@@ -1,0 +1,365 @@
+{
+  "schemaVersion": "1.1",
+  "supplementalItems": [
+    {
+      "id": "item:md-0001",
+      "legacyIds": [
+        "open_source_pr:2024-01-16:pytorch-lightning-19297"
+      ],
+      "slug": "pytorch-lightning-wandblogger-checkpoint-improvements-19297",
+      "slugAliases": [
+        "pytorch-lightning-19297"
+      ],
+      "type": "open_source_pr",
+      "title": "PyTorch Lightning #19297",
+      "displayTitle": "Improve WandbLogger checkpoint functionality",
+      "shortTitle": "PyTorch Lightning #19297",
+      "dateStart": "2024-01-16",
+      "role": "Contributor",
+      "organization": "Lightning AI / GitHub",
+      "status": "public pull request",
+      "primaryUrl": "https://github.com/Lightning-AI/pytorch-lightning/pull/19297",
+      "summary": "Public engineering artifact linked from the supplied impact report; authored by ash0ts.",
+      "topics": [
+        "mlops",
+        "open-source"
+      ],
+      "verificationState": "verified",
+      "sourceSnapshotId": "snapshot:impact-report-markdown",
+      "sourceLine": 57
+    },
+    {
+      "id": "item:md-0002",
+      "legacyIds": [
+        "open_source_repo:2024:evalforge"
+      ],
+      "slug": "evalforge",
+      "slugAliases": [],
+      "type": "open_source_repo",
+      "title": "EvalForge",
+      "displayTitle": "EvalForge",
+      "shortTitle": "EvalForge",
+      "dateStart": "2024",
+      "role": "Creator",
+      "organization": "Weights & Biases / GitHub",
+      "status": "public repository",
+      "primaryUrl": "https://github.com/wandb/evalForge",
+      "summary": "Public implementation of the EvalGen approach, linked from the supplied impact report and an external public citation.",
+      "topics": [
+        "evaluation",
+        "open-source"
+      ],
+      "verificationState": "verified",
+      "sourceSnapshotId": "snapshot:impact-report-markdown",
+      "sourceLine": 175
+    }
+  ],
+  "itemPresentation": {
+    "open_source_repo:undated:fugue": {
+      "displayTitle": "Fugue — governed experiments for AI agents",
+      "shortTitle": "Fugue"
+    },
+    "open_source_repo:undated:wandb-skills": {
+      "displayTitle": "W&B Skills",
+      "shortTitle": "W&B Skills"
+    },
+    "open_source_repo:undated:nemo-vertex-w-b-ptuning-llm": {
+      "displayTitle": "NeMo prompt-tuning on Vertex AI with W&B",
+      "shortTitle": "NeMo + Vertex AI"
+    },
+    "open_source_pr:undated:pytorch-lightning-19077": {
+      "displayTitle": "Add the W&B Fabric Logger to PyTorch Lightning",
+      "shortTitle": "PyTorch Lightning #19077"
+    },
+    "open_source_pr:undated:pytorch-lightning-19288": {
+      "displayTitle": "Add checkpoint logging controls to WandbLogger",
+      "shortTitle": "PyTorch Lightning #19288"
+    },
+    "event:2023-11-21:large-language-models-agents": {
+      "displayTitle": "Large Language Model Agents",
+      "shortTitle": "LLM Agents"
+    },
+    "recording:2023-11-21:large-language-models-agents": {
+      "displayTitle": "Large Language Model Agents",
+      "shortTitle": "LLM Agents"
+    }
+  },
+  "relationOverrides": [
+    {
+      "fromLegacyId": "external_reference:2023-06-05:wandbot-gpt-4-powered-chat-support",
+      "toLegacyId": "article:2023-04-20:wandbot-gpt-4-powered-chat-support",
+      "predicate": "translation_of",
+      "confidence": "high",
+      "rationale": "The supplied footprint report identifies this Japanese page as a translation or republication of the original WandBot article."
+    },
+    {
+      "fromLegacyId": "external_reference:2022-03-10:7-top-machine-learning-operations-startups-and-the-problem-they-solve",
+      "toLegacyId": "event:2022-04-19:orchestrating-reproducible-automl-experiments-using-pycaret-w-and-b-and-prefect",
+      "predicate": "references",
+      "confidence": "high",
+      "rationale": "The public article names Anish and the ODSC East session."
+    },
+    {
+      "fromLegacyId": "external_reference:2024-09:you-need-evals-a-primer-and-new-techniques",
+      "toItemId": "item:md-0002",
+      "predicate": "references",
+      "confidence": "high",
+      "rationale": "The cited public article explicitly links Anish's EvalForge implementation."
+    },
+    {
+      "fromItemId": "item:md-0001",
+      "toLegacyId": "open_source_pr:undated:pytorch-lightning-19077",
+      "predicate": "part_of",
+      "confidence": "high",
+      "rationale": "The impact report groups these public PyTorch Lightning contributions under the W&B Fabric integration."
+    },
+    {
+      "fromLegacyId": "open_source_pr:undated:pytorch-lightning-19288",
+      "toLegacyId": "open_source_pr:undated:pytorch-lightning-19077",
+      "predicate": "part_of",
+      "confidence": "high",
+      "rationale": "The supplied sources group these public PyTorch Lightning contributions under the W&B Fabric integration."
+    }
+  ],
+  "forcedEntities": [
+    {
+      "id": "entity:wk-0001",
+      "slug": "wandb-mcp-server",
+      "kind": "work",
+      "displayTitle": "W&B MCP Server",
+      "shortTitle": "MCP Server",
+      "summary": "An agent-native interface for inspecting W&B experiments and traces.",
+      "practice": "build",
+      "countability": "unique_work",
+      "primaryLegacyId": "open_source_repo:undated:wandb-mcp-server",
+      "memberLegacyIds": [
+        "open_source_repo:undated:wandb-mcp-server",
+        "article:2026-05-21:introducing-the-w-and-b-mcp-server-an-agent-native-interface-for-your-experiments-and-tr"
+      ]
+    },
+    {
+      "id": "entity:wk-0002",
+      "slug": "pytorch-lightning-fabric-integration",
+      "kind": "work",
+      "displayTitle": "PyTorch Lightning Fabric integration",
+      "shortTitle": "W&B × Lightning Fabric",
+      "summary": "A public set of W&B logger and checkpointing contributions for PyTorch Lightning and Fabric.",
+      "practice": "build",
+      "countability": "unique_work",
+      "primaryLegacyId": "open_source_pr:undated:pytorch-lightning-19077",
+      "memberLegacyIds": [
+        "open_source_pr:undated:pytorch-lightning-19077",
+        "open_source_pr:undated:pytorch-lightning-19288"
+      ],
+      "memberItemIds": [
+        "item:md-0001"
+      ]
+    },
+    {
+      "id": "entity:wk-0003",
+      "slug": "evalforge",
+      "kind": "work",
+      "displayTitle": "EvalForge",
+      "shortTitle": "EvalForge",
+      "summary": "An implementation of the EvalGen approach to generating and aligning evaluation criteria.",
+      "practice": "build",
+      "countability": "unique_work",
+      "primaryUrl": "https://github.com/wandb/evalForge",
+      "memberLegacyIds": [],
+      "memberItemIds": [
+        "item:md-0002"
+      ]
+    },
+    {
+      "id": "entity:wk-0004",
+      "slug": "nvidia-data-flywheel-blueprint",
+      "kind": "work",
+      "displayTitle": "NVIDIA Data Flywheel Blueprint",
+      "shortTitle": "Data Flywheel",
+      "summary": "A public NVIDIA and W&B blueprint contribution represented in the source inventory by the upstream pull request.",
+      "practice": "build",
+      "countability": "unique_work",
+      "primaryLegacyId": "open_source_pr:undated:nvidia-data-flywheel-11",
+      "memberLegacyIds": [
+        "open_source_pr:undated:nvidia-data-flywheel-11"
+      ]
+    }
+  ],
+  "programs": [
+    {
+      "id": "entity:pg-0001",
+      "slug": "google-cloud-startup-school-2025",
+      "displayTitle": "Google Cloud Gen AI Startup School 2025",
+      "shortTitle": "Startup School",
+      "summary": "Two region-specific broadcasts and their public replay.",
+      "practice": "teach",
+      "year": 2025,
+      "memberLegacyIds": [
+        "event:2025-03-11:mastering-gen-ai-applications-with-w-and-b-emea-apac",
+        "event:2025-03-11:mastering-gen-ai-applications-with-w-and-b-americas",
+        "recording:2025-03-11:google-cloud-gen-ai-startup-school-mastering-gen-ai-applications-with-w-and-b"
+      ]
+    },
+    {
+      "id": "entity:pg-0002",
+      "slug": "fine-tuning-and-evaluating-agentic-llms-series",
+      "displayTitle": "Fine-Tuning and Evaluating LLMs for Agentic Use Cases",
+      "shortTitle": "Agentic LLM series",
+      "summary": "A multi-session public workshop series; each scheduled session remains a distinct occurrence.",
+      "practice": "teach",
+      "year": 2024,
+      "memberLegacyIds": [
+        "event:2024-05-29:fine-tuning-and-evaluating-llms-for-agentic-use-cases",
+        "event:2024-06-05:fine-tuning-and-evaluating-llms-for-agentic-use-cases-part-1",
+        "event:2024-06-12:fine-tuning-and-evaluating-llms-for-agentic-use-cases-part-2"
+      ]
+    },
+    {
+      "id": "entity:pg-0003",
+      "slug": "generative-ai-summit-2024",
+      "displayTitle": "Generative AI Summit 2024",
+      "shortTitle": "GenAI Summit 2024",
+      "summary": "Two distinct sessions sharing the conference speaker listing.",
+      "practice": "convene",
+      "year": 2024,
+      "memberLegacyIds": [
+        "event:2024-11-06:investigating-the-evolution-of-evaluation-from-model-training-to-genai-inference",
+        "event:2024-11-06:hemm-holistic-evaluation-of-multi-modal-generative-models"
+      ]
+    },
+    {
+      "id": "entity:pg-0004",
+      "slug": "fully-connected-san-francisco-2025",
+      "displayTitle": "Fully Connected San Francisco 2025",
+      "shortTitle": "Fully Connected SF 2025",
+      "summary": "Two separately scheduled workshops within the same public program.",
+      "practice": "convene",
+      "year": 2025,
+      "memberLegacyIds": [
+        "event:2025-06-17:architecting-and-orchestrating-ai-agents",
+        "event:2025-06-17:optimizing-and-evaluating-agentic-ai-applications"
+      ]
+    },
+    {
+      "id": "entity:pg-0005",
+      "slug": "nvidia-gtc-2024",
+      "displayTitle": "NVIDIA GTC 2024",
+      "shortTitle": "GTC 2024",
+      "summary": "Program-level context for the public GTC session and related on-demand artifacts.",
+      "practice": "convene",
+      "year": 2024,
+      "memberLegacyIds": [
+        "event:2024-03-18:llm-agent-fine-tuning-enhancing-task-automation-with-w-and-b-s63088",
+        "mirror:2024-03-18:llm-agent-fine-tuning-nvidia-gtc24-s63088",
+        "mirror:2024-03:nvidia-mlops-on-demand-playlist"
+      ]
+    },
+    {
+      "id": "entity:pg-0006",
+      "slug": "fully-connected-san-francisco-2024",
+      "displayTitle": "Fully Connected San Francisco 2024",
+      "shortTitle": "Fully Connected SF 2024",
+      "summary": "Program-level reach; no individual session attribution is implied.",
+      "practice": "convene",
+      "year": 2024,
+      "memberLegacyIds": []
+    },
+    {
+      "id": "entity:pg-0007",
+      "slug": "event-programs-2025",
+      "displayTitle": "2025 event programs",
+      "shortTitle": "2025 programs",
+      "summary": "Aggregate program scope for the approved 2025 pipeline-supported claim.",
+      "practice": "convene",
+      "year": 2025,
+      "memberFilter": {
+        "type": "event",
+        "year": 2025
+      }
+    },
+    {
+      "id": "entity:pg-0008",
+      "slug": "event-programs-2024-ic",
+      "displayTitle": "2024 IC-associated event programs",
+      "shortTitle": "2024 IC programs",
+      "summary": "Tentative owner-defined program scope; warehouse data has no person-level campaign mapping.",
+      "practice": "convene",
+      "year": 2024,
+      "memberLegacyIds": []
+    }
+  ],
+  "metricSubjectOverrides": [
+    {
+      "item": "Scaling AI with Precision webinar",
+      "subjectLegacyId": "event:2024-03-12:scaling-ai-with-precision",
+      "scope": "occurrence",
+      "attribution": "direct"
+    },
+    {
+      "item": "MSFT Reactor Phi-2 session",
+      "subjectLegacyId": "event:2024-03-26:mastering-mlops-with-w-and-b-and-microsoft-phi-2",
+      "scope": "occurrence",
+      "attribution": "direct"
+    },
+    {
+      "item": "NVIDIA GTC 2024 - LLM Agent Fine-Tuning session",
+      "subjectLegacyId": "event:2024-03-18:llm-agent-fine-tuning-enhancing-task-automation-with-w-and-b-s63088",
+      "scope": "occurrence",
+      "attribution": "associated"
+    },
+    {
+      "item": "Google AI Startup School",
+      "subjectEntityId": "entity:pg-0001",
+      "scope": "program",
+      "attribution": "direct"
+    },
+    {
+      "item": "MLOps World GenAI Summit 2025 - Anish Session",
+      "subjectLegacyId": "event:2025-10-09:building-and-evaluating-agents",
+      "scope": "occurrence",
+      "attribution": "associated"
+    },
+    {
+      "item": "FC 2025 developer workshop (Operation Sentinel Grid)",
+      "subjectEntityId": "entity:pg-0004",
+      "scope": "program",
+      "attribution": "associated"
+    },
+    {
+      "item": "Fully Connected SF 2024",
+      "subjectEntityId": "entity:pg-0006",
+      "scope": "program",
+      "attribution": "contextual"
+    },
+    {
+      "item": "NVIDIA GTC 2024",
+      "subjectEntityId": "entity:pg-0005",
+      "scope": "program",
+      "attribution": "contextual"
+    },
+    {
+      "item": "NVIDIA GTC 2024 cluster",
+      "subjectEntityId": "entity:pg-0005",
+      "scope": "program",
+      "attribution": "contextual"
+    },
+    {
+      "item": "EvalForge",
+      "subjectEntityId": "entity:wk-0003",
+      "scope": "work",
+      "attribution": "direct"
+    },
+    {
+      "item": "PyTorch Lightning Fabric integration",
+      "subjectEntityId": "entity:wk-0002",
+      "scope": "work",
+      "attribution": "direct"
+    },
+    {
+      "item": "NVIDIA Data Flywheel Blueprint",
+      "subjectEntityId": "entity:wk-0004",
+      "scope": "work",
+      "attribution": "direct"
+    }
+  ]
+}

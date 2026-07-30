@@ -177,8 +177,19 @@ export default async function StudioPage() {
             <strong>Credential encryption needs setup.</strong>
             <span>
               Add a base64-encoded 32-byte{" "}
-              <code>CONNECTOR_ENCRYPTION_KEY</code> before connecting either
-              provider.
+              <code>CONNECTOR_ENCRYPTION_KEY</code> before connecting any
+              personal-data provider.
+            </span>
+          </div>
+        ) : null}
+        {!overview.steamStorageCountries ? (
+          <div className={styles.inlineNotice}>
+            <strong>Steam release gate is closed.</strong>
+            <span>
+              Set <code>STEAM_DATA_STORAGE_COUNTRIES</code> to the actual
+              country or countries where D1 stores sanitized Steam snapshots.
+              Steam credentials and sync remain disabled until this disclosure
+              is truthful and public.
             </span>
           </div>
         ) : null}
@@ -186,6 +197,7 @@ export default async function StudioPage() {
           {connectors.map((connector) => (
             <ConnectorControls
               connector={connector}
+              steamStorageCountries={overview.steamStorageCountries}
               key={connector.provider}
             />
           ))}

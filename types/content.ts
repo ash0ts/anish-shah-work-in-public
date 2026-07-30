@@ -19,6 +19,32 @@ export type RelationPredicate =
   | "part_of"
   | "implements"
   | "references";
+export type CanonicalEntityKind = "work" | "occurrence" | "artifact" | "program";
+export type CanonicalCountability = "unique_work" | "representation" | "context";
+export type CanonicalSourceBasis = "footprint" | "supplemental" | "mixed" | "synthetic";
+export type Practice = "teach" | "build" | "convene";
+export type ItemEntityRole =
+  | "primary"
+  | "recording"
+  | "mirror"
+  | "translation"
+  | "implementation"
+  | "component"
+  | "reference"
+  | "profile";
+export type MetricScope =
+  | "item"
+  | "work"
+  | "occurrence"
+  | "program"
+  | "collection"
+  | "portfolio";
+export type MetricAttribution = "direct" | "associated" | "contextual";
+export type MetricDisplaySurface =
+  | "item_detail"
+  | "collection"
+  | "homepage"
+  | "sources";
 
 export type PortfolioItemType =
   | "event"
@@ -57,9 +83,13 @@ export interface ContentDate {
 
 export interface PortfolioItem {
   id: string;
+  legacyIds: string[];
   slug: string;
+  slugAliases: string[];
   type: PortfolioItemType;
   title: string;
+  displayTitle: string;
+  shortTitle: string;
   date: ContentDate;
   additionalDates: Array<ContentDate & { label: string }>;
   year: number | null;
@@ -75,11 +105,51 @@ export interface PortfolioItem {
   verificationState: VerificationState;
   evidenceIds: string[];
   featured: boolean;
+  canonicalEntityId: string;
+  entityRole: ItemEntityRole;
   sourceRecord?: {
     snapshotId: string;
     row: number;
     fingerprint: string;
   };
+}
+
+export interface CanonicalEntity {
+  id: string;
+  slug: string;
+  slugAliases: string[];
+  kind: CanonicalEntityKind;
+  title: string;
+  displayTitle: string;
+  shortTitle: string;
+  summary: string;
+  practice: Practice;
+  representativeDate: ContentDate;
+  year: number | null;
+  role: string;
+  organizationIds: string[];
+  topics: string[];
+  primaryItemId: string | null;
+  itemIds: string[];
+  parentEntityIds: string[];
+  countability: CanonicalCountability;
+  sourceBasis: CanonicalSourceBasis;
+  childCounts: {
+    items: number;
+    occurrences: number;
+    artifacts: number;
+  };
+  publicationState: PublicationState;
+  verificationState: VerificationState;
+}
+
+export interface ContentSourceSummary {
+  footprintRows: number;
+  impactRows: number;
+  supplementalArtifacts: number;
+  publicItems: number;
+  footprintBackedUniqueWorks: number;
+  supplementalUniqueWorks: number;
 }
 
 export interface MetricPeriod {
@@ -98,6 +168,9 @@ export interface ImpactMetricBase {
   qualifier: string | null;
   period: MetricPeriod;
   sourceLabel: string;
+  scope: MetricScope;
+  attribution: MetricAttribution;
+  displaySurfaces: MetricDisplaySurface[];
   publicationState: PublicationState;
   verificationState: VerificationState;
 }
@@ -169,12 +242,14 @@ export interface SourceSnapshot {
 }
 
 export interface AnishContentBundle {
-  schemaVersion: "1.0";
+  schemaVersion: "1.1";
   contentVersion: string;
   generatedAt: ISODateTime;
+  sourceSummary: ContentSourceSummary;
   profile: Profile;
   organizations: Organization[];
   items: PortfolioItem[];
+  entities: CanonicalEntity[];
   metrics: ImpactMetric[];
   evidence: EvidenceSource[];
   relations: Relation[];

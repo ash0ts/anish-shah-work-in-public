@@ -268,6 +268,41 @@ export function mergePublishedEditorialSnapshot(
 
   const itemIds = new Set(items.map((item) => item.id));
   const metricIds = new Set(metrics.map((metric) => metric.id));
+  const requiredEntityIds = new Set([
+    ...items.map((item) => item.canonicalEntityId),
+    ...metrics
+      .map((metric) => metric.subjectId)
+      .filter((id) => staticBundle.entities.some((entity) => entity.id === id)),
+  ]);
+  for (const entity of staticBundle.entities) {
+    if (
+      entity.itemIds.some((id) => itemIds.has(id)) ||
+      entity.parentEntityIds.some((id) => requiredEntityIds.has(id))
+    ) {
+      requiredEntityIds.add(entity.id);
+      for (const parentId of entity.parentEntityIds) requiredEntityIds.add(parentId);
+    }
+  }
+  const entities = staticBundle.entities
+    .filter((entity) => requiredEntityIds.has(entity.id))
+    .map((entity) => {
+      const entityItemIds = entity.itemIds.filter((id) => itemIds.has(id));
+      return {
+        ...entity,
+        itemIds: entityItemIds,
+        primaryItemId:
+          entity.primaryItemId && itemIds.has(entity.primaryItemId)
+            ? entity.primaryItemId
+            : entityItemIds[0] ?? null,
+        parentEntityIds: entity.parentEntityIds.filter((id) =>
+          requiredEntityIds.has(id),
+        ),
+        childCounts: {
+          ...entity.childCounts,
+          items: entityItemIds.length,
+        },
+      };
+    });
   const referencedEvidenceIds = new Set([
     ...items.flatMap((item) => item.evidenceIds),
     ...metrics.flatMap((metric) => metric.publicEvidenceIds),
@@ -276,6 +311,7 @@ export function mergePublishedEditorialSnapshot(
   return {
     ...staticBundle,
     items,
+    entities,
     metrics,
     narratives,
     relations: staticBundle.relations.filter(

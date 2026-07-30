@@ -1,4 +1,8 @@
-export const CONNECTOR_PROVIDERS = ["myanimelist", "hardcover"] as const;
+export const CONNECTOR_PROVIDERS = [
+  "myanimelist",
+  "hardcover",
+  "steam",
+] as const;
 
 export type ConnectorProvider = (typeof CONNECTOR_PROVIDERS)[number];
 export type SyncTrigger = "manual" | "stale_revalidate";
@@ -17,9 +21,22 @@ export type HardcoverCredential = {
   authorization: string;
 };
 
+export type SteamCredential = {
+  apiKey: string;
+  steamId: string;
+};
+
 export type ConnectorCredential =
   | MyAnimeListCredential
-  | HardcoverCredential;
+  | HardcoverCredential
+  | SteamCredential;
+
+export type ConnectorCredentialInput =
+  | string
+  | {
+      apiKey: string;
+      steamId: string;
+    };
 
 export type ConnectorFetchResult = {
   publicPayload: Record<string, unknown>;

@@ -1,139 +1,110 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { HeroStage } from "@/components/HeroStage";
-import { ImpactMoments } from "@/components/ImpactMoments";
-import { Reveal } from "@/components/Reveal";
-import { WorkPoster } from "@/components/WorkPoster";
 import {
-  featuredItemsFrom,
   getPublicContentView,
   homepageMetricsFrom,
 } from "@/lib/server/public-content";
+import {
+  representativeWorksFrom,
+  workIndexEntriesFrom,
+} from "@/lib/work-index";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Applied AI, in public",
   description:
-    "Anish Shah is an applied AI builder, educator, and technical storyteller at Weights & Biases.",
+    "Anish Shah builds applied AI products, learning systems, and technical communities at Weights & Biases.",
 };
 
-const trajectory = [
-  {
-    year: "2021",
-    verb: "Enter",
-    body: "Joined W&B near the product: technical growth, working demos, and direct contact with the people building ML systems.",
-  },
-  {
-    year: "2022—23",
-    verb: "Explain",
-    body: "Turned emerging workflows into public talks, practical workshops, and reusable technical stories.",
-  },
-  {
-    year: "2024—25",
-    verb: "Gather",
-    body: "Built programs where practitioners, researchers, and product teams could compare real work in public.",
-  },
-  {
-    year: "Now",
-    verb: "Ship",
-    body: "Working where agent infrastructure, evaluation, open tools, and adoption meet.",
-  },
-] as const;
+const practiceCopy = {
+  teach: "Turn emerging AI workflows into something people can use, test, and carry forward.",
+  build: "Ship the product surfaces and open tools that make experimental systems operable.",
+  convene: "Create rooms where practitioners can compare the work—and understand its reach.",
+} as const;
 
 export default async function Home() {
-  const { bundle, source } = await getPublicContentView();
-  const items = featuredItemsFrom(bundle, 8, source === "published_snapshot");
+  const { bundle } = await getPublicContentView();
+  const entries = workIndexEntriesFrom(bundle);
+  const representatives = representativeWorksFrom(entries);
   const metrics = homepageMetricsFrom(bundle);
-  const { profile } = bundle;
 
   return (
-    <main id="main" className="site-main">
+    <main id="main" className="site-main v11-home">
       <HeroStage
-        headline={profile.headline}
-        items={items}
-        summary={profile.summary}
+        entries={entries}
+        headline={bundle.profile.headline}
+        summary={bundle.profile.summary}
       />
 
-      <section className="selected-work" aria-labelledby="selected-work-title">
-        <div className="section-intro">
-          <div>
-            <p className="utility-label">Selected work · eight ways in</p>
-            <h2 id="selected-work-title">The work is the introduction.</h2>
-          </div>
-          <p>
-            Courses, open-source tools, talks, and technical stories—each one
-            opens to the role, context, and evidence behind it.
-          </p>
-        </div>
-        <div className="poster-wall">
-          {items.map((item, index) => (
-            <WorkPoster item={item} index={index} key={item.id} />
+      <section className="v11-practice" aria-labelledby="practice-title">
+        <header>
+          <p className="utility-label">Three ways into the work</p>
+          <h2 id="practice-title">Teach. Build. Convene.</h2>
+          <Link href="/work">Open the complete index ↗</Link>
+        </header>
+        <div>
+          {representatives.map((entry) => (
+            <Link
+              className="v11-work-row"
+              href={`/work/${entry.slug}`}
+              key={entry.id}
+            >
+              <span className="v11-work-practice">{entry.practice}</span>
+              <span className="v11-work-title">
+                <strong>{entry.title}</strong>
+                <small>{practiceCopy[entry.practice]}</small>
+              </span>
+              <span className="v11-work-meta">
+                {entry.year ?? "Date open"} · {entry.formCount}{" "}
+                {entry.formCount === 1 ? "public form" : "public forms"}
+              </span>
+              <i aria-hidden="true">↗</i>
+            </Link>
           ))}
         </div>
-        <div className="section-exit">
-          <span>{bundle.items.length} public records · 2021—now</span>
-          <Link className="primary-action" href="/work">
-            Open the full index <span aria-hidden="true">↗</span>
-          </Link>
-        </div>
       </section>
 
-      <section className="impact-section" aria-labelledby="impact-title">
-        <Reveal className="impact-heading">
-          <p className="utility-label">Impact, with its edges left on</p>
-          <h2 id="impact-title">Scale means more with context.</h2>
-          <p>
-            These measures are rounded, dated, and qualified. Program reach
-            stays separate from personal contribution; supported pipeline is
-            not presented as generated revenue.
-          </p>
-        </Reveal>
-        <ImpactMoments metrics={metrics} />
-      </section>
-
-      <section className="trajectory-section" aria-labelledby="trajectory-title">
-        <div className="trajectory-heading">
-          <p className="utility-label">A widening practice · 2021—now</p>
-          <h2 id="trajectory-title">From making the demo to shaping the room.</h2>
-        </div>
-        <div className="trajectory-line">
-          {trajectory.map((step) => (
-            <article key={step.year}>
-              <span>{step.year}</span>
-              <h3>{step.verb}</h3>
-              <p>{step.body}</p>
+      <section className="v11-impact" aria-labelledby="impact-title">
+        <header>
+          <p className="utility-label">Three bounded outcomes</p>
+          <h2 id="impact-title">Reach, with the edges left on.</h2>
+          <Link href="/sources#internal-analytics">Read the methodology ↗</Link>
+        </header>
+        <div className="v11-impact-grid">
+          {metrics.map((metric) => (
+            <article key={metric.id}>
+              <strong>{metric.displayValue}</strong>
+              <h3>{metric.label}</h3>
+              <p>{metric.qualifier}</p>
+              <span>
+                {metric.sourceLabel} · {metric.period.label}
+              </span>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="play-invitation" aria-labelledby="play-title">
-        <div className="play-copy">
-          <p className="utility-label">Off the clock, still keeping score</p>
-          <h2 id="play-title">Watch. Read. Move.</h2>
-          <p>
-            Anime seasons, books in progress, and miles outside—the quieter
-            data streams that make the workday make sense.
-          </p>
-          <Link className="light-action" href="/play">
-            See what else I track <span aria-hidden="true">↗</span>
+      <section className="v11-close" aria-labelledby="current-focus-title">
+        <div>
+          <p className="utility-label">Current focus</p>
+          <h2 id="current-focus-title">
+            Agent infrastructure, evaluation, and the work of adoption.
+          </h2>
+        </div>
+        <p>
+          The professional archive stays inspectable. The quieter data streams—
+          anime, books, games, and movement—live somewhere more playful.
+        </p>
+        <nav aria-label="Continue exploring">
+          <Link className="primary-action" href="/work">
+            Explore my work <span aria-hidden="true">↗</span>
           </Link>
-        </div>
-        <div className="play-bands" aria-hidden="true">
-          <span className="play-band play-band-anime">
-            <i>WATCH</i>
-            <b>01</b>
-          </span>
-          <span className="play-band play-band-reading">
-            <i>READ</i>
-            <b>02</b>
-          </span>
-          <span className="play-band play-band-motion">
-            <i>MOVE</i>
-            <b>03</b>
-          </span>
-        </div>
+          <Link className="text-action" href="/play">
+            Watch, read, play, move
+          </Link>
+        </nav>
       </section>
     </main>
   );

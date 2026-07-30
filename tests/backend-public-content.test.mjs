@@ -14,6 +14,14 @@ const {
   "../lib/server/public-content-selector.ts",
   import.meta.url,
 );
+const {
+  collectionMetricsFrom,
+  entityForItemFrom,
+  findEntityBySlugFrom,
+  metricsForItemFrom,
+  supplementalWorkEntriesFrom,
+  workIndexEntriesFrom,
+} = await tsImport("../lib/content-selectors.ts", import.meta.url);
 
 const staticBundle = publicBundleJson;
 const publishedAt = "2026-07-30T18:00:00.000Z";
@@ -81,6 +89,54 @@ async function snapshotWith(records) {
     records,
   };
 }
+
+test("canonical selectors expose explicit work groups without collection outcome leakage", () => {
+  const byLegacyId = new Map(
+    staticBundle.items.flatMap((item) =>
+      item.legacyIds.map((legacyId) => [legacyId, item]),
+    ),
+  );
+  const prompting = byLegacyId.get(
+    "course:2024-07:developers-guide-to-llm-prompting",
+  );
+  const evals = byLegacyId.get("course:2025-01-07:llm-apps-evaluation");
+  const unrelatedPr = byLegacyId.get("open_source_pr:undated:prompting-course-142");
+  const oldEvent = byLegacyId.get(
+    "event:2021-09-27:mlops-sample-project-end-to-end-song-recommender",
+  );
+  const mcp = byLegacyId.get("open_source_repo:undated:wandb-mcp-server");
+  assert(prompting && evals && unrelatedPr && oldEvent && mcp);
+
+  assert.deepEqual(metricsForItemFrom(staticBundle, prompting), []);
+  assert.deepEqual(metricsForItemFrom(staticBundle, unrelatedPr), []);
+  assert.deepEqual(metricsForItemFrom(staticBundle, oldEvent), []);
+  assert.deepEqual(
+    metricsForItemFrom(staticBundle, evals).map((metric) => metric.key),
+    ["launch_signups"],
+  );
+  assert.deepEqual(
+    metricsForItemFrom(staticBundle, mcp).map((metric) => metric.key),
+    [
+      "mcp_tool_calls",
+      "mcp_users_and_organizations",
+      "returning_user_share",
+      "weekly_reengaged_users",
+    ],
+  );
+  assert.equal(collectionMetricsFrom(staticBundle, "collection:events").length, 5);
+
+  const mcpEntity = entityForItemFrom(staticBundle, mcp);
+  assert.equal(mcpEntity?.id, "entity:wk-0001");
+  assert.equal(findEntityBySlugFrom(staticBundle, "wandb-mcp-server")?.id, "entity:wk-0001");
+  const workIndex = workIndexEntriesFrom(staticBundle);
+  assert(workIndex.length > 0);
+  assert(workIndex.every((entity) => entity.countability === "unique_work"));
+  assert(workIndex.every((entity) => entity.sourceBasis !== "supplemental"));
+  assert.deepEqual(
+    supplementalWorkEntriesFrom(staticBundle).map((entity) => entity.id),
+    ["entity:wk-0003"],
+  );
+});
 
 test("published selector applies only visibility, order, feature, wording, and caveat", async () => {
   const first = staticBundle.items[0];
@@ -230,7 +286,7 @@ test("public runtime reads publication snapshots, never editable drafts", async 
     assert.match(route, /dynamic = "force-dynamic"/);
   }
   assert.equal(
-    [...detail.matchAll(/getPublicContentView\(\)/g)].length >= 2,
+    [...detail.matchAll(/\bresolveEntity\(/g)].length >= 3,
     true,
   );
 });

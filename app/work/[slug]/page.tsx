@@ -1,20 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { publicBundle } from "@/lib/content";
+import { isKnownUnavailablePublicUrl } from "@/lib/public-url-health";
 import {
-  formatDate,
-  formatItemType,
-  publicBundle,
-} from "@/lib/content";
-import {
-  evidenceForItemFrom,
+  entityForItemFrom,
+  findEntityBySlugFrom,
   findItemBySlugFrom,
   getPublicContentView,
-  metricsForItemFrom,
-  organizationNamesFrom,
-  relatedItemsFrom,
+  itemsForEntityFrom,
+  publicMetricsFrom,
+  workIndexEntriesFrom,
 } from "@/lib/server/public-content";
-import { isKnownUnavailablePublicUrl } from "@/lib/public-url-health";
+import type {
+  AnishContentBundle,
+  ContentDate,
+  EvidenceSource,
+  PortfolioItem,
+} from "@/types/content";
 
 export const dynamic = "force-dynamic";
 
@@ -23,115 +26,116 @@ type WorkDetailProps = {
 };
 
 export function generateStaticParams() {
-  return publicBundle.items
-    .filter((item) => item.publicationState === "public")
-    .map((item) => ({ slug: item.slug }));
+  return workIndexEntriesFrom(publicBundle).map((entity) => ({
+    slug: entity.slug,
+  }));
+}
+
+async function resolveEntity(slug: string) {
+  const { bundle } = await getPublicContentView();
+  const entity = findEntityBySlugFrom(bundle, slug);
+  if (entity) return { bundle, entity, legacyItem: null };
+  const item = findItemBySlugFrom(bundle, slug);
+  const itemEntity = item ? entityForItemFrom(bundle, item) : undefined;
+  return itemEntity
+    ? { bundle, entity: itemEntity, legacyItem: item ?? null }
+    : { bundle, entity: null, legacyItem: null };
 }
 
 export async function generateMetadata({
   params,
 }: WorkDetailProps): Promise<Metadata> {
   const { slug } = await params;
-  const { bundle } = await getPublicContentView();
-  const item = findItemBySlugFrom(bundle, slug);
-  if (!item) return { title: "Work record" };
+  const { entity } = await resolveEntity(slug);
+  if (!entity) return { title: "Work record" };
   return {
-    title: item.title,
-    description:
-      item.summary ??
-      `${item.role} record from Anish Shah’s public applied AI archive.`,
+    title: entity.displayTitle,
+    description: entity.summary,
   };
 }
 
 export default async function WorkDetailPage({ params }: WorkDetailProps) {
   const { slug } = await params;
-  const { bundle } = await getPublicContentView();
-  const item = findItemBySlugFrom(bundle, slug);
-  if (!item) notFound();
+  const { bundle, entity, legacyItem } = await resolveEntity(slug);
+  if (!entity) notFound();
+  if (legacyItem || slug !== entity.slug) {
+    const anchor = legacyItem ? `#${legacyItem.id}` : "";
+    redirect(`/work/${entity.slug}${anchor}`);
+  }
 
-  const organizations = organizationNamesFrom(bundle, item);
-  const evidence = evidenceForItemFrom(bundle, item);
-  const outcomes = metricsForItemFrom(bundle, item);
-  const related = relatedItemsFrom(bundle, item).slice(0, 8);
-  const primaryPublicUrl = item.urls.find(
-    ({ url }) => !isKnownUnavailablePublicUrl(url),
+  const items = itemsForEntityFrom(bundle, entity).sort(
+    (left, right) =>
+      (right.date.start ?? "").localeCompare(left.date.start ?? "") ||
+      left.displayTitle.localeCompare(right.displayTitle),
+  );
+  const primary =
+    items.find((item) => item.id === entity.primaryItemId) ?? items[0] ?? null;
+  const evidence = evidenceForItems(bundle, items);
+  const itemIds = new Set(items.map((item) => item.id));
+  const outcomes = publicMetricsFrom(bundle).filter(
+    (metric) =>
+      metric.displaySurfaces.includes("item_detail") &&
+      (metric.subjectId === entity.id || itemIds.has(metric.subjectId)),
+  );
+  const context = publicMetricsFrom(bundle).filter(
+    (metric) =>
+      entity.parentEntityIds.includes(metric.subjectId) &&
+      metric.displaySurfaces.includes("collection"),
+  );
+  const organizationCandidates = entity.organizationIds
+    .map(
+      (id) =>
+        bundle.organizations.find((organization) => organization.id === id)?.name,
+    )
+    .filter((name): name is string => Boolean(name))
+    .map((name) => name.replace(" / GitHub", " · GitHub"));
+  const organizations = [...new Set(organizationCandidates)].filter(
+    (name, _index, all) =>
+      !all.some(
+        (candidate) =>
+          candidate !== name && candidate.startsWith(`${name} ·`),
+      ),
   );
 
   return (
-    <main id="main" className="site-main">
-      <header className="case-hero">
-        <Link className="back-link" href="/work">
-          ← Public index
-        </Link>
-        <div className="case-kicker">
-          <span>{formatItemType(item.type)}</span>
-          <span>{item.year ?? "Date open"}</span>
-          <span>{item.verificationState.replaceAll("_", " ")}</span>
+    <main id="main" className="site-main v11-case">
+      <header className="v11-case-hero">
+        <Link href="/work">← Work index</Link>
+        <div className="v11-case-kicker">
+          <span>{entity.practice}</span>
+          <span>{entity.kind}</span>
+          <span>{entity.year ?? "Undated"}</span>
+          <span>{entity.verificationState.replaceAll("_", " ")}</span>
         </div>
-        <h1>{item.title}</h1>
-        <div className="case-hero-close">
-          <p>
-            {item.summary ??
-              `A public record of Anish’s documented role—${item.role}—with the artifact, context, and available evidence kept together.`}
-          </p>
-          {primaryPublicUrl ? (
-            <a
-              className="primary-action"
-              href={primaryPublicUrl.url}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Open the public artifact <span aria-hidden="true">↗</span>
-            </a>
-          ) : null}
+        <h1>{entity.displayTitle}</h1>
+        <div className="v11-case-intro">
+          <p>{entity.summary}</p>
+          {primary ? <PublicArtifactLink item={primary} primary /> : null}
         </div>
       </header>
 
-      <section className="case-facts" aria-label="Record facts">
-        <div>
-          <span>Role</span>
-          <strong>{item.role}</strong>
-        </div>
-        <div>
-          <span>Date</span>
-          <strong>{formatDate(item)}</strong>
-        </div>
-        <div>
-          <span>Organization</span>
-          <strong>{organizations.join(" / ") || "Independent/public"}</strong>
-        </div>
-        <div>
-          <span>Location</span>
-          <strong>{item.location.label || "Not listed"}</strong>
-        </div>
+      <section className="v11-case-facts" aria-label="Work facts">
+        <div><span>Documented role</span><strong>{entity.role}</strong></div>
+        <div><span>Representative date</span><strong>{formatDate(entity.representativeDate)}</strong></div>
+        <div><span>Organization</span><strong>{organizations.join(" / ") || "Independent/public"}</strong></div>
+        <div><span>Public forms</span><strong>{items.length}</strong></div>
       </section>
 
-      <section className="case-body">
-        <aside className="case-poster" aria-hidden="true">
-          <span>{item.year ?? "NOW"}</span>
-          <strong>{formatItemType(item.type).toUpperCase()}</strong>
-          <i>{item.title}</i>
-        </aside>
-        <div className="case-narrative">
-          <p className="utility-label">What this record establishes</p>
-          <h2>The artifact comes first.</h2>
-          <p>
-            This page does not infer ownership beyond the documented role. It
-            keeps the public artifact, its publication or event date, the
-            contributing organization, and any outcome language in one place so
-            the record can be inspected rather than taken on faith.
-          </p>
-          {item.topics.length ? (
-            <div className="case-topics" aria-label="Topics">
-              {item.topics.map((topic) => (
-                <span key={topic}>{topic}</span>
-              ))}
+      <div className="v11-case-layout">
+        <article className="v11-case-story">
+          <p className="utility-label">The underlying work</p>
+          <h2>{entity.shortTitle}</h2>
+          <p>{entity.summary}</p>
+          {entity.topics.length ? (
+            <div className="v11-case-topics" aria-label="Topics">
+              {entity.topics.map((topic) => <span key={topic}>{topic}</span>)}
             </div>
           ) : null}
 
           {outcomes.length ? (
-            <div className="case-outcomes">
-              <p className="utility-label">Qualified outcomes</p>
+            <section className="v11-case-outcomes" aria-labelledby="outcomes-title">
+              <p className="utility-label">Direct outcomes</p>
+              <h2 id="outcomes-title">What is explicitly attached.</h2>
               {outcomes.map((metric) => (
                 <article key={metric.id}>
                   <strong>{metric.displayValue}</strong>
@@ -145,67 +149,116 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                   </div>
                 </article>
               ))}
-            </div>
+            </section>
           ) : null}
-        </div>
-        <aside className="case-resources">
-          <p className="utility-label">Public resources</p>
-          <ul>
-            {item.urls.map((url) => (
-              <li key={url.url}>
-                {isKnownUnavailablePublicUrl(url.url) ? (
-                  <span>
-                    {url.kind === "primary"
-                      ? "Historical source"
-                      : "Related historical source"}{" "}
-                    · host unavailable
-                  </span>
-                ) : (
-                  <a href={url.url} rel="noreferrer" target="_blank">
-                    {url.kind === "primary"
-                      ? "Primary artifact"
-                      : "Related resource"}
-                    <span aria-hidden="true">↗</span>
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
-          <p className="utility-label">Evidence</p>
-          <ul>
+
+          {context.length ? (
+            <section className="v11-case-context" aria-labelledby="context-title">
+              <p className="utility-label">Program context · not direct attribution</p>
+              <h2 id="context-title">The wider program.</h2>
+              {context.map((metric) => (
+                <article key={metric.id}>
+                  <strong>{metric.displayValue}</strong>
+                  <p>{metric.label}</p>
+                  <span>{metric.qualifier}</span>
+                </article>
+              ))}
+            </section>
+          ) : null}
+        </article>
+
+        <aside className="v11-case-evidence">
+          <p className="utility-label">Public evidence</p>
+          <ol>
             {evidence.map((source) => (
               <li key={source.id}>
                 {source.url && !isKnownUnavailablePublicUrl(source.url) ? (
                   <a href={source.url} rel="noreferrer" target="_blank">
-                    {source.title}
-                    <span aria-hidden="true">↗</span>
+                    <span>{source.publisher ?? source.kind.replaceAll("_", " ")}</span>
+                    <strong>{source.title}</strong>
+                    <i aria-hidden="true">↗</i>
                   </a>
-                ) : source.url ? (
-                  <span>{source.title} · host unavailable</span>
                 ) : (
-                  <span>{source.title}</span>
+                  <span>
+                    <small>{source.publisher ?? source.kind.replaceAll("_", " ")}</small>
+                    <strong>{source.title}</strong>
+                    {source.url ? <i>Historical host unavailable</i> : null}
+                  </span>
                 )}
               </li>
             ))}
-          </ul>
+          </ol>
         </aside>
-      </section>
+      </div>
 
-      {related.length ? (
-        <section className="related-work" aria-labelledby="related-title">
-          <p className="utility-label">Connected records</p>
-          <h2 id="related-title">One work, several public lives.</h2>
-          <div>
-            {related.map(({ item: relatedItem, relation }) => (
-              <Link href={`/work/${relatedItem.slug}`} key={relation.id}>
-                <span>{relation.predicate.replaceAll("_", " ")}</span>
-                <strong>{relatedItem.title}</strong>
-                <i aria-hidden="true">↗</i>
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <section className="v11-public-forms" aria-labelledby="forms-title">
+        <header>
+          <p className="utility-label">Occurrences and artifacts</p>
+          <h2 id="forms-title">
+            {items.length === 1 ? "One public form." : `${items.length} public forms, connected.`}
+          </h2>
+        </header>
+        <ol>
+          {items.map((item) => (
+            <li id={item.id} key={item.id}>
+              <div>
+                <span>{formatDate(item.date)}</span>
+                <span>{item.entityRole.replaceAll("_", " ")}</span>
+              </div>
+              <h3>{item.displayTitle}</h3>
+              <p>{item.role}</p>
+              <PublicArtifactLink item={item} />
+            </li>
+          ))}
+        </ol>
+      </section>
     </main>
+  );
+}
+
+function evidenceForItems(
+  bundle: AnishContentBundle,
+  items: PortfolioItem[],
+): EvidenceSource[] {
+  const ids = new Set(items.flatMap((item) => item.evidenceIds));
+  return bundle.evidence.filter(
+    (source) => ids.has(source.id) && source.access === "public_web",
+  );
+}
+
+function formatDate(date: ContentDate) {
+  if (!date.start) return "Date unlisted";
+  if (date.precision === "year") return date.start.slice(0, 4);
+  const normalized =
+    date.precision === "month" ? `${date.start.slice(0, 7)}-01` : date.start;
+  return new Intl.DateTimeFormat("en-US", {
+    month: date.precision === "month" ? "long" : "short",
+    day: date.precision === "month" ? undefined : "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${normalized}T00:00:00Z`));
+}
+
+function PublicArtifactLink({
+  item,
+  primary = false,
+}: {
+  item: PortfolioItem;
+  primary?: boolean;
+}) {
+  const url = item.urls.find(({ url: candidate }) =>
+    !isKnownUnavailablePublicUrl(candidate),
+  );
+  if (!url) return <span className="v11-historical-link">Historical source unavailable</span>;
+  return (
+    <a
+      className={primary ? "primary-action" : "v11-artifact-link"}
+      href={url.url}
+      rel="noreferrer"
+      target="_blank"
+    >
+      {primary ? "Open the primary artifact" : "Open this public form"}{" "}
+      <span aria-hidden="true">↗</span>
+    </a>
   );
 }

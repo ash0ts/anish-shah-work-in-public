@@ -1,0 +1,97 @@
+{
+  "playerSummary": {
+    "response": {
+      "players": [
+        {
+          "steamid": "76561198000000000",
+          "personaname": "Fixture Player",
+          "avatarfull": "https://cdn.example.test/private-avatar.jpg"
+        }
+      ]
+    }
+  },
+  "ownedGames": {
+    "response": {
+      "game_count": 10,
+      "games": [
+        { "appid": 101, "name": "Alpha", "playtime_forever": 120 },
+        { "appid": 102, "name": "Beta", "playtime_forever": 0 },
+        { "appid": 103, "name": "Gamma", "playtime_forever": 600 },
+        { "appid": 104, "name": "Delta", "playtime_forever": 3000 },
+        { "appid": 105, "name": "Epsilon", "playtime_forever": 60 },
+        { "appid": 106, "name": "Zeta", "playtime_forever": 180 },
+        { "appid": 107, "name": "Eta", "playtime_forever": 1200 },
+        { "appid": 108, "name": "Theta", "playtime_forever": 240 },
+        { "appid": 109, "name": "Iota", "playtime_forever": 480 },
+        { "appid": 110, "name": "Kappa", "playtime_forever": 360 }
+      ]
+    }
+  },
+  "recentGames": {
+    "response": {
+      "total_count": 10,
+      "games": [
+        {
+          "appid": 101,
+          "name": "Alpha",
+          "playtime_forever": 120,
+          "playtime_2weeks": 120
+        },
+        {
+          "appid": 102,
+          "name": "Beta",
+          "playtime_forever": 0,
+          "playtime_2weeks": 30
+        },
+        {
+          "appid": 103,
+          "name": "Gamma",
+          "playtime_forever": 600,
+          "playtime_2weeks": 0
+        },
+        {
+          "appid": 104,
+          "name": "Delta",
+          "playtime_forever": 3000,
+          "playtime_2weeks": 180
+        },
+        {
+          "appid": 105,
+          "name": "Epsilon",
+          "playtime_forever": 60,
+          "playtime_2weeks": 60
+        },
+        {
+          "appid": 106,
+          "name": "Zeta",
+          "playtime_forever": 180,
+          "playtime_2weeks": 90
+        },
+        {
+          "appid": 107,
+          "name": "Eta",
+          "playtime_forever": 1200,
+          "playtime_2weeks": 240
+        },
+        {
+          "appid": 108,
+          "name": "Theta",
+          "playtime_forever": 240,
+          "playtime_2weeks": 10
+        },
+        {
+          "appid": 109,
+          "name": "Iota",
+          "playtime_forever": 480,
+          "playtime_2weeks": 20
+        },
+        {
+          "appid": 110,
+          "name": "Kappa",
+          "playtime_forever": 360,
+          "playtime_2weeks": 50
+        }
+      ]
+    }
+  }
+}

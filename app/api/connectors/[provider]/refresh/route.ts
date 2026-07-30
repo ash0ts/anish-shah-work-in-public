@@ -33,11 +33,13 @@ export async function POST(request: Request, context: RouteContext) {
   const status =
     result.status === "complete"
       ? 200
-      : result.status === "already_running" || result.status === "not_due"
-        ? 202
-        : result.status === "setup_required"
-          ? 503
-          : 424;
+      : result.status === "withheld"
+        ? 200
+        : result.status === "already_running" || result.status === "not_due"
+          ? 202
+          : result.status === "setup_required"
+            ? 503
+            : 424;
 
   const error =
     result.status === "setup_required"
@@ -45,17 +47,26 @@ export async function POST(request: Request, context: RouteContext) {
         ? "Connect this provider before refreshing it."
         : result.reason === "encryption_key"
           ? "Connector encryption is not configured."
-          : "The site database is not ready."
+          : result.reason === "storage_disclosure"
+            ? "Configure the truthful Steam data storage-country disclosure before syncing."
+            : "The site database is not ready."
       : result.status === "failed"
-        ? result.code === "credential_expired"
-          ? "The provider credential needs to be renewed."
-          : result.code === "rate_limited"
-            ? "The provider is rate-limiting requests. The previous snapshot is still live."
-            : "The provider could not be refreshed. The previous snapshot is still live."
-        : undefined;
+          ? result.code === "credential_expired"
+            ? "The provider credential needs to be renewed."
+            : result.code === "rate_limited"
+              ? "The provider is rate-limiting requests. The previous snapshot is still live."
+              : "The provider could not be refreshed. The previous snapshot is still live."
+          : undefined;
+  const message =
+    result.status === "withheld"
+      ? "Steam game details are not public, so every stored Steam snapshot was unpublished."
+      : undefined;
 
-  return Response.json(error ? { ...result, error } : result, {
+  return Response.json(
+    error ? { ...result, error } : message ? { ...result, message } : result,
+    {
     status,
     headers: { "cache-control": "private, no-store" },
-  });
+    },
+  );
 }

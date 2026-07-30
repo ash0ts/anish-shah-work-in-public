@@ -5,16 +5,23 @@ import test from "node:test";
 register("./content-connector-loader.mjs", import.meta.url);
 
 const [
-  { encryptCredential },
+  { decryptCredential, encryptCredential },
   { fetchHardcoverSnapshot },
   { fetchMyAnimeListSnapshot },
-  { getPublicConnectorSnapshot, refreshConnector },
+  {
+    deleteConnectorCredential,
+    getPublicConnectorSnapshot,
+    refreshConnector,
+    saveConnectorCredential,
+  },
+  { steamStorageCountries },
   { ConnectorFetchError },
 ] = await Promise.all([
   import("../lib/server/credential-crypto.ts"),
   import("../lib/server/connectors/hardcover.ts"),
   import("../lib/server/connectors/myanimelist.ts"),
   import("../lib/server/connectors/repository.ts"),
+  import("../lib/server/connectors/steam-policy.ts"),
   import("../lib/server/connectors/types.ts"),
 ]);
 
@@ -432,9 +439,14 @@ class FakeD1 {
     const sql = statement.sql.replace(/\s+/g, " ");
     if (sql.includes("FROM connector_snapshots")) {
       const provider = statement.values[0];
+      const readyOnly = sql.includes("status = 'ready'");
       return (
         this.snapshots
-          .filter((snapshot) => snapshot.provider === provider && snapshot.status === "ready")
+          .filter(
+            (snapshot) =>
+              snapshot.provider === provider &&
+              (!readyOnly || snapshot.status === "ready"),
+          )
           .sort((left, right) => right.fetchedAt.localeCompare(left.fetchedAt))[0] ?? null
       );
     }
@@ -461,9 +473,14 @@ class FakeD1 {
     const sql = statement.sql.replace(/\s+/g, " ");
     if (sql.includes("FROM connector_snapshots")) {
       const provider = statement.values[0];
+      const readyOnly = sql.includes("status = 'ready'");
       return {
         results: this.snapshots
-          .filter((snapshot) => snapshot.provider === provider && snapshot.status === "ready")
+          .filter(
+            (snapshot) =>
+              snapshot.provider === provider &&
+              (!readyOnly || snapshot.status === "ready"),
+          )
           .sort((left, right) => right.fetchedAt.localeCompare(left.fetchedAt))
           .slice(0, 25),
         success: true,
@@ -528,11 +545,16 @@ class FakeD1 {
     }
 
     if (sql.includes("INSERT INTO connector_snapshots")) {
-      const [id, provider, publicPayloadJson, fetchedAt, freshUntil, etag, itemCount] = values;
+      const [id, provider] = values;
+      const withheld = sql.includes("'withheld'");
+      const [publicPayloadJson, fetchedAt, freshUntil, etag, itemCount] =
+        withheld
+          ? ["{}", values[2], values[3], null, 0]
+          : values.slice(2);
       this.snapshots.push({
         id,
         provider,
-        status: "ready",
+        status: withheld ? "withheld" : "ready",
         publicPayloadJson,
         fetchedAt,
         freshUntil,
@@ -542,11 +564,85 @@ class FakeD1 {
       return 1;
     }
 
+    if (sql.includes("INSERT INTO connector_credentials")) {
+      const [
+        provider,
+        ciphertext,
+        iv,
+        keyVersion,
+      ] = values;
+      this.credentials.set(provider, {
+        ciphertext,
+        iv,
+        keyVersion,
+      });
+      return 1;
+    }
+
+    if (sql.includes("DELETE FROM connector_snapshots")) {
+      const [provider, retainedId] = values;
+      if (sql.includes("id NOT IN")) {
+        const retained = new Set(
+          this.snapshots
+            .filter((snapshot) => snapshot.provider === provider)
+            .sort(
+              (left, right) =>
+                right.fetchedAt.localeCompare(left.fetchedAt) ||
+                right.id.localeCompare(left.id),
+            )
+            .slice(0, 2)
+            .map((snapshot) => snapshot.id),
+        );
+        this.snapshots = this.snapshots.filter(
+          (snapshot) =>
+            snapshot.provider !== provider || retained.has(snapshot.id),
+        );
+      } else if (sql.includes("id <>")) {
+        this.snapshots = this.snapshots.filter(
+          (snapshot) =>
+            snapshot.provider !== provider || snapshot.id === retainedId,
+        );
+      } else {
+        this.snapshots = this.snapshots.filter(
+          (snapshot) => snapshot.provider !== provider,
+        );
+      }
+      return 1;
+    }
+
+    if (sql.includes("DELETE FROM connector_credentials")) {
+      return this.credentials.delete(values[0]) ? 1 : 0;
+    }
+
+    if (sql.includes("DELETE FROM sync_runs")) {
+      const [provider, retainedId] = values;
+      const before = this.runs.length;
+      this.runs = this.runs.filter(
+        (run) =>
+          run.provider !== provider ||
+          (sql.includes("id <>") && run.id === retainedId),
+      );
+      return before - this.runs.length;
+    }
+
     if (sql.includes("SET status = 'complete'")) {
       const [finishedAt, itemCount, id] = values;
       const run = this.runs.find((entry) => entry.id === id);
       if (!run) return 0;
       Object.assign(run, { status: "complete", finishedAt, itemCount });
+      return 1;
+    }
+
+    if (sql.includes("SET status = 'withheld'")) {
+      const [finishedAt, id] = values;
+      const run = this.runs.find((entry) => entry.id === id);
+      if (!run) return 0;
+      Object.assign(run, {
+        status: "withheld",
+        finishedAt,
+        itemCount: 0,
+        errorCode: "visibility_unavailable",
+      });
       return 1;
     }
 
@@ -578,7 +674,7 @@ class FakeD1 {
 
 function storedSnapshot(provider, payload, { fetchedAt, freshUntil }) {
   return {
-    id: `snapshot-${provider}`,
+    id: `snapshot-${provider}-${fetchedAt}`,
     provider,
     status: "ready",
     publicPayloadJson: JSON.stringify(payload),
@@ -591,6 +687,17 @@ function storedSnapshot(provider, payload, { fetchedAt, freshUntil }) {
 
 async function encryptedMyAnimeListCredential(key) {
   return encryptCredential({ accessToken: "repository-token" }, key, "myanimelist");
+}
+
+async function encryptedSteamCredential(key) {
+  return encryptCredential(
+    {
+      apiKey: "a".repeat(32),
+      steamId: "76561198000000000",
+    },
+    key,
+    "steam",
+  );
 }
 
 async function waitFor(predicate, attempts = 100) {
@@ -844,5 +951,342 @@ test("refresh rejects unsafe provider output before writing a snapshot", async (
     !database.statementLog.some(({ sql }) =>
       sql.includes("INSERT INTO connector_snapshots"),
     ),
+  );
+});
+
+test("Steam snapshots expire publicly after 72 hours", async () => {
+  const now = Date.now();
+  const payload = {
+    provider: "steam",
+    profileUrl:
+      "https://steamcommunity.com/profiles/76561198000000000",
+    coverage: "Public Steam game details returned at sync",
+    totals: {
+      publicGameCount: 1,
+      playedGameCount: 1,
+      totalHoursRounded: 10,
+    },
+    topPlayed: [],
+    recent: [],
+  };
+  const database = new FakeD1({
+    snapshots: [
+      storedSnapshot("steam", payload, {
+        fetchedAt: new Date(now - 73 * 60 * 60 * 1000).toISOString(),
+        freshUntil: new Date(now - 61 * 60 * 60 * 1000).toISOString(),
+      }),
+    ],
+  });
+
+  const result = await withRuntimeBindings({ DB: database }, () =>
+    getPublicConnectorSnapshot("steam"),
+  );
+  assert.deepEqual(result, {
+    status: "unavailable",
+    provider: "steam",
+    reason: "stale_expired",
+  });
+});
+
+test("Steam visibility tombstone blocks every older ready snapshot", async () => {
+  const database = new FakeD1({
+    snapshots: [
+      storedSnapshot(
+        "steam",
+        {
+          provider: "steam",
+          profileUrl:
+            "https://steamcommunity.com/profiles/76561198000000000",
+        },
+        {
+          fetchedAt: "2026-07-29T00:00:00.000Z",
+          freshUntil: "2026-07-29T12:00:00.000Z",
+        },
+      ),
+      {
+        id: "steam-withheld",
+        provider: "steam",
+        status: "withheld",
+        publicPayloadJson: "{}",
+        fetchedAt: "2026-07-30T00:00:00.000Z",
+        freshUntil: "2026-07-30T00:00:00.000Z",
+        etag: null,
+        itemCount: 0,
+      },
+    ],
+  });
+
+  const result = await withRuntimeBindings({ DB: database }, () =>
+    getPublicConnectorSnapshot("steam"),
+  );
+  assert.deepEqual(result, {
+    status: "unavailable",
+    provider: "steam",
+    reason: "visibility_withheld",
+  });
+});
+
+test("Steam visibility loss writes one tombstone and purges prior public state", async () => {
+  const key = Buffer.alloc(32, 13).toString("base64");
+  const credential = await encryptedSteamCredential(key);
+  const database = new FakeD1({
+    credentials: { steam: credential },
+    snapshots: [
+      storedSnapshot(
+        "steam",
+        {
+          provider: "steam",
+          profileUrl:
+            "https://steamcommunity.com/profiles/76561198000000000",
+        },
+        {
+          fetchedAt: "2026-07-29T00:00:00.000Z",
+          freshUntil: "2026-07-29T12:00:00.000Z",
+        },
+      ),
+    ],
+    runs: [
+      {
+        id: "previous-steam-sync",
+        provider: "steam",
+        trigger: "manual",
+        status: "complete",
+        startedAt: "2026-07-29T00:00:00.000Z",
+      },
+    ],
+  });
+  const responses = [
+    jsonResponse({
+      response: {
+        players: [{ steamid: "76561198000000000" }],
+      },
+    }),
+    jsonResponse({ response: {} }),
+  ];
+
+  const result = await withRuntimeBindings(
+    {
+      DB: database,
+      CONNECTOR_ENCRYPTION_KEY: key,
+      STEAM_DATA_STORAGE_COUNTRIES: "United States",
+    },
+    () =>
+      withFetch(
+        async () => responses.shift(),
+        () => refreshConnector("steam", "manual", "anish@example.com"),
+      ),
+  );
+
+  assert.equal(result.status, "withheld");
+  assert.equal(database.snapshots.length, 1);
+  assert.equal(database.snapshots[0].status, "withheld");
+  assert.equal(database.runs.length, 1);
+  assert.equal(database.runs[0].status, "withheld");
+  const publicResult = await withRuntimeBindings({ DB: database }, () =>
+    getPublicConnectorSnapshot("steam"),
+  );
+  assert.equal(publicResult.status, "unavailable");
+  assert.equal(publicResult.reason, "visibility_withheld");
+});
+
+test("successful Steam refresh retains only the latest two sanitized rows", async () => {
+  const key = Buffer.alloc(32, 15).toString("base64");
+  const credential = await encryptedSteamCredential(key);
+  const database = new FakeD1({
+    credentials: { steam: credential },
+    snapshots: [
+      storedSnapshot(
+        "steam",
+        {
+          provider: "steam",
+          profileUrl:
+            "https://steamcommunity.com/profiles/76561198000000000",
+        },
+        {
+          fetchedAt: "2026-07-28T00:00:00.000Z",
+          freshUntil: "2026-07-28T12:00:00.000Z",
+        },
+      ),
+      storedSnapshot(
+        "steam",
+        {
+          provider: "steam",
+          profileUrl:
+            "https://steamcommunity.com/profiles/76561198000000000",
+        },
+        {
+          fetchedAt: "2026-07-29T00:00:00.000Z",
+          freshUntil: "2026-07-29T12:00:00.000Z",
+        },
+      ),
+    ],
+  });
+  const responses = [
+    jsonResponse({
+      response: {
+        players: [{ steamid: "76561198000000000" }],
+      },
+    }),
+    jsonResponse({
+      response: {
+        game_count: 1,
+        games: [
+          {
+            appid: 10,
+            name: "Safe Game",
+            playtime_forever: 600,
+          },
+        ],
+      },
+    }),
+    jsonResponse({
+      response: {
+        total_count: 1,
+        games: [
+          {
+            appid: 10,
+            name: "Safe Game",
+            playtime_forever: 600,
+            playtime_2weeks: 60,
+          },
+        ],
+      },
+    }),
+  ];
+
+  const result = await withRuntimeBindings(
+    {
+      DB: database,
+      CONNECTOR_ENCRYPTION_KEY: key,
+      STEAM_DATA_STORAGE_COUNTRIES: "United States",
+    },
+    () =>
+      withFetch(
+        async () => responses.shift(),
+        () => refreshConnector("steam", "manual", "anish@example.com"),
+      ),
+  );
+
+  assert.equal(result.status, "complete");
+  assert.equal(database.snapshots.length, 2);
+  assert(
+    database.snapshots.every(
+      (snapshot) =>
+        !snapshot.publicPayloadJson.includes("a".repeat(32)) &&
+        snapshot.status === "ready",
+    ),
+  );
+});
+
+test("Steam disconnect deletes its credential, snapshots, and sync history", async () => {
+  const key = Buffer.alloc(32, 17).toString("base64");
+  const credential = await encryptedSteamCredential(key);
+  const database = new FakeD1({
+    credentials: { steam: credential },
+    snapshots: [
+      storedSnapshot(
+        "steam",
+        {
+          provider: "steam",
+          profileUrl:
+            "https://steamcommunity.com/profiles/76561198000000000",
+        },
+        {
+          fetchedAt: "2026-07-30T00:00:00.000Z",
+          freshUntil: "2026-07-30T12:00:00.000Z",
+        },
+      ),
+    ],
+    runs: [
+      {
+        id: "previous-steam-sync",
+        provider: "steam",
+        trigger: "manual",
+        status: "complete",
+        startedAt: "2026-07-30T00:00:00.000Z",
+      },
+    ],
+  });
+
+  await withRuntimeBindings({ DB: database }, () =>
+    deleteConnectorCredential("steam", "anish@example.com"),
+  );
+  assert.equal(database.credentials.has("steam"), false);
+  assert.equal(database.snapshots.length, 0);
+  assert.equal(database.runs.length, 0);
+});
+
+test("Steam release gate blocks sync until storage countries are disclosed", async () => {
+  const database = new FakeD1();
+  let fetchCalls = 0;
+  const result = await withRuntimeBindings({ DB: database }, () =>
+    withFetch(async () => {
+      fetchCalls += 1;
+      return jsonResponse({});
+    }, () => refreshConnector("steam", "manual", "anish@example.com")),
+  );
+
+  assert.deepEqual(result, {
+    status: "setup_required",
+    provider: "steam",
+    reason: "storage_disclosure",
+  });
+  assert.equal(fetchCalls, 0);
+  assert.equal(database.runs.length, 0);
+});
+
+test("Steam storage countries accept explicit countries and reject placeholders", async () => {
+  assert.equal(
+    await withRuntimeBindings(
+      { STEAM_DATA_STORAGE_COUNTRIES: "United States, Canada" },
+      () => steamStorageCountries(),
+    ),
+    "United States, Canada",
+  );
+  for (const value of [
+    "unknown",
+    "global",
+    "worldwide",
+    "United States<script>",
+    "https://example.com",
+  ]) {
+    assert.equal(
+      await withRuntimeBindings(
+        { STEAM_DATA_STORAGE_COUNTRIES: value },
+        () => steamStorageCountries(),
+      ),
+      null,
+    );
+  }
+});
+
+test("Steam credentials are encrypted as one provider-bound object", async () => {
+  const key = Buffer.alloc(32, 19).toString("base64");
+  const apiKey = "b".repeat(32);
+  const steamId = "76561198000000000";
+  const database = new FakeD1();
+
+  const result = await withRuntimeBindings(
+    {
+      DB: database,
+      CONNECTOR_ENCRYPTION_KEY: key,
+      STEAM_DATA_STORAGE_COUNTRIES: "United States",
+    },
+    () =>
+      saveConnectorCredential(
+        "steam",
+        { apiKey, steamId },
+        "anish@example.com",
+      ),
+  );
+  assert.deepEqual(result, { status: "saved" });
+
+  const encrypted = database.credentials.get("steam");
+  assert(encrypted);
+  assert.equal(JSON.stringify(encrypted).includes(apiKey), false);
+  assert.equal(JSON.stringify(encrypted).includes(steamId), false);
+  assert.deepEqual(
+    await decryptCredential(encrypted, key, "steam"),
+    { apiKey, steamId },
   );
 });

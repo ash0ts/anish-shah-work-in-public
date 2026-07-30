@@ -21,9 +21,7 @@ export function SiteHeader() {
           </Link>
         ))}
       </nav>
-      <Link className="header-index-link" href="/work">
-        Public index <span aria-hidden="true">↗</span>
-      </Link>
+      <span className="header-context">Applied AI · New York</span>
       <details className="mobile-menu">
         <summary>Menu</summary>
         <nav aria-label="Mobile navigation">

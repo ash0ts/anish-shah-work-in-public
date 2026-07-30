@@ -25,19 +25,34 @@ export default async function SourcesPage() {
     year: "numeric",
     timeZone: "UTC",
   }).format(new Date(bundle.generatedAt));
+  const entityById = new Map(
+    bundle.entities.map((entity) => [entity.id, entity]),
+  );
   const sourceEntries = bundle.evidence.map((source) => ({
     source,
-    linkedWork: bundle.items
-      .filter(
-        (item) =>
-          item.publicationState === "public" &&
-          item.evidenceIds.includes(source.id),
-      )
-      .map((item) => ({
-        id: item.id,
-        label: item.title,
-        href: `/work/${item.slug}`,
-      })),
+    linkedWork: [
+      ...new Map(
+        bundle.items
+          .filter(
+            (item) =>
+              item.publicationState === "public" &&
+              item.evidenceIds.includes(source.id),
+          )
+          .flatMap((item) => {
+            const entity = entityById.get(item.canonicalEntityId);
+            return entity
+              ? [[
+                  entity.id,
+                  {
+                    id: entity.id,
+                    label: entity.displayTitle,
+                    href: `/work/${entity.slug}#${item.id}`,
+                  },
+                ] as const]
+              : [];
+          }),
+      ).values(),
+    ],
     linkedClaims: metrics
       .filter((metric) => metric.publicEvidenceIds.includes(source.id))
       .map((metric) => ({
@@ -61,6 +76,12 @@ export default async function SourcesPage() {
           {methodology?.body ??
             "Public counts come from the public inventory. Internally derived outcomes are rounded, dated, and qualified."}
         </p>
+        <div className="v11-source-accounting">
+          <span>{bundle.sourceSummary.footprintRows} footprint rows</span>
+          <span>{bundle.sourceSummary.impactRows} impact rows</span>
+          <span>{bundle.sourceSummary.supplementalArtifacts} verified supplements</span>
+          <span>{bundle.sourceSummary.footprintBackedUniqueWorks} footprint-backed works</span>
+        </div>
       </header>
 
       <section className="method-grid" aria-label="Counting methodology">
@@ -68,8 +89,9 @@ export default async function SourcesPage() {
           <span>Count</span>
           <h2>One underlying work stays one work.</h2>
           <p>
-            Recordings, translations, mirrors, profiles, excerpts, and evidence
-            pages remain discoverable but cannot inflate canonical totals.
+            All {bundle.sourceSummary.publicItems} public forms remain
+            discoverable. Recordings, translations, mirrors, profiles,
+            excerpts, and evidence pages cannot inflate unique-work totals.
           </p>
         </article>
         <article>

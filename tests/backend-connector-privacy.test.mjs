@@ -41,6 +41,13 @@ test("connector profile URLs use exact HTTPS host and path allowlists", () => {
     ),
     "https://hardcover.app/@anish_shah",
   );
+  assert.equal(
+    normalizeConnectorProfileUrl(
+      "steam",
+      "https://steamcommunity.com/profiles/76561198000000000/",
+    ),
+    "https://steamcommunity.com/profiles/76561198000000000",
+  );
 
   const rejected = [
     ["myanimelist", "http://myanimelist.net/profile/anish"],
@@ -55,6 +62,11 @@ test("connector profile URLs use exact HTTPS host and path allowlists", () => {
     ["hardcover", "https://api.hardcover.app/@anish"],
     ["hardcover", "https://hardcover.app/@anish?token=secret"],
     ["hardcover", "file:///Users/ashah/private"],
+    ["steam", "http://steamcommunity.com/profiles/76561198000000000"],
+    ["steam", "https://api.steampowered.com/profiles/76561198000000000"],
+    ["steam", "https://steamcommunity.com/id/anish"],
+    ["steam", "https://key@steamcommunity.com/profiles/76561198000000000"],
+    ["steam", "https://steamcommunity.com/profiles/76561198000000000?key=x"],
   ];
 
   for (const [provider, value] of rejected) {
@@ -75,6 +87,38 @@ test("connector public payload policy permits only the allowlisted profile URL",
   assert.deepEqual(
     parseStoredConnectorPublicPayload("myanimelist", JSON.stringify(safe)),
     safe,
+  );
+  const safeSteam = {
+    provider: "steam",
+    profileUrl:
+      "https://steamcommunity.com/profiles/76561198000000000",
+    coverage: "Public Steam game details returned at sync",
+    totals: {
+      publicGameCount: 1,
+      playedGameCount: 1,
+      totalHoursRounded: 10,
+    },
+    topPlayed: [
+      { appId: "10", title: "Safe Game", hoursRounded: 10 },
+    ],
+    recent: [],
+    syncedAt,
+    freshUntil,
+  };
+  assert.equal(validateConnectorPublicPayload("steam", safeSteam), true);
+  assert.equal(
+    validateConnectorPublicPayload("steam", {
+      ...safeSteam,
+      apiKey: "must-never-persist",
+    }),
+    false,
+  );
+  assert.equal(
+    validateConnectorPublicPayload("steam", {
+      ...safeSteam,
+      metadata: { steam_id: "76561198000000000" },
+    }),
+    false,
   );
 
   const unsafePayloads = [

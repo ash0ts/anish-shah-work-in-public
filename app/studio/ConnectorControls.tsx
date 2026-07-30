@@ -11,10 +11,15 @@ type Props = {
 const providerNames = {
   myanimelist: "MyAnimeList",
   hardcover: "Hardcover",
+  steam: "Steam",
 } as const;
 
-export function ConnectorControls({ connector }: Props) {
+export function ConnectorControls({
+  connector,
+  steamStorageCountries,
+}: Props & { steamStorageCountries: string | null }) {
   const [secret, setSecret] = useState("");
+  const [steamId, setSteamId] = useState("");
   const [pending, setPending] = useState<
     "save" | "refresh" | "disconnect" | null
   >(null);
@@ -26,7 +31,9 @@ export function ConnectorControls({ connector }: Props) {
     if (
       action === "disconnect" &&
       !window.confirm(
-        `Disconnect ${providerNames[connector.provider]}? The encrypted credential will be deleted, while the last public snapshot remains published.`,
+        connector.provider === "steam"
+          ? "Disconnect Steam? The encrypted key, every stored Steam snapshot, and Steam sync history will be deleted and unpublished."
+          : `Disconnect ${providerNames[connector.provider]}? The encrypted credential will be deleted, while the last public snapshot remains published.`,
       )
     ) {
       return;
@@ -47,10 +54,18 @@ export function ConnectorControls({ connector }: Props) {
             : "POST",
         headers:
           action === "save" ? { "content-type": "application/json" } : undefined,
-        body: action === "save" ? JSON.stringify({ secret }) : undefined,
+        body:
+          action === "save"
+            ? JSON.stringify(
+                connector.provider === "steam"
+                  ? { apiKey: secret, steamId }
+                  : { secret },
+              )
+            : undefined,
       });
       const result = (await response.json()) as {
         error?: string;
+        message?: string;
         status?: string;
         itemCount?: number;
       };
@@ -60,13 +75,19 @@ export function ConnectorControls({ connector }: Props) {
       }
 
       setSecret("");
+      setSteamId("");
       setMessage(
         action === "save"
           ? "Credential encrypted and saved. You can sync now."
           : action === "disconnect"
-            ? "Credential removed. The last public snapshot was preserved."
+            ? connector.provider === "steam"
+              ? "Steam disconnected. Every stored Steam snapshot and Steam sync-history record was deleted."
+              : "Credential removed. The last public snapshot was preserved."
             : result.status === "already_running"
               ? "A sync is already running."
+              : result.status === "withheld"
+                ? result.message ??
+                  "Steam game details are not public, so the stream was unpublished."
               : `Sync complete${typeof result.itemCount === "number" ? ` · ${result.itemCount} items` : ""}.`,
       );
       window.setTimeout(() => window.location.reload(), 700);
@@ -123,38 +144,85 @@ export function ConnectorControls({ connector }: Props) {
             void request("save");
           }}
         >
+          {connector.provider === "steam" ? (
+            <>
+              <label htmlFor="steam-id">SteamID64</label>
+              <input
+                className={styles.fullInput}
+                id="steam-id"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]{17}"
+                value={steamId}
+                minLength={17}
+                maxLength={17}
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(event) => setSteamId(event.target.value)}
+                placeholder="17-digit public SteamID64"
+                required
+              />
+            </>
+          ) : null}
           <label htmlFor={`${connector.provider}-secret`}>
             {connector.provider === "myanimelist"
               ? "OAuth access token"
-              : "API authorization token"}
+              : connector.provider === "hardcover"
+                ? "API authorization token"
+                : "Web API key"}
           </label>
           <div className={styles.inputRow}>
             <input
               id={`${connector.provider}-secret`}
               type="password"
               value={secret}
-              minLength={8}
-              maxLength={8192}
+              minLength={connector.provider === "steam" ? 32 : 8}
+              maxLength={connector.provider === "steam" ? 32 : 8192}
               autoComplete="off"
               spellCheck={false}
               onChange={(event) => setSecret(event.target.value)}
               placeholder="Paste once; it will not be shown again"
               required
             />
-            <button type="submit" disabled={pending !== null}>
+            <button
+              type="submit"
+              disabled={
+                pending !== null ||
+                (connector.provider === "steam" &&
+                  !steamStorageCountries)
+              }
+            >
               {pending === "save" ? "Saving…" : "Connect"}
             </button>
           </div>
           <p>
-            Stored with AES-256-GCM. The public API receives only the normalized
-            snapshot.
+            {connector.provider === "steam" ? (
+              <>
+                Requires a Public Steam profile and Public Game details.
+                Connecting authorizes automatic public-only refreshes no more
+                than every 12 hours; the owner can refresh manually. Read the{" "}
+                <a href="/privacy">data and retention policy</a>.
+                {steamStorageCountries
+                  ? ` Sanitized snapshots are disclosed as stored in ${steamStorageCountries}.`
+                  : " Connecting is disabled until the storage-country release gate is configured."}
+              </>
+            ) : (
+              <>
+                Stored with AES-256-GCM. The public API receives only the
+                normalized snapshot.
+              </>
+            )}
           </p>
         </form>
       ) : (
         <div className={styles.actionRow}>
           <button
             type="button"
-            disabled={pending !== null}
+            disabled={
+              pending !== null ||
+              (connector.provider === "steam" &&
+                !steamStorageCountries)
+            }
             onClick={() => void request("refresh")}
           >
             {pending === "refresh" ? "Syncing…" : "Refresh now"}

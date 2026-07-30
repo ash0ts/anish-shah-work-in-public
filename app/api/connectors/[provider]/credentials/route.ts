@@ -52,24 +52,57 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const secret =
-    typeof payload === "object" &&
-    payload !== null &&
-    "secret" in payload &&
-    typeof payload.secret === "string"
-      ? payload.secret.trim()
-      : "";
-  if (secret.length < 8 || secret.length > 8192) {
-    return Response.json(
-      { error: "Credential must be between 8 and 8192 characters." },
-      { status: 400 },
-    );
+  let credentialInput:
+    | string
+    | { apiKey: string; steamId: string };
+  if (authorized.provider === "steam") {
+    const apiKey =
+      typeof payload === "object" &&
+      payload !== null &&
+      "apiKey" in payload &&
+      typeof payload.apiKey === "string"
+        ? payload.apiKey.trim()
+        : "";
+    const steamId =
+      typeof payload === "object" &&
+      payload !== null &&
+      "steamId" in payload &&
+      typeof payload.steamId === "string"
+        ? payload.steamId.trim()
+        : "";
+    if (
+      !apiKey ||
+      apiKey.length > 128 ||
+      !steamId ||
+      steamId.length > 32
+    ) {
+      return Response.json(
+        { error: "A Steam Web API key and SteamID64 are required." },
+        { status: 400 },
+      );
+    }
+    credentialInput = { apiKey, steamId };
+  } else {
+    const secret =
+      typeof payload === "object" &&
+      payload !== null &&
+      "secret" in payload &&
+      typeof payload.secret === "string"
+        ? payload.secret.trim()
+        : "";
+    if (secret.length < 8 || secret.length > 8192) {
+      return Response.json(
+        { error: "Credential must be between 8 and 8192 characters." },
+        { status: 400 },
+      );
+    }
+    credentialInput = secret;
   }
 
   try {
     const result = await saveConnectorCredential(
       authorized.provider,
-      secret,
+      credentialInput,
       authorized.user.email,
     );
     const responseBody =
@@ -79,9 +112,13 @@ export async function POST(request: Request, context: RouteContext) {
             ...result,
             error:
               result.reason === "credential"
-                ? "The provider credential is empty or invalid."
+                ? authorized.provider === "steam"
+                  ? "Use a valid 32-character Steam Web API key and 17-digit SteamID64."
+                  : "The provider credential is empty or invalid."
                 : result.reason === "encryption_key"
                 ? "Connector encryption is not configured correctly."
+                : result.reason === "storage_disclosure"
+                  ? "Configure the truthful Steam data storage-country disclosure before connecting."
                 : "The site database is not ready.",
           };
     return Response.json(responseBody, {
@@ -112,7 +149,12 @@ export async function DELETE(request: Request, context: RouteContext) {
       authorized.user.email,
     );
     return Response.json(
-      { status: "disconnected", provider: authorized.provider },
+      {
+        status: "disconnected",
+        provider: authorized.provider,
+        snapshotsDeleted: authorized.provider === "steam",
+        syncHistoryDeleted: authorized.provider === "steam",
+      },
       { headers: { "cache-control": "private, no-store" } },
     );
   } catch (error) {

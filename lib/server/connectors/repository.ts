@@ -15,16 +15,27 @@ import {
   validateConnectorPublicPayload,
 } from "./public-payload-policy";
 import {
+  fetchSteamSnapshot,
+  normalizeSteamApiKey,
+  normalizeSteamId,
+} from "./steam";
+import { steamStorageCountries } from "./steam-policy";
+import {
   CONNECTOR_PROVIDERS,
   ConnectorFetchError,
+  type ConnectorCredential,
+  type ConnectorCredentialInput,
+  type ConnectorFetchResult,
   type ConnectorProvider,
   type HardcoverCredential,
   type MyAnimeListCredential,
+  type SteamCredential,
   type SyncTrigger,
 } from "./types";
 
 const FRESHNESS_WINDOW_MS = 12 * 60 * 60 * 1000;
 const RUN_LOCK_WINDOW_MS = 10 * 60 * 1000;
+const STEAM_MAX_PUBLIC_AGE_MS = 72 * 60 * 60 * 1000;
 
 export type ConnectorHealth = {
   provider: ConnectorProvider;
@@ -35,6 +46,7 @@ export type ConnectorHealth = {
     | "healthy"
     | "stale"
     | "syncing"
+    | "visibility_required"
     | "error";
   lastSyncedAt: string | null;
   freshUntil: string | null;
@@ -47,6 +59,7 @@ export type StudioOverview =
   | {
       status: "ready";
       encryptionConfigured: boolean;
+      steamStorageCountries: string | null;
       publicationCounts: Record<string, number>;
       connectors: ConnectorHealth[];
       latestPublication: {
@@ -60,6 +73,7 @@ export type StudioOverview =
       status: "database_setup_required";
       reason: "binding_unavailable" | "schema_unavailable" | "database_error";
       encryptionConfigured: boolean;
+      steamStorageCountries: string | null;
       connectors: ConnectorHealth[];
     };
 
@@ -79,6 +93,8 @@ export type PublicSnapshotResult =
         | "not_configured"
         | "never_synced"
         | "invalid_snapshot"
+        | "visibility_withheld"
+        | "stale_expired"
         | "database_unavailable";
     };
 
@@ -98,9 +114,19 @@ export type RefreshResult =
       provider: ConnectorProvider;
     }
   | {
+      status: "withheld";
+      provider: "steam";
+      reason: "visibility_unavailable";
+      fetchedAt: string;
+    }
+  | {
       status: "setup_required";
       provider: ConnectorProvider;
-      reason: "database" | "credential" | "encryption_key";
+      reason:
+        | "database"
+        | "credential"
+        | "encryption_key"
+        | "storage_disclosure";
     }
   | {
       status: "failed";
@@ -137,6 +163,7 @@ export async function getStudioOverview(): Promise<StudioOverview> {
       status: "database_setup_required",
       reason: "binding_unavailable",
       encryptionConfigured: Boolean(runtimeValue("CONNECTOR_ENCRYPTION_KEY")),
+      steamStorageCountries: steamStorageCountries(),
       connectors: CONNECTOR_PROVIDERS.map(placeholderHealth),
     };
   }
@@ -170,15 +197,16 @@ export async function getStudioOverview(): Promise<StudioOverview> {
         .first<{ provider: string }>();
       const snapshot = await database
         .prepare(
-          `SELECT fetched_at AS fetchedAt, fresh_until AS freshUntil,
+          `SELECT status, fetched_at AS fetchedAt, fresh_until AS freshUntil,
                   item_count AS itemCount
            FROM connector_snapshots
-           WHERE provider = ? AND status = 'ready'
+           WHERE provider = ?
            ORDER BY fetched_at DESC
            LIMIT 1`,
         )
         .bind(provider)
         .first<{
+          status: string;
           fetchedAt: string;
           freshUntil: string;
           itemCount: number;
@@ -199,11 +227,18 @@ export async function getStudioOverview(): Promise<StudioOverview> {
         ? Date.parse(snapshot.freshUntil) <= Date.now()
         : false;
       let status: ConnectorHealth["status"] = "never_synced";
-      if (!configured) status = "setup_required";
+      if (provider === "steam" && !steamStorageCountries()) {
+        status = "setup_required";
+      } else if (!configured) status = "setup_required";
       else if (run?.status === "running") status = "syncing";
-      else if (run?.status === "failed") status = "error";
-      else if (snapshot && stale) status = "stale";
-      else if (snapshot) status = "healthy";
+      else if (
+        provider === "steam" &&
+        (snapshot?.status === "withheld" || run?.status === "withheld")
+      ) {
+        status = "visibility_required";
+      } else if (run?.status === "failed") status = "error";
+      else if (snapshot?.status === "ready" && stale) status = "stale";
+      else if (snapshot?.status === "ready") status = "healthy";
 
       connectors.push({
         provider,
@@ -213,7 +248,8 @@ export async function getStudioOverview(): Promise<StudioOverview> {
         freshUntil: snapshot?.freshUntil ?? null,
         lastRunStatus: run?.status ?? null,
         lastErrorCode: run?.errorCode ?? null,
-        itemCount: snapshot ? asCount(snapshot.itemCount) : null,
+        itemCount:
+          snapshot?.status === "ready" ? asCount(snapshot.itemCount) : null,
       });
     }
 
@@ -235,6 +271,7 @@ export async function getStudioOverview(): Promise<StudioOverview> {
     return {
       status: "ready",
       encryptionConfigured: Boolean(runtimeValue("CONNECTOR_ENCRYPTION_KEY")),
+      steamStorageCountries: steamStorageCountries(),
       publicationCounts,
       connectors,
       latestPublication: latestPublication
@@ -249,6 +286,7 @@ export async function getStudioOverview(): Promise<StudioOverview> {
       status: "database_setup_required",
       reason: classifyDatabaseError(error),
       encryptionConfigured: Boolean(runtimeValue("CONNECTOR_ENCRYPTION_KEY")),
+      steamStorageCountries: steamStorageCountries(),
       connectors: CONNECTOR_PROVIDERS.map(placeholderHealth),
     };
   }
@@ -265,27 +303,50 @@ export async function getPublicConnectorSnapshot(
   try {
     const snapshots = await database
       .prepare(
-        `SELECT public_payload_json AS publicPayloadJson,
+        `SELECT status, public_payload_json AS publicPayloadJson,
                 fetched_at AS fetchedAt,
                 fresh_until AS freshUntil
          FROM connector_snapshots
-         WHERE provider = ? AND status = 'ready'
+         WHERE provider = ?
          ORDER BY fetched_at DESC
          LIMIT 25`,
       )
       .bind(provider)
       .all<{
+        status: string;
         publicPayloadJson: string;
         fetchedAt: string;
         freshUntil: string;
       }>();
 
     for (const snapshot of snapshots.results ?? []) {
+      if (provider === "steam" && snapshot.status === "withheld") {
+        return {
+          status: "unavailable",
+          provider,
+          reason: "visibility_withheld",
+        };
+      }
+      if (snapshot.status !== "ready") continue;
+
       const payload = parseStoredConnectorPublicPayload(
         provider,
         snapshot.publicPayloadJson,
       );
       if (!payload) continue;
+      if (provider === "steam") {
+        const fetchedTime = Date.parse(snapshot.fetchedAt);
+        if (
+          !Number.isFinite(fetchedTime) ||
+          Date.now() - fetchedTime > STEAM_MAX_PUBLIC_AGE_MS
+        ) {
+          return {
+            status: "unavailable",
+            provider,
+            reason: "stale_expired",
+          };
+        }
+      }
 
       return {
         status: "ready",
@@ -326,7 +387,7 @@ export async function getPublicConnectorSnapshot(
 
 export async function saveConnectorCredential(
   provider: ConnectorProvider,
-  secret: string,
+  input: ConnectorCredentialInput,
   actorEmail: string,
 ): Promise<
   | { status: "saved" }
@@ -341,18 +402,29 @@ export async function saveConnectorCredential(
   if (!encryptionKey) {
     return { status: "setup_required", reason: "encryption_key" };
   }
+  if (provider === "steam" && !steamStorageCountries()) {
+    return { status: "setup_required", reason: "storage_disclosure" };
+  }
 
-  const normalizedSecret =
-    provider === "myanimelist"
-      ? normalizeMyAnimeListAccessToken(secret)
-      : secret.trim();
-  if (!normalizedSecret) {
+  let credential: ConnectorCredential | null = null;
+  if (provider === "myanimelist" && typeof input === "string") {
+    const accessToken = normalizeMyAnimeListAccessToken(input);
+    if (accessToken) credential = { accessToken };
+  } else if (provider === "hardcover" && typeof input === "string") {
+    const authorization = input.trim();
+    if (authorization) credential = { authorization };
+  } else if (
+    provider === "steam" &&
+    typeof input === "object" &&
+    input !== null
+  ) {
+    const apiKey = normalizeSteamApiKey(input.apiKey);
+    const steamId = normalizeSteamId(input.steamId);
+    if (apiKey && steamId) credential = { apiKey, steamId };
+  }
+  if (!credential) {
     return { status: "invalid", reason: "credential" };
   }
-  const credential =
-    provider === "myanimelist"
-      ? { accessToken: normalizedSecret }
-      : { authorization: normalizedSecret };
   let encrypted: EncryptedCredential;
   try {
     encrypted = await encryptCredential(credential, encryptionKey, provider);
@@ -385,7 +457,9 @@ export async function saveConnectorCredential(
         encrypted.keyVersion,
         provider === "myanimelist"
           ? "Owner OAuth access token"
-          : "Owner API authorization token",
+          : provider === "hardcover"
+            ? "Owner API authorization token"
+            : "Owner Web API key and SteamID64",
         "[]",
         now,
         now,
@@ -414,20 +488,45 @@ export async function deleteConnectorCredential(
     database
       .prepare(`DELETE FROM connector_credentials WHERE provider = ?`)
       .bind(provider),
+    ...(provider === "steam"
+      ? [
+          database
+            .prepare(`DELETE FROM connector_snapshots WHERE provider = ?`)
+            .bind(provider),
+          database
+            .prepare(`DELETE FROM sync_runs WHERE provider = ?`)
+            .bind(provider),
+          database
+            .prepare(
+              `DELETE FROM audit_log
+               WHERE entity_type = 'connector' AND entity_id = ?`,
+            )
+            .bind(provider),
+        ]
+      : []),
     database
       .prepare(
         `INSERT INTO audit_log (
            id, actor_email, action, entity_type, entity_id, details_json, created_at
-         ) VALUES (?, ?, 'connector.credential_deleted', 'connector', ?, '{}', ?)`,
+         ) VALUES (?, ?, 'connector.credential_deleted', 'connector', ?, ?, ?)`,
       )
-      .bind(crypto.randomUUID(), actorEmail, provider, now),
+      .bind(
+        crypto.randomUUID(),
+        actorEmail,
+        provider,
+        JSON.stringify({
+          snapshotsDeleted: provider === "steam",
+          syncHistoryDeleted: provider === "steam",
+        }),
+        now,
+      ),
   ]);
 }
 
 async function loadCredential(
   database: D1Database,
   provider: ConnectorProvider,
-): Promise<MyAnimeListCredential | HardcoverCredential | null> {
+): Promise<ConnectorCredential | null> {
   const row = await database
     .prepare(
       `SELECT ciphertext, iv, key_version AS keyVersion
@@ -447,9 +546,27 @@ async function loadCredential(
     );
   }
 
-  return decryptCredential<
-    MyAnimeListCredential | HardcoverCredential
-  >(row, encryptionKey, provider);
+  return decryptCredential<ConnectorCredential>(
+    row,
+    encryptionKey,
+    provider,
+  );
+}
+
+async function fetchConnectorSnapshot(
+  provider: ConnectorProvider,
+  credential: ConnectorCredential,
+): Promise<ConnectorFetchResult> {
+  switch (provider) {
+    case "myanimelist":
+      return fetchMyAnimeListSnapshot(
+        credential as MyAnimeListCredential,
+      );
+    case "hardcover":
+      return fetchHardcoverSnapshot(credential as HardcoverCredential);
+    case "steam":
+      return fetchSteamSnapshot(credential as SteamCredential);
+  }
 }
 
 function safeError(error: unknown): {
@@ -493,6 +610,13 @@ export async function refreshConnector(
   const database = databaseOrNull();
   if (!database) {
     return { status: "setup_required", provider, reason: "database" };
+  }
+  if (provider === "steam" && !steamStorageCountries()) {
+    return {
+      status: "setup_required",
+      provider,
+      reason: "storage_disclosure",
+    };
   }
 
   if (trigger === "stale_revalidate") {
@@ -570,10 +694,7 @@ export async function refreshConnector(
       return { status: "setup_required", provider, reason: "credential" };
     }
 
-    const result =
-      provider === "myanimelist"
-        ? await fetchMyAnimeListSnapshot(credential as MyAnimeListCredential)
-        : await fetchHardcoverSnapshot(credential as HardcoverCredential);
+    const result = await fetchConnectorSnapshot(provider, credential);
     const fetchedAt = new Date().toISOString();
     const freshUntil = new Date(
       Date.parse(fetchedAt) + FRESHNESS_WINDOW_MS,
@@ -609,6 +730,23 @@ export async function refreshConnector(
           result.etag ?? null,
           result.itemCount,
         ),
+      ...(provider === "steam"
+        ? [
+            database
+              .prepare(
+                `DELETE FROM connector_snapshots
+                 WHERE provider = ?
+                   AND id NOT IN (
+                     SELECT id
+                     FROM connector_snapshots
+                     WHERE provider = ?
+                     ORDER BY fetched_at DESC, id DESC
+                     LIMIT 2
+                   )`,
+              )
+              .bind(provider, provider),
+          ]
+        : []),
       database
         .prepare(
           `UPDATE sync_runs
@@ -641,6 +779,75 @@ export async function refreshConnector(
   } catch (error) {
     const failure = safeError(error);
     const finishedAt = new Date().toISOString();
+    if (provider === "steam" && failure.code === "visibility_unavailable") {
+      const tombstoneId = crypto.randomUUID();
+      try {
+        await database.batch([
+          database
+            .prepare(
+              `INSERT INTO connector_snapshots (
+                 id, provider, status, public_payload_json, fetched_at,
+                 fresh_until, etag, item_count
+               ) VALUES (?, ?, 'withheld', '{}', ?, ?, NULL, 0)`,
+            )
+            .bind(
+              tombstoneId,
+              provider,
+              finishedAt,
+              finishedAt,
+            ),
+          database
+            .prepare(
+              `DELETE FROM connector_snapshots
+               WHERE provider = ? AND id <> ?`,
+            )
+            .bind(provider, tombstoneId),
+          database
+            .prepare(
+              `UPDATE sync_runs
+               SET status = 'withheld', finished_at = ?, item_count = 0,
+                   http_status = 200, error_code = 'visibility_unavailable',
+                   error_message = 'Steam game details are not publicly visible.'
+               WHERE id = ?`,
+            )
+            .bind(finishedAt, runId),
+          database
+            .prepare(
+              `DELETE FROM sync_runs
+               WHERE provider = ? AND id <> ?`,
+            )
+            .bind(provider, runId),
+          database
+            .prepare(
+              `DELETE FROM audit_log
+               WHERE entity_type = 'connector' AND entity_id = ?`,
+            )
+            .bind(provider),
+          database
+            .prepare(
+              `INSERT INTO audit_log (
+                 id, actor_email, action, entity_type, entity_id, details_json, created_at
+               ) VALUES (?, ?, 'connector.visibility_withheld', 'connector', ?, ?, ?)`,
+            )
+            .bind(
+              crypto.randomUUID(),
+              requestedByEmail ?? "system",
+              provider,
+              JSON.stringify({ trigger }),
+              finishedAt,
+            ),
+        ]);
+        return {
+          status: "withheld",
+          provider,
+          reason: "visibility_unavailable",
+          fetchedAt: finishedAt,
+        };
+      } catch {
+        // Fall through to the generic safe failure path if D1 becomes
+        // unavailable while applying the privacy tombstone.
+      }
+    }
     try {
       await database.batch([
         database

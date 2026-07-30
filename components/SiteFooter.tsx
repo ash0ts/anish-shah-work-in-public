@@ -18,6 +18,7 @@ export function SiteFooter() {
       <div className="footer-bottom">
         <span>© {new Date().getFullYear()} Anish Shah</span>
         <span>Public work, carefully attributed.</span>
+        <Link href="/privacy">Privacy</Link>
         <Link href="/studio">Owner studio</Link>
       </div>
     </footer>

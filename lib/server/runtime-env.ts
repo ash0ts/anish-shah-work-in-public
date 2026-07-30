@@ -6,6 +6,7 @@ type RuntimeBindings = {
   CONNECTOR_ENCRYPTION_KEY?: string;
   MYANIMELIST_PROFILE_URL?: string;
   HARDCOVER_PROFILE_URL?: string;
+  STEAM_DATA_STORAGE_COUNTRIES?: string;
 };
 
 function cloudflareBindings(): RuntimeBindings {

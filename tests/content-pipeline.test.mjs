@@ -49,9 +49,25 @@ test(
 );
 
 test("public bundle preserves the complete footprint inventory", () => {
-  assert.equal(publicBundle.schemaVersion, "1.0");
+  assert.equal(publicBundle.schemaVersion, "1.1");
   assert.match(publicBundle.contentVersion, /^[a-f0-9]{16}$/);
-  assert.equal(publicBundle.items.length, 184);
+  assert.deepEqual(publicBundle.sourceSummary, {
+    footprintRows: 184,
+    impactRows: 85,
+    supplementalArtifacts: 2,
+    publicItems: 186,
+    footprintBackedUniqueWorks: 99,
+    supplementalUniqueWorks: 1,
+  });
+  assert.equal(publicBundle.items.length, 186);
+  assert.equal(
+    publicBundle.items.filter((item) => item.id.startsWith("item:fp-")).length,
+    184,
+  );
+  assert.equal(
+    publicBundle.items.filter((item) => item.id.startsWith("item:md-")).length,
+    2,
+  );
   assert.equal(publicBundle.metrics.length, 13);
 
   const expectedCategories = {
@@ -60,8 +76,8 @@ test("public bundle preserves the complete footprint inventory", () => {
     event: 49,
     external_reference: 24,
     mirror: 12,
-    open_source_pr: 21,
-    open_source_repo: 7,
+    open_source_pr: 22,
+    open_source_repo: 8,
     producer_credit: 4,
     profile: 6,
     recording: 23,
@@ -86,6 +102,7 @@ test("public bundle preserves the complete footprint inventory", () => {
 test("stable IDs and typed references resolve", () => {
   for (const values of [
     publicBundle.items,
+    publicBundle.entities,
     publicBundle.metrics,
     publicBundle.evidence,
     publicBundle.relations,
@@ -96,11 +113,26 @@ test("stable IDs and typed references resolve", () => {
   }
 
   const itemIds = new Set(publicBundle.items.map((item) => item.id));
+  const entityIds = new Set(publicBundle.entities.map((entity) => entity.id));
   const metricIds = new Set(publicBundle.metrics.map((metric) => metric.id));
   const evidenceIds = new Set(publicBundle.evidence.map((evidence) => evidence.id));
   const collectionIds = new Set(publicBundle.collections.map((collection) => collection.id));
-  const subjectIds = new Set([...itemIds, ...collectionIds, publicBundle.profile.id]);
+  const subjectIds = new Set([
+    ...itemIds,
+    ...entityIds,
+    ...collectionIds,
+    publicBundle.profile.id,
+  ]);
 
+  for (const item of publicBundle.items) {
+    assert.match(item.id, /^item:(?:fp|md)-\d{4}$/);
+    assert(item.legacyIds.length >= 1, item.id);
+    assert(entityIds.has(item.canonicalEntityId), item.canonicalEntityId);
+  }
+  for (const entity of publicBundle.entities) {
+    for (const itemId of entity.itemIds) assert(itemIds.has(itemId), itemId);
+    for (const parentId of entity.parentEntityIds) assert(entityIds.has(parentId), parentId);
+  }
   for (const relation of publicBundle.relations) {
     assert(itemIds.has(relation.fromId), relation.fromId);
     assert(itemIds.has(relation.toId), relation.toId);
@@ -140,6 +172,117 @@ test("every portfolio slug is stable and route-unique", () => {
   );
   assert.equal(new Set(pairedItems.map((item) => item.slug)).size, 2);
   assert(pairedItems.every((item) => item.slug.includes(`-${item.type}-`)));
+
+  const longTitle = publicBundle.items.find((item) =>
+    item.legacyIds.includes(
+      "article:2024-11-19:automated-medical-note-generation-fine-tuning-gpt-models-for-clinical-documentation-usin",
+    ),
+  );
+  assert(longTitle);
+  assert(!longTitle.slug.endsWith("-usin"));
+  assert(
+    longTitle.slugAliases.includes(
+      "automated-medical-note-generation-fine-tuning-gpt-models-for-clinical-documentation-usin",
+    ),
+  );
+});
+
+test("v1.1 relations and canonical group corrections are explicit", () => {
+  const byLegacyId = new Map(
+    publicBundle.items.flatMap((item) =>
+      item.legacyIds.map((legacyId) => [legacyId, item]),
+    ),
+  );
+  const recording = byLegacyId.get(
+    "recording:2025-10-06:architecting-and-orchestrating-ai-agents",
+  );
+  const correctEvent = byLegacyId.get(
+    "event:2025-10-06:architecting-and-orchestrating-ai-agents",
+  );
+  const wrongEvent = byLegacyId.get(
+    "event:2025-06-17:architecting-and-orchestrating-ai-agents",
+  );
+  assert(recording && correctEvent && wrongEvent);
+  assert(
+    publicBundle.relations.some(
+      (relation) =>
+        relation.predicate === "recording_of" &&
+        relation.fromId === recording.id &&
+        relation.toId === correctEvent.id,
+    ),
+  );
+  assert(
+    !publicBundle.relations.some(
+      (relation) =>
+        relation.predicate === "recording_of" &&
+        relation.fromId === recording.id &&
+        relation.toId === wrongEvent.id,
+    ),
+  );
+  assert.equal(recording.canonicalEntityId, correctEvent.canonicalEntityId);
+  assert.notEqual(recording.canonicalEntityId, wrongEvent.canonicalEntityId);
+
+  const evalForge = publicBundle.items.find((item) => item.id === "item:md-0002");
+  const primer = byLegacyId.get(
+    "external_reference:2024-09:you-need-evals-a-primer-and-new-techniques",
+  );
+  const fugue = byLegacyId.get("open_source_repo:undated:fugue");
+  assert(evalForge && primer && fugue);
+  assert(
+    publicBundle.relations.some(
+      (relation) =>
+        relation.predicate === "references" &&
+        relation.fromId === primer.id &&
+        relation.toId === evalForge.id,
+    ),
+  );
+  assert(
+    !publicBundle.relations.some(
+      (relation) =>
+        relation.predicate === "references" &&
+        relation.fromId === primer.id &&
+        relation.toId === fugue.id,
+    ),
+  );
+
+  const ptl19297 = publicBundle.items.find((item) => item.id === "item:md-0001");
+  assert.equal(
+    ptl19297?.urls[0]?.url,
+    "https://github.com/Lightning-AI/pytorch-lightning/pull/19297",
+  );
+  assert.equal(ptl19297?.canonicalEntityId, "entity:wk-0002");
+  assert.deepEqual(
+    publicBundle.entities.find((entity) => entity.id === "entity:wk-0002")?.childCounts,
+    { items: 3, occurrences: 0, artifacts: 3 },
+  );
+});
+
+test("public metrics have explicit scope and never imply collection inheritance", () => {
+  for (const metric of publicBundle.metrics) {
+    assert(
+      ["item", "work", "occurrence", "program", "collection", "portfolio"].includes(
+        metric.scope,
+      ),
+    );
+    assert(["direct", "associated", "contextual"].includes(metric.attribution));
+    assert(Array.isArray(metric.displaySurfaces));
+  }
+  assert.equal(
+    publicBundle.metrics.filter((metric) =>
+      metric.displaySurfaces.includes("item_detail"),
+    ).length,
+    5,
+  );
+  assert(
+    publicBundle.metrics
+      .filter((metric) => metric.displaySurfaces.includes("item_detail"))
+      .every((metric) => metric.scope === "work" && metric.attribution === "direct"),
+  );
+  assert(
+    publicBundle.metrics
+      .filter((metric) => metric.scope === "collection" || metric.scope === "program")
+      .every((metric) => !metric.displaySurfaces.includes("item_detail")),
+  );
 });
 
 test("known public URL correction and personal-stream narrative are present", () => {
@@ -161,7 +304,7 @@ test("known public URL correction and personal-stream narrative are present", ()
       {
         id: "narrative:play:personal-streams",
         title: "Outside the work",
-        body: "A consent-aware view of what Anish watches, reads, and moves through: owner-authorized MyAnimeList and Hardcover syncs, with Strava loaded only through official public embeds after visitor intent.",
+        body: "Four consent-aware streams outside the work: watch through owner-authorized MyAnimeList, read through owner-authorized Hardcover, play through Steam, and move through official public Strava embeds loaded only after visitor intent.",
         placement: "play",
         publicationState: "public",
       },
@@ -171,19 +314,29 @@ test("known public URL correction and personal-stream narrative are present", ()
 
 test("owner bundle retains source accounting when available", { skip: !existsSync(OWNER_PATH) }, () => {
   const ownerBundle = JSON.parse(readFileSync(OWNER_PATH, "utf8"));
-  assert.equal(ownerBundle.items.length, 184);
+  assert.equal(ownerBundle.items.length, 186);
+  assert.equal(
+    ownerBundle.items.filter(
+      (item) => item.sourceRecord?.snapshotId === "snapshot:public-footprint-csv",
+    ).length,
+    184,
+  );
   assert.equal(
     ownerBundle.metrics.filter((metric) => Object.hasOwn(metric, "sourceRecord")).length,
     85,
   );
-  assert.equal(ownerBundle.sourceSnapshots.length, 4);
+  assert.equal(ownerBundle.sourceSnapshots.length, 5);
   assert(ownerBundle.items.every((item) => item.sourceRecord?.fingerprint));
+  assert.deepEqual(ownerBundle.sourceSummary, publicBundle.sourceSummary);
 });
 
 test("generated schema exposes the canonical contract", () => {
   const schema = JSON.parse(readFileSync(SCHEMA_PATH, "utf8"));
-  assert.equal(schema.properties.schemaVersion.const, "1.0");
+  assert.equal(schema.properties.schemaVersion.const, "1.1");
+  assert(schema.required.includes("entities"));
+  assert(schema.required.includes("sourceSummary"));
   assert(schema.required.includes("sourceSnapshots"));
+  assert(schema.$defs.entity.required.includes("sourceBasis"));
   assert.equal(
     schema.$defs.item.properties.additionalDates.items.$ref,
     "#/$defs/additionalContentDate",
@@ -197,6 +350,13 @@ test("generated schema exposes the canonical contract", () => {
     "implements",
     "references",
   ]);
+  assert.deepEqual(schema.$defs.entity.properties.kind.enum, [
+    "work",
+    "occurrence",
+    "artifact",
+    "program",
+  ]);
+  assert(schema.$defs.metric.required.includes("displaySurfaces"));
 });
 
 test(

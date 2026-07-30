@@ -1,12 +1,12 @@
 # Webby-quality release review
 
 Review date: 2026-07-30
-Content version: `50bac7d3babb391a`
+Content version: `66ef8ac8ee193cb3`
 
 ## Content
 
 - The opening viewport states Anish Shah’s name, applied-AI focus, point of view, and the primary “Explore my work” action.
-- Eight selected works, three qualified impact moments, and the 2021–now trajectory lead into the complete 184-record archive.
+- Eight selected works, three qualified impact moments, and the 2021–now trajectory lead into the complete 184-source-record archive plus two Markdown-derived supplemental artifacts.
 - All public claims come from the 13 approved rounded projections. Qualifiers, periods, attribution, and public evidence remain attached.
 
 ## Structure and navigation
@@ -25,7 +25,7 @@ Content version: `50bac7d3babb391a`
 
 - The sanitized bundle is the sole substantive public source. Published D1 overrides may only order, feature, hide, or replace allowlisted plain-text wording and caveats.
 - Studio writes require Sign in with ChatGPT plus the exact-email owner allowlist. Connector secrets use authenticated encryption.
-- MyAnimeList and Hardcover use cached, last-known-good snapshots with 12-hour refresh throttling and duplicate-refresh locks. Strava remains consent-gated.
+- MyAnimeList and Hardcover use cached, last-known-good snapshots with 12-hour refresh throttling and duplicate-refresh locks. Steam is the public play stream; Strava remains consent-gated.
 
 ## Interactivity
 
@@ -43,7 +43,7 @@ Content version: `50bac7d3babb391a`
 
 - Two production-local mobile Lighthouse audits: Performance 96–98, Accessibility 100, Best Practices 100, SEO 100; LCP 1.97–2.3 s, TBT 0 ms, CLS 0.
 - Automated validation: 35 content/privacy/connector tests, 13 backend/security tests, and 5 rendered-output tests passed.
-- Content accounting: 184/184 footprint rows and 85/85 impact rows accounted for; 184 public items, 13 public metrics, 196 public evidence records, and 60 stable relations.
+- Content accounting: 184/184 footprint rows and 85/85 impact rows accounted for; 186 public items (184 source rows plus 2 supplemental artifacts), 137 canonical entities, 13 public metrics, 198 public evidence records, and 64 stable relations.
 - Production dependency audit: zero known runtime vulnerabilities with development dependencies omitted.
 - URL audit: 192 of 194 external references resolved in the final check. The retired Ray Summit 2023 host and intermittently unavailable Prog.AI profile remain as historical provenance but are rendered as unavailable, not clickable; the Ray talk retains its working public recording.
 - The deprecated film workspace, playback UI, rendering stack, and private owner content are absent from the public build.

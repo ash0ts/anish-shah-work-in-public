@@ -1,6 +1,6 @@
 # Canonical content migration quality report
 
-Generated from four immutable source files. Content version: `50bac7d3babb391a`.
+Generated from four immutable source files plus reviewed v1.1 curation. Content version: `66ef8ac8ee193cb3`.
 
 ## Source accounting
 
@@ -12,6 +12,8 @@ Generated from four immutable source files. Content version: `50bac7d3babb391a`.
 | Impact report Markdown | — | 10 level-two sections | 10 owner narrative blocks |
 
 The impact CSV has **24 more rows** than the plan baseline. The importer keeps all current rows and treats the file as the authority.
+
+The canonical bundle also contains **2 reviewed public artifacts** sourced from explicit links in the supplied Markdown, without changing or replacing any footprint observation.
 
 ## Footprint inventory
 
@@ -42,17 +44,23 @@ The impact CSV has **24 more rows** than the plan baseline. The importer keeps a
 | derivative_of | 1 |
 | implements | 4 |
 | mirror_of | 12 |
-| part_of | 7 |
+| part_of | 9 |
 | recording_of | 20 |
-| references | 5 |
-| translation_of | 11 |
+| references | 6 |
+| translation_of | 12 |
 
-Relations are generated only from exact shared titles, canonical URLs, source links, or GitHub repository ownership. Fuzzy matching never writes a relation.
+Recording relations require a unique best typed match across URL role, date, exact title, and organization. Reviewed curation supplies explicit corrections and relationships; title-only ties never write a relation.
+
+## Canonical entities
+
+- Entity groups: 137 (artifact 40, occurrence 52, program 8, work 37).
+- Source observations keep stable opaque IDs and retain their legacy IDs and route aliases.
+- Work, occurrence, artifact, and program groupings preserve every source item; representations and context records remain inspectable without inflating unique-work views.
 
 ## Publication projection
 
-- Owner bundle: 184 items, 85 exact metric observations plus 13 reviewed public projections, 213 evidence records, and 23 source narrative blocks.
-- Public bundle: 184 public inventory items, 13 approved rounded/derived claims, 196 public evidence records, and 9 collections.
+- Owner bundle: 186 items (184 footprint observations + 2 reviewed Markdown artifacts), 85 exact metric observations plus 13 reviewed public projections, 215 evidence records, and 23 source narrative blocks.
+- Public bundle: 186 public items, 137 canonical entities, 13 approved rounded/derived claims, 198 public evidence records, and 9 collections.
 - Exact metric observations remain only in the ignored owner bundle.
 - Public metrics contain display strings and qualifiers, never raw numeric value fields.
 - Internal evidence URLs, source excerpts, local paths, and source hashes are excluded from public output.
@@ -127,9 +135,10 @@ Completion floors, paid-organization associations, aggregate course-campaign lea
 
 ## Verification checks
 
-- Stable IDs and route slugs are content-derived and unique across all 184 items.
-- Every organization, evidence, relation, collection, and metric subject reference resolves.
+- Stable opaque source-observation IDs are unique across all 186 items; legacy IDs and old route slugs remain aliases.
+- Every organization, entity, evidence, relation, collection, and metric subject reference resolves.
 - All 184 footprint rows and 85 impact rows retain source-row fingerprints in the owner bundle.
+- Item-detail metrics require an explicit item or canonical-entity subject; collection metrics are never inherited implicitly.
 - The public projection contains only `public` publication states and `public_web` evidence.
 - Public URLs pass protocol and blocked-domain checks.
 - Re-running the importer with unchanged inputs produces byte-identical generated outputs.

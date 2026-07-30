@@ -21,7 +21,11 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const snapshot = await getPublicConnectorSnapshot(candidate);
-  if (snapshot.status === "ready" && snapshot.stale) {
+  if (
+    (snapshot.status === "ready" && snapshot.stale) ||
+    (snapshot.status === "unavailable" &&
+      snapshot.reason === "stale_expired")
+  ) {
     const refresh = refreshConnector(candidate, "stale_revalidate", null).catch(
       () => undefined,
     );
@@ -39,7 +43,12 @@ export async function GET(_request: Request, context: RouteContext) {
       },
       {
         status: 404,
-        headers: { "cache-control": "public, max-age=300" },
+        headers: {
+          "cache-control":
+            candidate === "steam"
+              ? "no-store"
+              : "public, max-age=300",
+        },
       },
     );
   }
@@ -47,7 +56,9 @@ export async function GET(_request: Request, context: RouteContext) {
   return Response.json(snapshot, {
     headers: {
       "cache-control":
-        "public, max-age=300, stale-while-revalidate=43200, stale-if-error=86400",
+        candidate === "steam"
+          ? "no-store"
+          : "public, max-age=300, stale-while-revalidate=43200, stale-if-error=86400",
     },
   });
 }

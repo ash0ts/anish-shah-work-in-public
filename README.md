@@ -8,7 +8,7 @@ open source, technical storytelling, and community programs from 2021 onward.
 - `/` — kinetic identity, selected work, qualified impact, and trajectory
 - `/work` — all 184 public artifacts with search, filters, and an opt-in visual archive
 - `/work/[slug]` — evidence-backed case studies for every public record
-- `/play` — consent-aware MyAnimeList, Hardcover, and Strava streams
+- `/play` — consent-aware MyAnimeList, Hardcover, Steam, and Strava streams
 - `/about` — biography, current focus, and verified public profiles
 - `/sources` — methodology, caveats, counting rules, and public bibliography
 - `/studio` — owner-only editorial and connector controls
@@ -62,6 +62,16 @@ MyAnimeList and Hardcover use 12-hour stale-while-revalidate snapshots and
 preserve the last successful public result on provider failure. The Strava
 surface accepts only an official public embed URL through
 `NEXT_PUBLIC_STRAVA_EMBED_URL`.
+
+Steam uses an owner-supplied Web API key and SteamID64 only from the server,
+publishes bounded summaries of public game details, and keeps no more than two
+sanitized snapshots. Configure the actual D1 storage country or countries in
+`STEAM_DATA_STORAGE_COUNTRIES` before connecting it. If public game visibility
+is removed, the public snapshots and prior sync history are purged;
+disconnecting Steam deletes its encrypted credential, all remaining Steam
+snapshots, and its Steam-specific sync and audit history. The public
+[privacy page](./app/privacy/page.tsx) records retrieval, storage, retention,
+and deletion behavior.
 
 See [.env.example](./.env.example) for local configuration. Never commit real
 provider credentials or encryption keys.

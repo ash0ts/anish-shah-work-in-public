@@ -1,0 +1,14 @@
+{
+  "playerSummary": {
+    "response": {
+      "players": [
+        {
+          "steamid": "76561198000000000"
+        }
+      ]
+    }
+  },
+  "ownedGames": {
+    "response": {}
+  }
+}

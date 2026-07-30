@@ -1,35 +1,37 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { publicBundle } from "@/lib/content";
+import { getPublicContentView } from "@/lib/server/public-content";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "About",
   description:
-    "About Anish Shah’s practice across applied AI products, education, open source, and technical communities.",
+    "Anish Shah’s applied AI practice across products, education, open source, and technical communities.",
 };
 
-const principles = [
-  {
-    title: "Make it work",
-    body: "Start near the actual workflow. A technical idea becomes useful only when someone can put it to work.",
-  },
-  {
-    title: "Make it legible",
-    body: "Explanations are part of the product. Courses, talks, and demos turn emerging systems into shared practice.",
-  },
-  {
-    title: "Make it public",
-    body: "Publish the artifact, preserve the context, and let other builders inspect what happened.",
-  },
+const trajectory = [
+  ["2021", "Enter", "Technical growth, working demos, and direct contact with teams building ML systems."],
+  ["2022—23", "Explain", "Public talks, workshops, and technical stories for fast-changing AI workflows."],
+  ["2024—25", "Gather", "Programs where practitioners and product teams could compare real work."],
+  ["Now", "Ship", "Agent infrastructure, evaluation, open tools, and the work of adoption."],
 ] as const;
 
-export default function AboutPage() {
-  const { profile } = publicBundle;
+const principles = [
+  ["Make it work", "Start near the actual workflow. Capability becomes useful when someone can put it to work."],
+  ["Make it legible", "Treat explanations as product surfaces: courses, demos, talks, and precise documentation."],
+  ["Make it public", "Publish the artifact, preserve its context, and let other builders inspect what happened."],
+] as const;
+
+export default async function AboutPage() {
+  const { bundle } = await getPublicContentView();
+  const { profile } = bundle;
+
   return (
-    <main id="main" className="site-main">
-      <header className="about-hero">
-        <p className="utility-label">About · a practice in three verbs</p>
-        <h1>Build. Teach. Convene.</h1>
+    <main id="main" className="site-main v11-about">
+      <header className="v11-about-hero">
+        <p className="utility-label">About · Anish Shah</p>
+        <h1>Applied AI that survives contact with the real world.</h1>
         <div>
           <p>{profile.summary}</p>
           <Link className="primary-action" href="/work">
@@ -38,53 +40,64 @@ export default function AboutPage() {
         </div>
       </header>
 
-      <section className="about-profile">
-        <aside>
-          <span className="about-monogram">AS</span>
-          <p>
-            No portrait required. The work, the public artifacts, and the people
-            they reached carry the identity here.
-          </p>
-        </aside>
-        <div className="about-copy">
-          <p className="utility-label">Current focus</p>
-          <h2>Applied AI that survives contact with the real world.</h2>
-          <p>
-            Anish Shah works at Weights &amp; Biases across product, education,
-            open source, and technical community programs. His public record
-            spans agents, evaluation, MLOps, model development, and the
-            infrastructure that helps teams understand what their systems are
-            doing.
-          </p>
-          <p>
-            The recurring job is translation: emerging capability into a usable
-            product surface, a practical explanation, and a room where builders
-            can compare notes.
-          </p>
-        </div>
-      </section>
-
-      <section className="principles" aria-labelledby="principles-title">
-        <p className="utility-label">Operating principles</p>
-        <h2 id="principles-title">Three ways the work moves.</h2>
+      <section className="v11-about-focus" aria-labelledby="focus-title">
+        <p className="utility-label">Current focus</p>
         <div>
-          {principles.map((principle, index) => (
-            <article key={principle.title}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <h3>{principle.title}</h3>
-              <p>{principle.body}</p>
-            </article>
-          ))}
+          <h2 id="focus-title">Products, learning systems, and technical rooms.</h2>
+          <div>
+            <p>
+              Anish works at Weights &amp; Biases across applied AI product,
+              education, open source, and technical community programs. The
+              public archive spans agents, evaluation, MLOps, model development,
+              and the infrastructure that helps teams understand what their
+              systems are doing.
+            </p>
+            <p>
+              The recurring job is translation: emerging capability into a
+              usable product surface, a practical explanation, and a setting
+              where builders can compare what works.
+            </p>
+          </div>
         </div>
       </section>
 
-      <section className="profile-links" aria-labelledby="profiles-title">
-        <h2 id="profiles-title">Find the public trail.</h2>
+      <section className="v11-trajectory" aria-labelledby="trajectory-title">
+        <header>
+          <p className="utility-label">2021—now</p>
+          <h2 id="trajectory-title">A widening practice.</h2>
+        </header>
+        <ol>
+          {trajectory.map(([year, title, body]) => (
+            <li key={year}>
+              <span>{year}</span>
+              <strong>{title}</strong>
+              <p>{body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="v11-principles" aria-labelledby="principles-title">
+        <header>
+          <p className="utility-label">Operating principles</p>
+          <h2 id="principles-title">How the work moves.</h2>
+        </header>
+        <ol>
+          {principles.map(([title, body]) => (
+            <li key={title}>
+              <strong>{title}</strong>
+              <p>{body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="v11-profile-links" aria-labelledby="profiles-title">
+        <h2 id="profiles-title">Follow the public trail.</h2>
         <div>
           {profile.links.map((link) => (
             <a href={link.href} key={link.href} rel="noreferrer" target="_blank">
-              <span>{link.label}</span>
-              <i aria-hidden="true">↗</i>
+              <span>{link.label}</span><i aria-hidden="true">↗</i>
             </a>
           ))}
         </div>

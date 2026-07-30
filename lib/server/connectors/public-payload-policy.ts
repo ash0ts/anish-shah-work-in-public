@@ -13,7 +13,27 @@ const PROFILE_POLICIES: Record<
     hosts: new Set(["hardcover.app", "www.hardcover.app"]),
     path: /^\/@[a-z0-9_-]{1,64}\/?$/i,
   },
+  steam: {
+    hosts: new Set(["steamcommunity.com", "www.steamcommunity.com"]),
+    path: /^\/profiles\/\d{17}\/?$/,
+  },
 };
+
+const FORBIDDEN_CREDENTIAL_FIELDS = new Set([
+  "apikey",
+  "authorization",
+  "ciphertext",
+  "credential",
+  "iv",
+  "key",
+  "password",
+  "refreshtoken",
+  "secret",
+  "steamid",
+  "steamid64",
+  "token",
+  "accesstoken",
+]);
 
 export function normalizeConnectorProfileUrl(
   provider: ConnectorProvider,
@@ -45,6 +65,20 @@ export function normalizeConnectorProfileUrl(
 
   url.pathname = url.pathname.replace(/\/$/, "");
   return url.toString();
+}
+
+function hasForbiddenCredentialField(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some(hasForbiddenCredentialField);
+  }
+  if (typeof value !== "object" || value === null) return false;
+
+  return Object.entries(value as Record<string, unknown>).some(
+    ([key, child]) =>
+      FORBIDDEN_CREDENTIAL_FIELDS.has(
+        key.replaceAll(/[^a-z0-9]/gi, "").toLowerCase(),
+      ) || hasForbiddenCredentialField(child),
+  );
 }
 
 function hasUnexpectedUrlField(
@@ -115,6 +149,7 @@ export function validateConnectorPublicPayload(
       (typeof payload.profileUrl === "string" &&
         normalizeConnectorProfileUrl(provider, payload.profileUrl) ===
           payload.profileUrl)) &&
+    !hasForbiddenCredentialField(payload) &&
     !hasUnexpectedUrlField(payload, provider) &&
     !hasUnexpectedUrlText(payload, provider) &&
     validatePublicProjection(payload, `connector:${provider}`).ok

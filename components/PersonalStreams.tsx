@@ -41,6 +41,30 @@ type HardcoverPayload = {
   freshUntil: string;
 };
 
+type SteamPayload = {
+  provider: "steam";
+  profileUrl: string;
+  coverage: string;
+  totals: {
+    publicGameCount: number;
+    playedGameCount: number;
+    totalHoursRounded: number;
+  };
+  topPlayed: Array<{
+    appId: string;
+    title: string;
+    hoursRounded: number;
+  }>;
+  recent: Array<{
+    appId: string;
+    title: string;
+    recentHoursRounded: number;
+    totalHoursRounded: number;
+  }>;
+  syncedAt: string;
+  freshUntil: string;
+};
+
 type ConnectorState<T> =
   | { status: "loading" }
   | { status: "unavailable"; message: string }
@@ -79,6 +103,9 @@ export function PersonalStreams() {
   const [hardcover, setHardcover] = useState<ConnectorState<HardcoverPayload>>({
     status: "loading",
   });
+  const [steam, setSteam] = useState<ConnectorState<SteamPayload>>({
+    status: "loading",
+  });
   const [showStrava, setShowStrava] = useState(false);
   const stravaEmbed = officialStravaEmbed(
     process.env.NEXT_PUBLIC_STRAVA_EMBED_URL,
@@ -87,7 +114,7 @@ export function PersonalStreams() {
   useEffect(() => {
     let cancelled = false;
     const load = async <T,>(
-      provider: "myanimelist" | "hardcover",
+      provider: "myanimelist" | "hardcover" | "steam",
       setter: (state: ConnectorState<T>) => void,
     ) => {
       try {
@@ -129,6 +156,7 @@ export function PersonalStreams() {
 
     void load<MalPayload>("myanimelist", setMal);
     void load<HardcoverPayload>("hardcover", setHardcover);
+    void load<SteamPayload>("steam", setSteam);
     return () => {
       cancelled = true;
     };
@@ -142,7 +170,7 @@ export function PersonalStreams() {
           <strong>Personal snapshots are optional.</strong>
           <p>
             JavaScript is off, so no connector request or third-party embed has
-            been made. The three stream descriptions remain available below.
+            been made. The four stream descriptions remain available below.
           </p>
         </div>
       </noscript>
@@ -258,12 +286,82 @@ export function PersonalStreams() {
       </section>
 
       <section
+        className="culture-stream steam-stream"
+        aria-labelledby="steam-title"
+      >
+        <header>
+          <div>
+            <span className="stream-number">03</span>
+            <p className="utility-label">Steam · public game details</p>
+          </div>
+          <h2 id="steam-title">Play, over time.</h2>
+        </header>
+
+        {steam.status === "ready" ? (
+          <>
+            <div className="reading-counts">
+              <span>
+                <b>{steam.payload.totals.publicGameCount}</b>
+                <i>Public games returned</i>
+              </span>
+              <span>
+                <b>{steam.payload.totals.playedGameCount}</b>
+                <i>With public playtime</i>
+              </span>
+              <span>
+                <b>
+                  {steam.payload.totals.totalHoursRounded.toLocaleString()}
+                </b>
+                <i>Rounded public hours</i>
+              </span>
+            </div>
+            <div className="anime-stream-body">
+              <div>
+                <p className="utility-label">Most played · public</p>
+                <ol className="recent-list">
+                  {steam.payload.topPlayed.map((game, index) => (
+                    <li key={game.appId}>
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <strong>{game.title}</strong>
+                      <i>{game.hoursRounded.toLocaleString()}h</i>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <div>
+                <p className="utility-label">Recently played · public</p>
+                <ol className="recent-list">
+                  {steam.payload.recent.map((game, index) => (
+                    <li key={game.appId}>
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <strong>{game.title}</strong>
+                      <i>{game.recentHoursRounded.toLocaleString()}h recent</i>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+            <StreamStatus
+              stale={steam.stale}
+              syncedAt={steam.payload.syncedAt || steam.fetchedAt}
+              profileUrl={steam.payload.profileUrl}
+            />
+          </>
+        ) : (
+          <StreamEmpty
+            loading={steam.status === "loading"}
+            message={steam.status === "unavailable" ? steam.message : undefined}
+          />
+        )}
+      </section>
+
+      <section
         className="culture-stream movement-stream"
         aria-labelledby="movement-title"
       >
         <header>
           <div>
-            <span className="stream-number">03</span>
+            <span className="stream-number">04</span>
             <p className="utility-label">Strava · official public embed</p>
           </div>
           <h2 id="movement-title">Outside, on purpose.</h2>

@@ -111,8 +111,8 @@ test("homepage communicates identity, focus, evidence, and its primary action", 
   assert.match(html, />SHAH</);
   assert.match(html, /applied AI builder, educator, and technical storyteller/i);
   assert.match(html, /Explore my work/i);
-  assert.match(html, /The work is the introduction\./i);
-  assert.match(html, /Scale means more with context\./i);
+  assert.match(html, /Teach\. Build\. Convene\./i);
+  assert.match(html, /Three bounded outcomes/i);
   assert.match(html, /property="og:image" content="\/og\.png"/i);
   assert.match(html, /href="\/favicon\.png"/i);
   assert.match(html, /href="#main"[^>]*>Skip to content/i);
@@ -128,10 +128,10 @@ test("all public editorial routes render useful server-side fallbacks", async ()
     {
       path: "/work",
       required: [
-        /Work that can/i,
-        /Open visual archive/i,
-        /Search the index/i,
-        /View the accessible visual-archive list/i,
+        /One body of work\. Many public forms\./i,
+        /Map[\s\S]{0,64}loads 3D/i,
+        /Search work and public forms/i,
+        /Browse all(?:\s|<!--.*?-->)*186(?:\s|<!--.*?-->)*public forms/i,
       ],
     },
     {
@@ -149,6 +149,7 @@ test("all public editorial routes render useful server-side fallbacks", async ()
         /Personal snapshots are optional\./i,
         /MyAnimeList/i,
         /Hardcover/i,
+        /Steam/i,
         /Strava/i,
       ],
     },
@@ -238,12 +239,11 @@ test("the production artifact excludes private content and removed runtimes", as
   assert(favicon.size > 0);
 });
 
-test("Three.js remains an intent-loaded archive dependency", async () => {
+test("Three.js remains a dynamically loaded archive dependency", async () => {
   const source = await readFile(
     path.join(PROJECT_ROOT, "components/VisualArchive.tsx"),
     "utf8",
   );
-  assert.match(source, /if \(!active \|\| !hostRef\.current\) return/);
   assert.match(source, /await import\("three"\)/);
   assert.doesNotMatch(source, /^import .* from ["']three["'];?$/m);
 

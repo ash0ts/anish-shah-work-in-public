@@ -6,6 +6,17 @@ import type {
   PublicImpactMetric,
   Relation,
 } from "@/types/content";
+export {
+  collectionMetricsFrom,
+  entitiesOfKindFrom,
+  entityForItemFrom,
+  findEntityBySlugFrom,
+  findItemBySlugFrom,
+  itemsForEntityFrom,
+  metricsForItemFrom,
+  supplementalWorkEntriesFrom,
+  workIndexEntriesFrom,
+} from "@/lib/content-selectors";
 import { runtimeDatabase } from "./runtime-env";
 import {
   resolvePublicContentFromSnapshotRow,
@@ -81,15 +92,6 @@ export function featuredItemsFrom(
   return ordered.slice(0, limit);
 }
 
-export function findItemBySlugFrom(
-  bundle: AnishContentBundle,
-  slug: string,
-): PortfolioItem | undefined {
-  return bundle.items.find(
-    (item) => item.slug === slug && item.publicationState === "public",
-  );
-}
-
 export function organizationNamesFrom(
   bundle: AnishContentBundle,
   item: PortfolioItem,
@@ -118,27 +120,6 @@ export function evidenceForItemFrom(
       (source): source is EvidenceSource =>
         Boolean(source && source.access === "public_web"),
     );
-}
-
-export function metricsForItemFrom(
-  bundle: AnishContentBundle,
-  item: PortfolioItem,
-): PublicImpactMetric[] {
-  const publicMetrics = publicMetricsFrom(bundle);
-  const direct = publicMetrics.filter((metric) => metric.subjectId === item.id);
-  const containingCollections = bundle.collections.filter((collection) =>
-    collection.itemIds.includes(item.id),
-  );
-  const collectionMetricIds = new Set(
-    containingCollections.flatMap((collection) => collection.metricIds),
-  );
-  return [
-    ...direct,
-    ...publicMetrics.filter((metric) => collectionMetricIds.has(metric.id)),
-  ].filter(
-    (metric, index, all) =>
-      all.findIndex((candidate) => candidate.id === metric.id) === index,
-  );
 }
 
 export function relatedItemsFrom(

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://anishshah.dev/schema/anish-content.v1.json",
+  "$id": "https://anishshah.dev/schema/anish-content.v1.1.json",
   "title": "Anish Shah Content Bundle",
   "type": "object",
   "additionalProperties": false,
@@ -8,9 +8,11 @@
     "schemaVersion",
     "contentVersion",
     "generatedAt",
+    "sourceSummary",
     "profile",
     "organizations",
     "items",
+    "entities",
     "metrics",
     "evidence",
     "relations",
@@ -20,7 +22,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.0"
+      "const": "1.1"
     },
     "contentVersion": {
       "type": "string",
@@ -29,6 +31,9 @@
     "generatedAt": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    },
+    "sourceSummary": {
+      "$ref": "#/$defs/sourceSummary"
     },
     "profile": {
       "$ref": "#/$defs/profile"
@@ -43,6 +48,12 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/item"
+      }
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entity"
       }
     },
     "metrics": {
@@ -83,6 +94,44 @@
     }
   },
   "$defs": {
+    "sourceSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "footprintRows",
+        "impactRows",
+        "supplementalArtifacts",
+        "publicItems",
+        "footprintBackedUniqueWorks",
+        "supplementalUniqueWorks"
+      ],
+      "properties": {
+        "footprintRows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "impactRows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "supplementalArtifacts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "publicItems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "footprintBackedUniqueWorks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "supplementalUniqueWorks": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
     "profile": {
       "type": "object",
       "additionalProperties": false,
@@ -216,9 +265,13 @@
       "additionalProperties": false,
       "required": [
         "id",
+        "legacyIds",
         "slug",
+        "slugAliases",
         "type",
         "title",
+        "displayTitle",
+        "shortTitle",
         "date",
         "additionalDates",
         "year",
@@ -233,14 +286,30 @@
         "publicationState",
         "verificationState",
         "evidenceIds",
-        "featured"
+        "featured",
+        "canonicalEntityId",
+        "entityRole"
       ],
       "properties": {
         "id": {
           "type": "string"
         },
+        "legacyIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
         "slug": {
           "type": "string"
+        },
+        "slugAliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
         },
         "type": {
           "enum": [
@@ -259,6 +328,12 @@
           ]
         },
         "title": {
+          "type": "string"
+        },
+        "displayTitle": {
+          "type": "string"
+        },
+        "shortTitle": {
           "type": "string"
         },
         "date": {
@@ -421,8 +496,235 @@
         "featured": {
           "type": "boolean"
         },
+        "canonicalEntityId": {
+          "type": "string"
+        },
+        "entityRole": {
+          "enum": [
+            "primary",
+            "recording",
+            "mirror",
+            "translation",
+            "implementation",
+            "component",
+            "reference",
+            "profile"
+          ]
+        },
         "sourceRecord": {
           "$ref": "#/$defs/sourceRecord"
+        }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "slug",
+        "slugAliases",
+        "kind",
+        "title",
+        "displayTitle",
+        "shortTitle",
+        "summary",
+        "practice",
+        "representativeDate",
+        "year",
+        "role",
+        "organizationIds",
+        "topics",
+        "primaryItemId",
+        "itemIds",
+        "parentEntityIds",
+        "countability",
+        "sourceBasis",
+        "childCounts",
+        "publicationState",
+        "verificationState"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "slugAliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "kind": {
+          "enum": [
+            "work",
+            "occurrence",
+            "artifact",
+            "program"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "displayTitle": {
+          "type": "string"
+        },
+        "shortTitle": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "practice": {
+          "enum": [
+            "teach",
+            "build",
+            "convene"
+          ]
+        },
+        "representativeDate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start",
+            "end",
+            "precision",
+            "basis"
+          ],
+          "properties": {
+            "start": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "end": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "precision": {
+              "enum": [
+                "day",
+                "month",
+                "year",
+                "unknown"
+              ]
+            },
+            "basis": {
+              "enum": [
+                "event_date",
+                "publication_date",
+                "upload_date",
+                "unknown"
+              ]
+            }
+          }
+        },
+        "year": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "role": {
+          "type": "string"
+        },
+        "organizationIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "primaryItemId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "itemIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "parentEntityIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "countability": {
+          "enum": [
+            "unique_work",
+            "representation",
+            "context"
+          ]
+        },
+        "sourceBasis": {
+          "enum": [
+            "footprint",
+            "supplemental",
+            "mixed",
+            "synthetic"
+          ]
+        },
+        "childCounts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "items",
+            "occurrences",
+            "artifacts"
+          ],
+          "properties": {
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "occurrences": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "artifacts": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "publicationState": {
+          "type": "string",
+          "enum": [
+            "public",
+            "review_required",
+            "private",
+            "excluded"
+          ]
+        },
+        "verificationState": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "corroborated",
+            "listed_unconfirmed",
+            "derived",
+            "tentative",
+            "superseded",
+            "excluded"
+          ]
         }
       }
     },
@@ -514,6 +816,9 @@
         "qualifier",
         "period",
         "sourceLabel",
+        "scope",
+        "attribution",
+        "displaySurfaces",
         "publicationState",
         "verificationState"
       ],
@@ -544,6 +849,35 @@
         },
         "sourceLabel": {
           "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "item",
+            "work",
+            "occurrence",
+            "program",
+            "collection",
+            "portfolio"
+          ]
+        },
+        "attribution": {
+          "enum": [
+            "direct",
+            "associated",
+            "contextual"
+          ]
+        },
+        "displaySurfaces": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "item_detail",
+              "collection",
+              "homepage",
+              "sources"
+            ]
+          },
+          "uniqueItems": true
         },
         "publicationState": {
           "type": "string",

@@ -1,6 +1,8 @@
 import publicBundleJson from "@/content/public/anish-content.public.v1.json";
 import type {
   AnishContentBundle,
+  CanonicalEntity,
+  CanonicalEntityKind,
   EvidenceSource,
   Organization,
   PortfolioItem,
@@ -43,11 +45,11 @@ export function publicMetrics(): PublicImpactMetric[] {
 const preferredMetricKeys = [
   "course_enrollments",
   "mcp_tool_calls",
-  "mcp_users",
-  "event_pipeline_supported",
+  "mcp_users_and_organizations",
+  "pipeline_supported",
   "gtc_leads",
-  "fully_connected_attendees",
-  "public_event_references",
+  "fully_connected_reach",
+  "event_references",
   "recording_hours",
 ];
 
@@ -87,25 +89,92 @@ export function featuredItems(limit = 6): PortfolioItem[] {
 
 export function findItemBySlug(slug: string): PortfolioItem | undefined {
   return publicBundle.items.find(
-    (item) => item.slug === slug && item.publicationState === "public",
+    (item) =>
+      (item.slug === slug || item.slugAliases.includes(slug)) &&
+      item.publicationState === "public",
   );
 }
 
 export function metricsForItem(item: PortfolioItem): PublicImpactMetric[] {
-  const direct = publicMetrics().filter((metric) => metric.subjectId === item.id);
-  const containingCollections = publicBundle.collections.filter((collection) =>
-    collection.itemIds.includes(item.id),
+  return publicMetrics().filter(
+    (metric) =>
+      metric.displaySurfaces.includes("item_detail") &&
+      (metric.subjectId === item.id ||
+        metric.subjectId === item.canonicalEntityId),
   );
-  const collectionMetricIds = new Set(
-    containingCollections.flatMap((collection) => collection.metricIds),
+}
+
+export function collectionMetrics(collectionId: string): PublicImpactMetric[] {
+  const collection = publicBundle.collections.find(
+    (candidate) => candidate.id === collectionId,
   );
-  return [
-    ...direct,
-    ...publicMetrics().filter((metric) => collectionMetricIds.has(metric.id)),
-  ].filter(
-    (metric, index, all) =>
-      all.findIndex((candidate) => candidate.id === metric.id) === index,
+  if (!collection) return [];
+  const ids = new Set(collection.metricIds);
+  return publicMetrics().filter(
+    (metric) =>
+      ids.has(metric.id) && metric.displaySurfaces.includes("collection"),
   );
+}
+
+export function entityForItem(item: PortfolioItem): CanonicalEntity | undefined {
+  return publicBundle.entities.find(
+    (entity) => entity.id === item.canonicalEntityId,
+  );
+}
+
+export function itemsForEntity(entity: CanonicalEntity): PortfolioItem[] {
+  const ids = new Set(entity.itemIds);
+  return publicBundle.items.filter(
+    (item) => ids.has(item.id) && item.publicationState === "public",
+  );
+}
+
+export function entitiesOfKind(kind: CanonicalEntityKind): CanonicalEntity[] {
+  return publicBundle.entities.filter(
+    (entity) => entity.kind === kind && entity.publicationState === "public",
+  );
+}
+
+export function findEntityBySlug(slug: string): CanonicalEntity | undefined {
+  return publicBundle.entities.find(
+    (entity) =>
+      (entity.slug === slug || entity.slugAliases.includes(slug)) &&
+      entity.publicationState === "public",
+  );
+}
+
+export function workIndexEntries({
+  includeSupplemental = false,
+}: { includeSupplemental?: boolean } = {}): CanonicalEntity[] {
+  return publicBundle.entities
+    .filter(
+      (entity) =>
+        entity.publicationState === "public" &&
+        entity.countability === "unique_work" &&
+        (includeSupplemental || entity.sourceBasis !== "supplemental"),
+    )
+    .sort(
+      (left, right) =>
+        (right.representativeDate.start || "").localeCompare(
+          left.representativeDate.start || "",
+        ) || left.displayTitle.localeCompare(right.displayTitle),
+    );
+}
+
+export function supplementalWorkEntries(): CanonicalEntity[] {
+  return publicBundle.entities
+    .filter(
+      (entity) =>
+        entity.publicationState === "public" &&
+        entity.countability === "unique_work" &&
+        entity.sourceBasis === "supplemental",
+    )
+    .sort(
+      (left, right) =>
+        (right.representativeDate.start || "").localeCompare(
+          left.representativeDate.start || "",
+        ) || left.displayTitle.localeCompare(right.displayTitle),
+    );
 }
 
 export function organizationById(id: string): Organization | undefined {

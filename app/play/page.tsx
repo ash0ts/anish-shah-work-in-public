@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Play",
   description:
-    "Anime, books, and movement—the personal streams Anish Shah keeps outside the work archive.",
+    "Anime, books, games, and movement—the personal streams Anish Shah keeps outside the work archive.",
 };
 
 export default async function PlayPage() {
@@ -19,14 +19,14 @@ export default async function PlayPage() {
   return (
     <main id="main" className="site-main play-page">
       <header className="play-page-hero">
-        <p className="utility-label">Play · three public streams</p>
+        <p className="utility-label">Play · four optional public streams</p>
         <h1>
           There is life
           <span>outside the work.</span>
         </h1>
         <p>
           {narrative?.body ??
-            "Anime, reading, and movement—published from owner-controlled snapshots and consent-gated embeds."}
+            "Watch, read, play, and move—published from owner-controlled snapshots and consent-gated embeds."}
         </p>
       </header>
       <PersonalStreams />
