@@ -1,9 +1,7 @@
-"use client";
-
 import Link from "next/link";
-import { useMemo, useState } from "react";
 import { isKnownUnavailablePublicUrl } from "@/lib/public-url-health";
 import type { EvidenceSource } from "@/types/content";
+import styles from "./SourcesIndex.module.css";
 
 type LinkedContext = {
   id: string;
@@ -17,53 +15,65 @@ type SourceIndexEntry = {
   linkedClaims: LinkedContext[];
 };
 
-export function SourcesIndex({ entries }: { entries: SourceIndexEntry[] }) {
-  const [query, setQuery] = useState("");
-  const [kind, setKind] = useState("all");
-  const kinds = useMemo(
-    () => [...new Set(entries.map(({ source }) => source.kind))].sort(),
-    [entries],
+export function SourcesIndex({
+  entries,
+  query = "",
+  kind = "all",
+  showAll = false,
+}: {
+  entries: SourceIndexEntry[];
+  query?: string;
+  kind?: string;
+  showAll?: boolean;
+}) {
+  const kinds = [...new Set(entries.map(({ source }) => source.kind))].sort();
+  const selectedKind = kinds.some((value) => value === kind) ? kind : "all";
+  const needle = query.trim().toLowerCase();
+  const filtered = entries.filter(
+    ({ source, linkedWork, linkedClaims }) =>
+      (selectedKind === "all" || source.kind === selectedKind) &&
+      (!needle ||
+        [
+          source.title,
+          source.publisher,
+          source.kind,
+          ...linkedWork.map((entry) => entry.label),
+          ...linkedClaims.map((entry) => entry.label),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(needle)),
   );
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    return entries.filter(
-      ({ source, linkedWork, linkedClaims }) =>
-        (kind === "all" || source.kind === kind) &&
-        (!needle ||
-          [
-            source.title,
-            source.publisher,
-            source.kind,
-            ...linkedWork.map((entry) => entry.label),
-            ...linkedClaims.map((entry) => entry.label),
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase()
-            .includes(needle)),
-    );
-  }, [entries, kind, query]);
+  const isFiltering = Boolean(needle) || selectedKind !== "all";
+  const initialLimit = 12;
+  const visibleEntries =
+    isFiltering || showAll ? filtered : filtered.slice(0, initialLimit);
 
   return (
-    <section className="source-index" aria-labelledby="source-index-title">
-      <div className="source-index-heading">
+    <section
+      className={styles.index}
+      aria-labelledby="source-index-title"
+      id="bibliography"
+    >
+      <div className={styles.heading}>
         <div>
-          <p className="utility-label">Public bibliography</p>
+          <p className={styles.eyebrow}>Public bibliography</p>
           <h2 id="source-index-title">{entries.length} sources, open to inspect.</h2>
         </div>
-        <div className="source-filters">
+        <form action="/sources" className={styles.filters} method="get">
           <label>
             <span>Search sources</span>
             <input
+              defaultValue={query}
+              name="q"
               type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
               placeholder="Work, claim, publisher, title…"
             />
           </label>
           <label>
             <span>Evidence type</span>
-            <select value={kind} onChange={(event) => setKind(event.target.value)}>
+            <select defaultValue={selectedKind} name="kind">
               <option value="all">All evidence</option>
               {kinds.map((value) => (
                 <option key={value} value={value}>
@@ -72,17 +82,52 @@ export function SourcesIndex({ entries }: { entries: SourceIndexEntry[] }) {
               ))}
             </select>
           </label>
+          <button type="submit">Search</button>
+          {isFiltering ? (
+            <Link className={styles.clear} href="/sources#bibliography">
+              Clear
+            </Link>
+          ) : null}
+        </form>
+      </div>
+      <div className={styles.count}>
+        {isFiltering
+          ? `${filtered.length} matching public sources`
+          : showAll
+            ? `${filtered.length} public sources · complete bibliography`
+            : `${filtered.length} public sources · first ${visibleEntries.length} shown`}
+      </div>
+      <SourceRows entries={visibleEntries} />
+      {!isFiltering && filtered.length > initialLimit ? (
+        <div className={styles.browseControls}>
+          {showAll ? (
+            <Link href="/sources#bibliography">Show the first {initialLimit}</Link>
+          ) : (
+            <Link href="/sources?sources=all#bibliography">
+              Browse all {filtered.length} sources
+            </Link>
+          )}
+          <span>Search uses the complete bibliography.</span>
         </div>
-      </div>
-      <div className="source-count" aria-live="polite">
-        {filtered.length} matching public sources
-      </div>
-      <ol className="source-list">
-        {filtered.map(({ source, linkedWork, linkedClaims }, index) => {
-          const context = [...linkedClaims, ...linkedWork];
-          return (
+      ) : null}
+    </section>
+  );
+}
+
+function SourceRows({
+  entries,
+  startIndex = 0,
+}: {
+  entries: SourceIndexEntry[];
+  startIndex?: number;
+}) {
+  return (
+    <ol className={styles.list} start={startIndex + 1}>
+      {entries.map(({ source, linkedWork, linkedClaims }, index) => {
+        const context = [...linkedClaims, ...linkedWork];
+        return (
           <li key={source.id}>
-            <span>{String(index + 1).padStart(3, "0")}</span>
+            <span>{String(startIndex + index + 1).padStart(3, "0")}</span>
             <div>
               <strong>{source.title}</strong>
               <small>
@@ -90,7 +135,7 @@ export function SourcesIndex({ entries }: { entries: SourceIndexEntry[] }) {
                 {source.publisher ? ` · ${source.publisher}` : ""}
               </small>
               {context.length ? (
-                <small className="source-context">
+                <small className={styles.context}>
                   Supports{" "}
                   {context.slice(0, 2).map((entry, contextIndex) => (
                     <span key={entry.id}>
@@ -112,9 +157,8 @@ export function SourcesIndex({ entries }: { entries: SourceIndexEntry[] }) {
               <i>Method note</i>
             )}
           </li>
-          );
-        })}
-      </ol>
-    </section>
+        );
+      })}
+    </ol>
   );
 }

@@ -3,10 +3,12 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
-const siteUrl = process.env.SITE_URL;
+const siteUrl =
+  process.env.SITE_URL ||
+  "https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site";
 
 export const metadata: Metadata = {
-  metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Anish Shah — Applied AI, in public",
     template: "%s — Anish Shah",

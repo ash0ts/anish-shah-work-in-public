@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { getPublicContentView } from "@/lib/server/public-content";
-
-export const dynamic = "force-dynamic";
+import styles from "./about.module.css";
 
 export const metadata: Metadata = {
   title: "About",
@@ -11,10 +8,10 @@ export const metadata: Metadata = {
 };
 
 const trajectory = [
-  ["2021", "Enter", "Technical growth, working demos, and direct contact with teams building ML systems."],
-  ["2022—23", "Explain", "Public talks, workshops, and technical stories for fast-changing AI workflows."],
-  ["2024—25", "Gather", "Programs where practitioners and product teams could compare real work."],
-  ["Now", "Ship", "Agent infrastructure, evaluation, open tools, and the work of adoption."],
+  ["2021", "Operational ML", "Working demos and reproducible workflows for teams shipping ML systems."],
+  ["2022—23", "Generative systems", "Public explanations, workshops, and practical interfaces for a fast-changing field."],
+  ["2024—25", "Evaluation and adoption", "Courses and programs where builders could test ideas against real work."],
+  ["Now", "Agent-native product", "Evaluation, open tools, and product surfaces for agentic workflows."],
 ] as const;
 
 const principles = [
@@ -23,47 +20,34 @@ const principles = [
   ["Make it public", "Publish the artifact, preserve its context, and let other builders inspect what happened."],
 ] as const;
 
-export default async function AboutPage() {
-  const { bundle } = await getPublicContentView();
-  const { profile } = bundle;
-
+export default function AboutPage() {
   return (
-    <main id="main" className="site-main v11-about">
-      <header className="v11-about-hero">
-        <p className="utility-label">About · Anish Shah</p>
+    <main id="main" className={`site-main ${styles.page}`}>
+      <header className={styles.intro}>
+        <p className={styles.eyebrow}>About · Anish Shah</p>
         <h1>Applied AI that survives contact with the real world.</h1>
-        <div>
-          <p>{profile.summary}</p>
-          <Link className="primary-action" href="/work">
-            Explore my work <span aria-hidden="true">↗</span>
-          </Link>
-        </div>
+        <p>
+          Anish Shah is an applied AI builder and educator at Weights &amp;
+          Biases. Since 2021, his public work has followed ML systems from
+          reproducible operations through evaluation, agents, and the tools
+          around them.
+        </p>
       </header>
 
-      <section className="v11-about-focus" aria-labelledby="focus-title">
-        <p className="utility-label">Current focus</p>
-        <div>
-          <h2 id="focus-title">Products, learning systems, and technical rooms.</h2>
-          <div>
-            <p>
-              Anish works at Weights &amp; Biases across applied AI product,
-              education, open source, and technical community programs. The
-              public archive spans agents, evaluation, MLOps, model development,
-              and the infrastructure that helps teams understand what their
-              systems are doing.
-            </p>
-            <p>
-              The recurring job is translation: emerging capability into a
-              usable product surface, a practical explanation, and a setting
-              where builders can compare what works.
-            </p>
-          </div>
-        </div>
+      <section className={styles.focus} aria-labelledby="focus-title">
+        <p className={styles.eyebrow}>Current focus</p>
+        <h2 id="focus-title">Evaluation and agent-native product.</h2>
+        <p>
+          The current question is practical: how should agents discover tools,
+          use context, and leave evidence a team can trust? The work spans
+          product surfaces, open integrations, and learning material for
+          builders taking those systems into production.
+        </p>
       </section>
 
-      <section className="v11-trajectory" aria-labelledby="trajectory-title">
+      <section className={styles.trajectory} aria-labelledby="trajectory-title">
         <header>
-          <p className="utility-label">2021—now</p>
+          <p className={styles.eyebrow}>2021—now</p>
           <h2 id="trajectory-title">A widening practice.</h2>
         </header>
         <ol>
@@ -77,9 +61,9 @@ export default async function AboutPage() {
         </ol>
       </section>
 
-      <section className="v11-principles" aria-labelledby="principles-title">
+      <section className={styles.principles} aria-labelledby="principles-title">
         <header>
-          <p className="utility-label">Operating principles</p>
+          <p className={styles.eyebrow}>Operating principles</p>
           <h2 id="principles-title">How the work moves.</h2>
         </header>
         <ol>
@@ -90,17 +74,6 @@ export default async function AboutPage() {
             </li>
           ))}
         </ol>
-      </section>
-
-      <section className="v11-profile-links" aria-labelledby="profiles-title">
-        <h2 id="profiles-title">Follow the public trail.</h2>
-        <div>
-          {profile.links.map((link) => (
-            <a href={link.href} key={link.href} rel="noreferrer" target="_blank">
-              <span>{link.label}</span><i aria-hidden="true">↗</i>
-            </a>
-          ))}
-        </div>
       </section>
     </main>
   );

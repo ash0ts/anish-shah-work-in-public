@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useState } from "react";
+import styles from "./PersonalStreams.module.css";
 
 type StatusCount = { label: string; count: number };
 
@@ -70,6 +71,40 @@ type ConnectorState<T> =
   | { status: "unavailable"; message: string }
   | { status: "ready"; payload: T; fetchedAt: string; stale: boolean };
 
+type StreamId = "watch" | "read" | "play" | "move";
+
+const streams = [
+  {
+    id: "watch",
+    label: "Watch",
+    provider: "MyAnimeList",
+    fallback: "Public watch states, recent activity, and genre patterns.",
+  },
+  {
+    id: "read",
+    label: "Read",
+    provider: "Hardcover",
+    fallback: "Reading states and recently updated books.",
+  },
+  {
+    id: "play",
+    label: "Play",
+    provider: "Steam",
+    fallback: "Rounded public library and playtime summaries.",
+  },
+  {
+    id: "move",
+    label: "Move",
+    provider: "Strava",
+    fallback: "An official public embed, loaded only after consent.",
+  },
+] as const satisfies ReadonlyArray<{
+  id: StreamId;
+  label: string;
+  provider: string;
+  fallback: string;
+}>;
+
 function syncLabel(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Sync date unavailable";
@@ -97,6 +132,7 @@ function officialStravaEmbed(value: string | undefined) {
 }
 
 export function PersonalStreams() {
+  const [active, setActive] = useState<StreamId>("watch");
   const [mal, setMal] = useState<ConnectorState<MalPayload>>({
     status: "loading",
   });
@@ -162,271 +198,320 @@ export function PersonalStreams() {
     };
   }, []);
 
+  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    const current = streams.findIndex((stream) => stream.id === active);
+    let next = current;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      next = (current + 1) % streams.length;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      next = (current - 1 + streams.length) % streams.length;
+    } else if (event.key === "Home") {
+      next = 0;
+    } else if (event.key === "End") {
+      next = streams.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    const target = streams[next];
+    setActive(target.id);
+    document.getElementById(`stream-tab-${target.id}`)?.focus();
+  };
+  const compactPanel =
+    (active === "watch" && mal.status !== "ready") ||
+    (active === "read" && hardcover.status !== "ready") ||
+    (active === "play" && steam.status !== "ready") ||
+    (active === "move" && !stravaEmbed);
+
   return (
-    <div className="personal-streams">
+    <section className={styles.streams} aria-label="Personal public streams">
       <noscript>
-        <style>{`.stream-loading { display: none !important; }`}</style>
-        <div className="stream-noscript">
-          <strong>Personal snapshots are optional.</strong>
-          <p>
-            JavaScript is off, so no connector request or third-party embed has
-            been made. The four stream descriptions remain available below.
-          </p>
+        <style>{`.${styles.enhanced}{display:none!important}`}</style>
+        <div className={styles.noScript}>
+          {streams.map((stream, index) => (
+            <details key={stream.id} open={index === 0}>
+              <summary>
+                {stream.label} · {stream.provider}
+              </summary>
+              <p>{stream.fallback}</p>
+            </details>
+          ))}
         </div>
       </noscript>
-      <section className="culture-stream anime-stream" aria-labelledby="anime-title">
-        <header>
-          <div>
-            <span className="stream-number">01</span>
-            <p className="utility-label">MyAnimeList · watch states</p>
-          </div>
-          <h2 id="anime-title">What’s in the queue?</h2>
-        </header>
 
-        {mal.status === "ready" ? (
-          <>
-            <div className="anime-status-ribbon">
-              {mal.payload.status.map((entry) => (
-                <span key={entry.label}>
-                  <b>{entry.count}</b>
-                  <i>{entry.label}</i>
-                </span>
-              ))}
-            </div>
-            <div className="anime-stream-body">
-              <div>
-                <p className="utility-label">Recent activity</p>
-                <ol className="recent-list">
-                  {mal.payload.recent.slice(0, 7).map((entry, index) => (
-                    <li key={entry.id}>
-                      <span>{String(index + 1).padStart(2, "0")}</span>
-                      <strong>{entry.title}</strong>
-                      <i>{entry.status}</i>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-              <div>
-                <p className="utility-label">Genre gravity</p>
-                <div className="genre-orbits">
-                  {mal.payload.genres.slice(0, 6).map((entry, index) => (
-                    <span
-                      key={entry.label}
-                      style={{
-                        width: `${72 + index * 23}px`,
-                        height: `${72 + index * 23}px`,
-                      }}
-                    >
-                      <i>
-                        {entry.label} · {entry.count}
-                      </i>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <StreamStatus
-              stale={mal.stale}
-              syncedAt={mal.payload.syncedAt || mal.fetchedAt}
-              profileUrl={mal.payload.profileUrl}
-            />
-          </>
-        ) : (
-          <StreamEmpty
-            loading={mal.status === "loading"}
-            message={mal.status === "unavailable" ? mal.message : undefined}
-          />
-        )}
-      </section>
-
-      <section
-        className="culture-stream reading-stream"
-        aria-labelledby="reading-title"
-      >
-        <header>
-          <div>
-            <span className="stream-number">02</span>
-            <p className="utility-label">Hardcover · reading states</p>
-          </div>
-          <h2 id="reading-title">A shelf with a pulse.</h2>
-        </header>
-
-        {hardcover.status === "ready" ? (
-          <>
-            <div className="book-shelf" aria-label="Recently updated books">
-              {hardcover.payload.recent.slice(0, 9).map((book, index) => (
-                <span className={`book-spine book-spine-${(index % 4) + 1}`} key={book.id}>
-                  <strong>{book.title}</strong>
-                  <i>{book.rating ? `${book.rating}/5` : book.status}</i>
-                </span>
-              ))}
-            </div>
-            <div className="reading-counts">
-              {hardcover.payload.status.map((entry) => (
-                <span key={entry.label}>
-                  <b>{entry.count}</b>
-                  <i>{entry.label}</i>
-                </span>
-              ))}
-            </div>
-            <StreamStatus
-              stale={hardcover.stale}
-              syncedAt={hardcover.payload.syncedAt || hardcover.fetchedAt}
-              profileUrl={hardcover.payload.profileUrl}
-            />
-          </>
-        ) : (
-          <StreamEmpty
-            loading={hardcover.status === "loading"}
-            message={
-              hardcover.status === "unavailable" ? hardcover.message : undefined
-            }
-          />
-        )}
-      </section>
-
-      <section
-        className="culture-stream steam-stream"
-        aria-labelledby="steam-title"
-      >
-        <header>
-          <div>
-            <span className="stream-number">03</span>
-            <p className="utility-label">Steam · public game details</p>
-          </div>
-          <h2 id="steam-title">Play, over time.</h2>
-        </header>
-
-        {steam.status === "ready" ? (
-          <>
-            <div className="reading-counts">
-              <span>
-                <b>{steam.payload.totals.publicGameCount}</b>
-                <i>Public games returned</i>
-              </span>
-              <span>
-                <b>{steam.payload.totals.playedGameCount}</b>
-                <i>With public playtime</i>
-              </span>
-              <span>
-                <b>
-                  {steam.payload.totals.totalHoursRounded.toLocaleString()}
-                </b>
-                <i>Rounded public hours</i>
-              </span>
-            </div>
-            <div className="anime-stream-body">
-              <div>
-                <p className="utility-label">Most played · public</p>
-                <ol className="recent-list">
-                  {steam.payload.topPlayed.map((game, index) => (
-                    <li key={game.appId}>
-                      <span>{String(index + 1).padStart(2, "0")}</span>
-                      <strong>{game.title}</strong>
-                      <i>{game.hoursRounded.toLocaleString()}h</i>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-              <div>
-                <p className="utility-label">Recently played · public</p>
-                <ol className="recent-list">
-                  {steam.payload.recent.map((game, index) => (
-                    <li key={game.appId}>
-                      <span>{String(index + 1).padStart(2, "0")}</span>
-                      <strong>{game.title}</strong>
-                      <i>{game.recentHoursRounded.toLocaleString()}h recent</i>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-            <StreamStatus
-              stale={steam.stale}
-              syncedAt={steam.payload.syncedAt || steam.fetchedAt}
-              profileUrl={steam.payload.profileUrl}
-            />
-          </>
-        ) : (
-          <StreamEmpty
-            loading={steam.status === "loading"}
-            message={steam.status === "unavailable" ? steam.message : undefined}
-          />
-        )}
-      </section>
-
-      <section
-        className="culture-stream movement-stream"
-        aria-labelledby="movement-title"
-      >
-        <header>
-          <div>
-            <span className="stream-number">04</span>
-            <p className="utility-label">Strava · official public embed</p>
-          </div>
-          <h2 id="movement-title">Outside, on purpose.</h2>
-        </header>
-        <div className="movement-stage">
-          {showStrava && stravaEmbed ? (
-            <iframe
-              title="Anish Shah’s public Strava activity"
-              src={stravaEmbed}
-              loading="lazy"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-            />
-          ) : (
-            <>
-              <div className="route-mark" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-                <span />
-              </div>
-              <div className="movement-consent">
-                <p>
-                  Strava stays outside this site until you choose to load its
-                  official public embed.
-                </p>
-                {stravaEmbed ? (
-                  <button type="button" onClick={() => setShowStrava(true)}>
-                    Load public Strava activity ↗
-                  </button>
-                ) : (
-                  <span>The owner has not published a Strava embed yet.</span>
-                )}
-              </div>
-            </>
-          )}
+      <div className={styles.enhanced}>
+        <div className={styles.tabs} role="tablist" aria-label="Choose a stream">
+          {streams.map((stream) => (
+            <button
+              aria-controls={`stream-panel-${stream.id}`}
+              aria-selected={active === stream.id}
+              className={active === stream.id ? styles.activeTab : undefined}
+              id={`stream-tab-${stream.id}`}
+              key={stream.id}
+              onClick={() => setActive(stream.id)}
+              onKeyDown={onTabKeyDown}
+              role="tab"
+              tabIndex={active === stream.id ? 0 : -1}
+              type="button"
+            >
+              <span>{stream.label}</span>
+              <small>{stream.provider}</small>
+            </button>
+          ))}
         </div>
-        <div className="stream-status">
-          <span>
-            <i /> Third-party content blocked by default
+
+        <div
+          aria-labelledby={`stream-tab-${active}`}
+          className={`${styles.panel}${compactPanel ? ` ${styles.compactPanel}` : ""}`}
+          id={`stream-panel-${active}`}
+          role="tabpanel"
+          tabIndex={0}
+        >
+          {active === "watch" ? <WatchStream state={mal} /> : null}
+          {active === "read" ? <ReadStream state={hardcover} /> : null}
+          {active === "play" ? <SteamStream state={steam} /> : null}
+          {active === "move" ? (
+            <MovementStream
+              embed={stravaEmbed}
+              show={showStrava}
+              onShow={() => setShowStrava(true)}
+            />
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function WatchStream({ state }: { state: ConnectorState<MalPayload> }) {
+  if (state.status !== "ready") return <StreamEmpty state={state} />;
+  return (
+    <>
+      <PanelHeading
+        title="Watch states, not a ranking."
+        description={state.payload.coverage}
+      />
+      <div className={styles.counts}>
+        {state.payload.status.slice(0, 5).map((entry) => (
+          <span key={entry.label}>
+            <b>{entry.count}</b>
+            <small>{entry.label}</small>
           </span>
-          <span>Loads only after interaction</span>
+        ))}
+      </div>
+      <div className={styles.split}>
+        <CompactList
+          label="Recently updated"
+          entries={state.payload.recent.slice(0, 6).map((entry) => ({
+            id: entry.id,
+            title: entry.title,
+            meta: entry.status,
+          }))}
+        />
+        <div>
+          <p className={styles.listLabel}>Recurring genres</p>
+          <div className={styles.tags}>
+            {state.payload.genres.slice(0, 8).map((entry) => (
+              <span key={entry.label}>
+                {entry.label} <b>{entry.count}</b>
+              </span>
+            ))}
+          </div>
         </div>
-      </section>
+      </div>
+      <StreamStatus
+        profileUrl={state.payload.profileUrl}
+        stale={state.stale}
+        syncedAt={state.payload.syncedAt || state.fetchedAt}
+      />
+    </>
+  );
+}
+
+function ReadStream({ state }: { state: ConnectorState<HardcoverPayload> }) {
+  if (state.status !== "ready") return <StreamEmpty state={state} />;
+  return (
+    <>
+      <PanelHeading title="A shelf in motion." description={state.payload.coverage} />
+      <div className={styles.counts}>
+        {state.payload.status.slice(0, 5).map((entry) => (
+          <span key={entry.label}>
+            <b>{entry.count}</b>
+            <small>{entry.label}</small>
+          </span>
+        ))}
+      </div>
+      <CompactList
+        label="Recently updated"
+        entries={state.payload.recent.slice(0, 6).map((entry) => ({
+          id: entry.id,
+          title: entry.title,
+          meta: entry.rating ? `${entry.rating}/5` : entry.status,
+        }))}
+      />
+      <StreamStatus
+        profileUrl={state.payload.profileUrl}
+        stale={state.stale}
+        syncedAt={state.payload.syncedAt || state.fetchedAt}
+      />
+    </>
+  );
+}
+
+function SteamStream({ state }: { state: ConnectorState<SteamPayload> }) {
+  if (state.status !== "ready") return <StreamEmpty state={state} />;
+  return (
+    <>
+      <PanelHeading
+        title="A public library snapshot."
+        description={state.payload.coverage}
+      />
+      <div className={styles.counts}>
+        <span>
+          <b>{state.payload.totals.publicGameCount}</b>
+          <small>Public games returned</small>
+        </span>
+        <span>
+          <b>{state.payload.totals.playedGameCount}</b>
+          <small>With public playtime</small>
+        </span>
+        <span>
+          <b>{state.payload.totals.totalHoursRounded.toLocaleString()}h</b>
+          <small>Rounded public hours</small>
+        </span>
+      </div>
+      <div className={styles.split}>
+        <CompactList
+          label="Most played"
+          entries={state.payload.topPlayed.slice(0, 5).map((game) => ({
+            id: game.appId,
+            title: game.title,
+            meta: `${game.hoursRounded.toLocaleString()}h`,
+          }))}
+        />
+        <CompactList
+          label="Recently played"
+          entries={state.payload.recent.slice(0, 5).map((game) => ({
+            id: game.appId,
+            title: game.title,
+            meta: `${game.recentHoursRounded.toLocaleString()}h recent`,
+          }))}
+        />
+      </div>
+      <p className={styles.attribution}>
+        Data provided by Steam. This independent site is not affiliated with{" "}
+        <a href="https://www.valvesoftware.com/" rel="noreferrer" target="_blank">
+          Valve
+        </a>
+        . Public data is shown as available.
+      </p>
+      <StreamStatus
+        profileUrl={state.payload.profileUrl}
+        stale={state.stale}
+        syncedAt={state.payload.syncedAt || state.fetchedAt}
+      />
+    </>
+  );
+}
+
+function MovementStream({
+  embed,
+  show,
+  onShow,
+}: {
+  embed: string;
+  show: boolean;
+  onShow: () => void;
+}) {
+  if (!embed) {
+    return (
+      <div className={styles.empty} aria-live="polite">
+        <span aria-hidden="true">○</span>
+        <p>The owner has not published a Strava embed yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <PanelHeading
+        title="Outside, on purpose."
+        description="Strava remains outside this site until you choose to load its official public embed."
+      />
+      {show ? (
+        <div className={styles.embed}>
+          <iframe
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+            src={embed}
+            title="Anish Shah’s public Strava activity"
+          />
+        </div>
+      ) : (
+        <div className={styles.consent}>
+          <span>Third-party content is blocked by default.</span>
+          <button onClick={onShow} type="button">
+            Load public Strava activity
+          </button>
+        </div>
+      )}
+      <div className={styles.status}>
+        <span>Loads only after interaction</span>
+      </div>
+    </>
+  );
+}
+
+function PanelHeading({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <header className={styles.panelHeading}>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </header>
+  );
+}
+
+function CompactList({
+  label,
+  entries,
+}: {
+  label: string;
+  entries: Array<{ id: string; title: string; meta: string }>;
+}) {
+  return (
+    <div>
+      <p className={styles.listLabel}>{label}</p>
+      <ol className={styles.list}>
+        {entries.map((entry, index) => (
+          <li key={entry.id}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{entry.title}</strong>
+            <small>{entry.meta}</small>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
 
-function StreamEmpty({
-  loading,
-  message,
-}: {
-  loading: boolean;
-  message?: string;
-}) {
+function StreamEmpty<T>({ state }: { state: ConnectorState<T> }) {
+  const loading = state.status === "loading";
   return (
-    <div
-      className={`stream-empty${loading ? " stream-loading" : ""}`}
-      aria-live="polite"
-    >
+    <div className={styles.empty} aria-live="polite">
       <span aria-hidden="true">{loading ? "···" : "○"}</span>
       <p>
         {loading
           ? "Loading the last public snapshot…"
-          : message ?? "This stream has not been published yet."}
+          : state.status === "unavailable"
+            ? state.message
+            : "This stream has not been published yet."}
       </p>
     </div>
   );
@@ -442,15 +527,12 @@ function StreamStatus({
   profileUrl: string | null;
 }) {
   return (
-    <div className="stream-status">
-      <span>
-        <i />
-        {stale ? "Last-known-good snapshot" : "Current public snapshot"}
-      </span>
+    <div className={styles.status}>
+      <span>{stale ? "Last-known-good snapshot" : "Current public snapshot"}</span>
       <span>{syncLabel(syncedAt)}</span>
       {profileUrl ? (
         <a href={profileUrl} rel="noreferrer" target="_blank">
-          Open profile ↗
+          Open profile
         </a>
       ) : null}
     </div>

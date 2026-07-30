@@ -1,26 +1,42 @@
 import Link from "next/link";
 import { publicBundle } from "@/lib/content";
+import styles from "./SiteFooter.module.css";
 
 export function SiteFooter() {
+  const linkedin = publicBundle.profile.links.find(
+    (link) => link.label === "LinkedIn",
+  );
+  const github = publicBundle.profile.links.find(
+    (link) => link.label === "GitHub",
+  );
+  const wandb = publicBundle.profile.links.find((link) =>
+    link.href.includes("wandb.ai"),
+  );
+
   return (
-    <footer className="site-footer">
-      <div className="footer-lead">
-        <span className="utility-label">Anish Shah · New York</span>
-        <p>Build the thing. Teach the thing. Put the work in public.</p>
-      </div>
-      <nav className="footer-links" aria-label="Public profiles">
-        {publicBundle.profile.links.slice(0, 5).map((link) => (
-          <a href={link.href} key={link.href} rel="noreferrer" target="_blank">
-            {link.label} <span aria-hidden="true">↗</span>
+    <footer className={styles.footer}>
+      <span className={styles.copyright}>© 2026 Anish Shah</span>
+      <nav className={styles.links} aria-label="Public profiles">
+        {linkedin ? (
+          <a href={linkedin.href} rel="noreferrer" target="_blank">
+            LinkedIn
           </a>
-        ))}
+        ) : null}
+        {github ? (
+          <a href={github.href} rel="noreferrer" target="_blank">
+            GitHub
+          </a>
+        ) : null}
+        {wandb ? (
+          <a href={wandb.href} rel="noreferrer" target="_blank">
+            W&amp;B
+          </a>
+        ) : null}
       </nav>
-      <div className="footer-bottom">
-        <span>© {new Date().getFullYear()} Anish Shah</span>
-        <span>Public work, carefully attributed.</span>
+      <nav className={styles.links} aria-label="Site information">
+        <Link href="/sources">Sources</Link>
         <Link href="/privacy">Privacy</Link>
-        <Link href="/studio">Owner studio</Link>
-      </div>
+      </nav>
     </footer>
   );
 }

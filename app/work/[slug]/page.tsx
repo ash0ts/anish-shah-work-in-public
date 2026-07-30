@@ -12,12 +12,14 @@ import {
   publicMetricsFrom,
   workIndexEntriesFrom,
 } from "@/lib/server/public-content";
+import { humanizeWorkFilter } from "@/lib/work-archive-query";
 import type {
   AnishContentBundle,
   ContentDate,
   EvidenceSource,
   PortfolioItem,
 } from "@/types/content";
+import styles from "./case.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -33,12 +35,21 @@ export function generateStaticParams() {
 
 async function resolveEntity(slug: string) {
   const { bundle } = await getPublicContentView();
-  const entity = findEntityBySlugFrom(bundle, slug);
-  if (entity) return { bundle, entity, legacyItem: null };
+  const exactEntity = bundle.entities.find(
+    (entity) =>
+      entity.slug === slug && entity.publicationState === "public",
+  );
+  if (exactEntity) return { bundle, entity: exactEntity, legacyItem: null };
+
   const item = findItemBySlugFrom(bundle, slug);
   const itemEntity = item ? entityForItemFrom(bundle, item) : undefined;
-  return itemEntity
-    ? { bundle, entity: itemEntity, legacyItem: item ?? null }
+  if (itemEntity) {
+    return { bundle, entity: itemEntity, legacyItem: item ?? null };
+  }
+
+  const aliasedEntity = findEntityBySlugFrom(bundle, slug);
+  return aliasedEntity
+    ? { bundle, entity: aliasedEntity, legacyItem: null }
     : { bundle, entity: null, legacyItem: null };
 }
 
@@ -68,14 +79,15 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
       (right.date.start ?? "").localeCompare(left.date.start ?? "") ||
       left.displayTitle.localeCompare(right.displayTitle),
   );
+  if (!items.length) notFound();
   const primary =
-    items.find((item) => item.id === entity.primaryItemId) ?? items[0] ?? null;
+    items.find((item) => item.id === entity.primaryItemId) ?? items[0]!;
   const evidence = evidenceForItems(bundle, items);
-  const itemIds = new Set(items.map((item) => item.id));
+  const directItemIds = new Set(entity.itemIds);
   const outcomes = publicMetricsFrom(bundle).filter(
     (metric) =>
       metric.displaySurfaces.includes("item_detail") &&
-      (metric.subjectId === entity.id || itemIds.has(metric.subjectId)),
+      (metric.subjectId === entity.id || directItemIds.has(metric.subjectId)),
   );
   const context = publicMetricsFrom(bundle).filter(
     (metric) =>
@@ -85,7 +97,8 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
   const organizationCandidates = entity.organizationIds
     .map(
       (id) =>
-        bundle.organizations.find((organization) => organization.id === id)?.name,
+        bundle.organizations.find((organization) => organization.id === id)
+          ?.name,
     )
     .filter((name): name is string => Boolean(name))
     .map((name) => name.replace(" / GitHub", " · GitHub"));
@@ -96,123 +109,183 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           candidate !== name && candidate.startsWith(`${name} ·`),
       ),
   );
+  const hasMultipleForms = items.length > 1;
 
   return (
-    <main id="main" className="site-main v11-case">
-      <header className="v11-case-hero">
-        <Link href="/work">← Work index</Link>
-        <div className="v11-case-kicker">
-          <span>{entity.practice}</span>
-          <span>{entity.kind}</span>
-          <span>{entity.year ?? "Undated"}</span>
-          <span>{entity.verificationState.replaceAll("_", " ")}</span>
+    <main id="main" className={`site-main ${styles.page}`}>
+      <header className={styles.hero}>
+        <div className={styles.heroTop}>
+          <Link href="/work">← Work index</Link>
+          <div className={styles.kicker} aria-label="Work classification">
+            <span>{humanizeWorkFilter(entity.kind)}</span>
+            <span>{entity.year ?? "Undated"}</span>
+            <span>{humanizeWorkFilter(entity.verificationState)}</span>
+          </div>
         </div>
         <h1>{entity.displayTitle}</h1>
-        <div className="v11-case-intro">
+        <div className={styles.intro}>
           <p>{entity.summary}</p>
-          {primary ? <PublicArtifactLink item={primary} primary /> : null}
+          {!hasMultipleForms && primary ? (
+            <PublicArtifactLink item={primary} primary />
+          ) : null}
         </div>
       </header>
 
-      <section className="v11-case-facts" aria-label="Work facts">
-        <div><span>Documented role</span><strong>{entity.role}</strong></div>
-        <div><span>Representative date</span><strong>{formatDate(entity.representativeDate)}</strong></div>
-        <div><span>Organization</span><strong>{organizations.join(" / ") || "Independent/public"}</strong></div>
-        <div><span>Public forms</span><strong>{items.length}</strong></div>
+      <section className={styles.facts} aria-label="Work facts">
+        <Fact label="Documented role" value={entity.role} />
+        <Fact
+          label="Representative date"
+          value={formatDate(entity.representativeDate)}
+        />
+        <Fact
+          label="Organization"
+          value={organizations.join(" / ") || "Independent/public"}
+        />
+        <Fact
+          label={hasMultipleForms ? "Connected forms" : "Public form"}
+          value={String(items.length)}
+        />
       </section>
 
-      <div className="v11-case-layout">
-        <article className="v11-case-story">
-          <p className="utility-label">The underlying work</p>
-          <h2>{entity.shortTitle}</h2>
-          <p>{entity.summary}</p>
+      <div className={styles.content}>
+        <article className={styles.story}>
           {entity.topics.length ? (
-            <div className="v11-case-topics" aria-label="Topics">
-              {entity.topics.map((topic) => <span key={topic}>{topic}</span>)}
+            <div className={styles.topics} aria-label="Topics">
+              {entity.topics.map((topic) => (
+                <span key={topic}>{humanizeWorkFilter(topic)}</span>
+              ))}
             </div>
           ) : null}
 
           {outcomes.length ? (
-            <section className="v11-case-outcomes" aria-labelledby="outcomes-title">
-              <p className="utility-label">Direct outcomes</p>
-              <h2 id="outcomes-title">What is explicitly attached.</h2>
-              {outcomes.map((metric) => (
-                <article key={metric.id}>
-                  <strong>{metric.displayValue}</strong>
-                  <div>
-                    <h3>{metric.label}</h3>
-                    <p>{metric.qualifier}</p>
-                    <span>
-                      {metric.sourceLabel} · {metric.period.label}
-                      {metric.period.asOf ? ` · as of ${metric.period.asOf}` : ""}
-                    </span>
-                  </div>
-                </article>
-              ))}
+            <section
+              className={styles.outcomes}
+              aria-labelledby="outcomes-title"
+            >
+              <p className={styles.sectionLabel}>Direct outcomes</p>
+              <h2 id="outcomes-title">Outcomes attached to this work.</h2>
+              <div className={styles.outcomeList}>
+                {outcomes.map((metric) => (
+                  <article key={metric.id}>
+                    <strong>{metric.displayValue}</strong>
+                    <div>
+                      <h3>{metric.label}</h3>
+                      {metric.qualifier ? <p>{metric.qualifier}</p> : null}
+                      <span>
+                        {metric.sourceLabel} · {metric.period.label}
+                        {metric.period.asOf
+                          ? ` · as of ${metric.period.asOf}`
+                          : ""}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </section>
           ) : null}
 
           {context.length ? (
-            <section className="v11-case-context" aria-labelledby="context-title">
-              <p className="utility-label">Program context · not direct attribution</p>
+            <section
+              className={styles.context}
+              aria-labelledby="context-title"
+            >
+              <p className={styles.sectionLabel}>
+                Program context · not direct attribution
+              </p>
               <h2 id="context-title">The wider program.</h2>
               {context.map((metric) => (
                 <article key={metric.id}>
                   <strong>{metric.displayValue}</strong>
-                  <p>{metric.label}</p>
-                  <span>{metric.qualifier}</span>
+                  <div>
+                    <h3>{metric.label}</h3>
+                    {metric.qualifier ? <p>{metric.qualifier}</p> : null}
+                  </div>
                 </article>
               ))}
             </section>
           ) : null}
         </article>
 
-        <aside className="v11-case-evidence">
-          <p className="utility-label">Public evidence</p>
+        {evidence.length ? (
+          <aside className={styles.evidence}>
+            <p className={styles.sectionLabel}>Public evidence</p>
+            <ol>
+              {evidence.map((source) => (
+                <li key={source.id}>
+                  {source.url && !isKnownUnavailablePublicUrl(source.url) ? (
+                    <a href={source.url} rel="noreferrer" target="_blank">
+                      <span>
+                        {source.publisher ??
+                          humanizeWorkFilter(source.kind)}
+                      </span>
+                      <strong>{source.title}</strong>
+                      <i aria-hidden="true">↗</i>
+                    </a>
+                  ) : (
+                    <span>
+                      <small>
+                        {source.publisher ??
+                          humanizeWorkFilter(source.kind)}
+                      </small>
+                      <strong>{source.title}</strong>
+                      {source.url ? <i>Historical host unavailable</i> : null}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </aside>
+        ) : null}
+      </div>
+
+      {hasMultipleForms ? (
+        <section
+          className={styles.appearances}
+          aria-labelledby="appearances-title"
+        >
+          <header>
+            <p className={styles.sectionLabel}>Connected public forms</p>
+            <h2 id="appearances-title">Appearances and artifacts</h2>
+          </header>
           <ol>
-            {evidence.map((source) => (
-              <li key={source.id}>
-                {source.url && !isKnownUnavailablePublicUrl(source.url) ? (
-                  <a href={source.url} rel="noreferrer" target="_blank">
-                    <span>{source.publisher ?? source.kind.replaceAll("_", " ")}</span>
-                    <strong>{source.title}</strong>
-                    <i aria-hidden="true">↗</i>
-                  </a>
-                ) : (
-                  <span>
-                    <small>{source.publisher ?? source.kind.replaceAll("_", " ")}</small>
-                    <strong>{source.title}</strong>
-                    {source.url ? <i>Historical host unavailable</i> : null}
-                  </span>
-                )}
+            {items.map((item) => (
+              <li id={item.id} key={item.id}>
+                <div className={styles.formMeta}>
+                  <span>{formatDate(item.date)}</span>
+                  <span>{humanizeWorkFilter(item.entityRole)}</span>
+                </div>
+                <h3>
+                  {appearanceTitle(item, entity.displayTitle, primary)}
+                </h3>
+                <p>{item.role}</p>
+                <PublicArtifactLink item={item} />
               </li>
             ))}
           </ol>
-        </aside>
-      </div>
-
-      <section className="v11-public-forms" aria-labelledby="forms-title">
-        <header>
-          <p className="utility-label">Occurrences and artifacts</p>
-          <h2 id="forms-title">
-            {items.length === 1 ? "One public form." : `${items.length} public forms, connected.`}
-          </h2>
-        </header>
-        <ol>
-          {items.map((item) => (
-            <li id={item.id} key={item.id}>
-              <div>
-                <span>{formatDate(item.date)}</span>
-                <span>{item.entityRole.replaceAll("_", " ")}</span>
-              </div>
-              <h3>{item.displayTitle}</h3>
-              <p>{item.role}</p>
-              <PublicArtifactLink item={item} />
-            </li>
-          ))}
-        </ol>
-      </section>
+        </section>
+      ) : null}
     </main>
+  );
+}
+
+function appearanceTitle(
+  item: PortfolioItem,
+  entityTitle: string,
+  primary: PortfolioItem,
+) {
+  const title =
+    item.displayTitle === entityTitle
+      ? humanizeWorkFilter(item.type)
+      : item.displayTitle;
+  return item.id === primary.id ? `${title} · primary form` : title;
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 
@@ -249,15 +322,23 @@ function PublicArtifactLink({
   const url = item.urls.find(({ url: candidate }) =>
     !isKnownUnavailablePublicUrl(candidate),
   );
-  if (!url) return <span className="v11-historical-link">Historical source unavailable</span>;
+  if (!url) {
+    return (
+      <span className={styles.historicalLink}>
+        Historical source unavailable
+      </span>
+    );
+  }
   return (
     <a
-      className={primary ? "primary-action" : "v11-artifact-link"}
+      className={primary ? styles.primaryArtifact : styles.artifactLink}
       href={url.url}
       rel="noreferrer"
       target="_blank"
     >
-      {primary ? "Open the primary artifact" : "Open this public form"}{" "}
+      {primary
+        ? `Open the ${humanizeWorkFilter(item.type).toLocaleLowerCase()}`
+        : "Open this public form"}{" "}
       <span aria-hidden="true">↗</span>
     </a>
   );

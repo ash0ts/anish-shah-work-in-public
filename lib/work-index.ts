@@ -1,5 +1,18 @@
-import type { WorkIndexEntry } from "@/components/LivingWorkIndex";
-import type { AnishContentBundle, PortfolioItem } from "@/types/content";
+import type {
+  AnishContentBundle,
+  PortfolioItem,
+} from "@/types/content";
+
+export type WorkIndexEntry = {
+  id: string;
+  slug: string;
+  title: string;
+  year: number | null;
+  practice: "teach" | "build" | "convene";
+  formCount: number;
+  kind: string;
+  role: string;
+};
 
 type CanonicalEntityView = {
   id: string;
@@ -39,75 +52,21 @@ function legacyPractice(item: PortfolioItem): WorkIndexEntry["practice"] {
   return "build";
 }
 
-export function workIndexEntriesFrom(
-  bundle: AnishContentBundle,
-): WorkIndexEntry[] {
-  const typedBundle = bundle as BundleWithEntities;
-  const publishedItems = bundle.items.filter(
-    (item) => item.publicationState === "public",
-  );
-  const itemById = new Map(publishedItems.map((item) => [item.id, item]));
-  const canonicalWorks = (typedBundle.entities ?? []).filter(
-    (entity) =>
-      entity.countability === "unique_work" &&
-      entity.sourceBasis !== "supplemental" &&
-      entity.publicationState === "public",
-  );
-
-  const entries = canonicalWorks.length
-    ? canonicalWorks.flatMap((entity): WorkIndexEntry[] => {
-        const primary =
-          (entity.primaryItemId ? itemById.get(entity.primaryItemId) : undefined) ??
-          entity.itemIds.map((id) => itemById.get(id)).find(Boolean);
-        if (!primary) return [];
-        return [
-          {
-            id: entity.id,
-            slug: entity.slug ?? primary.slug,
-            title:
-              entity.displayTitle ??
-              entity.shortTitle ??
-              entity.title ??
-              primary.title,
-            year: entity.year ?? primary.year,
-            practice: entity.practice ?? legacyPractice(primary),
-            formCount: Math.max(entity.itemIds.length, 1),
-            kind: primary.type,
-            role: entity.role ?? primary.role,
-          },
-        ];
-      })
-    : publishedItems.map(
-        (item): WorkIndexEntry => ({
-          id: item.id,
-          slug: item.slug,
-          title: item.title,
-          year: item.year,
-          practice: legacyPractice(item),
-          formCount: 1,
-          kind: item.type,
-          role: item.role,
-        }),
-      );
-
-  return entries.sort(
-    (left, right) =>
-      (right.year ?? -1) - (left.year ?? -1) ||
-      left.title.localeCompare(right.title),
-  );
-}
-
 export type WorkArchiveRecord = WorkIndexEntry & {
   summary: string | null;
   topics: string[];
   organizationIds: string[];
   organizationNames: string[];
   formats: string[];
+  searchAliases: string[];
   childTitles: string[];
   childItems: Array<{
     id: string;
     slug: string;
     title: string;
+    displayTitle: string;
+    shortTitle: string;
+    aliases: string[];
     type: string;
     role: string;
     year: number | null;
@@ -152,6 +111,11 @@ export function workArchiveRecordsFrom(
         .map((id) => organizationById.get(id))
         .filter((name): name is string => Boolean(name)),
       formats: [item.type],
+      searchAliases: [
+        item.displayTitle,
+        item.shortTitle,
+        ...item.slugAliases,
+      ],
       childTitles: [],
       childItems: [],
     }));
@@ -179,8 +143,7 @@ export function workArchiveRecordsFrom(
           primary.title,
         year: entity.year ?? primary.year,
         practice: entity.practice ?? legacyPractice(primary),
-        formCount:
-          entity.childCounts?.items ?? Math.max(entity.itemIds.length, 1),
+        formCount: Math.max(members.length, 1),
         kind: primary.type,
         role: entity.role ?? primary.role,
         summary: entity.summary ?? primary.summary,
@@ -192,6 +155,15 @@ export function workArchiveRecordsFrom(
           .map((id) => organizationById.get(id))
           .filter((name): name is string => Boolean(name)),
         formats: [...new Set(members.map((item) => item.type))],
+        searchAliases: [
+          ...(entity.slugAliases ?? []),
+          entity.title,
+          entity.shortTitle ?? "",
+          primary.title,
+          primary.displayTitle,
+          primary.shortTitle,
+          ...primary.slugAliases,
+        ].filter(Boolean),
         childTitles: members
           .filter((item) => item.id !== primary.id)
           .map((item) => item.title),
@@ -201,29 +173,14 @@ export function workArchiveRecordsFrom(
             id: item.id,
             slug: item.slug,
             title: item.title,
+            displayTitle: item.displayTitle,
+            shortTitle: item.shortTitle,
+            aliases: item.slugAliases,
             type: item.type,
             role: item.role,
             year: item.year,
           })),
       },
     ];
-  });
-}
-
-const preferredHomeMatches: Record<WorkIndexEntry["practice"], RegExp[]> = {
-  teach: [/llm apps.*evaluation/i, /developer.*prompting/i, /ai engineering.*agents/i],
-  build: [/mcp server/i, /evalforge/i, /fabric/i],
-  convene: [/fully connected/i, /nvidia.*gtc/i, /genai application/i],
-};
-
-export function representativeWorksFrom(
-  entries: WorkIndexEntry[],
-): WorkIndexEntry[] {
-  return (["teach", "build", "convene"] as const).flatMap((practice) => {
-    const candidates = entries.filter((entry) => entry.practice === practice);
-    const preferred = preferredHomeMatches[practice]
-      .map((pattern) => candidates.find((entry) => pattern.test(entry.title)))
-      .find(Boolean);
-    return preferred ? [preferred] : candidates.slice(0, 1);
   });
 }

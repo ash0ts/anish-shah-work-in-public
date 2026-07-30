@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PersonalStreams } from "@/components/PersonalStreams";
 import { getPublicContentView } from "@/lib/server/public-content";
+import styles from "./play.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +18,10 @@ export default async function PlayPage() {
   );
 
   return (
-    <main id="main" className="site-main play-page">
-      <header className="play-page-hero">
-        <p className="utility-label">Play · four optional public streams</p>
-        <h1>
-          There is life
-          <span>outside the work.</span>
-        </h1>
+    <main id="main" className={`site-main ${styles.page}`}>
+      <header className={styles.intro}>
+        <p className={styles.eyebrow}>Play · four optional public streams</p>
+        <h1>Outside the work.</h1>
         <p>
           {narrative?.body ??
             "Watch, read, play, and move—published from owner-controlled snapshots and consent-gated embeds."}

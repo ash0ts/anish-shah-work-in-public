@@ -1,37 +1,25 @@
 import Link from "next/link";
+import styles from "./SiteHeader.module.css";
 
 const navigation = [
   ["Work", "/work"],
-  ["Play", "/play"],
   ["About", "/about"],
-  ["Sources", "/sources"],
+  ["Play", "/play"],
 ] as const;
 
 export function SiteHeader() {
   return (
-    <header className="site-header">
-      <Link className="wordmark" href="/">
-        <span>Anish—Shah</span>
-        <i aria-hidden="true" />
+    <header className={styles.header}>
+      <Link className={styles.wordmark} href="/" aria-label="Anish Shah, home">
+        Anish Shah
       </Link>
-      <nav className="primary-nav" aria-label="Primary navigation">
+      <nav className={styles.navigation} aria-label="Primary navigation">
         {navigation.map(([label, href]) => (
           <Link key={href} href={href}>
             {label}
           </Link>
         ))}
       </nav>
-      <span className="header-context">Applied AI · New York</span>
-      <details className="mobile-menu">
-        <summary>Menu</summary>
-        <nav aria-label="Mobile navigation">
-          {navigation.map(([label, href]) => (
-            <Link key={href} href={href}>
-              {label}
-            </Link>
-          ))}
-        </nav>
-      </details>
     </header>
   );
 }

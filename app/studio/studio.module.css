@@ -53,13 +53,11 @@
 }
 
 .identity {
-  overflow: hidden;
   max-width: 42vw;
   color: rgba(23, 34, 59, 0.65);
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .hero,

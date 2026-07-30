@@ -1,0 +1,88 @@
+.page {
+  width: min(100% - 2rem, 48rem);
+  margin: 0 auto;
+  color: var(--ink, #17223b);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--muted, #667084);
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 0.68rem;
+  font-weight: 560;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.intro {
+  display: grid;
+  gap: 1.25rem;
+  padding-block: clamp(4rem, 10vw, 8rem) clamp(3rem, 6vw, 5rem);
+  border-bottom: 1px solid var(--line, #d5dbe4);
+}
+
+.intro h1 {
+  margin: 0;
+  font-family: var(--font-display, "Recursive", sans-serif);
+  font-size: clamp(3rem, 9vw, 6rem);
+  font-variation-settings: "CASL" 0.3, "wght" 720;
+  letter-spacing: -0.06em;
+  line-height: 0.92;
+  text-wrap: balance;
+}
+
+.intro > p {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--muted, #5f6878);
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.intro small {
+  color: var(--muted, #667084);
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 0.66rem;
+}
+
+.policy {
+  padding-block: clamp(2.5rem, 7vw, 5rem);
+}
+
+.policy section {
+  padding-block: 1.75rem;
+  border-bottom: 1px solid var(--line, #d5dbe4);
+}
+
+.policy section:first-child {
+  padding-top: 0;
+}
+
+.policy h2 {
+  margin: 0 0 0.8rem;
+  font-family: var(--font-display, "Recursive", sans-serif);
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+  font-variation-settings: "CASL" 0.25, "wght" 660;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.policy p {
+  margin: 0.75rem 0 0;
+  color: var(--muted, #4f596b);
+  line-height: 1.7;
+}
+
+.policy a {
+  color: var(--ink, #17223b);
+  overflow-wrap: anywhere;
+  text-decoration-color: var(--blue, #295dff);
+  text-underline-offset: 0.2em;
+}
+
+.policy a:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--blue, #295dff);
+  outline-offset: 3px;
+}

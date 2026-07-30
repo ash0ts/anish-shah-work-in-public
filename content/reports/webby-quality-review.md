@@ -1,51 +1,101 @@
 # Webby-quality release review
 
 Review date: 2026-07-30
+
+Release: Career Chapters v1.2
+
 Content version: `66ef8ac8ee193cb3`
 
-## Content
+Scores below are an internal readiness review against the seven Webby website
+criteria, not an award result.
 
-- The opening viewport states Anish Shah’s name, applied-AI focus, point of view, and the primary “Explore my work” action.
-- Eight selected works, three qualified impact moments, and the 2021–now trajectory lead into the complete 184-source-record archive plus two Markdown-derived supplemental artifacts.
-- All public claims come from the 13 approved rounded projections. Qualifiers, periods, attribution, and public evidence remain attached.
+## Content — 9.3 / 10
 
-## Structure and navigation
+- Home is 178 visible content words before the shell. It contains one thesis,
+  one primary CTA, five Career Chapters, twelve anchor links, and three
+  qualified impact claims.
+- The archive preserves 184 footprint rows and 85 impact rows. Public output
+  remains limited to 13 approved, rounded metrics with attribution, period, and
+  qualifier attached.
+- Work pages show the title and summary once. Direct outcomes and wider program
+  context are explicitly separated.
+- Sources owns the methodology, all 13 claims in four themes, and 198 public
+  evidence records.
 
-- The public hierarchy is Home, Work, Play, About, and Sources, with a separate owner-only Studio.
-- Search, filter, skip-link, mobile menu, back-links, related records, and source-context links were checked with keyboard-sized controls and server-rendered fallbacks.
-- Every public record has a unique stable slug and a case-study route.
+## Navigation and structure — 9.4 / 10
 
-## Visual design
+- The public header is only Anish Shah, Work, About, and Play. Sources and
+  Privacy live in the compact footer.
+- Work is one server-rendered index of 99 canonical Works, 24 per page. Child
+  titles, slugs, and aliases resolve to their parent Work and exact item anchor.
+- Search, Topic, Year, and Format are direct controls. Organization and Role
+  remain available under More filters without overloading the first viewport.
+- Legacy map links redirect to the two-dimensional Work index while preserving
+  valid search parameters.
 
-- The “Work in Public” system uses oversized kinetic identity, an index ribbon made from real work, editorial posters, and typographic impact spreads.
-- The palette and type system remain restrained and subject-aware. Dashboard cards, blueprint grids, fake terminals, film UI, and decorative analytics were removed.
-- Recursive’s full expressive axes are isolated to a 12 KB uppercase subset for the hero; the reading and evidence faces are self-hosted Latin subsets.
+## Visual design — 9.2 / 10
 
-## Functionality
+- One expressive device carries the site: a readable five-part career narrative
+  progressively enhanced by a restrained chapter stack.
+- Recursive, Hanken Grotesk, and IBM Plex Mono have distinct display, reading,
+  and evidence roles. Trace white, blueprint ink, and work blue dominate; the
+  three secondary accents appear only in the chapter leaves.
+- Global CSS is 275 lines; route and component systems are scoped. The former
+  4,813-line two-generation stylesheet, generic card walls, map, ticker, and
+  oversized footer are gone.
+- The 1200×630 social card is a 192 KiB typographic chapter-stack composition
+  derived from the finished visual system.
 
-- The sanitized bundle is the sole substantive public source. Published D1 overrides may only order, feature, hide, or replace allowlisted plain-text wording and caveats.
-- Studio writes require Sign in with ChatGPT plus the exact-email owner allowlist. Connector secrets use authenticated encryption.
-- MyAnimeList and Hardcover use cached, last-known-good snapshots with 12-hour refresh throttling and duplicate-refresh locks. Steam is the public play stream; Strava remains consent-gated.
+## Functionality — 9.5 / 10
 
-## Interactivity
+- Canonical content, D1 editorial boundaries, connector encryption, owner
+  authorization, audit records, and Steam release gates remain intact.
+- Sources defaults to twelve evidence rows and a server GET search. The default
+  HTML response is about 46 KiB; the complete 198-row bibliography is rendered
+  only after explicit selection.
+- MyAnimeList, Hardcover, Steam, and Strava retain loading, stale, unavailable,
+  and privacy-safe states. Strava creates no iframe before consent.
+- Robots and sitemap surfaces include public editorial routes and canonical Work
+  pages while excluding Studio and APIs.
 
-- Anime.js drives short, interruptible hero/index choreography with pause and reduced-motion behavior.
-- The visual archive dynamically imports Three.js only after “Open visual archive”; the equivalent HTML archive remains available.
-- Personal streams have loading, stale, failure, unpublished, and no-JavaScript states. No third-party Strava request occurs before consent.
+## Interactivity — 9.1 / 10
 
-## Innovation
+- Anime.js transitions are short, interruptible, and resolve immediately under
+  reduced motion.
+- Three.js is a single deferred Home enhancement. It loads only at widths of at
+  least 960px after readable paint and capability checks. Work contains no
+  Three.js or map code.
+- Chapter controls support keyboard Left, Right, Home, and End. Native details,
+  direct Work links, and synchronized HTML panels remain the primary interface.
+- Play uses four compact tabs with keyboard movement and four no-JavaScript
+  disclosures. Unpublished streams occupy one row.
 
-- The identity-to-index transition uses the work itself as the visual material.
-- Each claim remains inspectable without turning the portfolio into a ledger or dashboard.
-- The expressive hero font responds through real variable-font axes while preserving an early stable paint.
+## Innovation — 8.9 / 10
 
-## Overall experience and release gates
+- Career history becomes the interaction model without turning the portfolio
+  into a visualization puzzle. Time and selected work are understandable before
+  the canvas exists.
+- The Three scene has no orbit controls, drag, zoom, autoplay, canvas labels, or
+  permanent render loop. Technology is used as depth, not navigation.
+- Canonical relations let one underlying work retain its recordings,
+  translations, appearances, repositories, and evidence without multiplying
+  accomplishments.
 
-- Two production-local mobile Lighthouse audits: Performance 96–98, Accessibility 100, Best Practices 100, SEO 100; LCP 1.97–2.3 s, TBT 0 ms, CLS 0.
-- Automated validation: 35 content/privacy/connector tests, 13 backend/security tests, and 5 rendered-output tests passed.
-- Content accounting: 184/184 footprint rows and 85/85 impact rows accounted for; 186 public items (184 source rows plus 2 supplemental artifacts), 137 canonical entities, 13 public metrics, 198 public evidence records, and 64 stable relations.
-- Production dependency audit: zero known runtime vulnerabilities with development dependencies omitted.
-- URL audit: 192 of 194 external references resolved in the final check. The retired Ray Summit 2023 host and intermittently unavailable Prog.AI profile remain as historical provenance but are rendered as unavailable, not clickable; the Ray talk retains its working public recording.
-- The deprecated film workspace, playback UI, rendering stack, and private owner content are absent from the public build.
+## Overall experience — 9.3 / 10
 
-Result: all explicit release gates pass.
+- Responsive audits at 320, 390, 768, 1024, 1440, and 1920px reported
+  `scrollWidth === innerWidth` and no crossing elements for Home, Work,
+  expanded Work filters, the longest Work title, About, Play, Sources, and
+  Privacy.
+- At a 900px audit viewport, Home is 1.5 desktop viewports and about 2.1 mobile
+  viewports tall. The footer is 80px on desktop and 78px on mobile.
+- Mobile, reduced-motion, and Save-Data branches do not request Three.js.
+  Capable desktop widths render one canvas.
+- Mobile Lighthouse: Performance 91, Accessibility 100, Best Practices 100,
+  SEO 100; LCP 2.9s, TBT 0ms, CLS 0, initial transfer 278 KiB.
+- Automated validation passes 70 content/privacy/connector tests, 14
+  backend/security tests, 8 rendered-output tests, and 12 focused design
+  acceptance tests.
+
+Result: all v1.2 release gates pass. The remaining editorial risk is policy
+approval for employer-related impact wording, not a technical or UX defect.
