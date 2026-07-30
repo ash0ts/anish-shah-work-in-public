@@ -2,100 +2,141 @@
 
 Review date: 2026-07-30
 
-Release: Career Chapters v1.2
+Release candidate: Bodies of Work v1.3
 
-Content version: `66ef8ac8ee193cb3`
+Content version: `53cf9612400b16cc`
 
-Scores below are an internal readiness review against the seven Webby website
-criteria, not an award result.
+This is an internal review against the seven Webby website criteria, not an
+award result. The exact release candidate described here completed the
+verification record below.
 
-## Content — 9.3 / 10
+## Verified content baseline
 
-- Home is 178 visible content words before the shell. It contains one thesis,
-  one primary CTA, five Career Chapters, twelve anchor links, and three
-  qualified impact claims.
-- The archive preserves 184 footprint rows and 85 impact rows. Public output
-  remains limited to 13 approved, rounded metrics with attribution, period, and
-  qualifier attached.
-- Work pages show the title and summary once. Direct outcomes and wider program
-  context are explicitly separated.
-- Sources owns the methodology, all 13 claims in four themes, and 198 public
-  evidence records.
+- 184 public-footprint source observations are preserved. They are source
+  records, not a claim of 184 unique works.
+- 85 impact observations remain in the migration account.
+- The public archive currently resolves to 82 WorkGroups and 186 nested public
+  forms.
+- The public narrative uses 13 rounded measures in four impact families and
+  links to 198 evidence records.
+- Exact owner-only values, private notes, internal references, connector
+  credentials, and unsupported attribution do not belong in public output.
 
-## Navigation and structure — 9.4 / 10
+## Content — 8.6 / 10
 
-- The public header is only Anish Shah, Work, About, and Play. Sources and
-  Privacy live in the compact footer.
-- Work is one server-rendered index of 99 canonical Works, 24 per page. Child
-  titles, slugs, and aliases resolve to their parent Work and exact item anchor.
-- Search, Topic, Year, and Format are direct controls. Organization and Role
-  remain available under More filters without overloading the first viewport.
-- Legacy map links redirect to the two-dimensional Work index while preserving
-  valid search parameters.
+- Four Bodies of Work—Products and Open Source, Courses and Learning, Writing
+  and Research, and Talks and Programs—give visitors a useful first reading of
+  the career without flattening every appearance into another achievement.
+- The homepage uses representative stories and a four-part Impact Ledger rather
+  than repeating the complete archive.
+- WorkGroup pages keep occurrences, recordings, translations, repositories,
+  pull requests, and references attached to the story they support.
+- Sources separates archive accounting from the impact ledger and states what
+  the site does not claim, including that supported pipeline is not revenue,
+  ARR, or sole-person causality.
+- Representative titles, child associations, claim-to-work links, and the
+  complete generated bundle passed the final editorial and migration checks.
 
-## Visual design — 9.2 / 10
+## Structure and navigation — 8.4 / 10
 
-- One expressive device carries the site: a readable five-part career narrative
-  progressively enhanced by a restrained chapter stack.
-- Recursive, Hanken Grotesk, and IBM Plex Mono have distinct display, reading,
-  and evidence roles. Trace white, blueprint ink, and work blue dominate; the
-  three secondary accents appear only in the chapter leaves.
-- Global CSS is 275 lines; route and component systems are scoped. The former
-  4,813-line two-generation stylesheet, generic card walls, map, ticker, and
-  oversized footer are gone.
-- The 1200×630 social card is a 192 KiB typographic chapter-stack composition
-  derived from the finished visual system.
+- The primary navigation stays compact: Work, About, and Play, with Sources and
+  Privacy in the footer.
+- Work opens with a semantic Story × Time index, then one paginated WorkGroup
+  archive. Search includes nested titles and aliases while returning the parent
+  story.
+- Bucket, topic, year, and format controls expose the useful dimensions without
+  asking visitors to learn an internal taxonomy.
+- Group pages give public forms a clear home instead of presenting a second
+  competing archive.
+- Legacy redirects, context-only references, pagination, child-title search,
+  and long-query filter states passed rendered-route verification.
 
-## Functionality — 9.5 / 10
+## Visual design — 8.2 / 10
 
-- Canonical content, D1 editorial boundaries, connector encryption, owner
-  authorization, audit records, and Steam release gates remain intact.
-- Sources defaults to twelve evidence rows and a server GET search. The default
-  HTML response is about 46 KiB; the complete 198-row bibliography is rendered
-  only after explicit selection.
-- MyAnimeList, Hardcover, Steam, and Strava retain loading, stale, unavailable,
-  and privacy-safe states. Strava creates no iframe before consent.
-- Robots and sitemap surfaces include public editorial routes and canonical Work
-  pages while excluding Studio and APIs.
+- The expressive choice is typographic organization, not a decorative
+  dashboard: four ruled work rows, the Story × Time table, and the Impact
+  Ledger all encode real structure.
+- Recursive, Hanken Grotesk, and IBM Plex Mono retain distinct display,
+  reading, and evidence roles. Trace white, blueprint ink, and work blue keep
+  the palette controlled.
+- Removing the 3D navigator makes the hierarchy more legible and avoids
+  occlusion, tiny hit targets, and a second navigation model.
+- The design now depends on precision in spacing, wrapping, and responsive
+  hierarchy. Visual checks at 320, 390, 768, 1024, 1440, and 1920px found no
+  viewport crossings, and the social image was replaced with the finished
+  typographic direction.
 
-## Interactivity — 9.1 / 10
+## Functionality — 8.3 / 10
 
-- Anime.js transitions are short, interruptible, and resolve immediately under
-  reduced motion.
-- Three.js is a single deferred Home enhancement. It loads only at widths of at
-  least 960px after readable paint and capability checks. Work contains no
-  Three.js or map code.
-- Chapter controls support keyboard Left, Right, Home, and End. Native details,
-  direct Work links, and synchronized HTML panels remain the primary interface.
-- Play uses four compact tabs with keyboard movement and four no-JavaScript
-  disclosures. Unpublished streams occupy one row.
+- Home, Work, WorkGroup detail, About, Sources, Privacy, and the Play fallbacks
+  are server-readable without JavaScript.
+- The canonical public projection, D1 editorial boundary, exact-email owner
+  authorization, encrypted provider credentials, sync history, and audit trail
+  remain part of the implementation.
+- MyAnimeList, Hardcover, Steam, and Strava have bounded public contracts;
+  Strava loads only after consent and Steam requires a truthful storage-country
+  configuration.
+- The public runtime does not depend on 3D navigation, a cinematic renderer,
+  or a video player.
+- Connector expiry, replacement, provider outage, stale snapshots, bounded
+  credential storage, and Steam tombstoning are covered by backend and fixture
+  tests. Play’s active-stream loading and Strava consent gate were also checked
+  in-browser.
 
-## Innovation — 8.9 / 10
+## Interactivity — 7.8 / 10
 
-- Career history becomes the interaction model without turning the portfolio
-  into a visualization puzzle. Time and selected work are understandable before
-  the canvas exists.
-- The Three scene has no orbit controls, drag, zoom, autoplay, canvas labels, or
-  permanent render loop. Technology is used as depth, not navigation.
-- Canonical relations let one underlying work retain its recordings,
-  translations, appearances, repositories, and evidence without multiplying
+- Interactions are intentionally restrained: native disclosures and links work
+  first, while Anime.js supports short row, name, and route transitions.
+- The Story × Time index remains selectable, searchable, and understandable
+  without a canvas or motion.
+- Play fetches only the active personal stream and gives unpublished or stale
+  data a compact, directed state.
+- The direction is coherent but deliberately less spectacular than the former
+  WebGL concept. Native disclosure behavior, transition cancellation,
+  reduced-motion final states, keyboard flow, and connector retry behavior are
+  all covered by the release checks.
+
+## Innovation — 7.9 / 10
+
+- The strongest original idea is editorial rather than technical: one body of
+  work can have many public forms without multiplying the apparent number of
   accomplishments.
+- Story × Time turns a complicated public footprint into an inspectable career
+  map using ordinary web structure, keeping the technology invisible.
+- The Impact Ledger combines reach, participation, supported pipeline, and
+  product usage without pretending they are directly comparable units.
+- The model is differentiated by its content logic more than by a novel
+  interaction. Its quality depends on the deduplication and relationships
+  remaining credible under close inspection.
 
-## Overall experience — 9.3 / 10
+## Overall experience — 8.2 / 10
 
-- Responsive audits at 320, 390, 768, 1024, 1440, and 1920px reported
-  `scrollWidth === innerWidth` and no crossing elements for Home, Work,
-  expanded Work filters, the longest Work title, About, Play, Sources, and
-  Privacy.
-- At a 900px audit viewport, Home is 1.5 desktop viewports and about 2.1 mobile
-  viewports tall. The footer is 80px on desktop and 78px on mobile.
-- Mobile, reduced-motion, and Save-Data branches do not request Three.js.
-  Capable desktop widths render one canvas.
-- Mobile Lighthouse: Performance 91, Accessibility 100, Best Practices 100,
-  SEO 100; LCP 2.9s, TBT 0ms, CLS 0, initial transfer 278 KiB.
-- Automated validation passes 70 content/privacy/connector tests, 14
-  backend/security tests, 8 rendered-output tests, and 12 focused design
-  acceptance tests.
+- The v1.3 direction is substantially clearer: one thesis, four bodies of work,
+  one archive model, one impact ledger, and a small footer.
+- Visitors can scan the narrative before deciding whether to inspect all 82
+  WorkGroups, their 186 public forms, or the evidence behind a claim.
+- The absence of 3D and cinematic navigation is a product decision, not a
+  fallback: legibility and trust are the signature.
+- The release candidate meets the project’s production-quality gates while
+  preserving the existing owner-only access policy.
 
-Result: all v1.2 release gates pass. The remaining editorial risk is policy
-approval for employer-related impact wording, not a technical or UX defect.
+## Verification record
+
+1. Deterministic migration check: 184 footprint rows, 85 impact rows, 186
+   public forms, 82 WorkGroups, 13 rounded public measures, 198 evidence
+   records, and 64 typed relations.
+2. Automated checks: typecheck, lint, 84 content tests, 17 backend tests, 20
+   rendered acceptance tests, production build, dependency audit, and privacy
+   scans.
+3. Responsive audit: Home, Work, a long WorkGroup detail, Sources, Play, About,
+   and Privacy at 320, 390, 768, 1024, 1440, and 1920px, with no viewport
+   crossings.
+4. Interaction audit: keyboard order, visible focus, native disclosures,
+   cancellable Anime.js enhancement, reduced motion, active-stream loading, and
+   the Strava consent boundary.
+5. Mobile Lighthouse against the production Worker build: Performance 95,
+   Accessibility 100, Best Practices 100, SEO 100, and CLS 0.
+6. Final social preview: 1200 × 630 typographic asset inspected against the
+   release palette and information hierarchy.
+
+Release status: **validated for private deployment**.

@@ -5,7 +5,10 @@ import {
   type EncryptedCredential,
 } from "../credential-crypto";
 import { classifyDatabaseError } from "../database-errors";
-import { fetchHardcoverSnapshot } from "./hardcover";
+import {
+  fetchHardcoverSnapshot,
+  normalizeHardcoverAuthorization,
+} from "./hardcover";
 import {
   fetchMyAnimeListSnapshot,
   normalizeMyAnimeListAccessToken,
@@ -411,7 +414,7 @@ export async function saveConnectorCredential(
     const accessToken = normalizeMyAnimeListAccessToken(input);
     if (accessToken) credential = { accessToken };
   } else if (provider === "hardcover" && typeof input === "string") {
-    const authorization = input.trim();
+    const authorization = normalizeHardcoverAuthorization(input);
     if (authorization) credential = { authorization };
   } else if (
     provider === "steam" &&

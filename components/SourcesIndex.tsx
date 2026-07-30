@@ -19,19 +19,27 @@ export function SourcesIndex({
   entries,
   query = "",
   kind = "all",
-  showAll = false,
+  association = "all",
+  page = 1,
 }: {
   entries: SourceIndexEntry[];
   query?: string;
   kind?: string;
-  showAll?: boolean;
+  association?: string;
+  page?: number;
 }) {
   const kinds = [...new Set(entries.map(({ source }) => source.kind))].sort();
   const selectedKind = kinds.some((value) => value === kind) ? kind : "all";
+  const selectedAssociation = ["all", "work", "claim"].includes(association)
+    ? association
+    : "all";
   const needle = query.trim().toLowerCase();
   const filtered = entries.filter(
     ({ source, linkedWork, linkedClaims }) =>
       (selectedKind === "all" || source.kind === selectedKind) &&
+      (selectedAssociation === "all" ||
+        (selectedAssociation === "work" && linkedWork.length > 0) ||
+        (selectedAssociation === "claim" && linkedClaims.length > 0)) &&
       (!needle ||
         [
           source.title,
@@ -45,10 +53,15 @@ export function SourcesIndex({
           .toLowerCase()
           .includes(needle)),
   );
-  const isFiltering = Boolean(needle) || selectedKind !== "all";
-  const initialLimit = 12;
-  const visibleEntries =
-    isFiltering || showAll ? filtered : filtered.slice(0, initialLimit);
+  const isFiltering =
+    Boolean(needle) ||
+    selectedKind !== "all" ||
+    selectedAssociation !== "all";
+  const perPage = 24;
+  const pageCount = Math.max(Math.ceil(filtered.length / perPage), 1);
+  const selectedPage = Math.min(Math.max(page, 1), pageCount);
+  const startIndex = (selectedPage - 1) * perPage;
+  const visibleEntries = filtered.slice(startIndex, startIndex + perPage);
 
   return (
     <section
@@ -82,6 +95,14 @@ export function SourcesIndex({
               ))}
             </select>
           </label>
+          <label>
+            <span>Association</span>
+            <select defaultValue={selectedAssociation} name="association">
+              <option value="all">All associations</option>
+              <option value="work">Linked to work</option>
+              <option value="claim">Linked to a claim</option>
+            </select>
+          </label>
           <button type="submit">Search</button>
           {isFiltering ? (
             <Link className={styles.clear} href="/sources#bibliography">
@@ -91,27 +112,73 @@ export function SourcesIndex({
         </form>
       </div>
       <div className={styles.count}>
-        {isFiltering
-          ? `${filtered.length} matching public sources`
-          : showAll
-            ? `${filtered.length} public sources · complete bibliography`
-            : `${filtered.length} public sources · first ${visibleEntries.length} shown`}
+        <span>
+          {isFiltering
+            ? `${filtered.length} matching public sources`
+            : `${filtered.length} public sources`}
+        </span>
+        <span>
+          {filtered.length
+            ? `${startIndex + 1}—${Math.min(
+                startIndex + perPage,
+                filtered.length,
+              )} shown`
+            : "No matches"}
+        </span>
       </div>
-      <SourceRows entries={visibleEntries} />
-      {!isFiltering && filtered.length > initialLimit ? (
-        <div className={styles.browseControls}>
-          {showAll ? (
-            <Link href="/sources#bibliography">Show the first {initialLimit}</Link>
-          ) : (
-            <Link href="/sources?sources=all#bibliography">
-              Browse all {filtered.length} sources
+      <SourceRows entries={visibleEntries} startIndex={startIndex} />
+      {pageCount > 1 ? (
+        <nav className={styles.pagination} aria-label="Bibliography pages">
+          {selectedPage > 1 ? (
+            <Link
+              href={sourceIndexHref(
+                query,
+                selectedKind,
+                selectedAssociation,
+                selectedPage - 1,
+              )}
+            >
+              ← Previous
             </Link>
+          ) : (
+            <span />
           )}
-          <span>Search uses the complete bibliography.</span>
-        </div>
+          <span>
+            Page {selectedPage} of {pageCount}
+          </span>
+          {selectedPage < pageCount ? (
+            <Link
+              href={sourceIndexHref(
+                query,
+                selectedKind,
+                selectedAssociation,
+                selectedPage + 1,
+              )}
+            >
+              Next →
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
       ) : null}
     </section>
   );
+}
+
+function sourceIndexHref(
+  query: string,
+  kind: string,
+  association: string,
+  page: number,
+) {
+  const parameters = new URLSearchParams();
+  if (query.trim()) parameters.set("q", query.trim());
+  if (kind !== "all") parameters.set("kind", kind);
+  if (association !== "all") parameters.set("association", association);
+  if (page > 1) parameters.set("page", String(page));
+  const suffix = parameters.toString();
+  return `${suffix ? `/sources?${suffix}` : "/sources"}#bibliography`;
 }
 
 function SourceRows({
@@ -126,7 +193,7 @@ function SourceRows({
       {entries.map(({ source, linkedWork, linkedClaims }, index) => {
         const context = [...linkedClaims, ...linkedWork];
         return (
-          <li key={source.id}>
+          <li id={source.id} key={source.id}>
             <span>{String(startIndex + index + 1).padStart(3, "0")}</span>
             <div>
               <strong>{source.title}</strong>

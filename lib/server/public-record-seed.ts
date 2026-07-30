@@ -59,6 +59,18 @@ type PublicBundle = {
     placement: string;
     publicationState: string;
   }>;
+  workGroups: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    shortTitle: string;
+    summary: string;
+    bucket: string;
+    featuredOrder: number | null;
+    period: unknown;
+    publicationState: string;
+    verificationState: string;
+  }>;
 };
 
 type SeedRecord = {
@@ -199,7 +211,34 @@ function seedRecords(): SeedRecord[] {
     }),
   );
 
-  return [...itemRecords, ...metricRecords, ...narrativeRecords];
+  const workGroupRecords = publicBundle.workGroups.map(
+    (group, index): SeedRecord => ({
+      id: group.id,
+      recordType: "work_group",
+      slug: group.slug,
+      title: group.title,
+      summary: group.summary,
+      approvedPublicWording: group.summary,
+      caveat: "",
+      publicPayloadJson: JSON.stringify({
+        bucket: group.bucket,
+        shortTitle: group.shortTitle,
+        period: group.period,
+      }),
+      publicationState: safeState(group.publicationState),
+      verificationState: group.verificationState,
+      evidenceAccess: "public_web",
+      featured: group.featuredOrder !== null,
+      sortOrder: group.featuredOrder ?? 30_000 + index,
+    }),
+  );
+
+  return [
+    ...itemRecords,
+    ...metricRecords,
+    ...narrativeRecords,
+    ...workGroupRecords,
+  ];
 }
 
 export async function ensureSanitizedPublicRecords(

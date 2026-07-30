@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://anishshah.dev/schema/anish-content.v1.1.json",
+  "$id": "https://anishshah.dev/schema/anish-content.v1.2.json",
   "title": "Anish Shah Content Bundle",
   "type": "object",
   "additionalProperties": false,
@@ -13,7 +13,9 @@
     "organizations",
     "items",
     "entities",
+    "workGroups",
     "metrics",
+    "metricGroups",
     "evidence",
     "relations",
     "collections",
@@ -22,7 +24,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.1"
+      "const": "1.2"
     },
     "contentVersion": {
       "type": "string",
@@ -56,10 +58,22 @@
         "$ref": "#/$defs/entity"
       }
     },
+    "workGroups": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/workGroup"
+      }
+    },
     "metrics": {
       "type": "array",
       "items": {
         "$ref": "#/$defs/metric"
+      }
+    },
+    "metricGroups": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/metricPresentationGroup"
       }
     },
     "evidence": {
@@ -91,6 +105,9 @@
       "items": {
         "$ref": "#/$defs/sourceSnapshot"
       }
+    },
+    "groupingLedger": {
+      "$ref": "#/$defs/groupingLedger"
     }
   },
   "$defs": {
@@ -102,6 +119,7 @@
         "impactRows",
         "supplementalArtifacts",
         "publicItems",
+        "approvedMetricCount",
         "footprintBackedUniqueWorks",
         "supplementalUniqueWorks"
       ],
@@ -119,6 +137,10 @@
           "minimum": 0
         },
         "publicItems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "approvedMetricCount": {
           "type": "integer",
           "minimum": 0
         },
@@ -728,6 +750,309 @@
         }
       }
     },
+    "workGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "slug",
+        "slugAliases",
+        "title",
+        "shortTitle",
+        "summary",
+        "roleSummary",
+        "bucket",
+        "featuredOrder",
+        "primaryEntityId",
+        "memberEntityIds",
+        "programEntityIds",
+        "contextEntityIds",
+        "itemIds",
+        "period",
+        "yearStart",
+        "yearEnd",
+        "organizationIds",
+        "topics",
+        "formats",
+        "publicationState",
+        "verificationState"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "slugAliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "title": {
+          "type": "string"
+        },
+        "shortTitle": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "roleSummary": {
+          "type": "string"
+        },
+        "bucket": {
+          "enum": [
+            "products-open-source",
+            "courses-learning",
+            "writing-research",
+            "talks-programs"
+          ]
+        },
+        "featuredOrder": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "primaryEntityId": {
+          "type": "string"
+        },
+        "memberEntityIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "programEntityIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "contextEntityIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "itemIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "period": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start",
+            "end",
+            "precision",
+            "basis"
+          ],
+          "properties": {
+            "start": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "end": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "precision": {
+              "enum": [
+                "day",
+                "month",
+                "year",
+                "unknown"
+              ]
+            },
+            "basis": {
+              "enum": [
+                "event_date",
+                "publication_date",
+                "upload_date",
+                "unknown"
+              ]
+            }
+          }
+        },
+        "yearStart": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "yearEnd": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "organizationIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "formats": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "event",
+              "article",
+              "course",
+              "recording",
+              "technical_report",
+              "external_reference",
+              "producer_credit",
+              "translation",
+              "mirror",
+              "profile",
+              "open_source_repo",
+              "open_source_pr"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "publicationState": {
+          "type": "string",
+          "enum": [
+            "public",
+            "review_required",
+            "private",
+            "excluded"
+          ]
+        },
+        "verificationState": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "corroborated",
+            "listed_unconfirmed",
+            "derived",
+            "tentative",
+            "superseded",
+            "excluded"
+          ]
+        }
+      }
+    },
+    "groupingLedgerEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "workGroupId",
+        "decision",
+        "rule",
+        "entityIds",
+        "contextEntityIds",
+        "itemIds",
+        "rationale"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "workGroupId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "decision": {
+          "enum": [
+            "same_story",
+            "same_occurrence_representation",
+            "program_sibling",
+            "standalone",
+            "reference_only"
+          ]
+        },
+        "rule": {
+          "enum": [
+            "explicit_curation",
+            "typed_relation",
+            "deterministic_standalone",
+            "context_classification"
+          ]
+        },
+        "entityIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "contextEntityIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "itemIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "rationale": {
+          "type": "string"
+        }
+      }
+    },
+    "groupingLedger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "repeatedTitleClusterCount",
+        "repeatedUrlClusterCount",
+        "entries"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0"
+        },
+        "repeatedTitleClusterCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "repeatedUrlClusterCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/groupingLedgerEntry"
+          }
+        }
+      }
+    },
     "metricPeriod": {
       "type": "object",
       "additionalProperties": false,
@@ -984,6 +1309,48 @@
         }
       ],
       "additionalProperties": false
+    },
+    "metricPresentationGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "theme",
+        "title",
+        "order",
+        "leadMetricId",
+        "metricIds"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "theme": {
+          "enum": [
+            "learning",
+            "product",
+            "programs",
+            "archive"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "leadMetricId": {
+          "type": "string"
+        },
+        "metricIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
     },
     "evidence": {
       "type": "object",

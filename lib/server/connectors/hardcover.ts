@@ -24,6 +24,15 @@ type HardcoverBook = {
   };
 };
 
+export function normalizeHardcoverAuthorization(value: string): string {
+  const token = value
+    .trim()
+    .replace(/^Bearer(?:\s+|$)/i, "")
+    .trim();
+  if (!token || token.length > 8192 || /\s/.test(token)) return "";
+  return `Bearer ${token}`;
+}
+
 function hardcoverStatus(status: number | undefined): string {
   const statuses: Record<number, string> = {
     1: "Want to read",
@@ -83,11 +92,16 @@ async function queryHardcover<T>(
 export async function fetchHardcoverSnapshot(
   credential: HardcoverCredential,
 ): Promise<ConnectorFetchResult> {
-  const authorization = credential.authorization.trim();
+  const authorization = normalizeHardcoverAuthorization(
+    credential.authorization,
+  );
   if (!authorization) {
-    throw new ConnectorFetchError("Hardcover authorization token is empty.", {
-      code: "credential_invalid",
-    });
+    throw new ConnectorFetchError(
+      "Hardcover authorization token is empty or invalid.",
+      {
+        code: "credential_invalid",
+      },
+    );
   }
 
   const identity = await queryHardcover<{

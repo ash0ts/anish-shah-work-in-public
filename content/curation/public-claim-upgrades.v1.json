@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "1.0",
+  "claims": [
+    {
+      "replacesMetricId": "metric:events:pipeline-supported:2025",
+      "id": "metric:events:pipeline-supported:2024-2025",
+      "subjectId": "collection:events",
+      "category": "events",
+      "key": "pipeline_supported_2024_2025",
+      "displayValue": "$4M+",
+      "label": "in supported event pipeline across tracked 2024–2025 programs",
+      "qualifier": "Supported pipeline across tracked event programs; not revenue, closed ARR, or personal attribution.",
+      "period": {
+        "start": "2024",
+        "end": "2025",
+        "asOf": "2025-10-01",
+        "label": "2024–2025"
+      },
+      "sourceLabel": "Internal analytics",
+      "scope": "portfolio",
+      "attribution": "associated",
+      "displaySurfaces": [
+        "homepage",
+        "collection",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "derived",
+      "selectors": [
+        {
+          "item": "All tracked 2024 events",
+          "metric": "pipeline_supported_usd"
+        },
+        {
+          "item": "All 2025 events (Anish core IC/organizer)",
+          "metric": "pipeline_supported_usd"
+        }
+      ]
+    },
+    {
+      "replacesMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-06-11",
+      "id": "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "mcp_tool_calls",
+      "displayValue": "200K+",
+      "label": "MCP tool calls through July 29, 2026",
+      "qualifier": "Rounded down from the July 29 internal analytics checkpoint; direct project usage, not revenue.",
+      "period": {
+        "start": "2026-03-29",
+        "end": "2026-07-29",
+        "asOf": "2026-07-29",
+        "label": "Through July 29, 2026"
+      },
+      "sourceLabel": "Internal analytics",
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "homepage",
+        "collection",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "selectors": [
+        {
+          "item": "W&B MCP Server",
+          "metric": "all_time_tool_calls",
+          "date": "2026-07-29"
+        }
+      ]
+    }
+  ]
+}

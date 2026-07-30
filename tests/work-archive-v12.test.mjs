@@ -20,35 +20,22 @@ const { workArchiveRecordsFrom } = await tsImport(
 
 const records = workArchiveRecordsFrom(publicBundle);
 
-test("the archive separates nested forms from context and supplemental observations", () => {
+test("the archive indexes public WorkGroups while keeping context-only observations nested", () => {
   const publicItems = publicBundle.items.filter(
     (item) => item.publicationState === "public",
   );
-  const indexedEntityIds = new Set(records.map((record) => record.id));
-  const indexedEntities = publicBundle.entities.filter((entity) =>
-    indexedEntityIds.has(entity.id),
-  );
   const nestedItemIds = new Set(
-    indexedEntities.flatMap((entity) => entity.itemIds),
+    publicBundle.workGroups.flatMap((group) => group.itemIds),
   );
   const residual = publicItems.filter((item) => !nestedItemIds.has(item.id));
-  const entityById = new Map(
-    publicBundle.entities.map((entity) => [entity.id, entity]),
-  );
 
-  assert.equal(records.length, 99);
-  assert.equal(nestedItemIds.size, 156);
-  assert.equal(residual.length, 30);
-  assert(
-    residual.every((item) => {
-      const entity = entityById.get(item.canonicalEntityId);
-      return (
-        entity?.countability === "context" ||
-        entity?.sourceBasis === "supplemental"
-      );
-    }),
-    "Residual observations must stay explicitly contextual or supplemental",
+  assert.equal(records.length, 82);
+  assert.deepEqual(
+    new Set(records.map((record) => record.id)),
+    new Set(publicBundle.workGroups.map((group) => group.id)),
   );
+  assert.equal(nestedItemIds.size, 157);
+  assert.equal(residual.length, 29);
   assert.deepEqual(
     Object.fromEntries(
       [...new Set(residual.map((item) => item.type))]
@@ -60,13 +47,41 @@ test("the archive separates nested forms from context and supplemental observati
     ),
     {
       external_reference: 23,
-      open_source_repo: 1,
       profile: 6,
     },
   );
 });
 
-test("topic and legacy practice filters operate on canonical works", () => {
+test("related context is searchable when it has an explicit group relationship", () => {
+  const odscReference = publicBundle.items.find(
+    (item) => item.id === "item:fp-0100",
+  );
+  const unassociatedProfile = publicBundle.items.find(
+    (item) => item.id === "item:fp-0101",
+  );
+  assert(odscReference && unassociatedProfile);
+
+  const odscResults = filterWorkArchiveRecords(
+    records,
+    parseWorkArchiveQuery({ q: odscReference.displayTitle }),
+  );
+  assert.deepEqual(
+    odscResults.map((record) => record.id),
+    ["group:standalone:oc-fp-0002"],
+  );
+  assert.equal(
+    matchingChildForQuery(odscResults[0], odscReference.displayTitle)?.id,
+    odscReference.id,
+  );
+
+  const profileResults = filterWorkArchiveRecords(
+    records,
+    parseWorkArchiveQuery({ q: unassociatedProfile.displayTitle }),
+  );
+  assert.deepEqual(profileResults, []);
+});
+
+test("bucket, topic, and legacy practice filters operate on WorkGroups", () => {
   const sample = records.find((record) => record.topics.length);
   assert(sample, "Expected at least one canonical work with a topic");
 
@@ -75,6 +90,13 @@ test("topic and legacy practice filters operate on canonical works", () => {
   assert(topicResults.length > 0);
   assert(
     topicResults.every((record) => record.topics.includes(sample.topics[0])),
+  );
+
+  const bucketQuery = parseWorkArchiveQuery({ bucket: sample.bucket });
+  assert(
+    filterWorkArchiveRecords(records, bucketQuery).every(
+      (record) => record.bucket === sample.bucket,
+    ),
   );
 
   const legacyQuery = parseWorkArchiveQuery({ practice: sample.practice });
@@ -130,6 +152,7 @@ test("legacy map URLs canonicalize without losing search filters", () => {
   const redirected = legacyMapRedirectPath({
     view: "map",
     q: "agents",
+    bucket: "talks-programs",
     topic: "agents",
     year: "2025",
     format: "event",
@@ -143,6 +166,7 @@ test("legacy map URLs canonicalize without losing search filters", () => {
   assert.equal(url.pathname, "/work");
   assert.equal(url.searchParams.has("view"), false);
   assert.equal(url.searchParams.get("q"), "agents");
+  assert.equal(url.searchParams.get("bucket"), "talks-programs");
   assert.equal(url.searchParams.get("topic"), "agents");
   assert.equal(url.searchParams.get("year"), "2025");
   assert.equal(url.searchParams.get("format"), "event");
@@ -177,6 +201,7 @@ test("Work source removes map and all-forms UI while retaining 24-item paginatio
   ]);
   assert.match(source, /const perPage = 24/);
   assert.doesNotMatch(source, /VisualArchive|view switch|Browse all/i);
+  assert.match(source, /name="bucket"/);
   assert.match(source, /name="topic"/);
   assert.doesNotMatch(source, /name="view"/);
   assert.doesNotMatch(
@@ -184,8 +209,8 @@ test("Work source removes map and all-forms UI while retaining 24-item paginatio
     /id="work-(?:more-)?filters"[\s\S]{0,80}\bopen\b/,
     "Filter disclosures must not SSR open and collapse after paint",
   );
-  assert.match(behavior, /min-width:\s*901px/);
-  assert.match(css, /@media\s*\(max-width:\s*900px\)/);
+  assert.match(behavior, /min-width:\s*1101px/);
+  assert.match(css, /@media\s*\(max-width:\s*1100px\)/);
   assert.match(
     css,
     /\.moreFilters:not\(\[open\]\)\s*>\s*\.secondaryFilters\s*\{[\s\S]*?display:\s*none/,

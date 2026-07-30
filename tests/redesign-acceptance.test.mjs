@@ -174,48 +174,61 @@ async function runtimeSourceFiles() {
   return files;
 }
 
-test("Home stays within the v1.2 editorial and chapter contract", async () => {
+test("Home stays within the compressed Bodies of Work contract", async () => {
   const html = await renderHtml("/");
   const markup = documentMarkup(html);
   const visible = defaultVisibleHomeText(html);
-  const careerSection =
+  const bodiesSection =
     markup.match(
-      /<section\b[^>]*aria-labelledby="career-chapters-title"[\s\S]*?<\/section>/i,
+      /<section\b[^>]*aria-labelledby="bodies-of-work-title"[\s\S]*?<\/section>/i,
     )?.[0] ?? "";
   const workLinks = [
-    ...careerSection.matchAll(/<a\b[^>]*href="\/work\/([^"?#]+)"/gi),
+    ...bodiesSection.matchAll(/<a\b[^>]*href="\/work\/([^"?#]+)"/gi),
   ].map((match) => match[1]);
 
   assert(
     wordCount(visible) <= 300,
     `Default Home contains ${wordCount(visible)} visible words; budget is 300`,
   );
-  assert.equal((markup.match(/<details\b/g) ?? []).length, 5);
+  assert.equal((bodiesSection.match(/<details\b/g) ?? []).length, 4);
   assert.equal(workLinks.length, 12);
   assert.equal(new Set(workLinks).size, 12);
   assert.match(
-    markup,
-    /<details\b[^>]*data-selected="true"[^>]*open/i,
-    "The newest visible chapter must be selected by default",
+    bodiesSection,
+    /<details\b[^>]*open/i,
+    "One body of work should be readable without interaction",
   );
   assert.equal(occurrences(visible, "Explore my work"), 1);
   assert.equal(occurrences(visible, "7K+"), 1);
-  assert.equal(occurrences(visible, "Nearly 100K"), 1);
-  assert.equal(occurrences(visible, "$2M+"), 1);
+  assert.equal(occurrences(visible, "1K+ / 500+"), 1);
+  assert.equal(occurrences(visible, "$4M+"), 1);
+  assert.equal(occurrences(visible, "200K+"), 1);
   assert.doesNotMatch(
     visible,
-    /Teach\. Build\. Convene|representative work|public forms? archive/i,
+    /Teach\. Build\. Convene|representative work/i,
   );
 });
 
-test("Work is one paginated two-dimensional canonical index", async () => {
+test("Work combines a semantic Story × Time matrix with one paginated WorkGroup index", async () => {
   const html = await renderHtml("/work");
   const markup = documentMarkup(html);
   const workList =
     markup.match(/<ol\b[^>]*start="1"[^>]*>([\s\S]*?)<\/ol>/i)?.[1] ?? "";
+  const matrix =
+    markup.match(/<table\b[\s\S]*?<\/table>/i)?.[0] ?? "";
   assert.equal((workList.match(/<li\b/g) ?? []).length, 24);
+  assert.equal((matrix.match(/<tbody\b/g) ?? []).length, 1);
+  assert.equal((matrix.match(/<tr\b/g) ?? []).length, 5);
+  assert.match(matrix, /82 bodies|work|forms/i);
   assert.equal((markup.match(/<input\b[^>]*type="search"/gi) ?? []).length, 1);
-  for (const name of ["topic", "year", "format", "organization", "role"]) {
+  for (const name of [
+    "bucket",
+    "topic",
+    "year",
+    "format",
+    "organization",
+    "role",
+  ]) {
     assert.match(markup, new RegExp(`<select\\b[^>]*name="${name}"`, "i"));
   }
   assert.doesNotMatch(markup, /\bMap\b|Visual archive|Browse all 186|<canvas\b/i);
@@ -230,52 +243,48 @@ test("child-title search returns the parent and identifies the matching form", a
     (candidate) => candidate.id === child.canonicalEntityId,
   );
   assert(entity);
+  const group = publicBundle.workGroups.find((candidate) =>
+    candidate.itemIds.includes(child.id),
+  );
+  assert(group);
   const html = await renderHtml(
     `/work?q=${encodeURIComponent(child.displayTitle)}`,
   );
-  assert.match(html, /Matched public form:/i);
+  assert.match(html, /Matched public record:/i);
   assert.match(html, new RegExp(child.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  assert.match(html, new RegExp(`/work/${entity.slug}#${child.id}`));
+  assert.match(html, new RegExp(`/work/${group.slug}#${child.id}`));
 });
 
 test("child slugs search and redirect to the exact form anchor", async () => {
-  const entityById = new Map(
-    publicBundle.entities.map((entity) => [entity.id, entity]),
-  );
-  const child = publicBundle.items.find((item) => {
-    const entity = entityById.get(item.canonicalEntityId);
-    return (
-      entity?.countability === "unique_work" &&
-      entity.sourceBasis !== "supplemental" &&
-      item.id !== entity.primaryItemId &&
-      entity.slugAliases.includes(item.slug)
-    );
-  });
-  assert(child, "Expected a legacy child slug shared with its entity aliases");
-  const entity = entityById.get(child.canonicalEntityId);
-  assert(entity);
+  const match = publicBundle.workGroups
+    .flatMap((group) =>
+      group.itemIds.map((itemId) => ({
+        group,
+        item: publicBundle.items.find((item) => item.id === itemId),
+      })),
+    )
+    .find(({ group, item }) => item && item.slug !== group.slug);
+  assert(match?.item, "Expected a nested public form with a legacy slug");
+  const { group, item: child } = match;
 
   const searchHtml = await renderHtml(
     `/work?q=${encodeURIComponent(child.slug)}`,
   );
-  assert.match(searchHtml, /Matched public form:/i);
-  assert.match(searchHtml, new RegExp(`/work/${entity.slug}#${child.id}`));
+  assert.match(searchHtml, /Matched public record:/i);
+  assert.match(searchHtml, new RegExp(`/work/${group.slug}#${child.id}`));
 
   const response = await fetch(`${BASE_URL}/work/${child.slug}`, {
     redirect: "manual",
   });
   assert([307, 308].includes(response.status));
   const location = new URL(response.headers.get("location"), BASE_URL);
-  assert.equal(location.pathname, `/work/${entity.slug}`);
+  assert.equal(location.pathname, `/work/${group.slug}`);
   assert.equal(location.hash, `#${child.id}`);
 });
 
-test("single- and multi-form Work details avoid duplicate presentation", async () => {
-  const indexed = publicBundle.entities.filter(
-    (entity) =>
-      entity.publicationState === "public" &&
-      entity.countability === "unique_work" &&
-      entity.sourceBasis !== "supplemental",
+test("single- and multi-form WorkGroup details avoid duplicate presentation", async () => {
+  const indexed = publicBundle.workGroups.filter(
+    (group) => group.publicationState === "public",
   );
   const single = indexed.find((entity) => entity.itemIds.length === 1);
   const multiple = indexed.find((entity) => entity.itemIds.length > 1);
@@ -306,26 +315,11 @@ test("single- and multi-form Work details avoid duplicate presentation", async (
     );
   }
 
-  const duplicateTitleEntity = indexed.find((entity) => {
-    const primary = publicBundle.items.find(
-      (item) => item.id === entity.primaryItemId,
-    );
-    return (
-      primary &&
-      entity.itemIds.some((id) => {
-        const item = publicBundle.items.find((candidate) => candidate.id === id);
-        return (
-          item &&
-          item.id !== primary.id &&
-          item.displayTitle === entity.displayTitle
-        );
-      })
-    );
-  });
-  assert(duplicateTitleEntity);
-  const duplicateTitleHtml = await renderHtml(
-    `/work/${duplicateTitleEntity.slug}`,
+  const primaryEntity = publicBundle.entities.find(
+    (entity) => entity.id === multiple.primaryEntityId,
   );
+  assert(primaryEntity);
+  const duplicateTitleHtml = await renderHtml(`/work/${multiple.slug}`);
   assert.equal(
     occurrences(
       textFromMarkup(documentMarkup(duplicateTitleHtml)).toLocaleLowerCase(),
@@ -337,83 +331,60 @@ test("single- and multi-form Work details avoid duplicate presentation", async (
 });
 
 test("Work-detail outcomes are direct while wider measures remain contextual", async () => {
-  const itemsById = new Map(publicBundle.items.map((item) => [item.id, item]));
-  const entitiesById = new Map(
-    publicBundle.entities.map((entity) => [entity.id, entity]),
-  );
-
   for (const metric of publicBundle.metrics) {
     if (!metric.displaySurfaces?.includes("item_detail")) continue;
-    const item = itemsById.get(metric.subjectId);
-    const entity = entitiesById.get(metric.subjectId);
-    if (!item && !entity) continue;
-    const sampleEntity = entity ?? entitiesById.get(item.canonicalEntityId);
-    if (
-      !sampleEntity?.slug ||
-      sampleEntity.countability !== "unique_work" ||
-      !sampleEntity.itemIds.length
-    ) {
-      continue;
-    }
-    const html = await renderHtml(`/work/${sampleEntity.slug}`);
+    const group = publicBundle.workGroups.find(
+      (candidate) =>
+        candidate.id === metric.subjectId ||
+        candidate.memberEntityIds.includes(metric.subjectId) ||
+        candidate.itemIds.includes(metric.subjectId),
+    );
+    if (!group) continue;
+    const html = await renderHtml(`/work/${group.slug}`);
     const directText = textFromMarkup(
       sectionMarkupByLabel(html, "outcomes-title"),
     ).toLocaleLowerCase();
     const metricText = `${metric.displayValue} ${metric.label}`
       .toLocaleLowerCase();
-    const approved =
-      metric.subjectId === sampleEntity.id ||
-      sampleEntity.itemIds.includes(metric.subjectId);
-    assert.equal(
+    assert(
       directText.includes(metricText),
-      Boolean(approved),
-      `${metric.id} direct-outcome policy is incorrect`,
+      `${metric.id} should be a direct outcome of ${group.id}`,
     );
   }
 
   for (const metric of publicBundle.metrics.filter(
     (candidate) => !candidate.displaySurfaces?.includes("item_detail"),
   )) {
-    const contextEntity = entitiesById.get(metric.subjectId);
-    const contextItem = contextEntity?.itemIds
-      .map((id) => itemsById.get(id))
-      .find(Boolean);
-    const workEntity = contextItem
-      ? entitiesById.get(contextItem.canonicalEntityId)
-      : undefined;
-    if (!workEntity?.slug || workEntity.countability !== "unique_work") continue;
-    const html = await renderHtml(`/work/${workEntity.slug}`);
-    const directText = textFromMarkup(
-      sectionMarkupByLabel(html, "outcomes-title"),
-    ).toLocaleLowerCase();
-    assert(
-      !directText.includes(
-        `${metric.displayValue} ${metric.label}`.toLocaleLowerCase(),
-      ),
-      `${metric.id} leaked into a child Work as a direct outcome`,
-    );
+    for (const group of publicBundle.workGroups.filter(
+      (candidate) =>
+        candidate.programEntityIds.includes(metric.subjectId) ||
+        candidate.contextEntityIds.includes(metric.subjectId),
+    )) {
+      const html = await renderHtml(`/work/${group.slug}`);
+      const directText = textFromMarkup(
+        sectionMarkupByLabel(html, "outcomes-title"),
+      ).toLocaleLowerCase();
+      assert(
+        !directText.includes(
+          `${metric.displayValue} ${metric.label}`.toLocaleLowerCase(),
+        ),
+        `${metric.id} leaked into ${group.id} as a direct outcome`,
+      );
+    }
   }
 });
 
-test("Home owns the only Three.js consumer and keeps it deferred", async () => {
+test("Three.js, WebGL, and canvas navigation are absent from public runtime code", async () => {
   const sourceEntries = await Promise.all(
     (await runtimeSourceFiles())
       .filter((file) => /\.(?:js|mjs|ts|tsx)$/i.test(file))
       .map(async (file) => ({ file, text: await readFile(file, "utf8") })),
   );
-  const dynamicConsumers = sourceEntries.filter(({ text }) =>
-    /\bimport\(\s*["']three["']\s*\)/.test(text),
-  );
-  assert.equal(dynamicConsumers.length, 1);
-  assert.equal(
-    path.relative(PROJECT_ROOT, dynamicConsumers[0].file),
-    "components/CareerChapters.tsx",
-  );
   for (const { file, text } of sourceEntries) {
     assert.doesNotMatch(
       text,
-      /^import(?:[\s\S]*?)from\s*["']three["'];?$/m,
-      `${path.relative(PROJECT_ROOT, file)} statically imports Three.js`,
+      /(?:from\s*["']three["']|import\(\s*["']three["']\s*\)|WebGLRenderer|<canvas\b)/i,
+      `${path.relative(PROJECT_ROOT, file)} contains removed 3D navigation`,
     );
   }
 
@@ -422,30 +393,10 @@ test("Home owns the only Three.js consumer and keeps it deferred", async () => {
   const threeEntries = entries.filter(
     ([, entry]) => /node_modules\/three\//.test(entry.src ?? ""),
   );
-  assert.equal(threeEntries.length, 1);
-  assert.equal(threeEntries[0][1].isDynamicEntry, true);
-  const homeHtml = await renderHtml("/");
-  assert(!homeHtml.includes(threeEntries[0][1].file));
-  const workHtml = await renderHtml("/work");
-  assert(!workHtml.includes(threeEntries[0][1].file));
-});
-
-test("mobile, reduced-motion, Save-Data, and context loss are explicit no-Three paths", async () => {
-  const source = await readFile(
-    path.join(PROJECT_ROOT, "components/CareerChapters.tsx"),
-    "utf8",
-  );
-  assert.match(source, /window\.innerWidth < 960/);
-  assert.match(source, /prefers-reduced-motion:\s*reduce/);
-  assert.match(source, /\.connection\?\.saveData/);
-  assert.match(source, /webglcontextlost/);
-  assert.match(source, /ArrowLeft/);
-  assert.match(source, /ArrowRight/);
-  assert.match(source, /event\.key === "Home"/);
-  assert.match(source, /event\.key === "End"/);
-  assert.match(source, /activeAnimation\?\.complete\(\)/);
-  assert.match(source, /activeAnimation\?\.cancel\(\)/);
-  assert.doesNotMatch(source, /requestAnimationFrame\(\s*(?:render|animate)\s*\)/);
+  assert.equal(threeEntries.length, 0);
+  for (const pathname of ["/", "/work"]) {
+    assert.doesNotMatch(documentMarkup(await renderHtml(pathname)), /<canvas\b/i);
+  }
 });
 
 test("Play remains consent-gated and has a complete no-JavaScript state", async () => {
@@ -522,8 +473,12 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
   }
   assert.deepEqual(overflowMasking, [
     {
-      file: "components/CareerChapters.module.css",
-      selector: ".stage",
+      file: "components/StoryTimeMatrix.module.css",
+      selector: ".tableFrame caption",
+    },
+    {
+      file: "components/StoryTimeMatrix.module.css",
+      selector: ".tableFrame thead",
     },
   ]);
   for (const width of [1050, 760, 390]) {

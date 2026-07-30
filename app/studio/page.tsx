@@ -114,7 +114,7 @@ export default async function StudioPage() {
         <p className={styles.eyebrow}>Owner control room</p>
         <h1>Publish deliberately.</h1>
         <p>
-          Review the public projection, approve narrow editorial changes, and
+          Review the public projection, make narrow editorial changes, and
           refresh personal streams without exposing private source data.
         </p>
       </header>
@@ -172,6 +172,83 @@ export default async function StudioPage() {
             the last successful snapshot remains available.
           </p>
         </div>
+        <div className={styles.setupGuide} aria-labelledby="connector-setup-title">
+          <div className={styles.setupGuideIntro}>
+            <p className={styles.eyebrow}>Owner setup</p>
+            <h3 id="connector-setup-title">Connect once. Publish deliberately.</h3>
+          </div>
+          <ol className={styles.setupSteps}>
+            <li>
+              <span>01</span>
+              <p>
+                <strong>Open the site gates.</strong> Apply the D1 migrations,
+                allowlist the exact owner email, add the encryption key, and
+                disclose Steam storage countries.
+              </p>
+            </li>
+            <li>
+              <span>02</span>
+              <p>
+                <strong>Get the owner credential.</strong> Use only the official
+                provider pages below, then paste it into the matching card.
+              </p>
+            </li>
+            <li>
+              <span>03</span>
+              <p>
+                <strong>Publish the snapshot.</strong> Connect or replace the
+                credential, run Refresh now, and confirm the card reports
+                Current.
+              </p>
+            </li>
+          </ol>
+          <nav
+            className={styles.providerLinks}
+            aria-label="Official connector setup resources"
+          >
+            <a
+              href="https://myanimelist.net/apiconfig"
+              rel="noreferrer"
+              target="_blank"
+            >
+              MyAnimeList developer portal
+            </a>
+            <a
+              href="https://hardcover.app/account/api"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Hardcover API token
+            </a>
+            <a
+              href="https://steamcommunity.com/dev/apikey"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Steam API key
+            </a>
+            <a
+              href="https://help.steampowered.com/en/faqs/view/2816-BE67-5B69-0FEC"
+              rel="noreferrer"
+              target="_blank"
+            >
+              SteamID help
+            </a>
+            <a
+              href="https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Strava embed guide
+            </a>
+          </nav>
+          <p className={styles.setupFootnote}>
+            MyAnimeList access tokens are renewed manually through Replace
+            credential. Strava has no Studio credential: publish its official{" "}
+            <code>strava-embeds.com</code> URL through the deployment
+            environment, and visitors still choose whether to load it.
+          </p>
+        </div>
         {!overview.encryptionConfigured ? (
           <div className={styles.inlineNotice}>
             <strong>Credential encryption needs setup.</strong>
@@ -197,6 +274,7 @@ export default async function StudioPage() {
           {connectors.map((connector) => (
             <ConnectorControls
               connector={connector}
+              encryptionConfigured={overview.encryptionConfigured}
               steamStorageCountries={overview.steamStorageCountries}
               key={connector.provider}
             />

@@ -58,18 +58,31 @@ export function publicMetricsFrom(
   );
 }
 
-const homepageMetricIds = [
-  "metric:courses:enrollments:2026-07-30",
-  "metric:project:wandb-mcp-server:tool-calls:2026-06-11",
-  "metric:events:pipeline-supported:2025",
+const homepageMetricCandidates = [
+  ["metric:courses:enrollments:2026-07-30"],
+  ["metric:event:fully-connected-sf:reach:2024"],
+  [
+    "metric:events:pipeline-supported:2024-2025",
+    "metric:events:pipeline-supported:2025",
+  ],
+  [
+    "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+    "metric:project:wandb-mcp-server:tool-calls:2026-06-11",
+  ],
 ];
 
 export function homepageMetricsFrom(
   bundle: AnishContentBundle,
 ): PublicImpactMetric[] {
-  const metrics = publicMetricsFrom(bundle);
-  const ids = new Set(homepageMetricIds);
-  return metrics.filter((metric) => ids.has(metric.id));
+  const metrics = new Map(
+    publicMetricsFrom(bundle).map((metric) => [metric.id, metric]),
+  );
+  return homepageMetricCandidates.flatMap((candidateIds) => {
+    const metric = candidateIds
+      .map((id) => metrics.get(id))
+      .find((candidate) => Boolean(candidate));
+    return metric ? [metric] : [];
+  });
 }
 
 export function featuredItemsFrom(

@@ -1,6 +1,6 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import styles from "./PersonalStreams.module.css";
 
 type StatusCount = { label: string; count: number };
@@ -67,11 +67,13 @@ type SteamPayload = {
 };
 
 type ConnectorState<T> =
+  | { status: "idle" }
   | { status: "loading" }
   | { status: "unavailable"; message: string }
   | { status: "ready"; payload: T; fetchedAt: string; stale: boolean };
 
 type StreamId = "watch" | "read" | "play" | "move";
+type ConnectorProvider = "myanimelist" | "hardcover" | "steam";
 
 const streams = [
   {
@@ -131,72 +133,102 @@ function officialStravaEmbed(value: string | undefined) {
   }
 }
 
+async function loadConnector<T>(
+  provider: ConnectorProvider,
+): Promise<ConnectorState<T>> {
+  try {
+    const response = await fetch(`/api/connectors/${provider}`, {
+      headers: { Accept: "application/json" },
+    });
+    const body = (await response.json()) as {
+      status: string;
+      message?: string;
+      payload?: T;
+      fetchedAt?: string;
+      stale?: boolean;
+    };
+    if (!response.ok || body.status !== "ready" || !body.payload) {
+      return {
+        status: "unavailable",
+        message:
+          body.message ??
+          "This stream has not been published from the owner studio yet.",
+      };
+    }
+    return {
+      status: "ready",
+      payload: body.payload,
+      fetchedAt: body.fetchedAt ?? "",
+      stale: Boolean(body.stale),
+    };
+  } catch {
+    return {
+      status: "unavailable",
+      message: "The last public snapshot is temporarily unavailable.",
+    };
+  }
+}
+
 export function PersonalStreams() {
   const [active, setActive] = useState<StreamId>("watch");
   const [mal, setMal] = useState<ConnectorState<MalPayload>>({
-    status: "loading",
+    status: "idle",
   });
   const [hardcover, setHardcover] = useState<ConnectorState<HardcoverPayload>>({
-    status: "loading",
+    status: "idle",
   });
   const [steam, setSteam] = useState<ConnectorState<SteamPayload>>({
-    status: "loading",
+    status: "idle",
   });
   const [showStrava, setShowStrava] = useState(false);
+  const requestedProviders = useRef(new Set<ConnectorProvider>());
+  const mounted = useRef(true);
   const stravaEmbed = officialStravaEmbed(
     process.env.NEXT_PUBLIC_STRAVA_EMBED_URL,
   );
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async <T,>(
-      provider: "myanimelist" | "hardcover" | "steam",
-      setter: (state: ConnectorState<T>) => void,
-    ) => {
-      try {
-        const response = await fetch(`/api/connectors/${provider}`, {
-          headers: { Accept: "application/json" },
-        });
-        const body = (await response.json()) as {
-          status: string;
-          message?: string;
-          payload?: T;
-          fetchedAt?: string;
-          stale?: boolean;
-        };
-        if (cancelled) return;
-        if (!response.ok || body.status !== "ready" || !body.payload) {
-          setter({
-            status: "unavailable",
-            message:
-              body.message ??
-              "This stream has not been published from the owner studio yet.",
-          });
-          return;
-        }
-        setter({
-          status: "ready",
-          payload: body.payload,
-          fetchedAt: body.fetchedAt ?? "",
-          stale: Boolean(body.stale),
-        });
-      } catch {
-        if (!cancelled) {
-          setter({
-            status: "unavailable",
-            message: "The last public snapshot is temporarily unavailable.",
-          });
-        }
-      }
-    };
-
-    void load<MalPayload>("myanimelist", setMal);
-    void load<HardcoverPayload>("hardcover", setHardcover);
-    void load<SteamPayload>("steam", setSteam);
+    mounted.current = true;
     return () => {
-      cancelled = true;
+      mounted.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    const provider: ConnectorProvider | null =
+      active === "watch"
+        ? "myanimelist"
+        : active === "read"
+          ? "hardcover"
+          : active === "play"
+            ? "steam"
+            : null;
+    if (!provider || requestedProviders.current.has(provider)) return;
+    requestedProviders.current.add(provider);
+
+    if (provider === "myanimelist") {
+      void loadConnector<MalPayload>(provider).then((state) => {
+        if (state.status !== "ready") {
+          requestedProviders.current.delete(provider);
+        }
+        if (mounted.current) setMal(state);
+      });
+    } else if (provider === "hardcover") {
+      void loadConnector<HardcoverPayload>(provider).then((state) => {
+        if (state.status !== "ready") {
+          requestedProviders.current.delete(provider);
+        }
+        if (mounted.current) setHardcover(state);
+      });
+    } else {
+      void loadConnector<SteamPayload>(provider).then((state) => {
+        if (state.status !== "ready") {
+          requestedProviders.current.delete(provider);
+        }
+        if (mounted.current) setSteam(state);
+      });
+    }
+  }, [active]);
 
   const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     const current = streams.findIndex((stream) => stream.id === active);
@@ -502,7 +534,7 @@ function CompactList({
 }
 
 function StreamEmpty<T>({ state }: { state: ConnectorState<T> }) {
-  const loading = state.status === "loading";
+  const loading = state.status === "idle" || state.status === "loading";
   return (
     <div className={styles.empty} aria-live="polite">
       <span aria-hidden="true">{loading ? "···" : "○"}</span>

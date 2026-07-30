@@ -1,0 +1,490 @@
+{
+  "schemaVersion": "1.0",
+  "buckets": [
+    {
+      "id": "products-open-source",
+      "title": "Products & Open Source",
+      "description": "Products, repositories, integrations, and public engineering contributions.",
+      "order": 1
+    },
+    {
+      "id": "courses-learning",
+      "title": "Courses & Learning",
+      "description": "Courses, curricula, and repeatable learning programs.",
+      "order": 2
+    },
+    {
+      "id": "writing-research",
+      "title": "Writing & Research",
+      "description": "Articles, reports, technical explanations, and research-facing work.",
+      "order": 3
+    },
+    {
+      "id": "talks-programs",
+      "title": "Talks & Programs",
+      "description": "Talks, workshops, appearances, and authored event programs.",
+      "order": 4
+    }
+  ],
+  "groups": [
+    {
+      "id": "group:products:wandb-mcp",
+      "slug": "wandb-mcp-server",
+      "title": "W&B MCP Server",
+      "shortTitle": "W&B MCP Server",
+      "summary": "An agent-native interface for inspecting W&B experiments and traces.",
+      "roleSummary": "Contributor and coauthor",
+      "bucket": "products-open-source",
+      "featuredOrder": 1,
+      "primaryEntityId": "entity:wk-0001",
+      "memberEntityIds": [
+        "entity:wk-0001"
+      ],
+      "contextEntityIds": [],
+      "decision": "standalone",
+      "rationale": "The repository and launch article are already one canonical product entity."
+    },
+    {
+      "id": "group:products:evalforge",
+      "slug": "evalforge",
+      "title": "EvalForge",
+      "shortTitle": "EvalForge",
+      "summary": "An implementation of the EvalGen approach to generating and aligning evaluation criteria.",
+      "roleSummary": "Creator",
+      "bucket": "products-open-source",
+      "featuredOrder": 2,
+      "primaryEntityId": "entity:wk-0003",
+      "memberEntityIds": [
+        "entity:wk-0003"
+      ],
+      "contextEntityIds": [],
+      "decision": "standalone",
+      "rationale": "The reviewed supplemental repository is an eligible public work despite its supplemental source basis."
+    },
+    {
+      "id": "group:products:lightning-fabric",
+      "slug": "pytorch-lightning-fabric-integration",
+      "title": "PyTorch Lightning Fabric integration",
+      "shortTitle": "W&B × Lightning Fabric",
+      "summary": "A set of W&B logger and checkpointing contributions for PyTorch Lightning and Fabric.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": 3,
+      "primaryEntityId": "entity:wk-0002",
+      "memberEntityIds": [
+        "entity:wk-0002"
+      ],
+      "contextEntityIds": [],
+      "decision": "standalone",
+      "rationale": "Three reviewed pull requests are already represented by one canonical integration entity."
+    },
+    {
+      "id": "group:standalone:wk-fp-0160",
+      "slug": "groq-webinar-codegen-testing",
+      "title": "Groq code-generation testing demo",
+      "shortTitle": "Groq code-generation demo",
+      "summary": "A public code-generation testing demo created for a Groq webinar.",
+      "roleSummary": "Repository owner",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0160",
+      "memberEntityIds": [
+        "entity:wk-fp-0160"
+      ],
+      "contextEntityIds": [],
+      "decision": "standalone",
+      "rationale": "The repository is one public work; its raw repository slug remains a searchable alias."
+    },
+    {
+      "id": "group:standalone:ar-fp-0171",
+      "slug": "pii-safeguards-6",
+      "title": "PII safeguards contribution",
+      "shortTitle": "PII safeguards",
+      "summary": "A public contribution to PII detection safeguards.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0171",
+      "memberEntityIds": [
+        "entity:ar-fp-0171"
+      ],
+      "contextEntityIds": [],
+      "decision": "standalone",
+      "rationale": "The pull-request number remains form metadata rather than the public WorkGroup title."
+    },
+    {
+      "id": "group:standalone:ar-fp-0178",
+      "slug": "open-interpreter-390",
+      "title": "Open Interpreter integration",
+      "shortTitle": "Open Interpreter",
+      "summary": "A public integration contribution to Open Interpreter.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0178",
+      "memberEntityIds": [
+        "entity:ar-fp-0178"
+      ],
+      "contextEntityIds": [],
+      "decision": "standalone",
+      "rationale": "The pull-request number remains form metadata rather than the public WorkGroup title."
+    },
+    {
+      "id": "group:standalone:ar-fp-0183",
+      "slug": "google-cloud-generative-ai-1807",
+      "title": "Google Cloud Generative AI contribution",
+      "shortTitle": "Google Cloud Generative AI",
+      "summary": "A public contribution to Google Cloud's Generative AI repository.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0183",
+      "memberEntityIds": [
+        "entity:ar-fp-0183"
+      ],
+      "contextEntityIds": [],
+      "decision": "standalone",
+      "rationale": "The pull-request number remains form metadata rather than the public WorkGroup title."
+    },
+    {
+      "id": "group:standalone:wk-0004",
+      "slug": "nvidia-data-flywheel-blueprint",
+      "title": "NVIDIA Data Flywheel Blueprint",
+      "shortTitle": "Data Flywheel Blueprint",
+      "summary": "A public NVIDIA and W&B blueprint contribution represented by its upstream implementation.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-0004",
+      "memberEntityIds": [
+        "entity:wk-0004"
+      ],
+      "contextEntityIds": [],
+      "decision": "standalone",
+      "rationale": "The WorkGroup title describes the blueprint while the pull-request number remains nested form metadata."
+    },
+    {
+      "id": "group:products:diffusers-wandb",
+      "slug": "diffusers-wandb-integrations",
+      "title": "Diffusers W&B integrations",
+      "shortTitle": "Diffusers integrations",
+      "summary": "A related pair of public contributions integrating W&B with Diffusers.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0174",
+      "memberEntityIds": [
+        "entity:ar-fp-0174",
+        "entity:ar-fp-0175"
+      ],
+      "contextEntityIds": [],
+      "decision": "same_story",
+      "rationale": "The two pull requests are contributions to the same named integration family."
+    },
+    {
+      "id": "group:products:openai-cookbook",
+      "slug": "openai-cookbook-contributions",
+      "title": "OpenAI Cookbook contributions",
+      "shortTitle": "OpenAI Cookbook",
+      "summary": "A related pair of public contributions to the OpenAI Cookbook.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0176",
+      "memberEntityIds": [
+        "entity:ar-fp-0176",
+        "entity:ar-fp-0177"
+      ],
+      "contextEntityIds": [],
+      "decision": "same_story",
+      "rationale": "The two pull requests are adjacent contributions to the same public project."
+    },
+    {
+      "id": "group:products:gpt-engineer",
+      "slug": "gpt-engineer-contributions",
+      "title": "GPT Engineer contributions",
+      "shortTitle": "GPT Engineer",
+      "summary": "A related pair of public contributions to GPT Engineer.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0179",
+      "memberEntityIds": [
+        "entity:ar-fp-0179",
+        "entity:ar-fp-0180"
+      ],
+      "contextEntityIds": [],
+      "decision": "same_story",
+      "rationale": "The two pull requests are contributions to the same public project."
+    },
+    {
+      "id": "group:products:langchain-integrations",
+      "slug": "langchain-wandb-integrations",
+      "title": "LangChain W&B integrations",
+      "shortTitle": "LangChain integrations",
+      "summary": "Public W&B integration contributions across LangChain, with the release-note citation retained as context.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0172",
+      "memberEntityIds": [
+        "entity:ar-fp-0172",
+        "entity:ar-fp-0173"
+      ],
+      "contextEntityIds": [
+        "entity:ar-fp-0103"
+      ],
+      "decision": "same_story",
+      "rationale": "The two pull requests concern the same integration family; release notes are evidence, not another work."
+    },
+    {
+      "id": "group:courses:ai-curriculum",
+      "slug": "wandb-ai-course-curriculum",
+      "title": "W&B AI course curriculum",
+      "shortTitle": "AI course curriculum",
+      "summary": "Three practical courses spanning prompting, evaluation, and agent engineering.",
+      "roleSummary": "Instructor across three courses",
+      "bucket": "courses-learning",
+      "featuredOrder": 1,
+      "primaryEntityId": "entity:wk-fp-0066",
+      "memberEntityIds": [
+        "entity:wk-fp-0065",
+        "entity:wk-fp-0066",
+        "entity:wk-fp-0067"
+      ],
+      "contextEntityIds": [],
+      "decision": "same_story",
+      "rationale": "The three courses form the reviewed curriculum behind the approved aggregate learning claims."
+    },
+    {
+      "id": "group:courses:agentic-llm-series",
+      "slug": "fine-tuning-and-evaluating-agentic-llms-series",
+      "title": "Fine-Tuning and Evaluating LLMs for Agentic Use Cases",
+      "shortTitle": "Agentic LLM workshop series",
+      "summary": "A multi-session public workshop series on adapting and evaluating LLMs for agentic use cases.",
+      "roleSummary": "Speaker and co-instructor",
+      "bucket": "courses-learning",
+      "featuredOrder": 2,
+      "primaryEntityId": "entity:pg-0002",
+      "memberEntityIds": [
+        "entity:pg-0002",
+        "entity:oc-fp-0016",
+        "entity:oc-fp-0017",
+        "entity:oc-fp-0018"
+      ],
+      "contextEntityIds": [],
+      "decision": "same_story",
+      "rationale": "The program and its three scheduled sessions are one authored workshop series."
+    },
+    {
+      "id": "group:courses:startup-school",
+      "slug": "google-cloud-startup-school-2025",
+      "title": "Google Cloud Gen AI Startup School 2025",
+      "shortTitle": "Startup School",
+      "summary": "One Startup School lesson delivered for EMEA/APAC and the Americas, with its replay.",
+      "roleSummary": "Presenter",
+      "bucket": "courses-learning",
+      "featuredOrder": 3,
+      "primaryEntityId": "entity:pg-0001",
+      "memberEntityIds": [
+        "entity:pg-0001",
+        "entity:oc-fp-0036",
+        "entity:oc-fp-0037"
+      ],
+      "contextEntityIds": [],
+      "decision": "same_story",
+      "rationale": "Regional broadcasts and the replay are public forms of one Startup School lesson."
+    },
+    {
+      "id": "group:writing:wandbot",
+      "slug": "wandbot-gpt-4-powered-chat-support",
+      "title": "WandBot: GPT-4 Powered Chat Support",
+      "shortTitle": "WandBot",
+      "summary": "A public technical account of W&B's GPT-4-powered documentation assistant.",
+      "roleSummary": "Coauthor",
+      "bucket": "writing-research",
+      "featuredOrder": 1,
+      "primaryEntityId": "entity:wk-fp-0055",
+      "memberEntityIds": [
+        "entity:wk-fp-0055"
+      ],
+      "contextEntityIds": [],
+      "decision": "standalone",
+      "rationale": "The original article and Japanese republication are already one canonical work."
+    },
+    {
+      "id": "group:writing:prompt-engineering-langchain",
+      "slug": "prompt-engineering-llms-with-langchain-and-wandb",
+      "title": "Prompt Engineering LLMs with LangChain and W&B",
+      "shortTitle": "Prompt Engineering with LangChain",
+      "summary": "A practical guide to prompt engineering with LangChain and W&B.",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": 2,
+      "primaryEntityId": "entity:wk-fp-0053",
+      "memberEntityIds": [
+        "entity:wk-fp-0053"
+      ],
+      "contextEntityIds": [],
+      "decision": "standalone",
+      "rationale": "The article and its translations are already one canonical work."
+    },
+    {
+      "id": "group:writing:automated-pdf-summarization",
+      "slug": "automated-pdf-summarization-claude-weave",
+      "title": "Automated PDF Summarization with Claude and W&B Weave",
+      "shortTitle": "Automated PDF Summarization",
+      "summary": "A practical article and cookbook implementation for summarizing arXiv papers with Claude and W&B Weave.",
+      "roleSummary": "Author and implementation contributor",
+      "bucket": "writing-research",
+      "featuredOrder": 3,
+      "primaryEntityId": "entity:wk-fp-0061",
+      "memberEntityIds": [
+        "entity:wk-fp-0061"
+      ],
+      "contextEntityIds": [],
+      "decision": "standalone",
+      "rationale": "The article, translations, and implementation pull requests are already one canonical work."
+    },
+    {
+      "id": "group:talks:architecting-agents",
+      "slug": "architecting-and-orchestrating-ai-agents-series",
+      "title": "Architecting and Orchestrating AI Agents",
+      "shortTitle": "Architecting AI Agents",
+      "summary": "A talk developed across four public deliveries, including a Google-focused edition.",
+      "roleSummary": "Speaker and workshop instructor",
+      "bucket": "talks-programs",
+      "featuredOrder": 1,
+      "primaryEntityId": "entity:oc-fp-0045",
+      "memberEntityIds": [
+        "entity:oc-fp-0041",
+        "entity:oc-fp-0044",
+        "entity:oc-fp-0045",
+        "entity:oc-fp-0047"
+      ],
+      "contextEntityIds": [
+        "entity:pg-0004",
+        "entity:pg-0007"
+      ],
+      "decision": "same_story",
+      "rationale": "Four dated deliveries share the same authored talk identity while remaining separately inspectable."
+    },
+    {
+      "id": "group:talks:llm-agent-fine-tuning",
+      "slug": "llm-agent-fine-tuning",
+      "title": "LLM Agent Fine-Tuning",
+      "shortTitle": "LLM Agent Fine-Tuning",
+      "summary": "A talk delivered first as a public session and later at NVIDIA GTC.",
+      "roleSummary": "Speaker and session presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": 2,
+      "primaryEntityId": "entity:oc-fp-0010",
+      "memberEntityIds": [
+        "entity:oc-fp-0010",
+        "entity:oc-fp-0012"
+      ],
+      "contextEntityIds": [
+        "entity:pg-0005"
+      ],
+      "decision": "same_story",
+      "rationale": "The two dated deliveries share the same authored talk and retain distinct event context."
+    },
+    {
+      "id": "group:talks:building-evaluating-agents",
+      "slug": "building-and-evaluating-agents",
+      "title": "Building and Evaluating Agents",
+      "shortTitle": "Building and Evaluating Agents",
+      "summary": "A public talk on building agent systems with evaluation in the loop.",
+      "roleSummary": "Conference speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": 3,
+      "primaryEntityId": "entity:oc-fp-0046",
+      "memberEntityIds": [
+        "entity:oc-fp-0046"
+      ],
+      "contextEntityIds": [
+        "entity:pg-0007"
+      ],
+      "decision": "standalone",
+      "rationale": "The event, recording, and mirror are already one canonical occurrence."
+    },
+    {
+      "id": "group:talks:model-customization",
+      "slug": "mastering-model-customization",
+      "title": "Mastering Model Customization",
+      "shortTitle": "Model Customization",
+      "summary": "Two public sessions on fine-tuning Azure OpenAI Service models with W&B.",
+      "roleSummary": "Webinar presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0035",
+      "memberEntityIds": [
+        "entity:oc-fp-0035",
+        "entity:oc-fp-0039"
+      ],
+      "contextEntityIds": [
+        "entity:pg-0007"
+      ],
+      "decision": "same_story",
+      "rationale": "The two public sessions are deliveries of the same model-customization talk."
+    },
+    {
+      "id": "group:talks:gradient-dissent",
+      "slug": "gradient-dissent-production",
+      "title": "Gradient Dissent production",
+      "shortTitle": "Gradient Dissent",
+      "summary": "Transcription and production work across a set of Gradient Dissent interviews.",
+      "roleSummary": "Producer and transcript contributor",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0092",
+      "memberEntityIds": [
+        "entity:wk-fp-0092",
+        "entity:wk-fp-0124",
+        "entity:wk-fp-0125",
+        "entity:wk-fp-0126",
+        "entity:wk-fp-0127"
+      ],
+      "contextEntityIds": [],
+      "decision": "same_story",
+      "rationale": "The transcript archive and producer credits describe one bounded production body of work."
+    }
+  ],
+  "contextDecisions": [
+    {
+      "id": "decision:program:fully-connected-sf-2025",
+      "decision": "program_sibling",
+      "entityIds": [
+        "entity:oc-fp-0041",
+        "entity:oc-fp-0042"
+      ],
+      "contextEntityIds": [
+        "entity:pg-0004"
+      ],
+      "rationale": "The two Fully Connected workshops share program context but remain distinct authored works."
+    },
+    {
+      "id": "decision:program:genai-summit-2024",
+      "decision": "program_sibling",
+      "entityIds": [
+        "entity:oc-fp-0027",
+        "entity:oc-fp-0028"
+      ],
+      "contextEntityIds": [
+        "entity:pg-0003"
+      ],
+      "rationale": "The two summit sessions share a conference listing but are substantively distinct talks."
+    },
+    {
+      "id": "decision:reference:odsc",
+      "decision": "reference_only",
+      "entityIds": [
+        "entity:oc-fp-0002"
+      ],
+      "contextEntityIds": [
+        "entity:ar-fp-0100"
+      ],
+      "rationale": "The ODSC article is evidence for the event, not a separately authored work."
+    }
+  ]
+}

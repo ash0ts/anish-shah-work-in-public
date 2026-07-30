@@ -49,13 +49,14 @@ test(
 );
 
 test("public bundle preserves the complete footprint inventory", () => {
-  assert.equal(publicBundle.schemaVersion, "1.1");
+  assert.equal(publicBundle.schemaVersion, "1.2");
   assert.match(publicBundle.contentVersion, /^[a-f0-9]{16}$/);
   assert.deepEqual(publicBundle.sourceSummary, {
     footprintRows: 184,
     impactRows: 85,
     supplementalArtifacts: 2,
     publicItems: 186,
+    approvedMetricCount: 13,
     footprintBackedUniqueWorks: 99,
     supplementalUniqueWorks: 1,
   });
@@ -69,6 +70,9 @@ test("public bundle preserves the complete footprint inventory", () => {
     2,
   );
   assert.equal(publicBundle.metrics.length, 13);
+  assert.equal(publicBundle.workGroups.length, 82);
+  assert.equal(publicBundle.metricGroups.length, 4);
+  assert.equal(publicBundle.evidence.length, 198);
 
   const expectedCategories = {
     article: 15,
@@ -103,7 +107,9 @@ test("stable IDs and typed references resolve", () => {
   for (const values of [
     publicBundle.items,
     publicBundle.entities,
+    publicBundle.workGroups,
     publicBundle.metrics,
+    publicBundle.metricGroups,
     publicBundle.evidence,
     publicBundle.relations,
     publicBundle.collections,
@@ -114,12 +120,14 @@ test("stable IDs and typed references resolve", () => {
 
   const itemIds = new Set(publicBundle.items.map((item) => item.id));
   const entityIds = new Set(publicBundle.entities.map((entity) => entity.id));
+  const workGroupIds = new Set(publicBundle.workGroups.map((group) => group.id));
   const metricIds = new Set(publicBundle.metrics.map((metric) => metric.id));
   const evidenceIds = new Set(publicBundle.evidence.map((evidence) => evidence.id));
   const collectionIds = new Set(publicBundle.collections.map((collection) => collection.id));
   const subjectIds = new Set([
     ...itemIds,
     ...entityIds,
+    ...workGroupIds,
     ...collectionIds,
     publicBundle.profile.id,
   ]);
@@ -133,6 +141,18 @@ test("stable IDs and typed references resolve", () => {
     for (const itemId of entity.itemIds) assert(itemIds.has(itemId), itemId);
     for (const parentId of entity.parentEntityIds) assert(entityIds.has(parentId), parentId);
   }
+  for (const group of publicBundle.workGroups) {
+    assert(entityIds.has(group.primaryEntityId), group.primaryEntityId);
+    assert(group.memberEntityIds.includes(group.primaryEntityId), group.id);
+    for (const entityId of [
+      ...group.memberEntityIds,
+      ...group.programEntityIds,
+      ...group.contextEntityIds,
+    ]) {
+      assert(entityIds.has(entityId), `${group.id}: ${entityId}`);
+    }
+    for (const itemId of group.itemIds) assert(itemIds.has(itemId), itemId);
+  }
   for (const relation of publicBundle.relations) {
     assert(itemIds.has(relation.fromId), relation.fromId);
     assert(itemIds.has(relation.toId), relation.toId);
@@ -145,6 +165,11 @@ test("stable IDs and typed references resolve", () => {
     for (const itemId of collection.itemIds) assert(itemIds.has(itemId));
     for (const metricId of collection.metricIds) assert(metricIds.has(metricId));
   }
+  for (const group of publicBundle.metricGroups) {
+    assert(metricIds.has(group.leadMetricId), group.leadMetricId);
+    for (const metricId of group.metricIds) assert(metricIds.has(metricId));
+  }
+  assert.equal(workGroupIds.size, publicBundle.workGroups.length);
 
   assert.deepEqual(
     [...new Set(publicBundle.relations.map((relation) => relation.predicate))].sort(),
@@ -271,7 +296,7 @@ test("public metrics have explicit scope and never imply collection inheritance"
     publicBundle.metrics.filter((metric) =>
       metric.displaySurfaces.includes("item_detail"),
     ).length,
-    5,
+    7,
   );
   assert(
     publicBundle.metrics
@@ -325,15 +350,18 @@ test("owner bundle retains source accounting when available", { skip: !existsSyn
     ownerBundle.metrics.filter((metric) => Object.hasOwn(metric, "sourceRecord")).length,
     85,
   );
-  assert.equal(ownerBundle.sourceSnapshots.length, 5);
+  assert.equal(ownerBundle.sourceSnapshots.length, 8);
+  assert(ownerBundle.groupingLedger);
   assert(ownerBundle.items.every((item) => item.sourceRecord?.fingerprint));
   assert.deepEqual(ownerBundle.sourceSummary, publicBundle.sourceSummary);
 });
 
 test("generated schema exposes the canonical contract", () => {
   const schema = JSON.parse(readFileSync(SCHEMA_PATH, "utf8"));
-  assert.equal(schema.properties.schemaVersion.const, "1.1");
+  assert.equal(schema.properties.schemaVersion.const, "1.2");
   assert(schema.required.includes("entities"));
+  assert(schema.required.includes("workGroups"));
+  assert(schema.required.includes("metricGroups"));
   assert(schema.required.includes("sourceSummary"));
   assert(schema.required.includes("sourceSnapshots"));
   assert(schema.$defs.entity.required.includes("sourceBasis"));
@@ -357,6 +385,15 @@ test("generated schema exposes the canonical contract", () => {
     "program",
   ]);
   assert(schema.$defs.metric.required.includes("displaySurfaces"));
+  assert(schema.$defs.workGroup.required.includes("roleSummary"));
+  assert(schema.$defs.workGroup.required.includes("programEntityIds"));
+  assert.equal(schema.$defs.workGroup.properties.period.additionalProperties, false);
+  assert.deepEqual(schema.$defs.metricPresentationGroup.properties.theme.enum, [
+    "learning",
+    "product",
+    "programs",
+    "archive",
+  ]);
 });
 
 test(

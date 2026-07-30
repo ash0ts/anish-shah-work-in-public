@@ -23,6 +23,23 @@ export type CanonicalEntityKind = "work" | "occurrence" | "artifact" | "program"
 export type CanonicalCountability = "unique_work" | "representation" | "context";
 export type CanonicalSourceBasis = "footprint" | "supplemental" | "mixed" | "synthetic";
 export type Practice = "teach" | "build" | "convene";
+export type WorkBucket =
+  | "products-open-source"
+  | "courses-learning"
+  | "writing-research"
+  | "talks-programs";
+export type WorkGroupingDecision =
+  | "same_story"
+  | "same_occurrence_representation"
+  | "program_sibling"
+  | "standalone"
+  | "reference_only";
+export type WorkGroupingRule =
+  | "explicit_curation"
+  | "typed_relation"
+  | "deterministic_standalone"
+  | "context_classification";
+export type MetricTheme = "learning" | "product" | "programs" | "archive";
 export type ItemEntityRole =
   | "primary"
   | "recording"
@@ -143,11 +160,55 @@ export interface CanonicalEntity {
   verificationState: VerificationState;
 }
 
+export interface WorkGroup {
+  id: string;
+  slug: string;
+  slugAliases: string[];
+  title: string;
+  shortTitle: string;
+  summary: string;
+  roleSummary: string;
+  bucket: WorkBucket;
+  featuredOrder: number | null;
+  primaryEntityId: string;
+  memberEntityIds: string[];
+  programEntityIds: string[];
+  contextEntityIds: string[];
+  itemIds: string[];
+  period: ContentDate;
+  yearStart: number | null;
+  yearEnd: number | null;
+  organizationIds: string[];
+  topics: string[];
+  formats: PortfolioItemType[];
+  publicationState: PublicationState;
+  verificationState: VerificationState;
+}
+
+export interface GroupingLedgerEntry {
+  id: string;
+  workGroupId: string | null;
+  decision: WorkGroupingDecision;
+  rule: WorkGroupingRule;
+  entityIds: string[];
+  contextEntityIds: string[];
+  itemIds: string[];
+  rationale: string;
+}
+
+export interface GroupingLedger {
+  schemaVersion: "1.0";
+  repeatedTitleClusterCount: number;
+  repeatedUrlClusterCount: number;
+  entries: GroupingLedgerEntry[];
+}
+
 export interface ContentSourceSummary {
   footprintRows: number;
   impactRows: number;
   supplementalArtifacts: number;
   publicItems: number;
+  approvedMetricCount: number;
   footprintBackedUniqueWorks: number;
   supplementalUniqueWorks: number;
 }
@@ -192,6 +253,15 @@ export interface PublicImpactMetric extends ImpactMetricBase {
 }
 
 export type ImpactMetric = OwnerImpactMetric | PublicImpactMetric;
+
+export interface MetricPresentationGroup {
+  id: string;
+  theme: MetricTheme;
+  title: string;
+  order: number;
+  leadMetricId: string;
+  metricIds: string[];
+}
 
 export interface EvidenceSource {
   id: string;
@@ -242,7 +312,7 @@ export interface SourceSnapshot {
 }
 
 export interface AnishContentBundle {
-  schemaVersion: "1.1";
+  schemaVersion: "1.2";
   contentVersion: string;
   generatedAt: ISODateTime;
   sourceSummary: ContentSourceSummary;
@@ -250,10 +320,13 @@ export interface AnishContentBundle {
   organizations: Organization[];
   items: PortfolioItem[];
   entities: CanonicalEntity[];
+  workGroups: WorkGroup[];
   metrics: ImpactMetric[];
+  metricGroups: MetricPresentationGroup[];
   evidence: EvidenceSource[];
   relations: Relation[];
   collections: Collection[];
   narratives: NarrativeBlock[];
   sourceSnapshots: SourceSnapshot[];
+  groupingLedger?: GroupingLedger;
 }

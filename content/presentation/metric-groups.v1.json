@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0",
+  "groups": [
+    {
+      "id": "metric-group:learning",
+      "theme": "learning",
+      "title": "Learning reach",
+      "order": 1,
+      "leadMetricId": "metric:courses:enrollments:2026-07-30",
+      "metricIds": [
+        "metric:courses:enrollments:2026-07-30",
+        "metric:courses:same-day-account-share:2026-07-30",
+        "metric:course:llm-apps-evaluation:launch-signups:2025-01-10"
+      ]
+    },
+    {
+      "id": "metric-group:product",
+      "theme": "product",
+      "title": "Product adoption",
+      "order": 2,
+      "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+      "metricIds": [
+        "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+        "metric:project:wandb-mcp-server:audience:2026-06-11",
+        "metric:project:wandb-mcp-server:returning-share:2026-06-11",
+        "metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28"
+      ]
+    },
+    {
+      "id": "metric-group:programs",
+      "theme": "programs",
+      "title": "Program impact",
+      "order": 3,
+      "leadMetricId": "metric:events:pipeline-supported:2024-2025",
+      "metricIds": [
+        "metric:events:pipeline-supported:2024-2025",
+        "metric:event:fully-connected-sf:reach:2024",
+        "metric:event:nvidia-gtc:leads:2024",
+        "metric:events:ic-associated-pipeline:2024"
+      ]
+    },
+    {
+      "id": "metric-group:archive",
+      "theme": "archive",
+      "title": "Archive reach",
+      "order": 4,
+      "leadMetricId": "metric:archive:event-references:2026-07",
+      "metricIds": [
+        "metric:archive:event-references:2026-07",
+        "metric:archive:recording-hours:2026-07"
+      ]
+    }
+  ]
+}

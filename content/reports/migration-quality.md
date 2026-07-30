@@ -1,6 +1,6 @@
 # Canonical content migration quality report
 
-Generated from four immutable source files plus reviewed v1.1 curation. Content version: `66ef8ac8ee193cb3`.
+Generated from four immutable source files plus reviewed canonical and presentation curation. Content version: `53cf9612400b16cc`.
 
 ## Source accounting
 
@@ -57,24 +57,34 @@ Recording relations require a unique best typed match across URL role, date, exa
 - Source observations keep stable opaque IDs and retain their legacy IDs and route aliases.
 - Work, occurrence, artifact, and program groupings preserve every source item; representations and context records remain inspectable without inflating unique-work views.
 
+## Public WorkGroups
+
+- Public WorkGroups: 82 (courses-learning 3, products-open-source 14, talks-programs 43, writing-research 22).
+- Every public `unique_work` entity belongs to exactly one WorkGroup, including the reviewed EvalForge supplemental work.
+- Explicit curation groups related courses, workshop editions, regional broadcasts, repeated talk deliveries, pull-request families, and production credits without changing canonical entity IDs or legacy routes.
+- Remaining eligible entities receive deterministic standalone groups; context entities never become standalone WorkGroups.
+- Owner-only grouping ledger decisions: program_sibling 2, reference_only 30, same_occurrence_representation 31, same_story 11, standalone 71.
+- Duplicate titles and URLs alone never create a grouping; the ledger requires explicit curation, typed relations, or deterministic standalone classification.
+
 ## Publication projection
 
 - Owner bundle: 186 items (184 footprint observations + 2 reviewed Markdown artifacts), 85 exact metric observations plus 13 reviewed public projections, 215 evidence records, and 23 source narrative blocks.
-- Public bundle: 186 public items, 137 canonical entities, 13 approved rounded/derived claims, 198 public evidence records, and 9 collections.
+- Public bundle: 186 public items, 137 canonical entities, 82 WorkGroups, 13 rounded or derived public measures in 4 presentation groups, 198 public evidence records, and 9 collections.
 - Exact metric observations remain only in the ignored owner bundle.
+- The July MCP usage checkpoint and the cross-year tracked-program total replace their older public headline checkpoints; exact source values remain owner-only.
 - Public metrics contain display strings and qualifiers, never raw numeric value fields.
 - Internal evidence URLs, source excerpts, local paths, and source hashes are excluded from public output.
 
-Approved public claim records:
+Public measure records:
 
 - `metric:courses:enrollments:2026-07-30`
 - `metric:courses:same-day-account-share:2026-07-30`
 - `metric:course:llm-apps-evaluation:launch-signups:2025-01-10`
-- `metric:project:wandb-mcp-server:tool-calls:2026-06-11`
+- `metric:project:wandb-mcp-server:tool-calls:2026-07-29`
 - `metric:project:wandb-mcp-server:audience:2026-06-11`
 - `metric:project:wandb-mcp-server:returning-share:2026-06-11`
 - `metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28`
-- `metric:events:pipeline-supported:2025`
+- `metric:events:pipeline-supported:2024-2025`
 - `metric:events:ic-associated-pipeline:2024`
 - `metric:event:nvidia-gtc:leads:2024`
 - `metric:event:fully-connected-sf:reach:2024`
@@ -137,7 +147,9 @@ Completion floors, paid-organization associations, aggregate course-campaign lea
 
 - Stable opaque source-observation IDs are unique across all 186 items; legacy IDs and old route slugs remain aliases.
 - Every organization, entity, evidence, relation, collection, and metric subject reference resolves.
+- Every WorkGroup member, context entity, item, organization, and metric presentation reference resolves.
 - All 184 footprint rows and 85 impact rows retain source-row fingerprints in the owner bundle.
+- Tool-call display values are validated against currency prefixes.
 - Item-detail metrics require an explicit item or canonical-entity subject; collection metrics are never inherited implicitly.
 - The public projection contains only `public` publication states and `public_web` evidence.
 - Public URLs pass protocol and blocked-domain checks.

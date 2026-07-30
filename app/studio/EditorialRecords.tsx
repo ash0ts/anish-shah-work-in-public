@@ -180,7 +180,7 @@ export function EditorialRecords({
     <section className={styles.editorialWorkspace} aria-labelledby="records-title">
       <div className={styles.workspaceHeader}>
         <div>
-          <p className={styles.eyebrow}>Approved edit surface</p>
+          <p className={styles.eyebrow}>Editorial surface</p>
           <h3 id="records-title">Public records</h3>
         </div>
         <button
@@ -345,7 +345,7 @@ export function EditorialRecords({
               </label>
 
               <label className={styles.textField}>
-                Approved public wording
+                Public wording
                 <textarea
                   rows={5}
                   maxLength={600}

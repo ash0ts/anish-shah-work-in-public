@@ -1,3 +1,4 @@
+import publicBundleJson from "@/content/public/anish-content.public.v1.json";
 import { runtimeDatabase } from "./runtime-env";
 import {
   type EditorialRecordPatch,
@@ -113,6 +114,10 @@ const EDITORIAL_COLUMNS = `
   verification_state AS verificationState,
   updated_at AS updatedAt
 `;
+
+const CURRENT_CONTENT_VERSION = (
+  publicBundleJson as { contentVersion: string }
+).contentVersion;
 
 export async function listEditorialRecords(
   options: EditorialListOptions,
@@ -373,12 +378,14 @@ export async function createPublicationSnapshot(
   });
 
   const canonicalContentJson = JSON.stringify({
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
+    baseContentVersion: CURRENT_CONTENT_VERSION,
     records: projection,
   });
   const contentHash = await sha256(canonicalContentJson);
   const snapshotJson = JSON.stringify({
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
+    baseContentVersion: CURRENT_CONTENT_VERSION,
     publishedAt,
     contentHash,
     records: projection,
@@ -387,6 +394,7 @@ export async function createPublicationSnapshot(
   const settingJson = JSON.stringify({
     snapshotId: id,
     contentHash,
+    contentVersion: CURRENT_CONTENT_VERSION,
     publishedAt,
   });
 
@@ -435,7 +443,11 @@ export async function createPublicationSnapshot(
         crypto.randomUUID(),
         actorEmail,
         id,
-        JSON.stringify({ contentHash, recordCount: projection.length }),
+        JSON.stringify({
+          contentHash,
+          contentVersion: CURRENT_CONTENT_VERSION,
+          recordCount: projection.length,
+        }),
         publishedAt,
       ),
   ]);

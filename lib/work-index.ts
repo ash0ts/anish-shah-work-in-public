@@ -1,6 +1,8 @@
 import type {
   AnishContentBundle,
   PortfolioItem,
+  WorkBucket,
+  WorkGroup,
 } from "@/types/content";
 
 export type WorkIndexEntry = {
@@ -53,6 +55,13 @@ function legacyPractice(item: PortfolioItem): WorkIndexEntry["practice"] {
 }
 
 export type WorkArchiveRecord = WorkIndexEntry & {
+  recordType: "work_group" | "entity";
+  bucket: WorkBucket | null;
+  featuredOrder: number | null;
+  yearStart: number | null;
+  yearEnd: number | null;
+  memberEntityIds: string[];
+  contextEntityIds: string[];
   summary: string | null;
   topics: string[];
   organizationIds: string[];
@@ -87,6 +96,21 @@ export function workArchiveRecordsFrom(
       organization.name,
     ]),
   );
+  const publicWorkGroups = (bundle.workGroups ?? []).filter(
+    (group) => group.publicationState === "public",
+  );
+
+  if (publicWorkGroups.length) {
+    return publicWorkGroups.flatMap((group) =>
+      workGroupRecord(
+        group,
+        bundle,
+        itemById,
+        organizationById,
+      ),
+    );
+  }
+
   const canonical = (typedBundle.entities ?? []).filter(
     (entity) =>
       entity.countability === "unique_work" &&
@@ -101,6 +125,13 @@ export function workArchiveRecordsFrom(
       title: item.title,
       year: item.year,
       practice: legacyPractice(item),
+      recordType: "entity",
+      bucket: null,
+      featuredOrder: item.featured ? 1 : null,
+      yearStart: item.year,
+      yearEnd: item.year,
+      memberEntityIds: [item.canonicalEntityId],
+      contextEntityIds: [],
       formCount: 1,
       kind: item.type,
       role: item.role,
@@ -143,6 +174,13 @@ export function workArchiveRecordsFrom(
           primary.title,
         year: entity.year ?? primary.year,
         practice: entity.practice ?? legacyPractice(primary),
+        recordType: "entity",
+        bucket: null,
+        featuredOrder: primary.featured ? 1 : null,
+        yearStart: entity.year ?? primary.year,
+        yearEnd: entity.year ?? primary.year,
+        memberEntityIds: [entity.id],
+        contextEntityIds: [],
         formCount: Math.max(members.length, 1),
         kind: primary.type,
         role: entity.role ?? primary.role,
@@ -183,4 +221,102 @@ export function workArchiveRecordsFrom(
       },
     ];
   });
+}
+
+function workGroupRecord(
+  group: WorkGroup,
+  bundle: AnishContentBundle,
+  itemById: Map<string, PortfolioItem>,
+  organizationById: Map<string, string>,
+): WorkArchiveRecord[] {
+  const members = group.itemIds
+    .map((id) => itemById.get(id))
+    .filter((item): item is PortfolioItem => Boolean(item));
+  if (!members.length) return [];
+  const entityById = new Map(
+    bundle.entities.map((entity) => [entity.id, entity]),
+  );
+  const searchableEntities = [
+    ...new Set([
+      ...group.memberEntityIds,
+      ...group.programEntityIds,
+      ...group.contextEntityIds,
+    ]),
+  ]
+    .map((id) => entityById.get(id))
+    .filter(Boolean);
+  const searchableItems = [
+    ...new Map(
+      searchableEntities
+        .flatMap((entity) =>
+          entity
+            ? entity.itemIds
+                .map((id) => itemById.get(id))
+                .filter((item): item is PortfolioItem => Boolean(item))
+            : [],
+        )
+        .concat(members)
+        .map((item) => [item.id, item]),
+    ).values(),
+  ];
+  const practice: WorkIndexEntry["practice"] =
+    group.bucket === "courses-learning"
+      ? "teach"
+      : group.bucket === "talks-programs"
+        ? "convene"
+        : "build";
+
+  return [
+    {
+      id: group.id,
+      slug: group.slug,
+      title: group.title,
+      year: group.yearEnd ?? group.yearStart,
+      practice,
+      recordType: "work_group",
+      bucket: group.bucket,
+      featuredOrder: group.featuredOrder,
+      yearStart: group.yearStart,
+      yearEnd: group.yearEnd,
+      memberEntityIds: group.memberEntityIds,
+      contextEntityIds: group.contextEntityIds,
+      formCount: members.length,
+      kind: "work_group",
+      role: group.roleSummary,
+      summary: group.summary,
+      topics: group.topics,
+      organizationIds: group.organizationIds,
+      organizationNames: group.organizationIds
+        .map((id) => organizationById.get(id))
+        .filter((name): name is string => Boolean(name)),
+      formats: group.formats,
+      searchAliases: [
+        ...group.slugAliases,
+        group.shortTitle,
+        ...searchableEntities.flatMap((entity) =>
+          entity
+            ? [
+                entity.title,
+                entity.displayTitle,
+                entity.shortTitle,
+                entity.slug,
+                ...entity.slugAliases,
+              ]
+            : [],
+        ),
+      ].filter(Boolean),
+      childTitles: searchableItems.map((item) => item.displayTitle),
+      childItems: searchableItems.map((item) => ({
+        id: item.id,
+        slug: item.slug,
+        title: item.title,
+        displayTitle: item.displayTitle,
+        shortTitle: item.shortTitle,
+        aliases: item.slugAliases,
+        type: item.type,
+        role: item.role,
+        year: item.year,
+      })),
+    },
+  ];
 }

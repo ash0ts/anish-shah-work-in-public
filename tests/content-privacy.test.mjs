@@ -37,16 +37,18 @@ test("public output contains no internal URLs or local paths", () => {
   assert(publicBundle.evidence.every((evidence) => evidence.access === "public_web"));
   assert(publicBundle.items.every((item) => item.publicationState === "public"));
   assert(publicBundle.metrics.every((metric) => metric.publicationState === "public"));
+  assert(!Object.hasOwn(publicBundle, "reviewClaims"));
+  assert(!Object.hasOwn(publicBundle, "groupingLedger"));
 });
 test("public metrics expose reviewed display copy, never exact value fields", () => {
-  const approvedDisplays = new Set([
+  const publicDisplays = new Set([
     "7K+",
     "About half",
     "1K+",
-    "Nearly 100K",
+    "200K+",
     "More than two-thirds",
     "Hundreds",
-    "$2M+",
+    "$4M+",
     "$300K+",
     "500+",
     "1K+ / 500+",
@@ -56,13 +58,40 @@ test("public metrics expose reviewed display copy, never exact value fields", ()
   assert.equal(publicBundle.metrics.length, 13);
   for (const metric of publicBundle.metrics) {
     assert.equal(typeof metric.displayValue, "string");
-    assert(approvedDisplays.has(metric.displayValue), metric.displayValue);
+    assert(publicDisplays.has(metric.displayValue), metric.displayValue);
     for (const key of ["value", "unit", "evidenceIds", "sourceRecord"]) {
       assert(!Object.hasOwn(metric, key), `${metric.id} exposes ${key}`);
     }
     assert(metric.period.asOf, `${metric.id} lacks an as-of date`);
     assert(metric.sourceLabel, `${metric.id} lacks a source label`);
+    if (metric.key.includes("tool_calls")) {
+      assert(!metric.displayValue.includes("$"), `${metric.id} formats calls as currency`);
+    }
   }
+});
+
+test("selected public measure revisions stay rounded and omit exact source figures", () => {
+  const calls = publicBundle.metrics.find(
+    (metric) =>
+      metric.id ===
+      "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+  );
+  const pipeline = publicBundle.metrics.find(
+    (metric) => metric.id === "metric:events:pipeline-supported:2024-2025",
+  );
+  assert.equal(calls?.displayValue, "200K+");
+  assert.equal(calls?.period.asOf, "2026-07-29");
+  assert(!calls.displayValue.includes("$"));
+  assert.equal(pipeline?.displayValue, "$4M+");
+  assert.equal(pipeline?.period.label, "2024–2025");
+  assert(
+    !publicBundle.metrics.some(
+      (metric) =>
+        metric.id ===
+          "metric:project:wandb-mcp-server:tool-calls:2026-06-11" ||
+        metric.id === "metric:events:pipeline-supported:2025",
+    ),
+  );
 });
 
 test(

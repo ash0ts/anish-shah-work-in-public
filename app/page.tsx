@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { HeroStage } from "@/components/HeroStage";
-import { resolveCareerChapters } from "@/lib/career-chapters";
+import { BodiesOfWork } from "@/components/BodiesOfWork";
+import { HomeIntroduction } from "@/components/HomeIntroduction";
+import { featuredWorkBucketsFrom } from "@/lib/work-groups";
 import {
   getPublicContentView,
   homepageMetricsFrom,
@@ -18,45 +19,54 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   const { bundle } = await getPublicContentView();
-  const career = resolveCareerChapters(bundle);
+  const buckets = featuredWorkBucketsFrom(bundle);
   const metrics = homepageMetricsFrom(bundle);
 
   return (
     <main id="main" className={`site-main ${styles.home}`}>
-      <HeroStage
-        chapters={career.chapters}
-        defaultChapterId={career.defaultChapterId}
-        canEnhanceWithThree={career.canEnhanceWithThree}
+      <HomeIntroduction
         headline={bundle.profile.headline}
         summary={bundle.profile.summary}
       />
+      <BodiesOfWork buckets={buckets} />
 
       <section className={styles.impact} aria-labelledby="impact-title">
         <header>
           <div>
-            <p>Selected impact · qualified at source</p>
-            <h2 id="impact-title">Impact, in context.</h2>
+            <p>Selected impact · claim and limit stay together</p>
+            <h2 id="impact-title">Four signals. Four different scopes.</h2>
           </div>
           <Link href="/sources#internal-analytics">
-            Sources &amp; methodology <span aria-hidden="true">↗</span>
+            Read the full claim ledger <span aria-hidden="true">↗</span>
           </Link>
         </header>
-        <div className={styles.metricList}>
+        <ol className={styles.metricList}>
           {metrics.map((metric) => (
-            <article key={metric.id}>
+            <li key={metric.id}>
+              <span className={styles.metricScope}>
+                {metricLedgerLabel(metric.id)}
+              </span>
               <strong>{metric.displayValue}</strong>
               <div>
                 <h3>{metric.label}</h3>
                 <p>{metric.qualifier}</p>
                 <span>
-                  {metric.sourceLabel} · {metric.period.label}
+                  {metric.attribution} · {metric.sourceLabel} ·{" "}
+                  {metric.period.label}
                   {metric.period.asOf ? ` · as of ${metric.period.asOf}` : ""}
                 </span>
               </div>
-            </article>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
     </main>
   );
+}
+
+function metricLedgerLabel(metricId: string) {
+  if (metricId.includes("courses:")) return "Learning";
+  if (metricId.includes("fully-connected")) return "Gathering";
+  if (metricId.includes("pipeline")) return "Programs";
+  return "Product";
 }

@@ -16,6 +16,12 @@ const SOURCE_FILES = {
   impactCsv: path.join(SOURCE_ROOT, "anish_shah_impact_metrics_2021-2026.csv"),
   impactMarkdown: path.join(SOURCE_ROOT, "anish_shah_impact_report_2021-2026.md"),
   curation: path.join(PROJECT_ROOT, "content/curation/content-v1.1.json"),
+  workGroups: path.join(PROJECT_ROOT, "content/curation/work-groups.v1.json"),
+  metricGroups: path.join(PROJECT_ROOT, "content/presentation/metric-groups.v1.json"),
+  claimUpgrades: path.join(
+    PROJECT_ROOT,
+    "content/curation/public-claim-upgrades.v1.json",
+  ),
 };
 
 const OUTPUT_FILES = {
@@ -28,7 +34,9 @@ const OUTPUT_FILES = {
 const EXPECTED_FOOTPRINT_ROWS = 184;
 const EXPECTED_IMPACT_ROWS = 85;
 const PLAN_BASELINE_IMPACT_ROWS = 61;
-const SCHEMA_VERSION = "1.1";
+const SCHEMA_VERSION = "1.2";
+const CURATION_SCHEMA_VERSION = "1.1";
+const PRESENTATION_SCHEMA_VERSION = "1.0";
 
 const BROKEN_MLOPS_URL =
   "https://home.mlops.community/en/public/blogs/how-to-adapt-your-llm-for-question-answering-with-prompt-tuning-using-nvidia-nemo-and-weights-and-biases-2";
@@ -64,16 +72,33 @@ const APPROVED_PUBLIC_DISPLAYS = new Set([
   "7K+",
   "About half",
   "1K+",
-  "Nearly 100K",
+  "200K+",
   "More than two-thirds",
   "Hundreds",
-  "$2M+",
+  "$4M+",
   "$300K+",
   "500+",
   "1K+ / 500+",
   "49",
   "19+",
 ]);
+
+const WORK_BUCKETS = new Set([
+  "products-open-source",
+  "courses-learning",
+  "writing-research",
+  "talks-programs",
+]);
+
+const WORK_GROUPING_DECISIONS = new Set([
+  "same_story",
+  "same_occurrence_representation",
+  "program_sibling",
+  "standalone",
+  "reference_only",
+]);
+
+const METRIC_THEMES = new Set(["learning", "product", "programs", "archive"]);
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -1115,6 +1140,407 @@ function buildCanonicalEntities(items, relations, curation) {
   return entities.sort((left, right) => left.id.localeCompare(right.id));
 }
 
+function workBucketForEntity(entity, itemById) {
+  const primary = entity.primaryItemId ? itemById.get(entity.primaryItemId) : null;
+  if (primary?.type === "course") return "courses-learning";
+  if (
+    entity.kind === "occurrence" ||
+    ["event", "recording", "producer_credit"].includes(primary?.type)
+  ) {
+    return "talks-programs";
+  }
+  if (["article", "technical_report", "translation"].includes(primary?.type)) {
+    return "writing-research";
+  }
+  return "products-open-source";
+}
+
+function workGroupPeriod(memberEntities) {
+  const dates = memberEntities.map((entity) => entity.representativeDate);
+  const starts = dates.map((date) => date.start).filter(Boolean).sort();
+  const ends = dates
+    .map((date) => date.end || date.start)
+    .filter(Boolean)
+    .sort();
+  const start = starts[0] || null;
+  const last = ends.at(-1) || null;
+  const end = start && last && start !== last ? last : null;
+  const precisions = [...new Set(dates.map((date) => date.precision))];
+  const bases = [...new Set(dates.map((date) => date.basis))];
+  return {
+    start,
+    end,
+    precision: precisions.length === 1 ? precisions[0] : "unknown",
+    basis: bases.length === 1 ? bases[0] : "unknown",
+  };
+}
+
+function buildWorkGroups(items, entities, manifest) {
+  if (manifest.schemaVersion !== PRESENTATION_SCHEMA_VERSION) {
+    throw new Error(`Work-group curation schema must be ${PRESENTATION_SCHEMA_VERSION}`);
+  }
+  const bucketIds = new Set(manifest.buckets.map((bucket) => bucket.id));
+  if (
+    bucketIds.size !== WORK_BUCKETS.size ||
+    [...WORK_BUCKETS].some((bucket) => !bucketIds.has(bucket))
+  ) {
+    throw new Error("Work-group curation must define the four approved buckets exactly once");
+  }
+  const bucketOrder = new Map(
+    manifest.buckets.map((bucket) => [bucket.id, bucket.order]),
+  );
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+  const claimedEligibleIds = new Set();
+  const claimedExplicitIds = new Set();
+  const explicitById = new Map();
+
+  for (const definition of manifest.groups) {
+    if (!WORK_BUCKETS.has(definition.bucket)) {
+      throw new Error(`Work group ${definition.id} uses an unknown bucket`);
+    }
+    if (!WORK_GROUPING_DECISIONS.has(definition.decision)) {
+      throw new Error(`Work group ${definition.id} uses an unknown grouping decision`);
+    }
+    if (!definition.roleSummary?.trim()) {
+      throw new Error(`Work group ${definition.id} lacks a curated role summary`);
+    }
+    if (!definition.memberEntityIds.includes(definition.primaryEntityId)) {
+      throw new Error(`Work group ${definition.id} does not contain its primary entity`);
+    }
+    for (const entityId of [
+      ...definition.memberEntityIds,
+      ...definition.contextEntityIds,
+    ]) {
+      if (!entityById.has(entityId)) {
+        throw new Error(`Work group ${definition.id} has missing entity ${entityId}`);
+      }
+    }
+    for (const entityId of definition.memberEntityIds) {
+      if (claimedExplicitIds.has(entityId)) {
+        throw new Error(`Entity ${entityId} appears in more than one explicit work group`);
+      }
+      claimedExplicitIds.add(entityId);
+      if (entityById.get(entityId).countability === "unique_work") {
+        claimedEligibleIds.add(entityId);
+      }
+    }
+    explicitById.set(definition.id, definition);
+  }
+
+  const contextByEntityId = new Map();
+  for (const decision of manifest.contextDecisions) {
+    if (!WORK_GROUPING_DECISIONS.has(decision.decision)) {
+      throw new Error(`Context decision ${decision.id} uses an unknown decision`);
+    }
+    for (const entityId of [...decision.entityIds, ...decision.contextEntityIds]) {
+      if (!entityById.has(entityId)) {
+        throw new Error(`Context decision ${decision.id} has missing entity ${entityId}`);
+      }
+    }
+    for (const entityId of decision.entityIds) {
+      const current = contextByEntityId.get(entityId) || [];
+      current.push(...decision.contextEntityIds);
+      contextByEntityId.set(entityId, current);
+    }
+  }
+
+  const definitions = [
+    ...manifest.groups,
+    ...entities
+      .filter(
+        (entity) =>
+          entity.publicationState === "public" &&
+          entity.countability === "unique_work" &&
+          !claimedEligibleIds.has(entity.id),
+      )
+      .map((entity) => ({
+        id: `group:standalone:${entity.id.replace(/^entity:/, "")}`,
+        slug: entity.slug,
+        title: entity.displayTitle,
+        shortTitle: entity.shortTitle,
+        summary: entity.summary,
+        roleSummary: entity.role,
+        bucket: workBucketForEntity(entity, itemById),
+        featuredOrder: null,
+        primaryEntityId: entity.id,
+        memberEntityIds: [entity.id],
+        contextEntityIds: [],
+        decision: "standalone",
+        rationale: "No reviewed evidence supports merging this entity with another work.",
+      })),
+  ];
+
+  const groups = definitions.map((definition) => {
+    const memberEntities = definition.memberEntityIds.map((id) => entityById.get(id));
+    const itemIds = [
+      ...new Set(memberEntities.flatMap((entity) => entity.itemIds)),
+    ].sort();
+    const memberItems = itemIds.map((id) => itemById.get(id));
+    const period = workGroupPeriod(memberEntities);
+    const parentContexts = memberEntities.flatMap((entity) => entity.parentEntityIds);
+    const decisionContexts = memberEntities.flatMap(
+      (entity) => contextByEntityId.get(entity.id) || [],
+    );
+    const relatedContextEntityIds = [
+      ...new Set([
+        ...definition.contextEntityIds,
+        ...parentContexts,
+        ...decisionContexts,
+      ]),
+    ]
+      .filter((id) => !definition.memberEntityIds.includes(id))
+      .sort();
+    const programEntityIds = relatedContextEntityIds.filter(
+      (id) => entityById.get(id).kind === "program",
+    );
+    const contextEntityIds = relatedContextEntityIds.filter(
+      (id) => entityById.get(id).kind !== "program",
+    );
+    const years = [period.start, period.end || period.start]
+      .filter(Boolean)
+      .map((value) => Number(value.slice(0, 4)))
+      .filter(Number.isFinite);
+    const verificationState = memberEntities.some(
+      (entity) => entity.verificationState === "tentative",
+    )
+      ? "tentative"
+      : memberEntities.every((entity) => entity.verificationState === "verified")
+        ? "verified"
+        : "corroborated";
+    return {
+      id: definition.id,
+      slug: definition.slug,
+      slugAliases: [
+        ...new Set(
+          memberEntities
+            .flatMap((entity) => [entity.slug, ...entity.slugAliases])
+            .filter((slug) => slug !== definition.slug),
+        ),
+      ].sort(),
+      title: definition.title,
+      shortTitle: definition.shortTitle,
+      summary: definition.summary,
+      roleSummary: definition.roleSummary,
+      bucket: definition.bucket,
+      featuredOrder: definition.featuredOrder,
+      primaryEntityId: definition.primaryEntityId,
+      memberEntityIds: [...new Set(definition.memberEntityIds)].sort(),
+      programEntityIds,
+      contextEntityIds,
+      itemIds,
+      period,
+      yearStart: years.length ? Math.min(...years) : null,
+      yearEnd: years.length ? Math.max(...years) : null,
+      organizationIds: [
+        ...new Set(memberEntities.flatMap((entity) => entity.organizationIds)),
+      ].sort(),
+      topics: [...new Set(memberEntities.flatMap((entity) => entity.topics))].sort(),
+      formats: [...new Set(memberItems.map((item) => item.type))].sort(
+        (left, right) => TYPE_ORDER.indexOf(left) - TYPE_ORDER.indexOf(right),
+      ),
+      publicationState: "public",
+      verificationState,
+    };
+  });
+
+  const eligibleIds = entities
+    .filter(
+      (entity) =>
+        entity.publicationState === "public" &&
+        entity.countability === "unique_work",
+    )
+    .map((entity) => entity.id);
+  const memberCounts = countBy(
+    groups.flatMap((group) => group.memberEntityIds),
+    (id) => id,
+  );
+  for (const entityId of eligibleIds) {
+    if (memberCounts.get(entityId) !== 1) {
+      throw new Error(
+        `Eligible entity ${entityId} must belong to exactly one WorkGroup`,
+      );
+    }
+  }
+  const groupSlugs = countBy(groups, (group) => group.slug);
+  for (const group of groups) {
+    if (groupSlugs.get(group.slug) !== 1) {
+      throw new Error(`Duplicate WorkGroup slug: ${group.slug}`);
+    }
+  }
+  for (const bucket of WORK_BUCKETS) {
+    const featured = groups
+      .filter((group) => group.bucket === bucket && group.featuredOrder !== null)
+      .map((group) => group.featuredOrder)
+      .sort((left, right) => left - right);
+    if (featured.join(",") !== "1,2,3") {
+      throw new Error(`WorkGroup bucket ${bucket} must have featured order 1,2,3`);
+    }
+  }
+
+  return groups.sort(
+    (left, right) =>
+      bucketOrder.get(left.bucket) - bucketOrder.get(right.bucket) ||
+      (left.featuredOrder ?? Number.MAX_SAFE_INTEGER) -
+        (right.featuredOrder ?? Number.MAX_SAFE_INTEGER) ||
+      (right.period.start || "").localeCompare(left.period.start || "") ||
+      left.title.localeCompare(right.title),
+  );
+}
+
+function buildGroupingLedger(
+  items,
+  entities,
+  workGroups,
+  manifest,
+  footprintRows,
+) {
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+  const groupByEntityId = new Map(
+    workGroups.flatMap((group) =>
+      group.memberEntityIds.map((entityId) => [entityId, group]),
+    ),
+  );
+  const definitionById = new Map(
+    manifest.groups.map((definition) => [definition.id, definition]),
+  );
+  const entries = workGroups.map((group) => {
+    const definition = definitionById.get(group.id);
+    return {
+      id: `ledger:work-group:${group.id.replace(/^group:/, "").replaceAll(":", "-")}`,
+      workGroupId: group.id,
+      decision: definition?.decision || "standalone",
+      rule: definition ? "explicit_curation" : "deterministic_standalone",
+      entityIds: group.memberEntityIds,
+      contextEntityIds: [
+        ...new Set([...group.programEntityIds, ...group.contextEntityIds]),
+      ].sort(),
+      itemIds: group.itemIds,
+      rationale:
+        definition?.rationale ||
+        "No reviewed relation or curation override supports a broader grouping.",
+    };
+  });
+
+  for (const entity of entities) {
+    const memberItems = entity.itemIds.map((id) => itemById.get(id));
+    if (
+      memberItems.length < 2 ||
+      !memberItems.some((item) =>
+        ["recording", "mirror", "translation"].includes(item.entityRole),
+      )
+    ) {
+      continue;
+    }
+    entries.push({
+      id: `ledger:representation:${entity.id.replace(/^entity:/, "")}`,
+      workGroupId: groupByEntityId.get(entity.id)?.id || null,
+      decision: "same_occurrence_representation",
+      rule: "typed_relation",
+      entityIds: [entity.id],
+      contextEntityIds: [],
+      itemIds: entity.itemIds,
+      rationale:
+        "Typed recording, mirror, or translation relations preserve distinct public forms under one canonical entity.",
+    });
+  }
+
+  for (const decision of manifest.contextDecisions) {
+    const targetGroups = [
+      ...new Set(
+        decision.entityIds
+          .map((entityId) => groupByEntityId.get(entityId)?.id)
+          .filter(Boolean),
+      ),
+    ];
+    entries.push({
+      id: decision.id,
+      workGroupId: targetGroups.length === 1 ? targetGroups[0] : null,
+      decision: decision.decision,
+      rule: "explicit_curation",
+      entityIds: [...decision.entityIds].sort(),
+      contextEntityIds: [...decision.contextEntityIds].sort(),
+      itemIds: [
+        ...new Set(
+          [...decision.entityIds, ...decision.contextEntityIds].flatMap(
+            (entityId) => entityById.get(entityId).itemIds,
+          ),
+        ),
+      ].sort(),
+      rationale: decision.rationale,
+    });
+  }
+
+  const classifiedContextIds = new Set(
+    entries.flatMap((entry) => entry.contextEntityIds),
+  );
+  const memberEntityIds = new Set(
+    workGroups.flatMap((group) => group.memberEntityIds),
+  );
+  for (const entity of entities) {
+    if (memberEntityIds.has(entity.id) || classifiedContextIds.has(entity.id)) {
+      continue;
+    }
+    entries.push({
+      id: `ledger:context:${entity.id.replace(/^entity:/, "")}`,
+      workGroupId: null,
+      decision: "reference_only",
+      rule: "context_classification",
+      entityIds: [entity.id],
+      contextEntityIds: [],
+      itemIds: entity.itemIds,
+      rationale:
+        "This entity is retained as program, profile, citation, or representation context and is not a standalone public work.",
+    });
+  }
+
+  const repeatedTitleClusterCount = [
+    ...countBy(footprintRows, (row) => normalizedTitle(row.title)).values(),
+  ].filter((count) => count > 1).length;
+  const urls = footprintRows.flatMap((row) =>
+    [row.primary_url, row.secondary_url].filter(Boolean),
+  );
+  const repeatedUrlClusterCount = [
+    ...countBy(urls, normalizeUrl).values(),
+  ].filter((count) => count > 1).length;
+  return {
+    schemaVersion: "1.0",
+    repeatedTitleClusterCount,
+    repeatedUrlClusterCount,
+    entries: entries.sort((left, right) => left.id.localeCompare(right.id)),
+  };
+}
+
+function buildMetricGroups(publicMetrics, presentation) {
+  if (presentation.schemaVersion !== PRESENTATION_SCHEMA_VERSION) {
+    throw new Error(`Metric presentation schema must be ${PRESENTATION_SCHEMA_VERSION}`);
+  }
+  const metricIds = new Set(publicMetrics.map((metric) => metric.id));
+  const groups = presentation.groups.map((definition) => {
+    if (!METRIC_THEMES.has(definition.theme)) {
+      throw new Error(`Metric group ${definition.id} uses an unknown theme`);
+    }
+    for (const metricId of definition.metricIds) {
+      if (!metricIds.has(metricId)) {
+        throw new Error(`Metric group ${definition.id} has missing metric ${metricId}`);
+      }
+    }
+    if (!metricIds.has(definition.leadMetricId)) {
+      throw new Error(`Metric group ${definition.id} has missing lead metric`);
+    }
+    return {
+      ...definition,
+      metricIds: [...definition.metricIds],
+    };
+  });
+  const orders = groups.map((group) => group.order);
+  if (new Set(orders).size !== groups.length) {
+    throw new Error("Metric presentation group order must be unique");
+  }
+  return groups.sort((left, right) => left.order - right.order);
+}
+
 function parseMarkdownSections(markdown, sourceKey, publicationState) {
   const matches = [...markdown.matchAll(/^##\s+(.+)$/gm)];
   return matches.map((match, index) => {
@@ -1307,10 +1733,11 @@ function selectImpactRows(rows, selectors) {
   });
 }
 
-function buildPublicMetrics(impactRows, items, entities) {
+function buildPublicMetrics(impactRows, items, entities, claimUpgrades) {
   const internalEvidence = ["evidence:methodology:internal-analytics"];
   const publicEvidence = ["evidence:methodology:public-footprint"];
   const courseCollection = "collection:courses";
+  const courseCurriculumGroup = "group:courses:ai-curriculum";
   const eventCollection = "collection:events";
   const evalsEntityId =
     itemByTitle(items, "LLM Apps: Evaluation", "course")?.canonicalEntityId || courseCollection;
@@ -1322,30 +1749,30 @@ function buildPublicMetrics(impactRows, items, entities) {
   const definitions = [
     {
       id: "metric:courses:enrollments:2026-07-30",
-      subjectId: courseCollection,
+      subjectId: courseCurriculumGroup,
       category: "courses",
       key: "course_enrollments",
       displayValue: "7K+",
       label: "course enrollments across three AI courses",
       qualifier: "Enrollments, not unique learners.",
       period: { start: "2024-06", end: "2026-07", asOf: "2026-07-30", label: "2024–2026" },
-      scope: "collection",
-      attribution: "contextual",
-      displaySurfaces: ["homepage", "collection", "sources"],
+      scope: "work",
+      attribution: "direct",
+      displaySurfaces: ["item_detail", "homepage", "collection", "sources"],
       selectors: [{ item: "All 3 Anish courses", metric: "enrollments_total" }],
     },
     {
       id: "metric:courses:same-day-account-share:2026-07-30",
-      subjectId: courseCollection,
+      subjectId: courseCurriculumGroup,
       category: "courses",
       key: "same_day_account_creation_share",
       displayValue: "About half",
       label: "of course enrollments accompanied a W&B account created the same day",
       qualifier: "An observed same-day association, not a causal conversion claim.",
       period: { start: "2024-06", end: "2026-07", asOf: "2026-07-30", label: "2024–2026" },
-      scope: "collection",
-      attribution: "contextual",
-      displaySurfaces: ["collection", "sources"],
+      scope: "work",
+      attribution: "direct",
+      displaySurfaces: ["item_detail", "collection", "sources"],
       selectors: [
         { item: "All 3 Anish courses", metric: "enrollments_total" },
         { item: "All 3 Anish courses", metric: "course_sourced_wandb_signups" },
@@ -1559,6 +1986,25 @@ function buildPublicMetrics(impactRows, items, entities) {
     },
   ];
 
+  if (claimUpgrades.schemaVersion !== PRESENTATION_SCHEMA_VERSION) {
+    throw new Error(`Public claim-upgrade schema must be ${PRESENTATION_SCHEMA_VERSION}`);
+  }
+  for (const replacement of claimUpgrades.claims) {
+    const index = definitions.findIndex(
+      (definition) => definition.id === replacement.replacesMetricId,
+    );
+    if (index < 0 || replacement.publicationState !== "public") {
+      throw new Error(`Public claim replacement ${replacement.id} is unresolved`);
+    }
+    if (
+      replacement.key.includes("tool_calls") &&
+      replacement.displayValue.includes("$")
+    ) {
+      throw new Error(`Tool-call public claim ${replacement.id} cannot use currency formatting`);
+    }
+    definitions.splice(index, 1, replacement);
+  }
+
   return definitions.map((definition) => {
     selectImpactRows(impactRows, definition.selectors);
     if (!APPROVED_PUBLIC_DISPLAYS.has(definition.displayValue)) {
@@ -1572,6 +2018,8 @@ function buildPublicMetrics(impactRows, items, entities) {
     delete safe.verificationState;
     delete safe.sourceLabel;
     delete safe.publicEvidenceIds;
+    delete safe.replacesMetricId;
+    delete safe.publicationState;
     return {
       ...safe,
       sourceLabel,
@@ -1803,7 +2251,7 @@ function buildJsonSchema() {
 
   return {
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: "https://anishshah.dev/schema/anish-content.v1.1.json",
+    $id: "https://anishshah.dev/schema/anish-content.v1.2.json",
     title: "Anish Shah Content Bundle",
     type: "object",
     additionalProperties: false,
@@ -1816,7 +2264,9 @@ function buildJsonSchema() {
       "organizations",
       "items",
       "entities",
+      "workGroups",
       "metrics",
+      "metricGroups",
       "evidence",
       "relations",
       "collections",
@@ -1824,7 +2274,7 @@ function buildJsonSchema() {
       "sourceSnapshots",
     ],
     properties: {
-      schemaVersion: { const: "1.1" },
+      schemaVersion: { const: "1.2" },
       contentVersion: { type: "string", pattern: "^[a-f0-9]{16}$" },
       generatedAt: {
         type: "string",
@@ -1835,12 +2285,18 @@ function buildJsonSchema() {
       organizations: { type: "array", items: { $ref: "#/$defs/organization" } },
       items: { type: "array", items: { $ref: "#/$defs/item" } },
       entities: { type: "array", items: { $ref: "#/$defs/entity" } },
+      workGroups: { type: "array", items: { $ref: "#/$defs/workGroup" } },
       metrics: { type: "array", items: { $ref: "#/$defs/metric" } },
+      metricGroups: {
+        type: "array",
+        items: { $ref: "#/$defs/metricPresentationGroup" },
+      },
       evidence: { type: "array", items: { $ref: "#/$defs/evidence" } },
       relations: { type: "array", items: { $ref: "#/$defs/relation" } },
       collections: { type: "array", items: { $ref: "#/$defs/collection" } },
       narratives: { type: "array", items: { $ref: "#/$defs/narrative" } },
       sourceSnapshots: { type: "array", items: { $ref: "#/$defs/sourceSnapshot" } },
+      groupingLedger: { $ref: "#/$defs/groupingLedger" },
     },
     $defs: {
       sourceSummary: {
@@ -1851,6 +2307,7 @@ function buildJsonSchema() {
           "impactRows",
           "supplementalArtifacts",
           "publicItems",
+          "approvedMetricCount",
           "footprintBackedUniqueWorks",
           "supplementalUniqueWorks",
         ],
@@ -1859,6 +2316,7 @@ function buildJsonSchema() {
           impactRows: { type: "integer", minimum: 0 },
           supplementalArtifacts: { type: "integer", minimum: 0 },
           publicItems: { type: "integer", minimum: 0 },
+          approvedMetricCount: { type: "integer", minimum: 0 },
           footprintBackedUniqueWorks: { type: "integer", minimum: 0 },
           supplementalUniqueWorks: { type: "integer", minimum: 0 },
         },
@@ -2072,6 +2530,162 @@ function buildJsonSchema() {
           verificationState,
         },
       },
+      workGroup: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "id",
+          "slug",
+          "slugAliases",
+          "title",
+          "shortTitle",
+          "summary",
+          "roleSummary",
+          "bucket",
+          "featuredOrder",
+          "primaryEntityId",
+          "memberEntityIds",
+          "programEntityIds",
+          "contextEntityIds",
+          "itemIds",
+          "period",
+          "yearStart",
+          "yearEnd",
+          "organizationIds",
+          "topics",
+          "formats",
+          "publicationState",
+          "verificationState",
+        ],
+        properties: {
+          id: { type: "string" },
+          slug: { type: "string" },
+          slugAliases: { type: "array", items: { type: "string" }, uniqueItems: true },
+          title: { type: "string" },
+          shortTitle: { type: "string" },
+          summary: { type: "string" },
+          roleSummary: { type: "string" },
+          bucket: {
+            enum: [
+              "products-open-source",
+              "courses-learning",
+              "writing-research",
+              "talks-programs",
+            ],
+          },
+          featuredOrder: { type: ["integer", "null"], minimum: 1 },
+          primaryEntityId: { type: "string" },
+          memberEntityIds: {
+            type: "array",
+            items: { type: "string" },
+            uniqueItems: true,
+          },
+          programEntityIds: {
+            type: "array",
+            items: { type: "string" },
+            uniqueItems: true,
+          },
+          contextEntityIds: {
+            type: "array",
+            items: { type: "string" },
+            uniqueItems: true,
+          },
+          itemIds: { type: "array", items: { type: "string" }, uniqueItems: true },
+          period: contentDate,
+          yearStart: { type: ["integer", "null"] },
+          yearEnd: { type: ["integer", "null"] },
+          organizationIds: {
+            type: "array",
+            items: { type: "string" },
+            uniqueItems: true,
+          },
+          topics: { type: "array", items: { type: "string" }, uniqueItems: true },
+          formats: {
+            type: "array",
+            items: {
+              enum: [
+                "event",
+                "article",
+                "course",
+                "recording",
+                "technical_report",
+                "external_reference",
+                "producer_credit",
+                "translation",
+                "mirror",
+                "profile",
+                "open_source_repo",
+                "open_source_pr",
+              ],
+            },
+            uniqueItems: true,
+          },
+          publicationState,
+          verificationState,
+        },
+      },
+      groupingLedgerEntry: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "id",
+          "workGroupId",
+          "decision",
+          "rule",
+          "entityIds",
+          "contextEntityIds",
+          "itemIds",
+          "rationale",
+        ],
+        properties: {
+          id: { type: "string" },
+          workGroupId: { type: ["string", "null"] },
+          decision: {
+            enum: [
+              "same_story",
+              "same_occurrence_representation",
+              "program_sibling",
+              "standalone",
+              "reference_only",
+            ],
+          },
+          rule: {
+            enum: [
+              "explicit_curation",
+              "typed_relation",
+              "deterministic_standalone",
+              "context_classification",
+            ],
+          },
+          entityIds: { type: "array", items: { type: "string" }, uniqueItems: true },
+          contextEntityIds: {
+            type: "array",
+            items: { type: "string" },
+            uniqueItems: true,
+          },
+          itemIds: { type: "array", items: { type: "string" }, uniqueItems: true },
+          rationale: { type: "string" },
+        },
+      },
+      groupingLedger: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "schemaVersion",
+          "repeatedTitleClusterCount",
+          "repeatedUrlClusterCount",
+          "entries",
+        ],
+        properties: {
+          schemaVersion: { const: "1.0" },
+          repeatedTitleClusterCount: { type: "integer", minimum: 0 },
+          repeatedUrlClusterCount: { type: "integer", minimum: 0 },
+          entries: {
+            type: "array",
+            items: { $ref: "#/$defs/groupingLedgerEntry" },
+          },
+        },
+      },
       metricPeriod: {
         type: "object",
         additionalProperties: false,
@@ -2157,6 +2771,23 @@ function buildJsonSchema() {
           },
         ],
         additionalProperties: false,
+      },
+      metricPresentationGroup: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "theme", "title", "order", "leadMetricId", "metricIds"],
+        properties: {
+          id: { type: "string" },
+          theme: { enum: ["learning", "product", "programs", "archive"] },
+          title: { type: "string" },
+          order: { type: "integer", minimum: 1 },
+          leadMetricId: { type: "string" },
+          metricIds: {
+            type: "array",
+            items: { type: "string" },
+            uniqueItems: true,
+          },
+        },
       },
       evidence: {
         type: "object",
@@ -2277,6 +2908,7 @@ function assertBundleIntegrity(bundle, { publicOnly = false } = {}) {
     impactRows: EXPECTED_IMPACT_ROWS,
     supplementalArtifacts: bundle.items.filter((item) => item.id.startsWith("item:md-")).length,
     publicItems: bundle.items.length,
+    approvedMetricCount: 13,
     footprintBackedUniqueWorks: bundle.entities.filter(
       (entity) =>
         entity.countability === "unique_work" &&
@@ -2299,7 +2931,10 @@ function assertBundleIntegrity(bundle, { publicOnly = false } = {}) {
   for (const [label, values] of Object.entries({
     item: bundle.items,
     entity: bundle.entities,
+    workGroup: bundle.workGroups,
     metric: bundle.metrics,
+    metricGroup: bundle.metricGroups,
+    groupingLedgerEntry: bundle.groupingLedger?.entries || [],
     evidence: bundle.evidence,
     relation: bundle.relations,
     collection: bundle.collections,
@@ -2313,12 +2948,14 @@ function assertBundleIntegrity(bundle, { publicOnly = false } = {}) {
   const itemIds = new Set(bundle.items.map((item) => item.id));
   const entityIds = new Set(bundle.entities.map((entity) => entity.id));
   const metricIds = new Set(bundle.metrics.map((metric) => metric.id));
+  const workGroupIds = new Set(bundle.workGroups.map((group) => group.id));
   const evidenceIds = new Set(bundle.evidence.map((evidence) => evidence.id));
   const organizationIds = new Set(bundle.organizations.map((organization) => organization.id));
   const collectionIds = new Set(bundle.collections.map((collection) => collection.id));
   const subjects = new Set([
     ...itemIds,
     ...entityIds,
+    ...workGroupIds,
     ...collectionIds,
     bundle.profile.id,
     ...organizationIds,
@@ -2357,6 +2994,65 @@ function assertBundleIntegrity(bundle, { publicOnly = false } = {}) {
       }
     }
   }
+  const eligibleEntityIds = new Set(
+    bundle.entities
+      .filter(
+        (entity) =>
+          entity.publicationState === "public" &&
+          entity.countability === "unique_work",
+      )
+      .map((entity) => entity.id),
+  );
+  const eligibleMembership = countBy(
+    bundle.workGroups.flatMap((group) =>
+      group.memberEntityIds.filter((entityId) => eligibleEntityIds.has(entityId)),
+    ),
+    (entityId) => entityId,
+  );
+  for (const entityId of eligibleEntityIds) {
+    if (eligibleMembership.get(entityId) !== 1) {
+      throw new Error(`Eligible entity ${entityId} is not assigned to one WorkGroup`);
+    }
+  }
+  for (const group of bundle.workGroups) {
+    if (!group.memberEntityIds.includes(group.primaryEntityId)) {
+      throw new Error(`WorkGroup ${group.id} lacks its primary entity`);
+    }
+    for (const entityId of [
+      ...group.memberEntityIds,
+      ...group.programEntityIds,
+      ...group.contextEntityIds,
+    ]) {
+      if (!entityIds.has(entityId)) {
+        throw new Error(`WorkGroup ${group.id} has missing entity ${entityId}`);
+      }
+    }
+    if (
+      group.programEntityIds.some(
+        (entityId) =>
+          bundle.entities.find((entity) => entity.id === entityId)?.kind !== "program",
+      )
+    ) {
+      throw new Error(`WorkGroup ${group.id} has a non-program program parent`);
+    }
+    for (const itemId of group.itemIds) {
+      if (!itemIds.has(itemId)) {
+        throw new Error(`WorkGroup ${group.id} has missing item ${itemId}`);
+      }
+    }
+    for (const organizationId of group.organizationIds) {
+      if (!organizationIds.has(organizationId)) {
+        throw new Error(`WorkGroup ${group.id} has missing organization`);
+      }
+    }
+    if (
+      group.yearStart !== null &&
+      group.yearEnd !== null &&
+      group.yearStart > group.yearEnd
+    ) {
+      throw new Error(`WorkGroup ${group.id} has an inverted period`);
+    }
+  }
   for (const metric of bundle.metrics) {
     if (!subjects.has(metric.subjectId)) {
       throw new Error(`Metric ${metric.id} has missing subject ${metric.subjectId}`);
@@ -2383,6 +3079,31 @@ function assertBundleIntegrity(bundle, { publicOnly = false } = {}) {
       }
     }
   }
+  for (const group of bundle.metricGroups) {
+    if (!metricIds.has(group.leadMetricId)) {
+      throw new Error(`Metric group ${group.id} has missing lead metric`);
+    }
+    for (const metricId of group.metricIds) {
+      if (!metricIds.has(metricId)) {
+        throw new Error(`Metric group ${group.id} has missing metric ${metricId}`);
+      }
+    }
+  }
+  for (const entry of bundle.groupingLedger?.entries || []) {
+    if (entry.workGroupId && !workGroupIds.has(entry.workGroupId)) {
+      throw new Error(`Grouping ledger ${entry.id} has missing WorkGroup`);
+    }
+    for (const entityId of [...entry.entityIds, ...entry.contextEntityIds]) {
+      if (!entityIds.has(entityId)) {
+        throw new Error(`Grouping ledger ${entry.id} has missing entity`);
+      }
+    }
+    for (const itemId of entry.itemIds) {
+      if (!itemIds.has(itemId)) {
+        throw new Error(`Grouping ledger ${entry.id} has missing item`);
+      }
+    }
+  }
 
   if (publicOnly) {
     if (bundle.items.some((item) => item.publicationState !== "public")) {
@@ -2391,11 +3112,17 @@ function assertBundleIntegrity(bundle, { publicOnly = false } = {}) {
     if (bundle.entities.some((entity) => entity.publicationState !== "public")) {
       throw new Error("Public bundle contains a non-public entity");
     }
+    if (bundle.workGroups.some((group) => group.publicationState !== "public")) {
+      throw new Error("Public bundle contains a non-public WorkGroup");
+    }
     if (bundle.metrics.some((metric) => metric.publicationState !== "public")) {
       throw new Error("Public bundle contains a non-public metric");
     }
     if (bundle.evidence.some((evidence) => evidence.access !== "public_web")) {
       throw new Error("Public bundle contains non-public evidence");
+    }
+    if (bundle.groupingLedger) {
+      throw new Error("Public bundle contains owner-only grouping data");
     }
   }
 }
@@ -2415,6 +3142,13 @@ function assertPublicSafety(publicBundle) {
     if (typeof metric.displayValue !== "string" || !APPROVED_PUBLIC_DISPLAYS.has(metric.displayValue)) {
       throw new Error(`Public metric ${metric.id} lacks approved display copy`);
     }
+    if (metric.key.includes("tool_calls") && metric.displayValue.includes("$")) {
+      throw new Error(`Public tool-call metric ${metric.id} uses currency formatting`);
+    }
+  }
+
+  if (Object.hasOwn(publicBundle, "groupingLedger")) {
+    throw new Error("Public bundle exposes owner-only curation");
   }
 
   for (const snapshot of publicBundle.sourceSnapshots) {
@@ -2506,10 +3240,25 @@ function buildQualityReport({
     .sort((left, right) => left[0].localeCompare(right[0]))
     .map(([kind, count]) => `${kind} ${count}`)
     .join(", ");
+  const workGroupCounts = [
+    ...countBy(publicBundle.workGroups, (group) => group.bucket).entries(),
+  ]
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .map(([bucket, count]) => `${bucket} ${count}`)
+    .join(", ");
+  const groupingDecisionCounts = [
+    ...countBy(
+      ownerBundle.groupingLedger.entries,
+      (entry) => entry.decision,
+    ).entries(),
+  ]
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .map(([decision, count]) => `${decision} ${count}`)
+    .join(", ");
 
   return `# Canonical content migration quality report
 
-Generated from four immutable source files plus reviewed v1.1 curation. Content version: \`${contentVersion}\`.
+Generated from four immutable source files plus reviewed canonical and presentation curation. Content version: \`${contentVersion}\`.
 
 ## Source accounting
 
@@ -2551,15 +3300,25 @@ Recording relations require a unique best typed match across URL role, date, exa
 - Source observations keep stable opaque IDs and retain their legacy IDs and route aliases.
 - Work, occurrence, artifact, and program groupings preserve every source item; representations and context records remain inspectable without inflating unique-work views.
 
+## Public WorkGroups
+
+- Public WorkGroups: ${publicBundle.workGroups.length} (${workGroupCounts}).
+- Every public \`unique_work\` entity belongs to exactly one WorkGroup, including the reviewed EvalForge supplemental work.
+- Explicit curation groups related courses, workshop editions, regional broadcasts, repeated talk deliveries, pull-request families, and production credits without changing canonical entity IDs or legacy routes.
+- Remaining eligible entities receive deterministic standalone groups; context entities never become standalone WorkGroups.
+- Owner-only grouping ledger decisions: ${groupingDecisionCounts}.
+- Duplicate titles and URLs alone never create a grouping; the ledger requires explicit curation, typed relations, or deterministic standalone classification.
+
 ## Publication projection
 
 - Owner bundle: ${ownerBundle.items.length} items (${footprintItemCount} footprint observations + ${supplementalItemCount} reviewed Markdown artifacts), ${ownerExactMetricCount} exact metric observations plus ${publicBundle.metrics.length} reviewed public projections, ${ownerBundle.evidence.length} evidence records, and ${ownerBundle.narratives.length} source narrative blocks.
-- Public bundle: ${publicBundle.items.length} public items, ${publicBundle.entities.length} canonical entities, ${publicBundle.metrics.length} approved rounded/derived claims, ${publicBundle.evidence.length} public evidence records, and ${publicBundle.collections.length} collections.
+- Public bundle: ${publicBundle.items.length} public items, ${publicBundle.entities.length} canonical entities, ${publicBundle.workGroups.length} WorkGroups, ${publicBundle.metrics.length} rounded or derived public measures in ${publicBundle.metricGroups.length} presentation groups, ${publicBundle.evidence.length} public evidence records, and ${publicBundle.collections.length} collections.
 - Exact metric observations remain only in the ignored owner bundle.
+- The July MCP usage checkpoint and the cross-year tracked-program total replace their older public headline checkpoints; exact source values remain owner-only.
 - Public metrics contain display strings and qualifiers, never raw numeric value fields.
 - Internal evidence URLs, source excerpts, local paths, and source hashes are excluded from public output.
 
-Approved public claim records:
+Public measure records:
 
 ${publicClaimIds}
 
@@ -2575,7 +3334,9 @@ Completion floors, paid-organization associations, aggregate course-campaign lea
 
 - Stable opaque source-observation IDs are unique across all ${ownerBundle.items.length} items; legacy IDs and old route slugs remain aliases.
 - Every organization, entity, evidence, relation, collection, and metric subject reference resolves.
+- Every WorkGroup member, context entity, item, organization, and metric presentation reference resolves.
 - All ${footprintRows.length} footprint rows and ${impactRows.length} impact rows retain source-row fingerprints in the owner bundle.
+- Tool-call display values are validated against currency prefixes.
 - Item-detail metrics require an explicit item or canonical-entity subject; collection metrics are never inherited implicitly.
 - The public projection contains only \`public\` publication states and \`public_web\` evidence.
 - Public URLs pass protocol and blocked-domain checks.
@@ -2609,17 +3370,31 @@ async function writeOrCheck(outputs, check) {
 }
 
 export async function buildContent({ check = false } = {}) {
-  const [footprintCsv, footprintMarkdown, impactCsv, impactMarkdown, curationSource] =
-    await Promise.all([
+  const [
+    footprintCsv,
+    footprintMarkdown,
+    impactCsv,
+    impactMarkdown,
+    curationSource,
+    workGroupSource,
+    metricGroupSource,
+    claimUpgradeSource,
+  ] = await Promise.all([
     readFile(SOURCE_FILES.footprintCsv, "utf8"),
     readFile(SOURCE_FILES.footprintMarkdown, "utf8"),
     readFile(SOURCE_FILES.impactCsv, "utf8"),
     readFile(SOURCE_FILES.impactMarkdown, "utf8"),
     readFile(SOURCE_FILES.curation, "utf8"),
+    readFile(SOURCE_FILES.workGroups, "utf8"),
+    readFile(SOURCE_FILES.metricGroups, "utf8"),
+    readFile(SOURCE_FILES.claimUpgrades, "utf8"),
   ]);
   const curation = JSON.parse(curationSource);
-  if (curation.schemaVersion !== SCHEMA_VERSION) {
-    throw new Error(`Curation schema must be ${SCHEMA_VERSION}`);
+  const workGroupCuration = JSON.parse(workGroupSource);
+  const metricGroupPresentation = JSON.parse(metricGroupSource);
+  const claimUpgrades = JSON.parse(claimUpgradeSource);
+  if (curation.schemaVersion !== CURATION_SCHEMA_VERSION) {
+    throw new Error(`Canonical curation schema must be ${CURATION_SCHEMA_VERSION}`);
   }
   const footprintRows = parseCsv(footprintCsv, path.basename(SOURCE_FILES.footprintCsv));
   const impactRows = parseCsv(impactCsv, path.basename(SOURCE_FILES.impactCsv));
@@ -2646,6 +3421,9 @@ export async function buildContent({ check = false } = {}) {
     impactCsv,
     impactMarkdown,
     curationSource,
+    workGroupSource,
+    metricGroupSource,
+    claimUpgradeSource,
   ];
   const [pipelineSource, csvParserSource] = await Promise.all([
     readFile(fileURLToPath(import.meta.url), "utf8"),
@@ -2682,8 +3460,22 @@ export async function buildContent({ check = false } = {}) {
   );
   const impactSections = parseMarkdownSections(impactMarkdown, "impact-report", "private");
   const ownerNarratives = [...footprintSections, ...impactSections];
-  const publicMetrics = buildPublicMetrics(impactRows, ownerItems, entities);
+  const publicMetrics = buildPublicMetrics(
+    impactRows,
+    ownerItems,
+    entities,
+    claimUpgrades,
+  );
   const collections = buildCollections(ownerItems, publicMetrics);
+  const workGroups = buildWorkGroups(ownerItems, entities, workGroupCuration);
+  const groupingLedger = buildGroupingLedger(
+    ownerItems,
+    entities,
+    workGroups,
+    workGroupCuration,
+    footprintRows,
+  );
+  const metricGroups = buildMetricGroups(publicMetrics, metricGroupPresentation);
   const selected = collections.find((collection) => collection.id === "collection:selected-work");
   markFeatured(ownerItems, selected);
 
@@ -2734,6 +3526,34 @@ export async function buildContent({ check = false } = {}) {
       access: "owner_private",
       sourceFile: path.relative(PROJECT_ROOT, SOURCE_FILES.curation),
     }),
+    sourceSnapshot({
+      id: "snapshot:work-groups-v1",
+      label: "Reviewed WorkGroup curation",
+      content: workGroupSource,
+      capturedAt: asOf,
+      rowCount: workGroupCuration.groups.length,
+      sectionCount: workGroupCuration.contextDecisions.length,
+      access: "owner_private",
+      sourceFile: path.relative(PROJECT_ROOT, SOURCE_FILES.workGroups),
+    }),
+    sourceSnapshot({
+      id: "snapshot:metric-groups-v1",
+      label: "Public metric presentation groups",
+      content: metricGroupSource,
+      capturedAt: asOf,
+      rowCount: metricGroupPresentation.groups.length,
+      access: "owner_private",
+      sourceFile: path.relative(PROJECT_ROOT, SOURCE_FILES.metricGroups),
+    }),
+    sourceSnapshot({
+      id: "snapshot:public-claim-upgrades-v1",
+      label: "Selected public measure revisions",
+      content: claimUpgradeSource,
+      capturedAt: asOf,
+      rowCount: claimUpgrades.claims.length,
+      access: "owner_private",
+      sourceFile: path.relative(PROJECT_ROOT, SOURCE_FILES.claimUpgrades),
+    }),
   ];
 
   const profile = buildProfile(ownerItems);
@@ -2742,6 +3562,7 @@ export async function buildContent({ check = false } = {}) {
     impactRows: impactRows.length,
     supplementalArtifacts: curation.supplementalItems.length,
     publicItems: ownerItems.length,
+    approvedMetricCount: publicMetrics.length,
     footprintBackedUniqueWorks: entities.filter(
       (entity) =>
         entity.countability === "unique_work" &&
@@ -2762,12 +3583,15 @@ export async function buildContent({ check = false } = {}) {
     organizations,
     items: ownerItems,
     entities,
+    workGroups,
     metrics: [...ownerMetrics, ...publicMetrics],
+    metricGroups,
     evidence: ownerEvidence,
     relations,
     collections,
     narratives: ownerNarratives,
     sourceSnapshots: ownerSnapshots,
+    groupingLedger,
   };
 
   const publicBundle = {
@@ -2779,7 +3603,9 @@ export async function buildContent({ check = false } = {}) {
     organizations,
     items: ownerItems.map(stripPrivateItemFields),
     entities,
+    workGroups,
     metrics: publicMetrics,
+    metricGroups,
     evidence: publicEvidence,
     relations,
     collections,

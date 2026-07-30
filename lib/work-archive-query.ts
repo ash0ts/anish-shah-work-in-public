@@ -7,6 +7,7 @@ export type WorkSearchParams = Record<
 
 export type WorkArchiveQuery = {
   query: string;
+  bucket: string;
   topic: string;
   year: string;
   format: string;
@@ -18,13 +19,22 @@ export type WorkArchiveQuery = {
 
 type WorkArchiveQueryPatch = Partial<
   Record<
-    "q" | "topic" | "year" | "format" | "organization" | "role" | "practice" | "page",
+    | "q"
+    | "bucket"
+    | "topic"
+    | "year"
+    | "format"
+    | "organization"
+    | "role"
+    | "practice"
+    | "page",
     string | number | null
   >
 >;
 
 const queryParameterOrder = [
   "q",
+  "bucket",
   "topic",
   "year",
   "format",
@@ -48,6 +58,7 @@ export function parseWorkArchiveQuery(
   const parsedPage = Number.parseInt(first(params.page), 10);
   return {
     query: first(params.q).trim(),
+    bucket: first(params.bucket),
     topic: first(params.topic),
     year: first(params.year),
     format: first(params.format),
@@ -62,6 +73,7 @@ export function parseWorkArchiveQuery(
 function queryEntries(query: WorkArchiveQuery) {
   return {
     q: query.query,
+    bucket: query.bucket,
     topic: query.topic,
     year: query.year,
     format: query.format,
@@ -115,6 +127,20 @@ function parentSearchText(work: WorkArchiveRecord): string {
   );
 }
 
+function coreParentSearchText(work: WorkArchiveRecord): string {
+  return normalized(
+    [
+      work.title,
+      work.summary ?? "",
+      work.role,
+      work.kind,
+      ...work.formats,
+      ...work.topics,
+      ...work.organizationNames,
+    ].join(" "),
+  );
+}
+
 function childSearchText(child: WorkArchiveRecord["childItems"][number]) {
   return normalized(
     [
@@ -141,7 +167,13 @@ export function matchingChildForQuery(
     ),
   );
   if (exactChild) return exactChild;
-  if (parentSearchText(work).includes(needle)) return undefined;
+  const exactTitleChild = work.childItems.find((child) =>
+    [child.title, child.displayTitle, child.shortTitle].some(
+      (title) => normalized(title) === needle,
+    ),
+  );
+  if (exactTitleChild) return exactTitleChild;
+  if (coreParentSearchText(work).includes(needle)) return undefined;
   return work.childItems.find((child) =>
     childSearchText(child).includes(needle),
   );
@@ -159,8 +191,13 @@ export function filterWorkArchiveRecords(
       work.childItems.some((child) => childSearchText(child).includes(needle));
     return (
       searchMatches &&
+      (!query.bucket || work.bucket === query.bucket) &&
       (!query.topic || work.topics.includes(query.topic)) &&
-      (!query.year || String(work.year ?? "undated") === query.year) &&
+      (!query.year ||
+        (query.year === "undated"
+          ? work.yearStart === null && work.yearEnd === null
+          : Number(query.year) >= (work.yearStart ?? Number.MAX_SAFE_INTEGER) &&
+            Number(query.year) <= (work.yearEnd ?? Number.MIN_SAFE_INTEGER))) &&
       (!query.format || work.formats.includes(query.format)) &&
       (!query.organization ||
         work.organizationIds.includes(query.organization)) &&

@@ -205,3 +205,58 @@ test("provider normalizers do not request or publish remote cover URLs", async (
   assert.doesNotMatch(myAnimeList, /main_picture/);
   assert.doesNotMatch(hardcover, /\bimage\s*\{/);
 });
+
+test("Play fetches a personal-data provider only after its stream is active", async () => {
+  const source = await readFile(
+    new URL("../components/PersonalStreams.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /requestedProviders = useRef\(new Set<ConnectorProvider>\(\)\)/);
+  assert.match(source, /requestedProviders\.current\.has\(provider\)/);
+  assert.equal(
+    (source.match(/requestedProviders\.current\.delete\(provider\)/g) ?? [])
+      .length,
+    3,
+    "Each personal-data provider must become retryable after an unavailable response",
+  );
+  assert.match(source, /active === "watch"\s*\?\s*"myanimelist"/);
+  assert.match(source, /active === "read"\s*\?\s*"hardcover"/);
+  assert.match(source, /active === "play"\s*\?\s*"steam"/);
+  assert.match(source, /:\s*null;/);
+  assert.doesNotMatch(
+    source,
+    /loadConnector<(?:MalPayload|HardcoverPayload|SteamPayload)>\("(?:myanimelist|hardcover|steam)"\)/,
+  );
+  assert.match(source, /show=\{showStrava\}/);
+  assert.match(source, /onShow=\{\(\) => setShowStrava\(true\)\}/);
+});
+
+test("Studio documents setup, replacement, and official provider sources", async () => {
+  const [page, controls, guide] = await Promise.all([
+    readFile(new URL("../app/studio/page.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/studio/ConnectorControls.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../docs/play-connections.md", import.meta.url), "utf8"),
+  ]);
+
+  for (const officialUrl of [
+    "https://myanimelist.net/apiconfig",
+    "https://hardcover.app/account/api",
+    "https://steamcommunity.com/dev/apikey",
+    "https://help.steampowered.com/en/faqs/view/2816-BE67-5B69-0FEC",
+    "https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed",
+  ]) {
+    assert.match(page, new RegExp(officialUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(page, /Connect or replace the\s+credential, run Refresh now/);
+  assert.match(controls, /Replace credential/);
+  assert.match(controls, /credential_expired/);
+  assert.match(controls, /rate_limited/);
+  assert.match(controls, /Bearer optional/);
+  assert.match(guide, /Connect → Refresh now → confirm Current/);
+  assert.match(guide, /Renewal is manual/);
+  assert.match(guide, /strava-embeds\.com/);
+});

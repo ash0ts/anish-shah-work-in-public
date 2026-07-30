@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { resolveCareerChapters } from "@/lib/career-chapters";
 import { getPublicContentView } from "@/lib/server/public-content";
 import { workArchiveRecordsFrom } from "@/lib/work-index";
 
@@ -54,9 +53,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const workSlugs = new Set(
     workArchiveRecordsFrom(bundle).map((work) => work.slug),
   );
-  for (const chapter of resolveCareerChapters(bundle).chapters) {
-    for (const work of chapter.works) workSlugs.add(work.slug);
-  }
   const workRoutes: MetadataRoute.Sitemap = [...workSlugs].map((slug) => ({
     url: `${baseUrl}/work/${encodeURIComponent(slug)}`,
     lastModified,

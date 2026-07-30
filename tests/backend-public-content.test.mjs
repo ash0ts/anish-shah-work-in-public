@@ -80,10 +80,32 @@ function narrativeRecord(narrative, overrides = {}) {
   };
 }
 
-async function snapshotWith(records) {
-  const contentHash = await publishedRecordsHash(records);
+function workGroupRecord(group, overrides = {}) {
   return {
-    schemaVersion: "1.0",
+    id: group.id,
+    recordType: "work_group",
+    slug: group.slug,
+    title: group.title,
+    summary: group.summary,
+    approvedPublicWording: group.summary,
+    caveat: "",
+    featured: group.featuredOrder !== null,
+    sortOrder: group.featuredOrder ?? 30_000,
+    verificationState: group.verificationState,
+    evidenceAccess: "public_web",
+    publicPayload: {},
+    ...overrides,
+  };
+}
+
+async function snapshotWith(records) {
+  const contentHash = await publishedRecordsHash(
+    records,
+    staticBundle.contentVersion,
+  );
+  return {
+    schemaVersion: "1.1",
+    baseContentVersion: staticBundle.contentVersion,
     publishedAt,
     contentHash,
     records,
@@ -141,7 +163,9 @@ test("canonical selectors expose explicit work groups without collection outcome
 test("published selector applies only visibility, order, feature, wording, and caveat", async () => {
   const first = staticBundle.items[0];
   const second = staticBundle.items[1];
-  const metric = staticBundle.metrics[0];
+  const metric = staticBundle.metrics.find(
+    (entry) => entry.subjectId.startsWith("collection:"),
+  );
   const narrative = staticBundle.narratives.find(
     (entry) => entry.id === "narrative:play:personal-streams",
   );
@@ -209,6 +233,42 @@ test("published selector applies only visibility, order, feature, wording, and c
   );
 });
 
+test("published WorkGroups resolve only against visible member records", async () => {
+  const group = staticBundle.workGroups.find(
+    (entry) => entry.id === "group:products:wandb-mcp",
+  );
+  assert(group);
+  const items = group.itemIds.map((id) =>
+    staticBundle.items.find((item) => item.id === id),
+  );
+  assert(items.every(Boolean));
+
+  const snapshot = await snapshotWith([
+    ...items.map((item, index) =>
+      itemRecord(item, { sortOrder: index }),
+    ),
+    workGroupRecord(group, {
+      approvedPublicWording: "A compact public summary.",
+      caveat: "Evidence stays attached.",
+      featured: false,
+    }),
+  ]);
+  const merged = mergePublishedEditorialSnapshot(staticBundle, snapshot);
+  assert(merged);
+  assert.equal(merged.workGroups.length, 1);
+  assert.equal(merged.workGroups[0].id, group.id);
+  assert.equal(merged.workGroups[0].featuredOrder, null);
+  assert.equal(
+    merged.workGroups[0].summary,
+    "A compact public summary. — Evidence stays attached.",
+  );
+
+  const emptySnapshot = await snapshotWith([workGroupRecord(group)]);
+  const empty = mergePublishedEditorialSnapshot(staticBundle, emptySnapshot);
+  assert(empty);
+  assert.equal(empty.workGroups.length, 0);
+});
+
 test("published selector rejects raw HTML, private fields, and malformed records", async () => {
   const item = staticBundle.items[0];
   const safe = itemRecord(item);
@@ -216,7 +276,8 @@ test("published selector rejects raw HTML, private fields, and malformed records
 
   assert.equal(
     parsePublishedEditorialSnapshot({
-      schemaVersion: "1.0",
+      schemaVersion: "1.1",
+      baseContentVersion: staticBundle.contentVersion,
       publishedAt,
       contentHash: hash,
       records: [{ ...safe, approvedPublicWording: "<b>unsafe</b>" }],
@@ -225,7 +286,8 @@ test("published selector rejects raw HTML, private fields, and malformed records
   );
   assert.equal(
     parsePublishedEditorialSnapshot({
-      schemaVersion: "1.0",
+      schemaVersion: "1.1",
+      baseContentVersion: staticBundle.contentVersion,
       publishedAt,
       contentHash: hash,
       records: [{ ...safe, privateNotes: "do not publish" }],
@@ -234,7 +296,8 @@ test("published selector rejects raw HTML, private fields, and malformed records
   );
   assert.equal(
     parsePublishedEditorialSnapshot({
-      schemaVersion: "1.0",
+      schemaVersion: "1.1",
+      baseContentVersion: staticBundle.contentVersion,
       publishedAt,
       contentHash: hash,
       records: [{ ...safe, sortOrder: 1.5 }],
@@ -266,6 +329,22 @@ test("resolver verifies the content hash and falls back safely without D1", asyn
   });
   assert.equal(tampered.source, "static_fallback");
   assert.equal(tampered.bundle, staticBundle);
+
+  const staleVersion = "0".repeat(16);
+  const staleContentHash = await publishedRecordsHash(
+    snapshot.records,
+    staleVersion,
+  );
+  const stale = await resolvePublicContentFromSnapshotRow(staticBundle, {
+    snapshotJson: JSON.stringify({
+      ...snapshot,
+      baseContentVersion: staleVersion,
+      contentHash: staleContentHash,
+    }),
+    contentHash: staleContentHash,
+  });
+  assert.equal(stale.source, "static_fallback");
+  assert.equal(stale.bundle, staticBundle);
 });
 
 test("public runtime reads publication snapshots, never editable drafts", async () => {
@@ -286,7 +365,7 @@ test("public runtime reads publication snapshots, never editable drafts", async 
     assert.match(route, /dynamic = "force-dynamic"/);
   }
   assert.equal(
-    [...detail.matchAll(/\bresolveEntity\(/g)].length >= 3,
+    [...detail.matchAll(/\bresolveGroup\(/g)].length >= 3,
     true,
   );
 });

@@ -29,7 +29,6 @@ export const metadata: Metadata = {
       "Products, education, open source, and technical communities—with the public work attached.",
     images: ["/og.png"],
   },
-  icons: { icon: "/favicon.png" },
 };
 
 export default function RootLayout({
@@ -40,6 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/favicon.png" />
         <link
           rel="preload"
           href="/fonts/recursive-kinetic.woff2"

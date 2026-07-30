@@ -6,7 +6,7 @@ register("./content-connector-loader.mjs", import.meta.url);
 
 const [
   { decryptCredential, encryptCredential },
-  { fetchHardcoverSnapshot },
+  { fetchHardcoverSnapshot, normalizeHardcoverAuthorization },
   { fetchMyAnimeListSnapshot },
   {
     deleteConnectorCredential,
@@ -252,7 +252,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
     const result = await withFetch(async (_input, init) => {
       requests.push(init);
       return responses.shift();
-    }, () => fetchHardcoverSnapshot({ authorization: " Bearer hardcover-secret " }));
+    }, () => fetchHardcoverSnapshot({ authorization: " hardcover-secret " }));
 
     assert.equal(requests.length, 2);
     assert.equal(requests[0].method, "POST");
@@ -294,6 +294,19 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
     if (previousProfile === undefined) delete process.env.HARDCOVER_PROFILE_URL;
     else process.env.HARDCOVER_PROFILE_URL = previousProfile;
   }
+});
+
+test("Hardcover accepts bare or prefixed tokens and emits one Bearer prefix", () => {
+  assert.equal(
+    normalizeHardcoverAuthorization(" hardcover-secret "),
+    "Bearer hardcover-secret",
+  );
+  assert.equal(
+    normalizeHardcoverAuthorization(" bearer   hardcover-secret "),
+    "Bearer hardcover-secret",
+  );
+  assert.equal(normalizeHardcoverAuthorization("Bearer"), "");
+  assert.equal(normalizeHardcoverAuthorization("token with spaces"), "");
 });
 
 test("both providers reject empty credentials before making a request", async () => {
@@ -1288,5 +1301,29 @@ test("Steam credentials are encrypted as one provider-bound object", async () =>
   assert.deepEqual(
     await decryptCredential(encrypted, key, "steam"),
     { apiKey, steamId },
+  );
+});
+
+test("Hardcover credentials are normalized before encrypted storage", async () => {
+  const key = Buffer.alloc(32, 21).toString("base64");
+  const database = new FakeD1();
+
+  const result = await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      saveConnectorCredential(
+        "hardcover",
+        " hardcover-secret ",
+        "anish@example.com",
+      ),
+  );
+  assert.deepEqual(result, { status: "saved" });
+
+  const encrypted = database.credentials.get("hardcover");
+  assert(encrypted);
+  assert.equal(JSON.stringify(encrypted).includes("hardcover-secret"), false);
+  assert.deepEqual(
+    await decryptCredential(encrypted, key, "hardcover"),
+    { authorization: "Bearer hardcover-secret" },
   );
 });

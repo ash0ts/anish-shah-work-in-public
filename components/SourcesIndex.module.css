@@ -1,6 +1,6 @@
 .index {
   min-width: 0;
-  padding-block: clamp(3.5rem, 7vw, 7rem);
+  padding-block: clamp(3rem, 5vw, 5rem);
   border-top: 1px solid var(--line, #d5dbe4);
 }
 
@@ -27,7 +27,7 @@
   max-width: 18ch;
   margin: 0;
   font-family: var(--font-display, "Recursive", sans-serif);
-  font-size: clamp(1.9rem, 3.4vw, 3.7rem);
+  font-size: clamp(1.9rem, 3vw, 3rem);
   font-variation-settings: "CASL" 0.3, "wght" 660;
   letter-spacing: -0.05em;
   line-height: 0.98;
@@ -37,7 +37,11 @@
 .filters {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(0, 1.35fr) minmax(10rem, 0.65fr) auto;
+  grid-template-columns:
+    minmax(0, 1.25fr)
+    minmax(9rem, 0.6fr)
+    minmax(10rem, 0.65fr)
+    auto;
   gap: 0.8rem;
   align-items: end;
 }
@@ -99,6 +103,11 @@
 }
 
 .count {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   margin-top: 1.3rem;
   padding-block: 0.75rem;
   border-bottom: 1px solid var(--line, #d5dbe4);
@@ -107,28 +116,34 @@
   font-size: 0.66rem;
 }
 
-.browseControls {
-  display: flex;
+.pagination {
+  display: grid;
   min-width: 0;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.5rem;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1rem;
   align-items: center;
-  justify-content: space-between;
   min-height: 3.5rem;
   padding-block: 0.85rem;
   border-bottom: 1px solid var(--line, #d5dbe4);
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.browseControls a {
+.pagination a {
   color: var(--ink, #17223b);
   font-weight: 650;
   text-underline-offset: 0.22em;
 }
 
-.browseControls span {
+.pagination > span {
   color: var(--muted, #667084);
-  font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.62rem;
+  text-align: center;
+}
+
+.pagination a:last-child {
+  justify-self: end;
 }
 
 .list {
@@ -146,6 +161,12 @@
   align-items: start;
   padding: 0.95rem 0;
   border-bottom: 1px solid var(--line, #d5dbe4);
+  scroll-margin-top: 6rem;
+}
+
+.list > li:target {
+  padding-left: 0.75rem;
+  box-shadow: inset 3px 0 0 var(--blue, #295dff);
 }
 
 .list > li > span {
@@ -196,7 +217,7 @@
   outline-offset: 3px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .heading,
   .filters {
     grid-template-columns: 1fr;
@@ -208,6 +229,12 @@
 }
 
 @media (max-width: 520px) {
+  .count {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
   .list > li {
     grid-template-columns: 2rem minmax(0, 1fr);
   }

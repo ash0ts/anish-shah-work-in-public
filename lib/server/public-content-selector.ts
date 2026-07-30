@@ -2,6 +2,7 @@ import type {
   AnishContentBundle,
   PortfolioItem,
   PublicImpactMetric,
+  WorkGroup,
 } from "@/types/content";
 import { validatePublicProjection } from "./editorial-policy";
 
@@ -21,7 +22,8 @@ export type PublishedEditorialRecord = {
 };
 
 export type PublishedEditorialSnapshot = {
-  schemaVersion: "1.0";
+  schemaVersion: "1.1";
+  baseContentVersion: string;
   publishedAt: string;
   contentHash: string;
   records: PublishedEditorialRecord[];
@@ -96,11 +98,17 @@ export function parsePublishedEditorialSnapshot(
   }
   const snapshot = value as Record<string, unknown>;
   if (
-    Object.keys(snapshot).length !== 4 ||
-    !["schemaVersion", "publishedAt", "contentHash", "records"].every((key) =>
-      Object.hasOwn(snapshot, key),
-    ) ||
-    snapshot.schemaVersion !== "1.0" ||
+    Object.keys(snapshot).length !== 5 ||
+    ![
+      "schemaVersion",
+      "baseContentVersion",
+      "publishedAt",
+      "contentHash",
+      "records",
+    ].every((key) => Object.hasOwn(snapshot, key)) ||
+    snapshot.schemaVersion !== "1.1" ||
+    typeof snapshot.baseContentVersion !== "string" ||
+    !/^[a-f0-9]{16}$/.test(snapshot.baseContentVersion) ||
     typeof snapshot.publishedAt !== "string" ||
     !Number.isFinite(Date.parse(snapshot.publishedAt)) ||
     typeof snapshot.contentHash !== "string" ||
@@ -118,7 +126,8 @@ export function parsePublishedEditorialSnapshot(
   }
 
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "1.1",
+    baseContentVersion: snapshot.baseContentVersion,
     publishedAt: snapshot.publishedAt,
     contentHash: snapshot.contentHash,
     records,
@@ -139,8 +148,13 @@ function toHex(bytes: Uint8Array): string {
 
 export async function publishedRecordsHash(
   records: unknown[],
+  baseContentVersion: string,
 ): Promise<string> {
-  const canonical = JSON.stringify({ schemaVersion: "1.0", records });
+  const canonical = JSON.stringify({
+    schemaVersion: "1.1",
+    baseContentVersion,
+    records,
+  });
   const digest = await crypto.subtle.digest(
     "SHA-256",
     asArrayBuffer(new TextEncoder().encode(canonical)),
@@ -198,6 +212,7 @@ export function mergePublishedEditorialSnapshot(
   staticBundle: AnishContentBundle,
   snapshot: PublishedEditorialSnapshot,
 ): AnishContentBundle | null {
+  if (snapshot.baseContentVersion !== staticBundle.contentVersion) return null;
   const records = new Map(snapshot.records.map((record) => [record.id, record]));
 
   for (const record of snapshot.records) {
@@ -208,8 +223,19 @@ export function mergePublishedEditorialSnapshot(
     const narrative = staticBundle.narratives.find(
       (candidate) => candidate.id === record.id,
     );
-    const expectedType = item ? item.type : metric ? "metric" : narrative ? "narrative" : null;
-    if (expectedType && record.recordType !== expectedType) return null;
+    const workGroup = staticBundle.workGroups.find(
+      (candidate) => candidate.id === record.id,
+    );
+    const expectedType = item
+      ? item.type
+      : metric
+        ? "metric"
+        : narrative
+          ? "narrative"
+          : workGroup
+            ? "work_group"
+            : null;
+    if (!expectedType || record.recordType !== expectedType) return null;
   }
 
   const items = orderByPublished(
@@ -231,7 +257,7 @@ export function mergePublishedEditorialSnapshot(
     records,
   );
 
-  const metrics = orderByPublished(
+  const orderedMetrics = orderByPublished(
     staticBundle.metrics.flatMap((metric) => {
       if (!("displayValue" in metric)) return [];
       const record = records.get(metric.id);
@@ -267,12 +293,37 @@ export function mergePublishedEditorialSnapshot(
   );
 
   const itemIds = new Set(items.map((item) => item.id));
-  const metricIds = new Set(metrics.map((metric) => metric.id));
+  const candidateWorkGroups = orderByPublished(
+    staticBundle.workGroups.flatMap((group): WorkGroup[] => {
+      const record = records.get(group.id);
+      if (!record) return [];
+      const visibleItemIds = group.itemIds.filter((id) => itemIds.has(id));
+      if (!visibleItemIds.length) return [];
+      return [
+        {
+          ...group,
+          itemIds: visibleItemIds,
+          featuredOrder: record.featured ? record.sortOrder : null,
+          summary:
+            withCaveat(
+              record.approvedPublicWording || group.summary,
+              record.caveat,
+            ) ?? group.summary,
+        },
+      ];
+    }),
+    records,
+  );
   const requiredEntityIds = new Set([
     ...items.map((item) => item.canonicalEntityId),
-    ...metrics
+    ...orderedMetrics
       .map((metric) => metric.subjectId)
       .filter((id) => staticBundle.entities.some((entity) => entity.id === id)),
+    ...candidateWorkGroups.flatMap((group) => [
+      ...group.memberEntityIds,
+      ...group.programEntityIds,
+      ...group.contextEntityIds,
+    ]),
   ]);
   for (const entity of staticBundle.entities) {
     if (
@@ -303,6 +354,56 @@ export function mergePublishedEditorialSnapshot(
         },
       };
     });
+  const entityIds = new Set(entities.map((entity) => entity.id));
+  const visibleEntityItems = new Map(
+    entities.map((entity) => [entity.id, new Set(entity.itemIds)]),
+  );
+  const workGroups = candidateWorkGroups.flatMap((group): WorkGroup[] => {
+    const memberEntityIds = group.memberEntityIds.filter((id) => {
+      const entityItemIds = visibleEntityItems.get(id);
+      return (
+        entityIds.has(id) &&
+        entityItemIds !== undefined &&
+        group.itemIds.some((itemId) => entityItemIds.has(itemId))
+      );
+    });
+    const primaryEntityId = memberEntityIds.includes(group.primaryEntityId)
+      ? group.primaryEntityId
+      : memberEntityIds[0];
+    if (!primaryEntityId || !group.itemIds.length) return [];
+    return [
+      {
+        ...group,
+        primaryEntityId,
+        memberEntityIds,
+        programEntityIds: group.programEntityIds.filter(
+          (id) => entityIds.has(id) && (visibleEntityItems.get(id)?.size ?? 0) > 0,
+        ),
+        contextEntityIds: group.contextEntityIds.filter(
+          (id) => entityIds.has(id) && (visibleEntityItems.get(id)?.size ?? 0) > 0,
+        ),
+      },
+    ];
+  });
+  const workGroupIds = new Set(workGroups.map((group) => group.id));
+  const metrics = orderedMetrics.filter(
+    (metric) => {
+      if (metric.subjectId.startsWith("group:")) {
+        return workGroupIds.has(metric.subjectId);
+      }
+      if (metric.subjectId.startsWith("item:")) {
+        return itemIds.has(metric.subjectId);
+      }
+      if (metric.subjectId.startsWith("entity:")) {
+        return (
+          entityIds.has(metric.subjectId) &&
+          (visibleEntityItems.get(metric.subjectId)?.size ?? 0) > 0
+        );
+      }
+      return true;
+    },
+  );
+  const metricIds = new Set(metrics.map((metric) => metric.id));
   const referencedEvidenceIds = new Set([
     ...items.flatMap((item) => item.evidenceIds),
     ...metrics.flatMap((metric) => metric.publicEvidenceIds),
@@ -312,7 +413,22 @@ export function mergePublishedEditorialSnapshot(
     ...staticBundle,
     items,
     entities,
+    workGroups,
     metrics,
+    metricGroups: staticBundle.metricGroups
+      .map((group) => {
+        const visibleMetricIds = group.metricIds.filter((id) =>
+          metricIds.has(id),
+        );
+        return {
+          ...group,
+          metricIds: visibleMetricIds,
+          leadMetricId: metricIds.has(group.leadMetricId)
+            ? group.leadMetricId
+            : (visibleMetricIds[0] ?? group.leadMetricId),
+        };
+      })
+      .filter((group) => group.metricIds.length > 0),
     narratives,
     relations: staticBundle.relations.filter(
       (relation) =>
@@ -328,6 +444,10 @@ export function mergePublishedEditorialSnapshot(
         source.kind === "methodology" ||
         referencedEvidenceIds.has(source.id),
     ),
+    sourceSummary: {
+      ...staticBundle.sourceSummary,
+      approvedMetricCount: metrics.length,
+    },
   };
 }
 
@@ -347,8 +467,12 @@ export async function resolvePublicContentFromSnapshotRow(
     const parsed = parsePublishedEditorialSnapshot(JSON.parse(row.snapshotJson));
     if (
       !parsed ||
+      parsed.baseContentVersion !== staticBundle.contentVersion ||
       parsed.contentHash !== row.contentHash ||
-      (await publishedRecordsHash(parsed.records)) !== row.contentHash
+      (await publishedRecordsHash(
+        parsed.records,
+        parsed.baseContentVersion,
+      )) !== row.contentHash
     ) {
       return {
         bundle: staticBundle,

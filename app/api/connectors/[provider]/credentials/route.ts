@@ -63,25 +63,30 @@ export async function POST(request: Request, context: RouteContext) {
       typeof payload.apiKey === "string"
         ? payload.apiKey.trim()
         : "";
-    const steamId =
+    const steamId64 =
       typeof payload === "object" &&
       payload !== null &&
-      "steamId" in payload &&
-      typeof payload.steamId === "string"
-        ? payload.steamId.trim()
+      "steamId64" in payload &&
+      typeof payload.steamId64 === "string"
+        ? payload.steamId64.trim()
+        : typeof payload === "object" &&
+            payload !== null &&
+            "steamId" in payload &&
+            typeof payload.steamId === "string"
+          ? payload.steamId.trim()
         : "";
     if (
       !apiKey ||
       apiKey.length > 128 ||
-      !steamId ||
-      steamId.length > 32
+      !steamId64 ||
+      steamId64.length > 32
     ) {
       return Response.json(
         { error: "A Steam Web API key and SteamID64 are required." },
         { status: 400 },
       );
     }
-    credentialInput = { apiKey, steamId };
+    credentialInput = { apiKey, steamId: steamId64 };
   } else {
     const secret =
       typeof payload === "object" &&

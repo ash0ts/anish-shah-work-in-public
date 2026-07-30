@@ -128,29 +128,28 @@ function visibleText(html) {
     .trim();
 }
 
-test("homepage renders the Career Chapters story and three qualified metrics", async () => {
+test("homepage renders four Bodies of Work and four qualified impact signals", async () => {
   const html = await renderHtml("/");
   const markup = documentMarkup(html);
 
   assert.match(html, /<title>Applied AI, in public — Anish Shah<\/title>/i);
-  assert.match(markup, />ANISH</);
-  assert.match(markup, />SHAH</);
+  assert.match(markup, />Anish</);
+  assert.match(markup, />Shah</);
   assert.match(html, /applied AI builder, educator, and technical storyteller/i);
   assert.match(html, /Explore my work/i);
-  assert.match(html, /Career Chapters/i);
-  assert.equal((markup.match(/<details\b/g) ?? []).length, 5);
+  assert.match(html, /Bodies of work/i);
+  assert.equal((markup.match(/<details\b/g) ?? []).length, 4);
   assert.equal(
     (markup.match(/<a\b[^>]*href="\/work\/[^"]+"/g) ?? []).length,
     12,
   );
-  for (const value of ["7K+", "Nearly 100K", "$2M+"]) {
-    assert.match(visibleText(html), new RegExp(value.replace("$", "\\$")));
+  for (const value of ["7K+", "1K+ / 500+", "$4M+", "200K+"]) {
+    assert.match(
+      visibleText(html),
+      new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    );
   }
-  assert.equal(
-    (markup.match(/<article\b/g) ?? []).length,
-    3,
-    "Home must expose exactly three metric articles",
-  );
+  assert.match(markup, /Four signals\. Four different scopes\./i);
   assert.match(html, /Internal analytics/i);
   assert.match(html, /as of 2026/i);
   assert.match(html, /property="og:image" content="[^"]*\/og\.png"/i);
@@ -164,12 +163,14 @@ test("all public routes expose useful server-rendered content", async () => {
     {
       path: "/work",
       required: [
-        /Work, with its public forms attached\./i,
+        /Work, grouped by the story it tells\./i,
+        /Story × Time/i,
         /Search work and public forms/i,
+        /name="bucket"/i,
         /name="topic"/i,
         /name="year"/i,
         /name="format"/i,
-        /Chronological index/i,
+        /Complete grouped index/i,
       ],
     },
     {
@@ -198,6 +199,7 @@ test("all public routes expose useful server-rendered content", async () => {
         /id="public-footprint"/i,
         /id="internal-analytics"/i,
         /13(?:\s|<!--.*?-->)*measures in four contexts/i,
+        /What this site does not claim/i,
         /public bibliography/i,
       ],
     },
@@ -216,38 +218,85 @@ test("all public routes expose useful server-rendered content", async () => {
   }
 });
 
-test("Sources defaults to a compact server-searchable bibliography", async () => {
+test("Sources paginates the complete searchable bibliography 24 rows at a time", async () => {
   const compactHtml = await renderHtml("/sources");
   const compactMarkup = documentMarkup(compactHtml);
+  const sourceText = visibleText(compactHtml);
+  for (const value of [
+    "Public archive",
+    "184",
+    "82",
+    "186",
+    "198",
+    "Impact ledger",
+    "85",
+    "13",
+    "What this site does not claim",
+  ]) {
+    assert.match(sourceText, new RegExp(value.replace("+", "\\+"), "i"));
+  }
+  assert.doesNotMatch(sourceText, /184 footprint \+ 85 impact/i);
+  assert.doesNotMatch(sourceText, /\b269\b/);
+  assert.doesNotMatch(sourceText, /approved public claim/i);
+  assert.match(sourceText, /Scope work/i);
+  assert.match(
+    compactMarkup,
+    /href="\/sources\?association=claim(?:&amp;|&)q=[^"]+#evidence:[^"]+"/i,
+  );
   const compactIndex =
     compactMarkup.match(
       /<section\b[^>]*id="bibliography"[^>]*>[\s\S]*?<\/section>/i,
     )?.[0] ?? "";
   assert.equal(
     (compactIndex.match(/<li\b/g) ?? []).length,
-    12,
-    "the default bibliography should render only its first twelve rows",
+    24,
+    "the default bibliography should render its first 24 rows",
   );
-  assert.match(compactIndex, /Browse all 198 sources/i);
+  assert.match(compactIndex, /1—24 shown/i);
+  assert.match(compactIndex, /Page 1 of 9/i);
   assert.match(compactIndex, /<form\b[^>]*action="\/sources"[^>]*method="get"/i);
   assert.match(compactIndex, /name="q"/i);
   assert.match(compactIndex, /name="kind"/i);
+  assert.match(compactIndex, /name="association"/i);
+  assert.equal(
+    (compactIndex.match(/<li\b[^>]*id="evidence:[^"]+"/gi) ?? []).length,
+    24,
+    "each visible evidence row should expose a stable fragment target",
+  );
 
-  const completeHtml = await renderHtml("/sources?sources=all");
-  const completeIndex =
-    documentMarkup(completeHtml).match(
+  const secondHtml = await renderHtml("/sources?page=2");
+  const secondIndex =
+    documentMarkup(secondHtml).match(
       /<section\b[^>]*id="bibliography"[^>]*>[\s\S]*?<\/section>/i,
     )?.[0] ?? "";
-  assert.equal((completeIndex.match(/<li\b/g) ?? []).length, 198);
-  assert.match(completeIndex, /Show the first 12/i);
-  assert(
-    compactHtml.length < completeHtml.length / 3,
-    "the default Sources response should stay materially smaller than Browse all",
-  );
+  assert.equal((secondIndex.match(/<li\b/g) ?? []).length, 24);
+  assert.match(secondIndex, /25—48 shown/i);
+  assert.match(secondIndex, /Page 2 of 9/i);
+  assert.doesNotMatch(secondIndex, /Browse all|Show the first/i);
 
   const searchHtml = await renderHtml("/sources?q=MCP");
   assert.match(searchHtml, /matching public sources/i);
   assert.match(searchHtml, /MCP/i);
+
+  const claimHtml = await renderHtml("/sources?association=claim");
+  const claimIndex =
+    documentMarkup(claimHtml).match(
+      /<section\b[^>]*id="bibliography"[^>]*>[\s\S]*?<\/section>/i,
+    )?.[0] ?? "";
+  assert.match(claimIndex, /2 matching public sources/i);
+  assert.equal((claimIndex.match(/<li\b/g) ?? []).length, 2);
+  assert.match(claimIndex, /value="claim" selected/i);
+
+  const workHtml = await renderHtml("/sources?association=work");
+  const workIndex =
+    documentMarkup(workHtml).match(
+      /<section\b[^>]*id="bibliography"[^>]*>[\s\S]*?<\/section>/i,
+    )?.[0] ?? "";
+  assert.match(
+    workIndex,
+    /href="\/sources\?association=work(?:&amp;|&)page=2#bibliography"/i,
+    "association filtering should survive bibliography pagination",
+  );
 });
 
 test("legacy map URLs redirect to the two-dimensional Work index", async () => {
@@ -262,6 +311,41 @@ test("legacy map URLs redirect to the two-dimensional Work index", async () => {
   assert.equal(location.searchParams.get("q"), "agents");
   assert.equal(location.searchParams.get("topic"), "agents");
   assert.equal(location.searchParams.get("page"), "2");
+});
+
+test("legacy context routes land on a real nested anchor or a useful search", async () => {
+  const related = await fetch(
+    `${BASE_URL}/work/7-top-machine-learning-operations-startups-and-the-problem-they-solve`,
+    { redirect: "manual" },
+  );
+  assert([307, 308].includes(related.status));
+  const relatedLocation = new URL(related.headers.get("location"), BASE_URL);
+  assert.equal(
+    relatedLocation.pathname,
+    "/work/orchestrating-reproducible-automl-experiments-using-pycaret-w-and-b-and-prefect",
+  );
+  assert.equal(relatedLocation.hash, "#item:fp-0100");
+  const relatedHtml = await renderHtml(
+    `${relatedLocation.pathname}${relatedLocation.hash}`,
+  );
+  assert.match(relatedHtml, /id="item:fp-0100"/i);
+  assert.match(relatedHtml, /Related public context/i);
+
+  const unassociated = await fetch(
+    `${BASE_URL}/work/fourthbrain-graduate-testimonial`,
+    { redirect: "manual" },
+  );
+  assert([307, 308].includes(unassociated.status));
+  const fallbackLocation = new URL(
+    unassociated.headers.get("location"),
+    BASE_URL,
+  );
+  assert.equal(fallbackLocation.pathname, "/work");
+  assert.equal(
+    fallbackLocation.searchParams.get("q"),
+    "FourthBrain Graduate Testimonial",
+  );
+  assert.equal(fallbackLocation.hash, "#work-index");
 });
 
 test("the public shell has the exact compact navigation and footer contract", async () => {
@@ -330,25 +414,21 @@ test("the public surface and build contain no removed experience or private prov
   assert((await stat(path.join(DIST_ROOT, "client/favicon.png"))).size > 0);
 });
 
-test("Three.js is dynamic on Home and absent from the Work route", async () => {
-  const careerSource = await readFile(
-    path.join(PROJECT_ROOT, "components/CareerChapters.tsx"),
-    "utf8",
-  );
+test("Three.js and canvas navigation are absent from Home and Work", async () => {
   const workSource = await readFile(
     path.join(PROJECT_ROOT, "app/work/page.tsx"),
     "utf8",
   );
-  assert.match(careerSource, /import\("three"\)/);
-  assert.doesNotMatch(careerSource, /^import .* from ["']three["'];?$/m);
   assert.doesNotMatch(workSource, /three|canvas|VisualArchive/i);
 
-  const workHtml = await renderHtml("/work");
-  assert.doesNotMatch(documentMarkup(workHtml), /<canvas\b/i);
-  const workAssets = [
-    ...workHtml.matchAll(/<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"/gi),
-  ].map((match) => match[1]);
-  assert(workAssets.every((asset) => !/three/i.test(asset)));
+  for (const pathname of ["/", "/work"]) {
+    const html = await renderHtml(pathname);
+    assert.doesNotMatch(documentMarkup(html), /<canvas\b/i);
+    const assets = [
+      ...html.matchAll(/<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"/gi),
+    ].map((match) => match[1]);
+    assert(assets.every((asset) => !/three/i.test(asset)));
+  }
 });
 
 test("robots and sitemap publish only public editorial surfaces", async () => {

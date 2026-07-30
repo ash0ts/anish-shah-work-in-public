@@ -4,20 +4,25 @@ import { notFound, redirect } from "next/navigation";
 import { publicBundle } from "@/lib/content";
 import { isKnownUnavailablePublicUrl } from "@/lib/public-url-health";
 import {
-  entityForItemFrom,
+  findWorkGroupBySlugFrom,
+  workBuckets,
+  workGroupForEntityFrom,
+  workGroupPeriodLabel,
+} from "@/lib/work-groups";
+import {
   findEntityBySlugFrom,
   findItemBySlugFrom,
   getPublicContentView,
-  itemsForEntityFrom,
   publicMetricsFrom,
-  workIndexEntriesFrom,
 } from "@/lib/server/public-content";
 import { humanizeWorkFilter } from "@/lib/work-archive-query";
+import { workArchiveRecordsFrom } from "@/lib/work-index";
 import type {
   AnishContentBundle,
   ContentDate,
   EvidenceSource,
   PortfolioItem,
+  WorkGroup,
 } from "@/types/content";
 import styles from "./case.module.css";
 
@@ -28,73 +33,138 @@ type WorkDetailProps = {
 };
 
 export function generateStaticParams() {
-  return workIndexEntriesFrom(publicBundle).map((entity) => ({
-    slug: entity.slug,
+  return workArchiveRecordsFrom(publicBundle).map((record) => ({
+    slug: record.slug,
   }));
 }
 
-async function resolveEntity(slug: string) {
+async function resolveGroup(slug: string) {
   const { bundle } = await getPublicContentView();
-  const exactEntity = bundle.entities.find(
-    (entity) =>
-      entity.slug === slug && entity.publicationState === "public",
+  const exactGroup = bundle.workGroups.find(
+    (group) =>
+      group.slug === slug && group.publicationState === "public",
   );
-  if (exactEntity) return { bundle, entity: exactEntity, legacyItem: null };
-
-  const item = findItemBySlugFrom(bundle, slug);
-  const itemEntity = item ? entityForItemFrom(bundle, item) : undefined;
-  if (itemEntity) {
-    return { bundle, entity: itemEntity, legacyItem: item ?? null };
+  if (exactGroup) {
+    return {
+      bundle,
+      group: exactGroup,
+      legacyAnchor: null as string | null,
+      fallbackQuery: null as string | null,
+    };
   }
 
-  const aliasedEntity = findEntityBySlugFrom(bundle, slug);
-  return aliasedEntity
-    ? { bundle, entity: aliasedEntity, legacyItem: null }
-    : { bundle, entity: null, legacyItem: null };
+  const item = findItemBySlugFrom(bundle, slug);
+  const entity =
+    (item
+      ? bundle.entities.find(
+          (candidate) => candidate.id === item.canonicalEntityId,
+        )
+      : undefined) ?? findEntityBySlugFrom(bundle, slug);
+  const legacyGroup = entity
+    ? workGroupForEntityFrom(bundle, entity.id)
+    : undefined;
+  const aliasedGroup = findWorkGroupBySlugFrom(bundle, slug);
+  const resolvedGroup = legacyGroup ?? aliasedGroup ?? null;
+  const entityAnchor =
+    entity && resolvedGroup?.memberEntityIds.includes(entity.id)
+      ? resolvedGroup.memberEntityIds.length > 1
+        ? entity.id
+        : null
+      : entity
+        ? entity.itemIds.find((id) => resolvedGroup?.itemIds.includes(id)) ??
+          entity.itemIds[0] ??
+          null
+        : null;
+  return {
+    bundle,
+    group: resolvedGroup,
+    legacyAnchor: item?.id ?? entityAnchor,
+    fallbackQuery:
+      resolvedGroup === null
+        ? item?.displayTitle ?? entity?.displayTitle ?? null
+        : null,
+  };
 }
 
 export async function generateMetadata({
   params,
 }: WorkDetailProps): Promise<Metadata> {
   const { slug } = await params;
-  const { entity } = await resolveEntity(slug);
-  if (!entity) return { title: "Work record" };
+  const { group, fallbackQuery } = await resolveGroup(slug);
+  if (!group) {
+    return {
+      title: fallbackQuery ?? "Work record",
+      description: fallbackQuery
+        ? `Find the bodies of work connected to ${fallbackQuery}.`
+        : undefined,
+    };
+  }
   return {
-    title: entity.displayTitle,
-    description: entity.summary,
+    title: group.title,
+    description: group.summary,
   };
 }
 
 export default async function WorkDetailPage({ params }: WorkDetailProps) {
   const { slug } = await params;
-  const { bundle, entity, legacyItem } = await resolveEntity(slug);
-  if (!entity) notFound();
-  if (legacyItem || slug !== entity.slug) {
-    const anchor = legacyItem ? `#${legacyItem.id}` : "";
-    redirect(`/work/${entity.slug}${anchor}`);
+  const { bundle, group, legacyAnchor, fallbackQuery } =
+    await resolveGroup(slug);
+  if (!group && fallbackQuery) {
+    redirect(`/work?q=${encodeURIComponent(fallbackQuery)}#work-index`);
+  }
+  if (!group) notFound();
+  if (legacyAnchor || slug !== group.slug) {
+    redirect(
+      `/work/${group.slug}${legacyAnchor ? `#${legacyAnchor}` : ""}`,
+    );
   }
 
-  const items = itemsForEntityFrom(bundle, entity).sort(
-    (left, right) =>
-      (right.date.start ?? "").localeCompare(left.date.start ?? "") ||
-      left.displayTitle.localeCompare(right.displayTitle),
+  const itemById = new Map(bundle.items.map((item) => [item.id, item]));
+  const entityById = new Map(
+    bundle.entities.map((entity) => [entity.id, entity]),
   );
+  const items = group.itemIds
+    .map((id) => itemById.get(id))
+    .filter(
+      (item): item is PortfolioItem =>
+        Boolean(item && item.publicationState === "public"),
+    )
+    .sort(
+      (left, right) =>
+        (right.date.start ?? "").localeCompare(left.date.start ?? "") ||
+        left.displayTitle.localeCompare(right.displayTitle),
+    );
   if (!items.length) notFound();
+  const primaryEntity = entityById.get(group.primaryEntityId);
   const primary =
-    items.find((item) => item.id === entity.primaryItemId) ?? items[0]!;
+    (primaryEntity?.primaryItemId
+      ? itemById.get(primaryEntity.primaryItemId)
+      : undefined) ?? items[0]!;
+  const memberEntities = group.memberEntityIds
+    .map((id) => entityById.get(id))
+    .filter((entity) => Boolean(entity));
   const evidence = evidenceForItems(bundle, items);
-  const directItemIds = new Set(entity.itemIds);
+  const directSubjects = new Set([
+    group.id,
+    ...group.memberEntityIds,
+    ...group.itemIds,
+  ]);
+  const contextSubjects = new Set([
+    ...group.programEntityIds,
+    ...group.contextEntityIds,
+    ...memberEntities.flatMap((entity) => entity?.parentEntityIds ?? []),
+  ]);
   const outcomes = publicMetricsFrom(bundle).filter(
     (metric) =>
       metric.displaySurfaces.includes("item_detail") &&
-      (metric.subjectId === entity.id || directItemIds.has(metric.subjectId)),
+      directSubjects.has(metric.subjectId),
   );
   const context = publicMetricsFrom(bundle).filter(
     (metric) =>
-      entity.parentEntityIds.includes(metric.subjectId) &&
+      contextSubjects.has(metric.subjectId) &&
       metric.displaySurfaces.includes("collection"),
   );
-  const organizationCandidates = entity.organizationIds
+  const organizationCandidates = group.organizationIds
     .map(
       (id) =>
         bundle.organizations.find((organization) => organization.id === id)
@@ -109,52 +179,99 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           candidate !== name && candidate.startsWith(`${name} ·`),
       ),
   );
+  const bucket =
+    workBuckets.find((candidate) => candidate.id === group.bucket)?.title ??
+    humanizeWorkFilter(group.bucket);
   const hasMultipleForms = items.length > 1;
+  const relatedContextItems = [
+    ...new Map(
+      [...group.programEntityIds, ...group.contextEntityIds]
+        .flatMap((entityId) => entityById.get(entityId)?.itemIds ?? [])
+        .filter((itemId) => !group.itemIds.includes(itemId))
+        .map((itemId) => itemById.get(itemId))
+        .filter(
+          (item): item is PortfolioItem =>
+            Boolean(item && item.publicationState === "public"),
+        )
+        .map((item) => [item.id, item]),
+    ).values(),
+  ].sort(
+    (left, right) =>
+      (right.date.start ?? "").localeCompare(left.date.start ?? "") ||
+      left.displayTitle.localeCompare(right.displayTitle),
+  );
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
-      <header className={styles.hero}>
+      <header
+        className={styles.hero}
+        id={!hasMultipleForms ? primary.id : undefined}
+      >
         <div className={styles.heroTop}>
           <Link href="/work">← Work index</Link>
           <div className={styles.kicker} aria-label="Work classification">
-            <span>{humanizeWorkFilter(entity.kind)}</span>
-            <span>{entity.year ?? "Undated"}</span>
-            <span>{humanizeWorkFilter(entity.verificationState)}</span>
+            <span>{bucket}</span>
+            <span>{workGroupPeriodLabel(group)}</span>
+            <span>{humanizeWorkFilter(group.verificationState)}</span>
           </div>
         </div>
-        <h1>{entity.displayTitle}</h1>
+        <h1>{group.title}</h1>
         <div className={styles.intro}>
-          <p>{entity.summary}</p>
-          {!hasMultipleForms && primary ? (
+          <p>{group.summary}</p>
+          {!hasMultipleForms ? (
             <PublicArtifactLink item={primary} primary />
           ) : null}
         </div>
       </header>
 
       <section className={styles.facts} aria-label="Work facts">
-        <Fact label="Documented role" value={entity.role} />
-        <Fact
-          label="Representative date"
-          value={formatDate(entity.representativeDate)}
-        />
+        <Fact label="Documented role" value={group.roleSummary} />
+        <Fact label="Period" value={formatGroupPeriod(group)} />
         <Fact
           label="Organization"
           value={organizations.join(" / ") || "Independent/public"}
         />
         <Fact
-          label={hasMultipleForms ? "Connected forms" : "Public form"}
+          label={hasMultipleForms ? "Nested public forms" : "Public form"}
           value={String(items.length)}
         />
       </section>
 
       <div className={styles.content}>
         <article className={styles.story}>
-          {entity.topics.length ? (
+          {group.topics.length ? (
             <div className={styles.topics} aria-label="Topics">
-              {entity.topics.map((topic) => (
+              {group.topics.map((topic) => (
                 <span key={topic}>{humanizeWorkFilter(topic)}</span>
               ))}
             </div>
+          ) : null}
+
+          {memberEntities.length > 1 ? (
+            <section
+              className={styles.members}
+              aria-labelledby="members-title"
+            >
+              <p className={styles.sectionLabel}>Inside this body of work</p>
+              <h2 id="members-title">
+                {memberEntities.length} connected works, one public story.
+              </h2>
+              <ol>
+                {memberEntities.map((entity) =>
+                  entity ? (
+                    <li id={entity.id} key={entity.id}>
+                      <span>
+                        {entity.year ?? "Undated"} · {entity.role}
+                      </span>
+                      <h3>{entity.displayTitle}</h3>
+                      {entity.summary && entity.summary !== group.summary ? (
+                        <p>{entity.summary}</p>
+                      ) : null}
+                    </li>
+                  ) : null,
+                )}
+              </ol>
+            </section>
           ) : null}
 
           {outcomes.length ? (
@@ -164,23 +281,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
             >
               <p className={styles.sectionLabel}>Direct outcomes</p>
               <h2 id="outcomes-title">Outcomes attached to this work.</h2>
-              <div className={styles.outcomeList}>
-                {outcomes.map((metric) => (
-                  <article key={metric.id}>
-                    <strong>{metric.displayValue}</strong>
-                    <div>
-                      <h3>{metric.label}</h3>
-                      {metric.qualifier ? <p>{metric.qualifier}</p> : null}
-                      <span>
-                        {metric.sourceLabel} · {metric.period.label}
-                        {metric.period.asOf
-                          ? ` · as of ${metric.period.asOf}`
-                          : ""}
-                      </span>
-                    </div>
-                  </article>
-                ))}
-              </div>
+              <MetricRows metrics={outcomes} />
             </section>
           ) : null}
 
@@ -193,15 +294,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                 Program context · not direct attribution
               </p>
               <h2 id="context-title">The wider program.</h2>
-              {context.map((metric) => (
-                <article key={metric.id}>
-                  <strong>{metric.displayValue}</strong>
-                  <div>
-                    <h3>{metric.label}</h3>
-                    {metric.qualifier ? <p>{metric.qualifier}</p> : null}
-                  </div>
-                </article>
-              ))}
+              <MetricRows metrics={context} compact />
             </section>
           ) : null}
         </article>
@@ -215,8 +308,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                   {source.url && !isKnownUnavailablePublicUrl(source.url) ? (
                     <a href={source.url} rel="noreferrer" target="_blank">
                       <span>
-                        {source.publisher ??
-                          humanizeWorkFilter(source.kind)}
+                        {source.publisher ?? humanizeWorkFilter(source.kind)}
                       </span>
                       <strong>{source.title}</strong>
                       <i aria-hidden="true">↗</i>
@@ -224,8 +316,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                   ) : (
                     <span>
                       <small>
-                        {source.publisher ??
-                          humanizeWorkFilter(source.kind)}
+                        {source.publisher ?? humanizeWorkFilter(source.kind)}
                       </small>
                       <strong>{source.title}</strong>
                       {source.url ? <i>Historical host unavailable</i> : null}
@@ -244,7 +335,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           aria-labelledby="appearances-title"
         >
           <header>
-            <p className={styles.sectionLabel}>Connected public forms</p>
+            <p className={styles.sectionLabel}>Nested public forms</p>
             <h2 id="appearances-title">Appearances and artifacts</h2>
           </header>
           <ol>
@@ -254,10 +345,36 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                   <span>{formatDate(item.date)}</span>
                   <span>{humanizeWorkFilter(item.entityRole)}</span>
                 </div>
-                <h3>
-                  {appearanceTitle(item, entity.displayTitle, primary)}
-                </h3>
+                <h3>{appearanceTitle(item, group, primary)}</h3>
                 <p>{item.role}</p>
+                <PublicArtifactLink item={item} />
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
+      {relatedContextItems.length ? (
+        <section
+          className={styles.appearances}
+          aria-labelledby="related-context-title"
+        >
+          <header>
+            <p className={styles.sectionLabel}>Related public context</p>
+            <h2 id="related-context-title">Programs and references</h2>
+          </header>
+          <ol>
+            {relatedContextItems.map((item) => (
+              <li id={item.id} key={item.id}>
+                <div className={styles.formMeta}>
+                  <span>{formatDate(item.date)}</span>
+                  <span>{humanizeWorkFilter(item.type)}</span>
+                </div>
+                <h3>{item.displayTitle}</h3>
+                <p>
+                  Related context only. It is not counted as another form of
+                  this work.
+                </p>
                 <PublicArtifactLink item={item} />
               </li>
             ))}
@@ -268,13 +385,42 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
   );
 }
 
+function MetricRows({
+  metrics,
+  compact = false,
+}: {
+  metrics: ReturnType<typeof publicMetricsFrom>;
+  compact?: boolean;
+}) {
+  return (
+    <div className={compact ? styles.contextList : styles.outcomeList}>
+      {metrics.map((metric) => (
+        <article key={metric.id}>
+          <strong>{metric.displayValue}</strong>
+          <div>
+            <h3>{metric.label}</h3>
+            {metric.qualifier ? <p>{metric.qualifier}</p> : null}
+            {!compact ? (
+              <span>
+                {metric.attribution} · {metric.sourceLabel} ·{" "}
+                {metric.period.label}
+                {metric.period.asOf ? ` · as of ${metric.period.asOf}` : ""}
+              </span>
+            ) : null}
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 function appearanceTitle(
   item: PortfolioItem,
-  entityTitle: string,
+  group: WorkGroup,
   primary: PortfolioItem,
 ) {
   const title =
-    item.displayTitle === entityTitle
+    item.displayTitle === group.title
       ? humanizeWorkFilter(item.type)
       : item.displayTitle;
   return item.id === primary.id ? `${title} · primary form` : title;
@@ -297,6 +443,17 @@ function evidenceForItems(
   return bundle.evidence.filter(
     (source) => ids.has(source.id) && source.access === "public_web",
   );
+}
+
+function formatGroupPeriod(group: WorkGroup) {
+  if (
+    group.yearStart &&
+    group.yearEnd &&
+    group.yearStart !== group.yearEnd
+  ) {
+    return `${group.yearStart}—${group.yearEnd}`;
+  }
+  return formatDate(group.period);
 }
 
 function formatDate(date: ContentDate) {

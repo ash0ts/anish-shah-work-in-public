@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { StoryTimeMatrix } from "@/components/StoryTimeMatrix";
 import {
   filterWorkArchiveRecords,
   humanizeWorkFilter,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/work-archive-query";
 import { getPublicContentView } from "@/lib/server/public-content";
 import { workArchiveRecordsFrom } from "@/lib/work-index";
+import { workBuckets } from "@/lib/work-groups";
 import { WorkFilterBehavior } from "./WorkFilterBehavior";
 import styles from "./work.module.css";
 
@@ -52,10 +54,25 @@ export default async function WorkPage({
     bundle.organizations.map((entry) => [entry.id, entry.name]),
   );
   const options = {
+    buckets: workBuckets,
     topics: [...new Set(allWorks.flatMap((work) => work.topics))]
       .filter(Boolean)
       .sort(collator.compare),
-    years: [...new Set(allWorks.map((work) => work.year ?? "undated"))].sort(
+    years: [
+      ...new Set(
+        allWorks.flatMap((work) => {
+          if (work.yearStart === null && work.yearEnd === null) {
+            return ["undated"];
+          }
+          const start = work.yearStart ?? work.yearEnd!;
+          const end = work.yearEnd ?? work.yearStart!;
+          return Array.from(
+            { length: Math.max(end - start + 1, 1) },
+            (_, index) => String(start + index),
+          );
+        }),
+      ),
+    ].sort(
       (left, right) =>
         left === "undated"
           ? 1
@@ -76,6 +93,7 @@ export default async function WorkPage({
     ),
   };
   const activeFilterCount = [
+    query.bucket,
     query.topic,
     query.year,
     query.format,
@@ -85,16 +103,21 @@ export default async function WorkPage({
   const secondaryFilterCount = [query.organization, query.role].filter(
     Boolean,
   ).length;
+  const showStoryTime =
+    !query.query && activeFilterCount === 0 && !query.practice;
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
       <header className={styles.masthead}>
-        <p className={styles.eyebrow}>Public work · 2021—now</p>
+        <p className={styles.eyebrow}>
+          {allWorks.length} bodies of work · 2021—now
+        </p>
         <div className={styles.mastheadBody}>
-          <h1>Work, with its public forms attached.</h1>
+          <h1>Work, grouped by the story it tells.</h1>
           <p>
-            Search the underlying work. Talks, recordings, translations,
-            repositories, and event appearances stay connected to it.
+            One body of work can surface as a product, course, article, talk,
+            recording, repository, or regional appearance. Those forms remain
+            attached here.
           </p>
         </div>
       </header>
@@ -123,11 +146,20 @@ export default async function WorkPage({
               <span>
                 {activeFilterCount
                   ? `${activeFilterCount} active`
-                  : "Topic, year, format"}
+                  : "Body, topic, year, format"}
               </span>
             </summary>
             <div className={styles.filterBody}>
               <div className={styles.primaryFilters}>
+                <FilterSelect
+                  label="Body"
+                  name="bucket"
+                  value={query.bucket}
+                  options={options.buckets.map((bucket) => ({
+                    value: bucket.id,
+                    label: bucket.shortTitle,
+                  }))}
+                />
                 <FilterSelect
                   label="Topic"
                   name="topic"
@@ -203,14 +235,25 @@ export default async function WorkPage({
         </form>
       </section>
 
-      <section className={styles.index} aria-labelledby="work-index-title">
+      {showStoryTime ? (
+        <StoryTimeMatrix records={allWorks} />
+      ) : null}
+
+      <section
+        className={styles.index}
+        aria-labelledby="work-index-title"
+        id="work-index"
+      >
         <header className={styles.indexHeader}>
           <div>
             <p className={styles.resultCount}>
-              {filtered.length} {filtered.length === 1 ? "work" : "works"}
+              {filtered.length}{" "}
+              {filtered.length === 1 ? "body of work" : "bodies of work"}
             </p>
             <h2 id="work-index-title">
-              {query.query ? `Results for “${query.query}”` : "Chronological index"}
+              {query.query
+                ? `Results for “${query.query}”`
+                : "Complete grouped index"}
             </h2>
           </div>
           <span>
@@ -237,10 +280,19 @@ export default async function WorkPage({
                     <strong>{work.title}</strong>
                     {matchingChild ? (
                       <small>
-                        Matched public form: {matchingChild.displayTitle}
+                        Matched public record: {matchingChild.displayTitle}
                       </small>
                     ) : (
-                      <small>{work.role}</small>
+                      <small>
+                        {work.role}
+                        {work.bucket
+                          ? ` · ${
+                              workBuckets.find(
+                                (bucket) => bucket.id === work.bucket,
+                              )?.shortTitle ?? ""
+                            }`
+                          : ""}
+                      </small>
                     )}
                   </span>
                   <span className={styles.workMeta}>
@@ -249,8 +301,8 @@ export default async function WorkPage({
                       .map(humanizeWorkFilter)
                       .join(" · ")}
                     {work.formCount > 1
-                      ? ` · ${work.formCount} connected forms`
-                      : ""}
+                      ? ` · ${work.formCount} nested forms`
+                      : " · 1 public form"}
                   </span>
                   <i aria-hidden="true">↗</i>
                 </Link>
@@ -308,7 +360,11 @@ function FilterSelect({
     <label className={styles.select}>
       <span>{label}</span>
       <select defaultValue={value} name={name}>
-        <option value="">All {label.toLocaleLowerCase()}s</option>
+        <option value="">
+          {label === "Body"
+            ? "All bodies"
+            : `All ${label.toLocaleLowerCase()}s`}
+        </option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

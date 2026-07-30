@@ -269,7 +269,7 @@
       "slug": "event-programs-2025",
       "displayTitle": "2025 event programs",
       "shortTitle": "2025 programs",
-      "summary": "Aggregate program scope for the approved 2025 pipeline-supported claim.",
+      "summary": "Program context for supported pipeline across tracked 2025 event work.",
       "practice": "convene",
       "year": 2025,
       "memberFilter": {
@@ -282,7 +282,7 @@
       "slug": "event-programs-2024-ic",
       "displayTitle": "2024 IC-associated event programs",
       "shortTitle": "2024 IC programs",
-      "summary": "Tentative owner-defined program scope; warehouse data has no person-level campaign mapping.",
+      "summary": "Owner-defined context for 2024 event work; available warehouse data does not support person-level campaign attribution.",
       "practice": "convene",
       "year": 2024,
       "memberLegacyIds": []

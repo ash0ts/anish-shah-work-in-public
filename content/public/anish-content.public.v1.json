@@ -1,12 +1,13 @@
 {
-  "schemaVersion": "1.1",
-  "contentVersion": "66ef8ac8ee193cb3",
+  "schemaVersion": "1.2",
+  "contentVersion": "53cf9612400b16cc",
   "generatedAt": "2026-07-30T00:00:00.000Z",
   "sourceSummary": {
     "footprintRows": 184,
     "impactRows": 85,
     "supplementalArtifacts": 2,
     "publicItems": 186,
+    "approvedMetricCount": 13,
     "footprintBackedUniqueWorks": 99,
     "supplementalUniqueWorks": 1
   },
@@ -13775,7 +13776,7 @@
       "title": "2025 event programs",
       "displayTitle": "2025 event programs",
       "shortTitle": "2025 programs",
-      "summary": "Aggregate program scope for the approved 2025 pipeline-supported claim.",
+      "summary": "Program context for supported pipeline across tracked 2025 event work.",
       "practice": "convene",
       "representativeDate": {
         "start": "2025-01-22",
@@ -13850,7 +13851,7 @@
       "title": "2024 IC-associated event programs",
       "displayTitle": "2024 IC-associated event programs",
       "shortTitle": "2024 IC programs",
-      "summary": "Tentative owner-defined program scope; warehouse data has no person-level campaign mapping.",
+      "summary": "Owner-defined context for 2024 event work; available warehouse data does not support person-level campaign attribution.",
       "practice": "convene",
       "representativeDate": {
         "start": "2024",
@@ -15401,10 +15402,3571 @@
       "verificationState": "verified"
     }
   ],
+  "workGroups": [
+    {
+      "id": "group:products:wandb-mcp",
+      "slug": "wandb-mcp-server",
+      "slugAliases": [
+        "introducing-the-w-and-b-mcp-server-an-agent-native-interface-for-your-753d84",
+        "introducing-the-w-and-b-mcp-server-an-agent-native-interface-for-your-experiments-and-tr"
+      ],
+      "title": "W&B MCP Server",
+      "shortTitle": "W&B MCP Server",
+      "summary": "An agent-native interface for inspecting W&B experiments and traces.",
+      "roleSummary": "Contributor and coauthor",
+      "bucket": "products-open-source",
+      "featuredOrder": 1,
+      "primaryEntityId": "entity:wk-0001",
+      "memberEntityIds": [
+        "entity:wk-0001"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0064",
+        "item:fp-0162"
+      ],
+      "period": {
+        "start": "2026-05-21",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "organizationIds": [
+        "org:weights-and-biases",
+        "org:weights-and-biases-github"
+      ],
+      "topics": [
+        "agents",
+        "mcp",
+        "open-source"
+      ],
+      "formats": [
+        "article",
+        "open_source_repo"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:products:evalforge",
+      "slug": "evalforge",
+      "slugAliases": [],
+      "title": "EvalForge",
+      "shortTitle": "EvalForge",
+      "summary": "An implementation of the EvalGen approach to generating and aligning evaluation criteria.",
+      "roleSummary": "Creator",
+      "bucket": "products-open-source",
+      "featuredOrder": 2,
+      "primaryEntityId": "entity:wk-0003",
+      "memberEntityIds": [
+        "entity:wk-0003"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:md-0002"
+      ],
+      "period": {
+        "start": "2024",
+        "end": null,
+        "precision": "year",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:weights-and-biases-github"
+      ],
+      "topics": [
+        "evaluation",
+        "open-source"
+      ],
+      "formats": [
+        "open_source_repo"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:products:lightning-fabric",
+      "slug": "pytorch-lightning-fabric-integration",
+      "slugAliases": [
+        "pytorch-lightning-19077",
+        "pytorch-lightning-19288",
+        "pytorch-lightning-19297",
+        "pytorch-lightning-wandblogger-checkpoint-improvements-19297"
+      ],
+      "title": "PyTorch Lightning Fabric integration",
+      "shortTitle": "W&B × Lightning Fabric",
+      "summary": "A set of W&B logger and checkpointing contributions for PyTorch Lightning and Fabric.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": 3,
+      "primaryEntityId": "entity:wk-0002",
+      "memberEntityIds": [
+        "entity:wk-0002"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0181",
+        "item:fp-0182",
+        "item:md-0001"
+      ],
+      "period": {
+        "start": "2024-01-16",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:lightning-ai-github"
+      ],
+      "topics": [
+        "mlops",
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:products:langchain-integrations",
+      "slug": "langchain-wandb-integrations",
+      "slugAliases": [
+        "langchain-9771",
+        "langchain-w-and-b-integration-1357"
+      ],
+      "title": "LangChain W&B integrations",
+      "shortTitle": "LangChain integrations",
+      "summary": "Public W&B integration contributions across LangChain, with the release-note citation retained as context.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0172",
+      "memberEntityIds": [
+        "entity:ar-fp-0172",
+        "entity:ar-fp-0173"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [
+        "entity:ar-fp-0103"
+      ],
+      "itemIds": [
+        "item:fp-0172",
+        "item:fp-0173"
+      ],
+      "period": {
+        "start": "2023-08-26",
+        "end": null,
+        "precision": "unknown",
+        "basis": "unknown"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:langchain-github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:products:diffusers-wandb",
+      "slug": "diffusers-wandb-integrations",
+      "slugAliases": [
+        "diffusers-w-and-b-integration-1209",
+        "diffusers-w-and-b-integration-1245"
+      ],
+      "title": "Diffusers W&B integrations",
+      "shortTitle": "Diffusers integrations",
+      "summary": "A related pair of public contributions integrating W&B with Diffusers.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0174",
+      "memberEntityIds": [
+        "entity:ar-fp-0174",
+        "entity:ar-fp-0175"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0174",
+        "item:fp-0175"
+      ],
+      "period": {
+        "start": null,
+        "end": null,
+        "precision": "unknown",
+        "basis": "unknown"
+      },
+      "yearStart": null,
+      "yearEnd": null,
+      "organizationIds": [
+        "org:hugging-face-github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0161",
+      "slug": "fugue",
+      "slugAliases": [],
+      "title": "Fugue — governed experiments for AI agents",
+      "shortTitle": "Fugue",
+      "summary": "Repository owner.",
+      "roleSummary": "Repository owner",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0161",
+      "memberEntityIds": [
+        "entity:wk-fp-0161"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0161"
+      ],
+      "period": {
+        "start": null,
+        "end": null,
+        "precision": "unknown",
+        "basis": "unknown"
+      },
+      "yearStart": null,
+      "yearEnd": null,
+      "organizationIds": [
+        "org:github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_repo"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:ar-fp-0183",
+      "slug": "google-cloud-generative-ai-1807",
+      "slugAliases": [],
+      "title": "Google Cloud Generative AI contribution",
+      "shortTitle": "Google Cloud Generative AI",
+      "summary": "A public contribution to Google Cloud's Generative AI repository.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0183",
+      "memberEntityIds": [
+        "entity:ar-fp-0183"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0183"
+      ],
+      "period": {
+        "start": null,
+        "end": null,
+        "precision": "unknown",
+        "basis": "unknown"
+      },
+      "yearStart": null,
+      "yearEnd": null,
+      "organizationIds": [
+        "org:google-cloud-github"
+      ],
+      "topics": [
+        "cloud",
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:products:gpt-engineer",
+      "slug": "gpt-engineer-contributions",
+      "slugAliases": [
+        "gpt-engineer-701",
+        "gpt-engineer-752"
+      ],
+      "title": "GPT Engineer contributions",
+      "shortTitle": "GPT Engineer",
+      "summary": "A related pair of public contributions to GPT Engineer.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0179",
+      "memberEntityIds": [
+        "entity:ar-fp-0179",
+        "entity:ar-fp-0180"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0179",
+        "item:fp-0180"
+      ],
+      "period": {
+        "start": null,
+        "end": null,
+        "precision": "unknown",
+        "basis": "unknown"
+      },
+      "yearStart": null,
+      "yearEnd": null,
+      "organizationIds": [
+        "org:gpt-engineer-github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0160",
+      "slug": "groq-webinar-codegen-testing",
+      "slugAliases": [],
+      "title": "Groq code-generation testing demo",
+      "shortTitle": "Groq code-generation demo",
+      "summary": "A public code-generation testing demo created for a Groq webinar.",
+      "roleSummary": "Repository owner",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0160",
+      "memberEntityIds": [
+        "entity:wk-fp-0160"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0160"
+      ],
+      "period": {
+        "start": null,
+        "end": null,
+        "precision": "unknown",
+        "basis": "unknown"
+      },
+      "yearStart": null,
+      "yearEnd": null,
+      "organizationIds": [
+        "org:github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_repo"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-0004",
+      "slug": "nvidia-data-flywheel-blueprint",
+      "slugAliases": [
+        "nvidia-data-flywheel-11"
+      ],
+      "title": "NVIDIA Data Flywheel Blueprint",
+      "shortTitle": "Data Flywheel Blueprint",
+      "summary": "A public NVIDIA and W&B blueprint contribution represented by its upstream implementation.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-0004",
+      "memberEntityIds": [
+        "entity:wk-0004"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0184"
+      ],
+      "period": {
+        "start": null,
+        "end": null,
+        "precision": "unknown",
+        "basis": "unknown"
+      },
+      "yearStart": null,
+      "yearEnd": null,
+      "organizationIds": [
+        "org:nvidia-github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:ar-fp-0178",
+      "slug": "open-interpreter-390",
+      "slugAliases": [],
+      "title": "Open Interpreter integration",
+      "shortTitle": "Open Interpreter",
+      "summary": "A public integration contribution to Open Interpreter.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0178",
+      "memberEntityIds": [
+        "entity:ar-fp-0178"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0178"
+      ],
+      "period": {
+        "start": null,
+        "end": null,
+        "precision": "unknown",
+        "basis": "unknown"
+      },
+      "yearStart": null,
+      "yearEnd": null,
+      "organizationIds": [
+        "org:open-interpreter-github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:products:openai-cookbook",
+      "slug": "openai-cookbook-contributions",
+      "slugAliases": [
+        "openai-cookbook-419",
+        "openai-cookbook-420"
+      ],
+      "title": "OpenAI Cookbook contributions",
+      "shortTitle": "OpenAI Cookbook",
+      "summary": "A related pair of public contributions to the OpenAI Cookbook.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0176",
+      "memberEntityIds": [
+        "entity:ar-fp-0176",
+        "entity:ar-fp-0177"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0176",
+        "item:fp-0177"
+      ],
+      "period": {
+        "start": null,
+        "end": null,
+        "precision": "unknown",
+        "basis": "unknown"
+      },
+      "yearStart": null,
+      "yearEnd": null,
+      "organizationIds": [
+        "org:openai-github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:ar-fp-0171",
+      "slug": "pii-safeguards-6",
+      "slugAliases": [],
+      "title": "PII safeguards contribution",
+      "shortTitle": "PII safeguards",
+      "summary": "A public contribution to PII detection safeguards.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0171",
+      "memberEntityIds": [
+        "entity:ar-fp-0171"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0171"
+      ],
+      "period": {
+        "start": null,
+        "end": null,
+        "precision": "unknown",
+        "basis": "unknown"
+      },
+      "yearStart": null,
+      "yearEnd": null,
+      "organizationIds": [
+        "org:github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0163",
+      "slug": "wandb-skills",
+      "slugAliases": [],
+      "title": "W&B Skills",
+      "shortTitle": "W&B Skills",
+      "summary": "Contributor.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0163",
+      "memberEntityIds": [
+        "entity:wk-fp-0163"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0163"
+      ],
+      "period": {
+        "start": null,
+        "end": null,
+        "precision": "unknown",
+        "basis": "unknown"
+      },
+      "yearStart": null,
+      "yearEnd": null,
+      "organizationIds": [
+        "org:weights-and-biases-github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_repo"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:courses:ai-curriculum",
+      "slug": "wandb-ai-course-curriculum",
+      "slugAliases": [
+        "agents-course-2",
+        "ai-engineering-agents",
+        "developers-guide-to-llm-prompting",
+        "evaluation-course-1",
+        "evaluation-course-2",
+        "llm-apps-evaluation",
+        "prompting-course-142"
+      ],
+      "title": "W&B AI course curriculum",
+      "shortTitle": "AI course curriculum",
+      "summary": "Three practical courses spanning prompting, evaluation, and agent engineering.",
+      "roleSummary": "Instructor across three courses",
+      "bucket": "courses-learning",
+      "featuredOrder": 1,
+      "primaryEntityId": "entity:wk-fp-0066",
+      "memberEntityIds": [
+        "entity:wk-fp-0065",
+        "entity:wk-fp-0066",
+        "entity:wk-fp-0067"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0065",
+        "item:fp-0066",
+        "item:fp-0067",
+        "item:fp-0164",
+        "item:fp-0165",
+        "item:fp-0166",
+        "item:fp-0167"
+      ],
+      "period": {
+        "start": "2024-07",
+        "end": "2025-06-02",
+        "precision": "unknown",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:weights-and-biases",
+        "org:weights-and-biases-github",
+        "org:weights-and-biases-openai"
+      ],
+      "topics": [
+        "agents",
+        "education",
+        "evaluation",
+        "llms",
+        "open-source"
+      ],
+      "formats": [
+        "course",
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:courses:agentic-llm-series",
+      "slug": "fine-tuning-and-evaluating-agentic-llms-series",
+      "slugAliases": [
+        "fine-tuning-and-evaluating-llms-for-agentic-use-cases",
+        "fine-tuning-and-evaluating-llms-for-agentic-use-cases-part-1",
+        "fine-tuning-and-evaluating-llms-for-agentic-use-cases-part-2"
+      ],
+      "title": "Fine-Tuning and Evaluating LLMs for Agentic Use Cases",
+      "shortTitle": "Agentic LLM workshop series",
+      "summary": "A multi-session public workshop series on adapting and evaluating LLMs for agentic use cases.",
+      "roleSummary": "Speaker and co-instructor",
+      "bucket": "courses-learning",
+      "featuredOrder": 2,
+      "primaryEntityId": "entity:pg-0002",
+      "memberEntityIds": [
+        "entity:oc-fp-0016",
+        "entity:oc-fp-0017",
+        "entity:oc-fp-0018",
+        "entity:pg-0002"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0016",
+        "item:fp-0017",
+        "item:fp-0018"
+      ],
+      "period": {
+        "start": "2024-05-29",
+        "end": "2024-06-12",
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "agents",
+        "evaluation",
+        "fine-tuning",
+        "llms"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "group:courses:startup-school",
+      "slug": "google-cloud-startup-school-2025",
+      "slugAliases": [
+        "google-cloud-gen-ai-startup-school-mastering-gen-ai-applications-with-w-and-b",
+        "mastering-gen-ai-applications-with-w-and-b-americas",
+        "mastering-gen-ai-applications-with-w-and-b-emea-apac"
+      ],
+      "title": "Google Cloud Gen AI Startup School 2025",
+      "shortTitle": "Startup School",
+      "summary": "One Startup School lesson delivered for EMEA/APAC and the Americas, with its replay.",
+      "roleSummary": "Presenter",
+      "bucket": "courses-learning",
+      "featuredOrder": 3,
+      "primaryEntityId": "entity:pg-0001",
+      "memberEntityIds": [
+        "entity:oc-fp-0036",
+        "entity:oc-fp-0037",
+        "entity:pg-0001"
+      ],
+      "programEntityIds": [
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0036",
+        "item:fp-0037",
+        "item:fp-0085"
+      ],
+      "period": {
+        "start": "2025-03-11",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:google-cloud-w-and-b"
+      ],
+      "topics": [
+        "cloud"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "group:writing:wandbot",
+      "slug": "wandbot-gpt-4-powered-chat-support",
+      "slugAliases": [
+        "wandbot-gpt-4-powered-chat-support-article-2023-04-20-185660",
+        "wandbot-gpt-4-powered-chat-support-external_reference-2023-06-05-0c79b2"
+      ],
+      "title": "WandBot: GPT-4 Powered Chat Support",
+      "shortTitle": "WandBot",
+      "summary": "A public technical account of W&B's GPT-4-powered documentation assistant.",
+      "roleSummary": "Coauthor",
+      "bucket": "writing-research",
+      "featuredOrder": 1,
+      "primaryEntityId": "entity:wk-fp-0055",
+      "memberEntityIds": [
+        "entity:wk-fp-0055"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0055",
+        "item:fp-0102"
+      ],
+      "period": {
+        "start": "2023-04-20",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:w-and-b-japan-note-com",
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "llms"
+      ],
+      "formats": [
+        "article",
+        "external_reference"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:writing:prompt-engineering-langchain",
+      "slug": "prompt-engineering-llms-with-langchain-and-wandb",
+      "slugAliases": [
+        "prompt-engineering-llms-with-langchain-and-w-and-b",
+        "prompt-engineering-llms-with-langchain-and-w-and-b-japanese",
+        "prompt-engineering-llms-with-langchain-and-w-and-b-korean"
+      ],
+      "title": "Prompt Engineering LLMs with LangChain and W&B",
+      "shortTitle": "Prompt Engineering with LangChain",
+      "summary": "A practical guide to prompt engineering with LangChain and W&B.",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": 2,
+      "primaryEntityId": "entity:wk-fp-0053",
+      "memberEntityIds": [
+        "entity:wk-fp-0053"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0053",
+        "item:fp-0137",
+        "item:fp-0138"
+      ],
+      "period": {
+        "start": "2023-03-21",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "llms"
+      ],
+      "formats": [
+        "article",
+        "translation"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:writing:automated-pdf-summarization",
+      "slug": "automated-pdf-summarization-claude-weave",
+      "slugAliases": [
+        "automated-pdf-summarization-of-arxiv-papers-with-claude-3-5-sonnet-and-w-and-b-weave",
+        "automated-pdf-summarization-with-claude-3-5-sonnet-and-w-and-b-weave-japanese",
+        "automated-pdf-summarization-with-claude-3-5-sonnet-and-w-and-b-weave-korean",
+        "w-and-b-weave-arxiv-cookbook-2005",
+        "w-and-b-weave-arxiv-cookbook-2089"
+      ],
+      "title": "Automated PDF Summarization with Claude and W&B Weave",
+      "shortTitle": "Automated PDF Summarization",
+      "summary": "A practical article and cookbook implementation for summarizing arXiv papers with Claude and W&B Weave.",
+      "roleSummary": "Author and implementation contributor",
+      "bucket": "writing-research",
+      "featuredOrder": 3,
+      "primaryEntityId": "entity:wk-fp-0061",
+      "memberEntityIds": [
+        "entity:wk-fp-0061"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0061",
+        "item:fp-0128",
+        "item:fp-0134",
+        "item:fp-0168",
+        "item:fp-0169"
+      ],
+      "period": {
+        "start": "2024-07-24",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:weights-and-biases",
+        "org:weights-and-biases-github"
+      ],
+      "topics": [
+        "open-source",
+        "weave"
+      ],
+      "formats": [
+        "article",
+        "open_source_pr",
+        "translation"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0099",
+      "slug": "when-a-plausible-tab-is-wrong-toraneko-evidence-level-analysis",
+      "slugAliases": [],
+      "title": "When a Plausible Tab Is Wrong: Toraneko Evidence-Level Analysis",
+      "shortTitle": "When a Plausible Tab Is Wrong: Toraneko Evidence-Level Analysis",
+      "summary": "Latest indexed copy of eight duplicate reports",
+      "roleSummary": "Author / report owner",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0099",
+      "memberEntityIds": [
+        "entity:wk-fp-0099"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0099"
+      ],
+      "period": {
+        "start": "2026-07-28",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [],
+      "formats": [
+        "technical_report"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0098",
+      "slug": "understanding-pii-detection-guardrails",
+      "slugAliases": [],
+      "title": "Understanding PII Detection Guardrails",
+      "shortTitle": "Understanding PII Detection Guardrails",
+      "summary": "Author.",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0098",
+      "memberEntityIds": [
+        "entity:wk-fp-0098"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0098"
+      ],
+      "period": {
+        "start": "2024-12-03",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [],
+      "formats": [
+        "technical_report"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0063",
+      "slug": "automated-medical-note-generation-fine-tuning-gpt-models-for-clinical-8c1bf5",
+      "slugAliases": [
+        "automated-medical-note-generation-fine-tuning-gpt-models-for-clinical-documentation-usin",
+        "w-and-b-examples-azure-medical-notes-578"
+      ],
+      "title": "Automated Medical Note Generation: Fine-Tuning GPT Models for Clinical Documentation Using Azure OpenAI and Weights & Biases",
+      "shortTitle": "Automated Medical Note Generation: Fine-Tuning GPT Models for Clinical Documentation Using Azure OpenAI and Weights & Biases",
+      "summary": "W&B Fully Connected editorial item",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0063",
+      "memberEntityIds": [
+        "entity:wk-fp-0063"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0063",
+        "item:fp-0170"
+      ],
+      "period": {
+        "start": "2024-11-19",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:weights-and-biases",
+        "org:weights-and-biases-github"
+      ],
+      "topics": [
+        "cloud",
+        "fine-tuning",
+        "healthcare",
+        "open-source"
+      ],
+      "formats": [
+        "article",
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0062",
+      "slug": "how-to-create-a-biomedical-rag-application-using-snowflake-arctic-for-pubmed-88a78e",
+      "slugAliases": [
+        "how-to-create-a-biomedical-rag-application-using-snowflake-arctic-for-pubmed-paper-under",
+        "snowflake-arctic-pubmed-rag-korean",
+        "snowflake-arctic-weave-demo"
+      ],
+      "title": "How to Create a Biomedical RAG Application Using Snowflake Arctic for PubMed Paper Understanding",
+      "shortTitle": "How to Create a Biomedical RAG Application Using Snowflake Arctic for PubMed Paper Understanding",
+      "summary": "W&B Fully Connected editorial item",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0062",
+      "memberEntityIds": [
+        "entity:wk-fp-0062"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0062",
+        "item:fp-0131",
+        "item:fp-0159"
+      ],
+      "period": {
+        "start": "2024-08-15",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:github",
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "cloud",
+        "healthcare",
+        "open-source",
+        "rag",
+        "weave"
+      ],
+      "formats": [
+        "article",
+        "open_source_repo",
+        "translation"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0097",
+      "slug": "how-to-use-azure-openai-and-azure-ai-studio-with-weights-and-biases-weave",
+      "slugAliases": [],
+      "title": "How to Use Azure OpenAI and Azure AI Studio with Weights & Biases Weave",
+      "shortTitle": "How to Use Azure OpenAI and Azure AI Studio with Weights & Biases Weave",
+      "summary": "Azure/Weave cookbook",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0097",
+      "memberEntityIds": [
+        "entity:wk-fp-0097"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0097"
+      ],
+      "period": {
+        "start": "2024-05-28",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "cloud",
+        "weave"
+      ],
+      "formats": [
+        "technical_report"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0096",
+      "slug": "deploying-models-to-azure-ml-with-weights-and-biases",
+      "slugAliases": [],
+      "title": "Deploying Models to Azure ML with Weights & Biases",
+      "shortTitle": "Deploying Models to Azure ML with Weights & Biases",
+      "summary": "Author.",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0096",
+      "memberEntityIds": [
+        "entity:wk-fp-0096"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0096"
+      ],
+      "period": {
+        "start": "2024-02-20",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "cloud"
+      ],
+      "formats": [
+        "technical_report"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0095",
+      "slug": "deep-learning-and-mlops-for-health-care-a-look-into-medsam",
+      "slugAliases": [],
+      "title": "Deep Learning and MLOps for Health Care: A Look into MedSAM",
+      "shortTitle": "Deep Learning and MLOps for Health Care: A Look into MedSAM",
+      "summary": "Author.",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0095",
+      "memberEntityIds": [
+        "entity:wk-fp-0095"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0095"
+      ],
+      "period": {
+        "start": "2024-01-24",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "mlops"
+      ],
+      "formats": [
+        "technical_report"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0060",
+      "slug": "how-to-adapt-your-llm-for-question-answering-with-prompt-tuning-using-nvidia-601881",
+      "slugAliases": [
+        "how-to-adapt-your-llm-for-question-answering-with-prompt-tuning-using-nvidia-nemo-and-we",
+        "nemo-vertex-w-b-ptuning-llm"
+      ],
+      "title": "How to Adapt your LLM for Question Answering with Prompt-Tuning using NVIDIA NeMo and Weights & Biases",
+      "shortTitle": "How to Adapt your LLM for Question Answering with Prompt-Tuning using NVIDIA NeMo and Weights & Biases",
+      "summary": "W&B Fully Connected editorial item",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0060",
+      "memberEntityIds": [
+        "entity:wk-fp-0060"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0060",
+        "item:fp-0158"
+      ],
+      "period": {
+        "start": "2023-11-01",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:github",
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "fine-tuning",
+        "llms",
+        "open-source"
+      ],
+      "formats": [
+        "article",
+        "open_source_repo"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0059",
+      "slug": "enhancing-llm-agent-performance-through-dynamic-plugin-selection-and-w-and-b-prompts",
+      "slugAliases": [],
+      "title": "Enhancing LLM Agent Performance through Dynamic Plugin Selection and W&B Prompts",
+      "shortTitle": "Enhancing LLM Agent Performance through Dynamic Plugin Selection and W&B Prompts",
+      "summary": "W&B Fully Connected editorial item",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0059",
+      "memberEntityIds": [
+        "entity:wk-fp-0059"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0059"
+      ],
+      "period": {
+        "start": "2023-09-01",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "agents",
+        "llms"
+      ],
+      "formats": [
+        "article"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0058",
+      "slug": "how-to-save-a-classifier-to-disk-in-scikit-learn",
+      "slugAliases": [
+        "how-to-save-a-classifier-to-disk-in-scikit-learn-japanese"
+      ],
+      "title": "How to Save a Classifier to Disk in Scikit-learn",
+      "shortTitle": "How to Save a Classifier to Disk in Scikit-learn",
+      "summary": "W&B Fully Connected editorial item",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0058",
+      "memberEntityIds": [
+        "entity:wk-fp-0058"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0058",
+        "item:fp-0132"
+      ],
+      "period": {
+        "start": "2023-07-27",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "education"
+      ],
+      "formats": [
+        "article",
+        "translation"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0057",
+      "slug": "harnessing-langchain-and-weights-and-biases-to-enhance-database-interactions-on-snowpark",
+      "slugAliases": [],
+      "title": "Harnessing Langchain and Weights & Biases to Enhance Database Interactions on Snowpark",
+      "shortTitle": "Harnessing Langchain and Weights & Biases to Enhance Database Interactions on Snowpark",
+      "summary": "W&B Fully Connected editorial item",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0057",
+      "memberEntityIds": [
+        "entity:wk-fp-0057"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0057"
+      ],
+      "period": {
+        "start": "2023-07-19",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [],
+      "formats": [
+        "article"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0056",
+      "slug": "applying-ethical-principles-and-scoring-to-langchain-and-visualizing-with-w-and-01b509",
+      "slugAliases": [
+        "applying-ethical-principles-and-scoring-to-langchain-and-visualizing-with-w-and-b-prompt"
+      ],
+      "title": "Applying Ethical Principles & Scoring to Langchain & Visualizing with W&B Prompts",
+      "shortTitle": "Applying Ethical Principles & Scoring to Langchain & Visualizing with W&B Prompts",
+      "summary": "W&B Fully Connected editorial item",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0056",
+      "memberEntityIds": [
+        "entity:wk-fp-0056"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0056"
+      ],
+      "period": {
+        "start": "2023-04-26",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [],
+      "formats": [
+        "article"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0054",
+      "slug": "introduction-to-pytorch-geometric-and-weights-and-biases",
+      "slugAliases": [],
+      "title": "Introduction to PyTorch Geometric and Weights & Biases",
+      "shortTitle": "Introduction to PyTorch Geometric and Weights & Biases",
+      "summary": "W&B Fully Connected editorial item",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0054",
+      "memberEntityIds": [
+        "entity:wk-fp-0054"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0054"
+      ],
+      "period": {
+        "start": "2023-04-11",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [],
+      "formats": [
+        "article"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0052",
+      "slug": "an-introduction-to-huggingface-transformers-for-nlp",
+      "slugAliases": [],
+      "title": "An Introduction To HuggingFace Transformers for NLP",
+      "shortTitle": "An Introduction To HuggingFace Transformers for NLP",
+      "summary": "W&B Fully Connected editorial item",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0052",
+      "memberEntityIds": [
+        "entity:wk-fp-0052"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0052"
+      ],
+      "period": {
+        "start": "2023-02-24",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [],
+      "formats": [
+        "article"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0051",
+      "slug": "compare-methods-for-converting-and-optimizing-huggingface-models-for-deployment",
+      "slugAliases": [],
+      "title": "Compare Methods for Converting and Optimizing HuggingFace Models for Deployment",
+      "shortTitle": "Compare Methods for Converting and Optimizing HuggingFace Models for Deployment",
+      "summary": "W&B Fully Connected editorial item",
+      "roleSummary": "Coauthor with Manan Goel",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0051",
+      "memberEntityIds": [
+        "entity:wk-fp-0051"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0051"
+      ],
+      "period": {
+        "start": "2022-11-17",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2022,
+      "yearEnd": 2022,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [],
+      "formats": [
+        "article"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0050",
+      "slug": "scaling-out-motion-prediction-for-autonomous-vehicles-with-l5kit-ray-and-w-and-b",
+      "slugAliases": [
+        "l5kit-ray-and-w-and-b-motion-prediction-japanese",
+        "l5kit-ray-wandb-demo"
+      ],
+      "title": "Scaling Out Motion Prediction for Autonomous Vehicles with L5Kit, Ray, and W&B",
+      "shortTitle": "Scaling Out Motion Prediction for Autonomous Vehicles with L5Kit, Ray, and W&B",
+      "summary": "W&B Fully Connected editorial item",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0050",
+      "memberEntityIds": [
+        "entity:wk-fp-0050"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0050",
+        "item:fp-0133",
+        "item:fp-0157"
+      ],
+      "period": {
+        "start": "2022-09-30",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2022,
+      "yearEnd": 2022,
+      "organizationIds": [
+        "org:github",
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "article",
+        "open_source_repo",
+        "translation"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0094",
+      "slug": "how-to-optimize-gpu-cost-with-weights-and-biases",
+      "slugAliases": [],
+      "title": "How to Optimize GPU Cost with Weights and Biases",
+      "shortTitle": "How to Optimize GPU Cost with Weights and Biases",
+      "summary": "Author.",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0094",
+      "memberEntityIds": [
+        "entity:wk-fp-0094"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0094"
+      ],
+      "period": {
+        "start": "2022-09-29",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2022,
+      "yearEnd": 2022,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [],
+      "formats": [
+        "technical_report"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0093",
+      "slug": "scaling-out-autonomous-vehicle-use-cases-the-primer",
+      "slugAliases": [],
+      "title": "Scaling out Autonomous Vehicle Use Cases: The Primer",
+      "shortTitle": "Scaling out Autonomous Vehicle Use Cases: The Primer",
+      "summary": "Supporting L5Kit/Ray material",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0093",
+      "memberEntityIds": [
+        "entity:wk-fp-0093"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0093"
+      ],
+      "period": {
+        "start": "2022-09-08",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2022,
+      "yearEnd": 2022,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [],
+      "formats": [
+        "technical_report"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0091",
+      "slug": "kedro-mlflow-wandb",
+      "slugAliases": [],
+      "title": "Kedro + MLFlow + WANDB?",
+      "shortTitle": "Kedro + MLFlow + WANDB?",
+      "summary": "FourthBrain-era Spotify/MLOps report",
+      "roleSummary": "Author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0091",
+      "memberEntityIds": [
+        "entity:wk-fp-0091"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0091"
+      ],
+      "period": {
+        "start": "2021-10-29",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2021,
+      "yearEnd": 2021,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "mlops"
+      ],
+      "formats": [
+        "technical_report"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:talks:architecting-agents",
+      "slug": "architecting-and-orchestrating-ai-agents-series",
+      "slugAliases": [
+        "architecting-and-orchestrating-ai-agents-class-central",
+        "architecting-and-orchestrating-ai-agents-event-2025-06-17-6d53d5",
+        "architecting-and-orchestrating-ai-agents-event-2025-10-06-4e7a61",
+        "architecting-and-orchestrating-ai-agents-event-2025-10-15-2eb162",
+        "architecting-and-orchestrating-ai-agents-recording-2025-10-06-0be567",
+        "architecting-and-orchestrating-ai-agents-with-google"
+      ],
+      "title": "Architecting and Orchestrating AI Agents",
+      "shortTitle": "Architecting AI Agents",
+      "summary": "A talk developed across four public deliveries, including a Google-focused edition.",
+      "roleSummary": "Speaker and workshop instructor",
+      "bucket": "talks-programs",
+      "featuredOrder": 1,
+      "primaryEntityId": "entity:oc-fp-0045",
+      "memberEntityIds": [
+        "entity:oc-fp-0041",
+        "entity:oc-fp-0044",
+        "entity:oc-fp-0045",
+        "entity:oc-fp-0047"
+      ],
+      "programEntityIds": [
+        "entity:pg-0004",
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0041",
+        "item:fp-0044",
+        "item:fp-0045",
+        "item:fp-0047",
+        "item:fp-0088",
+        "item:fp-0147"
+      ],
+      "period": {
+        "start": "2025-06-17",
+        "end": "2025-10-15",
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:class-central",
+        "org:fully-connected-w-and-b",
+        "org:google-cloud-w-and-b",
+        "org:mlops-world",
+        "org:w-and-b-coreweave"
+      ],
+      "topics": [
+        "agents",
+        "cloud",
+        "education",
+        "mlops"
+      ],
+      "formats": [
+        "event",
+        "recording",
+        "mirror"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:talks:llm-agent-fine-tuning",
+      "slug": "llm-agent-fine-tuning",
+      "slugAliases": [
+        "llm-agent-fine-tuning-bilibili-subtitle-mirror",
+        "llm-agent-fine-tuning-enhancing-task-automation-with-w-and-b-event-2023-12-19-1de6f5",
+        "llm-agent-fine-tuning-enhancing-task-automation-with-w-and-b-recording-2023-12-19-6698d7",
+        "llm-agent-fine-tuning-enhancing-task-automation-with-w-and-b-s63088",
+        "llm-agent-fine-tuning-nvidia-gtc24-s63088",
+        "nvidia-mlops-on-demand-playlist"
+      ],
+      "title": "LLM Agent Fine-Tuning",
+      "shortTitle": "LLM Agent Fine-Tuning",
+      "summary": "A talk delivered first as a public session and later at NVIDIA GTC.",
+      "roleSummary": "Speaker and session presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": 2,
+      "primaryEntityId": "entity:oc-fp-0010",
+      "memberEntityIds": [
+        "entity:oc-fp-0010",
+        "entity:oc-fp-0012"
+      ],
+      "programEntityIds": [
+        "entity:pg-0005"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0010",
+        "item:fp-0012",
+        "item:fp-0075",
+        "item:fp-0145",
+        "item:fp-0146",
+        "item:fp-0150"
+      ],
+      "period": {
+        "start": "2023-12-19",
+        "end": "2024-03-21",
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:bilibili",
+        "org:deeplearning-ai",
+        "org:nvidia",
+        "org:nvidia-gtc",
+        "org:nvidia-gtc-2024"
+      ],
+      "topics": [
+        "agents",
+        "fine-tuning",
+        "llms",
+        "mlops"
+      ],
+      "formats": [
+        "event",
+        "recording",
+        "mirror"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "group:talks:building-evaluating-agents",
+      "slug": "building-and-evaluating-agents",
+      "slugAliases": [
+        "building-and-evaluating-agents-class-central",
+        "building-and-evaluating-agents-event-2025-10-09-eb35c6",
+        "building-and-evaluating-agents-recording-2025-10-09-9e70d5"
+      ],
+      "title": "Building and Evaluating Agents",
+      "shortTitle": "Building and Evaluating Agents",
+      "summary": "A public talk on building agent systems with evaluation in the loop.",
+      "roleSummary": "Conference speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": 3,
+      "primaryEntityId": "entity:oc-fp-0046",
+      "memberEntityIds": [
+        "entity:oc-fp-0046"
+      ],
+      "programEntityIds": [
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0046",
+        "item:fp-0089",
+        "item:fp-0148"
+      ],
+      "period": {
+        "start": "2025-10-09",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:class-central",
+        "org:mlops-world-generative-ai-summit"
+      ],
+      "topics": [
+        "agents",
+        "education",
+        "evaluation",
+        "llms",
+        "mlops"
+      ],
+      "formats": [
+        "event",
+        "recording",
+        "mirror"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0049",
+      "slug": "nyc-ai-innovators-meetup",
+      "slugAliases": [],
+      "title": "NYC AI Innovators Meetup",
+      "shortTitle": "NYC AI Innovators Meetup",
+      "summary": "No replay found through July 30, 2026",
+      "roleSummary": "Meetup speaker/host",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0049",
+      "memberEntityIds": [
+        "entity:oc-fp-0049"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0049"
+      ],
+      "period": {
+        "start": "2026-02-04",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "organizationIds": [
+        "org:w-and-b-anyscale"
+      ],
+      "topics": [
+        "community"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0048",
+      "slug": "architecting-multi-agent-workflows-with-google-cloud-and-w-and-b-event-2025-10-28-5df540",
+      "slugAliases": [
+        "architecting-multi-agent-workflows-with-google-cloud-and-w-and-b-recording-2025-10-caf4b1"
+      ],
+      "title": "Architecting Multi-Agent Workflows with Google Cloud and W&B",
+      "shortTitle": "Architecting Multi-Agent Workflows with Google Cloud and W&B",
+      "summary": "Scheduled event October 28; replay page dated October 21; registration record https://events.bizzabo.com/763997",
+      "roleSummary": "Co-presenter with Ivan Nardini",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0048",
+      "memberEntityIds": [
+        "entity:oc-fp-0048"
+      ],
+      "programEntityIds": [
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0048",
+        "item:fp-0090"
+      ],
+      "period": {
+        "start": "2025-10-28",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:google-cloud-w-and-b"
+      ],
+      "topics": [
+        "agents",
+        "cloud"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0043",
+      "slug": "agent-observability",
+      "slugAliases": [],
+      "title": "Agent Observability",
+      "shortTitle": "Agent Observability",
+      "summary": "AI Innovators meetup speaker.",
+      "roleSummary": "AI Innovators meetup speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0043",
+      "memberEntityIds": [
+        "entity:oc-fp-0043"
+      ],
+      "programEntityIds": [
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0043"
+      ],
+      "period": {
+        "start": "2025-09-09",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "agents"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0042",
+      "slug": "optimizing-and-evaluating-agentic-ai-applications",
+      "slugAliases": [],
+      "title": "Optimizing and Evaluating Agentic AI Applications",
+      "shortTitle": "Optimizing and Evaluating Agentic AI Applications",
+      "summary": "2:00 PM workshop",
+      "roleSummary": "Workshop co-instructor with Sam Stowers",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0042",
+      "memberEntityIds": [
+        "entity:oc-fp-0042"
+      ],
+      "programEntityIds": [
+        "entity:pg-0004",
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0042"
+      ],
+      "period": {
+        "start": "2025-06-17",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:fully-connected-w-and-b"
+      ],
+      "topics": [
+        "agents",
+        "education",
+        "evaluation"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0040",
+      "slug": "how-to-build-ai-agents-with-mcp-and-other-protocols-event-2025-05-22-a4e01a",
+      "slugAliases": [
+        "how-to-build-ai-agents-with-mcp-and-other-protocols-recording-2025-05-ef453a"
+      ],
+      "title": "How to Build AI Agents with MCP and Other Protocols",
+      "shortTitle": "How to Build AI Agents with MCP and Other Protocols",
+      "summary": "Scheduled event May 22; replay page dated May 21; registration record https://events.bizzabo.com/729529",
+      "roleSummary": "Webinar presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0040",
+      "memberEntityIds": [
+        "entity:oc-fp-0040"
+      ],
+      "programEntityIds": [
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0040",
+        "item:fp-0087"
+      ],
+      "period": {
+        "start": "2025-05-22",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "agents",
+        "mcp"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0038",
+      "slug": "accelerate-genai-application-development-with-w-and-b-weave-and-nvidia-exs74222-event-2025-03-19-b6e749",
+      "slugAliases": [
+        "accelerate-genai-application-development-with-w-and-b-weave-and-nvidia-exs74222-recording-2025-03-19-b192b8"
+      ],
+      "title": "Accelerate GenAI Application Development with W&B Weave and NVIDIA — EXS74222",
+      "shortTitle": "Accelerate GenAI Application Development with W&B Weave and NVIDIA — EXS74222",
+      "summary": "GTC session presenter.",
+      "roleSummary": "GTC session presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0038",
+      "memberEntityIds": [
+        "entity:oc-fp-0038"
+      ],
+      "programEntityIds": [
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0038",
+        "item:fp-0086"
+      ],
+      "period": {
+        "start": "2025-03-19",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:nvidia-gtc",
+        "org:nvidia-gtc-w-and-b"
+      ],
+      "topics": [
+        "llms",
+        "weave"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:talks:model-customization",
+      "slug": "mastering-model-customization",
+      "slugAliases": [
+        "mastering-model-customization-fine-tuning-azure-openai-service-models-with-efdf92",
+        "mastering-model-customization-fine-tuning-azure-openai-service-models-with-w-and-b-event-2025-03-04-e6f2dd",
+        "mastering-model-customization-fine-tuning-azure-openai-service-models-with-w-and-b-recording-2025-03-04-f243bc",
+        "mastering-model-customization-fine-tuning-azure-openai-service-models-with-weights-and-b"
+      ],
+      "title": "Mastering Model Customization",
+      "shortTitle": "Model Customization",
+      "summary": "Two public sessions on fine-tuning Azure OpenAI Service models with W&B.",
+      "roleSummary": "Webinar presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0035",
+      "memberEntityIds": [
+        "entity:oc-fp-0035",
+        "entity:oc-fp-0039"
+      ],
+      "programEntityIds": [
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0035",
+        "item:fp-0039",
+        "item:fp-0084"
+      ],
+      "period": {
+        "start": "2025-03-04",
+        "end": "2025-03-20",
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:microsoft-azure-w-and-b",
+        "org:microsoft-nvidia-gtc",
+        "org:w-and-b-microsoft-azure"
+      ],
+      "topics": [
+        "cloud",
+        "fine-tuning"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0034",
+      "slug": "mastering-genai-applications",
+      "slugAliases": [],
+      "title": "Mastering GenAI Applications",
+      "shortTitle": "Mastering GenAI Applications",
+      "summary": "Hands-on workshop speaker.",
+      "roleSummary": "Hands-on workshop speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0034",
+      "memberEntityIds": [
+        "entity:oc-fp-0034"
+      ],
+      "programEntityIds": [
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0034"
+      ],
+      "period": {
+        "start": "2025-02-27",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:google-w-and-b"
+      ],
+      "topics": [
+        "llms"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0033",
+      "slug": "ai-in-production-evals-and-observability",
+      "slugAliases": [],
+      "title": "AI in Production: Evals & Observability",
+      "shortTitle": "AI in Production: Evals & Observability",
+      "summary": "Workshop speaker.",
+      "roleSummary": "Workshop speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0033",
+      "memberEntityIds": [
+        "entity:oc-fp-0033"
+      ],
+      "programEntityIds": [
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0033"
+      ],
+      "period": {
+        "start": "2025-02-24",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:ai-tinkerers-toronto-w-and-b"
+      ],
+      "topics": [
+        "evaluation"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0032",
+      "slug": "evaluating-rag-applications",
+      "slugAliases": [],
+      "title": "Evaluating RAG Applications",
+      "shortTitle": "Evaluating RAG Applications",
+      "summary": "Event page records 187 guests",
+      "roleSummary": "Host and co-facilitator",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0032",
+      "memberEntityIds": [
+        "entity:oc-fp-0032"
+      ],
+      "programEntityIds": [
+        "entity:pg-0007"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0032"
+      ],
+      "period": {
+        "start": "2025-01-22",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:pinecone-w-and-b"
+      ],
+      "topics": [
+        "evaluation",
+        "rag"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0031",
+      "slug": "fine-tuning-the-gpt-model-series-for-agent-applications-event-2024-12-10-f80f2c",
+      "slugAliases": [
+        "fine-tuning-the-gpt-model-series-for-agent-applications-recording-2024-12-10-809b0b"
+      ],
+      "title": "Fine-Tuning the GPT Model Series for Agent Applications",
+      "shortTitle": "Fine-Tuning the GPT Model Series for Agent Applications",
+      "summary": "Co-presenter with Gerard Woods.",
+      "roleSummary": "Co-presenter with Gerard Woods",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0031",
+      "memberEntityIds": [
+        "entity:oc-fp-0031"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0031",
+        "item:fp-0083"
+      ],
+      "period": {
+        "start": "2024-12-10",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:microsoft-reactor"
+      ],
+      "topics": [
+        "agents",
+        "fine-tuning"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0030",
+      "slug": "ai-customization-fine-tuning-azure-openai-service-models-brk101-event-2024-11-20-bb616a",
+      "slugAliases": [
+        "ai-customization-fine-tuning-azure-openai-service-models-brk101-recording-2024-11-20-67be59",
+        "fine-tuning-azure-openai-service-models-with-w-and-b"
+      ],
+      "title": "AI Customization: Fine-Tuning Azure OpenAI Service Models — BRK101",
+      "shortTitle": "AI Customization: Fine-Tuning Azure OpenAI Service Models — BRK101",
+      "summary": "Co-speaker with Ami Patel and Steve Sweetman.",
+      "roleSummary": "Co-speaker with Ami Patel and Steve Sweetman",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0030",
+      "memberEntityIds": [
+        "entity:oc-fp-0030"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0030",
+        "item:fp-0082",
+        "item:fp-0144"
+      ],
+      "period": {
+        "start": "2024-11-20",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:microsoft-ignite",
+        "org:weights-and-biases-microsoft-ignite"
+      ],
+      "topics": [
+        "cloud",
+        "fine-tuning"
+      ],
+      "formats": [
+        "event",
+        "recording",
+        "mirror"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0029",
+      "slug": "iterating-on-and-evaluating-production-ready-rag-applications-with-gemini-and-w-66e3bc",
+      "slugAliases": [
+        "iterating-on-and-evaluating-production-ready-rag-applications-with-gemini-and-w-9bc333",
+        "iterating-on-and-evaluating-production-ready-rag-applications-with-gemini-and-w-and-b-we-event-2024-11-14-97a9c9",
+        "iterating-on-and-evaluating-production-ready-rag-applications-with-gemini-and-w-and-b-we-recording-2024-11-14-1970b5"
+      ],
+      "title": "Iterating On and Evaluating Production-Ready RAG Applications with Gemini and W&B Weave",
+      "shortTitle": "Iterating On and Evaluating Production-Ready RAG Applications with Gemini and W&B Weave",
+      "summary": "Meetup/workshop presenter.",
+      "roleSummary": "Meetup/workshop presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0029",
+      "memberEntityIds": [
+        "entity:oc-fp-0029"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0029",
+        "item:fp-0081"
+      ],
+      "period": {
+        "start": "2024-11-14",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:odsc-google-cloud",
+        "org:odsc-google-cloud-actualtech-media"
+      ],
+      "topics": [
+        "cloud",
+        "evaluation",
+        "rag",
+        "weave"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0028",
+      "slug": "hemm-holistic-evaluation-of-multi-modal-generative-models",
+      "slugAliases": [],
+      "title": "HEMM: Holistic Evaluation of Multi-modal Generative Models",
+      "shortTitle": "HEMM: Holistic Evaluation of Multi-modal Generative Models",
+      "summary": "Exact session slot not recovered; historical MLOps World video-index URL now returns 404",
+      "roleSummary": "Virtual workshop speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0028",
+      "memberEntityIds": [
+        "entity:oc-fp-0028"
+      ],
+      "programEntityIds": [
+        "entity:pg-0003"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0028"
+      ],
+      "period": {
+        "start": "2024-11-06",
+        "end": "2024-11-08",
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:mlops-world-generative-ai-world"
+      ],
+      "topics": [
+        "evaluation",
+        "llms",
+        "mlops"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "group:standalone:oc-fp-0027",
+      "slug": "investigating-the-evolution-of-evaluation-from-model-training-to-genai-inference",
+      "slugAliases": [],
+      "title": "Investigating the Evolution of Evaluation from Model Training to GenAI Inference",
+      "shortTitle": "Investigating the Evolution of Evaluation from Model Training to GenAI Inference",
+      "summary": "Exact session slot not recovered",
+      "roleSummary": "In-person technical speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0027",
+      "memberEntityIds": [
+        "entity:oc-fp-0027"
+      ],
+      "programEntityIds": [
+        "entity:pg-0003"
+      ],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0027"
+      ],
+      "period": {
+        "start": "2024-11-06",
+        "end": "2024-11-08",
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:mlops-world-generative-ai-world"
+      ],
+      "topics": [
+        "evaluation",
+        "llms",
+        "mlops"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "group:standalone:oc-fp-0026",
+      "slug": "building-an-llm-judge-with-weights-and-biases-event-2024-10-29-c95277",
+      "slugAliases": [
+        "building-an-llm-judge-with-weights-and-biases-recording-2024-10-29-1f7d8b"
+      ],
+      "title": "Building an LLM Judge with Weights & Biases",
+      "shortTitle": "Building an LLM Judge with Weights & Biases",
+      "summary": "Presenter.",
+      "roleSummary": "Presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0026",
+      "memberEntityIds": [
+        "entity:oc-fp-0026"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0026",
+        "item:fp-0080"
+      ],
+      "period": {
+        "start": "2024-10-29",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:microsoft-reactor"
+      ],
+      "topics": [
+        "evaluation",
+        "llms"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0025",
+      "slug": "how-do-we-actually-evaluate-llm-apps",
+      "slugAliases": [],
+      "title": "How Do We Actually Evaluate LLM Apps?",
+      "shortTitle": "How Do We Actually Evaluate LLM Apps?",
+      "summary": "Presenter.",
+      "roleSummary": "Presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0025",
+      "memberEntityIds": [
+        "entity:oc-fp-0025"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0025"
+      ],
+      "period": {
+        "start": "2024-10-17",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:ai-tinkerers-nyc"
+      ],
+      "topics": [
+        "llms"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0024",
+      "slug": "optimizing-ai-evaluations",
+      "slugAliases": [],
+      "title": "Optimizing AI Evaluations",
+      "shortTitle": "Optimizing AI Evaluations",
+      "summary": "Meetup speaker.",
+      "roleSummary": "Meetup speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0024",
+      "memberEntityIds": [
+        "entity:oc-fp-0024"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0024"
+      ],
+      "period": {
+        "start": "2024-10-16",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:w-and-b-google"
+      ],
+      "topics": [],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0023",
+      "slug": "train-fine-tune-and-manage-models-from-experimentation-to-production",
+      "slugAliases": [],
+      "title": "Train, Fine-Tune, and Manage Models from Experimentation to Production",
+      "shortTitle": "Train, Fine-Tune, and Manage Models from Experimentation to Production",
+      "summary": "1:00–2:45 PM; separate public appearance from the W&B + Google meetup",
+      "roleSummary": "Quarter-day workshop instructor",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0023",
+      "memberEntityIds": [
+        "entity:oc-fp-0023"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0023"
+      ],
+      "period": {
+        "start": "2024-10-16",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:ai-stac-dev"
+      ],
+      "topics": [
+        "community",
+        "fine-tuning"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0022",
+      "slug": "ai-powered-healthcare-and-drug-discovery",
+      "slugAliases": [],
+      "title": "AI-Powered Healthcare & Drug Discovery",
+      "shortTitle": "AI-Powered Healthcare & Drug Discovery",
+      "summary": "Meetup speaker.",
+      "roleSummary": "Meetup speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0022",
+      "memberEntityIds": [
+        "entity:oc-fp-0022"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0022"
+      ],
+      "period": {
+        "start": "2024-10-15",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "healthcare"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0021",
+      "slug": "judgment-day-hackathon",
+      "slugAliases": [],
+      "title": "Judgment Day Hackathon",
+      "shortTitle": "Judgment Day Hackathon",
+      "summary": "In-person at the W&B office",
+      "roleSummary": "Judge",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0021",
+      "memberEntityIds": [
+        "entity:oc-fp-0021"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0021"
+      ],
+      "period": {
+        "start": "2024-09-21",
+        "end": "2024-09-22",
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:judgment-day-devpost"
+      ],
+      "topics": [],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0020",
+      "slug": "fine-tuning-and-evaluating-multimodal-llms",
+      "slugAliases": [],
+      "title": "Fine-Tuning and Evaluating Multimodal LLMs",
+      "shortTitle": "Fine-Tuning and Evaluating Multimodal LLMs",
+      "summary": "Original W&B event page was removed; no retrospective or replay found",
+      "roleSummary": "Meetup speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0020",
+      "memberEntityIds": [
+        "entity:oc-fp-0020"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0020"
+      ],
+      "period": {
+        "start": "2024-09-19",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:genai-innovators-w-and-b"
+      ],
+      "topics": [
+        "evaluation",
+        "fine-tuning",
+        "llms",
+        "multimodal"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "group:standalone:oc-fp-0019",
+      "slug": "genai-development-building-production-ready-rag-systems-event-2024-09-10-0aa120",
+      "slugAliases": [
+        "genai-development-building-production-ready-rag-systems-recording-2024-09-10-9b4771"
+      ],
+      "title": "GenAI Development: Building Production-Ready RAG Systems",
+      "shortTitle": "GenAI Development: Building Production-Ready RAG Systems",
+      "summary": "Webinar presenter.",
+      "roleSummary": "Webinar presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0019",
+      "memberEntityIds": [
+        "entity:oc-fp-0019"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0019",
+        "item:fp-0079"
+      ],
+      "period": {
+        "start": "2024-09-10",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "llms",
+        "rag"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0015",
+      "slug": "lets-get-better-step-by-step-llms-in-your-business-event-2024-05-21-fff5af",
+      "slugAliases": [
+        "lets-get-better-step-by-step-llms-in-your-business-recording-2024-05-21-c81976"
+      ],
+      "title": "Let's Get Better Step By Step — LLMs in Your Business",
+      "shortTitle": "Let's Get Better Step By Step — LLMs in Your Business",
+      "summary": "Presenter.",
+      "roleSummary": "Presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0015",
+      "memberEntityIds": [
+        "entity:oc-fp-0015"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0015",
+        "item:fp-0078"
+      ],
+      "period": {
+        "start": "2024-05-21",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:microsoft-reactor"
+      ],
+      "topics": [
+        "llms"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0014",
+      "slug": "meta-llama-3-hackathon",
+      "slugAliases": [],
+      "title": "Meta Llama 3 Hackathon",
+      "shortTitle": "Meta Llama 3 Hackathon",
+      "summary": "In-person at SHACK15 in the Ferry Building",
+      "roleSummary": "Judge",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0014",
+      "memberEntityIds": [
+        "entity:oc-fp-0014"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0014"
+      ],
+      "period": {
+        "start": "2024-05-11",
+        "end": "2024-05-12",
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:meta-cerebral-valley-shack15"
+      ],
+      "topics": [],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0013",
+      "slug": "mastering-mlops-with-w-and-b-and-microsoft-phi-2-event-2024-03-26-cdfee0",
+      "slugAliases": [
+        "mastering-mlops-with-w-and-b-and-microsoft-phi-2-recording-2024-03-26-cccb64"
+      ],
+      "title": "Mastering MLOps with W&B and Microsoft Phi-2",
+      "shortTitle": "Mastering MLOps with W&B and Microsoft Phi-2",
+      "summary": "Presenter.",
+      "roleSummary": "Presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0013",
+      "memberEntityIds": [
+        "entity:oc-fp-0013"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0013",
+        "item:fp-0077"
+      ],
+      "period": {
+        "start": "2024-03-26",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:microsoft-reactor"
+      ],
+      "topics": [
+        "mlops"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0011",
+      "slug": "scaling-ai-with-precision",
+      "slugAliases": [],
+      "title": "Scaling AI with Precision",
+      "shortTitle": "Scaling AI with Precision",
+      "summary": "No replay located",
+      "roleSummary": "Deep Dive speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0011",
+      "memberEntityIds": [
+        "entity:oc-fp-0011"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0011"
+      ],
+      "period": {
+        "start": "2024-03-12",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0076",
+      "slug": "evaluating-and-integrating-ml-models-mlops-podcast-213",
+      "slugAliases": [
+        "evaluating-and-integrating-ml-models-amazon-music",
+        "evaluating-and-integrating-ml-models-apple-podcasts",
+        "evaluating-and-integrating-ml-models-forem",
+        "evaluating-and-integrating-ml-models-spotify",
+        "evaluating-and-integrating-ml-models-transcript-video-page"
+      ],
+      "title": "Evaluating and Integrating ML Models — MLOps Podcast #213",
+      "shortTitle": "Evaluating and Integrating ML Models — MLOps Podcast #213",
+      "summary": "51:56",
+      "roleSummary": "Guest with Morgan McGuire",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0076",
+      "memberEntityIds": [
+        "entity:oc-fp-0076"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0076",
+        "item:fp-0140",
+        "item:fp-0141",
+        "item:fp-0142",
+        "item:fp-0143",
+        "item:fp-0149"
+      ],
+      "period": {
+        "start": "2024-02-21",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:mlops-community",
+        "org:mlops-community-forem"
+      ],
+      "topics": [
+        "community",
+        "evaluation",
+        "mlops"
+      ],
+      "formats": [
+        "recording",
+        "mirror"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0009",
+      "slug": "large-language-models-agents-event-2023-11-21-913d19",
+      "slugAliases": [
+        "large-language-models-agents-recording-2023-11-21-e12b73"
+      ],
+      "title": "Large Language Model Agents",
+      "shortTitle": "LLM Agents",
+      "summary": "Webinar speaker.",
+      "roleSummary": "Webinar speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0009",
+      "memberEntityIds": [
+        "entity:oc-fp-0009"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0009",
+        "item:fp-0074"
+      ],
+      "period": {
+        "start": "2023-11-21",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:datatalksclub"
+      ],
+      "topics": [
+        "agents",
+        "llms"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0008",
+      "slug": "bay-area-ai-ray-summit-meetup",
+      "slugAliases": [],
+      "title": "Bay Area AI + Ray Summit Meetup",
+      "shortTitle": "Bay Area AI + Ray Summit Meetup",
+      "summary": "No replay found",
+      "roleSummary": "Listed speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0008",
+      "memberEntityIds": [
+        "entity:oc-fp-0008"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0008"
+      ],
+      "period": {
+        "start": "2023-09-20",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:microsoft-reactor-bay-area-ai"
+      ],
+      "topics": [
+        "community"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0007",
+      "slug": "tend-and-tune-your-marl-experiments-with-ray-and-w-and-b-event-2023-09-19-8736cb",
+      "slugAliases": [
+        "tend-and-tune-your-marl-experiments-with-ray-and-w-and-b-recording-2023-09-19-5dbf8d"
+      ],
+      "title": "Tend and Tune Your MARL Experiments with Ray and W&B",
+      "shortTitle": "Tend and Tune Your MARL Experiments with Ray and W&B",
+      "summary": "Conference speaker.",
+      "roleSummary": "Conference speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0007",
+      "memberEntityIds": [
+        "entity:oc-fp-0007"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0007",
+        "item:fp-0073"
+      ],
+      "period": {
+        "start": "2023-09-19",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:ray-summit-anyscale"
+      ],
+      "topics": [],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0006",
+      "slug": "build-and-deploy-llm-based-apps",
+      "slugAliases": [],
+      "title": "Build and Deploy LLM-Based Apps",
+      "shortTitle": "Build and Deploy LLM-Based Apps",
+      "summary": "Organizer, lead instructor, and content creator.",
+      "roleSummary": "Organizer, lead instructor, and content creator",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0006",
+      "memberEntityIds": [
+        "entity:oc-fp-0006"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0006"
+      ],
+      "period": {
+        "start": "2023-09-09",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:w-and-b"
+      ],
+      "topics": [
+        "llms"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0005",
+      "slug": "understanding-llm-performance-with-w-and-b-and-snowpark-container-services-event-2023-06-27-984f5c",
+      "slugAliases": [
+        "understanding-llm-performance-with-w-and-b-and-snowpark-container-services-mirror-2023-06-28-29c0d4",
+        "understanding-llm-performance-with-w-and-b-and-snowpark-container-services-recording-2023-06-27-7da3bb"
+      ],
+      "title": "Understanding LLM Performance With W&B and Snowpark Container Services",
+      "shortTitle": "Understanding LLM Performance With W&B and Snowpark Container Services",
+      "summary": "Exact live slot not recovered; secondary URL is a mirror/edit",
+      "roleSummary": "Demo presenter",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0005",
+      "memberEntityIds": [
+        "entity:oc-fp-0005"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0005",
+        "item:fp-0072",
+        "item:fp-0139"
+      ],
+      "period": {
+        "start": "2023-06-27",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:snowflake-developers",
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "cloud",
+        "llms"
+      ],
+      "formats": [
+        "event",
+        "recording",
+        "mirror"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "group:standalone:oc-fp-0071",
+      "slug": "everything-you-wanted-to-know-about-llmops-but-were-afraid-to-ask",
+      "slugAliases": [],
+      "title": "Everything You Wanted to Know About LLMOps but Were Afraid to Ask",
+      "shortTitle": "Everything You Wanted to Know About LLMOps but Were Afraid to Ask",
+      "summary": "39:51",
+      "roleSummary": "Interview guest",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0071",
+      "memberEntityIds": [
+        "entity:oc-fp-0071"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0071"
+      ],
+      "period": {
+        "start": "2023-06-23",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:harpreet-sahota"
+      ],
+      "topics": [
+        "llms"
+      ],
+      "formats": [
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0004",
+      "slug": "understanding-the-landscape-of-the-latest-large-models-event-2023-02-28-3afd31",
+      "slugAliases": [
+        "understanding-the-landscape-of-the-latest-large-models-recording-2023-02-28-7961c4"
+      ],
+      "title": "Understanding the Landscape of the Latest Large Models",
+      "shortTitle": "Understanding the Landscape of the Latest Large Models",
+      "summary": "Recording uploaded March 5, 2023",
+      "roleSummary": "Conference speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0004",
+      "memberEntityIds": [
+        "entity:oc-fp-0004"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0004",
+        "item:fp-0070"
+      ],
+      "period": {
+        "start": "2023-02-28",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:mdli-ops"
+      ],
+      "topics": [],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0003",
+      "slug": "simplify-building-scaling-tracking-and-monitoring-your-ai-ml-models",
+      "slugAliases": [],
+      "title": "Simplify Building, Scaling, Tracking, and Monitoring Your AI/ML Models",
+      "shortTitle": "Simplify Building, Scaling, Tracking, and Monitoring Your AI/ML Models",
+      "summary": "Webinar speaker.",
+      "roleSummary": "Webinar speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0003",
+      "memberEntityIds": [
+        "entity:oc-fp-0003"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0003"
+      ],
+      "period": {
+        "start": "2023-01-19",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:anyscale"
+      ],
+      "topics": [],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0069",
+      "slug": "accelerating-diffusion-with-hugging-face",
+      "slugAliases": [],
+      "title": "Accelerating Diffusion with Hugging Face",
+      "shortTitle": "Accelerating Diffusion with Hugging Face",
+      "summary": "46:17",
+      "roleSummary": "Co-presenter with Zach Mueller and Suraj Patil",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0069",
+      "memberEntityIds": [
+        "entity:oc-fp-0069"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0069"
+      ],
+      "period": {
+        "start": "2023-01-13",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [],
+      "formats": [
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:talks:gradient-dissent",
+      "slug": "gradient-dissent-production",
+      "slugAliases": [
+        "d-sculley-technical-debt-trade-offs-and-kaggle",
+        "emad-mostaque-stable-diffusion-japanese",
+        "emad-mostaque-stable-diffusion-korean",
+        "emad-mostaque-stable-diffusion-stability-ai-and-whats-next",
+        "gradient-dissent-transcriptions",
+        "jehan-wickramasuriya-ai-in-high-stress-scenarios",
+        "will-falcon-lightning-japanese",
+        "will-falcon-lightning-korean",
+        "will-falcon-making-lightning-the-apple-of-ml"
+      ],
+      "title": "Gradient Dissent production",
+      "shortTitle": "Gradient Dissent",
+      "summary": "Transcription and production work across a set of Gradient Dissent interviews.",
+      "roleSummary": "Producer and transcript contributor",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0092",
+      "memberEntityIds": [
+        "entity:wk-fp-0092",
+        "entity:wk-fp-0124",
+        "entity:wk-fp-0125",
+        "entity:wk-fp-0126",
+        "entity:wk-fp-0127"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0092",
+        "item:fp-0124",
+        "item:fp-0125",
+        "item:fp-0126",
+        "item:fp-0127",
+        "item:fp-0129",
+        "item:fp-0130",
+        "item:fp-0135",
+        "item:fp-0136"
+      ],
+      "period": {
+        "start": "2022-08-08",
+        "end": "2022-12-01",
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2022,
+      "yearEnd": 2022,
+      "organizationIds": [
+        "org:weights-and-biases",
+        "org:weights-and-biases-gradient-dissent"
+      ],
+      "topics": [],
+      "formats": [
+        "technical_report",
+        "producer_credit",
+        "translation"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:oc-fp-0002",
+      "slug": "orchestrating-reproducible-automl-experiments-using-pycaret-w-and-b-and-prefect",
+      "slugAliases": [],
+      "title": "Orchestrating Reproducible AutoML Experiments using PyCaret, W&B, and Prefect",
+      "shortTitle": "Orchestrating Reproducible AutoML Experiments using PyCaret, W&B, and Prefect",
+      "summary": "No replay or retrospective located",
+      "roleSummary": "Listed speaker",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0002",
+      "memberEntityIds": [
+        "entity:oc-fp-0002"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [
+        "entity:ar-fp-0100"
+      ],
+      "itemIds": [
+        "item:fp-0002"
+      ],
+      "period": {
+        "start": "2022-04-19",
+        "end": "2022-04-21",
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2022,
+      "yearEnd": 2022,
+      "organizationIds": [
+        "org:odsc-east"
+      ],
+      "topics": [],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "group:standalone:oc-fp-0001",
+      "slug": "mlops-sample-project-end-to-end-song-recommender-event-2021-09-27-563eee",
+      "slugAliases": [
+        "mlops-sample-project-end-to-end-song-recommender-recording-2021-09-27-15fef2"
+      ],
+      "title": "MLOps Sample Project: End to End Song Recommender",
+      "shortTitle": "MLOps Sample Project: End to End Song Recommender",
+      "summary": "Upload date; exact live presentation date is not indexed",
+      "roleSummary": "Capstone presenter and project author",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-fp-0001",
+      "memberEntityIds": [
+        "entity:oc-fp-0001"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0001",
+        "item:fp-0068"
+      ],
+      "period": {
+        "start": "2021-09-27",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2021,
+      "yearEnd": 2021,
+      "organizationIds": [
+        "org:fourthbrain"
+      ],
+      "topics": [
+        "mlops"
+      ],
+      "formats": [
+        "event",
+        "recording"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    }
+  ],
   "metrics": [
     {
       "id": "metric:courses:enrollments:2026-07-30",
-      "subjectId": "collection:courses",
+      "subjectId": "group:courses:ai-curriculum",
       "category": "courses",
       "key": "course_enrollments",
       "displayValue": "7K+",
@@ -15416,9 +18978,10 @@
         "asOf": "2026-07-30",
         "label": "2024–2026"
       },
-      "scope": "collection",
-      "attribution": "contextual",
+      "scope": "work",
+      "attribution": "direct",
       "displaySurfaces": [
+        "item_detail",
         "homepage",
         "collection",
         "sources"
@@ -15432,7 +18995,7 @@
     },
     {
       "id": "metric:courses:same-day-account-share:2026-07-30",
-      "subjectId": "collection:courses",
+      "subjectId": "group:courses:ai-curriculum",
       "category": "courses",
       "key": "same_day_account_creation_share",
       "displayValue": "About half",
@@ -15444,9 +19007,10 @@
         "asOf": "2026-07-30",
         "label": "2024–2026"
       },
-      "scope": "collection",
-      "attribution": "contextual",
+      "scope": "work",
+      "attribution": "direct",
       "displaySurfaces": [
+        "item_detail",
         "collection",
         "sources"
       ],
@@ -15486,18 +19050,18 @@
       ]
     },
     {
-      "id": "metric:project:wandb-mcp-server:tool-calls:2026-06-11",
+      "id": "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
       "subjectId": "entity:wk-0001",
       "category": "product",
       "key": "mcp_tool_calls",
-      "displayValue": "Nearly 100K",
-      "label": "MCP tool calls in its first few months",
-      "qualifier": "Historical launch-period snapshot; later usage is intentionally not substituted.",
+      "displayValue": "200K+",
+      "label": "MCP tool calls through July 29, 2026",
+      "qualifier": "Rounded down from the July 29 internal analytics checkpoint; direct project usage, not revenue.",
       "period": {
-        "start": "2026-03",
-        "end": "2026-06-11",
-        "asOf": "2026-06-11",
-        "label": "First few months"
+        "start": "2026-03-29",
+        "end": "2026-07-29",
+        "asOf": "2026-07-29",
+        "label": "Through July 29, 2026"
       },
       "scope": "work",
       "attribution": "direct",
@@ -15599,20 +19163,20 @@
       ]
     },
     {
-      "id": "metric:events:pipeline-supported:2025",
-      "subjectId": "entity:pg-0007",
+      "id": "metric:events:pipeline-supported:2024-2025",
+      "subjectId": "collection:events",
       "category": "events",
-      "key": "pipeline_supported",
-      "displayValue": "$2M+",
-      "label": "in pipeline supported by 2025 event programs",
-      "qualifier": "Program-supported pipeline, not generated revenue or individual ARR attribution.",
+      "key": "pipeline_supported_2024_2025",
+      "displayValue": "$4M+",
+      "label": "in supported event pipeline across tracked 2024–2025 programs",
+      "qualifier": "Supported pipeline across tracked event programs; not revenue, closed ARR, or personal attribution.",
       "period": {
-        "start": "2025",
+        "start": "2024",
         "end": "2025",
         "asOf": "2025-10-01",
-        "label": "2025"
+        "label": "2024–2025"
       },
-      "scope": "program",
+      "scope": "portfolio",
       "attribution": "associated",
       "displaySurfaces": [
         "homepage",
@@ -15621,7 +19185,7 @@
       ],
       "sourceLabel": "Internal analytics",
       "publicationState": "public",
-      "verificationState": "corroborated",
+      "verificationState": "derived",
       "publicEvidenceIds": [
         "evidence:methodology:internal-analytics"
       ]
@@ -15759,6 +19323,57 @@
       "verificationState": "derived",
       "publicEvidenceIds": [
         "evidence:methodology:public-footprint"
+      ]
+    }
+  ],
+  "metricGroups": [
+    {
+      "id": "metric-group:learning",
+      "theme": "learning",
+      "title": "Learning reach",
+      "order": 1,
+      "leadMetricId": "metric:courses:enrollments:2026-07-30",
+      "metricIds": [
+        "metric:courses:enrollments:2026-07-30",
+        "metric:courses:same-day-account-share:2026-07-30",
+        "metric:course:llm-apps-evaluation:launch-signups:2025-01-10"
+      ]
+    },
+    {
+      "id": "metric-group:product",
+      "theme": "product",
+      "title": "Product adoption",
+      "order": 2,
+      "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+      "metricIds": [
+        "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+        "metric:project:wandb-mcp-server:audience:2026-06-11",
+        "metric:project:wandb-mcp-server:returning-share:2026-06-11",
+        "metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28"
+      ]
+    },
+    {
+      "id": "metric-group:programs",
+      "theme": "programs",
+      "title": "Program impact",
+      "order": 3,
+      "leadMetricId": "metric:events:pipeline-supported:2024-2025",
+      "metricIds": [
+        "metric:events:pipeline-supported:2024-2025",
+        "metric:event:fully-connected-sf:reach:2024",
+        "metric:event:nvidia-gtc:leads:2024",
+        "metric:events:ic-associated-pipeline:2024"
+      ]
+    },
+    {
+      "id": "metric-group:archive",
+      "theme": "archive",
+      "title": "Archive reach",
+      "order": 4,
+      "leadMetricId": "metric:archive:event-references:2026-07",
+      "metricIds": [
+        "metric:archive:event-references:2026-07",
+        "metric:archive:recording-hours:2026-07"
       ]
     }
   ],
@@ -18431,7 +22046,7 @@
         "item:fp-0049"
       ],
       "metricIds": [
-        "metric:events:pipeline-supported:2025",
+        "metric:events:pipeline-supported:2024-2025",
         "metric:events:ic-associated-pipeline:2024",
         "metric:event:nvidia-gtc:leads:2024",
         "metric:event:fully-connected-sf:reach:2024",
@@ -18475,7 +22090,7 @@
         "item:md-0002"
       ],
       "metricIds": [
-        "metric:project:wandb-mcp-server:tool-calls:2026-06-11",
+        "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
         "metric:project:wandb-mcp-server:audience:2026-06-11",
         "metric:project:wandb-mcp-server:returning-share:2026-06-11",
         "metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28"

@@ -19,7 +19,7 @@ export function WorkFilterBehavior({
       return;
     }
 
-    const desktop = window.matchMedia("(min-width: 901px)");
+    const desktop = window.matchMedia("(min-width: 1101px)");
     const syncDefault = () => {
       filters.open = desktop.matches;
       moreFilters.open = !desktop.matches;
