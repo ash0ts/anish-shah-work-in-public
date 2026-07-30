@@ -1,0 +1,886 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anishshah.dev/schema/anish-content.v1.json",
+  "title": "Anish Shah Content Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contentVersion",
+    "generatedAt",
+    "profile",
+    "organizations",
+    "items",
+    "metrics",
+    "evidence",
+    "relations",
+    "collections",
+    "narratives",
+    "sourceSnapshots"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "contentVersion": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{16}$"
+    },
+    "generatedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    },
+    "profile": {
+      "$ref": "#/$defs/profile"
+    },
+    "organizations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/organization"
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/metric"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relation"
+      }
+    },
+    "collections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/collection"
+      }
+    },
+    "narratives": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/narrative"
+      }
+    },
+    "sourceSnapshots": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/sourceSnapshot"
+      }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "headline",
+        "summary",
+        "primaryCta",
+        "links"
+      ],
+      "properties": {
+        "id": {
+          "const": "person:anish-shah"
+        },
+        "name": {
+          "type": "string"
+        },
+        "headline": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "primaryCta": {
+          "$ref": "#/$defs/link"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "href": {
+          "type": "string"
+        }
+      }
+    },
+    "organization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "contentDate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end",
+        "precision",
+        "basis"
+      ],
+      "properties": {
+        "start": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "end": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "precision": {
+          "enum": [
+            "day",
+            "month",
+            "year",
+            "unknown"
+          ]
+        },
+        "basis": {
+          "enum": [
+            "event_date",
+            "publication_date",
+            "upload_date",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "sourceRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshotId",
+        "row",
+        "fingerprint"
+      ],
+      "properties": {
+        "snapshotId": {
+          "type": "string"
+        },
+        "row": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "slug",
+        "type",
+        "title",
+        "date",
+        "additionalDates",
+        "year",
+        "role",
+        "organizationIds",
+        "location",
+        "status",
+        "urls",
+        "summary",
+        "topics",
+        "durationSeconds",
+        "publicationState",
+        "verificationState",
+        "evidenceIds",
+        "featured"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "event",
+            "article",
+            "course",
+            "recording",
+            "technical_report",
+            "external_reference",
+            "producer_credit",
+            "translation",
+            "mirror",
+            "profile",
+            "open_source_repo",
+            "open_source_pr"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "date": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start",
+            "end",
+            "precision",
+            "basis"
+          ],
+          "properties": {
+            "start": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "end": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "precision": {
+              "enum": [
+                "day",
+                "month",
+                "year",
+                "unknown"
+              ]
+            },
+            "basis": {
+              "enum": [
+                "event_date",
+                "publication_date",
+                "upload_date",
+                "unknown"
+              ]
+            }
+          }
+        },
+        "additionalDates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/additionalContentDate"
+          }
+        },
+        "year": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "role": {
+          "type": "string"
+        },
+        "organizationIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "location": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "label",
+            "kind"
+          ],
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                "online",
+                "physical",
+                "hybrid",
+                "platform",
+                "unknown"
+              ]
+            }
+          }
+        },
+        "status": {
+          "type": "string"
+        },
+        "urls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "url"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "primary",
+                  "secondary"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "pattern": "^https?://"
+              }
+            }
+          }
+        },
+        "summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "durationSeconds": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "publicationState": {
+          "type": "string",
+          "enum": [
+            "public",
+            "review_required",
+            "private",
+            "excluded"
+          ]
+        },
+        "verificationState": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "corroborated",
+            "listed_unconfirmed",
+            "derived",
+            "tentative",
+            "superseded",
+            "excluded"
+          ]
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "featured": {
+          "type": "boolean"
+        },
+        "sourceRecord": {
+          "$ref": "#/$defs/sourceRecord"
+        }
+      }
+    },
+    "metricPeriod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end",
+        "asOf",
+        "label"
+      ],
+      "properties": {
+        "start": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "end": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "asOf": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "additionalContentDate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "start",
+        "end",
+        "precision",
+        "basis"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "start": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "end": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "precision": {
+          "enum": [
+            "day",
+            "month",
+            "year",
+            "unknown"
+          ]
+        },
+        "basis": {
+          "enum": [
+            "event_date",
+            "publication_date",
+            "upload_date",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "required": [
+        "id",
+        "subjectId",
+        "category",
+        "key",
+        "label",
+        "qualifier",
+        "period",
+        "sourceLabel",
+        "publicationState",
+        "verificationState"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "subjectId": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "qualifier": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "period": {
+          "$ref": "#/$defs/metricPeriod"
+        },
+        "sourceLabel": {
+          "type": "string"
+        },
+        "publicationState": {
+          "type": "string",
+          "enum": [
+            "public",
+            "review_required",
+            "private",
+            "excluded"
+          ]
+        },
+        "verificationState": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "corroborated",
+            "listed_unconfirmed",
+            "derived",
+            "tentative",
+            "superseded",
+            "excluded"
+          ]
+        },
+        "value": {
+          "type": [
+            "number",
+            "string",
+            "boolean"
+          ]
+        },
+        "unit": {
+          "type": "string"
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sourceRecord": {
+          "$ref": "#/$defs/sourceRecord"
+        },
+        "displayValue": {
+          "type": "string"
+        },
+        "publicEvidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "value",
+            "unit",
+            "evidenceIds",
+            "sourceRecord"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "displayValue"
+                ]
+              },
+              {
+                "required": [
+                  "publicEvidenceIds"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "displayValue",
+            "publicEvidenceIds"
+          ],
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "value"
+                ]
+              },
+              {
+                "required": [
+                  "unit"
+                ]
+              },
+              {
+                "required": [
+                  "evidenceIds"
+                ]
+              },
+              {
+                "required": [
+                  "sourceRecord"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "kind",
+        "access",
+        "capturedAt",
+        "verificationState"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "web_page",
+            "video",
+            "repository",
+            "profile",
+            "methodology",
+            "internal_record"
+          ]
+        },
+        "access": {
+          "enum": [
+            "public_web",
+            "company_internal",
+            "owner_private"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^(?:https?://|file://|/)"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "capturedAt": {
+          "type": "string"
+        },
+        "verificationState": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "corroborated",
+            "listed_unconfirmed",
+            "derived",
+            "tentative",
+            "superseded",
+            "excluded"
+          ]
+        }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "fromId",
+        "toId",
+        "predicate",
+        "confidence",
+        "rationale"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "fromId": {
+          "type": "string"
+        },
+        "toId": {
+          "type": "string"
+        },
+        "predicate": {
+          "enum": [
+            "recording_of",
+            "mirror_of",
+            "translation_of",
+            "derivative_of",
+            "part_of",
+            "implements",
+            "references"
+          ]
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium"
+          ]
+        },
+        "rationale": {
+          "type": "string"
+        }
+      }
+    },
+    "collection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "description",
+        "itemIds",
+        "metricIds"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "itemIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "metricIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "narrative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "body",
+        "placement",
+        "publicationState"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "placement": {
+          "enum": [
+            "home",
+            "work",
+            "play",
+            "about",
+            "sources",
+            "owner_archive"
+          ]
+        },
+        "publicationState": {
+          "type": "string",
+          "enum": [
+            "public",
+            "review_required",
+            "private",
+            "excluded"
+          ]
+        },
+        "sourceSnapshotId": {
+          "type": "string"
+        }
+      }
+    },
+    "sourceSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "capturedAt",
+        "rowCount",
+        "sectionCount",
+        "access"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "capturedAt": {
+          "type": "string"
+        },
+        "rowCount": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sectionCount": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "access": {
+          "enum": [
+            "public_web",
+            "company_internal",
+            "owner_private"
+          ]
+        },
+        "sourceFile": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

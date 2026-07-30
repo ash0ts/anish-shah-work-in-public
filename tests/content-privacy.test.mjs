@@ -1,0 +1,126 @@
+import assert from "node:assert/strict";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+import { parseCsv } from "../scripts/lib/csv.mjs";
+
+const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const PUBLIC_PATH = path.join(
+  PROJECT_ROOT,
+  "content/public/anish-content.public.v1.json",
+);
+const OWNER_PATH = path.join(PROJECT_ROOT, "content/private/anish-content.v1.json");
+const IMPACT_PATH = path.resolve(
+  PROJECT_ROOT,
+  "../anish_shah_impact_metrics_2021-2026.csv",
+);
+const publicText = readFileSync(PUBLIC_PATH, "utf8");
+const publicBundle = JSON.parse(publicText);
+
+const BLOCKED_PUBLIC_PATTERNS = [
+  /app\.notion\.com/i,
+  /notion\.so/i,
+  /app\.hex\.tech/i,
+  /coreweave\.enterprise\.slack\.com/i,
+  /slack\.com\/archives/i,
+  /\/users\//i,
+  /documents\/new project/i,
+];
+
+test("public output contains no internal URLs or local paths", () => {
+  for (const pattern of BLOCKED_PUBLIC_PATTERNS) {
+    assert.doesNotMatch(publicText, pattern);
+  }
+  assert(publicBundle.evidence.every((evidence) => evidence.access === "public_web"));
+  assert(publicBundle.items.every((item) => item.publicationState === "public"));
+  assert(publicBundle.metrics.every((metric) => metric.publicationState === "public"));
+});
+test("public metrics expose reviewed display copy, never exact value fields", () => {
+  const approvedDisplays = new Set([
+    "7K+",
+    "About half",
+    "1K+",
+    "Nearly 100K",
+    "More than two-thirds",
+    "Hundreds",
+    "$2M+",
+    "$300K+",
+    "500+",
+    "1K+ / 500+",
+    "49",
+    "19+",
+  ]);
+  assert.equal(publicBundle.metrics.length, 13);
+  for (const metric of publicBundle.metrics) {
+    assert.equal(typeof metric.displayValue, "string");
+    assert(approvedDisplays.has(metric.displayValue), metric.displayValue);
+    for (const key of ["value", "unit", "evidenceIds", "sourceRecord"]) {
+      assert(!Object.hasOwn(metric, key), `${metric.id} exposes ${key}`);
+    }
+    assert(metric.period.asOf, `${metric.id} lacks an as-of date`);
+    assert(metric.sourceLabel, `${metric.id} lacks a source label`);
+  }
+});
+
+test(
+  "large exact internal metric values do not appear in public metric records",
+  { skip: !existsSync(IMPACT_PATH) },
+  () => {
+    const rows = parseCsv(readFileSync(IMPACT_PATH, "utf8"), path.basename(IMPACT_PATH));
+    const publicMetricText = JSON.stringify(publicBundle.metrics);
+    const privateExactValues = [
+      ...new Set(
+        rows
+          .filter(
+            (row) =>
+              row.source_system !== "public_footprint" &&
+              /^\d+(?:\.\d+)?$/.test(row.value) &&
+              row.value.length >= 4,
+          )
+          .map((row) => row.value),
+      ),
+    ];
+    for (const exactValue of privateExactValues) {
+      assert(
+        !publicMetricText.includes(exactValue),
+        `Public metric records contain an exact internal value`,
+      );
+    }
+  },
+);
+
+test("public provenance omits private source metadata", () => {
+  for (const item of publicBundle.items) assert(!Object.hasOwn(item, "sourceRecord"));
+  for (const snapshot of publicBundle.sourceSnapshots) {
+    assert(!Object.hasOwn(snapshot, "sha256"));
+    assert(!Object.hasOwn(snapshot, "sourceFile"));
+  }
+});
+
+test("removed film artifacts and terminology do not survive in generated content", () => {
+  assert(!existsSync(path.join(PROJECT_ROOT, "content/public/motion-story-manifest.v1.json")));
+  const generatedFiles = readdirSync(path.join(PROJECT_ROOT, "content"), {
+    recursive: true,
+    withFileTypes: true,
+  })
+    .filter((entry) => entry.isFile() && /\.(?:json|md)$/.test(entry.name))
+    .map((entry) => path.join(entry.parentPath, entry.name));
+  for (const file of generatedFiles) {
+    const text = readFileSync(file, "utf8");
+    assert.doesNotMatch(text, /field notes/i, file);
+    assert.doesNotMatch(text, /motion[-_ ]?manifest/i, file);
+  }
+});
+
+test("owner-only canonical bundle is ignored by Git", () => {
+  const result = spawnSync("git", ["check-ignore", "content/private/anish-content.v1.json"], {
+    cwd: PROJECT_ROOT,
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /content\/private\/anish-content\.v1\.json/);
+  assert(existsSync(OWNER_PATH));
+});
