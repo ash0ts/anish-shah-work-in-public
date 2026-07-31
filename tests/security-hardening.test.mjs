@@ -152,6 +152,8 @@ test("public Cloudflare release config is generated without embedding secrets", 
   assert.match(prepare, /CF_ACCESS_TEAM_DOMAIN/);
   assert.match(prepare, /CF_ACCESS_AUD/);
   assert.match(prepare, /migrations_dir:\s*"\.\.\/\.\.\/drizzle"/);
+  assert.match(prepare, /config\.workers_dev\s*=\s*true/);
+  assert.match(prepare, /config\.preview_urls\s*=\s*false/);
   assert.doesNotMatch(prepare, /CONNECTOR_ENCRYPTION_KEY\s*:/);
   assert.doesNotMatch(prepare, /RATE_LIMIT_SALT\s*:/);
 });

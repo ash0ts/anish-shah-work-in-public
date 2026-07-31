@@ -81,6 +81,8 @@ const publicSiteUrl = exactHttpsOrigin(
 const config = JSON.parse(await readFile(generatedConfigPath, "utf8"));
 config.name = "anish-shah-work-in-public";
 config.topLevelName = config.name;
+config.workers_dev = true;
+config.preview_urls = false;
 config.d1_databases = [
   {
     binding: "DB",
