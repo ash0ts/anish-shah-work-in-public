@@ -53,7 +53,7 @@ bundle available to the application. The exact owner bundle is generated under
 
 ## Local development
 
-Requires Node.js `>=22.13.0`.
+Requires Node.js `>=24.0.0`.
 
 ```bash
 npm install
