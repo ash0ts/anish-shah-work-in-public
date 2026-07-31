@@ -1,12 +1,14 @@
 import {
   chatGPTSignInPath,
   getChatGPTUser,
+  localStudioSetupPath,
 } from "@/app/chatgpt-auth";
 import {
   completeMyAnimeListOAuth,
   stageMyAnimeListOAuthCallback,
 } from "@/lib/server/connectors";
 import { ownerAuthorizationForEmail } from "@/lib/server/owner-auth";
+import { runtimeValue } from "@/lib/server/runtime-env";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,8 @@ type CallbackResult =
   | "denied"
   | "expired"
   | "invalid_state"
+  | "provider_unavailable"
+  | "rate_limited"
   | "token_exchange_failed"
   | "setup_required"
   | "forbidden";
@@ -30,8 +34,43 @@ function redirectResponse(target: URL, status = 303): Response {
   });
 }
 
+function configuredSiteOrigin(request: Request): URL | null {
+  try {
+    const requestUrl = new URL(request.url);
+    const configured = new URL(runtimeValue("SITE_URL") ?? "");
+    const isSafeOrigin =
+      configured.origin === "http://localhost:3000" ||
+      configured.protocol === "https:";
+    if (
+      !isSafeOrigin ||
+      configured.origin !== requestUrl.origin ||
+      configured.pathname !== "/" ||
+      configured.search ||
+      configured.hash ||
+      configured.username ||
+      configured.password
+    ) {
+      return null;
+    }
+    return configured;
+  } catch {
+    return null;
+  }
+}
+
 function studioRedirect(request: Request, result: CallbackResult): Response {
-  const target = new URL("/studio", request.url);
+  const site = configuredSiteOrigin(request);
+  if (!site) {
+    return new Response("OAuth callback origin is not configured.", {
+      status: 400,
+      headers: {
+        "cache-control": "private, no-store",
+        "content-type": "text/plain; charset=utf-8",
+        "referrer-policy": "no-referrer",
+      },
+    });
+  }
+  const target = new URL("/studio", site);
   target.searchParams.set("connector", "myanimelist");
   target.searchParams.set("result", result);
   return redirectResponse(target);
@@ -43,11 +82,18 @@ async function finishOwnerBoundCallback(
 ): Promise<Response> {
   const user = await getChatGPTUser();
   if (!user) {
+    const site = configuredSiteOrigin(request);
+    if (!site) return studioRedirect(request, "setup_required");
     const returnTo =
       `/api/connectors/myanimelist/oauth/callback` +
       `?resume=${encodeURIComponent(resumeState)}`;
+    const signInPath =
+      site.origin === "http://localhost:3000" &&
+      (runtimeValue("NODE_ENV") ?? process.env.NODE_ENV) === "development"
+        ? localStudioSetupPath(returnTo)
+        : chatGPTSignInPath(returnTo);
     return redirectResponse(
-      new URL(chatGPTSignInPath(returnTo), request.url),
+      new URL(signInPath, site),
       302,
     );
   }

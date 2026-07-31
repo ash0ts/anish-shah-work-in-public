@@ -32,6 +32,10 @@ function jsonResponse(body, { status = 200, headers = {} } = {}) {
   });
 }
 
+function oversizedJsonResponse() {
+  return jsonResponse({ padding: "x".repeat(1_000_100) });
+}
+
 async function withFetch(mockFetch, callback) {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = mockFetch;
@@ -255,7 +259,6 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
   assert.deepEqual(result.publicPayload, {
       provider: "hardcover",
       profileUrl: "https://hardcover.app/@anish",
-      username: "anish",
       coverage: "Current library",
       status: [
         { label: "Currently reading", count: 1 },
@@ -397,6 +400,187 @@ test("malformed provider payloads fail at the normalization boundary", async (co
   });
 });
 
+test("MyAnimeList and Hardcover reject oversized response bodies", async (context) => {
+  await context.test("MyAnimeList", async () => {
+    await withFetch(
+      async () => oversizedJsonResponse(),
+      () =>
+        expectConnectorError(
+          () => fetchMyAnimeListSnapshot({ accessToken: "valid" }),
+          { code: "provider_payload_too_large" },
+        ),
+    );
+  });
+
+  await context.test("Hardcover", async () => {
+    await withFetch(
+      async () => oversizedJsonResponse(),
+      () =>
+        expectConnectorError(
+          () => fetchHardcoverSnapshot({ authorization: "Bearer valid" }),
+          { code: "provider_payload_too_large" },
+        ),
+    );
+  });
+});
+
+test("provider collection sizes cannot exceed the requested bounds", async (context) => {
+  await context.test("MyAnimeList page", async () => {
+    const responses = [
+      jsonResponse({ id: 42, name: "anish" }),
+      jsonResponse({ data: Array.from({ length: 101 }, () => ({})) }),
+    ];
+    await withFetch(
+      async () => responses.shift(),
+      () =>
+        expectConnectorError(
+          () => fetchMyAnimeListSnapshot({ accessToken: "valid" }),
+          { code: "provider_schema_changed" },
+        ),
+    );
+  });
+
+  await context.test("MyAnimeList genre list", async () => {
+    const responses = [
+      jsonResponse({ id: 42, name: "anish" }),
+      jsonResponse({
+        data: [
+          {
+            node: {
+              id: 1,
+              title: "Bounded genres",
+              genres: Array.from({ length: 65 }, (_, index) => ({
+                id: index + 1,
+                name: `Genre ${index + 1}`,
+              })),
+            },
+          },
+        ],
+      }),
+    ];
+    await withFetch(
+      async () => responses.shift(),
+      () =>
+        expectConnectorError(
+          () => fetchMyAnimeListSnapshot({ accessToken: "valid" }),
+          { code: "provider_schema_changed" },
+        ),
+    );
+  });
+
+  await context.test("Hardcover library", async () => {
+    const responses = [
+      jsonResponse({ data: { me: [{ id: 42, username: "anish" }] } }),
+      jsonResponse({
+        data: {
+          user_books: Array.from({ length: 251 }, () => ({})),
+        },
+      }),
+    ];
+    await withFetch(
+      async () => responses.shift(),
+      () =>
+        expectConnectorError(
+          () => fetchHardcoverSnapshot({ authorization: "Bearer valid" }),
+          { code: "provider_schema_changed" },
+        ),
+    );
+  });
+});
+
+test("MyAnimeList rejects wrong-type and unbounded public scalars", async (context) => {
+  const scenarios = [
+    {
+      name: "wrong-type title",
+      item: { node: { id: 1, title: 42 } },
+    },
+    {
+      name: "unbounded title",
+      item: { node: { id: 1, title: "x".repeat(513) } },
+    },
+    {
+      name: "out-of-range score",
+      item: {
+        node: { id: 1, title: "Score" },
+        list_status: { score: 11 },
+      },
+    },
+    {
+      name: "invalid partial date",
+      item: { node: { id: 1, title: "Date", start_date: "2026-02-31" } },
+    },
+    {
+      name: "wrong-type update date",
+      item: {
+        node: { id: 1, title: "Updated" },
+        list_status: { updated_at: 20260730 },
+      },
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    await context.test(scenario.name, async () => {
+      const responses = [
+        jsonResponse({ id: 42, name: "anish" }),
+        jsonResponse({ data: [scenario.item] }),
+      ];
+      await withFetch(
+        async () => responses.shift(),
+        () =>
+          expectConnectorError(
+            () => fetchMyAnimeListSnapshot({ accessToken: "valid" }),
+            { code: "provider_schema_changed" },
+          ),
+      );
+    });
+  }
+});
+
+test("Hardcover rejects wrong-type and unbounded public scalars", async (context) => {
+  const scenarios = [
+    {
+      name: "wrong-type title",
+      entry: { book: { id: 1, title: 42 } },
+    },
+    {
+      name: "unbounded title",
+      entry: { book: { id: 1, title: "x".repeat(513) } },
+    },
+    {
+      name: "out-of-range rating",
+      entry: { rating: 5.5, book: { id: 1, title: "Rating" } },
+    },
+    {
+      name: "invalid update date",
+      entry: {
+        date_updated: "not-a-date",
+        book: { id: 1, title: "Date" },
+      },
+    },
+    {
+      name: "wrong-type reading status",
+      entry: { status_id: "3", book: { id: 1, title: "Status" } },
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    await context.test(scenario.name, async () => {
+      const responses = [
+        jsonResponse({ data: { me: [{ id: 42, username: "anish" }] } }),
+        jsonResponse({ data: { user_books: [scenario.entry] } }),
+      ];
+      await withFetch(
+        async () => responses.shift(),
+        () =>
+          expectConnectorError(
+            () => fetchHardcoverSnapshot({ authorization: "Bearer valid" }),
+            { code: "provider_schema_changed" },
+          ),
+      );
+    });
+  }
+});
+
 class FakeStatement {
   constructor(database, sql) {
     this.database = database;
@@ -424,7 +608,15 @@ class FakeStatement {
 
 class FakeD1 {
   constructor({ credentials = {}, snapshots = [], runs = [] } = {}) {
-    this.credentials = new Map(Object.entries(credentials));
+    this.credentials = new Map(
+      Object.entries(credentials).map(([provider, credential]) => [
+        provider,
+        {
+          ...structuredClone(credential),
+          generation: credential.generation ?? 1,
+        },
+      ]),
+    );
     this.snapshots = structuredClone(snapshots);
     this.runs = structuredClone(runs);
     this.statementLog = [];
@@ -547,10 +739,31 @@ class FakeD1 {
     if (sql.includes("INSERT INTO connector_snapshots")) {
       const [id, provider] = values;
       const withheld = sql.includes("'withheld'");
+      if (sql.includes("generation = ?")) {
+        const conditionOffset = withheld ? 4 : 7;
+        const expectedProvider = values[conditionOffset];
+        const expectedGeneration = values[conditionOffset + 1];
+        const expectedRunId = values[conditionOffset + 2];
+        const expectedRunProvider = values[conditionOffset + 3];
+        const credential = this.credentials.get(expectedProvider);
+        const run = this.runs.find(
+          (entry) =>
+            entry.id === expectedRunId &&
+            entry.provider === expectedRunProvider &&
+            entry.status === "running",
+        );
+        if (
+          !credential ||
+          credential.generation !== expectedGeneration ||
+          !run
+        ) {
+          return 0;
+        }
+      }
       const [publicPayloadJson, fetchedAt, freshUntil, etag, itemCount] =
         withheld
           ? ["{}", values[2], values[3], null, 0]
-          : values.slice(2);
+          : values.slice(2, 7);
       this.snapshots.push({
         id,
         provider,
@@ -571,18 +784,32 @@ class FakeD1 {
         iv,
         keyVersion,
       ] = values;
+      const previous = this.credentials.get(provider);
       this.credentials.set(provider, {
         ciphertext,
         iv,
         keyVersion,
+        generation: previous ? previous.generation + 1 : 1,
       });
       return 1;
     }
 
     if (sql.includes("UPDATE connector_credentials")) {
-      const [ciphertext, iv, keyVersion, expiresAt, updatedAt] = values;
+      const [
+        ciphertext,
+        iv,
+        keyVersion,
+        expiresAt,
+        updatedAt,
+        expectedGeneration,
+      ] = values;
       const credential = this.credentials.get("myanimelist");
-      if (!credential) return 0;
+      if (
+        !credential ||
+        credential.generation !== expectedGeneration
+      ) {
+        return 0;
+      }
       this.credentials.set("myanimelist", {
         ...credential,
         ciphertext,
@@ -596,6 +823,27 @@ class FakeD1 {
 
     if (sql.includes("DELETE FROM connector_snapshots")) {
       const [provider, retainedId] = values;
+      if (sql.includes("generation = ?")) {
+        const conditionOffset = sql.includes("id NOT IN") ? 1 : 2;
+        const expectedProvider = values[conditionOffset];
+        const expectedGeneration = values[conditionOffset + 1];
+        const expectedRunId = values[conditionOffset + 2];
+        const expectedRunProvider = values[conditionOffset + 3];
+        const credential = this.credentials.get(expectedProvider);
+        const run = this.runs.find(
+          (entry) =>
+            entry.id === expectedRunId &&
+            entry.provider === expectedRunProvider &&
+            (entry.status === "running" || entry.status === "withheld"),
+        );
+        if (
+          !credential ||
+          credential.generation !== expectedGeneration ||
+          !run
+        ) {
+          return 0;
+        }
+      }
       if (sql.includes("id NOT IN")) {
         const retained = new Set(
           this.snapshots
@@ -631,6 +879,26 @@ class FakeD1 {
 
     if (sql.includes("DELETE FROM sync_runs")) {
       const [provider, retainedId] = values;
+      if (sql.includes("generation = ?")) {
+        const expectedProvider = values[2];
+        const expectedGeneration = values[3];
+        const expectedRunId = values[4];
+        const expectedRunProvider = values[5];
+        const credential = this.credentials.get(expectedProvider);
+        const run = this.runs.find(
+          (entry) =>
+            entry.id === expectedRunId &&
+            entry.provider === expectedRunProvider &&
+            entry.status === "withheld",
+        );
+        if (
+          !credential ||
+          credential.generation !== expectedGeneration ||
+          !run
+        ) {
+          return 0;
+        }
+      }
       const before = this.runs.length;
       this.runs = this.runs.filter(
         (run) =>
@@ -641,17 +909,54 @@ class FakeD1 {
     }
 
     if (sql.includes("SET status = 'complete'")) {
-      const [finishedAt, itemCount, id] = values;
-      const run = this.runs.find((entry) => entry.id === id);
-      if (!run) return 0;
+      const [
+        finishedAt,
+        itemCount,
+        id,
+        runProvider,
+        credentialProvider,
+        expectedGeneration,
+      ] = values;
+      const run = this.runs.find(
+        (entry) =>
+          entry.id === id &&
+          entry.provider === runProvider &&
+          entry.status === "running",
+      );
+      const credential = this.credentials.get(credentialProvider);
+      if (
+        !run ||
+        !credential ||
+        credential.generation !== expectedGeneration
+      ) {
+        return 0;
+      }
       Object.assign(run, { status: "complete", finishedAt, itemCount });
       return 1;
     }
 
     if (sql.includes("SET status = 'withheld'")) {
-      const [finishedAt, id] = values;
-      const run = this.runs.find((entry) => entry.id === id);
-      if (!run) return 0;
+      const [
+        finishedAt,
+        id,
+        runProvider,
+        credentialProvider,
+        expectedGeneration,
+      ] = values;
+      const run = this.runs.find(
+        (entry) =>
+          entry.id === id &&
+          entry.provider === runProvider &&
+          entry.status === "running",
+      );
+      const credential = this.credentials.get(credentialProvider);
+      if (
+        !run ||
+        !credential ||
+        credential.generation !== expectedGeneration
+      ) {
+        return 0;
+      }
       Object.assign(run, {
         status: "withheld",
         finishedAt,
@@ -662,16 +967,35 @@ class FakeD1 {
     }
 
     if (sql.includes("SET status = 'failed'")) {
-      const id = values.at(-1);
-      const run = this.runs.find((entry) => entry.id === id);
-      if (!run) return 0;
       if (sql.includes("credential_missing")) {
+        const id = values[1];
+        const run = this.runs.find((entry) => entry.id === id);
+        if (!run) return 0;
         Object.assign(run, {
           status: "failed",
           finishedAt: values[0],
           errorCode: "credential_missing",
         });
       } else {
+        const id = values[4];
+        const runProvider = values[5];
+        const credentialProvider = values[6];
+        const expectedGeneration = values[7];
+        const run = this.runs.find(
+          (entry) =>
+            entry.id === id &&
+            entry.provider === runProvider &&
+            entry.status === "running",
+        );
+        const credential = this.credentials.get(credentialProvider);
+        if (
+          !run ||
+          !credential ||
+          (expectedGeneration !== undefined &&
+            credential.generation !== expectedGeneration)
+        ) {
+          return 0;
+        }
         Object.assign(run, {
           status: "failed",
           finishedAt: values[0],
@@ -896,6 +1220,110 @@ test("duplicate manual refreshes share the database lock", async () => {
         assert.equal(database.snapshots.length, 1);
       }),
   );
+});
+
+test("disconnect during a provider fetch cannot republish a snapshot", async () => {
+  const key = Buffer.alloc(32, 29).toString("base64");
+  const credential = await encryptedMyAnimeListCredential(key);
+  const database = new FakeD1({ credentials: { myanimelist: credential } });
+  let fetchStarted = false;
+  let releaseFetch;
+  const pendingResponse = new Promise((resolve) => {
+    releaseFetch = resolve;
+  });
+
+  await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(async (input) => {
+        if (String(input).includes("/v2/users/@me?")) {
+          return jsonResponse({ id: 42, name: "anish" });
+        }
+        fetchStarted = true;
+        return pendingResponse;
+      }, async () => {
+        const refresh = refreshConnector(
+          "myanimelist",
+          "manual",
+          "anish@example.com",
+        );
+        await waitFor(() => fetchStarted);
+        await deleteConnectorCredential(
+          "myanimelist",
+          "anish@example.com",
+        );
+        releaseFetch(jsonResponse({ data: [], paging: {} }));
+
+        assert.deepEqual(await refresh, {
+          status: "failed",
+          provider: "myanimelist",
+          code: "credential_changed",
+          retryable: true,
+        });
+      }),
+  );
+
+  assert.equal(database.credentials.has("myanimelist"), false);
+  assert.equal(database.snapshots.length, 0);
+  assert.equal(database.runs.length, 0);
+});
+
+test("credential replacement supersedes an in-flight provider fetch", async () => {
+  const key = Buffer.alloc(32, 31).toString("base64");
+  const credential = await encryptedMyAnimeListCredential(key);
+  const database = new FakeD1({ credentials: { myanimelist: credential } });
+  let fetchStarted = false;
+  let releaseFetch;
+  const pendingResponse = new Promise((resolve) => {
+    releaseFetch = resolve;
+  });
+
+  await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(async (input) => {
+        if (String(input).includes("/v2/users/@me?")) {
+          return jsonResponse({ id: 42, name: "anish" });
+        }
+        fetchStarted = true;
+        return pendingResponse;
+      }, async () => {
+        const refresh = refreshConnector(
+          "myanimelist",
+          "manual",
+          "anish@example.com",
+        );
+        await waitFor(() => fetchStarted);
+        assert.deepEqual(
+          await saveConnectorCredential(
+            "myanimelist",
+            "replacement-access-token",
+            "anish@example.com",
+          ),
+          { status: "saved" },
+        );
+        releaseFetch(jsonResponse({ data: [], paging: {} }));
+
+        assert.deepEqual(await refresh, {
+          status: "failed",
+          provider: "myanimelist",
+          code: "credential_changed",
+          retryable: true,
+        });
+      }),
+  );
+
+  assert.equal(database.snapshots.length, 0);
+  assert.equal(database.runs.length, 0);
+  assert.deepEqual(
+    await decryptCredential(
+      database.credentials.get("myanimelist"),
+      key,
+      "myanimelist",
+    ),
+    { accessToken: "replacement-access-token" },
+  );
+  assert.equal(database.credentials.get("myanimelist").generation, 2);
 });
 
 test("MyAnimeList proactively refreshes and persists rotated OAuth tokens", async () => {

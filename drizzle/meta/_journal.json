@@ -22,6 +22,13 @@
       "when": 1785456000000,
       "tag": "0002_secure_mal_oauth",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785470144115,
+      "tag": "0003_breezy_donald_blake",
+      "breakpoints": true
     }
   ]
 }

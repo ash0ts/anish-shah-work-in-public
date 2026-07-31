@@ -1,0 +1,1 @@
+ALTER TABLE `connector_credentials` ADD `generation` integer DEFAULT 1 NOT NULL;

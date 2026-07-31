@@ -5,7 +5,12 @@ import {
   decryptCredential,
   encryptCredential,
 } from "../lib/server/credential-crypto.ts";
-import { resolveLocalDevelopmentUser } from "../app/chatgpt-auth.ts";
+import {
+  isLocalDevelopmentRequest,
+  localStudioSetupPath,
+  resolveLocalDevelopmentUser,
+  safeAuthReturnPath,
+} from "../app/chatgpt-auth.ts";
 import {
   evaluateOwnerAuthorization,
   parseOwnerEmails,
@@ -110,6 +115,34 @@ test("local Studio identity fails closed outside its exact security boundary", (
   );
 });
 
+test("misconfigured loopback Studio gets a diagnostic path without gaining access", () => {
+  const loopback = new Headers({ host: "localhost:3000" });
+  const missingOwner = {
+    NODE_ENV: "development",
+    OWNER_EMAILS: "anish@example.com",
+  };
+
+  assert.equal(isLocalDevelopmentRequest(loopback, missingOwner), true);
+  assert.equal(resolveLocalDevelopmentUser(loopback, missingOwner), null);
+  assert.equal(
+    localStudioSetupPath("/studio"),
+    "/studio/local-setup?return_to=%2Fstudio",
+  );
+  assert.equal(
+    isLocalDevelopmentRequest(loopback, { NODE_ENV: "production" }),
+    false,
+  );
+  assert.equal(
+    isLocalDevelopmentRequest(
+      new Headers({ host: "portfolio.example.com" }),
+      missingOwner,
+    ),
+    false,
+  );
+  assert.equal(safeAuthReturnPath("//evil.example/studio"), "/");
+  assert.equal(safeAuthReturnPath("/signin-with-chatgpt"), "/");
+});
+
 test("owner access is an exact, normalized email allowlist", () => {
   assert.deepEqual(
     parseOwnerEmails(" Anish@Example.com,ops@example.com,anish@example.com "),
@@ -154,7 +187,13 @@ test("connector credentials use authenticated encryption and context binding", a
 });
 
 test("D1 migrations contain the scoped tables and encrypted credential fields", async () => {
-  const [initialMigration, editorialMigration, oauthMigration, hosting] = await Promise.all([
+  const [
+    initialMigration,
+    editorialMigration,
+    oauthMigration,
+    generationMigration,
+    hosting,
+  ] = await Promise.all([
     readFile(
       new URL("../drizzle/0000_jittery_whistler.sql", import.meta.url),
       "utf8",
@@ -167,9 +206,18 @@ test("D1 migrations contain the scoped tables and encrypted credential fields", 
       new URL("../drizzle/0002_secure_mal_oauth.sql", import.meta.url),
       "utf8",
     ),
+    readFile(
+      new URL(
+        "../drizzle/0003_breezy_donald_blake.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
-  const migration = `${initialMigration}\n${editorialMigration}\n${oauthMigration}`;
+  const migration =
+    `${initialMigration}\n${editorialMigration}\n` +
+    `${oauthMigration}\n${generationMigration}`;
 
   for (const table of [
     "public_records",
@@ -185,6 +233,10 @@ test("D1 migrations contain the scoped tables and encrypted credential fields", 
   }
   assert.match(migration, /`ciphertext` text NOT NULL/);
   assert.match(migration, /`iv` text NOT NULL/);
+  assert.match(
+    generationMigration,
+    /ADD `generation` integer DEFAULT 1 NOT NULL/,
+  );
   assert.match(migration, /`approved_public_wording` text/);
   assert.match(migration, /`public_caveat` text/);
   assert.doesNotMatch(migration, /access_token|refresh_token|api_token/i);

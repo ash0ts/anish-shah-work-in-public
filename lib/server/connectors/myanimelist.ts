@@ -5,33 +5,287 @@ import {
 } from "./types";
 import { normalizeConnectorProfileUrl } from "./public-payload-policy";
 
-type MalItem = {
+type NormalizedMalItem = {
   node?: {
     id?: number;
     title?: string;
-    start_date?: string;
-    genres?: Array<{ id?: number; name?: string }>;
+    startDate?: string;
+    genres: Array<{ name: string }>;
   };
-  list_status?: {
+  listStatus?: {
     status?: string;
     score?: number;
-    num_episodes_watched?: number;
-    updated_at?: string;
+    episodesWatched?: number;
+    updatedAt?: string;
   };
-};
-
-type MalPage = {
-  data?: MalItem[];
-  paging?: { next?: string };
-};
-
-type MalIdentity = {
-  id?: number;
-  name?: string;
 };
 
 const MAX_PAGES = 5;
+const MAX_PAGE_ITEMS = 100;
+const MAX_RESPONSE_BYTES = 1_000_000;
+const MAX_GENRES_PER_ITEM = 64;
+const MAX_TITLE_LENGTH = 512;
+const MAX_LABEL_LENGTH = 128;
+const MAX_PROFILE_NAME_LENGTH = 64;
+const MAX_URL_LENGTH = 2_048;
+const MAX_EPISODES_WATCHED = 1_000_000;
 const MAL_API_ORIGIN = "https://api.myanimelist.net";
+const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
+const ISO_DATE_TIME =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function providerSchemaError(message: string): never {
+  throw new ConnectorFetchError(message, {
+    code: "provider_schema_changed",
+  });
+}
+
+async function boundedJsonResponse(
+  response: Response,
+  context: string,
+): Promise<unknown> {
+  const contentLength = Number(response.headers.get("content-length"));
+  if (
+    Number.isFinite(contentLength) &&
+    contentLength > MAX_RESPONSE_BYTES
+  ) {
+    throw new ConnectorFetchError(
+      `MyAnimeList returned too much ${context} data.`,
+      { code: "provider_payload_too_large" },
+    );
+  }
+
+  const text = await response.text();
+  if (new TextEncoder().encode(text).byteLength > MAX_RESPONSE_BYTES) {
+    throw new ConnectorFetchError(
+      `MyAnimeList returned too much ${context} data.`,
+      { code: "provider_payload_too_large" },
+    );
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return providerSchemaError(
+      `MyAnimeList returned an unexpected ${context} response.`,
+    );
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function optionalBoundedString(
+  value: unknown,
+  maximumLength: number,
+  field: string,
+): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") {
+    return providerSchemaError(
+      `MyAnimeList returned an unexpected ${field} value.`,
+    );
+  }
+  const normalized = value.trim();
+  if (
+    normalized.length > maximumLength ||
+    CONTROL_CHARACTER.test(normalized)
+  ) {
+    return providerSchemaError(
+      `MyAnimeList returned an unexpected ${field} value.`,
+    );
+  }
+  return normalized || undefined;
+}
+
+function optionalSafeInteger(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+  field: string,
+): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (
+    typeof value !== "number" ||
+    !Number.isSafeInteger(value) ||
+    value < minimum ||
+    value > maximum
+  ) {
+    return providerSchemaError(
+      `MyAnimeList returned an unexpected ${field} value.`,
+    );
+  }
+  return value;
+}
+
+function optionalScore(value: unknown): number | undefined {
+  return optionalSafeInteger(value, 0, 10, "score");
+}
+
+function optionalPartialDate(value: unknown): string | undefined {
+  const normalized = optionalBoundedString(value, 10, "start date");
+  if (!normalized) return undefined;
+  const match = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.exec(normalized);
+  if (!match) {
+    return providerSchemaError(
+      "MyAnimeList returned an unexpected start date value.",
+    );
+  }
+
+  const year = Number(match[1]);
+  const month = match[2] ? Number(match[2]) : null;
+  const day = match[3] ? Number(match[3]) : null;
+  if (
+    year < 1_000 ||
+    year > 9_999 ||
+    (month !== null && (month < 1 || month > 12)) ||
+    (day !== null &&
+      (month === null ||
+        day < 1 ||
+        day > new Date(Date.UTC(year, month, 0)).getUTCDate()))
+  ) {
+    return providerSchemaError(
+      "MyAnimeList returned an unexpected start date value.",
+    );
+  }
+  return normalized;
+}
+
+function optionalDateTime(value: unknown): string | undefined {
+  const normalized = optionalBoundedString(value, 64, "update date");
+  if (!normalized) return undefined;
+  if (!ISO_DATE_TIME.test(normalized) || !Number.isFinite(Date.parse(normalized))) {
+    return providerSchemaError(
+      "MyAnimeList returned an unexpected update date value.",
+    );
+  }
+  return normalized;
+}
+
+function normalizeMalItem(value: unknown): NormalizedMalItem {
+  if (!isRecord(value)) {
+    return providerSchemaError(
+      "MyAnimeList returned an unexpected library item.",
+    );
+  }
+
+  let node: NormalizedMalItem["node"];
+  if (value.node !== undefined && value.node !== null) {
+    if (!isRecord(value.node)) {
+      return providerSchemaError(
+        "MyAnimeList returned an unexpected title record.",
+      );
+    }
+    const rawGenres = value.node.genres;
+    if (
+      rawGenres !== undefined &&
+      rawGenres !== null &&
+      (!Array.isArray(rawGenres) || rawGenres.length > MAX_GENRES_PER_ITEM)
+    ) {
+      return providerSchemaError(
+        "MyAnimeList returned an unexpected genre list.",
+      );
+    }
+    const genres = (rawGenres ?? []).flatMap((genre) => {
+      if (!isRecord(genre)) {
+        return providerSchemaError(
+          "MyAnimeList returned an unexpected genre record.",
+        );
+      }
+      optionalSafeInteger(genre.id, 1, Number.MAX_SAFE_INTEGER, "genre ID");
+      const name = optionalBoundedString(
+        genre.name,
+        MAX_LABEL_LENGTH,
+        "genre name",
+      );
+      return name ? [{ name }] : [];
+    });
+
+    node = {
+      id: optionalSafeInteger(
+        value.node.id,
+        1,
+        Number.MAX_SAFE_INTEGER,
+        "title ID",
+      ),
+      title: optionalBoundedString(
+        value.node.title,
+        MAX_TITLE_LENGTH,
+        "title",
+      ),
+      startDate: optionalPartialDate(value.node.start_date),
+      genres,
+    };
+  }
+
+  let listStatus: NormalizedMalItem["listStatus"];
+  if (value.list_status !== undefined && value.list_status !== null) {
+    if (!isRecord(value.list_status)) {
+      return providerSchemaError(
+        "MyAnimeList returned an unexpected list status.",
+      );
+    }
+    const status = optionalBoundedString(
+      value.list_status.status,
+      64,
+      "list status",
+    );
+    if (status && !/^[a-z0-9_]+$/i.test(status)) {
+      return providerSchemaError(
+        "MyAnimeList returned an unexpected list status value.",
+      );
+    }
+    listStatus = {
+      status,
+      score: optionalScore(value.list_status.score),
+      episodesWatched: optionalSafeInteger(
+        value.list_status.num_episodes_watched,
+        0,
+        MAX_EPISODES_WATCHED,
+        "episode count",
+      ),
+      updatedAt: optionalDateTime(value.list_status.updated_at),
+    };
+  }
+
+  return { node, listStatus };
+}
+
+function normalizeMalPage(value: unknown): {
+  data: NormalizedMalItem[];
+  nextUrl: string | null;
+} {
+  if (!isRecord(value) || !Array.isArray(value.data)) {
+    return providerSchemaError(
+      "MyAnimeList returned an unexpected library response.",
+    );
+  }
+  if (value.data.length > MAX_PAGE_ITEMS) {
+    return providerSchemaError(
+      "MyAnimeList returned too many library items in one page.",
+    );
+  }
+
+  let next: string | undefined;
+  if (value.paging !== undefined && value.paging !== null) {
+    if (!isRecord(value.paging)) {
+      return providerSchemaError(
+        "MyAnimeList returned an unexpected paging record.",
+      );
+    }
+    next = optionalBoundedString(
+      value.paging.next,
+      MAX_URL_LENGTH,
+      "paging URL",
+    );
+  }
+
+  return {
+    data: value.data.map(normalizeMalItem),
+    nextUrl: safeNextPage(next),
+  };
+}
 
 function safeNextPage(value: string | undefined): string | null {
   if (!value) return null;
@@ -55,10 +309,16 @@ function publicStatus(value: string | undefined): string {
 }
 
 export function normalizeMyAnimeListAccessToken(value: string): string {
-  return value
+  const normalized = value
     .trim()
     .replace(/^Bearer(?:\s+|$)/i, "")
     .trim();
+  return normalized &&
+    normalized.length <= 8_192 &&
+    !CONTROL_CHARACTER.test(normalized) &&
+    !/\s/.test(normalized)
+    ? normalized
+    : "";
 }
 
 export async function fetchMyAnimeListSnapshot(
@@ -83,7 +343,7 @@ export async function fetchMyAnimeListSnapshot(
   let nextUrl: string | null =
     `${MAL_API_ORIGIN}/v2/users/@me/animelist` +
     `?limit=100&sort=list_updated_at&fields=${encodeURIComponent(fields)}`;
-  const items: MalItem[] = [];
+  const items: NormalizedMalItem[] = [];
   let etag: string | undefined;
   const signal = AbortSignal.timeout(25_000);
 
@@ -115,12 +375,27 @@ export async function fetchMyAnimeListSnapshot(
       },
     );
   }
-  const identity = (await identityResponse.json()) as MalIdentity;
+  const identity = await boundedJsonResponse(identityResponse, "identity");
   if (
-    !Number.isSafeInteger(identity.id) ||
-    typeof identity.name !== "string" ||
-    !identity.name.trim()
+    !isRecord(identity) ||
+    optionalSafeInteger(
+      identity.id,
+      1,
+      Number.MAX_SAFE_INTEGER,
+      "profile ID",
+    ) === undefined
   ) {
+    throw new ConnectorFetchError(
+      "MyAnimeList returned an unexpected identity response.",
+      { code: "provider_schema_changed" },
+    );
+  }
+  const profileName = optionalBoundedString(
+    identity.name,
+    MAX_PROFILE_NAME_LENGTH,
+    "profile name",
+  );
+  if (!profileName || !/^[a-z0-9_-]+$/i.test(profileName)) {
     throw new ConnectorFetchError(
       "MyAnimeList returned an unexpected identity response.",
       { code: "provider_schema_changed" },
@@ -128,8 +403,14 @@ export async function fetchMyAnimeListSnapshot(
   }
   const profileUrl = normalizeConnectorProfileUrl(
     "myanimelist",
-    `https://myanimelist.net/profile/${encodeURIComponent(identity.name.trim())}`,
+    `https://myanimelist.net/profile/${encodeURIComponent(profileName)}`,
   );
+  if (!profileUrl) {
+    throw new ConnectorFetchError(
+      "MyAnimeList profile attribution could not be normalized.",
+      { code: "public_payload_rejected" },
+    );
+  }
 
   for (let page = 0; page < MAX_PAGES && nextUrl; page += 1) {
     const response = await fetch(nextUrl, {
@@ -159,16 +440,11 @@ export async function fetchMyAnimeListSnapshot(
     }
 
     etag ??= response.headers.get("etag") ?? undefined;
-    const body = (await response.json()) as MalPage;
-    if (!Array.isArray(body.data)) {
-      throw new ConnectorFetchError(
-        "MyAnimeList returned an unexpected response.",
-        { code: "provider_schema_changed" },
-      );
-    }
-
+    const body = normalizeMalPage(
+      await boundedJsonResponse(response, "library"),
+    );
     items.push(...body.data);
-    nextUrl = safeNextPage(body.paging?.next);
+    nextUrl = body.nextUrl;
   }
 
   const statusCounts = new Map<string, number>();
@@ -176,7 +452,7 @@ export async function fetchMyAnimeListSnapshot(
   const eraCounts = new Map<string, number>();
 
   for (const item of items) {
-    const status = publicStatus(item.list_status?.status);
+    const status = publicStatus(item.listStatus?.status);
     statusCounts.set(status, (statusCounts.get(status) ?? 0) + 1);
 
     for (const genre of item.node?.genres ?? []) {
@@ -184,7 +460,7 @@ export async function fetchMyAnimeListSnapshot(
       genreCounts.set(genre.name, (genreCounts.get(genre.name) ?? 0) + 1);
     }
 
-    const year = Number(item.node?.start_date?.slice(0, 4));
+    const year = Number(item.node?.startDate?.slice(0, 4));
     if (Number.isFinite(year)) {
       const decade = `${Math.floor(year / 10) * 10}s`;
       eraCounts.set(decade, (eraCounts.get(decade) ?? 0) + 1);
@@ -199,8 +475,8 @@ export async function fetchMyAnimeListSnapshot(
 
   const recent = [...items]
     .sort((left, right) =>
-      (right.list_status?.updated_at ?? "").localeCompare(
-        left.list_status?.updated_at ?? "",
+      (right.listStatus?.updatedAt ?? "").localeCompare(
+        left.listStatus?.updatedAt ?? "",
       ),
     )
     .slice(0, 12)
@@ -210,10 +486,10 @@ export async function fetchMyAnimeListSnapshot(
         {
           id: String(item.node.id),
           title: item.node.title,
-          status: publicStatus(item.list_status?.status),
-          score: item.list_status?.score ?? null,
-          episodesWatched: item.list_status?.num_episodes_watched ?? null,
-          updatedAt: item.list_status?.updated_at ?? null,
+          status: publicStatus(item.listStatus?.status),
+          score: item.listStatus?.score ?? null,
+          episodesWatched: item.listStatus?.episodesWatched ?? null,
+          updatedAt: item.listStatus?.updatedAt ?? null,
         },
       ];
     });

@@ -1,0 +1,315 @@
+import { runtimeDatabase } from "./runtime-env";
+
+const STRAVA_SETTING_KEY = "connector.strava.public_embed";
+const STRAVA_EMBED_HOST = "strava-embeds.com";
+const MAX_INPUT_LENGTH = 8192;
+const MAX_URL_LENGTH = 2048;
+const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
+const UNSAFE_MARKUP_CONTROL =
+  /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
+
+export type StravaPublicConfig = {
+  provider: "strava";
+  embedUrl: string;
+  coverage: "Official public Strava activity, loaded only after consent.";
+  updatedAt: string;
+};
+
+export type StravaConfigResult =
+  | { status: "ready"; config: StravaPublicConfig }
+  | {
+      status: "unavailable";
+      reason:
+        | "database_unavailable"
+        | "not_configured"
+        | "invalid_config";
+    };
+
+export type StravaEmbedValidation =
+  | { ok: true; embedUrl: string }
+  | { ok: false; code: "invalid_embed"; message: string };
+
+type EditorialSettingRow = {
+  valueJson: string;
+};
+
+function isCanonicalIsoDateTime(value: string): boolean {
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && date.toISOString() === value;
+}
+
+function unavailableEmbed(message: string): StravaEmbedValidation {
+  return { ok: false, code: "invalid_embed", message };
+}
+
+function isSensitiveQueryKey(value: string): boolean {
+  const normalized = value.replaceAll(/[^a-z0-9]/gi, "").toLowerCase();
+  return (
+    normalized === "key" ||
+    normalized === "code" ||
+    normalized === "oauthcode" ||
+    normalized === "authorizationcode" ||
+    normalized.endsWith("apikey") ||
+    normalized.includes("authorization") ||
+    normalized.includes("credential") ||
+    normalized.includes("password") ||
+    normalized.includes("secret") ||
+    normalized.includes("token")
+  );
+}
+
+function iframeSource(value: string): string | null {
+  if (!value.startsWith("<")) return value;
+
+  const iframe = value.match(
+    /^<iframe\b([^>]*)\/?>\s*(?:<\/iframe>)?$/i,
+  );
+  if (!iframe) return null;
+
+  const matches = [
+    ...iframe[1].matchAll(
+      /(?:^|\s)src\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi,
+    ),
+  ];
+  if (matches.length !== 1) return null;
+
+  return matches[0][1] ?? matches[0][2] ?? matches[0][3] ?? null;
+}
+
+export function normalizeStravaEmbed(
+  input: unknown,
+): StravaEmbedValidation {
+  if (typeof input !== "string") {
+    return unavailableEmbed(
+      "Paste an official Strava embed URL or iframe snippet.",
+    );
+  }
+  if (
+    !input.trim() ||
+    input.length > MAX_INPUT_LENGTH ||
+    UNSAFE_MARKUP_CONTROL.test(input)
+  ) {
+    return unavailableEmbed(
+      "Paste one official Strava embed without unsafe control characters.",
+    );
+  }
+
+  const source = iframeSource(input.trim());
+  if (
+    !source ||
+    source.length > MAX_URL_LENGTH ||
+    CONTROL_CHARACTER.test(source)
+  ) {
+    return unavailableEmbed(
+      "The iframe must contain one official Strava embed URL.",
+    );
+  }
+
+  let url: URL;
+  const authority = source.match(/^https:\/\/([^/?#]+)/i)?.[1];
+  if (authority?.toLowerCase() !== STRAVA_EMBED_HOST) {
+    return unavailableEmbed(
+      "Use an HTTPS URL from exactly strava-embeds.com without credentials or a port.",
+    );
+  }
+  try {
+    url = new URL(source.replaceAll("&amp;", "&"));
+  } catch {
+    return unavailableEmbed("The Strava embed URL is malformed.");
+  }
+
+  if (
+    url.protocol !== "https:" ||
+    url.hostname.toLowerCase() !== STRAVA_EMBED_HOST ||
+    url.port ||
+    url.username ||
+    url.password ||
+    url.hash ||
+    /%(?:0[0-9a-f]|1[0-9a-f]|7f)/i.test(url.toString()) ||
+    [...url.searchParams.keys()].some(isSensitiveQueryKey)
+  ) {
+    return unavailableEmbed(
+      "Use an HTTPS URL from exactly strava-embeds.com without credentials, control characters, a port, or a fragment.",
+    );
+  }
+
+  return { ok: true, embedUrl: url.toString() };
+}
+
+function databaseOrNull(
+  database: D1Database | null | undefined,
+): D1Database | null {
+  return database === undefined ? runtimeDatabase() : database;
+}
+
+export async function getStravaPublicConfig(
+  database?: D1Database | null,
+): Promise<StravaConfigResult> {
+  const binding = databaseOrNull(database);
+  if (!binding) {
+    return { status: "unavailable", reason: "database_unavailable" };
+  }
+
+  let row: EditorialSettingRow | null;
+  try {
+    row = await binding
+      .prepare(
+        `SELECT value_json AS valueJson
+         FROM editorial_settings
+         WHERE key = ?
+         LIMIT 1`,
+      )
+      .bind(STRAVA_SETTING_KEY)
+      .first<EditorialSettingRow>();
+  } catch {
+    return { status: "unavailable", reason: "database_unavailable" };
+  }
+  if (!row) return { status: "unavailable", reason: "not_configured" };
+
+  let stored: unknown;
+  try {
+    stored = JSON.parse(row.valueJson);
+  } catch {
+    return { status: "unavailable", reason: "invalid_config" };
+  }
+  if (
+    typeof stored !== "object" ||
+    stored === null ||
+    !("embedUrl" in stored) ||
+    !("updatedAt" in stored) ||
+    typeof stored.embedUrl !== "string" ||
+    typeof stored.updatedAt !== "string" ||
+    !isCanonicalIsoDateTime(stored.updatedAt)
+  ) {
+    return { status: "unavailable", reason: "invalid_config" };
+  }
+
+  const normalized = normalizeStravaEmbed(stored.embedUrl);
+  if (!normalized.ok || normalized.embedUrl !== stored.embedUrl) {
+    return { status: "unavailable", reason: "invalid_config" };
+  }
+
+  return {
+    status: "ready",
+    config: {
+      provider: "strava",
+      embedUrl: normalized.embedUrl,
+      coverage: "Official public Strava activity, loaded only after consent.",
+      updatedAt: stored.updatedAt,
+    },
+  };
+}
+
+export async function saveStravaPublicConfig(
+  input: unknown,
+  actorEmail: string,
+  database?: D1Database | null,
+): Promise<
+  | {
+      status: "saved";
+      provider: "strava";
+      embedUrl: string;
+      updatedAt: string;
+    }
+  | { ok: false; code: "invalid_embed"; message: string }
+> {
+  const normalized = normalizeStravaEmbed(input);
+  if (!normalized.ok) return normalized;
+
+  const binding = databaseOrNull(database);
+  if (!binding) throw new Error("D1 database binding is unavailable.");
+
+  const updatedAt = new Date().toISOString();
+  const stored = JSON.stringify({
+    embedUrl: normalized.embedUrl,
+    updatedAt,
+  });
+
+  await binding.batch([
+    binding
+      .prepare(
+        `INSERT INTO editorial_settings (
+           key, value_json, updated_by_email, updated_at
+         ) VALUES (?, ?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET
+           value_json = excluded.value_json,
+           updated_by_email = excluded.updated_by_email,
+           updated_at = excluded.updated_at`,
+      )
+      .bind(STRAVA_SETTING_KEY, stored, actorEmail, updatedAt),
+    binding
+      .prepare(
+        `INSERT INTO audit_log (
+           id, actor_email, action, entity_type, entity_id, details_json, created_at
+         ) VALUES (?, ?, 'connector.config_saved', 'connector', 'strava', ?, ?)`,
+      )
+      .bind(
+        crypto.randomUUID(),
+        actorEmail,
+        JSON.stringify({ configuration: "official_embed" }),
+        updatedAt,
+      ),
+  ]);
+
+  return {
+    status: "saved",
+    provider: "strava",
+    embedUrl: normalized.embedUrl,
+    updatedAt,
+  };
+}
+
+export async function deleteStravaPublicConfig(
+  actorEmail: string,
+  database?: D1Database | null,
+): Promise<{
+  status: "disconnected";
+  provider: "strava";
+  configDeleted: true;
+  snapshotsDeleted: true;
+  syncHistoryDeleted: true;
+}> {
+  const binding = databaseOrNull(database);
+  if (!binding) throw new Error("D1 database binding is unavailable.");
+  const deletedAt = new Date().toISOString();
+
+  await binding.batch([
+    binding
+      .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
+      .bind(STRAVA_SETTING_KEY),
+    binding
+      .prepare(`DELETE FROM connector_credentials WHERE provider = 'strava'`),
+    binding
+      .prepare(`DELETE FROM connector_snapshots WHERE provider = 'strava'`),
+    binding.prepare(`DELETE FROM sync_runs WHERE provider = 'strava'`),
+    binding
+      .prepare(
+        `DELETE FROM audit_log
+         WHERE entity_type = 'connector' AND entity_id = 'strava'`,
+      ),
+    binding
+      .prepare(
+        `INSERT INTO audit_log (
+           id, actor_email, action, entity_type, entity_id, details_json, created_at
+         ) VALUES (?, ?, 'connector.config_deleted', 'connector', 'strava', ?, ?)`,
+      )
+      .bind(
+        crypto.randomUUID(),
+        actorEmail,
+        JSON.stringify({
+          configDeleted: true,
+          snapshotsDeleted: true,
+          syncHistoryDeleted: true,
+        }),
+        deletedAt,
+      ),
+  ]);
+
+  return {
+    status: "disconnected",
+    provider: "strava",
+    configDeleted: true,
+    snapshotsDeleted: true,
+    syncHistoryDeleted: true,
+  };
+}

@@ -27,7 +27,6 @@ type MalPayload = {
 type HardcoverPayload = {
   provider: "hardcover";
   profileUrl: string | null;
-  username: string | null;
   coverage: string;
   status: StatusCount[];
   recent: Array<{
@@ -66,6 +65,13 @@ type SteamPayload = {
   freshUntil: string;
 };
 
+type StravaPayload = {
+  provider: "strava";
+  embedUrl: string;
+  coverage: string;
+  updatedAt: string;
+};
+
 type ConnectorState<T> =
   | { status: "idle" }
   | { status: "loading" }
@@ -73,7 +79,11 @@ type ConnectorState<T> =
   | { status: "ready"; payload: T; fetchedAt: string; stale: boolean };
 
 type StreamId = "watch" | "read" | "play" | "move";
-type ConnectorProvider = "myanimelist" | "hardcover" | "steam";
+type ConnectorProvider =
+  | "myanimelist"
+  | "hardcover"
+  | "steam"
+  | "strava";
 
 const streams = [
   {
@@ -117,20 +127,14 @@ function syncLabel(value: string) {
   }).format(date)}`;
 }
 
-function officialStravaEmbed(value: string | undefined) {
-  if (!value) return "";
-  try {
-    const url = new URL(value);
-    if (
-      url.protocol !== "https:" ||
-      url.hostname.toLowerCase() !== "strava-embeds.com"
-    ) {
-      return "";
-    }
-    return url.toString();
-  } catch {
-    return "";
-  }
+function publishedLabel(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Publish date unavailable";
+  return `Published ${new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date)}`;
 }
 
 async function loadConnector<T>(
@@ -180,12 +184,12 @@ export function PersonalStreams() {
   const [steam, setSteam] = useState<ConnectorState<SteamPayload>>({
     status: "idle",
   });
+  const [strava, setStrava] = useState<ConnectorState<StravaPayload>>({
+    status: "idle",
+  });
   const [showStrava, setShowStrava] = useState(false);
   const requestedProviders = useRef(new Set<ConnectorProvider>());
   const mounted = useRef(true);
-  const stravaEmbed = officialStravaEmbed(
-    process.env.NEXT_PUBLIC_STRAVA_EMBED_URL,
-  );
 
   useEffect(() => {
     mounted.current = true;
@@ -202,8 +206,8 @@ export function PersonalStreams() {
           ? "hardcover"
           : active === "play"
             ? "steam"
-            : null;
-    if (!provider || requestedProviders.current.has(provider)) return;
+            : "strava";
+    if (requestedProviders.current.has(provider)) return;
     requestedProviders.current.add(provider);
 
     if (provider === "myanimelist") {
@@ -220,12 +224,19 @@ export function PersonalStreams() {
         }
         if (mounted.current) setHardcover(state);
       });
-    } else {
+    } else if (provider === "steam") {
       void loadConnector<SteamPayload>(provider).then((state) => {
         if (state.status !== "ready") {
           requestedProviders.current.delete(provider);
         }
         if (mounted.current) setSteam(state);
+      });
+    } else {
+      void loadConnector<StravaPayload>(provider).then((state) => {
+        if (state.status !== "ready") {
+          requestedProviders.current.delete(provider);
+        }
+        if (mounted.current) setStrava(state);
       });
     }
   }, [active]);
@@ -253,7 +264,7 @@ export function PersonalStreams() {
     (active === "watch" && mal.status !== "ready") ||
     (active === "read" && hardcover.status !== "ready") ||
     (active === "play" && steam.status !== "ready") ||
-    (active === "move" && !stravaEmbed);
+    (active === "move" && strava.status !== "ready");
 
   return (
     <section className={styles.streams} aria-label="Personal public streams">
@@ -304,7 +315,7 @@ export function PersonalStreams() {
           {active === "play" ? <SteamStream state={steam} /> : null}
           {active === "move" ? (
             <MovementStream
-              embed={stravaEmbed}
+              state={strava}
               show={showStrava}
               onShow={() => setShowStrava(true)}
             />
@@ -447,28 +458,21 @@ function SteamStream({ state }: { state: ConnectorState<SteamPayload> }) {
 }
 
 function MovementStream({
-  embed,
+  state,
   show,
   onShow,
 }: {
-  embed: string;
+  state: ConnectorState<StravaPayload>;
   show: boolean;
   onShow: () => void;
 }) {
-  if (!embed) {
-    return (
-      <div className={styles.empty} aria-live="polite">
-        <span aria-hidden="true">○</span>
-        <p>The owner has not published a Strava embed yet.</p>
-      </div>
-    );
-  }
+  if (state.status !== "ready") return <StreamEmpty state={state} />;
 
   return (
     <>
       <PanelHeading
         title="Outside, on purpose."
-        description="Strava remains outside this site until you choose to load its official public embed."
+        description={state.payload.coverage}
       />
       {show ? (
         <div className={styles.embed}>
@@ -476,7 +480,7 @@ function MovementStream({
             allowFullScreen
             loading="lazy"
             referrerPolicy="strict-origin-when-cross-origin"
-            src={embed}
+            src={state.payload.embedUrl}
             title="Anish Shah’s public Strava activity"
           />
         </div>
@@ -490,6 +494,7 @@ function MovementStream({
       )}
       <div className={styles.status}>
         <span>Loads only after interaction</span>
+        <span>{publishedLabel(state.payload.updatedAt)}</span>
       </div>
     </>
   );

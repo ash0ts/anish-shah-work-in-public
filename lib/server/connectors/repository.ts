@@ -62,6 +62,7 @@ const MYANIMELIST_OAUTH_TRANSACTION_CONTEXT =
 export type ConnectorHealth = {
   provider: ConnectorProvider;
   configured: boolean;
+  canReuseOAuthClient: boolean;
   status:
     | "setup_required"
     | "authorization_required"
@@ -192,6 +193,8 @@ export type MyAnimeListOAuthCompletionResult =
         | "denied"
         | "expired"
         | "invalid_state"
+        | "provider_unavailable"
+        | "rate_limited"
         | "token_exchange_failed"
         | "setup_required";
     };
@@ -204,6 +207,7 @@ function placeholderHealth(provider: ConnectorProvider): ConnectorHealth {
   return {
     provider,
     configured: false,
+    canReuseOAuthClient: false,
     status: "setup_required",
     lastSyncedAt: null,
     freshUntil: null,
@@ -217,7 +221,9 @@ function asCount(value: unknown): number {
   return typeof value === "number" ? value : Number(value) || 0;
 }
 
-export async function getStudioOverview(): Promise<StudioOverview> {
+export async function getStudioOverview(
+  actorEmail: string,
+): Promise<StudioOverview> {
   const database = databaseOrNull();
   if (!database) {
     return {
@@ -230,6 +236,15 @@ export async function getStudioOverview(): Promise<StudioOverview> {
   }
 
   try {
+    const now = new Date().toISOString();
+    await database
+      .prepare(
+        `DELETE FROM connector_oauth_transactions
+         WHERE expires_at <= ?`,
+      )
+      .bind(now)
+      .run();
+
     const publicationRows = await database
       .prepare(
         `SELECT publication_state AS publicationState, COUNT(*) AS count
@@ -249,13 +264,18 @@ export async function getStudioOverview(): Promise<StudioOverview> {
     for (const provider of CONNECTOR_PROVIDERS) {
       const credential = await database
         .prepare(
-          `SELECT provider, updated_at AS updatedAt
+          `SELECT provider, credential_label AS credentialLabel,
+                  updated_at AS updatedAt
            FROM connector_credentials
            WHERE provider = ?
            LIMIT 1`,
         )
         .bind(provider)
-        .first<{ provider: string; updatedAt: string }>();
+        .first<{
+          provider: string;
+          credentialLabel: string;
+          updatedAt: string;
+        }>();
       const snapshot = await database
         .prepare(
           `SELECT status, fetched_at AS fetchedAt, fresh_until AS freshUntil,
@@ -274,7 +294,8 @@ export async function getStudioOverview(): Promise<StudioOverview> {
         }>();
       const run = await database
         .prepare(
-          `SELECT status, error_code AS errorCode, started_at AS startedAt
+          `SELECT status, error_code AS errorCode, started_at AS startedAt,
+                  finished_at AS finishedAt
            FROM sync_runs
            WHERE provider = ?
            ORDER BY started_at DESC
@@ -285,6 +306,7 @@ export async function getStudioOverview(): Promise<StudioOverview> {
           status: string;
           errorCode: string | null;
           startedAt: string;
+          finishedAt: string | null;
         }>();
       const pendingAuthorization =
         provider === "myanimelist"
@@ -293,11 +315,12 @@ export async function getStudioOverview(): Promise<StudioOverview> {
                 `SELECT state_hash AS stateHash
                  FROM connector_oauth_transactions
                  WHERE provider = 'myanimelist'
+                   AND owner_email = ?
                    AND consumed_at IS NULL
                    AND expires_at > ?
                  LIMIT 1`,
               )
-              .bind(new Date().toISOString())
+              .bind(normalizedOwnerEmail(actorEmail), now)
               .first<{ stateHash: string }>()
           : null;
 
@@ -321,15 +344,15 @@ export async function getStudioOverview(): Promise<StudioOverview> {
         run?.status === "failed" &&
         run.errorCode === "reauthorization_required" &&
         (!credential?.updatedAt ||
-          !run.startedAt ||
-          Date.parse(run.startedAt) >= Date.parse(credential.updatedAt))
+          !run.finishedAt ||
+          Date.parse(run.finishedAt) >= Date.parse(credential.updatedAt))
       ) {
         status = "reauthorization_required";
       } else if (
         run?.status === "failed" &&
         (!credential?.updatedAt ||
-          !run.startedAt ||
-          Date.parse(run.startedAt) >= Date.parse(credential.updatedAt))
+          !run.finishedAt ||
+          Date.parse(run.finishedAt) >= Date.parse(credential.updatedAt))
       ) {
         status = "error";
       }
@@ -339,6 +362,9 @@ export async function getStudioOverview(): Promise<StudioOverview> {
       connectors.push({
         provider,
         configured,
+        canReuseOAuthClient:
+          provider === "myanimelist" &&
+          credential?.credentialLabel === "Owner OAuth authorization",
         status,
         lastSyncedAt: snapshot?.fetchedAt ?? null,
         freshUntil: snapshot?.freshUntil ?? null,
@@ -498,7 +524,7 @@ function myAnimeListCallbackUrl(requestUrl: string): string | null {
 }
 
 function normalizedOwnerEmail(value: string): string {
-  return value.trim().toLocaleLowerCase();
+  return value.trim().toLowerCase();
 }
 
 function validAuthorizationCode(value: string | undefined): string | null {
@@ -534,6 +560,19 @@ async function storedOAuthTransaction(
     )
     .bind(stateHash)
     .first<StoredOAuthTransaction>();
+}
+
+async function deleteOAuthTransaction(
+  database: D1Database,
+  stateHash: string,
+): Promise<void> {
+  await database
+    .prepare(
+      `DELETE FROM connector_oauth_transactions
+       WHERE state_hash = ? AND provider = 'myanimelist'`,
+    )
+    .bind(stateHash)
+    .run();
 }
 
 async function decryptOAuthTransaction(
@@ -577,10 +616,13 @@ export async function startMyAnimeListOAuth(input: {
   } else {
     try {
       const existing = await loadCredential(database, "myanimelist");
-      if (isMyAnimeListOAuthCredential(existing)) {
+      if (
+        existing &&
+        isMyAnimeListOAuthCredential(existing.credential)
+      ) {
         client = {
-          clientId: existing.clientId,
-          clientSecret: existing.clientSecret,
+          clientId: existing.credential.clientId,
+          clientSecret: existing.credential.clientSecret,
         };
       }
     } catch {
@@ -592,6 +634,7 @@ export async function startMyAnimeListOAuth(input: {
   const state = createMyAnimeListOAuthState();
   const stateHash = await hashMyAnimeListOAuthState(state);
   const codeVerifier = createMyAnimeListPkceVerifier();
+  const ownerEmail = normalizedOwnerEmail(input.actorEmail);
   const now = new Date();
   const createdAt = now.toISOString();
   const expiresAt = new Date(
@@ -605,6 +648,8 @@ export async function startMyAnimeListOAuth(input: {
         ...client,
         codeVerifier,
         callbackUrl,
+        ownerEmail,
+        stateHash,
       } satisfies MyAnimeListOAuthTransactionPayload,
       encryptionKey,
       MYANIMELIST_OAUTH_TRANSACTION_CONTEXT,
@@ -613,13 +658,12 @@ export async function startMyAnimeListOAuth(input: {
     return { status: "setup_required", reason: "encryption_key" };
   }
 
-  const ownerEmail = normalizedOwnerEmail(input.actorEmail);
   try {
     await database.batch([
       database
         .prepare(
           `DELETE FROM connector_oauth_transactions
-           WHERE consumed_at IS NOT NULL OR expires_at <= ?`,
+           WHERE expires_at <= ?`,
         )
         .bind(createdAt),
       database
@@ -699,14 +743,23 @@ export async function stageMyAnimeListOAuthCallback(input: {
     return { status: "setup_required" };
   }
   if (!row || row.consumedAt) return { status: "invalid_state" };
-  if (Date.parse(row.expiresAt) <= Date.now()) return { status: "expired" };
+  if (Date.parse(row.expiresAt) <= Date.now()) {
+    try {
+      await deleteOAuthTransaction(database, stateHash);
+    } catch {
+      return { status: "setup_required" };
+    }
+    return { status: "expired" };
+  }
   if (row.redirectUri !== callbackUrl) return { status: "invalid_state" };
 
   const transaction = await decryptOAuthTransaction(row, encryptionKey);
   if (
     !transaction ||
     transaction.phase !== "authorization" ||
-    transaction.callbackUrl !== callbackUrl
+    transaction.callbackUrl !== callbackUrl ||
+    transaction.ownerEmail !== normalizedOwnerEmail(row.ownerEmail) ||
+    transaction.stateHash !== stateHash
   ) {
     return { status: "invalid_state" };
   }
@@ -719,6 +772,7 @@ export async function stageMyAnimeListOAuthCallback(input: {
       {
         ...transaction,
         phase: "callback",
+        stateHash: resumeStateHash,
         ...(authorizationCode ? { authorizationCode } : {}),
         ...(providerError ? { providerError } : {}),
       } satisfies MyAnimeListOAuthTransactionPayload,
@@ -760,6 +814,7 @@ async function saveMyAnimeListOAuthCredential(
   database: D1Database,
   credential: MyAnimeListOAuthCredential,
   actorEmail: string,
+  stateHash: string,
 ): Promise<void> {
   const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
   if (!encryptionKey) throw new Error("Connector encryption is unavailable.");
@@ -770,13 +825,21 @@ async function saveMyAnimeListOAuthCredential(
   );
   const now = new Date().toISOString();
   const ownerEmail = normalizedOwnerEmail(actorEmail);
-  await database.batch([
+  const results = await database.batch([
     database
       .prepare(
         `INSERT INTO connector_credentials (
            provider, ciphertext, iv, key_version, credential_label,
-           scopes_json, expires_at, created_at, updated_at
-         ) VALUES ('myanimelist', ?, ?, ?, ?, '[]', ?, ?, ?)
+           scopes_json, expires_at, generation, created_at, updated_at
+         )
+         SELECT 'myanimelist', ?, ?, ?, ?, '[]', ?, 1, ?, ?
+         WHERE EXISTS (
+           SELECT 1
+           FROM connector_oauth_transactions
+           WHERE state_hash = ? AND provider = 'myanimelist'
+             AND owner_email = ? AND consumed_at IS NOT NULL
+             AND expires_at > ?
+         )
          ON CONFLICT(provider) DO UPDATE SET
            ciphertext = excluded.ciphertext,
            iv = excluded.iv,
@@ -784,6 +847,7 @@ async function saveMyAnimeListOAuthCredential(
            credential_label = excluded.credential_label,
            scopes_json = excluded.scopes_json,
            expires_at = excluded.expires_at,
+           generation = connector_credentials.generation + 1,
            updated_at = excluded.updated_at`,
       )
       .bind(
@@ -794,22 +858,82 @@ async function saveMyAnimeListOAuthCredential(
         credential.accessTokenExpiresAt,
         now,
         now,
+        stateHash,
+        ownerEmail,
+        now,
       ),
     database
       .prepare(
-        `DELETE FROM connector_oauth_transactions
-         WHERE provider = 'myanimelist' AND owner_email = ?`,
+        `DELETE FROM connector_snapshots
+         WHERE provider = 'myanimelist'
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = 'myanimelist' AND ciphertext = ?
+               AND iv = ? AND updated_at = ?
+           )`,
       )
-      .bind(ownerEmail),
+      .bind(encrypted.ciphertext, encrypted.iv, now),
+    database
+      .prepare(
+        `DELETE FROM sync_runs
+         WHERE provider = 'myanimelist'
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = 'myanimelist' AND ciphertext = ?
+               AND iv = ? AND updated_at = ?
+           )`,
+      )
+      .bind(encrypted.ciphertext, encrypted.iv, now),
+    database
+      .prepare(
+        `DELETE FROM audit_log
+         WHERE entity_type = 'connector' AND entity_id = 'myanimelist'
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = 'myanimelist' AND ciphertext = ?
+               AND iv = ? AND updated_at = ?
+           )`,
+      )
+      .bind(encrypted.ciphertext, encrypted.iv, now),
+    database
+      .prepare(
+        `DELETE FROM connector_oauth_transactions
+         WHERE provider = 'myanimelist' AND owner_email = ?
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = 'myanimelist' AND ciphertext = ?
+               AND iv = ? AND updated_at = ?
+           )`,
+      )
+      .bind(ownerEmail, encrypted.ciphertext, encrypted.iv, now),
     database
       .prepare(
         `INSERT INTO audit_log (
            id, actor_email, action, entity_type, entity_id, details_json, created_at
-         ) VALUES (?, ?, 'connector.oauth_connected', 'connector',
-                   'myanimelist', '{}', ?)`,
+         )
+         SELECT ?, ?, 'connector.oauth_connected', 'connector',
+                'myanimelist', '{}', ?
+         WHERE EXISTS (
+           SELECT 1 FROM connector_credentials
+           WHERE provider = 'myanimelist' AND ciphertext = ?
+             AND iv = ? AND updated_at = ?
+         )`,
       )
-      .bind(crypto.randomUUID(), actorEmail, now),
+      .bind(
+        crypto.randomUUID(),
+        actorEmail,
+        now,
+        encrypted.ciphertext,
+        encrypted.iv,
+        now,
+      ),
   ]);
+  if ((results[0]?.meta.changes ?? 0) !== 1) {
+    throw new ConnectorFetchError(
+      "The MyAnimeList authorization was cancelled before it could be saved.",
+      { code: "credential_changed" },
+    );
+  }
 }
 
 export async function completeMyAnimeListOAuth(input: {
@@ -835,7 +959,14 @@ export async function completeMyAnimeListOAuth(input: {
     return { status: "setup_required" };
   }
   if (!row || row.consumedAt) return { status: "invalid_state" };
-  if (Date.parse(row.expiresAt) <= Date.now()) return { status: "expired" };
+  if (Date.parse(row.expiresAt) <= Date.now()) {
+    try {
+      await deleteOAuthTransaction(database, stateHash);
+    } catch {
+      return { status: "setup_required" };
+    }
+    return { status: "expired" };
+  }
   if (
     row.redirectUri !== callbackUrl ||
     normalizedOwnerEmail(row.ownerEmail) !==
@@ -848,7 +979,10 @@ export async function completeMyAnimeListOAuth(input: {
   if (
     !transaction ||
     transaction.phase !== "callback" ||
-    transaction.callbackUrl !== callbackUrl
+    transaction.callbackUrl !== callbackUrl ||
+    transaction.ownerEmail !== normalizedOwnerEmail(row.ownerEmail) ||
+    transaction.ownerEmail !== normalizedOwnerEmail(input.actorEmail) ||
+    transaction.stateHash !== stateHash
   ) {
     return { status: "invalid_state" };
   }
@@ -871,6 +1005,11 @@ export async function completeMyAnimeListOAuth(input: {
   }
 
   if (transaction.providerError) {
+    try {
+      await deleteOAuthTransaction(database, stateHash);
+    } catch {
+      return { status: "setup_required" };
+    }
     return {
       status:
         transaction.providerError === "access_denied"
@@ -879,6 +1018,11 @@ export async function completeMyAnimeListOAuth(input: {
     };
   }
   if (!transaction.authorizationCode) {
+    try {
+      await deleteOAuthTransaction(database, stateHash);
+    } catch {
+      return { status: "setup_required" };
+    }
     return { status: "invalid_state" };
   }
 
@@ -890,13 +1034,43 @@ export async function completeMyAnimeListOAuth(input: {
       authorizationCode: transaction.authorizationCode,
       codeVerifier: transaction.codeVerifier,
     });
+  } catch (error) {
+    try {
+      await deleteOAuthTransaction(database, stateHash);
+    } catch {
+      // The transaction remains unusable because it was already consumed.
+    }
+    if (error instanceof ConnectorFetchError) {
+      if (error.code === "rate_limited") {
+        return { status: "rate_limited" };
+      }
+      if (error.code === "provider_error") {
+        return { status: "provider_unavailable" };
+      }
+    }
+    return { status: "token_exchange_failed" };
+  }
+
+  try {
     await saveMyAnimeListOAuthCredential(
       database,
       credential,
       input.actorEmail,
+      stateHash,
     );
-  } catch {
-    return { status: "token_exchange_failed" };
+  } catch (error) {
+    try {
+      await deleteOAuthTransaction(database, stateHash);
+    } catch {
+      // The transaction remains unusable because it was already consumed.
+    }
+    return {
+      status:
+        error instanceof ConnectorFetchError &&
+        error.code === "credential_changed"
+          ? "invalid_state"
+          : "setup_required",
+    };
   }
 
   return { status: "connected" };
@@ -956,8 +1130,8 @@ export async function saveConnectorCredential(
       .prepare(
         `INSERT INTO connector_credentials (
            provider, ciphertext, iv, key_version, credential_label,
-           scopes_json, expires_at, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)
+           scopes_json, expires_at, generation, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, NULL, 1, ?, ?)
          ON CONFLICT(provider) DO UPDATE SET
            ciphertext = excluded.ciphertext,
            iv = excluded.iv,
@@ -965,6 +1139,7 @@ export async function saveConnectorCredential(
            credential_label = excluded.credential_label,
            scopes_json = excluded.scopes_json,
            expires_at = excluded.expires_at,
+           generation = connector_credentials.generation + 1,
            updated_at = excluded.updated_at`,
       )
       .bind(
@@ -981,6 +1156,18 @@ export async function saveConnectorCredential(
         now,
         now,
       ),
+    database
+      .prepare(`DELETE FROM connector_snapshots WHERE provider = ?`)
+      .bind(provider),
+    database
+      .prepare(`DELETE FROM sync_runs WHERE provider = ?`)
+      .bind(provider),
+    database
+      .prepare(
+        `DELETE FROM audit_log
+         WHERE entity_type = 'connector' AND entity_id = ?`,
+      )
+      .bind(provider),
     database
       .prepare(
         `INSERT INTO audit_log (
@@ -1038,19 +1225,28 @@ export async function deleteConnectorCredential(
   ]);
 }
 
+type LoadedCredential = {
+  credential: ConnectorCredential;
+  generation: number;
+};
+
+type StoredConnectorCredential = EncryptedCredential & {
+  generation: number;
+};
+
 async function loadCredential(
   database: D1Database,
   provider: ConnectorProvider,
-): Promise<ConnectorCredential | null> {
+): Promise<LoadedCredential | null> {
   const row = await database
     .prepare(
-      `SELECT ciphertext, iv, key_version AS keyVersion
+      `SELECT ciphertext, iv, key_version AS keyVersion, generation
        FROM connector_credentials
        WHERE provider = ?
        LIMIT 1`,
     )
     .bind(provider)
-    .first<EncryptedCredential>();
+    .first<StoredConnectorCredential>();
   if (!row) return null;
 
   const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
@@ -1061,16 +1257,23 @@ async function loadCredential(
     );
   }
 
-  return decryptCredential<ConnectorCredential>(
+  const credential = await decryptCredential<ConnectorCredential>(
     row,
     encryptionKey,
     provider,
   );
+  const generation = Number(row.generation);
+  return {
+    credential,
+    generation:
+      Number.isSafeInteger(generation) && generation > 0 ? generation : 1,
+  };
 }
 
 async function persistRefreshedMyAnimeListCredential(
   database: D1Database,
   credential: MyAnimeListOAuthCredential,
+  expectedGeneration: number,
 ): Promise<void> {
   const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
   if (!encryptionKey) {
@@ -1097,7 +1300,7 @@ async function persistRefreshedMyAnimeListCredential(
       `UPDATE connector_credentials
        SET ciphertext = ?, iv = ?, key_version = ?, expires_at = ?,
            credential_label = 'Owner OAuth authorization', updated_at = ?
-       WHERE provider = 'myanimelist'`,
+       WHERE provider = 'myanimelist' AND generation = ?`,
     )
     .bind(
       encrypted.ciphertext,
@@ -1105,12 +1308,13 @@ async function persistRefreshedMyAnimeListCredential(
       encrypted.keyVersion,
       credential.accessTokenExpiresAt,
       new Date().toISOString(),
+      expectedGeneration,
     )
     .run();
   if ((result.meta.changes ?? 0) !== 1) {
     throw new ConnectorFetchError(
       "MyAnimeList authorization could not be saved.",
-      { code: "credential_persistence_failed", retryable: true },
+      { code: "credential_changed" },
     );
   }
 }
@@ -1119,6 +1323,7 @@ async function fetchConnectorSnapshot(
   database: D1Database,
   provider: ConnectorProvider,
   credential: ConnectorCredential,
+  expectedGeneration: number,
 ): Promise<ConnectorFetchResult> {
   switch (provider) {
     case "myanimelist": {
@@ -1128,7 +1333,11 @@ async function fetchConnectorSnapshot(
         shouldRefreshMyAnimeListToken(current)
       ) {
         const refreshed = await refreshMyAnimeListOAuthCredential(current);
-        await persistRefreshedMyAnimeListCredential(database, refreshed);
+        await persistRefreshedMyAnimeListCredential(
+          database,
+          refreshed,
+          expectedGeneration,
+        );
         current = refreshed;
       }
 
@@ -1151,7 +1360,11 @@ async function fetchConnectorSnapshot(
         );
       }
       const refreshed = await refreshMyAnimeListOAuthCredential(current);
-      await persistRefreshedMyAnimeListCredential(database, refreshed);
+      await persistRefreshedMyAnimeListCredential(
+        database,
+        refreshed,
+        expectedGeneration,
+      );
       return fetchMyAnimeListSnapshot(refreshed);
     }
     case "hardcover":
@@ -1269,9 +1482,11 @@ export async function refreshConnector(
     return { status: "already_running", provider };
   }
 
+  let activeCredentialGeneration: number | null = null;
+
   try {
-    const credential = await loadCredential(database, provider);
-    if (!credential) {
+    const loadedCredential = await loadCredential(database, provider);
+    if (!loadedCredential) {
       const finishedAt = new Date().toISOString();
       await database
         .prepare(
@@ -1285,11 +1500,13 @@ export async function refreshConnector(
         .run();
       return { status: "setup_required", provider, reason: "credential" };
     }
+    activeCredentialGeneration = loadedCredential.generation;
 
     const result = await fetchConnectorSnapshot(
       database,
       provider,
-      credential,
+      loadedCredential.credential,
+      loadedCredential.generation,
     );
     const fetchedAt = new Date().toISOString();
     const freshUntil = new Date(
@@ -1309,13 +1526,22 @@ export async function refreshConnector(
     }
     const publicPayloadJson = JSON.stringify(publicPayload);
 
-    await database.batch([
+    const completionResults = await database.batch([
       database
         .prepare(
           `INSERT INTO connector_snapshots (
              id, provider, status, public_payload_json, fetched_at,
              fresh_until, etag, item_count
-           ) VALUES (?, ?, 'ready', ?, ?, ?, ?, ?)`,
+           )
+           SELECT ?, ?, 'ready', ?, ?, ?, ?, ?
+           WHERE EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = ? AND generation = ?
+           )
+             AND EXISTS (
+               SELECT 1 FROM sync_runs
+               WHERE id = ? AND provider = ? AND status = 'running'
+             )`,
         )
         .bind(
           snapshotId,
@@ -1325,11 +1551,23 @@ export async function refreshConnector(
           freshUntil,
           result.etag ?? null,
           result.itemCount,
+          provider,
+          loadedCredential.generation,
+          runId,
+          provider,
         ),
       database
         .prepare(
           `DELETE FROM connector_snapshots
            WHERE provider = ?
+             AND EXISTS (
+               SELECT 1 FROM connector_credentials
+               WHERE provider = ? AND generation = ?
+             )
+             AND EXISTS (
+               SELECT 1 FROM sync_runs
+               WHERE id = ? AND provider = ? AND status = 'running'
+             )
              AND id NOT IN (
                SELECT id
                FROM connector_snapshots
@@ -1338,20 +1576,43 @@ export async function refreshConnector(
                LIMIT 2
              )`,
         )
-        .bind(provider, provider),
+        .bind(
+          provider,
+          provider,
+          loadedCredential.generation,
+          runId,
+          provider,
+          provider,
+        ),
       database
         .prepare(
           `UPDATE sync_runs
            SET status = 'complete', finished_at = ?, item_count = ?,
                http_status = 200, error_code = NULL, error_message = NULL
-           WHERE id = ?`,
+           WHERE id = ? AND provider = ? AND status = 'running'
+             AND EXISTS (
+               SELECT 1 FROM connector_credentials
+               WHERE provider = ? AND generation = ?
+             )`,
         )
-        .bind(fetchedAt, result.itemCount, runId),
+        .bind(
+          fetchedAt,
+          result.itemCount,
+          runId,
+          provider,
+          provider,
+          loadedCredential.generation,
+        ),
       database
         .prepare(
           `INSERT INTO audit_log (
              id, actor_email, action, entity_type, entity_id, details_json, created_at
-           ) VALUES (?, ?, 'connector.sync_completed', 'connector', ?, ?, ?)`,
+           )
+           SELECT ?, ?, 'connector.sync_completed', 'connector', ?, ?, ?
+           WHERE EXISTS (
+             SELECT 1 FROM sync_runs
+             WHERE id = ? AND provider = ? AND status = 'complete'
+           )`,
         )
         .bind(
           crypto.randomUUID(),
@@ -1359,8 +1620,19 @@ export async function refreshConnector(
           provider,
           JSON.stringify({ trigger, itemCount: result.itemCount }),
           fetchedAt,
+          runId,
+          provider,
         ),
     ]);
+    if (
+      (completionResults[0]?.meta.changes ?? 0) !== 1 ||
+      (completionResults[2]?.meta.changes ?? 0) !== 1
+    ) {
+      throw new ConnectorFetchError(
+        "The connector changed before its refresh could be finalized.",
+        { code: "credential_changed", retryable: true },
+      );
+    }
 
     return {
       status: "complete",
@@ -1371,55 +1643,131 @@ export async function refreshConnector(
   } catch (error) {
     const failure = safeError(error);
     const finishedAt = new Date().toISOString();
-    if (provider === "steam" && failure.code === "visibility_unavailable") {
+    if (
+      provider === "steam" &&
+      failure.code === "visibility_unavailable" &&
+      activeCredentialGeneration !== null
+    ) {
       const tombstoneId = crypto.randomUUID();
       try {
-        await database.batch([
+        const withheldResults = await database.batch([
           database
             .prepare(
               `INSERT INTO connector_snapshots (
                  id, provider, status, public_payload_json, fetched_at,
                  fresh_until, etag, item_count
-               ) VALUES (?, ?, 'withheld', '{}', ?, ?, NULL, 0)`,
+               )
+               SELECT ?, ?, 'withheld', '{}', ?, ?, NULL, 0
+               WHERE EXISTS (
+                 SELECT 1 FROM connector_credentials
+                 WHERE provider = ? AND generation = ?
+               )
+                 AND EXISTS (
+                   SELECT 1 FROM sync_runs
+                   WHERE id = ? AND provider = ? AND status = 'running'
+                 )`,
             )
             .bind(
               tombstoneId,
               provider,
               finishedAt,
               finishedAt,
+              provider,
+              activeCredentialGeneration,
+              runId,
+              provider,
             ),
           database
             .prepare(
               `DELETE FROM connector_snapshots
-               WHERE provider = ? AND id <> ?`,
+               WHERE provider = ? AND id <> ?
+                 AND EXISTS (
+                   SELECT 1 FROM connector_credentials
+                   WHERE provider = ? AND generation = ?
+                 )
+                 AND EXISTS (
+                   SELECT 1 FROM sync_runs
+                   WHERE id = ? AND provider = ? AND status = 'running'
+                 )`,
             )
-            .bind(provider, tombstoneId),
+            .bind(
+              provider,
+              tombstoneId,
+              provider,
+              activeCredentialGeneration,
+              runId,
+              provider,
+            ),
           database
             .prepare(
               `UPDATE sync_runs
                SET status = 'withheld', finished_at = ?, item_count = 0,
                    http_status = 200, error_code = 'visibility_unavailable',
                    error_message = 'Steam game details are not publicly visible.'
-               WHERE id = ?`,
+               WHERE id = ? AND provider = ? AND status = 'running'
+                 AND EXISTS (
+                   SELECT 1 FROM connector_credentials
+                   WHERE provider = ? AND generation = ?
+                 )`,
             )
-            .bind(finishedAt, runId),
+            .bind(
+              finishedAt,
+              runId,
+              provider,
+              provider,
+              activeCredentialGeneration,
+            ),
           database
             .prepare(
               `DELETE FROM sync_runs
-               WHERE provider = ? AND id <> ?`,
+               WHERE provider = ? AND id <> ?
+                 AND EXISTS (
+                   SELECT 1 FROM connector_credentials
+                   WHERE provider = ? AND generation = ?
+                 )
+                 AND EXISTS (
+                   SELECT 1 FROM sync_runs
+                   WHERE id = ? AND provider = ? AND status = 'withheld'
+                 )`,
             )
-            .bind(provider, runId),
+            .bind(
+              provider,
+              runId,
+              provider,
+              activeCredentialGeneration,
+              runId,
+              provider,
+            ),
           database
             .prepare(
               `DELETE FROM audit_log
-               WHERE entity_type = 'connector' AND entity_id = ?`,
+               WHERE entity_type = 'connector' AND entity_id = ?
+                 AND EXISTS (
+                   SELECT 1 FROM connector_credentials
+                   WHERE provider = ? AND generation = ?
+                 )
+                 AND EXISTS (
+                   SELECT 1 FROM sync_runs
+                   WHERE id = ? AND provider = ? AND status = 'withheld'
+                 )`,
             )
-            .bind(provider),
+            .bind(
+              provider,
+              provider,
+              activeCredentialGeneration,
+              runId,
+              provider,
+            ),
           database
             .prepare(
               `INSERT INTO audit_log (
                  id, actor_email, action, entity_type, entity_id, details_json, created_at
-               ) VALUES (?, ?, 'connector.visibility_withheld', 'connector', ?, ?, ?)`,
+               )
+               SELECT ?, ?, 'connector.visibility_withheld', 'connector', ?, ?, ?
+               WHERE EXISTS (
+                 SELECT 1 FROM sync_runs
+                 WHERE id = ? AND provider = ? AND status = 'withheld'
+               )`,
             )
             .bind(
               crypto.randomUUID(),
@@ -1427,8 +1775,21 @@ export async function refreshConnector(
               provider,
               JSON.stringify({ trigger }),
               finishedAt,
+              runId,
+              provider,
             ),
         ]);
+        if (
+          (withheldResults[0]?.meta.changes ?? 0) !== 1 ||
+          (withheldResults[2]?.meta.changes ?? 0) !== 1
+        ) {
+          return {
+            status: "failed",
+            provider,
+            code: "credential_changed",
+            retryable: true,
+          };
+        }
         return {
           status: "withheld",
           provider,
@@ -1440,39 +1801,71 @@ export async function refreshConnector(
         // unavailable while applying the privacy tombstone.
       }
     }
-    try {
-      await database.batch([
-        database
-          .prepare(
-            `UPDATE sync_runs
-             SET status = 'failed', finished_at = ?, http_status = ?,
-                 error_code = ?, error_message = ?
-             WHERE id = ?`,
-          )
-          .bind(
-            finishedAt,
-            failure.httpStatus,
-            failure.code,
-            failure.message,
-            runId,
-          ),
-        database
-          .prepare(
-            `INSERT INTO audit_log (
-               id, actor_email, action, entity_type, entity_id, details_json, created_at
-             ) VALUES (?, ?, 'connector.sync_failed', 'connector', ?, ?, ?)`,
-          )
-          .bind(
-            crypto.randomUUID(),
-            requestedByEmail ?? "system",
-            provider,
-            JSON.stringify({ trigger, code: failure.code }),
-            finishedAt,
-          ),
-      ]);
-    } catch {
-      // The caller still receives a safe failure result if D1 becomes
-      // unavailable while recording the provider failure.
+    if (failure.code !== "credential_changed") {
+      try {
+        const generationCondition =
+          activeCredentialGeneration === null
+            ? `provider = ?`
+            : `provider = ? AND generation = ?`;
+        const updateBindings =
+          activeCredentialGeneration === null
+            ? [
+                finishedAt,
+                failure.httpStatus,
+                failure.code,
+                failure.message,
+                runId,
+                provider,
+                provider,
+              ]
+            : [
+                finishedAt,
+                failure.httpStatus,
+                failure.code,
+                failure.message,
+                runId,
+                provider,
+                provider,
+                activeCredentialGeneration,
+              ];
+        await database.batch([
+          database
+            .prepare(
+              `UPDATE sync_runs
+               SET status = 'failed', finished_at = ?, http_status = ?,
+                   error_code = ?, error_message = ?
+               WHERE id = ? AND provider = ? AND status = 'running'
+                 AND EXISTS (
+                   SELECT 1 FROM connector_credentials
+                   WHERE ${generationCondition}
+                 )`,
+            )
+            .bind(...updateBindings),
+          database
+            .prepare(
+              `INSERT INTO audit_log (
+                 id, actor_email, action, entity_type, entity_id, details_json, created_at
+               )
+               SELECT ?, ?, 'connector.sync_failed', 'connector', ?, ?, ?
+               WHERE EXISTS (
+                 SELECT 1 FROM sync_runs
+                 WHERE id = ? AND provider = ? AND status = 'failed'
+               )`,
+            )
+            .bind(
+              crypto.randomUUID(),
+              requestedByEmail ?? "system",
+              provider,
+              JSON.stringify({ trigger, code: failure.code }),
+              finishedAt,
+              runId,
+              provider,
+            ),
+        ]);
+      } catch {
+        // The caller still receives a safe failure result if D1 becomes
+        // unavailable while recording the provider failure.
+      }
     }
 
     if (failure.code === "encryption_key_missing") {

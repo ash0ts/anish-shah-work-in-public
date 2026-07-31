@@ -430,10 +430,13 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
     path.join(PROJECT_ROOT, "components/PersonalStreams.tsx"),
     "utf8",
   );
-  assert.match(source, /active === "move" && !stravaEmbed/);
   assert.match(
     source,
-    /if \(!embed\)\s*\{[\s\S]{0,300}?className=\{styles\.empty\}/,
+    /active === "move" && strava\.status !== "ready"/,
+  );
+  assert.match(
+    source,
+    /if \(state\.status !== "ready"\) return <StreamEmpty state=\{state\} \/>;/,
     "An unpublished Strava stream must render the compact empty row",
   );
 });

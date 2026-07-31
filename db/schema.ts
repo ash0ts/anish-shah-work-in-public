@@ -79,6 +79,7 @@ export const connectorCredentials = sqliteTable("connector_credentials", {
   credentialLabel: text("credential_label").notNull().default("Owner credential"),
   scopesJson: text("scopes_json").notNull().default("[]"),
   expiresAt: text("expires_at"),
+  generation: integer("generation").notNull().default(1),
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
 });

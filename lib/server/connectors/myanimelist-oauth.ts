@@ -35,6 +35,8 @@ export type MyAnimeListOAuthTransactionPayload = MyAnimeListOAuthClient & {
   phase: "authorization" | "callback";
   codeVerifier: string;
   callbackUrl: string;
+  ownerEmail: string;
+  stateHash: string;
   authorizationCode?: string;
   providerError?: string;
 };
@@ -56,6 +58,20 @@ function randomBase64Url(byteLength: number): string {
 
 function hasControlCharacters(value: string): boolean {
   return /[\u0000-\u001f\u007f]/.test(value);
+}
+
+function normalizeOAuthToken(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const candidate = value.trim();
+  if (
+    !candidate ||
+    candidate.length > 8192 ||
+    hasControlCharacters(candidate) ||
+    /\s/.test(candidate)
+  ) {
+    return "";
+  }
+  return candidate;
 }
 
 function normalizeClientValue(
@@ -271,8 +287,7 @@ function requiredTokenFields(body: TokenResponse): {
   accessToken: string;
   expiresIn: number;
 } {
-  const accessToken =
-    typeof body.access_token === "string" ? body.access_token.trim() : "";
+  const accessToken = normalizeOAuthToken(body.access_token);
   const expiresIn =
     typeof body.expires_in === "number"
       ? body.expires_in
@@ -312,9 +327,8 @@ export async function exchangeMyAnimeListAuthorizationCode(input: {
     "authorization_code",
   );
   const { accessToken, expiresIn } = requiredTokenFields(body);
-  const refreshToken =
-    typeof body.refresh_token === "string" ? body.refresh_token.trim() : "";
-  if (!refreshToken || refreshToken.length > 8192) {
+  const refreshToken = normalizeOAuthToken(body.refresh_token);
+  if (!refreshToken) {
     throw new ConnectorFetchError(
       "MyAnimeList did not return a renewable authorization.",
       { code: "oauth_token_response_invalid" },
@@ -371,9 +385,15 @@ export async function refreshMyAnimeListOAuthCredential(
   );
   const { accessToken, expiresIn } = requiredTokenFields(body);
   const rotatedRefreshToken =
-    typeof body.refresh_token === "string" && body.refresh_token.trim()
-      ? body.refresh_token.trim()
-      : credential.refreshToken;
+    body.refresh_token === undefined
+      ? credential.refreshToken
+      : normalizeOAuthToken(body.refresh_token);
+  if (!rotatedRefreshToken) {
+    throw new ConnectorFetchError(
+      "MyAnimeList returned an unexpected authorization response.",
+      { code: "oauth_token_response_invalid" },
+    );
+  }
 
   return {
     ...credential,

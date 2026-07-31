@@ -7,7 +7,7 @@ export async function GET() {
   const authorization = await authorizeOwnerApi();
   if (!authorization.ok) return authorization.response;
 
-  const overview = await getStudioOverview();
+  const overview = await getStudioOverview(authorization.user.email);
   return Response.json(overview, {
     headers: { "cache-control": "private, no-store" },
   });

@@ -1,181 +1,229 @@
 # Play connections: owner setup
 
-The Play page publishes sanitized snapshots for MyAnimeList, Hardcover, and
-Steam. Strava is different: it stays on Strava and loads its official embed
-only after a visitor chooses to do so.
+The protected Studio connects four personal streams without putting credentials
+in source code, deployment artifacts, public APIs, or browser storage.
 
-## 1. Prepare and test the protected Studio
+## Credential map
 
-Local and production Studio are deliberately separate environments:
+| Stream | Provider | Obtain from provider | Enter in Studio | Verification |
+| --- | --- | --- | --- | --- |
+| Watch | MyAnimeList | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current** |
+| Read | Hardcover | Personal API token | Token, with or without `Bearer` | **Refresh now → Current** |
+| Play | Steam | Web API key and 17-digit SteamID64 | Both values | **Refresh now → Current** |
+| Move | Strava | Official public embed | URL or complete iframe snippet | Save, then consent-load it on Play |
+
+MyAnimeList is the important distinction: its developer portal correctly gives
+you a **client ID** and **client secret**. Those identify the application.
+Studio sends you to MyAnimeList for owner approval and exchanges the returned
+authorization code for access and refresh tokens. Do not paste the client
+secret into a token field or try to create an access token manually.
+
+For every API-backed stream, the verification sequence is **Connect or
+authorize → Refresh now → confirm Current**. Saving a credential alone does not
+prove that the provider accepted it.
+
+## Local Studio and production Studio
+
+Local and production are isolated on purpose:
 
 | | Local Studio | Production Studio |
 | --- | --- | --- |
-| Identity | Development-only localhost owner | Sign in with ChatGPT + owner allowlist |
-| Database | Project-local D1 under `.wrangler/state` | Sites-managed D1 |
-| Encryption | Disposable local-only key | Existing production key; never rotate during setup |
-| Provider credentials | Enter for testing only | Re-enter over the deployed HTTPS Studio |
-| Propagation | Nothing is copied automatically | A refresh publishes a sanitized production snapshot |
+| Address | `http://localhost:3000/studio` | [Private HTTPS Studio](https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site/studio) |
+| Identity | Loopback-only development owner | Sign in with ChatGPT + exact owner allowlist |
+| Database | Project-local D1 in `.wrangler/state` | Sites-managed D1 |
+| Encryption | Local-only key | Existing production key; do not rotate |
+| Credentials | Test credentials or a separate local registration | Re-enter through HTTPS Studio |
+| Propagation | Nothing copies to production | Refresh publishes a sanitized snapshot |
 
-### Test locally
+### Start the local Studio
 
-1. In the project directory, install dependencies and create an ignored local
-   environment file if one does not already exist:
+Run:
 
-   ```bash
-   npm install
-   test -f .env.local || cp .env.example .env.local
-   openssl rand -base64 32
+```bash
+cd "/Users/ashah/Documents/New project/anish-site"
+npm install
+test -f .env.local || cp .env.example .env.local
+openssl rand -base64 32
+```
+
+Open `.env.local` and set:
+
+```dotenv
+OWNER_EMAILS=your-owner-email@example.com
+LOCAL_OWNER_EMAIL=your-owner-email@example.com
+CONNECTOR_ENCRYPTION_KEY=<the newly generated local-only value>
+STEAM_DATA_STORAGE_COUNTRIES=United States
+SITE_URL=http://localhost:3000
+```
+
+`LOCAL_OWNER_EMAIL` must exactly match an address in `OWNER_EMAILS`. Never add
+`LOCAL_OWNER_EMAIL` to production, and never replace the production encryption
+key with this local key.
+
+Start the strict localhost server:
+
+```bash
+npm run dev:studio
+```
+
+Open [http://localhost:3000/studio](http://localhost:3000/studio). Stop another
+process already using port 3000 rather than accepting a different port:
+
+```bash
+lsof -nP -iTCP:3000 -sTCP:LISTEN
+```
+
+The page must say **Local sandbox** before you enter anything. Local provider
+calls reach the real provider, but credentials, snapshots, and audit history
+stay in the local D1 sandbox.
+
+### Promote safely
+
+1. Validate locally with `npm run lint && npm test`.
+2. Deploy code, migrations, and intentional non-secret settings.
+3. Preserve the existing production `CONNECTOR_ENCRYPTION_KEY`,
+   `OWNER_EMAILS`, D1 binding, site URL, and private access policy.
+4. Set production `STEAM_DATA_STORAGE_COUNTRIES=United States`. Never set
+   `LOCAL_OWNER_EMAIL`.
+5. Open the production HTTPS Studio and enter each credential again.
+6. Refresh MyAnimeList, Hardcover, and Steam; confirm **Current** and inspect
+   `/play`. Save Strava, then consent-load it on `/play`.
+
+Code propagates. Credentials do not. Never copy `.env.local`,
+`.wrangler/state`, encrypted D1 rows, or a local encryption key to production.
+
+## MyAnimeList
+
+Use separate MyAnimeList API clients for local and production.
+
+### Local client
+
+1. Open the [MyAnimeList developer portal](https://myanimelist.net/apiconfig)
+   and create or edit the local application.
+2. Register this exact callback:
+
+   ```text
+   http://localhost:3000/api/connectors/myanimelist/oauth/callback
    ```
 
-2. Put the generated value in `.env.local` as
-   `CONNECTOR_ENCRYPTION_KEY`. Configure the remaining local gates:
+3. In local Studio, copy the callback shown in the Watch panel and confirm it
+   matches character for character.
+4. Enter the client ID and client secret, then select **Authorize with
+   MyAnimeList**.
+5. Sign in to the owner MyAnimeList account and approve access. MyAnimeList
+   returns to Studio; no token should appear in the URL or interface.
+6. Select **Refresh now**, confirm **Current**, and inspect Watch on the local
+   Play page.
 
-   ```dotenv
-   OWNER_EMAILS=your-owner-email@example.com
-   LOCAL_OWNER_EMAIL=your-owner-email@example.com
-   CONNECTOR_ENCRYPTION_KEY=<new local-only key>
-   STEAM_DATA_STORAGE_COUNTRIES=United States
-   SITE_URL=http://localhost:3000
+### Production client
+
+1. Create a separate production application in the same developer portal.
+2. Register this exact callback:
+
+   ```text
+   https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site/api/connectors/myanimelist/oauth/callback
    ```
 
-   Use the actual Steam storage country. `LOCAL_OWNER_EMAIL` must exactly match
-   an address in `OWNER_EMAILS`. It is accepted only during development from
-   `localhost`, `127.0.0.1`, or `[::1]`; never add it to Sites.
-3. Create or update the isolated local database, then start the site:
+3. Enter that application’s client ID and client secret only in the production
+   HTTPS Studio and complete approval.
+4. Select **Refresh now** and confirm **Current**.
 
-   ```bash
-   npm run dev:studio
-   ```
+Studio encrypts the client secret, access token, and refresh token. It refreshes
+access shortly before expiry, persists rotated refresh tokens, and retries once
+after an authorization failure. If MyAnimeList revokes access or rejects the
+refresh token, Studio reports **Reauthorization required**:
 
-   `dev:studio` applies pending migrations, then starts the site. Its migration
-   wrapper always includes Wrangler’s `--local` flag, uses a placeholder
-   database identity, and stores state under `.wrangler/state`. It cannot
-   mutate the Sites production database.
-4. Open `/studio` on the exact localhost URL printed by the development
-   server. The page must show **Local sandbox** before you enter a credential.
-5. For each provider, use **Connect → Refresh now → confirm Current**. These
-   calls reach the real provider, but the encrypted credential and resulting
-   snapshot remain in the local D1 sandbox.
+- Choose **Authorize again** to reuse the stored application registration.
+- Choose **Replace app credentials** only if the client ID or secret changed.
+- If authorization was denied or the ten-minute attempt expired, start it
+  again from Studio.
+- If callback verification fails, keep the same Studio tab, verify the exact
+  callback registration, and start again.
 
-Saving or replacing a credential does not publish a snapshot by itself.
+The public Watch snapshot contains only bounded, sanitized list summaries and a
+profile link derived from the authorized MyAnimeList identity.
 
-### Promote a tested connection safely
+## Hardcover
 
-Local credentials and D1 rows never propagate—and should never be copied—to
-production. Promote the site in this order:
+1. Read the [official Hardcover API setup guide](https://docs.hardcover.app/api/getting-started/)
+   and copy the token from [Hardcover account → API](https://hardcover.app/account/api).
+2. In the Read panel, paste either the bare token or `Bearer <token>`.
+3. Select **Connect**, then **Refresh now**.
+4. Confirm **Current** and inspect Read on `/play`.
 
-1. Run `npm test`, then deploy the validated code and intended non-secret
-   configuration through Sites.
-2. Keep the existing production `CONNECTOR_ENCRYPTION_KEY`. Do not replace it
-   with the local key; doing so would make existing production credentials
-   unreadable.
-3. Configure production gates such as `OWNER_EMAILS`,
-   `STEAM_DATA_STORAGE_COUNTRIES`, profile URLs, and the Strava embed through
-   Sites. Do not configure `LOCAL_OWNER_EMAIL` in production.
-4. Open the
-   [production HTTPS Studio](https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site/studio)
-   and sign in with the allowlisted ChatGPT account.
-5. Paste the provider credential again into the production connector card,
-   choose **Connect** or **Replace credential**, then choose **Refresh now**.
-   Confirm **Current** and inspect `/play`.
+The server normalizes the authorization value and derives the public profile
+link from the authenticated identity. Hardcover documents that tokens expire
+after one year, reset on January 1, and may be reset without notice while the
+API is in beta; its current limit is 60 requests per minute. If Hardcover
+returns 401, copy a current token, choose **Replace credential**, and refresh.
+If rate-limited, wait before retrying—the last successful snapshot remains
+live.
 
-This split is the security boundary: code and allowlisted configuration deploy;
-secrets are entered directly into the environment that will store them.
+## Steam
 
-## 2. MyAnimeList
+1. Read the [Steam Web API overview](https://partner.steamgames.com/doc/webapi_overview).
+2. Set both **Profile** and **Game details** to Public in Steam privacy
+   settings.
+3. Register a standard owner Web API key at
+   [Steam Web API key registration](https://steamcommunity.com/dev/apikey).
+4. Locate the owner’s 17-digit SteamID64.
+5. Confirm the site truthfully declares
+   `STEAM_DATA_STORAGE_COUNTRIES=United States`.
+6. Enter the API key and SteamID64 in the Play panel, select **Connect**, then
+   **Refresh now**.
+7. Confirm **Current** and inspect Play on `/play`.
 
-1. Create or open an API client in the
-   [MyAnimeList developer portal](https://myanimelist.net/apiconfig).
-2. Complete MyAnimeList’s OAuth authorization-code flow outside this site and
-   obtain the owner access token. This project intentionally has no public
-   OAuth callback and does not store a refresh token.
-3. In Studio, paste the access token into MyAnimeList and select **Connect**.
-   A bare token or a value prefixed with `Bearer` is accepted.
-4. Select **Refresh now**. Optionally set
-   `MYANIMELIST_PROFILE_URL=https://myanimelist.net/profile/<owner>` so the
-   public snapshot links to the owner profile.
-5. When Studio reports an expired credential, obtain a current access token,
-   choose **Replace credential**, and refresh again. Renewal is manual.
+The public snapshot contains rounded totals and no more than eight top-played
+and eight recent games. It excludes exact minutes, presence, friends, bans,
+achievements, inventories, real name, location, artwork, and raw provider
+payloads. If Game details becomes private, a refresh immediately unpublishes
+the Steam stream. Retry 429 responses later rather than repeatedly refreshing.
 
-The public snapshot can include up to the 500 most recently updated list
-entries, reduced to watch-state counts, genres, eras, and a short recent list.
+## Strava
 
-## 3. Hardcover
+Strava uses neither an API credential nor a custom API visualization.
 
-1. Copy the owner token from
-   [Hardcover account → API](https://hardcover.app/account/api).
-2. Paste the token into Studio with or without the `Bearer` prefix. The server
-   normalizes it to `Bearer <token>` before encryption and before every
-   provider request.
-3. Select **Connect**, then **Refresh now**. Optionally set
-   `HARDCOVER_PROFILE_URL=https://hardcover.app/@<owner>`.
-4. If Hardcover returns 401, copy a current token, choose
-   **Replace credential**, and refresh again.
+1. Follow Strava’s [official embed instructions](https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed).
+2. Copy one current public activity, route, or activity-feed embed.
+3. In the Move panel, paste either:
+   - its `https://strava-embeds.com/...` source URL, or
+   - the complete single `<iframe ...>` snippet, including a snippet that spans
+     multiple lines.
+4. Select **Save Strava embed**.
+5. Open Move on `/play`, choose to load third-party content, and inspect the
+   result.
 
-The public snapshot uses at most the 250 most recently updated books and
-publishes reading-state counts plus a short recent list. Raw provider payloads
-and credentials never enter the public response.
+Studio extracts and stores only the source URL. It rejects non-HTTPS or legacy
+hosts, URL credentials, explicit ports, fragments, scripts, and multi-element
+snippets. Replacing the embed does not require a deployment. Visitors still
+must consent before any Strava request or iframe loads.
 
-## 4. Steam
+## Routes, retention, and recovery
 
-1. Read the [Steam Web API documentation](https://steamcommunity.com/dev) and
-   create an owner key at [Register a Steam Web API key](https://steamcommunity.com/dev/apikey).
-2. Find the owner’s 17-digit SteamID64. Steam’s
-   [account-link help](https://help.steampowered.com/en/faqs/view/2816-BE67-5B69-0FEC)
-   explains where account details are shown.
-3. In Steam privacy settings, set both the profile and **Game details** to
-   Public. The key is 32 hexadecimal characters; SteamID64 is 17 digits.
-4. Confirm `STEAM_DATA_STORAGE_COUNTRIES` is truthful, then enter both fields
-   in Studio, select **Connect**, and select **Refresh now**.
-
-Steam publishes rounded library totals and at most eight top-played and eight
-recent games. It excludes exact minutes, presence, friends, bans,
-achievements, inventories, real name, location, artwork, and the raw payload.
-Only the latest two sanitized snapshots are retained, and a public snapshot
-expires after 72 hours. If Game details becomes private, refresh immediately
-unpublishes the Steam stream. Disconnecting Steam deletes its encrypted
-credential, snapshots, and Steam-specific sync history.
-
-## 5. Strava
-
-Strava has no Studio credential and this site does not ingest Strava API data.
-
-1. Follow Strava’s
-   [official activity and route embed guide](https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed).
-2. Copy the current `https://strava-embeds.com/...` iframe source into
-   `NEXT_PUBLIC_STRAVA_EMBED_URL`. Other hosts and legacy embed formats are
-   rejected.
-3. Redeploy. The Play page still withholds all third-party content until the
-   visitor selects Move and chooses **Load public Strava activity**.
-
-## API and retention reference
-
-| Purpose | Route | Owner request body |
+| Purpose | Route | Owner request |
 | --- | --- | --- |
-| Read a public snapshot | `GET /api/connectors/[provider]` | None |
-| Save or replace MyAnimeList/Hardcover | `POST /api/connectors/[provider]/credentials` | `{ "secret": "…" }` |
-| Save or replace Steam | `POST /api/connectors/steam/credentials` | `{ "apiKey": "…", "steamId64": "…" }` |
-| Refresh now | `POST /api/connectors/[provider]/refresh` | None |
-| Disconnect | `DELETE /api/connectors/[provider]/credentials` | None |
+| Start MyAnimeList OAuth | `POST /api/connectors/myanimelist/oauth/start` | `{ "clientId": "…", "clientSecret": "…" }`, or `{}` to reauthorize |
+| Finish MyAnimeList OAuth | `GET /api/connectors/myanimelist/oauth/callback` | Provider redirect only |
+| Save/replace Hardcover | `POST /api/connectors/hardcover/credentials` | `{ "secret": "…" }` |
+| Save/replace Steam | `POST /api/connectors/steam/credentials` | `{ "apiKey": "…", "steamId64": "…" }` |
+| Refresh an API stream | `POST /api/connectors/[provider]/refresh` | No body |
+| Read a public API stream | `GET /api/connectors/[provider]` | No owner credential |
+| Save/replace Strava | `PUT /api/connectors/strava/config` | `{ "embed": "URL or iframe" }` |
+| Read public Strava config | `GET /api/connectors/strava` | No owner credential |
+| Disconnect API stream | `DELETE /api/connectors/[provider]/credentials` | No body |
+| Disconnect Strava | `DELETE /api/connectors/strava/config` | No body |
 
-Every write route requires Sign in with ChatGPT, the exact owner allowlist,
-and a same-origin request. Credentials use AES-256-GCM with provider-bound
-associated data. MyAnimeList and Hardcover preserve the last successful public
-snapshot if a refresh fails or the credential is removed. Steam uses the
-stricter 72-hour, visibility, and deletion rules above.
+Every write requires same-origin access, Sign in with ChatGPT or the constrained
+local-development owner, and an exact email allowlist match. API credentials
+use AES-256-GCM encryption with provider-bound associated data. OAuth state is
+single-use, owner-bound, encrypted, and expires after ten minutes.
 
-Public requests can trigger a stale refresh, but never more than once per
-12-hour refresh window. Provider failure does not replace a known-good
-snapshot.
+A transient provider failure preserves the latest known-good eligible snapshot.
+Disconnect is different: it deletes that provider’s credentials, snapshots,
+pending OAuth state, sync history, and provider-specific audit history, then
+unpublishes the stream.
 
-## Rotation and recovery
-
-- Rotate `CONNECTOR_ENCRYPTION_KEY` only with a planned credential reset:
-  existing ciphertext cannot be decrypted with a new key. Replace every
-  provider credential after rotation.
-- Use **Replace credential** rather than disconnecting when only a token or key
-  changed.
-- For rate limits, wait and retry; repeated manual refreshes do not bypass
-  provider limits.
-- Never paste credentials into source files, D1 consoles, screenshots, issue
-  trackers, or browser-visible environment variables.
+Do not paste credentials into source files, deployment variables intended for
+browser code, D1 consoles, screenshots, issues, or chat. Rotate
+`CONNECTOR_ENCRYPTION_KEY` only as part of a planned full credential reset;
+existing ciphertext cannot be decrypted with a different key.

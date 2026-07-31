@@ -187,6 +187,22 @@ test("connector repository validates public payloads before D1 writes and reads"
   assert.match(repository, /reason: "invalid_snapshot"/);
 });
 
+test("public connector responses are never reusable after disconnect", async () => {
+  const route = await readFile(
+    new URL(
+      "../app/api/connectors/[provider]/route.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.equal(
+    (route.match(/"cache-control": "no-store"/g) ?? []).length,
+    3,
+  );
+  assert.doesNotMatch(route, /public,\s*max-age|stale-while-revalidate/i);
+});
+
 test("provider normalizers do not request or publish remote cover URLs", async () => {
   const [myAnimeList, hardcover] = await Promise.all([
     readFile(
@@ -217,19 +233,21 @@ test("Play fetches a personal-data provider only after its stream is active", as
   assert.equal(
     (source.match(/requestedProviders\.current\.delete\(provider\)/g) ?? [])
       .length,
-    3,
+    4,
     "Each personal-data provider must become retryable after an unavailable response",
   );
   assert.match(source, /active === "watch"\s*\?\s*"myanimelist"/);
   assert.match(source, /active === "read"\s*\?\s*"hardcover"/);
   assert.match(source, /active === "play"\s*\?\s*"steam"/);
-  assert.match(source, /:\s*null;/);
+  assert.match(source, /:\s*"strava";/);
   assert.doesNotMatch(
     source,
     /loadConnector<(?:MalPayload|HardcoverPayload|SteamPayload)>\("(?:myanimelist|hardcover|steam)"\)/,
   );
   assert.match(source, /show=\{showStrava\}/);
   assert.match(source, /onShow=\{\(\) => setShowStrava\(true\)\}/);
+  assert.doesNotMatch(source, /NEXT_PUBLIC_STRAVA_EMBED_URL/);
+  assert.match(source, /src=\{state\.payload\.embedUrl\}/);
 });
 
 test("Studio documents setup, replacement, and official provider sources", async () => {
@@ -246,32 +264,48 @@ test("Studio documents setup, replacement, and official provider sources", async
     readFile(new URL("../docs/play-connections.md", import.meta.url), "utf8"),
   ]);
 
+  const setupSurface = `${page}\n${controls}\n${guide}`;
   for (const officialUrl of [
     "https://myanimelist.net/apiconfig",
     "https://hardcover.app/account/api",
+    "https://docs.hardcover.app/api/getting-started/",
+    "https://partner.steamgames.com/doc/webapi_overview",
     "https://steamcommunity.com/dev/apikey",
-    "https://help.steampowered.com/en/faqs/view/2816-BE67-5B69-0FEC",
     "https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed",
   ]) {
-    assert.match(page, new RegExp(officialUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(
+      setupSurface,
+      new RegExp(officialUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    );
   }
-  assert.match(page, /Connect or replace the\s+credential, run Refresh now/);
   assert.match(controls, /Replace credential/);
   assert.match(controls, /credential_expired/);
   assert.match(controls, /rate_limited/);
+  assert.match(controls, /provider_unavailable/);
   assert.match(controls, /Bearer optional/);
+  assert.match(controls, /Cancel pending authorization/);
+  assert.match(controls, /canReuseOAuthClient/);
+  assert.match(controls, /\/api\/connectors\/myanimelist\/oauth\/start/);
+  assert.match(
+    controls,
+    /\/api\/connectors\/myanimelist\/oauth\/callback/,
+  );
+  assert.match(controls, /\/api\/connectors\/strava\/config/);
+  assert.match(controls, /Studio stores the resulting tokens/);
   assert.match(page, /Local sandbox · isolated data/);
   assert.match(page, /Changes here stay on this machine/);
   assert.match(page, /isLocalSandbox=\{isLocalStudio\}/);
-  assert.match(controls, /Nothing here has been copied to production/);
+  assert.match(controls, /has not been copied to production/);
   assert.match(editorial, /Create local snapshot/);
   assert.match(editorial, /production is unchanged/);
-  assert.match(guide, /Connect → Refresh now → confirm Current/);
-  assert.match(guide, /Local credentials and D1 rows never propagate/);
-  assert.match(
-    guide,
-    /Paste the provider credential again into the production connector card/,
-  );
-  assert.match(guide, /Renewal is manual/);
+  assert.match(guide, /client ID.*client secret/is);
+  assert.match(guide, /Refresh now.*Current/is);
+  assert.match(guide, /Code propagates\. Credentials do not\./);
+  assert.match(guide, /Re-enter through HTTPS Studio/);
+  assert.match(guide, /Reauthorization required/);
+  assert.match(guide, /one year/i);
+  assert.match(guide, /January 1/i);
+  assert.match(guide, /npm run lint && npm test/);
+  assert.doesNotMatch(guide, /Renewal is manual/);
   assert.match(guide, /strava-embeds\.com/);
 });

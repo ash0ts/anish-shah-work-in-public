@@ -8,7 +8,10 @@ import { getStudioOverview } from "@/lib/server/connectors";
 import { listEditorialRecords } from "@/lib/server/editorial";
 import { ownerAuthorizationForEmail } from "@/lib/server/owner-auth";
 import { ensureSanitizedPublicRecords } from "@/lib/server/public-record-seed";
-import { ConnectorControls } from "./ConnectorControls";
+import {
+  ConnectorControls,
+  StravaConnectorControls,
+} from "./ConnectorControls";
 import { EditorialRecords } from "./EditorialRecords";
 import styles from "./studio.module.css";
 
@@ -90,7 +93,7 @@ export default async function StudioPage() {
     // The overview below converts missing bindings/migrations into a setup
     // state instead of failing the protected page.
   }
-  const overview = await getStudioOverview();
+  const overview = await getStudioOverview(user.email);
   const connectors = overview.connectors;
   const initialEditorialRecords =
     overview.status === "ready"
@@ -173,59 +176,6 @@ export default async function StudioPage() {
         </p>
       </header>
 
-      {overview.status === "database_setup_required" ? (
-        <SetupNotice title="The site database is not ready.">
-          {overview.reason === "binding_unavailable"
-            ? isLocalStudio
-              ? "Restart with npm run dev:studio so the project-local DB binding and migrations are available."
-              : "Provision the logical DB binding through Sites."
-            : overview.reason === "schema_unavailable"
-              ? isLocalStudio
-                ? "Stop the server, run npm run db:local:migrate, then restart the local Studio."
-                : "Apply the checked-in D1 migration before using Studio."
-              : "The database could not be read. Existing public pages remain independent of this control surface."}
-        </SetupNotice>
-      ) : (
-        <section className={styles.section} aria-labelledby="editorial-title">
-            <div className={styles.sectionIntro}>
-              <p className={styles.eyebrow}>Editorial state</p>
-              <h2 id="editorial-title">The publication boundary</h2>
-              <p>
-                Only sanitized records belong here. Exact internal source data
-                never enters the deployed database.
-              </p>
-            </div>
-            <div className={styles.metricGrid}>
-              {["public", "review_required", "private", "excluded"].map(
-                (state) => (
-                  <article className={styles.metricCard} key={state}>
-                    <strong>
-                      {(overview.publicationCounts[state] ?? 0).toLocaleString()}
-                    </strong>
-                    <span>{publicationLabels[state]}</span>
-                  </article>
-                ),
-              )}
-            </div>
-            <div className={styles.releaseLine}>
-              <span>
-                {isLocalStudio ? "Latest local snapshot" : "Latest publication"}
-              </span>
-              <strong>
-                {overview.latestPublication
-                  ? `${overview.latestPublication.recordCount.toLocaleString()} records · ${overview.latestPublication.contentHash.slice(0, 12)}`
-                  : "No publication snapshot yet"}
-              </strong>
-            </div>
-            {initialEditorialRecords ? (
-              <EditorialRecords
-                initial={initialEditorialRecords}
-                isLocalSandbox={isLocalStudio}
-              />
-            ) : null}
-          </section>
-      )}
-
       <section className={styles.section} aria-labelledby="connectors-title">
         <div className={styles.sectionIntro}>
           <p className={styles.eyebrow}>Connector health</p>
@@ -238,101 +188,6 @@ export default async function StudioPage() {
             {isLocalStudio
               ? "Each refresh writes a sanitized snapshot only to local D1. If a provider fails, the last successful local snapshot remains available."
               : "Each refresh writes a new public-only snapshot. If a provider fails, the last successful snapshot remains available."}
-          </p>
-        </div>
-        <div className={styles.setupGuide} aria-labelledby="connector-setup-title">
-          <div className={styles.setupGuideIntro}>
-            <p className={styles.eyebrow}>Owner setup</p>
-            <h3 id="connector-setup-title">
-              {isLocalStudio
-                ? "Test locally. Connect production deliberately."
-                : "Connect once. Publish deliberately."}
-            </h3>
-          </div>
-          <ol className={styles.setupSteps}>
-            <li>
-              <span>01</span>
-              <p>
-                <strong>
-                  {isLocalStudio ? "Validate locally." : "Open the site gates."}
-                </strong>{" "}
-                {isLocalStudio
-                  ? "Connect a provider, refresh it, and inspect its local Play view."
-                  : "Apply the D1 migrations, allowlist the exact owner email, add the encryption key, and disclose Steam storage countries."}
-              </p>
-            </li>
-            <li>
-              <span>02</span>
-              <p>
-                <strong>
-                  {isLocalStudio
-                    ? "Deploy without secrets."
-                    : "Get the owner credential."}
-                </strong>{" "}
-                {isLocalStudio
-                  ? "Ship code and non-secret settings. Local D1 rows and environment files stay here."
-                  : "Use only the official provider pages below, then paste it into the matching card."}
-              </p>
-            </li>
-            <li>
-              <span>03</span>
-              <p>
-                <strong>
-                  {isLocalStudio
-                    ? "Connect production."
-                    : "Publish the snapshot."}
-                </strong>{" "}
-                {isLocalStudio
-                  ? "Open the deployed HTTPS Studio, re-enter the credential, refresh, and confirm Current."
-                  : "Connect or replace the credential, run Refresh now, and confirm the card reports Current."}
-              </p>
-            </li>
-          </ol>
-          <nav
-            className={styles.providerLinks}
-            aria-label="Official connector setup resources"
-          >
-            <a
-              href="https://myanimelist.net/apiconfig"
-              rel="noreferrer"
-              target="_blank"
-            >
-              MyAnimeList developer portal
-            </a>
-            <a
-              href="https://hardcover.app/account/api"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Hardcover API token
-            </a>
-            <a
-              href="https://steamcommunity.com/dev/apikey"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Steam API key
-            </a>
-            <a
-              href="https://help.steampowered.com/en/faqs/view/2816-BE67-5B69-0FEC"
-              rel="noreferrer"
-              target="_blank"
-            >
-              SteamID help
-            </a>
-            <a
-              href="https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Strava embed guide
-            </a>
-          </nav>
-          <p className={styles.setupFootnote}>
-            MyAnimeList access tokens are renewed manually through Replace
-            credential. Strava has no Studio credential: publish its official{" "}
-            <code>strava-embeds.com</code> URL through the deployment
-            environment, and visitors still choose whether to load it.
           </p>
         </div>
         {!overview.encryptionConfigured ? (
@@ -378,8 +233,64 @@ export default async function StudioPage() {
               key={connector.provider}
             />
           ))}
+          <StravaConnectorControls
+            environment={isLocalStudio ? "local" : "hosted"}
+          />
         </div>
       </section>
+
+      {overview.status === "database_setup_required" ? (
+        <SetupNotice title="The site database is not ready.">
+          {overview.reason === "binding_unavailable"
+            ? isLocalStudio
+              ? "Restart with npm run dev:studio so the project-local DB binding and migrations are available."
+              : "Provision the logical DB binding through Sites."
+            : overview.reason === "schema_unavailable"
+              ? isLocalStudio
+                ? "Stop the server, run npm run db:local:migrate, then restart the local Studio."
+                : "Apply the checked-in D1 migration before using Studio."
+              : "The database could not be read. Existing public pages remain independent of this control surface."}
+        </SetupNotice>
+      ) : (
+        <section className={styles.section} aria-labelledby="editorial-title">
+          <div className={styles.sectionIntro}>
+            <p className={styles.eyebrow}>Editorial state</p>
+            <h2 id="editorial-title">The publication boundary</h2>
+            <p>
+              Only sanitized records belong here. Exact internal source data
+              never enters the deployed database.
+            </p>
+          </div>
+          <div className={styles.metricGrid}>
+            {["public", "review_required", "private", "excluded"].map(
+              (state) => (
+                <article className={styles.metricCard} key={state}>
+                  <strong>
+                    {(overview.publicationCounts[state] ?? 0).toLocaleString()}
+                  </strong>
+                  <span>{publicationLabels[state]}</span>
+                </article>
+              ),
+            )}
+          </div>
+          <div className={styles.releaseLine}>
+            <span>
+              {isLocalStudio ? "Latest local snapshot" : "Latest publication"}
+            </span>
+            <strong>
+              {overview.latestPublication
+                ? `${overview.latestPublication.recordCount.toLocaleString()} records · ${overview.latestPublication.contentHash.slice(0, 12)}`
+                : "No publication snapshot yet"}
+            </strong>
+          </div>
+          {initialEditorialRecords ? (
+            <EditorialRecords
+              initial={initialEditorialRecords}
+              isLocalSandbox={isLocalStudio}
+            />
+          ) : null}
+        </section>
+      )}
     </main>
   );
 }

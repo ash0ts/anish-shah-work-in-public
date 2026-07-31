@@ -16,7 +16,7 @@ export async function GET(_request: Request, context: RouteContext) {
   if (!isConnectorProvider(candidate)) {
     return Response.json(
       { error: "Unknown connector." },
-      { status: 404, headers: { "cache-control": "public, max-age=300" } },
+      { status: 404, headers: { "cache-control": "no-store" } },
     );
   }
 
@@ -43,22 +43,12 @@ export async function GET(_request: Request, context: RouteContext) {
       },
       {
         status: 404,
-        headers: {
-          "cache-control":
-            candidate === "steam"
-              ? "no-store"
-              : "public, max-age=300",
-        },
+        headers: { "cache-control": "no-store" },
       },
     );
   }
 
   return Response.json(snapshot, {
-    headers: {
-      "cache-control":
-        candidate === "steam"
-          ? "no-store"
-          : "public, max-age=300, stale-while-revalidate=43200, stale-if-error=86400",
-    },
+    headers: { "cache-control": "no-store" },
   });
 }

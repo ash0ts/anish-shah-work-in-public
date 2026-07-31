@@ -55,14 +55,15 @@ npm run dev:studio
 ```
 
 `dev:studio` applies pending migrations to the project-local D1 sandbox under
-`.wrangler/state`, then starts the development site. Its migration wrapper
-always uses Wrangler’s local mode and cannot target production. To open the
-protected Studio locally, create an ignored `.env.local` from
+`.wrangler/state`, then starts the development site on strict
+`localhost:3000`. Its migration wrapper always uses Wrangler’s local mode and
+cannot target production. To open the protected Studio locally, create an
+ignored `.env.local` from
 [.env.example](./.env.example), set the same email in `OWNER_EMAILS` and
 `LOCAL_OWNER_EMAIL`, and generate a local-only
-`CONNECTOR_ENCRYPTION_KEY`. Then visit `/studio` on the exact localhost URL
-printed by the development server. The local identity fallback is rejected
-outside development and outside localhost.
+`CONNECTOR_ENCRYPTION_KEY`. Then visit
+`http://localhost:3000/studio`. The local identity fallback is rejected outside
+development and outside localhost.
 
 Local connector tests use real provider requests but write credentials,
 snapshots, sync history, and editorial changes only to the local D1 sandbox.
@@ -93,18 +94,27 @@ Production authentication remains Sign in with ChatGPT. `LOCAL_OWNER_EMAIL`
 exists only to make the isolated localhost Studio testable and must never be
 configured in Sites.
 
-MyAnimeList and Hardcover use 12-hour stale-while-revalidate snapshots and
-preserve the last successful public result on provider failure. The Strava
-surface accepts only an official public embed URL through
-`NEXT_PUBLIC_STRAVA_EMBED_URL`.
+MyAnimeList uses a complete owner-only authorization-code flow. Studio accepts
+the application client ID and secret, performs OAuth with a single-use
+owner-bound PKCE transaction, encrypts the resulting access and refresh tokens,
+and renews access automatically. Hardcover uses its owner API token. Both use
+12-hour stale-while-revalidate snapshots and preserve the last successful
+public result on transient provider failure. Their public profile links are
+derived from the authenticated provider identities.
+
+Strava is configured through Studio with an official public embed URL or iframe
+snippet. The server stores only a validated `https://strava-embeds.com/...`
+source, and `/play` still makes visitors opt in before any third-party content
+loads. Replacing the embed requires no rebuild or deployment.
 
 Steam uses an owner-supplied Web API key and SteamID64 only from the server,
 publishes bounded summaries of public game details, and keeps no more than two
 sanitized snapshots. Configure the actual D1 storage country or countries in
 `STEAM_DATA_STORAGE_COUNTRIES` before connecting it. If public game visibility
-is removed, the public snapshots and prior sync history are purged;
-disconnecting Steam deletes its encrypted credential, all remaining Steam
-snapshots, and its Steam-specific sync and audit history. The public
+is removed, the public snapshots and prior sync history are purged.
+Disconnecting any Play provider deletes its credentials or configuration,
+snapshots, pending OAuth transactions, sync history, and provider-specific
+audit history, then unpublishes that stream. The public
 [privacy page](./app/privacy/page.tsx) records retrieval, storage, retention,
 and deletion behavior.
 

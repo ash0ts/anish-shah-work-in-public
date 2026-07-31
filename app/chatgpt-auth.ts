@@ -83,20 +83,30 @@ export async function requireChatGPTUser(
   const user = await getChatGPTUser();
   if (user) return user;
 
+  const requestHeaders = await headers();
+  if (isLocalDevelopmentRequest(requestHeaders)) {
+    redirect(localStudioSetupPath(returnTo));
+  }
+
   redirect(chatGPTSignInPath(returnTo));
 }
 
 export function chatGPTSignInPath(returnTo: string): string {
-  const safeReturnTo = safeRelativeReturnPath(returnTo);
+  const safeReturnTo = safeAuthReturnPath(returnTo);
   return `${SIGN_IN_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
 }
 
 export function chatGPTSignOutPath(returnTo = "/"): string {
-  const safeReturnTo = safeRelativeReturnPath(returnTo);
+  const safeReturnTo = safeAuthReturnPath(returnTo);
   return `${SIGN_OUT_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
 }
 
-function safeRelativeReturnPath(value: string): string {
+export function localStudioSetupPath(returnTo: string): string {
+  const safeReturnTo = safeAuthReturnPath(returnTo);
+  return `/studio/local-setup?return_to=${encodeURIComponent(safeReturnTo)}`;
+}
+
+export function safeAuthReturnPath(value: string): string {
   if (!value.startsWith("/") || value.startsWith("//")) return "/";
 
   let url: URL;
@@ -109,6 +119,15 @@ function safeRelativeReturnPath(value: string): string {
   if (isReservedAuthPath(url.pathname)) return "/";
 
   return `${url.pathname}${url.search}${url.hash}`;
+}
+
+export function isLocalDevelopmentRequest(
+  requestHeaders: HeaderReader,
+  environment: Pick<LocalDevelopmentAuthEnvironment, "NODE_ENV"> = process.env,
+): boolean {
+  if (environment.NODE_ENV !== "development") return false;
+  const host = requestHeaders.get("host");
+  return Boolean(host && isLoopbackHost(host));
 }
 
 function isReservedAuthPath(pathname: string): boolean {
