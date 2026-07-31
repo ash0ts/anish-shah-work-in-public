@@ -5,26 +5,28 @@ technical storytelling, and community programs from 2021 onward.
 
 ## Experience
 
-- `/` — a concise introduction, four Bodies of Work, and a cross-year Impact
-  Ledger
+- `/` — identity, current technical focus, a compact career arc, four Bodies
+  of Work, and three qualified impact stories
 - `/work` — a semantic four-line 2021–2026 calendar heatmap, four unpaginated
   body folds containing all 82 WorkGroups once, and search across 186 nested
   public forms
 - `/work/[slug]` — one story page that keeps its appearances, recordings,
   translations, repositories, and references together
 - `/play` — consent-aware MyAnimeList, Hardcover, Steam, and Strava streams
-- `/about` — biography, current focus, trajectory, and operating principles
 - `/sources` — archive accounting, claim context, counting rules, and the
   public evidence explorer
 - `/studio` — owner-only editorial and connector controls
 
+Legacy `/about` links permanently redirect to the profile section on `/`.
+
 The homepage and Work archive are deliberately two-dimensional: semantic HTML
-and CSS carry the work index, while Anime.js adds brief, cancellable
-transitions. Work’s server-rendered calendar uses one color per line and shade
-for density, keeps exact work and public-form counts in every populated cell,
-and filters the four body folds when a visitor chooses a year. The public
-runtime contains no Three.js, 3D navigation, cinematic workspace, autoplay, or
-scroll hijacking. Strava content remains blocked until explicit interaction.
+and CSS carry the work index and impact small multiples, while Anime.js adds
+brief, cancellable transitions. Work’s server-rendered calendar uses one color
+per line and shade for density, keeps exact work and public-form counts in
+every populated cell, and filters the four body folds when a visitor chooses a
+year. The public runtime contains no Three.js, 3D navigation, cinematic
+workspace, autoplay, or scroll hijacking. Strava content remains blocked until
+explicit interaction.
 
 ## Canonical content
 

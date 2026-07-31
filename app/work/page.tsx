@@ -10,9 +10,7 @@ import {
 } from "@/lib/work-archive-query";
 import {
   countWorkFacetOptions,
-  ecosystemFacetDefinitions,
   mediaFacetDefinitions,
-  themeFacetDefinitions,
   workFacetsForRecord,
 } from "@/lib/work-facets";
 import { workBuckets } from "@/lib/work-groups";

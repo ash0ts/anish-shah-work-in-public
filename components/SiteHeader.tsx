@@ -3,7 +3,6 @@ import styles from "./SiteHeader.module.css";
 
 const navigation = [
   ["Work", "/work"],
-  ["About", "/about"],
   ["Play", "/play"],
 ] as const;
 

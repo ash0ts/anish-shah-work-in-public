@@ -64,19 +64,6 @@ export function strongestPublicMetrics(limit = 6): PublicImpactMetric[] {
   return [...ordered, ...remainder].slice(0, limit);
 }
 
-const homepageMetricIds = [
-  "metric:courses:enrollments:2026-07-30",
-  "metric:project:wandb-mcp-server:tool-calls:2026-06-11",
-  "metric:events:pipeline-supported:2025",
-];
-
-export function homepageMetrics(): PublicImpactMetric[] {
-  const metrics = publicMetrics();
-  return homepageMetricIds
-    .map((id) => metrics.find((metric) => metric.id === id))
-    .filter((metric): metric is PublicImpactMetric => Boolean(metric));
-}
-
 export function featuredItems(limit = 6): PortfolioItem[] {
   const published = publicBundle.items.filter(
     (item) => item.publicationState === "public",

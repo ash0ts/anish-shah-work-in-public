@@ -200,9 +200,15 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   );
   assert.equal(occurrences(visible, "Explore my work"), 1);
   assert.equal(occurrences(visible, "7K+"), 1);
-  assert.equal(occurrences(visible, "1K+ / 500+"), 1);
   assert.equal(occurrences(visible, "$4M+"), 1);
   assert.equal(occurrences(visible, "200K+"), 1);
+  assert.equal(occurrences(visible, "More than two-thirds"), 1);
+  assert.equal(occurrences(visible, "About half"), 1);
+  assert.equal(
+    (markup.match(/data-impact-track="(?:deployed|taught|programs)"/g) ?? [])
+      .length,
+    3,
+  );
   assert.doesNotMatch(
     visible,
     /Teach\. Build\. Convene|representative work/i,
@@ -473,16 +479,30 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
   );
 });
 
-test("About has distinct biography and current-focus copy", async () => {
-  const aboutText = textFromMarkup(
-    documentMarkup(await renderHtml("/about")),
+test("Home absorbs the useful profile arc and About redirects permanently", async () => {
+  const homeText = textFromMarkup(documentMarkup(await renderHtml("/")));
+  assert.match(
+    homeText,
+    /how agents discover tools, use context, and leave evidence teams can trust/i,
   );
-  assert(
-    !aboutText.includes(publicBundle.profile.summary),
-    "About must not repeat the homepage thesis verbatim",
-  );
-  assert.match(aboutText, /Evaluation and agent-native product\./);
-  assert.match(aboutText, /how should agents discover tools/i);
+  for (const stage of [
+    "Operational ML",
+    "Generative systems",
+    "Evaluation & adoption",
+    "Agent-native product",
+  ]) {
+    assert.equal(
+      occurrences(homeText, stage),
+      1,
+      `${stage} should appear once in the compact Home trajectory`,
+    );
+  }
+
+  const response = await fetch(`${BASE_URL}/about`, { redirect: "manual" });
+  assert.equal(response.status, 308);
+  const location = new URL(response.headers.get("location"), BASE_URL);
+  assert.equal(location.pathname, "/");
+  assert.equal(location.hash, "#profile");
 });
 
 test("the CSS architecture is scoped and has no page-level overflow masking", async () => {

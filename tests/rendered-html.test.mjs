@@ -128,30 +128,52 @@ function visibleText(html) {
     .trim();
 }
 
-test("homepage renders four technical-work bodies and four qualified impact signals", async () => {
+test("homepage renders four technical-work bodies and three qualified impact stories", async () => {
   const html = await renderHtml("/");
   const markup = documentMarkup(html);
+  const text = visibleText(html);
 
   assert.match(html, /<title>Applied AI, in public — Anish Shah<\/title>/i);
   assert.match(markup, />Anish</);
   assert.match(markup, />Shah</);
   assert.match(html, /applied AI builder, educator, and technical storyteller/i);
+  assert.match(
+    text,
+    /How agents discover tools, use context, and leave evidence teams can trust/i,
+  );
+  for (const stage of [
+    "Operational ML",
+    "Generative systems",
+    "Evaluation & adoption",
+    "Agent-native product",
+  ]) {
+    assert.match(text, new RegExp(stage.replace("&", "&(?:amp;)?"), "i"));
+  }
   assert.match(html, /Explore my work/i);
   assert.match(html, /Selected technical work/i);
   assert.equal((markup.match(/<details\b/g) ?? []).length, 4);
   assert.equal(
     (markup.match(/<a\b[^>]*href="\/work\/[^"]+"/g) ?? []).length,
-    12,
+      12,
   );
-  for (const value of ["7K+", "1K+ / 500+", "$4M+", "200K+"]) {
+  for (const value of [
+    "200K+",
+    "More than two-thirds",
+    "7K+",
+    "About half",
+    "$4M+",
+  ]) {
     assert.match(
-      visibleText(html),
+      text,
       new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
     );
   }
-  assert.match(markup, /Four signals\. Four different scopes\./i);
+  assert.equal((markup.match(/data-impact-track=/g) ?? []).length, 3);
+  assert.match(markup, /Use\. Return\. Act\./i);
   assert.match(html, /Internal analytics/i);
-  assert.match(html, /as of 2026/i);
+  assert.match(html, /checkpoint Jul 29, 2026/i);
+  assert.match(html, /association is not conversion/i);
+  assert.match(html, /not revenue, ARR, or personal causality/i);
   assert.match(html, /property="og:image" content="[^"]*\/og\.png"/i);
   assert.match(html, /href="[^"]*\/favicon\.png"/i);
   assert.match(html, /href="#main"[^>]*>Skip to content/i);
@@ -195,10 +217,6 @@ test("all public routes expose useful server-rendered content", async () => {
       ],
     },
     {
-      path: "/about",
-      required: [/About/i, /Applied AI/i, /Weights &amp; Biases/i, /2021—now/i],
-    },
-    {
       path: "/sources",
       required: [
         /Sources/i,
@@ -222,6 +240,14 @@ test("all public routes expose useful server-rendered content", async () => {
     }
     assert.match(html, /<main id="main"/i);
   }
+});
+
+test("legacy About requests permanently redirect to the homepage profile", async () => {
+  const response = await fetch(`${BASE_URL}/about`, { redirect: "manual" });
+  assert.equal(response.status, 308);
+  const location = new URL(response.headers.get("location"), BASE_URL);
+  assert.equal(location.pathname, "/");
+  assert.equal(location.hash, "#profile");
 });
 
 test("Sources paginates the complete searchable bibliography 24 rows at a time", async () => {
@@ -359,9 +385,10 @@ test("the public shell has the exact compact navigation and footer contract", as
   const header = html.match(/<header\b[\s\S]*?<\/header>/i)?.[0] ?? "";
   const footer = html.match(/<footer\b[\s\S]*?<\/footer>/i)?.[0] ?? "";
 
-  for (const label of ["Work", "About", "Play"]) {
+  for (const label of ["Work", "Play"]) {
     assert.match(header, new RegExp(`>${label}<`));
   }
+  assert.doesNotMatch(header, />About</);
   assert.doesNotMatch(header, />Sources</);
   for (const label of ["LinkedIn", "GitHub", "W&amp;B", "Sources", "Privacy"]) {
     assert.equal(
@@ -390,7 +417,7 @@ test("the public surface and build contain no removed experience or private prov
     /documents\/new project/i,
     /\/users\/ashah/i,
   ];
-  for (const pathname of ["/", "/work", "/play", "/about", "/sources", "/privacy"]) {
+  for (const pathname of ["/", "/work", "/play", "/sources", "/privacy"]) {
     const html = await renderHtml(pathname);
     for (const pattern of forbidden) {
       assert.doesNotMatch(html, pattern, `${pathname} contains ${pattern}`);
@@ -454,5 +481,6 @@ test("robots and sitemap publish only public editorial surfaces", async () => {
   assert.match(robots, /Disallow: \/api\//i);
   assert.match(sitemap, /<loc>[^<]+\/work<\/loc>/i);
   assert.match(sitemap, /<loc>[^<]+\/work\/wandb-mcp-server<\/loc>/i);
+  assert.doesNotMatch(sitemap, /<loc>[^<]+\/about<\/loc>/i);
   assert.doesNotMatch(sitemap, /\/studio|\/api\//i);
 });

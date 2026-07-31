@@ -10,6 +10,13 @@ type HomeIntroductionProps = {
   summary: string;
 };
 
+const trajectory = [
+  ["2021", "Operational ML"],
+  ["2022—23", "Generative systems"],
+  ["2024—25", "Evaluation & adoption"],
+  ["Now", "Agent-native product"],
+] as const;
+
 export function HomeIntroduction({
   headline,
   summary,
@@ -52,6 +59,7 @@ export function HomeIntroduction({
 
   return (
     <section
+      id="profile"
       className={styles.introduction}
       aria-labelledby="home-title"
       ref={rootRef}
@@ -66,10 +74,23 @@ export function HomeIntroduction({
       <div className={styles.copy} data-intro-copy>
         <p className={styles.headline}>{headline}</p>
         <p className={styles.summary}>{summary}</p>
+        <p className={styles.focus}>
+          <span>Now</span>
+          How agents discover tools, use context, and leave evidence teams can
+          trust.
+        </p>
         <Link className={styles.action} href="/work">
           Explore my work <span aria-hidden="true">↗</span>
         </Link>
       </div>
+      <ol className={styles.trajectory} aria-label="Career trajectory">
+        {trajectory.map(([period, title]) => (
+          <li key={period}>
+            <span>{period}</span>
+            <strong>{title}</strong>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

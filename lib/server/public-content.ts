@@ -58,33 +58,6 @@ export function publicMetricsFrom(
   );
 }
 
-const homepageMetricCandidates = [
-  ["metric:courses:enrollments:2026-07-30"],
-  ["metric:event:fully-connected-sf:reach:2024"],
-  [
-    "metric:events:pipeline-supported:2024-2025",
-    "metric:events:pipeline-supported:2025",
-  ],
-  [
-    "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
-    "metric:project:wandb-mcp-server:tool-calls:2026-06-11",
-  ],
-];
-
-export function homepageMetricsFrom(
-  bundle: AnishContentBundle,
-): PublicImpactMetric[] {
-  const metrics = new Map(
-    publicMetricsFrom(bundle).map((metric) => [metric.id, metric]),
-  );
-  return homepageMetricCandidates.flatMap((candidateIds) => {
-    const metric = candidateIds
-      .map((id) => metrics.get(id))
-      .find((candidate) => Boolean(candidate));
-    return metric ? [metric] : [];
-  });
-}
-
 export function featuredItemsFrom(
   bundle: AnishContentBundle,
   limit = 6,

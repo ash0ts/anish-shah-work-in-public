@@ -27,8 +27,10 @@ verification record below.
 - Four Bodies of Work—Products and Open Source, Courses and Learning, Writing
   and Research, and Talks and Programs—give visitors a useful first reading of
   the career without flattening every appearance into another achievement.
-- The homepage uses representative stories and a four-part Impact Ledger rather
-  than repeating the complete archive.
+- The homepage uses representative stories and three evidence tracks rather
+  than repeating the complete archive. Product adoption leads with use,
+  breadth, and return behavior; learning connects reach to observed action;
+  program impact stays explicitly bounded.
 - WorkGroup pages keep occurrences, recordings, translations, repositories,
   pull requests, and references attached to the story they support.
 - Sources separates archive accounting from the impact ledger and states what
@@ -39,8 +41,9 @@ verification record below.
 
 ## Structure and navigation — 8.4 / 10
 
-- The primary navigation stays compact: Work, About, and Play, with Sources and
-  Privacy in the footer.
+- The primary navigation stays compact: Work and Play, with Sources and Privacy
+  in the footer. Biography, current focus, and the 2021–Now arc now live in the
+  homepage introduction; legacy About links redirect there.
 - Work opens as four server-rendered body folds. Together they contain all 82
   WorkGroups exactly once, so the complete archive is present without
   pagination. A semantic four-line calendar heatmap summarizes 2021–2026 above
@@ -58,8 +61,8 @@ verification record below.
 ## Visual design — 8.2 / 10
 
 - The expressive choice is typographic organization, not a decorative
-  dashboard: four ruled homepage rows, four archive body folds, and the Impact
-  Ledger all encode real structure.
+  dashboard: a four-stop career rule, four archive body folds, and three
+  unboxed impact small multiples all encode real structure.
 - Recursive, Hanken Grotesk, and IBM Plex Mono retain distinct display,
   reading, and evidence roles. Trace white, blueprint ink, and work blue keep
   the palette controlled.
@@ -75,8 +78,9 @@ verification record below.
 
 ## Functionality — 8.3 / 10
 
-- Home, Work, WorkGroup detail, About, Sources, Privacy, and the Play fallbacks
-  are server-readable without JavaScript.
+- Home, Work, WorkGroup detail, Sources, Privacy, and the Play fallbacks are
+  server-readable without JavaScript. The retired About route permanently
+  redirects to the homepage profile.
 - The canonical public projection, D1 editorial boundary, exact-email owner
   authorization, encrypted provider credentials, sync history, and audit trail
   remain part of the implementation.
@@ -115,17 +119,18 @@ verification record below.
   inspectable archive using ordinary web structure. The color-and-density
   calendar adds a compact chronological lens without becoming another taxonomy
   or navigation requirement.
-- The Impact Ledger combines reach, participation, supported pipeline, and
-  product usage without pretending they are directly comparable units.
+- The impact small multiples rank repeat product use, learning-associated
+  action, and supported pipeline without pretending they are directly
+  comparable units.
 - The model is differentiated by its content logic more than by a novel
   interaction. Its quality depends on the deduplication and relationships
   remaining credible under close inspection.
 
 ## Overall experience — 8.2 / 10
 
-- The v1.3 direction is substantially clearer: one thesis, four bodies of work,
-  one complete archive with a six-year calendar, one impact ledger, and a
-  small footer.
+- The v1.3 direction is substantially clearer: one thesis and profile, four
+  bodies of work, one complete archive with a six-year calendar, three impact
+  stories, and a small footer.
 - Visitors can scan the narrative before deciding whether to inspect all 82
   WorkGroups, their 186 public forms, or the evidence behind a claim.
 - The absence of 3D and cinematic navigation is a product decision, not a
@@ -144,9 +149,9 @@ verification record below.
 3. Work archive audit: all 82 WorkGroups appear exactly once across four
    server-rendered body folds; the four-line 2021–2026 calendar exposes exact
    work/form counts and filters those folds through standard links.
-4. Responsive audit: Home, Work, a long WorkGroup detail, Sources, Play, About,
-   and Privacy at 320, 390, 768, 1024, 1440, and 1920px, with no viewport
-   crossings.
+4. Responsive audit: Home, Work, a long WorkGroup detail, Sources, Play, and
+   Privacy at 320, 390, 768, 1024, 1440, and 1920px, with no viewport
+   crossings; `/about` redirects to the homepage profile.
 5. Interaction audit: keyboard order, visible focus, native disclosures,
    calendar filters, cancellable Anime.js enhancement, reduced motion,
    active-stream loading, and the Strava consent boundary.
