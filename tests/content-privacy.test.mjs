@@ -11,7 +11,6 @@ const PUBLIC_PATH = path.join(
   PROJECT_ROOT,
   "content/public/anish-content.public.v1.json",
 );
-const OWNER_PATH = path.join(PROJECT_ROOT, "content/private/anish-content.v1.json");
 const IMPACT_PATH = path.resolve(
   PROJECT_ROOT,
   "../anish_shah_impact_metrics_2021-2026.csv",
