@@ -26,3 +26,8 @@
   `package-lock.json` changes. These controls are the private-repository
   fallback, not a full replacement for GitHub Advanced Security. Reinstate the
   Dependency Review workflow if GitHub Advanced Security is enabled later.
+- CodeQL runs the extended JavaScript/TypeScript security suite in CI and fails
+  on any SARIF finding. Because code scanning storage is not enabled for this
+  private repository, the workflow deliberately keeps results inside the job
+  instead of attempting an unsupported GitHub Security upload. Enable the
+  standard upload when GitHub Advanced Security is available.

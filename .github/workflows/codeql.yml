@@ -28,4 +28,13 @@ jobs:
           languages: javascript-typescript
           queries: security-extended
       - name: Analyze
+        id: analyze
         uses: github/codeql-action/analyze@3599b3baa15b485a2e49ef411a7a4bb2452e7f93 # v3.30.5
+        with:
+          output: ${{ runner.temp }}/codeql-results
+          upload: never
+          upload-database: false
+      - name: Enforce CodeQL findings gate
+        env:
+          CODEQL_SARIF_DIR: ${{ steps.analyze.outputs.sarif-output }}
+        run: node scripts/check-codeql-sarif.mjs "$CODEQL_SARIF_DIR"
