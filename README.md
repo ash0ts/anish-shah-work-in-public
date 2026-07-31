@@ -51,8 +51,25 @@ Requires Node.js `>=22.13.0`.
 
 ```bash
 npm install
-npm run dev
+npm run dev:studio
 ```
+
+`dev:studio` applies pending migrations to the project-local D1 sandbox under
+`.wrangler/state`, then starts the development site. Its migration wrapper
+always uses Wrangler’s local mode and cannot target production. To open the
+protected Studio locally, create an ignored `.env.local` from
+[.env.example](./.env.example), set the same email in `OWNER_EMAILS` and
+`LOCAL_OWNER_EMAIL`, and generate a local-only
+`CONNECTOR_ENCRYPTION_KEY`. Then visit `/studio` on the exact localhost URL
+printed by the development server. The local identity fallback is rejected
+outside development and outside localhost.
+
+Local connector tests use real provider requests but write credentials,
+snapshots, sync history, and editorial changes only to the local D1 sandbox.
+They do not propagate to production. Deploy code and non-secret configuration
+separately; then enter each provider credential again through the production
+HTTPS Studio and run **Refresh now**. Never copy the local D1 state or replace
+the existing production encryption key.
 
 Useful checks:
 
@@ -71,6 +88,10 @@ deployed-artifact hygiene.
 Studio and every write API require both Sign in with ChatGPT and an exact email
 match in `OWNER_EMAILS`. Connector credentials are AES-256-GCM encrypted before
 they enter D1 using `CONNECTOR_ENCRYPTION_KEY`.
+
+Production authentication remains Sign in with ChatGPT. `LOCAL_OWNER_EMAIL`
+exists only to make the isolated localhost Studio testable and must never be
+configured in Sites.
 
 MyAnimeList and Hardcover use 12-hour stale-while-revalidate snapshots and
 preserve the last successful public result on provider failure. The Strava

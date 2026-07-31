@@ -233,10 +233,14 @@ test("Play fetches a personal-data provider only after its stream is active", as
 });
 
 test("Studio documents setup, replacement, and official provider sources", async () => {
-  const [page, controls, guide] = await Promise.all([
+  const [page, controls, editorial, guide] = await Promise.all([
     readFile(new URL("../app/studio/page.tsx", import.meta.url), "utf8"),
     readFile(
       new URL("../app/studio/ConnectorControls.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/studio/EditorialRecords.tsx", import.meta.url),
       "utf8",
     ),
     readFile(new URL("../docs/play-connections.md", import.meta.url), "utf8"),
@@ -256,7 +260,18 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(controls, /credential_expired/);
   assert.match(controls, /rate_limited/);
   assert.match(controls, /Bearer optional/);
+  assert.match(page, /Local sandbox · isolated data/);
+  assert.match(page, /Changes here stay on this machine/);
+  assert.match(page, /isLocalSandbox=\{isLocalStudio\}/);
+  assert.match(controls, /Nothing here has been copied to production/);
+  assert.match(editorial, /Create local snapshot/);
+  assert.match(editorial, /production is unchanged/);
   assert.match(guide, /Connect → Refresh now → confirm Current/);
+  assert.match(guide, /Local credentials and D1 rows never propagate/);
+  assert.match(
+    guide,
+    /Paste the provider credential again into the production connector card/,
+  );
   assert.match(guide, /Renewal is manual/);
   assert.match(guide, /strava-embeds\.com/);
 });

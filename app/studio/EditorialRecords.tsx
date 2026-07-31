@@ -25,8 +25,10 @@ function displayVisibility(value: EditorialVisibility): string {
 
 export function EditorialRecords({
   initial,
+  isLocalSandbox,
 }: {
   initial: EditorialRecordList;
+  isLocalSandbox: boolean;
 }) {
   const [records, setRecords] = useState<EditorialRecord[]>(initial.records);
   const [draft, setDraft] = useState<EditorialRecord | null>(
@@ -137,7 +139,11 @@ export function EditorialRecords({
         ),
       );
       setDraft({ ...result.record });
-      setMessage("Editorial change saved and audited.");
+      setMessage(
+        isLocalSandbox
+          ? "Editorial change saved and audited in local D1 only."
+          : "Editorial change saved and audited.",
+      );
     } catch {
       setMessage("The editorial change could not be saved.");
     } finally {
@@ -148,7 +154,9 @@ export function EditorialRecords({
   async function publish() {
     if (
       !window.confirm(
-        "Create a new publication snapshot from every record currently marked public?",
+        isLocalSandbox
+          ? "Create a local-only snapshot from every record currently marked public? This will not affect production."
+          : "Create a new publication snapshot from every record currently marked public?",
       )
     ) {
       return;
@@ -167,7 +175,9 @@ export function EditorialRecords({
         return;
       }
       setMessage(
-        `Published ${result.publication.recordCount.toLocaleString()} records · ${result.publication.contentHash.slice(0, 12)}.`,
+        isLocalSandbox
+          ? `Created local-only snapshot · ${result.publication.recordCount.toLocaleString()} records · ${result.publication.contentHash.slice(0, 12)}.`
+          : `Published ${result.publication.recordCount.toLocaleString()} records · ${result.publication.contentHash.slice(0, 12)}.`,
       );
     } catch {
       setMessage("The publication snapshot was not created.");
@@ -182,13 +192,24 @@ export function EditorialRecords({
         <div>
           <p className={styles.eyebrow}>Editorial surface</p>
           <h3 id="records-title">Public records</h3>
+          {isLocalSandbox ? (
+            <p className={styles.workspaceScope}>
+              Local draft state · production is unchanged
+            </p>
+          ) : null}
         </div>
         <button
           type="button"
           onClick={() => void publish()}
           disabled={pending !== null}
         >
-          {pending === "publish" ? "Publishing…" : "Publish snapshot"}
+          {pending === "publish"
+            ? isLocalSandbox
+              ? "Creating…"
+              : "Publishing…"
+            : isLocalSandbox
+              ? "Create local snapshot"
+              : "Publish snapshot"}
         </button>
       </div>
 

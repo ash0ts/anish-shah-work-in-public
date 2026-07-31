@@ -4,35 +4,83 @@ The Play page publishes sanitized snapshots for MyAnimeList, Hardcover, and
 Steam. Strava is different: it stays on Strava and loads its official embed
 only after a visitor chooses to do so.
 
-## 1. Prepare the protected Studio
+## 1. Prepare and test the protected Studio
 
-Before saving a provider credential:
+Local and production Studio are deliberately separate environments:
 
-1. Provision the Sites D1 binding as `DB` and apply the checked-in migrations
-   under `drizzle/`.
-2. Set `OWNER_EMAILS` to the exact email address used with Sign in with
-   ChatGPT. Authentication without an exact allowlist match cannot read or
-   write Studio data.
-3. For a brand-new environment only, generate a connector encryption key
-   locally:
+| | Local Studio | Production Studio |
+| --- | --- | --- |
+| Identity | Development-only localhost owner | Sign in with ChatGPT + owner allowlist |
+| Database | Project-local D1 under `.wrangler/state` | Sites-managed D1 |
+| Encryption | Disposable local-only key | Existing production key; never rotate during setup |
+| Provider credentials | Enter for testing only | Re-enter over the deployed HTTPS Studio |
+| Propagation | Nothing is copied automatically | A refresh publishes a sanitized production snapshot |
+
+### Test locally
+
+1. In the project directory, install dependencies and create an ignored local
+   environment file if one does not already exist:
 
    ```bash
+   npm install
+   test -f .env.local || cp .env.example .env.local
    openssl rand -base64 32
    ```
 
-   Store the result as `CONNECTOR_ENCRYPTION_KEY` in the deployment
-   environment. Never commit it. The existing production site already has
-   this key configured: do not rotate or replace it during provider setup,
-   because existing encrypted credentials would become unreadable.
-4. For Steam, set `STEAM_DATA_STORAGE_COUNTRIES` to the truthful country or
-   comma-separated countries where D1 stores the sanitized snapshots, for
-   example `United States`. Values such as `global`, `unknown`, or `TBD` fail
-   the release gate.
-5. Deploy the environment changes, open `/studio`, and confirm the encryption
-   and Steam notices are cleared.
+2. Put the generated value in `.env.local` as
+   `CONNECTOR_ENCRYPTION_KEY`. Configure the remaining local gates:
 
-The normal owner workflow is **Connect → Refresh now → confirm Current**.
+   ```dotenv
+   OWNER_EMAILS=your-owner-email@example.com
+   LOCAL_OWNER_EMAIL=your-owner-email@example.com
+   CONNECTOR_ENCRYPTION_KEY=<new local-only key>
+   STEAM_DATA_STORAGE_COUNTRIES=United States
+   SITE_URL=http://localhost:3000
+   ```
+
+   Use the actual Steam storage country. `LOCAL_OWNER_EMAIL` must exactly match
+   an address in `OWNER_EMAILS`. It is accepted only during development from
+   `localhost`, `127.0.0.1`, or `[::1]`; never add it to Sites.
+3. Create or update the isolated local database, then start the site:
+
+   ```bash
+   npm run dev:studio
+   ```
+
+   `dev:studio` applies pending migrations, then starts the site. Its migration
+   wrapper always includes Wrangler’s `--local` flag, uses a placeholder
+   database identity, and stores state under `.wrangler/state`. It cannot
+   mutate the Sites production database.
+4. Open `/studio` on the exact localhost URL printed by the development
+   server. The page must show **Local sandbox** before you enter a credential.
+5. For each provider, use **Connect → Refresh now → confirm Current**. These
+   calls reach the real provider, but the encrypted credential and resulting
+   snapshot remain in the local D1 sandbox.
+
 Saving or replacing a credential does not publish a snapshot by itself.
+
+### Promote a tested connection safely
+
+Local credentials and D1 rows never propagate—and should never be copied—to
+production. Promote the site in this order:
+
+1. Run `npm test`, then deploy the validated code and intended non-secret
+   configuration through Sites.
+2. Keep the existing production `CONNECTOR_ENCRYPTION_KEY`. Do not replace it
+   with the local key; doing so would make existing production credentials
+   unreadable.
+3. Configure production gates such as `OWNER_EMAILS`,
+   `STEAM_DATA_STORAGE_COUNTRIES`, profile URLs, and the Strava embed through
+   Sites. Do not configure `LOCAL_OWNER_EMAIL` in production.
+4. Open the
+   [production HTTPS Studio](https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site/studio)
+   and sign in with the allowlisted ChatGPT account.
+5. Paste the provider credential again into the production connector card,
+   choose **Connect** or **Replace credential**, then choose **Refresh now**.
+   Confirm **Current** and inspect `/play`.
+
+This split is the security boundary: code and allowlisted configuration deploy;
+secrets are entered directly into the environment that will store them.
 
 ## 2. MyAnimeList
 

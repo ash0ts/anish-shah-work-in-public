@@ -5,6 +5,7 @@ import {
   decryptCredential,
   encryptCredential,
 } from "../lib/server/credential-crypto.ts";
+import { resolveLocalDevelopmentUser } from "../app/chatgpt-auth.ts";
 import {
   evaluateOwnerAuthorization,
   parseOwnerEmails,
@@ -15,6 +16,99 @@ import {
 } from "../lib/server/editorial-policy.ts";
 
 const root = new URL("../", import.meta.url);
+
+test("local Studio identity is limited to allowlisted loopback development requests", () => {
+  const environment = {
+    NODE_ENV: "development",
+    LOCAL_OWNER_EMAIL: "Anish@Example.com",
+    OWNER_EMAILS: "ops@example.com, anish@example.com",
+  };
+
+  for (const host of [
+    "localhost",
+    "localhost:3000",
+    "127.0.0.1",
+    "127.0.0.1:8788",
+    "[::1]",
+    "[::1]:3000",
+  ]) {
+    assert.deepEqual(
+      resolveLocalDevelopmentUser(new Headers({ host }), environment),
+      {
+        authSource: "local-development",
+        displayName: "Anish@Example.com",
+        email: "Anish@Example.com",
+        fullName: null,
+      },
+    );
+  }
+});
+
+test("local Studio identity fails closed outside its exact security boundary", () => {
+  const allowedEnvironment = {
+    NODE_ENV: "development",
+    LOCAL_OWNER_EMAIL: "anish@example.com",
+    OWNER_EMAILS: "anish@example.com",
+  };
+
+  for (const host of [
+    "anish.test",
+    "localhost.example.com",
+    "127.0.0.2",
+    "0.0.0.0",
+    "localhost:65536",
+    " localhost:3000",
+    "localhost:3000 ",
+  ]) {
+    assert.equal(
+      resolveLocalDevelopmentUser(
+        { get: (name) => (name.toLowerCase() === "host" ? host : null) },
+        allowedEnvironment,
+      ),
+      null,
+      host,
+    );
+  }
+
+  assert.equal(
+    resolveLocalDevelopmentUser(new Headers({ host: "localhost:3000" }), {
+      ...allowedEnvironment,
+      NODE_ENV: "production",
+    }),
+    null,
+  );
+  assert.equal(
+    resolveLocalDevelopmentUser(new Headers({ host: "localhost:3000" }), {
+      ...allowedEnvironment,
+      NODE_ENV: "test",
+    }),
+    null,
+  );
+  assert.equal(
+    resolveLocalDevelopmentUser(new Headers({ host: "localhost:3000" }), {
+      NODE_ENV: "development",
+      OWNER_EMAILS: "anish@example.com",
+    }),
+    null,
+  );
+  assert.equal(
+    resolveLocalDevelopmentUser(new Headers({ host: "localhost:3000" }), {
+      ...allowedEnvironment,
+      OWNER_EMAILS: "someone-else@example.com",
+    }),
+    null,
+  );
+  assert.equal(
+    resolveLocalDevelopmentUser(
+      new Headers({
+        host: "portfolio.example.com",
+        "x-forwarded-host": "localhost:3000",
+      }),
+      allowedEnvironment,
+    ),
+    null,
+  );
+});
 
 test("owner access is an exact, normalized email allowlist", () => {
   assert.deepEqual(
@@ -91,6 +185,25 @@ test("D1 migrations contain the scoped tables and encrypted credential fields", 
   assert.doesNotMatch(migration, /access_token|refresh_token|api_token/i);
   assert.equal(JSON.parse(hosting).d1, "DB");
   assert.equal(JSON.parse(hosting).r2, null);
+});
+
+test("local Studio migrations are pinned to the isolated local D1 sandbox", async () => {
+  const migrationScript = await readFile(
+    new URL(
+      "../scripts/apply-local-d1-migrations.mjs",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(migrationScript, /"--local"/);
+  assert.match(migrationScript, /\.wrangler\/state/);
+  assert.match(
+    migrationScript,
+    /00000000-0000-4000-8000-000000000000/,
+  );
+  assert.doesNotMatch(migrationScript, /"--remote"/);
+  assert.doesNotMatch(migrationScript, /appgprj_/);
 });
 
 test("editorial policy only accepts narrow plain-text public fields", () => {

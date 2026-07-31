@@ -44,6 +44,7 @@ function SetupNotice({
 
 export default async function StudioPage() {
   const user = await requireChatGPTUser("/studio");
+  const isLocalStudio = user.authSource === "local-development";
   const ownerAuthorization = ownerAuthorizationForEmail(user.email);
 
   if (ownerAuthorization.status === "forbidden") {
@@ -104,27 +105,84 @@ export default async function StudioPage() {
         </Link>
         <div className={styles.ownerMeta}>
           <span className={styles.identity}>{user.email}</span>
-          <a href={chatGPTSignOutPath("/")} className={styles.utilityLink}>
-            Sign out
-          </a>
+          {isLocalStudio ? (
+            <span className={styles.localTag}>Local sandbox</span>
+          ) : (
+            <a href={chatGPTSignOutPath("/")} className={styles.utilityLink}>
+              Sign out
+            </a>
+          )}
         </div>
       </div>
 
+      {isLocalStudio ? (
+        <section
+          className={styles.environmentNotice}
+          aria-labelledby="local-environment-title"
+        >
+          <div className={styles.environmentStatus}>
+            <span aria-hidden="true" />
+            Local sandbox · isolated data
+          </div>
+          <div className={styles.environmentCopy}>
+            <h2 id="local-environment-title">
+              Changes here stay on this machine.
+            </h2>
+            <p>
+              Credentials, snapshots, sync history, and editorial changes are
+              stored in project-local D1. Deploying the site does not copy any
+              of them to production.
+            </p>
+          </div>
+          <ol className={styles.environmentPath}>
+            <li>
+              <strong>Test here</strong>
+              <span>Connect, refresh, and inspect the local Play page.</span>
+            </li>
+            <li>
+              <strong>Deploy code</strong>
+              <span>Ship validated code and intended non-secret settings.</span>
+            </li>
+            <li>
+              <strong>Connect production</strong>
+              <span>
+                Re-enter credentials in the{" "}
+                <a
+                  href="https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site/studio"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  HTTPS Studio
+                </a>
+                ; keep its encryption key unchanged.
+              </span>
+            </li>
+          </ol>
+        </section>
+      ) : null}
+
       <header className={styles.hero}>
-        <p className={styles.eyebrow}>Owner control room</p>
+        <p className={styles.eyebrow}>
+          {isLocalStudio ? "Local owner workbench" : "Owner control room"}
+        </p>
         <h1>Publish deliberately.</h1>
         <p>
-          Review the public projection, make narrow editorial changes, and
-          refresh personal streams without exposing private source data.
+          {isLocalStudio
+            ? "Validate connector behavior and editorial changes against isolated local state before promoting them."
+            : "Review the public projection, make narrow editorial changes, and refresh personal streams without exposing private source data."}
         </p>
       </header>
 
       {overview.status === "database_setup_required" ? (
         <SetupNotice title="The site database is not ready.">
           {overview.reason === "binding_unavailable"
-            ? "Provision the logical DB binding through Sites."
+            ? isLocalStudio
+              ? "Restart with npm run dev:studio so the project-local DB binding and migrations are available."
+              : "Provision the logical DB binding through Sites."
             : overview.reason === "schema_unavailable"
-              ? "Apply the checked-in D1 migration before using Studio."
+              ? isLocalStudio
+                ? "Stop the server, run npm run db:local:migrate, then restart the local Studio."
+                : "Apply the checked-in D1 migration before using Studio."
               : "The database could not be read. Existing public pages remain independent of this control surface."}
         </SetupNotice>
       ) : (
@@ -150,7 +208,9 @@ export default async function StudioPage() {
               )}
             </div>
             <div className={styles.releaseLine}>
-              <span>Latest publication</span>
+              <span>
+                {isLocalStudio ? "Latest local snapshot" : "Latest publication"}
+              </span>
               <strong>
                 {overview.latestPublication
                   ? `${overview.latestPublication.recordCount.toLocaleString()} records · ${overview.latestPublication.contentHash.slice(0, 12)}`
@@ -158,7 +218,10 @@ export default async function StudioPage() {
               </strong>
             </div>
             {initialEditorialRecords ? (
-              <EditorialRecords initial={initialEditorialRecords} />
+              <EditorialRecords
+                initial={initialEditorialRecords}
+                isLocalSandbox={isLocalStudio}
+              />
             ) : null}
           </section>
       )}
@@ -166,39 +229,62 @@ export default async function StudioPage() {
       <section className={styles.section} aria-labelledby="connectors-title">
         <div className={styles.sectionIntro}>
           <p className={styles.eyebrow}>Connector health</p>
-          <h2 id="connectors-title">Personal data, published safely</h2>
+          <h2 id="connectors-title">
+            {isLocalStudio
+              ? "Personal data, tested safely"
+              : "Personal data, published safely"}
+          </h2>
           <p>
-            Each refresh writes a new public-only snapshot. If a provider fails,
-            the last successful snapshot remains available.
+            {isLocalStudio
+              ? "Each refresh writes a sanitized snapshot only to local D1. If a provider fails, the last successful local snapshot remains available."
+              : "Each refresh writes a new public-only snapshot. If a provider fails, the last successful snapshot remains available."}
           </p>
         </div>
         <div className={styles.setupGuide} aria-labelledby="connector-setup-title">
           <div className={styles.setupGuideIntro}>
             <p className={styles.eyebrow}>Owner setup</p>
-            <h3 id="connector-setup-title">Connect once. Publish deliberately.</h3>
+            <h3 id="connector-setup-title">
+              {isLocalStudio
+                ? "Test locally. Connect production deliberately."
+                : "Connect once. Publish deliberately."}
+            </h3>
           </div>
           <ol className={styles.setupSteps}>
             <li>
               <span>01</span>
               <p>
-                <strong>Open the site gates.</strong> Apply the D1 migrations,
-                allowlist the exact owner email, add the encryption key, and
-                disclose Steam storage countries.
+                <strong>
+                  {isLocalStudio ? "Validate locally." : "Open the site gates."}
+                </strong>{" "}
+                {isLocalStudio
+                  ? "Connect a provider, refresh it, and inspect its local Play view."
+                  : "Apply the D1 migrations, allowlist the exact owner email, add the encryption key, and disclose Steam storage countries."}
               </p>
             </li>
             <li>
               <span>02</span>
               <p>
-                <strong>Get the owner credential.</strong> Use only the official
-                provider pages below, then paste it into the matching card.
+                <strong>
+                  {isLocalStudio
+                    ? "Deploy without secrets."
+                    : "Get the owner credential."}
+                </strong>{" "}
+                {isLocalStudio
+                  ? "Ship code and non-secret settings. Local D1 rows and environment files stay here."
+                  : "Use only the official provider pages below, then paste it into the matching card."}
               </p>
             </li>
             <li>
               <span>03</span>
               <p>
-                <strong>Publish the snapshot.</strong> Connect or replace the
-                credential, run Refresh now, and confirm the card reports
-                Current.
+                <strong>
+                  {isLocalStudio
+                    ? "Connect production."
+                    : "Publish the snapshot."}
+                </strong>{" "}
+                {isLocalStudio
+                  ? "Open the deployed HTTPS Studio, re-enter the credential, refresh, and confirm Current."
+                  : "Connect or replace the credential, run Refresh now, and confirm the card reports Current."}
               </p>
             </li>
           </ol>
@@ -253,9 +339,20 @@ export default async function StudioPage() {
           <div className={styles.inlineNotice}>
             <strong>Credential encryption needs setup.</strong>
             <span>
-              Add a base64-encoded 32-byte{" "}
-              <code>CONNECTOR_ENCRYPTION_KEY</code> before connecting any
-              personal-data provider.
+              {isLocalStudio ? (
+                <>
+                  Add a new local-only base64-encoded 32-byte{" "}
+                  <code>CONNECTOR_ENCRYPTION_KEY</code> to{" "}
+                  <code>.env.local</code>, then restart{" "}
+                  <code>npm run dev:studio</code>.
+                </>
+              ) : (
+                <>
+                  Add a base64-encoded 32-byte{" "}
+                  <code>CONNECTOR_ENCRYPTION_KEY</code> before connecting any
+                  personal-data provider.
+                </>
+              )}
             </span>
           </div>
         ) : null}
@@ -264,7 +361,8 @@ export default async function StudioPage() {
             <strong>Steam release gate is closed.</strong>
             <span>
               Set <code>STEAM_DATA_STORAGE_COUNTRIES</code> to the actual
-              country or countries where D1 stores sanitized Steam snapshots.
+              country or countries where D1 stores sanitized Steam snapshots
+              {isLocalStudio ? " in .env.local, then restart Studio" : ""}.
               Steam credentials and sync remain disabled until this disclosure
               is truthful and public.
             </span>
@@ -274,6 +372,7 @@ export default async function StudioPage() {
           {connectors.map((connector) => (
             <ConnectorControls
               connector={connector}
+              environment={isLocalStudio ? "local" : "hosted"}
               encryptionConfigured={overview.encryptionConfigured}
               steamStorageCountries={overview.steamStorageCountries}
               key={connector.provider}

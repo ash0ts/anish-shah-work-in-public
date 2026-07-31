@@ -6,6 +6,7 @@ import styles from "./studio.module.css";
 
 type Props = {
   connector: ConnectorHealth;
+  environment: "local" | "hosted";
 };
 
 const providerNames = {
@@ -26,33 +27,46 @@ const statusLabels: Record<ConnectorHealth["status"], string> = {
 
 function statusGuidance(
   connector: ConnectorHealth,
+  environment: "local" | "hosted",
   encryptionConfigured: boolean,
   steamStorageCountries: string | null,
 ): string {
   if (!encryptionConfigured) {
-    return "Set CONNECTOR_ENCRYPTION_KEY and redeploy before connecting or refreshing this provider.";
+    return environment === "local"
+      ? "Add a local-only CONNECTOR_ENCRYPTION_KEY to .env.local, then restart npm run dev:studio."
+      : "Set CONNECTOR_ENCRYPTION_KEY and redeploy before connecting or refreshing this provider.";
   }
   if (connector.provider === "steam" && !steamStorageCountries) {
-    return "Set the truthful Steam storage-country disclosure and redeploy before connecting or refreshing.";
+    return environment === "local"
+      ? "Set the truthful Steam storage-country disclosure in .env.local, then restart the local Studio."
+      : "Set the truthful Steam storage-country disclosure and redeploy before connecting or refreshing.";
   }
 
   const preservedSnapshot =
     connector.itemCount === null
       ? ""
-      : connector.provider === "steam"
+      : environment === "local"
+        ? " The last successful snapshot remains in this local sandbox."
+        : connector.provider === "steam"
         ? " The latest eligible snapshot remains available for up to 72 hours."
         : " The last successful snapshot remains public.";
 
   if (connector.status === "setup_required") {
     return connector.configured
-      ? "A site release gate is incomplete. Resolve the notice above before refreshing."
+      ? environment === "local"
+        ? "A local setup gate is incomplete. Resolve the notice above before refreshing."
+        : "A site release gate is incomplete. Resolve the notice above before refreshing."
       : "Add the owner credential below, then run the first refresh.";
   }
   if (connector.status === "never_synced") {
-    return "The credential is encrypted and stored. Run Refresh now to publish the first sanitized snapshot.";
+    return environment === "local"
+      ? "The credential is encrypted in local D1. Run Refresh now to create the first local sanitized snapshot."
+      : "The credential is encrypted and stored. Run Refresh now to publish the first sanitized snapshot.";
   }
   if (connector.status === "healthy") {
-    return "The public snapshot is current. Visitor-triggered refreshes are limited to once every 12 hours.";
+    return environment === "local"
+      ? "The local snapshot is current. Nothing here has been copied to production."
+      : "The public snapshot is current. Visitor-triggered refreshes are limited to once every 12 hours.";
   }
   if (connector.status === "stale") {
     return `Run Refresh now to update this stream.${preservedSnapshot}`;
@@ -61,7 +75,9 @@ function statusGuidance(
     return "A refresh is already running. This page will show its result after completion.";
   }
   if (connector.status === "visibility_required") {
-    return "Set both the Steam profile and Game details to Public, then run Refresh now. The previous Steam snapshot is unpublished.";
+    return environment === "local"
+      ? "Set both the Steam profile and Game details to Public, then run Refresh now. The previous local Steam snapshot is unavailable."
+      : "Set both the Steam profile and Game details to Public, then run Refresh now. The previous Steam snapshot is unpublished.";
   }
   if (
     connector.lastErrorCode === "credential_expired" ||
@@ -78,6 +94,7 @@ function statusGuidance(
 
 export function ConnectorControls({
   connector,
+  environment,
   encryptionConfigured,
   steamStorageCountries,
 }: Props & {
@@ -104,8 +121,8 @@ export function ConnectorControls({
       action === "disconnect" &&
       !window.confirm(
         connector.provider === "steam"
-          ? "Disconnect Steam? The encrypted key, every stored Steam snapshot, and Steam sync history will be deleted and unpublished."
-          : `Disconnect ${providerNames[connector.provider]}? The encrypted credential will be deleted, while the last public snapshot remains published.`,
+          ? `Disconnect Steam? The encrypted key, every stored Steam snapshot, and Steam sync history will be deleted${environment === "local" ? " from this local sandbox." : " and unpublished."}`
+          : `Disconnect ${providerNames[connector.provider]}? The encrypted credential will be deleted${environment === "local" ? " from this local sandbox." : ", while the last public snapshot remains published."}`,
       )
     ) {
       return;
@@ -152,18 +169,24 @@ export function ConnectorControls({
       setMessage(
         action === "save"
           ? connector.configured
-            ? "Credential encrypted and replaced. Run Refresh now to verify and publish it."
-            : "Credential encrypted and saved. Run Refresh now to publish the first snapshot."
+            ? environment === "local"
+              ? "Credential encrypted and replaced in local D1. Run Refresh now to verify it here."
+              : "Credential encrypted and replaced. Run Refresh now to verify and publish it."
+            : environment === "local"
+              ? "Credential encrypted in local D1. Run Refresh now to create the first local snapshot."
+              : "Credential encrypted and saved. Run Refresh now to publish the first snapshot."
           : action === "disconnect"
             ? connector.provider === "steam"
-              ? "Steam disconnected. Every stored Steam snapshot and Steam sync-history record was deleted."
-              : "Credential removed. The last public snapshot was preserved."
+              ? `Steam disconnected. Every stored Steam snapshot and Steam sync-history record was deleted${environment === "local" ? " from this sandbox." : "."}`
+              : environment === "local"
+                ? "Credential removed from local D1. The local snapshot was preserved."
+                : "Credential removed. The last public snapshot was preserved."
             : result.status === "already_running"
               ? "A sync is already running."
               : result.status === "withheld"
                 ? result.message ??
                   "Steam game details are not public, so the stream was unpublished."
-              : `Sync complete${typeof result.itemCount === "number" ? ` · ${result.itemCount} items` : ""}.`,
+              : `${environment === "local" ? "Local sync" : "Sync"} complete${typeof result.itemCount === "number" ? ` · ${result.itemCount} items` : ""}.`,
       );
       window.setTimeout(() => window.location.reload(), 1_100);
     } catch {
@@ -202,7 +225,9 @@ export function ConnectorControls({
           </dd>
         </div>
         <div>
-          <dt>Published snapshot</dt>
+          <dt>
+            {environment === "local" ? "Local snapshot" : "Published snapshot"}
+          </dt>
           <dd>
             {connector.itemCount === null
               ? "None"
@@ -214,6 +239,7 @@ export function ConnectorControls({
       <p className={styles.statusGuidance}>
         {statusGuidance(
           connector,
+          environment,
           encryptionConfigured,
           steamStorageCountries,
         )}
@@ -282,9 +308,12 @@ export function ConnectorControls({
             {connector.provider === "steam" ? (
               <>
                 Requires a Public Steam profile and Public Game details.
-                Connecting authorizes automatic public-only refreshes no more
-                than every 12 hours; the owner can refresh manually. Read the{" "}
+                Connecting authorizes sanitized refreshes no more than every 12
+                hours; the owner can refresh manually. Read the{" "}
                 <a href="/privacy">data and retention policy</a>.
+                {environment === "local"
+                  ? " This test writes only to the local sandbox."
+                  : " The resulting snapshot may be published on Play."}
                 {steamStorageCountries
                   ? ` Sanitized snapshots are disclosed as stored in ${steamStorageCountries}.`
                   : " Connecting is disabled until the storage-country release gate is configured."}
