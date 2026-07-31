@@ -83,6 +83,35 @@ export const connectorCredentials = sqliteTable("connector_credentials", {
   updatedAt: timestamp("updated_at"),
 });
 
+/**
+ * OAuth state is stored only as a SHA-256 hash. The encrypted payload contains
+ * the PKCE verifier, OAuth client secret, and—during an authentication resume—
+ * the short-lived authorization code. Transactions are owner-bound,
+ * single-use, and expire after ten minutes.
+ */
+export const connectorOauthTransactions = sqliteTable(
+  "connector_oauth_transactions",
+  {
+    stateHash: text("state_hash").primaryKey(),
+    provider: text("provider").notNull(),
+    ciphertext: text("ciphertext").notNull(),
+    iv: text("iv").notNull(),
+    keyVersion: text("key_version").notNull().default("v1"),
+    ownerEmail: text("owner_email").notNull(),
+    redirectUri: text("redirect_uri").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    consumedAt: text("consumed_at"),
+    createdAt: timestamp("created_at"),
+  },
+  (table) => [
+    index("connector_oauth_owner_provider_expiry_idx").on(
+      table.ownerEmail,
+      table.provider,
+      table.expiresAt,
+    ),
+  ],
+);
+
 export const connectorSnapshots = sqliteTable(
   "connector_snapshots",
   {

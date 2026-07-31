@@ -13,9 +13,22 @@ export function isConnectorProvider(
   return CONNECTOR_PROVIDERS.includes(value as ConnectorProvider);
 }
 
-export type MyAnimeListCredential = {
+export type LegacyMyAnimeListCredential = {
   accessToken: string;
 };
+
+export type MyAnimeListOAuthCredential = {
+  kind: "oauth";
+  clientId: string;
+  clientSecret: string;
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresAt: string;
+};
+
+export type MyAnimeListCredential =
+  | LegacyMyAnimeListCredential
+  | MyAnimeListOAuthCredential;
 
 export type HardcoverCredential = {
   authorization: string;

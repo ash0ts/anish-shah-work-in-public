@@ -64,10 +64,9 @@ async function expectConnectorError(action, expected) {
 }
 
 test("MyAnimeList success payload is normalized, sorted, bounded, and origin-safe", async () => {
-  const previousProfile = process.env.MYANIMELIST_PROFILE_URL;
-  process.env.MYANIMELIST_PROFILE_URL = "https://myanimelist.net/profile/anish";
   const requests = [];
   const pages = [
+    jsonResponse({ id: 42, name: "anish" }),
     jsonResponse(
       {
         data: [
@@ -142,19 +141,18 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
     }),
   ];
 
-  try {
-    const result = await withFetch(async (input, init) => {
-      requests.push({ url: String(input), init });
-      return pages.shift();
-    }, () => fetchMyAnimeListSnapshot({ accessToken: " Bearer mal-secret " }));
+  const result = await withFetch(async (input, init) => {
+    requests.push({ url: String(input), init });
+    return pages.shift();
+  }, () => fetchMyAnimeListSnapshot({ accessToken: " Bearer mal-secret " }));
 
-    assert.equal(requests.length, 2);
+    assert.equal(requests.length, 3);
     assert.equal(requests[0].init.headers.Authorization, "Bearer mal-secret");
     assert.match(requests[0].url, /^https:\/\/api\.myanimelist\.net\//);
     assert.match(requests[1].url, /^https:\/\/api\.myanimelist\.net\//);
     assert.equal(result.itemCount, 4);
     assert.equal(result.etag, '"mal-v1"');
-    assert.deepEqual(result.publicPayload, {
+  assert.deepEqual(result.publicPayload, {
       provider: "myanimelist",
       profileUrl: "https://myanimelist.net/profile/anish",
       coverage: "Current library",
@@ -200,16 +198,10 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
           updatedAt: "2026-07-01T12:00:00Z",
         },
       ],
-    });
-  } finally {
-    if (previousProfile === undefined) delete process.env.MYANIMELIST_PROFILE_URL;
-    else process.env.MYANIMELIST_PROFILE_URL = previousProfile;
-  }
+  });
 });
 
 test("Hardcover success payload deduplicates books and normalizes public fields", async () => {
-  const previousProfile = process.env.HARDCOVER_PROFILE_URL;
-  process.env.HARDCOVER_PROFILE_URL = "https://hardcover.app/@anish";
   const requests = [];
   const responses = [
     jsonResponse({ data: { me: [{ id: 42, username: "anish" }] } }),
@@ -248,11 +240,10 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
     }),
   ];
 
-  try {
-    const result = await withFetch(async (_input, init) => {
-      requests.push(init);
-      return responses.shift();
-    }, () => fetchHardcoverSnapshot({ authorization: " hardcover-secret " }));
+  const result = await withFetch(async (_input, init) => {
+    requests.push(init);
+    return responses.shift();
+  }, () => fetchHardcoverSnapshot({ authorization: " hardcover-secret " }));
 
     assert.equal(requests.length, 2);
     assert.equal(requests[0].method, "POST");
@@ -261,7 +252,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
     assert.deepEqual(JSON.parse(requests[1].body).variables, { userId: 42 });
     assert.doesNotMatch(JSON.parse(requests[1].body).query, /\bimage\b/i);
     assert.equal(result.itemCount, 3);
-    assert.deepEqual(result.publicPayload, {
+  assert.deepEqual(result.publicPayload, {
       provider: "hardcover",
       profileUrl: "https://hardcover.app/@anish",
       username: "anish",
@@ -289,11 +280,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           updatedAt: "2026-07-02T00:00:00Z",
         },
       ],
-    });
-  } finally {
-    if (previousProfile === undefined) delete process.env.HARDCOVER_PROFILE_URL;
-    else process.env.HARDCOVER_PROFILE_URL = previousProfile;
-  }
+  });
 });
 
 test("Hardcover accepts bare or prefixed tokens and emits one Bearer prefix", () => {
@@ -592,6 +579,21 @@ class FakeD1 {
       return 1;
     }
 
+    if (sql.includes("UPDATE connector_credentials")) {
+      const [ciphertext, iv, keyVersion, expiresAt, updatedAt] = values;
+      const credential = this.credentials.get("myanimelist");
+      if (!credential) return 0;
+      this.credentials.set("myanimelist", {
+        ...credential,
+        ciphertext,
+        iv,
+        keyVersion,
+        expiresAt,
+        updatedAt,
+      });
+      return 1;
+    }
+
     if (sql.includes("DELETE FROM connector_snapshots")) {
       const [provider, retainedId] = values;
       if (sql.includes("id NOT IN")) {
@@ -700,6 +702,27 @@ function storedSnapshot(provider, payload, { fetchedAt, freshUntil }) {
 
 async function encryptedMyAnimeListCredential(key) {
   return encryptCredential({ accessToken: "repository-token" }, key, "myanimelist");
+}
+
+async function encryptedMyAnimeListOAuthCredential(
+  key,
+  overrides = {},
+) {
+  return encryptCredential(
+    {
+      kind: "oauth",
+      clientId: "client-id-value",
+      clientSecret: "client-secret-value",
+      accessToken: "old-access-token",
+      refreshToken: "old-refresh-token",
+      accessTokenExpiresAt: new Date(
+        Date.now() + 60 * 60 * 1000,
+      ).toISOString(),
+      ...overrides,
+    },
+    key,
+    "myanimelist",
+  );
 }
 
 async function encryptedSteamCredential(key) {
@@ -846,7 +869,10 @@ test("duplicate manual refreshes share the database lock", async () => {
   await withRuntimeBindings(
     { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
     () =>
-      withFetch(async () => {
+      withFetch(async (input) => {
+        if (String(input).includes("/v2/users/@me?")) {
+          return jsonResponse({ id: 42, name: "anish" });
+        }
         fetchStarted = true;
         return pendingResponse;
       }, async () => {
@@ -870,6 +896,116 @@ test("duplicate manual refreshes share the database lock", async () => {
         assert.equal(database.snapshots.length, 1);
       }),
   );
+});
+
+test("MyAnimeList proactively refreshes and persists rotated OAuth tokens", async () => {
+  const key = Buffer.alloc(32, 23).toString("base64");
+  const credential = await encryptedMyAnimeListOAuthCredential(key, {
+    accessTokenExpiresAt: new Date(Date.now() - 60_000).toISOString(),
+  });
+  const database = new FakeD1({ credentials: { myanimelist: credential } });
+  const requests = [];
+
+  const result = await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(async (input, init) => {
+        const url = String(input);
+        requests.push({ url, authorization: init?.headers?.Authorization });
+        if (url === "https://myanimelist.net/v1/oauth2/token") {
+          return jsonResponse({
+            expires_in: 3600,
+            access_token: "new-access-token",
+            refresh_token: "new-refresh-token",
+          });
+        }
+        if (url.includes("/v2/users/@me?")) {
+          assert.equal(init.headers.Authorization, "Bearer new-access-token");
+          return jsonResponse({ id: 42, name: "anish" });
+        }
+        assert.equal(init.headers.Authorization, "Bearer new-access-token");
+        return jsonResponse({ data: [], paging: {} });
+      }, () => refreshConnector("myanimelist", "manual", "anish@example.com")),
+  );
+
+  assert.equal(result.status, "complete");
+  assert.equal(
+    requests.filter(({ url }) => url.endsWith("/v1/oauth2/token")).length,
+    1,
+  );
+  const stored = await decryptCredential(
+    database.credentials.get("myanimelist"),
+    key,
+    "myanimelist",
+  );
+  assert.equal(stored.accessToken, "new-access-token");
+  assert.equal(stored.refreshToken, "new-refresh-token");
+  assert(Date.parse(stored.accessTokenExpiresAt) > Date.now());
+});
+
+test("MyAnimeList refreshes once after API 401 and retries with the new token", async () => {
+  const key = Buffer.alloc(32, 25).toString("base64");
+  const credential = await encryptedMyAnimeListOAuthCredential(key);
+  const database = new FakeD1({ credentials: { myanimelist: credential } });
+  let identityCalls = 0;
+  let tokenCalls = 0;
+
+  const result = await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(async (input, init) => {
+        const url = String(input);
+        if (url === "https://myanimelist.net/v1/oauth2/token") {
+          tokenCalls += 1;
+          return jsonResponse({
+            expires_in: 3600,
+            access_token: "retry-access-token",
+            refresh_token: "retry-refresh-token",
+          });
+        }
+        if (url.includes("/v2/users/@me?")) {
+          identityCalls += 1;
+          if (identityCalls === 1) {
+            assert.equal(init.headers.Authorization, "Bearer old-access-token");
+            return jsonResponse({ error: "expired" }, { status: 401 });
+          }
+          assert.equal(init.headers.Authorization, "Bearer retry-access-token");
+          return jsonResponse({ id: 42, name: "anish" });
+        }
+        assert.equal(init.headers.Authorization, "Bearer retry-access-token");
+        return jsonResponse({ data: [], paging: {} });
+      }, () => refreshConnector("myanimelist", "manual", "anish@example.com")),
+  );
+
+  assert.equal(result.status, "complete");
+  assert.equal(identityCalls, 2);
+  assert.equal(tokenCalls, 1);
+});
+
+test("MyAnimeList invalid refresh grant requires owner reauthorization", async () => {
+  const key = Buffer.alloc(32, 27).toString("base64");
+  const credential = await encryptedMyAnimeListOAuthCredential(key, {
+    accessTokenExpiresAt: new Date(Date.now() - 60_000).toISOString(),
+  });
+  const database = new FakeD1({ credentials: { myanimelist: credential } });
+
+  const result = await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(
+        async () =>
+          jsonResponse({ error: "invalid_grant" }, { status: 400 }),
+        () => refreshConnector("myanimelist", "manual", "anish@example.com"),
+      ),
+  );
+
+  assert.deepEqual(result, {
+    status: "failed",
+    provider: "myanimelist",
+    code: "reauthorization_required",
+    retryable: false,
+  });
+  assert.equal(database.snapshots.length, 0);
 });
 
 test("failed refresh preserves the last-known-good snapshot", async () => {
@@ -932,8 +1068,10 @@ test("refresh rejects unsafe provider output before writing a snapshot", async (
     { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
     () =>
       withFetch(
-        async () =>
-          jsonResponse({
+        async (input) =>
+          String(input).includes("/v2/users/@me?")
+            ? jsonResponse({ id: 42, name: "anish" })
+            : jsonResponse({
             data: [
               {
                 node: {

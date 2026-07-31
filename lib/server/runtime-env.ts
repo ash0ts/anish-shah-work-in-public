@@ -2,11 +2,11 @@ import { env } from "cloudflare:workers";
 
 type RuntimeBindings = {
   DB?: D1Database;
+  NODE_ENV?: string;
   OWNER_EMAILS?: string;
   CONNECTOR_ENCRYPTION_KEY?: string;
-  MYANIMELIST_PROFILE_URL?: string;
-  HARDCOVER_PROFILE_URL?: string;
   STEAM_DATA_STORAGE_COUNTRIES?: string;
+  SITE_URL?: string;
 };
 
 function cloudflareBindings(): RuntimeBindings {

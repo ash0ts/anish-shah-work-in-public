@@ -52,6 +52,17 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
+  if (authorized.provider === "myanimelist") {
+    return Response.json(
+      {
+        error:
+          "Connect MyAnimeList through its OAuth setup instead of pasting an access token.",
+        code: "oauth_required",
+      },
+      { status: 400, headers: { "cache-control": "private, no-store" } },
+    );
+  }
+
   let credentialInput:
     | string
     | { apiKey: string; steamId: string };
@@ -157,8 +168,8 @@ export async function DELETE(request: Request, context: RouteContext) {
       {
         status: "disconnected",
         provider: authorized.provider,
-        snapshotsDeleted: authorized.provider === "steam",
-        syncHistoryDeleted: authorized.provider === "steam",
+        snapshotsDeleted: true,
+        syncHistoryDeleted: true,
       },
       { headers: { "cache-control": "private, no-store" } },
     );

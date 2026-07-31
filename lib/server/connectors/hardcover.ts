@@ -1,4 +1,3 @@
-import { runtimeValue } from "../runtime-env";
 import {
   ConnectorFetchError,
   type ConnectorFetchResult,
@@ -122,6 +121,11 @@ export async function fetchHardcoverSnapshot(
       { code: "provider_schema_changed" },
     );
   }
+  const username =
+    typeof viewer.username === "string" &&
+    /^[a-z0-9_-]{1,64}$/i.test(viewer.username.trim())
+      ? viewer.username.trim()
+      : null;
 
   const library = await queryHardcover<{ user_books?: HardcoverBook[] }>(
     authorization,
@@ -182,9 +186,9 @@ export async function fetchHardcoverSnapshot(
       provider: "hardcover",
       profileUrl: normalizeConnectorProfileUrl(
         "hardcover",
-        runtimeValue("HARDCOVER_PROFILE_URL"),
+        username ? `https://hardcover.app/@${username}` : undefined,
       ),
-      username: viewer.username ?? null,
+      username,
       coverage:
         uniqueBooks.length === 250
           ? "250 most recently updated books"

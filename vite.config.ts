@@ -15,9 +15,8 @@ const LOCAL_SERVER_VARIABLE_NAMES = [
   "OWNER_EMAILS",
   "LOCAL_OWNER_EMAIL",
   "CONNECTOR_ENCRYPTION_KEY",
-  "MYANIMELIST_PROFILE_URL",
-  "HARDCOVER_PROFILE_URL",
   "STEAM_DATA_STORAGE_COUNTRIES",
+  "SITE_URL",
 ] as const;
 
 export default defineConfig(async ({ command, mode }) => {
@@ -71,9 +70,14 @@ export default defineConfig(async ({ command, mode }) => {
   };
 
   return {
-    server: isCodexSeatbeltSandbox
-      ? { watch: { useFsEvents: false, usePolling: true } }
-      : undefined,
+    server: {
+      host: "localhost",
+      port: 3000,
+      strictPort: true,
+      ...(isCodexSeatbeltSandbox
+        ? { watch: { useFsEvents: false, usePolling: true } }
+        : {}),
+    },
     plugins: [
       vinext(),
       sites(),

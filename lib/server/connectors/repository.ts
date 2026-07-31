@@ -14,6 +14,21 @@ import {
   normalizeMyAnimeListAccessToken,
 } from "./myanimelist";
 import {
+  buildMyAnimeListAuthorizationUrl,
+  createMyAnimeListOAuthState,
+  createMyAnimeListPkceVerifier,
+  exchangeMyAnimeListAuthorizationCode,
+  hashMyAnimeListOAuthState,
+  isMyAnimeListOAuthCredential,
+  isValidMyAnimeListOAuthState,
+  normalizeMyAnimeListOAuthClient,
+  refreshMyAnimeListOAuthCredential,
+  resolveMyAnimeListCallbackUrl,
+  shouldRefreshMyAnimeListToken,
+  type MyAnimeListOAuthClient,
+  type MyAnimeListOAuthTransactionPayload,
+} from "./myanimelist-oauth";
+import {
   parseStoredConnectorPublicPayload,
   validateConnectorPublicPayload,
 } from "./public-payload-policy";
@@ -32,6 +47,7 @@ import {
   type ConnectorProvider,
   type HardcoverCredential,
   type MyAnimeListCredential,
+  type MyAnimeListOAuthCredential,
   type SteamCredential,
   type SyncTrigger,
 } from "./types";
@@ -39,12 +55,17 @@ import {
 const FRESHNESS_WINDOW_MS = 12 * 60 * 60 * 1000;
 const RUN_LOCK_WINDOW_MS = 10 * 60 * 1000;
 const STEAM_MAX_PUBLIC_AGE_MS = 72 * 60 * 60 * 1000;
+const OAUTH_TRANSACTION_WINDOW_MS = 10 * 60 * 1000;
+const MYANIMELIST_OAUTH_TRANSACTION_CONTEXT =
+  "myanimelist-oauth-transaction";
 
 export type ConnectorHealth = {
   provider: ConnectorProvider;
   configured: boolean;
   status:
     | "setup_required"
+    | "authorization_required"
+    | "reauthorization_required"
     | "never_synced"
     | "healthy"
     | "stale"
@@ -138,6 +159,43 @@ export type RefreshResult =
       retryable: boolean;
     };
 
+export type MyAnimeListOAuthStartResult =
+  | {
+      status: "authorization_required";
+      provider: "myanimelist";
+      authorizationUrl: string;
+      callbackUrl: string;
+      expiresAt: string;
+    }
+  | {
+      status: "invalid";
+      reason: "credential";
+    }
+  | {
+      status: "setup_required";
+      reason: "database" | "encryption_key" | "callback_url";
+    };
+
+export type MyAnimeListOAuthStageResult =
+  | { status: "ready"; resumeState: string }
+  | {
+      status:
+        | "expired"
+        | "invalid_state"
+        | "setup_required";
+    };
+
+export type MyAnimeListOAuthCompletionResult =
+  | { status: "connected" }
+  | {
+      status:
+        | "denied"
+        | "expired"
+        | "invalid_state"
+        | "token_exchange_failed"
+        | "setup_required";
+    };
+
 function databaseOrNull(): D1Database | null {
   return runtimeDatabase();
 }
@@ -191,13 +249,13 @@ export async function getStudioOverview(): Promise<StudioOverview> {
     for (const provider of CONNECTOR_PROVIDERS) {
       const credential = await database
         .prepare(
-          `SELECT provider
+          `SELECT provider, updated_at AS updatedAt
            FROM connector_credentials
            WHERE provider = ?
            LIMIT 1`,
         )
         .bind(provider)
-        .first<{ provider: string }>();
+        .first<{ provider: string; updatedAt: string }>();
       const snapshot = await database
         .prepare(
           `SELECT status, fetched_at AS fetchedAt, fresh_until AS freshUntil,
@@ -216,14 +274,32 @@ export async function getStudioOverview(): Promise<StudioOverview> {
         }>();
       const run = await database
         .prepare(
-          `SELECT status, error_code AS errorCode
+          `SELECT status, error_code AS errorCode, started_at AS startedAt
            FROM sync_runs
            WHERE provider = ?
            ORDER BY started_at DESC
            LIMIT 1`,
         )
         .bind(provider)
-        .first<{ status: string; errorCode: string | null }>();
+        .first<{
+          status: string;
+          errorCode: string | null;
+          startedAt: string;
+        }>();
+      const pendingAuthorization =
+        provider === "myanimelist"
+          ? await database
+              .prepare(
+                `SELECT state_hash AS stateHash
+                 FROM connector_oauth_transactions
+                 WHERE provider = 'myanimelist'
+                   AND consumed_at IS NULL
+                   AND expires_at > ?
+                 LIMIT 1`,
+              )
+              .bind(new Date().toISOString())
+              .first<{ stateHash: string }>()
+          : null;
 
       const configured = Boolean(credential);
       const stale = snapshot
@@ -232,6 +308,8 @@ export async function getStudioOverview(): Promise<StudioOverview> {
       let status: ConnectorHealth["status"] = "never_synced";
       if (provider === "steam" && !steamStorageCountries()) {
         status = "setup_required";
+      } else if (!configured && pendingAuthorization) {
+        status = "authorization_required";
       } else if (!configured) status = "setup_required";
       else if (run?.status === "running") status = "syncing";
       else if (
@@ -239,7 +317,22 @@ export async function getStudioOverview(): Promise<StudioOverview> {
         (snapshot?.status === "withheld" || run?.status === "withheld")
       ) {
         status = "visibility_required";
-      } else if (run?.status === "failed") status = "error";
+      } else if (
+        run?.status === "failed" &&
+        run.errorCode === "reauthorization_required" &&
+        (!credential?.updatedAt ||
+          !run.startedAt ||
+          Date.parse(run.startedAt) >= Date.parse(credential.updatedAt))
+      ) {
+        status = "reauthorization_required";
+      } else if (
+        run?.status === "failed" &&
+        (!credential?.updatedAt ||
+          !run.startedAt ||
+          Date.parse(run.startedAt) >= Date.parse(credential.updatedAt))
+      ) {
+        status = "error";
+      }
       else if (snapshot?.status === "ready" && stale) status = "stale";
       else if (snapshot?.status === "ready") status = "healthy";
 
@@ -388,6 +481,427 @@ export async function getPublicConnectorSnapshot(
   }
 }
 
+type StoredOAuthTransaction = EncryptedCredential & {
+  stateHash: string;
+  ownerEmail: string;
+  redirectUri: string;
+  expiresAt: string;
+  consumedAt: string | null;
+};
+
+function myAnimeListCallbackUrl(requestUrl: string): string | null {
+  return resolveMyAnimeListCallbackUrl(
+    requestUrl,
+    runtimeValue("SITE_URL"),
+    runtimeValue("NODE_ENV") ?? process.env.NODE_ENV,
+  );
+}
+
+function normalizedOwnerEmail(value: string): string {
+  return value.trim().toLocaleLowerCase();
+}
+
+function validAuthorizationCode(value: string | undefined): string | null {
+  const candidate = value?.trim() ?? "";
+  if (
+    candidate.length < 8 ||
+    candidate.length > 8192 ||
+    /[\u0000-\u001f\u007f]/.test(candidate)
+  ) {
+    return null;
+  }
+  return candidate;
+}
+
+function validProviderOAuthError(value: string | undefined): string | null {
+  const candidate = value?.trim() ?? "";
+  return /^[a-z0-9_]{1,64}$/i.test(candidate) ? candidate : null;
+}
+
+async function storedOAuthTransaction(
+  database: D1Database,
+  stateHash: string,
+): Promise<StoredOAuthTransaction | null> {
+  return database
+    .prepare(
+      `SELECT state_hash AS stateHash, ciphertext, iv,
+              key_version AS keyVersion, owner_email AS ownerEmail,
+              redirect_uri AS redirectUri, expires_at AS expiresAt,
+              consumed_at AS consumedAt
+       FROM connector_oauth_transactions
+       WHERE state_hash = ? AND provider = 'myanimelist'
+       LIMIT 1`,
+    )
+    .bind(stateHash)
+    .first<StoredOAuthTransaction>();
+}
+
+async function decryptOAuthTransaction(
+  row: StoredOAuthTransaction,
+  encryptionKey: string,
+): Promise<MyAnimeListOAuthTransactionPayload | null> {
+  try {
+    return await decryptCredential<MyAnimeListOAuthTransactionPayload>(
+      row,
+      encryptionKey,
+      MYANIMELIST_OAUTH_TRANSACTION_CONTEXT,
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function startMyAnimeListOAuth(input: {
+  clientId?: string;
+  clientSecret?: string;
+  actorEmail: string;
+  requestUrl: string;
+}): Promise<MyAnimeListOAuthStartResult> {
+  const database = databaseOrNull();
+  const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
+  if (!database) return { status: "setup_required", reason: "database" };
+  if (!encryptionKey) {
+    return { status: "setup_required", reason: "encryption_key" };
+  }
+  const callbackUrl = myAnimeListCallbackUrl(input.requestUrl);
+  if (!callbackUrl) {
+    return { status: "setup_required", reason: "callback_url" };
+  }
+
+  let client: MyAnimeListOAuthClient | null = null;
+  if (input.clientId !== undefined || input.clientSecret !== undefined) {
+    client = normalizeMyAnimeListOAuthClient(
+      input.clientId ?? "",
+      input.clientSecret ?? "",
+    );
+  } else {
+    try {
+      const existing = await loadCredential(database, "myanimelist");
+      if (isMyAnimeListOAuthCredential(existing)) {
+        client = {
+          clientId: existing.clientId,
+          clientSecret: existing.clientSecret,
+        };
+      }
+    } catch {
+      return { status: "setup_required", reason: "encryption_key" };
+    }
+  }
+  if (!client) return { status: "invalid", reason: "credential" };
+
+  const state = createMyAnimeListOAuthState();
+  const stateHash = await hashMyAnimeListOAuthState(state);
+  const codeVerifier = createMyAnimeListPkceVerifier();
+  const now = new Date();
+  const createdAt = now.toISOString();
+  const expiresAt = new Date(
+    now.getTime() + OAUTH_TRANSACTION_WINDOW_MS,
+  ).toISOString();
+  let encrypted: EncryptedCredential;
+  try {
+    encrypted = await encryptCredential(
+      {
+        phase: "authorization",
+        ...client,
+        codeVerifier,
+        callbackUrl,
+      } satisfies MyAnimeListOAuthTransactionPayload,
+      encryptionKey,
+      MYANIMELIST_OAUTH_TRANSACTION_CONTEXT,
+    );
+  } catch {
+    return { status: "setup_required", reason: "encryption_key" };
+  }
+
+  const ownerEmail = normalizedOwnerEmail(input.actorEmail);
+  try {
+    await database.batch([
+      database
+        .prepare(
+          `DELETE FROM connector_oauth_transactions
+           WHERE consumed_at IS NOT NULL OR expires_at <= ?`,
+        )
+        .bind(createdAt),
+      database
+        .prepare(
+          `DELETE FROM connector_oauth_transactions
+           WHERE provider = 'myanimelist' AND owner_email = ?`,
+        )
+        .bind(ownerEmail),
+      database
+        .prepare(
+          `INSERT INTO connector_oauth_transactions (
+             state_hash, provider, ciphertext, iv, key_version, owner_email,
+             redirect_uri, expires_at, consumed_at, created_at
+           ) VALUES (?, 'myanimelist', ?, ?, ?, ?, ?, ?, NULL, ?)`,
+        )
+        .bind(
+          stateHash,
+          encrypted.ciphertext,
+          encrypted.iv,
+          encrypted.keyVersion,
+          ownerEmail,
+          callbackUrl,
+          expiresAt,
+          createdAt,
+        ),
+    ]);
+  } catch {
+    return { status: "setup_required", reason: "database" };
+  }
+
+  return {
+    status: "authorization_required",
+    provider: "myanimelist",
+    authorizationUrl: buildMyAnimeListAuthorizationUrl({
+      clientId: client.clientId,
+      codeVerifier,
+      state,
+    }),
+    callbackUrl,
+    expiresAt,
+  };
+}
+
+/**
+ * The provider callback can arrive after the SIWC session expires. Stow the
+ * authorization code inside the already owner-bound encrypted transaction,
+ * rotate the public state, and send only the fresh resume state through the
+ * sign-in redirect.
+ */
+export async function stageMyAnimeListOAuthCallback(input: {
+  state: string;
+  authorizationCode?: string;
+  providerError?: string;
+  requestUrl: string;
+}): Promise<MyAnimeListOAuthStageResult> {
+  if (!isValidMyAnimeListOAuthState(input.state)) {
+    return { status: "invalid_state" };
+  }
+  const authorizationCode = validAuthorizationCode(input.authorizationCode);
+  const providerError = validProviderOAuthError(input.providerError);
+  if (!authorizationCode && !providerError) {
+    return { status: "invalid_state" };
+  }
+
+  const database = databaseOrNull();
+  const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
+  const callbackUrl = myAnimeListCallbackUrl(input.requestUrl);
+  if (!database || !encryptionKey || !callbackUrl) {
+    return { status: "setup_required" };
+  }
+
+  const stateHash = await hashMyAnimeListOAuthState(input.state);
+  let row: StoredOAuthTransaction | null;
+  try {
+    row = await storedOAuthTransaction(database, stateHash);
+  } catch {
+    return { status: "setup_required" };
+  }
+  if (!row || row.consumedAt) return { status: "invalid_state" };
+  if (Date.parse(row.expiresAt) <= Date.now()) return { status: "expired" };
+  if (row.redirectUri !== callbackUrl) return { status: "invalid_state" };
+
+  const transaction = await decryptOAuthTransaction(row, encryptionKey);
+  if (
+    !transaction ||
+    transaction.phase !== "authorization" ||
+    transaction.callbackUrl !== callbackUrl
+  ) {
+    return { status: "invalid_state" };
+  }
+
+  const resumeState = createMyAnimeListOAuthState();
+  const resumeStateHash = await hashMyAnimeListOAuthState(resumeState);
+  let encrypted: EncryptedCredential;
+  try {
+    encrypted = await encryptCredential(
+      {
+        ...transaction,
+        phase: "callback",
+        ...(authorizationCode ? { authorizationCode } : {}),
+        ...(providerError ? { providerError } : {}),
+      } satisfies MyAnimeListOAuthTransactionPayload,
+      encryptionKey,
+      MYANIMELIST_OAUTH_TRANSACTION_CONTEXT,
+    );
+  } catch {
+    return { status: "setup_required" };
+  }
+
+  try {
+    const result = await database
+      .prepare(
+        `UPDATE connector_oauth_transactions
+         SET state_hash = ?, ciphertext = ?, iv = ?, key_version = ?
+         WHERE state_hash = ? AND provider = 'myanimelist'
+           AND consumed_at IS NULL AND expires_at > ?`,
+      )
+      .bind(
+        resumeStateHash,
+        encrypted.ciphertext,
+        encrypted.iv,
+        encrypted.keyVersion,
+        stateHash,
+        new Date().toISOString(),
+      )
+      .run();
+    if ((result.meta.changes ?? 0) !== 1) {
+      return { status: "invalid_state" };
+    }
+  } catch {
+    return { status: "setup_required" };
+  }
+
+  return { status: "ready", resumeState };
+}
+
+async function saveMyAnimeListOAuthCredential(
+  database: D1Database,
+  credential: MyAnimeListOAuthCredential,
+  actorEmail: string,
+): Promise<void> {
+  const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
+  if (!encryptionKey) throw new Error("Connector encryption is unavailable.");
+  const encrypted = await encryptCredential(
+    credential,
+    encryptionKey,
+    "myanimelist",
+  );
+  const now = new Date().toISOString();
+  const ownerEmail = normalizedOwnerEmail(actorEmail);
+  await database.batch([
+    database
+      .prepare(
+        `INSERT INTO connector_credentials (
+           provider, ciphertext, iv, key_version, credential_label,
+           scopes_json, expires_at, created_at, updated_at
+         ) VALUES ('myanimelist', ?, ?, ?, ?, '[]', ?, ?, ?)
+         ON CONFLICT(provider) DO UPDATE SET
+           ciphertext = excluded.ciphertext,
+           iv = excluded.iv,
+           key_version = excluded.key_version,
+           credential_label = excluded.credential_label,
+           scopes_json = excluded.scopes_json,
+           expires_at = excluded.expires_at,
+           updated_at = excluded.updated_at`,
+      )
+      .bind(
+        encrypted.ciphertext,
+        encrypted.iv,
+        encrypted.keyVersion,
+        "Owner OAuth authorization",
+        credential.accessTokenExpiresAt,
+        now,
+        now,
+      ),
+    database
+      .prepare(
+        `DELETE FROM connector_oauth_transactions
+         WHERE provider = 'myanimelist' AND owner_email = ?`,
+      )
+      .bind(ownerEmail),
+    database
+      .prepare(
+        `INSERT INTO audit_log (
+           id, actor_email, action, entity_type, entity_id, details_json, created_at
+         ) VALUES (?, ?, 'connector.oauth_connected', 'connector',
+                   'myanimelist', '{}', ?)`,
+      )
+      .bind(crypto.randomUUID(), actorEmail, now),
+  ]);
+}
+
+export async function completeMyAnimeListOAuth(input: {
+  resumeState: string;
+  actorEmail: string;
+  requestUrl: string;
+}): Promise<MyAnimeListOAuthCompletionResult> {
+  if (!isValidMyAnimeListOAuthState(input.resumeState)) {
+    return { status: "invalid_state" };
+  }
+  const database = databaseOrNull();
+  const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
+  const callbackUrl = myAnimeListCallbackUrl(input.requestUrl);
+  if (!database || !encryptionKey || !callbackUrl) {
+    return { status: "setup_required" };
+  }
+
+  const stateHash = await hashMyAnimeListOAuthState(input.resumeState);
+  let row: StoredOAuthTransaction | null;
+  try {
+    row = await storedOAuthTransaction(database, stateHash);
+  } catch {
+    return { status: "setup_required" };
+  }
+  if (!row || row.consumedAt) return { status: "invalid_state" };
+  if (Date.parse(row.expiresAt) <= Date.now()) return { status: "expired" };
+  if (
+    row.redirectUri !== callbackUrl ||
+    normalizedOwnerEmail(row.ownerEmail) !==
+      normalizedOwnerEmail(input.actorEmail)
+  ) {
+    return { status: "invalid_state" };
+  }
+
+  const transaction = await decryptOAuthTransaction(row, encryptionKey);
+  if (
+    !transaction ||
+    transaction.phase !== "callback" ||
+    transaction.callbackUrl !== callbackUrl
+  ) {
+    return { status: "invalid_state" };
+  }
+
+  try {
+    const consumed = await database
+      .prepare(
+        `UPDATE connector_oauth_transactions
+         SET consumed_at = ?
+         WHERE state_hash = ? AND provider = 'myanimelist'
+           AND consumed_at IS NULL AND expires_at > ?`,
+      )
+      .bind(new Date().toISOString(), stateHash, new Date().toISOString())
+      .run();
+    if ((consumed.meta.changes ?? 0) !== 1) {
+      return { status: "invalid_state" };
+    }
+  } catch {
+    return { status: "setup_required" };
+  }
+
+  if (transaction.providerError) {
+    return {
+      status:
+        transaction.providerError === "access_denied"
+          ? "denied"
+          : "token_exchange_failed",
+    };
+  }
+  if (!transaction.authorizationCode) {
+    return { status: "invalid_state" };
+  }
+
+  let credential: MyAnimeListOAuthCredential;
+  try {
+    credential = await exchangeMyAnimeListAuthorizationCode({
+      clientId: transaction.clientId,
+      clientSecret: transaction.clientSecret,
+      authorizationCode: transaction.authorizationCode,
+      codeVerifier: transaction.codeVerifier,
+    });
+    await saveMyAnimeListOAuthCredential(
+      database,
+      credential,
+      input.actorEmail,
+    );
+  } catch {
+    return { status: "token_exchange_failed" };
+  }
+
+  return { status: "connected" };
+}
+
 export async function saveConnectorCredential(
   provider: ConnectorProvider,
   input: ConnectorCredentialInput,
@@ -491,22 +1005,23 @@ export async function deleteConnectorCredential(
     database
       .prepare(`DELETE FROM connector_credentials WHERE provider = ?`)
       .bind(provider),
-    ...(provider === "steam"
-      ? [
-          database
-            .prepare(`DELETE FROM connector_snapshots WHERE provider = ?`)
-            .bind(provider),
-          database
-            .prepare(`DELETE FROM sync_runs WHERE provider = ?`)
-            .bind(provider),
-          database
-            .prepare(
-              `DELETE FROM audit_log
-               WHERE entity_type = 'connector' AND entity_id = ?`,
-            )
-            .bind(provider),
-        ]
-      : []),
+    database
+      .prepare(`DELETE FROM connector_snapshots WHERE provider = ?`)
+      .bind(provider),
+    database
+      .prepare(`DELETE FROM sync_runs WHERE provider = ?`)
+      .bind(provider),
+    database
+      .prepare(
+        `DELETE FROM connector_oauth_transactions WHERE provider = ?`,
+      )
+      .bind(provider),
+    database
+      .prepare(
+        `DELETE FROM audit_log
+         WHERE entity_type = 'connector' AND entity_id = ?`,
+      )
+      .bind(provider),
     database
       .prepare(
         `INSERT INTO audit_log (
@@ -517,10 +1032,7 @@ export async function deleteConnectorCredential(
         crypto.randomUUID(),
         actorEmail,
         provider,
-        JSON.stringify({
-          snapshotsDeleted: provider === "steam",
-          syncHistoryDeleted: provider === "steam",
-        }),
+        "{}",
         now,
       ),
   ]);
@@ -556,15 +1068,92 @@ async function loadCredential(
   );
 }
 
+async function persistRefreshedMyAnimeListCredential(
+  database: D1Database,
+  credential: MyAnimeListOAuthCredential,
+): Promise<void> {
+  const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
+  if (!encryptionKey) {
+    throw new ConnectorFetchError(
+      "Connector encryption is not configured.",
+      { code: "encryption_key_missing" },
+    );
+  }
+  let encrypted: EncryptedCredential;
+  try {
+    encrypted = await encryptCredential(
+      credential,
+      encryptionKey,
+      "myanimelist",
+    );
+  } catch {
+    throw new ConnectorFetchError(
+      "Connector encryption is not configured.",
+      { code: "encryption_key_missing" },
+    );
+  }
+  const result = await database
+    .prepare(
+      `UPDATE connector_credentials
+       SET ciphertext = ?, iv = ?, key_version = ?, expires_at = ?,
+           credential_label = 'Owner OAuth authorization', updated_at = ?
+       WHERE provider = 'myanimelist'`,
+    )
+    .bind(
+      encrypted.ciphertext,
+      encrypted.iv,
+      encrypted.keyVersion,
+      credential.accessTokenExpiresAt,
+      new Date().toISOString(),
+    )
+    .run();
+  if ((result.meta.changes ?? 0) !== 1) {
+    throw new ConnectorFetchError(
+      "MyAnimeList authorization could not be saved.",
+      { code: "credential_persistence_failed", retryable: true },
+    );
+  }
+}
+
 async function fetchConnectorSnapshot(
+  database: D1Database,
   provider: ConnectorProvider,
   credential: ConnectorCredential,
 ): Promise<ConnectorFetchResult> {
   switch (provider) {
-    case "myanimelist":
-      return fetchMyAnimeListSnapshot(
-        credential as MyAnimeListCredential,
-      );
+    case "myanimelist": {
+      let current = credential as MyAnimeListCredential;
+      if (
+        isMyAnimeListOAuthCredential(current) &&
+        shouldRefreshMyAnimeListToken(current)
+      ) {
+        const refreshed = await refreshMyAnimeListOAuthCredential(current);
+        await persistRefreshedMyAnimeListCredential(database, refreshed);
+        current = refreshed;
+      }
+
+      try {
+        return await fetchMyAnimeListSnapshot(current);
+      } catch (error) {
+        if (
+          !isMyAnimeListOAuthCredential(current) ||
+          !(error instanceof ConnectorFetchError) ||
+          error.code !== "credential_expired"
+        ) {
+          throw error;
+        }
+      }
+
+      if (!isMyAnimeListOAuthCredential(current)) {
+        throw new ConnectorFetchError(
+          "MyAnimeList authorization needs to be renewed.",
+          { code: "credential_expired", httpStatus: 401 },
+        );
+      }
+      const refreshed = await refreshMyAnimeListOAuthCredential(current);
+      await persistRefreshedMyAnimeListCredential(database, refreshed);
+      return fetchMyAnimeListSnapshot(refreshed);
+    }
     case "hardcover":
       return fetchHardcoverSnapshot(credential as HardcoverCredential);
     case "steam":
@@ -697,7 +1286,11 @@ export async function refreshConnector(
       return { status: "setup_required", provider, reason: "credential" };
     }
 
-    const result = await fetchConnectorSnapshot(provider, credential);
+    const result = await fetchConnectorSnapshot(
+      database,
+      provider,
+      credential,
+    );
     const fetchedAt = new Date().toISOString();
     const freshUntil = new Date(
       Date.parse(fetchedAt) + FRESHNESS_WINDOW_MS,
@@ -733,23 +1326,19 @@ export async function refreshConnector(
           result.etag ?? null,
           result.itemCount,
         ),
-      ...(provider === "steam"
-        ? [
-            database
-              .prepare(
-                `DELETE FROM connector_snapshots
-                 WHERE provider = ?
-                   AND id NOT IN (
-                     SELECT id
-                     FROM connector_snapshots
-                     WHERE provider = ?
-                     ORDER BY fetched_at DESC, id DESC
-                     LIMIT 2
-                   )`,
-              )
-              .bind(provider, provider),
-          ]
-        : []),
+      database
+        .prepare(
+          `DELETE FROM connector_snapshots
+           WHERE provider = ?
+             AND id NOT IN (
+               SELECT id
+               FROM connector_snapshots
+               WHERE provider = ?
+               ORDER BY fetched_at DESC, id DESC
+               LIMIT 2
+             )`,
+        )
+        .bind(provider, provider),
       database
         .prepare(
           `UPDATE sync_runs

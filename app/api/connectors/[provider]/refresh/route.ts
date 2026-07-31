@@ -51,7 +51,8 @@ export async function POST(request: Request, context: RouteContext) {
             ? "Configure the truthful Steam data storage-country disclosure before syncing."
             : "The site database is not ready."
       : result.status === "failed"
-          ? result.code === "credential_expired"
+          ? result.code === "credential_expired" ||
+            result.code === "reauthorization_required"
             ? "The provider credential needs to be renewed."
             : result.code === "rate_limited"
               ? "The provider is rate-limiting requests. The previous snapshot is still live."

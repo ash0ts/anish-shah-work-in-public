@@ -1,4 +1,3 @@
-import { runtimeValue } from "../runtime-env";
 import {
   ConnectorFetchError,
   type ConnectorFetchResult,
@@ -24,6 +23,11 @@ type MalItem = {
 type MalPage = {
   data?: MalItem[];
   paging?: { next?: string };
+};
+
+type MalIdentity = {
+  id?: number;
+  name?: string;
 };
 
 const MAX_PAGES = 5;
@@ -82,6 +86,50 @@ export async function fetchMyAnimeListSnapshot(
   const items: MalItem[] = [];
   let etag: string | undefined;
   const signal = AbortSignal.timeout(25_000);
+
+  const identityResponse = await fetch(
+    `${MAL_API_ORIGIN}/v2/users/@me?fields=id,name`,
+    {
+      signal,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+    },
+  );
+  if (!identityResponse.ok) {
+    throw new ConnectorFetchError(
+      identityResponse.status === 401
+        ? "MyAnimeList authorization needs to be renewed."
+        : "MyAnimeList could not be synchronized.",
+      {
+        code:
+          identityResponse.status === 401
+            ? "credential_expired"
+            : identityResponse.status === 429
+              ? "rate_limited"
+              : "provider_error",
+        httpStatus: identityResponse.status,
+        retryable:
+          identityResponse.status === 429 || identityResponse.status >= 500,
+      },
+    );
+  }
+  const identity = (await identityResponse.json()) as MalIdentity;
+  if (
+    !Number.isSafeInteger(identity.id) ||
+    typeof identity.name !== "string" ||
+    !identity.name.trim()
+  ) {
+    throw new ConnectorFetchError(
+      "MyAnimeList returned an unexpected identity response.",
+      { code: "provider_schema_changed" },
+    );
+  }
+  const profileUrl = normalizeConnectorProfileUrl(
+    "myanimelist",
+    `https://myanimelist.net/profile/${encodeURIComponent(identity.name.trim())}`,
+  );
 
   for (let page = 0; page < MAX_PAGES && nextUrl; page += 1) {
     const response = await fetch(nextUrl, {
@@ -173,10 +221,7 @@ export async function fetchMyAnimeListSnapshot(
   return {
     publicPayload: {
       provider: "myanimelist",
-      profileUrl: normalizeConnectorProfileUrl(
-        "myanimelist",
-        runtimeValue("MYANIMELIST_PROFILE_URL"),
-      ),
+      profileUrl,
       coverage:
         items.length === MAX_PAGES * 100
           ? "Most recently updated 500 entries"

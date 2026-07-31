@@ -15,6 +15,13 @@
       "when": 1785400859622,
       "tag": "0001_gifted_frog_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785456000000,
+      "tag": "0002_secure_mal_oauth",
+      "breakpoints": true
     }
   ]
 }

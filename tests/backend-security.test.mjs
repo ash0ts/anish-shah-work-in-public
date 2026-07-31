@@ -154,7 +154,7 @@ test("connector credentials use authenticated encryption and context binding", a
 });
 
 test("D1 migrations contain the scoped tables and encrypted credential fields", async () => {
-  const [initialMigration, editorialMigration, hosting] = await Promise.all([
+  const [initialMigration, editorialMigration, oauthMigration, hosting] = await Promise.all([
     readFile(
       new URL("../drizzle/0000_jittery_whistler.sql", import.meta.url),
       "utf8",
@@ -163,14 +163,19 @@ test("D1 migrations contain the scoped tables and encrypted credential fields", 
       new URL("../drizzle/0001_gifted_frog_thor.sql", import.meta.url),
       "utf8",
     ),
+    readFile(
+      new URL("../drizzle/0002_secure_mal_oauth.sql", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
-  const migration = `${initialMigration}\n${editorialMigration}`;
+  const migration = `${initialMigration}\n${editorialMigration}\n${oauthMigration}`;
 
   for (const table of [
     "public_records",
     "editorial_settings",
     "connector_credentials",
+    "connector_oauth_transactions",
     "connector_snapshots",
     "sync_runs",
     "audit_log",
