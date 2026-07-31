@@ -1,7 +1,8 @@
 import type { ConnectorProvider } from "./types";
+import { publicArtworkForItem } from "./artwork";
 
 const PAGE_SIZES = new Set([12, 24, 36]);
-const DEFAULT_PAGE_SIZE = 24;
+const DEFAULT_PAGE_SIZE = 12;
 const MAX_QUERY_LENGTH = 80;
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 
@@ -29,7 +30,7 @@ type GallerySpec = {
 export function connectorSnapshotNeedsUpgrade(
   payload: Record<string, unknown>,
 ): boolean {
-  return payload.snapshotVersion !== 2 || !Array.isArray(payload.library);
+  return payload.snapshotVersion !== 3 || !Array.isArray(payload.library);
 }
 
 export function projectConnectorSnapshotForPublic(
@@ -103,7 +104,9 @@ export function projectConnectorSnapshotForPublic(
     ...summary,
     gallery: {
       ready: true,
-      items: filtered.slice(start, start + pageSize),
+      items: filtered
+        .slice(start, start + pageSize)
+        .map((item) => projectGalleryItem(provider, item)),
       page,
       pageSize,
       totalItems: filtered.length,
@@ -119,6 +122,16 @@ export function projectConnectorSnapshotForPublic(
       sorts: spec.sorts,
     },
   };
+}
+
+function projectGalleryItem(
+  provider: ConnectorProvider,
+  item: GalleryItem,
+): GalleryItem {
+  const itemId = stringValue(provider === "steam" ? item.appId : item.id);
+  const { artwork: storedArtwork, ...publicItem } = item;
+  const artwork = publicArtworkForItem(provider, itemId, storedArtwork);
+  return artwork ? { ...publicItem, artwork } : publicItem;
 }
 
 function gallerySpec(

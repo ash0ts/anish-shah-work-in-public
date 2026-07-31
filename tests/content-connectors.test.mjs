@@ -188,7 +188,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
     assert.equal(result.etag, '"mal-v1"');
   assert.deepEqual(result.publicPayload, {
       provider: "myanimelist",
-      snapshotVersion: 2,
+      snapshotVersion: 3,
       profileUrl: "https://myanimelist.net/profile/anish",
       coverage: "Complete anime library at sync",
       status: [
@@ -351,11 +351,11 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
     const libraryQuery = JSON.parse(requests[1].body).query;
     assert.match(libraryQuery, /\bupdated_at\b/);
     assert.doesNotMatch(libraryQuery, /\bdate_updated\b/);
-    assert.doesNotMatch(libraryQuery, /\bimage\b/i);
+    assert.match(libraryQuery, /\bimage\s*\{\s*url\s*\}/i);
     assert.equal(result.itemCount, 3);
   assert.deepEqual(result.publicPayload, {
       provider: "hardcover",
-      snapshotVersion: 2,
+      snapshotVersion: 3,
       profileUrl: "https://hardcover.app/@anish",
       coverage: "Complete book library at sync",
       status: [
@@ -447,7 +447,7 @@ test("MyAnimeList follows every page and uses a fresh timeout per request", asyn
 
   assert.equal(result.itemCount, 1_001);
   assert.equal(result.publicPayload.library.length, 1_001);
-  assert.equal(result.publicPayload.snapshotVersion, 2);
+  assert.equal(result.publicPayload.snapshotVersion, 3);
   assert.equal(signals.length, 3);
   assert.equal(new Set(signals).size, signals.length);
   assert(signals.every((signal) => signal instanceof AbortSignal));
@@ -527,7 +527,7 @@ test("Hardcover paginates the full library with per-request timeouts", async () 
 
   assert.equal(result.itemCount, 252);
   assert.equal(result.publicPayload.library.length, 252);
-  assert.equal(result.publicPayload.snapshotVersion, 2);
+  assert.equal(result.publicPayload.snapshotVersion, 3);
   assert.deepEqual(
     requests.slice(1).map((request) => JSON.parse(request.body).variables),
     [

@@ -22,6 +22,8 @@ type ApiResult = {
   expiresAt?: string;
   itemCount?: number;
   message?: string;
+  profileUrl?: string;
+  embedStatus?: "available" | "unavailable";
   status?: string;
   updatedAt?: string;
 };
@@ -236,6 +238,7 @@ function formatTimestamp(value: string | null): string {
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "America/New_York",
   }).format(date);
 }
 
@@ -327,7 +330,7 @@ export function ConnectorControls({
     setMessage(null);
     try {
       const response = await fetch(
-        "/api/connectors/myanimelist/oauth/start",
+        "/api/studio/connectors/myanimelist/oauth/start",
         {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -392,8 +395,8 @@ export function ConnectorControls({
     setMessage(null);
     const path =
       action === "refresh"
-        ? `/api/connectors/${connector.provider}/refresh`
-        : `/api/connectors/${connector.provider}/credentials`;
+        ? `/api/studio/connectors/${connector.provider}/refresh`
+        : `/api/studio/connectors/${connector.provider}/credentials`;
 
     try {
       const response = await fetch(path, {
@@ -729,9 +732,14 @@ export function ConnectorControls({
 type StravaState =
   | { phase: "loading" }
   | { phase: "unavailable" }
-  | { phase: "needs_replacement"; message: string }
   | { phase: "error"; message: string }
-  | { phase: "ready"; embedUrl: string; updatedAt: string | null };
+  | {
+      phase: "ready";
+      profileUrl: string;
+      embedUrl: string | null;
+      embedStatus: "available" | "unavailable";
+      updatedAt: string | null;
+    };
 
 export function StravaConnectorControls({
   environment,
@@ -739,6 +747,7 @@ export function StravaConnectorControls({
   environment: Environment;
 }) {
   const [state, setState] = useState<StravaState>({ phase: "loading" });
+  const [profileUrl, setProfileUrl] = useState("");
   const [embed, setEmbed] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [pending, setPending] = useState<"save" | "disconnect" | null>(null);
@@ -746,34 +755,29 @@ export function StravaConnectorControls({
 
   useEffect(() => {
     let active = true;
-    void fetch("/api/connectors/strava", { cache: "no-store" })
+    void fetch("/api/studio/connectors/strava/config", { cache: "no-store" })
       .then(async (response) => {
         const result = (await responseJson(response)) as ApiResult & {
           payload?: {
-            embedUrl?: string;
+            profileUrl?: string;
+            embedUrl?: string | null;
+            embedStatus?: "available" | "unavailable";
             updatedAt?: string;
           };
         };
         if (!active) return;
-        if (response.ok && result.payload?.embedUrl) {
+        if (response.ok && result.payload?.profileUrl) {
           setState({
             phase: "ready",
-            embedUrl: result.payload.embedUrl,
+            profileUrl: result.payload.profileUrl,
+            embedUrl: result.payload.embedUrl ?? null,
+            embedStatus: result.payload.embedStatus ?? "unavailable",
             updatedAt: result.payload.updatedAt ?? null,
           });
+          setProfileUrl(result.payload.profileUrl);
+          setEmbed(result.payload.embedUrl ?? "");
           setShowForm(false);
-        } else if (
-          response.status === 409 &&
-          result.code === "legacy_embed"
-        ) {
-          setState({
-            phase: "needs_replacement",
-            message:
-              result.message ??
-              "The saved Strava profile widget must be replaced with a current public activity or route embed.",
-          });
-          setShowForm(true);
-        } else if (response.status === 404) {
+        } else if (response.ok && result.status === "unavailable") {
           setState({ phase: "unavailable" });
           setShowForm(true);
         } else {
@@ -802,39 +806,43 @@ export function StravaConnectorControls({
   }, []);
 
   async function save(): Promise<void> {
-    if (!embed.trim()) {
+    if (!profileUrl.trim()) {
       setMessage(
-        "Paste a current public Strava activity or route embed URL or its complete embed snippet.",
+        "Enter the public Strava athlete profile URL. The cumulative feed is optional.",
       );
       return;
     }
     setPending("save");
     setMessage(null);
     try {
-      const response = await fetch("/api/connectors/strava/config", {
+      const response = await fetch("/api/studio/connectors/strava/config", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ embed }),
+        body: JSON.stringify({ profileUrl, embed }),
       });
       const result = await responseJson(response);
-      if (!response.ok || !result.embedUrl) {
+      if (!response.ok || result.status !== "saved" || !result.profileUrl) {
         setMessage(
           result.error ??
-            "Paste the complete HTTPS embed that Strava generated.",
+            "Enter the public athlete profile and, optionally, the complete iframe generated by Strava.",
         );
         return;
       }
       setState({
         phase: "ready",
-        embedUrl: result.embedUrl,
+        profileUrl: String(result.profileUrl),
+        embedUrl:
+          typeof result.embedUrl === "string" ? result.embedUrl : null,
+        embedStatus:
+          result.embedStatus === "available" ? "available" : "unavailable",
         updatedAt: result.updatedAt ?? null,
       });
-      setEmbed("");
+      setEmbed(typeof result.embedUrl === "string" ? result.embedUrl : "");
       setShowForm(false);
       setMessage(
         environment === "local"
-          ? "Current Strava embed saved in local D1. Open the local Play page and grant consent to verify it."
-          : "Current Strava embed published. Visitors must still grant consent before it loads.",
+          ? "Strava settings saved in local D1. Play uses the cumulative feed when it passes the anonymous frame check, otherwise the profile link."
+          : "Strava settings published. The cumulative feed appears only when it passes the anonymous frame check.",
       );
     } catch {
       setMessage("The Strava embed could not be saved. Try again.");
@@ -854,7 +862,7 @@ export function StravaConnectorControls({
     setPending("disconnect");
     setMessage(null);
     try {
-      const response = await fetch("/api/connectors/strava/config", {
+      const response = await fetch("/api/studio/connectors/strava/config", {
         method: "DELETE",
       });
       const result = await responseJson(response);
@@ -876,9 +884,10 @@ export function StravaConnectorControls({
     state.phase === "loading"
       ? "Checking…"
       : state.phase === "ready"
-        ? "Current"
-        : state.phase === "error" ||
-            state.phase === "needs_replacement"
+        ? state.embedStatus === "available"
+          ? "Current"
+          : "Profile fallback"
+        : state.phase === "error"
           ? "Needs attention"
           : "Not configured";
 
@@ -895,8 +904,7 @@ export function StravaConnectorControls({
           className={`${styles.statusPill} ${
             state.phase === "ready"
               ? styles.status_healthy
-              : state.phase === "error" ||
-                  state.phase === "needs_replacement"
+              : state.phase === "error"
                 ? styles.status_error
                 : styles.status_setup_required
           }`}
@@ -907,9 +915,9 @@ export function StravaConnectorControls({
       <div className={styles.connectorMain}>
         <div className={styles.providerLead}>
           <p>
-            Publish one current official public activity or route. The site
-            stores only a canonical embed URL and loads Strava only after
-            visitor consent.
+            Publish the athlete profile and, when Strava provides it, the
+            generated recent-activity feed or weekly summary. The profile link
+            remains available whenever anonymous framing fails.
           </p>
           <nav aria-label="Strava setup resources">
             <a
@@ -932,7 +940,7 @@ export function StravaConnectorControls({
         <dl className={styles.connectorFacts}>
           <div>
             <dt>You need</dt>
-            <dd>Current activity or route embed</dd>
+            <dd>Public athlete URL; cumulative iframe optional</dd>
           </div>
           <div>
             <dt>Last updated</dt>
@@ -948,25 +956,30 @@ export function StravaConnectorControls({
           </div>
         </dl>
 
-        {state.phase === "ready" ? (
+        {state.phase === "ready" && state.embedStatus === "available" ? (
           <p className={styles.statusGuidance}>
-            The Move stream is published. Its iframe remains blocked until a
-            visitor explicitly chooses to load it.
+            The cumulative Move feed passed the anonymous frame check. Its
+            iframe remains blocked until a visitor chooses to load it.
           </p>
-        ) : state.phase === "error" ||
-          state.phase === "needs_replacement" ? (
+        ) : state.phase === "ready" ? (
+          <p className={styles.statusGuidance}>
+            The Move stream uses the public profile link because the saved
+            widget redirected, rejected framing, or was omitted.
+          </p>
+        ) : state.phase === "error" ? (
           <p className={styles.statusGuidance}>{state.message}</p>
         ) : (
           <p className={styles.statusGuidance}>
-            Paste an official embed below. No Strava API key or OAuth token is
-            used.
+            Add the public athlete URL. A generated profile feed or weekly
+            summary iframe is optional; no Strava API token is used.
           </p>
         )}
 
         {state.phase === "ready" ? (
           <div className={styles.currentConfig}>
-            <span>Stored public embed</span>
-            <code>{state.embedUrl}</code>
+            <span>Stored public profile</span>
+            <code>{state.profileUrl}</code>
+            {state.embedUrl ? <code>{state.embedUrl}</code> : null}
           </div>
         ) : null}
 
@@ -978,8 +991,21 @@ export function StravaConnectorControls({
               void save();
             }}
           >
+            <label className={styles.formField} htmlFor="strava-profile">
+              <span>Public athlete profile</span>
+              <input
+                id="strava-profile"
+                value={profileUrl}
+                maxLength={2048}
+                inputMode="url"
+                spellCheck={false}
+                onChange={(event) => setProfileUrl(event.target.value)}
+                placeholder="https://www.strava.com/athletes/37597587"
+                required
+              />
+            </label>
             <label className={styles.formField} htmlFor="strava-embed">
-              <span>Current activity or route embed</span>
+              <span>Cumulative feed or summary iframe (optional)</span>
               <textarea
                 id="strava-embed"
                 value={embed}
@@ -987,13 +1013,14 @@ export function StravaConnectorControls({
                 rows={3}
                 spellCheck={false}
                 onChange={(event) => setEmbed(event.target.value)}
-                placeholder={'https://strava-embeds.com/activity/… or Strava’s complete <div class="strava-embed-placeholder" …><script …></script>'}
-                required
+                placeholder={'<iframe src="https://www.strava.com/athletes/…/latest-rides/…"></iframe>'}
               />
             </label>
             <div className={styles.formActions}>
               <button type="submit" disabled={pending !== null}>
-                {pending === "save" ? "Saving…" : "Save Strava embed"}
+                {pending === "save"
+                  ? "Checking and saving…"
+                  : "Save Strava settings"}
               </button>
               {state.phase === "ready" ? (
                 <button
@@ -1002,6 +1029,7 @@ export function StravaConnectorControls({
                   disabled={pending !== null}
                   onClick={() => {
                     setEmbed("");
+                    setProfileUrl(state.profileUrl);
                     setShowForm(false);
                   }}
                 >
@@ -1018,10 +1046,12 @@ export function StravaConnectorControls({
               disabled={pending !== null}
               onClick={() => {
                 setMessage(null);
+                setProfileUrl(state.profileUrl);
+                setEmbed(state.embedUrl ?? "");
                 setShowForm(true);
               }}
             >
-              Replace embed
+              Replace settings
             </button>
             <button
               className={styles.quietButton}
@@ -1035,15 +1065,14 @@ export function StravaConnectorControls({
         ) : null}
 
         <p className={styles.recoveryText}>
-          <strong>Use the current embed format</strong>
-          Open a public activity or route in Strava, choose Share and Embed, then
-          paste the complete code here. Studio safely extracts the numeric
-          activity or route and stores a canonical{" "}
-          <code>https://strava-embeds.com/…</code> URL. Older{" "}
-          <code>www.strava.com/athletes/…</code> profile widgets redirect to
-          sign-in and cannot be framed, so they must be replaced. Private-share
-          tokens, unrelated pages, credentials, and scripts from other hosts are
-          rejected.
+          <strong>Use only Strava-generated values</strong>
+          Copy the athlete profile URL. If Strava offers a recent-activity feed
+          or weekly-summary embed, paste the complete iframe too. Studio stores
+          the exact tokenized widget URL, checks it anonymously without following
+          redirects, and publishes it only when framing is allowed. A failed
+          widget stays available for owner recovery while visitors receive the
+          profile link. Private-share parameters, credentials, and unrelated
+          hosts are rejected.
         </p>
 
         {message ? (

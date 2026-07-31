@@ -164,14 +164,15 @@ test("Bodies of Work motion enhances native details without hiding SSR content",
   assert.doesNotMatch(bodySource, /opacity:\s*\[0,\s*1\]/);
 });
 
-test("Home introduction motion is synchronous, cancellable, and always readable", () => {
-  assert.match(
-    introductionSource,
-    /import \{ animate, stagger \} from "animejs"/,
-  );
+test("Home keeps its LCP name static while non-LCP motion remains cancellable", () => {
+  assert.match(introductionSource, /import \{ animate \} from "animejs"/);
   assert.match(introductionSource, /useLayoutEffect/);
   assert.match(introductionSource, /animation\.cancel\(\)/);
   assert.match(introductionSource, /prefers-reduced-motion: reduce/);
+  assert.match(introductionSource, /const copy = root\.querySelector/);
+  assert.match(introductionSource, /animate\(copy,/);
+  assert.doesNotMatch(introductionSource, /data-name-line/);
+  assert.doesNotMatch(introductionSource, /querySelectorAll\([^)]*name/i);
   assert.doesNotMatch(introductionSource, /import\("animejs"\)/);
   assert.doesNotMatch(introductionSource, /opacity:\s*\[0,\s*1\]/);
 });

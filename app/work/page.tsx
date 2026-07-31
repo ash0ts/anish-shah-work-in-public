@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
+import { FilteredResultFocus } from "@/components/FilteredResultFocus";
 import {
   filterWorkArchiveRecords,
   legacyMapRedirectPath,
@@ -16,17 +17,29 @@ import {
 import { workBuckets } from "@/lib/work-groups";
 import { workArchiveRecordsFrom, type WorkArchiveRecord } from "@/lib/work-index";
 import { getPublicContentView } from "@/lib/server/public-content";
+import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
 import { WorkFilterBehavior } from "./WorkFilterBehavior";
 import { WorkTimeline } from "./WorkTimeline";
 import styles from "./work.module.css";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Work",
-  description:
-    "An index of Anish Shah’s applied AI systems, curricula, technical writing, open-source work, and public sessions.",
-};
+const workDescription =
+  "Browse Anish Shah’s applied AI systems, curricula, technical writing, open-source contributions, and public sessions.";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<WorkSearchParams>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  return publicPageMetadata({
+    title: "Work",
+    description: workDescription,
+    path: "/work",
+    noindex: hasPublicQuery(params),
+  });
+}
 
 const collator = new Intl.Collator("en", { sensitivity: "base" });
 const mediaLabels = new Map(
@@ -43,7 +56,7 @@ export default async function WorkPage({
     getPublicContentView(),
   ]);
   const mapRedirect = legacyMapRedirectPath(params);
-  if (mapRedirect) redirect(mapRedirect);
+  if (mapRedirect) permanentRedirect(mapRedirect);
 
   const query = parseWorkArchiveQuery(params);
   const allWorks = workArchiveRecordsFrom(bundle).sort(
@@ -118,7 +131,11 @@ export default async function WorkPage({
       </header>
 
       <section className={styles.tools} aria-labelledby="work-search-title">
-        <form action="/work" method="get" className={styles.filterForm}>
+        <form
+          action="/work#work-index"
+          method="get"
+          className={styles.filterForm}
+        >
           {query.practice ? (
             <input name="practice" type="hidden" value={query.practice} />
           ) : null}
@@ -206,7 +223,7 @@ export default async function WorkPage({
             </div>
           </details>
 
-          <Link className={styles.clear} href="/work">
+          <Link className={styles.clear} href="/work" prefetch={false}>
             Clear
           </Link>
         </form>
@@ -221,11 +238,24 @@ export default async function WorkPage({
       >
         <header className={styles.indexHeader}>
           <div>
-            <p className={styles.resultCount}>{resultLabel}</p>
-            <h2 id="work-index-title">{explorerHeading}</h2>
+            <p
+              aria-atomic="true"
+              aria-live="polite"
+              className={styles.resultCount}
+              role="status"
+            >
+              {resultLabel}
+            </p>
+            <h2 id="work-index-title" tabIndex={-1}>
+              {explorerHeading}
+            </h2>
           </div>
           <p>Open a line to inspect every work and its public forms.</p>
         </header>
+        <FilteredResultFocus
+          active={hasScopedResults || query.page > 1}
+          targetId="work-index-title"
+        />
 
         <div className={styles.bodyIndex}>
           {workBuckets.map((bucket, bucketIndex) => {
@@ -274,7 +304,9 @@ export default async function WorkPage({
         {!filtered.length ? (
           <div className={styles.empty}>
             <p>No work matches those filters.</p>
-            <Link href="/work">Clear the search</Link>
+            <Link href="/work" prefetch={false}>
+              Clear the search
+            </Link>
           </div>
         ) : null}
       </section>
@@ -301,6 +333,7 @@ function WorkRow({
     <li data-work-id={work.id}>
       <Link
         className={styles.workRow}
+        prefetch={false}
         href={`/work/${work.slug}${
           matchingChild ? `#${matchingChild.id}` : ""
         }`}

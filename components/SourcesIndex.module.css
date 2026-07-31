@@ -16,7 +16,7 @@
   margin: 0 0 0.75rem;
   color: var(--muted, #667084);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 560;
   letter-spacing: 0.08em;
   line-height: 1.4;
@@ -31,6 +31,7 @@
   font-variation-settings: "CASL" 0.3, "wght" 660;
   letter-spacing: -0.05em;
   line-height: 0.98;
+  scroll-margin-top: calc(var(--header-height, 64px) + 1rem);
   text-wrap: balance;
 }
 
@@ -52,7 +53,7 @@
   gap: 0.4rem;
   color: var(--muted, #667084);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -78,12 +79,12 @@
 .filters button:focus-visible,
 .clear:focus-visible {
   border-color: var(--blue, #295dff);
-  outline: 2px solid color-mix(in srgb, var(--blue, #295dff) 25%, transparent);
-  outline-offset: 0;
+  outline: 3px solid var(--blue, #295dff);
+  outline-offset: 2px;
 }
 
 .filters button {
-  min-height: 2.75rem;
+  min-height: 2.875rem;
   padding: 0.7rem 0.95rem;
   border: 1px solid var(--ink, #17223b);
   border-radius: 0;
@@ -98,7 +99,7 @@
   grid-column: 1 / -1;
   width: fit-content;
   color: var(--muted, #667084);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-underline-offset: 0.2em;
 }
 
@@ -113,7 +114,7 @@
   border-bottom: 1px solid var(--line, #d5dbe4);
   color: var(--muted, #667084);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
 }
 
 .pagination {
@@ -126,12 +127,15 @@
   padding-block: 0.85rem;
   border-bottom: 1px solid var(--line, #d5dbe4);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .pagination a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
   color: var(--ink, #17223b);
   font-weight: 650;
   text-underline-offset: 0.22em;
@@ -172,7 +176,7 @@
 .list > li > span {
   color: var(--blue, #295dff);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.62rem;
+  font-size: 0.75rem;
 }
 
 .list > li > div {
@@ -194,7 +198,7 @@
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--muted, #667084);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-style: normal;
   line-height: 1.4;
 }
@@ -205,8 +209,11 @@
 }
 
 .list > li > a {
+  display: inline-flex;
+  min-height: 1.75rem;
+  align-items: center;
   color: var(--ink, #17223b);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   text-underline-offset: 0.22em;
   white-space: nowrap;
 }

@@ -113,6 +113,44 @@ export const connectorOauthTransactions = sqliteTable(
   ],
 );
 
+/**
+ * Short-lived, owner-approved handoff from the isolated local Studio to the
+ * production Studio. The bearer secret is stored only as a hash. Provider
+ * credentials enter this table only after they have been encrypted with the
+ * destination environment's connector key, and are deleted after review.
+ */
+export const playPromotionTransactions = sqliteTable(
+  "play_promotion_transactions",
+  {
+    id: text("id").primaryKey(),
+    tokenHash: text("token_hash").notNull(),
+    ownerEmail: text("owner_email").notNull(),
+    targetOrigin: text("target_origin").notNull(),
+    status: text("status").notNull().default("issued"),
+    attempts: integer("attempts").notNull().default(0),
+    ciphertext: text("ciphertext"),
+    iv: text("iv"),
+    keyVersion: text("key_version"),
+    providersJson: text("providers_json").notNull().default("[]"),
+    expiresAt: text("expires_at").notNull(),
+    stagedExpiresAt: text("staged_expires_at"),
+    consumedAt: text("consumed_at"),
+    createdAt: timestamp("created_at"),
+    updatedAt: timestamp("updated_at"),
+  },
+  (table) => [
+    uniqueIndex("play_promotion_transactions_token_hash_unique").on(
+      table.tokenHash,
+    ),
+    index("play_promotion_owner_status_idx").on(
+      table.ownerEmail,
+      table.status,
+      table.createdAt,
+    ),
+    index("play_promotion_expiry_idx").on(table.expiresAt),
+  ],
+);
+
 export const connectorSnapshots = sqliteTable(
   "connector_snapshots",
   {

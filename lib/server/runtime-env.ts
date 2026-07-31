@@ -7,6 +7,10 @@ type RuntimeBindings = {
   CONNECTOR_ENCRYPTION_KEY?: string;
   STEAM_DATA_STORAGE_COUNTRIES?: string;
   SITE_URL?: string;
+  PRODUCTION_SITE_URL?: string;
+  AUTH_MODE?: string;
+  CF_ACCESS_TEAM_DOMAIN?: string;
+  CF_ACCESS_AUD?: string;
 };
 
 function cloudflareBindings(): RuntimeBindings {

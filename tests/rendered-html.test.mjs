@@ -174,7 +174,7 @@ test("homepage renders four technical-work bodies and three qualified impact sto
   assert.match(html, /checkpoint Jul 29, 2026/i);
   assert.match(html, /association is not conversion/i);
   assert.match(html, /not revenue, ARR, or personal causality/i);
-  assert.match(html, /property="og:image" content="[^"]*\/og\.png"/i);
+  assert.match(html, /property="og:image" content="[^"]*\/og\.jpg"/i);
   assert.match(html, /href="[^"]*\/favicon\.png"/i);
   assert.match(html, /href="#main"[^>]*>Skip to content/i);
   assert.doesNotMatch(markup, /<canvas\b/i);
@@ -286,7 +286,10 @@ test("Sources paginates the complete searchable bibliography 24 rows at a time",
   );
   assert.match(compactIndex, /1—24 shown/i);
   assert.match(compactIndex, /Page 1 of 9/i);
-  assert.match(compactIndex, /<form\b[^>]*action="\/sources"[^>]*method="get"/i);
+  assert.match(
+    compactIndex,
+    /<form\b[^>]*action="\/sources#bibliography"[^>]*method="get"/i,
+  );
   assert.match(compactIndex, /name="q"/i);
   assert.match(compactIndex, /name="kind"/i);
   assert.match(compactIndex, /name="association"/i);
@@ -443,7 +446,14 @@ test("the public surface and build contain no removed experience or private prov
   }
   assert.equal(existsSync(path.join(PROJECT_ROOT, "components/VisualArchive.tsx")), false);
   assert.equal(existsSync(path.join(PROJECT_ROOT, "components/LivingWorkIndex.tsx")), false);
-  assert((await stat(path.join(DIST_ROOT, "client/og.png"))).size > 0);
+  const socialPreviewSize = (
+    await stat(path.join(DIST_ROOT, "client/og.jpg"))
+  ).size;
+  assert(socialPreviewSize > 0);
+  assert(
+    socialPreviewSize < 200_000,
+    `Social preview is ${socialPreviewSize} bytes; budget is 200 KB`,
+  );
   assert((await stat(path.join(DIST_ROOT, "client/favicon.png"))).size > 0);
 });
 
@@ -483,4 +493,63 @@ test("robots and sitemap publish only public editorial surfaces", async () => {
   assert.match(sitemap, /<loc>[^<]+\/work\/wandb-mcp-server<\/loc>/i);
   assert.doesNotMatch(sitemap, /<loc>[^<]+\/about<\/loc>/i);
   assert.doesNotMatch(sitemap, /\/studio|\/api\//i);
+});
+
+test("public pages expose canonical, social, and structured metadata", async () => {
+  const routes = ["/", "/work", "/play", "/sources", "/privacy"];
+  const socialTitles = new Set();
+  for (const pathname of routes) {
+    const html = await renderHtml(pathname);
+    const canonical = html.match(
+      /<link\b(?=[^>]*\brel="canonical")(?=[^>]*\bhref="([^"]+)")[^>]*>/i,
+    )?.[1];
+    assert(canonical, `${pathname} is missing its canonical link`);
+    assert.equal(new URL(canonical).pathname, pathname);
+    const socialTitle = html.match(
+      /<meta\b(?=[^>]*\bproperty="og:title")(?=[^>]*\bcontent="([^"]+)")[^>]*>/i,
+    )?.[1];
+    assert(socialTitle, `${pathname} is missing an Open Graph title`);
+    socialTitles.add(decodeHtml(socialTitle));
+    const description = html.match(
+      /<meta\b(?=[^>]*\bname="description")(?=[^>]*\bcontent="([^"]+)")[^>]*>/i,
+    )?.[1];
+    assert(description, `${pathname} is missing a description`);
+    const descriptionLength = decodeHtml(description).length;
+    assert(
+      descriptionLength >= 80 && descriptionLength <= 160,
+      `${pathname} description is ${descriptionLength} characters`,
+    );
+    assert.match(html, /name="twitter:card"[^>]*content="summary_large_image"/i);
+  }
+  assert.equal(socialTitles.size, routes.length);
+
+  const [home, work] = await Promise.all([
+    renderHtml("/"),
+    renderHtml("/work/wandb-mcp-server"),
+  ]);
+  assert.match(home, /"@type":"ProfilePage"/);
+  assert.match(home, /"@type":"Person"/);
+  assert.match(home, /"@type":"WebSite"/);
+  assert.match(work, /"@type":"CreativeWork"/);
+  assert.match(work, /"@type":"BreadcrumbList"/);
+});
+
+test("filtered variants are noindexed and the custom 404 is accessible", async () => {
+  for (const pathname of ["/work?q=agents", "/sources?q=MCP"]) {
+    const html = await renderHtml(pathname);
+    assert.match(
+      html,
+      /<meta\b(?=[^>]*\bname="robots")(?=[^>]*\bcontent="[^"]*noindex[^"]*follow)[^>]*>/i,
+    );
+  }
+
+  const response = await render("/this-page-does-not-exist");
+  assert.equal(response.status, 404);
+  const html = await response.text();
+  assert.match(html, /<main id="main"/i);
+  assert.match(html, /This path stops here/i);
+  assert.match(
+    html,
+    /<meta\b(?=[^>]*\bname="robots")(?=[^>]*\bcontent="[^"]*noindex)[^>]*>/i,
+  );
 });

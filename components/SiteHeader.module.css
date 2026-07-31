@@ -14,6 +14,9 @@
 }
 
 .wordmark {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
   flex: none;
   color: inherit;
   font-family: var(--font-display, "Recursive", sans-serif);
@@ -32,6 +35,9 @@
 
 .navigation a {
   position: relative;
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
   color: inherit;
   font-size: 0.875rem;
   font-weight: 560;
@@ -81,5 +87,15 @@
 
   .navigation a {
     font-size: 0.8rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .header {
+    background: Canvas;
+  }
+
+  .navigation a::after {
+    background: LinkText;
   }
 }

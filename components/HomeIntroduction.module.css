@@ -20,7 +20,7 @@
   margin: 0 0 clamp(1.5rem, 4vw, 3.75rem);
   color: var(--work-blue);
   font-family: var(--font-mono);
-  font-size: 0.58rem;
+  font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -93,7 +93,7 @@
   margin-right: 0.6rem;
   color: var(--work-blue);
   font-family: var(--font-mono);
-  font-size: 0.53rem;
+  font-size: 0.75rem;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -101,7 +101,7 @@
 .action {
   display: inline-flex;
   width: fit-content;
-  min-height: 2.7rem;
+  min-height: 2.75rem;
   align-items: center;
   gap: 0.7rem;
   margin-top: 0.2rem;
@@ -152,7 +152,7 @@
 .trajectory li > span {
   color: var(--work-blue);
   font-family: var(--font-mono);
-  font-size: 0.5rem;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
   line-height: 1.35;
   text-transform: uppercase;
@@ -161,7 +161,7 @@
 .trajectory li > strong {
   min-width: 0;
   font-family: var(--font-body);
-  font-size: clamp(0.72rem, 1vw, 0.88rem);
+  font-size: clamp(0.75rem, 1vw, 0.88rem);
   font-weight: 680;
   letter-spacing: -0.02em;
   line-height: 1.25;
@@ -225,5 +225,16 @@
 
   .trajectory li:nth-child(3) {
     border-left: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .identity h1 span:last-child {
+    color: CanvasText;
+    -webkit-text-stroke: 0;
+  }
+
+  .action {
+    border-color: LinkText;
   }
 }

@@ -22,7 +22,7 @@
   margin-bottom: 0.45rem;
   color: var(--work-blue, #295dff);
   font-family: var(--font-mono, monospace);
-  font-size: 0.56rem;
+  font-size: 0.75rem;
   letter-spacing: 0.075em;
   text-transform: uppercase;
 }
@@ -35,7 +35,7 @@
 .header > p {
   max-width: 42rem;
   color: var(--ink-muted, #5c6477);
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   line-height: 1.5;
 }
 
@@ -43,6 +43,12 @@
   max-width: 100%;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
+  scroll-padding-inline-start: clamp(11rem, 21vw, 18rem);
+}
+
+.frame:focus-visible {
+  outline: 3px solid var(--work-blue, #295dff);
+  outline-offset: 4px;
 }
 
 .frame table {
@@ -73,7 +79,7 @@
   padding: 0.5rem 0.58rem;
   color: var(--ink-muted, #5c6477);
   font-family: var(--font-mono, monospace);
-  font-size: 0.49rem;
+  font-size: 0.75rem;
   font-weight: 550;
   letter-spacing: 0.055em;
   text-align: left;
@@ -81,26 +87,42 @@
 }
 
 .frame thead th:first-child {
+  position: sticky;
+  z-index: 3;
+  left: 0;
   width: clamp(11rem, 21vw, 18rem);
+  background: var(--trace-white, #f4f7f8);
 }
 
 .frame tbody > tr {
   --line-accent: var(--work-blue, #295dff);
+  --line-text: #1745c7;
+  --line-fill: #1745c7;
 }
 
 .frame tbody > tr[data-bucket="courses-learning"] {
   --line-accent: var(--reading-amber, #e6a23c);
+  --line-text: #815000;
+  --line-fill: #815000;
 }
 
 .frame tbody > tr[data-bucket="writing-research"] {
   --line-accent: var(--anime-magenta, #f04e85);
+  --line-text: #a12957;
+  --line-fill: #a12957;
 }
 
 .frame tbody > tr[data-bucket="talks-programs"] {
   --line-accent: var(--motion-mint, #15a88a);
+  --line-text: #08715e;
+  --line-fill: #08715e;
 }
 
 .frame tbody > tr > th {
+  position: sticky;
+  z-index: 2;
+  left: 0;
+  background: var(--trace-white, #f4f7f8);
   text-align: left;
 }
 
@@ -121,7 +143,7 @@
 }
 
 .frame tbody > tr > th strong {
-  color: var(--line-accent);
+  color: var(--line-text);
   font-family: var(--font-display, sans-serif);
   font-size: clamp(0.92rem, 1.2vw, 1.12rem);
   font-variation-settings: "CASL" 0.45, "MONO" 0.03;
@@ -134,7 +156,7 @@
 .frame tbody > tr > th span {
   color: var(--ink-muted, #5c6477);
   font-family: var(--font-mono, monospace);
-  font-size: 0.46rem;
+  font-size: 0.75rem;
   letter-spacing: 0.055em;
   text-transform: uppercase;
 }
@@ -194,7 +216,7 @@
 .frame td > a > span,
 .frame td > a > small {
   font-family: var(--font-mono, monospace);
-  font-size: 0.43rem;
+  font-size: 0.75rem;
   font-weight: 550;
   letter-spacing: 0.035em;
   line-height: 1.25;
@@ -210,7 +232,7 @@
 .frame td > a:focus-visible,
 .frame td > a[aria-current="page"] {
   color: var(--paper, #fff);
-  background: var(--line-accent);
+  background: var(--line-fill);
 }
 
 .frame td > a:hover > small,
@@ -225,7 +247,7 @@
   padding: 0.62rem;
   color: var(--hairline-strong, rgba(23, 34, 59, 0.35));
   font-family: var(--font-mono, monospace);
-  font-size: 0.6rem;
+  font-size: 0.75rem;
 }
 
 .mobileHint {
@@ -233,7 +255,7 @@
   margin: 0.5rem 0 0;
   color: var(--ink-muted, #5c6477);
   font-family: var(--font-mono, monospace);
-  font-size: 0.48rem;
+  font-size: 0.75rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -252,5 +274,19 @@
 
   .mobileHint {
     display: block;
+  }
+}
+
+@media (forced-colors: active) {
+  .frame td,
+  .frame td[data-density] {
+    background: Canvas;
+  }
+
+  .frame td > a:hover,
+  .frame td > a:focus-visible,
+  .frame td > a[aria-current="page"] {
+    color: HighlightText;
+    background: Highlight;
   }
 }

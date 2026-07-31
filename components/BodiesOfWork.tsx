@@ -120,7 +120,7 @@ export function BodiesOfWork({ buckets }: { buckets: FeaturedBuckets }) {
                 <ol>
                   {bucket.groups.map((group) => (
                     <li data-work-row key={group.id}>
-                      <Link href={`/work/${group.slug}`}>
+                      <Link href={`/work/${group.slug}`} prefetch={false}>
                         <span>
                           {workGroupPeriodLabel(group)} · {group.homeRole}
                         </span>

@@ -25,6 +25,9 @@
 }
 
 .links a {
+  display: inline-flex;
+  min-height: 1.75rem;
+  align-items: center;
   color: inherit;
   text-underline-offset: 0.25em;
   text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);

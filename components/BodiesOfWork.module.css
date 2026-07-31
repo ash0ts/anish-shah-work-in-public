@@ -27,7 +27,7 @@
   margin-bottom: 0.55rem;
   color: var(--work-blue);
   font-family: var(--font-mono);
-  font-size: 0.58rem;
+  font-size: 0.75rem;
   letter-spacing: 0.075em;
   text-transform: uppercase;
 }
@@ -52,19 +52,23 @@
 
 .bucket {
   --bucket-accent: var(--work-blue);
+  --bucket-text: #1745c7;
   border-bottom: 1px solid var(--blueprint-ink);
 }
 
 .bucket[data-bucket="courses-learning"] {
   --bucket-accent: var(--reading-amber);
+  --bucket-text: #815000;
 }
 
 .bucket[data-bucket="writing-research"] {
   --bucket-accent: var(--anime-magenta);
+  --bucket-text: #a12957;
 }
 
 .bucket[data-bucket="talks-programs"] {
   --bucket-accent: var(--motion-mint);
+  --bucket-text: #08715e;
 }
 
 .bucket > summary {
@@ -84,7 +88,7 @@
 
 .bucket > summary > small {
   font-family: var(--font-mono);
-  font-size: 0.56rem;
+  font-size: 0.75rem;
   letter-spacing: 0.065em;
   text-transform: uppercase;
 }
@@ -115,7 +119,7 @@
 }
 
 .bucket[open] > summary h3 {
-  color: var(--bucket-accent);
+  color: var(--bucket-text);
 }
 
 .bucketBody {
@@ -168,7 +172,7 @@
 .bucketBody a > span {
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 0.49rem;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
   line-height: 1.45;
   text-transform: uppercase;
@@ -190,14 +194,14 @@
   right: 0.6rem;
   bottom: 0.6rem;
   color: var(--bucket-accent);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-style: normal;
   transition: transform 160ms var(--ease-out);
 }
 
 .bucketBody a:hover > strong,
 .bucketBody a:focus-visible > strong {
-  color: var(--bucket-accent);
+  color: var(--bucket-text);
 }
 
 .bucketBody a:hover > i,
@@ -208,11 +212,13 @@
 .indexLink {
   display: inline-flex;
   width: fit-content;
+  min-height: 2.75rem;
+  align-items: center;
   gap: 0.5rem;
   margin-top: 1.25rem;
   padding-bottom: 0.15rem;
   border-bottom: 1px solid currentColor;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 690;
   text-decoration: none;
 }

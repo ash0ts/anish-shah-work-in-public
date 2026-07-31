@@ -19,6 +19,7 @@
   min-width: 0;
   gap: 0.3rem;
   padding: 1rem 1.2rem;
+  min-height: 2.75rem;
   border: 0;
   border-right: 1px solid var(--line, #d5dbe4);
   background: transparent;
@@ -42,7 +43,7 @@
 .tabs button small {
   overflow-wrap: anywhere;
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.62rem;
+  font-size: 0.75rem;
 }
 
 .tabs .activeTab {
@@ -63,6 +64,7 @@
 .galleryPagination button:focus-visible,
 .galleryUnavailable button:focus-visible,
 .consent button:focus-visible,
+.stravaFallback a:focus-visible,
 .status a:focus-visible,
 .atlas a:focus-visible {
   border-radius: 1px;
@@ -118,12 +120,13 @@
 
 .viewSwitch button {
   min-width: 5.5rem;
+  min-height: 2.75rem;
   padding: 0.65rem 0.8rem;
   border: 0;
   background: transparent;
   color: var(--muted, #5f6878);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   letter-spacing: 0.055em;
   text-transform: uppercase;
   cursor: pointer;
@@ -197,7 +200,7 @@
   margin: 0 0 1.1rem;
   color: var(--muted, #5f6878);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   font-weight: 560;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -242,7 +245,7 @@
 
 .distribution li > strong {
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.64rem;
+  font-size: 0.75rem;
 }
 
 .recentIndex li {
@@ -258,7 +261,7 @@
 .recentIndex li > span {
   color: var(--blue, #295dff);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.6rem;
+  font-size: 0.75rem;
 }
 
 .recentIndex strong {
@@ -269,7 +272,7 @@
 
 .recentIndex small {
   color: var(--muted, #5f6878);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-align: right;
 }
 
@@ -300,7 +303,7 @@
 .gallerySelect > span {
   color: var(--muted, #5f6878);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.54rem;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -315,7 +318,7 @@
 .gallerySelect select {
   width: 100%;
   min-width: 0;
-  min-height: 2rem;
+  min-height: 2.75rem;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -325,11 +328,12 @@
 }
 
 .gallerySearch button {
+  min-height: 2.75rem;
   padding: 0.35rem 0.7rem;
   border: 0;
   background: var(--ink, #17223b);
   color: var(--paper, #f4f7f8);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 
@@ -341,7 +345,7 @@
   padding: 0.7rem 0;
   color: var(--muted, #5f6878);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.58rem;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -349,7 +353,7 @@
 .atlas {
   display: grid;
   min-width: 0;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   margin: 0;
   padding: 0;
   border-top: 1px solid var(--ink, #17223b);
@@ -366,8 +370,8 @@
   position: relative;
   display: grid;
   min-width: 0;
-  min-height: 12.5rem;
-  grid-template-rows: auto minmax(3.2rem, 1fr) auto auto auto;
+  min-height: 20rem;
+  grid-template-rows: minmax(0, auto) auto minmax(2.8rem, 1fr) auto auto auto auto;
   gap: 0.55rem;
   padding: 0.9rem;
   border-right: 1px solid var(--line, #d5dbe4);
@@ -379,6 +383,68 @@
 .atlas a:hover,
 .atlas a:focus-visible {
   background: color-mix(in srgb, var(--blue, #295dff) 6%, transparent);
+}
+
+.artwork {
+  position: relative;
+  display: grid;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--ink, #17223b) 16%, transparent);
+  background:
+    linear-gradient(135deg, transparent 49.5%, color-mix(in srgb, var(--ink, #17223b) 10%, transparent) 50%, transparent 50.5%),
+    color-mix(in srgb, var(--ink, #17223b) 4%, var(--paper, #f4f7f8));
+}
+
+.artwork[data-aspect="square"] {
+  aspect-ratio: 1;
+}
+
+.artwork img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.artworkFallback {
+  padding: 0.5rem;
+  color: color-mix(in srgb, var(--ink, #17223b) 58%, transparent);
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+.atlas[data-provider="hardcover"] .artwork {
+  box-shadow: 0.28rem 0.35rem 0 color-mix(in srgb, var(--amber, #e6a23c) 34%, transparent);
+}
+
+.atlas[data-provider="hardcover"] .artwork::after {
+  position: absolute;
+  right: -0.35rem;
+  bottom: -0.42rem;
+  left: -0.35rem;
+  z-index: 2;
+  height: 1px;
+  background: var(--ink, #17223b);
+  content: "";
+}
+
+.atlas[data-provider="steam"] .artwork {
+  width: min(100%, 8rem);
+  justify-self: center;
+  border-radius: 18%;
+  background:
+    radial-gradient(circle at 72% 24%, color-mix(in srgb, var(--blue, #295dff) 24%, transparent), transparent 44%),
+    var(--ink, #17223b);
+}
+
+.atlas[data-provider="steam"] .artworkFallback {
+  color: var(--paper, #f4f7f8);
 }
 
 .atlas a > strong,
@@ -400,7 +466,7 @@
   overflow-wrap: anywhere;
   color: var(--muted, #5f6878);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.58rem;
+  font-size: 0.75rem;
   line-height: 1.35;
   text-transform: uppercase;
 }
@@ -441,12 +507,13 @@
 .galleryPagination button,
 .galleryUnavailable button {
   width: fit-content;
+  min-height: 2.75rem;
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--ink, #17223b);
   background: transparent;
   color: var(--ink, #17223b);
   font: inherit;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 
@@ -462,7 +529,7 @@
 .galleryPagination span {
   color: var(--muted, #5f6878);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   text-align: center;
   text-transform: uppercase;
 }
@@ -488,7 +555,7 @@
 .attribution,
 .status {
   color: var(--muted, #5f6878);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 
 .attribution {
@@ -514,7 +581,8 @@
 }
 
 .empty,
-.consent {
+.consent,
+.stravaFallback {
   display: flex;
   min-width: 0;
   min-height: 4.25rem;
@@ -537,7 +605,9 @@
 
 .empty p,
 .consent span,
-.consent small {
+.consent small,
+.stravaFallback span,
+.stravaFallback small {
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
@@ -549,12 +619,22 @@
   gap: 0.2rem;
 }
 
+.stravaFallback > span {
+  display: grid;
+  gap: 0.2rem;
+}
+
 .consent strong {
+  color: var(--ink, #17223b);
+}
+
+.stravaFallback strong {
   color: var(--ink, #17223b);
 }
 
 .consent button {
   flex: none;
+  min-height: 2.75rem;
   padding: 0.7rem 0.9rem;
   border: 1px solid var(--ink, #17223b);
   background: var(--ink, #17223b);
@@ -562,6 +642,14 @@
   font: inherit;
   font-size: 0.8rem;
   cursor: pointer;
+}
+
+.stravaFallback a {
+  flex: none;
+  padding: 0.7rem 0;
+  color: var(--ink, #17223b);
+  font-weight: 650;
+  text-underline-offset: 0.22em;
 }
 
 .embed {
@@ -613,7 +701,7 @@
   }
 
   .atlas {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -641,7 +729,7 @@
   }
 
   .atlas {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .patternLead {
@@ -672,7 +760,7 @@
   }
 
   .atlas {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .atlas a,
@@ -705,6 +793,12 @@
   .galleryPagination span {
     grid-column: 1 / -1;
     grid-row: 1;
+  }
+}
+
+@media (max-width: 339px) {
+  .atlas {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -96,7 +96,7 @@ export function ImpactEvidence({
                   <li data-signal-marker key={metric.id}>
                     <Link
                       href={`/sources#${metric.id}`}
-                      aria-label={`${metric.displayValue} ${metric.label}. ${metric.qualifier}`}
+                      aria-describedby={`impact-${track.id}-qualifier`}
                     >
                       <strong>{metric.displayValue}</strong>
                       <span>{shortLabel}</span>
@@ -131,7 +131,10 @@ export function ImpactEvidence({
               ) : null}
             </div>
 
-            <p className={styles.qualifier}>
+            <p
+              className={styles.qualifier}
+              id={`impact-${track.id}-qualifier`}
+            >
               <span>Limit</span> {track.qualifier}
             </p>
           </li>

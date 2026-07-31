@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import { PersonalStreams } from "@/components/PersonalStreams";
 import { getPublicContentView } from "@/lib/server/public-content";
+import { publicPageMetadata } from "@/lib/seo";
 import styles from "./play.module.css";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: "Play",
   description:
-    "Anime, books, games, and movement—the personal streams Anish Shah keeps outside the work archive.",
-};
+    "Explore Anish Shah’s public anime, reading, gaming, and movement collections through bounded, owner-controlled snapshots.",
+  path: "/play",
+});
 
 export default async function PlayPage() {
   const { bundle } = await getPublicContentView();

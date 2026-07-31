@@ -56,6 +56,9 @@ const FRESHNESS_WINDOW_MS = 12 * 60 * 60 * 1000;
 const RUN_LOCK_WINDOW_MS = 10 * 60 * 1000;
 const STEAM_MAX_PUBLIC_AGE_MS = 72 * 60 * 60 * 1000;
 const OAUTH_TRANSACTION_WINDOW_MS = 10 * 60 * 1000;
+const OAUTH_TRANSACTION_RETENTION_MS = 24 * 60 * 60 * 1000;
+const SYNC_RUN_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+const AUDIT_RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
 const MYANIMELIST_OAUTH_TRANSACTION_CONTEXT =
   "myanimelist-oauth-transaction";
 
@@ -221,6 +224,38 @@ function asCount(value: unknown): number {
   return typeof value === "number" ? value : Number(value) || 0;
 }
 
+async function pruneConnectorRetention(
+  database: D1Database,
+  now = new Date(),
+): Promise<void> {
+  const oauthCutoff = new Date(
+    now.getTime() - OAUTH_TRANSACTION_RETENTION_MS,
+  ).toISOString();
+  const syncCutoff = new Date(
+    now.getTime() - SYNC_RUN_RETENTION_MS,
+  ).toISOString();
+  const auditCutoff = new Date(
+    now.getTime() - AUDIT_RETENTION_MS,
+  ).toISOString();
+  await database.batch([
+    database
+      .prepare(
+        `DELETE FROM connector_oauth_transactions
+         WHERE expires_at < ?`,
+      )
+      .bind(oauthCutoff),
+    database
+      .prepare(
+        `DELETE FROM sync_runs
+         WHERE started_at < ? AND status <> 'running'`,
+      )
+      .bind(syncCutoff),
+    database
+      .prepare(`DELETE FROM audit_log WHERE created_at < ?`)
+      .bind(auditCutoff),
+  ]);
+}
+
 export async function getStudioOverview(
   actorEmail: string,
 ): Promise<StudioOverview> {
@@ -236,14 +271,9 @@ export async function getStudioOverview(
   }
 
   try {
-    const now = new Date().toISOString();
-    await database
-      .prepare(
-        `DELETE FROM connector_oauth_transactions
-         WHERE expires_at <= ?`,
-      )
-      .bind(now)
-      .run();
+    const nowDate = new Date();
+    const now = nowDate.toISOString();
+    await pruneConnectorRetention(database, nowDate);
 
     const publicationRows = await database
       .prepare(
@@ -1422,6 +1452,12 @@ export async function refreshConnector(
       provider,
       reason: "storage_disclosure",
     };
+  }
+
+  try {
+    await pruneConnectorRetention(database);
+  } catch {
+    return { status: "setup_required", provider, reason: "database" };
   }
 
   if (trigger === "stale_revalidate") {

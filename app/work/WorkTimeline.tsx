@@ -52,7 +52,12 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
         </p>
       </header>
 
-      <div className={styles.frame}>
+      <div
+        aria-label="Work timeline table. Scroll horizontally to compare years."
+        className={styles.frame}
+        role="region"
+        tabIndex={0}
+      >
         <table>
           <caption>
             Bodies of work by year, with exact work and public-form counts
@@ -76,6 +81,7 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
                 <tr data-bucket={bucket.id} key={bucket.id}>
                   <th scope="row">
                     <Link
+                      prefetch={false}
                       aria-current={
                         query.bucket === bucket.id && !query.year
                           ? "page"
@@ -107,16 +113,8 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
                       >
                         {works.length ? (
                           <Link
+                            prefetch={false}
                             aria-current={selected ? "page" : undefined}
-                            aria-label={`${year}, ${bucket.title}: ${
-                              works.length
-                            } ${
-                              works.length === 1
-                                ? "body of work"
-                                : "bodies of work"
-                            }, ${formCount} public ${
-                              formCount === 1 ? "form" : "forms"
-                            }. Filter the archive to this cell.`}
                             href={`${workArchiveHref(query, {
                               bucket: bucket.id,
                               page: null,

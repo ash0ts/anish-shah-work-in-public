@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { steamStorageCountries } from "@/lib/server/connectors/steam-policy";
+import { publicPageMetadata } from "@/lib/seo";
 import styles from "./privacy.module.css";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: "Privacy and personal streams",
   description:
-    "What the personal data connectors retrieve, store, publish, retain, and delete.",
-};
+    "Learn what Anish Shah’s personal data connectors retrieve, store, publish, retain, and delete, plus how to report an issue.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   const storageCountries = steamStorageCountries();
@@ -44,7 +46,9 @@ export default function PrivacyPage() {
                 status, genre, era, and score distributions reflect the whole
                 collection. The public endpoint returns those distributions,
                 one bounded gallery page, and a profile link derived from the
-                authorized identity.
+                authorized identity. Cover URLs are reduced to host-free
+                references and served only through the bounded same-origin
+                artwork endpoint while the snapshot remains published.
               </dd>
             </div>
             <div>
@@ -55,7 +59,9 @@ export default function PrivacyPage() {
                 published. D1 stores a complete sanitized shelf snapshot; the
                 public endpoint returns whole-shelf reading and rating
                 distributions, one bounded gallery page, recent books, and a
-                profile link derived from the authenticated username.
+                profile link derived from the authenticated username. Cover
+                URLs are reduced to host-free references and never exposed to
+                browser code.
               </dd>
             </div>
             <div>
@@ -66,18 +72,22 @@ export default function PrivacyPage() {
                 The public endpoint returns whole-library totals and playtime
                 bands, one bounded gallery page, and at most eight highlighted
                 titles. Passwords, exact minutes, presence, friends, bans,
-                achievements, inventories, real names, locations, artwork, and
-                raw responses are excluded.
+                achievements, inventories, real names, locations, remote
+                artwork URLs, and raw responses are excluded. Documented game
+                icon hashes may be stored as host-free references and served
+                through the same-origin artwork endpoint.
               </dd>
             </div>
             <div>
               <dt>Strava · Move</dt>
               <dd>
                 No Strava API credential or custom activity dataset is stored.
-                Studio keeps only one validated current public activity or
-                route URL on <code>https://strava-embeds.com/…</code>. The
-                third-party iframe remains blocked until a visitor explicitly
-                chooses to load it.
+                Studio keeps the public athlete profile, an optional exact
+                Strava-generated profile-feed, summary, activity, or route
+                iframe URL, and its last anonymous frame check. A redirecting
+                or blocked widget is not shown publicly; visitors receive the
+                athlete-profile link instead. A working third-party iframe
+                remains blocked until a visitor explicitly chooses to load it.
               </dd>
             </div>
           </dl>
@@ -153,6 +163,30 @@ export default function PrivacyPage() {
             fitness. To the maximum extent permitted by law, Valve, Steam game
             publishers and developers, and their suppliers are not liable for
             damages arising from use of the Steam Web API or Steam data.
+          </p>
+        </section>
+
+        <section aria-labelledby="accessibility-contact-title">
+          <h2 id="accessibility-contact-title">
+            Accessibility and issue reporting
+          </h2>
+          <p>
+            This site targets WCAG 2.2 Level AA and is tested with keyboard,
+            screen-reader, zoom, reduced-motion, and high-contrast settings.
+            That target is an ongoing practice, not a legal certification.
+          </p>
+          <p>
+            If something is difficult to use—or you notice a privacy or
+            security concern—contact Anish through{" "}
+            <a
+              href="https://www.linkedin.com/in/anish-shah"
+              rel="noreferrer"
+              target="_blank"
+            >
+              LinkedIn
+            </a>
+            . Include the page, browser or assistive technology, and what you
+            expected to happen when those details are safe to share.
           </p>
         </section>
       </article>

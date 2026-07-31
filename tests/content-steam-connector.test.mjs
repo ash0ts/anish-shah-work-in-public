@@ -99,7 +99,7 @@ test("Steam success fixture is normalized, rounded, bounded, and secret-free", a
   assert.equal(result.itemCount, 10);
   assert.deepEqual(result.publicPayload, {
     provider: "steam",
-    snapshotVersion: 2,
+    snapshotVersion: 3,
     profileUrl: `https://steamcommunity.com/profiles/${STEAM_ID}`,
     coverage: "Complete public Steam library snapshot",
     totals: {

@@ -4,6 +4,10 @@ import {
   type HardcoverCredential,
 } from "./types";
 import { normalizeConnectorProfileUrl } from "./public-payload-policy";
+import {
+  normalizeHardcoverArtwork,
+  type StoredArtworkRef,
+} from "./artwork";
 
 const HARDCOVER_ENDPOINT = "https://api.hardcover.app/v1/graphql";
 const MAX_RESPONSE_BYTES = 1_000_000;
@@ -27,6 +31,7 @@ type NormalizedHardcoverBook = {
     id?: number;
     title?: string;
     slug?: string;
+    artwork?: StoredArtworkRef;
   };
 };
 
@@ -37,6 +42,7 @@ type PublicHardcoverLibraryItem = {
   status: string;
   rating: number | null;
   updatedAt: string | null;
+  artwork?: StoredArtworkRef;
 };
 
 function providerSchemaError(message: string): never {
@@ -171,6 +177,10 @@ function normalizeHardcoverBook(value: unknown): NormalizedHardcoverBook {
         MAX_SLUG_LENGTH,
         "book slug",
       ),
+      artwork:
+        isRecord(value.book.image)
+          ? normalizeHardcoverArtwork(value.book.image.url) ?? undefined
+          : undefined,
     };
   }
 
@@ -353,6 +363,9 @@ export async function fetchHardcoverSnapshot(
         id
         title
         slug
+        image {
+          url
+        }
       }
     }
   }`;
@@ -403,6 +416,7 @@ export async function fetchHardcoverSnapshot(
     }
     if (seenBookIds.has(id)) continue;
     seenBookIds.add(id);
+    const artwork = entry.book?.artwork;
     publicLibrary.push({
       id: String(id),
       title,
@@ -410,6 +424,7 @@ export async function fetchHardcoverSnapshot(
       status: hardcoverStatus(entry.statusId),
       rating: entry.rating ?? null,
       updatedAt: entry.updatedAt ?? null,
+      ...(artwork ? { artwork } : {}),
     });
   }
 
@@ -442,7 +457,7 @@ export async function fetchHardcoverSnapshot(
   return {
     publicPayload: {
       provider: "hardcover",
-      snapshotVersion: 2,
+      snapshotVersion: 3,
       profileUrl: normalizeConnectorProfileUrl(
         "hardcover",
         username ? `https://hardcover.app/@${username}` : undefined,

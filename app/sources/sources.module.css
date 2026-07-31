@@ -9,7 +9,7 @@
   margin: 0;
   color: var(--muted, #667084);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 560;
   letter-spacing: 0.08em;
   line-height: 1.4;
@@ -45,7 +45,7 @@
 .intro small {
   color: var(--muted, #667084);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   overflow-wrap: anywhere;
 }
 
@@ -108,7 +108,7 @@
   padding: 0.85rem 1rem 0.85rem 0;
   color: var(--muted, #667084);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.055em;
   line-height: 1.35;
@@ -156,7 +156,7 @@
   max-width: 16ch;
   color: var(--muted, #667084);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.58rem;
+  font-size: 0.75rem;
   letter-spacing: 0.05em;
   line-height: 1.4;
   text-transform: uppercase;
@@ -197,7 +197,7 @@
   color: var(--blue, #295dff);
   content: "Not";
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.54rem;
+  font-size: 0.75rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -227,7 +227,7 @@
 .rules li > span {
   color: var(--blue, #295dff);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.6rem;
+  font-size: 0.75rem;
 }
 
 .rules li > div {
@@ -345,7 +345,7 @@
   margin: 0;
   overflow-wrap: anywhere;
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.59rem;
+  font-size: 0.75rem;
   line-height: 1.4;
 }
 
@@ -365,13 +365,13 @@
   gap: 0.35rem 0.7rem;
   align-items: baseline;
   margin-top: 0.7rem;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
 }
 
 .metricEvidence span {
   color: var(--muted, #667084);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.57rem;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }

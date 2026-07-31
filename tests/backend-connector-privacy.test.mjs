@@ -61,7 +61,7 @@ test("connector profile URLs use exact HTTPS host and path allowlists", () => {
     ["hardcover", "https://hardcover.app/anish"],
     ["hardcover", "https://api.hardcover.app/@anish"],
     ["hardcover", "https://hardcover.app/@anish?token=secret"],
-    ["hardcover", "file:///Users/ashah/private"],
+    ["hardcover", "file:///Users/example/private"],
     ["steam", "http://steamcommunity.com/profiles/76561198000000000"],
     ["steam", "https://api.steampowered.com/profiles/76561198000000000"],
     ["steam", "https://steamcommunity.com/id/anish"],
@@ -140,7 +140,7 @@ test("connector public payload policy permits only the allowlisted profile URL",
     },
     {
       ...safe,
-      recent: [{ id: "1", title: "file:///Users/ashah/private" }],
+      recent: [{ id: "1", title: "file:///Users/example/private" }],
     },
     {
       ...safe,
@@ -203,7 +203,7 @@ test("public connector responses are never reusable after disconnect", async () 
   assert.doesNotMatch(route, /public,\s*max-age|stale-while-revalidate/i);
 });
 
-test("provider normalizers do not request or publish remote cover URLs", async () => {
+test("provider normalizers reduce artwork to host-free references", async () => {
   const [myAnimeList, hardcover] = await Promise.all([
     readFile(
       new URL("../lib/server/connectors/myanimelist.ts", import.meta.url),
@@ -215,11 +215,11 @@ test("provider normalizers do not request or publish remote cover URLs", async (
     ),
   ]);
 
+  assert.match(myAnimeList, /main_picture/);
+  assert.match(hardcover, /\bimage\s*\{/);
   for (const source of [myAnimeList, hardcover]) {
-    assert.doesNotMatch(source, /coverImage/);
+    assert.doesNotMatch(source, /publicPayload[\s\S]*?https:\/\/.*(?:jpg|png|webp)/i);
   }
-  assert.doesNotMatch(myAnimeList, /main_picture/);
-  assert.doesNotMatch(hardcover, /\bimage\s*\{/);
 });
 
 test("Play fetches a personal-data provider only after its stream is active", async () => {
@@ -256,7 +256,7 @@ test("Play fetches a personal-data provider only after its stream is active", as
   assert.match(source, /show=\{showStrava\}/);
   assert.match(source, /onShow=\{\(\) => setShowStrava\(true\)\}/);
   assert.doesNotMatch(source, /NEXT_PUBLIC_STRAVA_EMBED_URL/);
-  assert.match(source, /src=\{state\.payload\.embedUrl\}/);
+  assert.match(source, /src=\{state\.payload\.embed\.embedUrl\}/);
 });
 
 test("Studio documents setup, replacement, and official provider sources", async () => {
@@ -294,12 +294,12 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(controls, /Bearer optional/);
   assert.match(controls, /Cancel pending authorization/);
   assert.match(controls, /canReuseOAuthClient/);
-  assert.match(controls, /\/api\/connectors\/myanimelist\/oauth\/start/);
+  assert.match(controls, /\/api\/studio\/connectors\/myanimelist\/oauth\/start/);
   assert.match(
     controls,
     /\/api\/connectors\/myanimelist\/oauth\/callback/,
   );
-  assert.match(controls, /\/api\/connectors\/strava\/config/);
+  assert.match(controls, /\/api\/studio\/connectors\/strava\/config/);
   assert.match(controls, /Studio stores the resulting tokens/);
   assert.match(page, /Local sandbox · isolated data/);
   assert.match(page, /Changes here stay on this machine/);
@@ -309,8 +309,8 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(editorial, /production is unchanged/);
   assert.match(guide, /client ID.*client secret/is);
   assert.match(guide, /Refresh now.*Current/is);
-  assert.match(guide, /Code propagates\. Credentials do not\./);
-  assert.match(guide, /Re-enter through HTTPS Studio/);
+  assert.match(guide, /one-time[\s\S]*transfer code/i);
+  assert.match(guide, /Authorize MyAnimeList separately/i);
   assert.match(guide, /Reauthorization required/);
   assert.match(guide, /one year/i);
   assert.match(guide, /January\s+1/i);
@@ -318,9 +318,9 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.doesNotMatch(guide, /Renewal is manual/);
   assert.match(guide, /strava-embeds\.com/);
   assert.match(guide, /www\.strava\.com\/athletes/);
-  assert.match(guide, /redirects those widgets to its sign-in page/);
-  assert.match(guide, /no\s+site-side setting or credential that can safely bypass/);
+  assert.match(guide, /profile feed|weekly summary/i);
+  assert.match(guide, /profile-link fallback|profile link fallback/i);
   assert.match(guide, /does not fetch, copy, aggregate, or custom-visualize/);
-  assert.match(controls, /result\.code === "legacy_embed"/);
-  assert.match(controls, /Use the current embed format/);
+  assert.match(controls, /anonymous frame check/);
+  assert.match(controls, /Use only Strava-generated values/);
 });

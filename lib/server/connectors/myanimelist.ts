@@ -4,6 +4,10 @@ import {
   type MyAnimeListCredential,
 } from "./types";
 import { normalizeConnectorProfileUrl } from "./public-payload-policy";
+import {
+  normalizeMyAnimeListArtwork,
+  type StoredArtworkRef,
+} from "./artwork";
 
 type NormalizedMalItem = {
   node?: {
@@ -11,6 +15,7 @@ type NormalizedMalItem = {
     title?: string;
     startDate?: string;
     genres: Array<{ name: string }>;
+    artwork?: StoredArtworkRef;
   };
   listStatus?: {
     status?: string;
@@ -30,6 +35,7 @@ type PublicMalLibraryItem = {
   score: number | null;
   episodesWatched: number | null;
   updatedAt: string | null;
+  artwork?: StoredArtworkRef;
 };
 
 const MAX_LIBRARY_ITEMS = 5_000;
@@ -231,6 +237,12 @@ function normalizeMalItem(value: unknown): NormalizedMalItem {
       ),
       startDate: optionalPartialDate(value.node.start_date),
       genres,
+      artwork:
+        isRecord(value.node.main_picture)
+          ? normalizeMyAnimeListArtwork(
+              value.node.main_picture.large ?? value.node.main_picture.medium,
+            ) ?? undefined
+          : undefined,
     };
   }
 
@@ -364,6 +376,7 @@ export async function fetchMyAnimeListSnapshot(
     "title",
     "start_date",
     "genres",
+    "main_picture",
     "list_status",
   ].join(",");
   let nextUrl: string | null =
@@ -504,6 +517,7 @@ export async function fetchMyAnimeListSnapshot(
     if (libraryById.has(id)) continue;
     const startDate = item.node.startDate ?? null;
     const releaseYearValue = Number(startDate?.slice(0, 4));
+    const artwork = item.node.artwork;
     libraryById.set(id, {
       id,
       title: item.node.title,
@@ -516,6 +530,7 @@ export async function fetchMyAnimeListSnapshot(
       score: item.listStatus?.score ?? null,
       episodesWatched: item.listStatus?.episodesWatched ?? null,
       updatedAt: item.listStatus?.updatedAt ?? null,
+      ...(artwork ? { artwork } : {}),
     });
   }
   const library = [...libraryById.values()].sort(
@@ -566,7 +581,7 @@ export async function fetchMyAnimeListSnapshot(
   return {
     publicPayload: {
       provider: "myanimelist",
-      snapshotVersion: 2,
+      snapshotVersion: 3,
       profileUrl,
       coverage: "Complete anime library at sync",
       status: rankedEntries(statusCounts),

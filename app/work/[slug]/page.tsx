@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { publicBundle } from "@/lib/content";
 import { isKnownUnavailablePublicUrl } from "@/lib/public-url-health";
 import {
@@ -17,6 +17,13 @@ import {
 } from "@/lib/server/public-content";
 import { humanizeWorkFilter } from "@/lib/work-archive-query";
 import { workArchiveRecordsFrom } from "@/lib/work-index";
+import { requestCspNonce } from "@/lib/server/csp";
+import {
+  absoluteSiteUrl,
+  publicPageMetadata,
+  safeJsonLd,
+  workMetadataDescription,
+} from "@/lib/seo";
 import type {
   AnishContentBundle,
   ContentDate,
@@ -92,29 +99,36 @@ export async function generateMetadata({
   const { slug } = await params;
   const { group, fallbackQuery } = await resolveGroup(slug);
   if (!group) {
-    return {
+    return publicPageMetadata({
       title: fallbackQuery ?? "Work record",
       description: fallbackQuery
         ? `Find the bodies of work connected to ${fallbackQuery}.`
-        : undefined,
-    };
+        : "This work record is not available in the public archive.",
+      path: `/work/${encodeURIComponent(slug)}`,
+      noindex: true,
+    });
   }
-  return {
-    title: group.title,
-    description: group.summary,
-  };
+  return publicPageMetadata({
+    title: group.shortTitle || group.title,
+    description: workMetadataDescription(group.title, group.summary),
+    path: `/work/${encodeURIComponent(group.slug)}`,
+    type: "article",
+  });
 }
 
 export default async function WorkDetailPage({ params }: WorkDetailProps) {
+  const nonce = await requestCspNonce();
   const { slug } = await params;
   const { bundle, group, legacyAnchor, fallbackQuery } =
     await resolveGroup(slug);
   if (!group && fallbackQuery) {
-    redirect(`/work?q=${encodeURIComponent(fallbackQuery)}#work-index`);
+    permanentRedirect(
+      `/work?q=${encodeURIComponent(fallbackQuery)}#work-index`,
+    );
   }
   if (!group) notFound();
   if (legacyAnchor || slug !== group.slug) {
-    redirect(
+    permanentRedirect(
       `/work/${group.slug}${legacyAnchor ? `#${legacyAnchor}` : ""}`,
     );
   }
@@ -200,9 +214,63 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
       (right.date.start ?? "").localeCompare(left.date.start ?? "") ||
       left.displayTitle.localeCompare(right.displayTitle),
   );
+  const workUrl = absoluteSiteUrl(`/work/${encodeURIComponent(group.slug)}`);
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CreativeWork",
+        "@id": `${workUrl}#work`,
+        url: workUrl,
+        name: group.title,
+        headline: group.shortTitle,
+        description: workMetadataDescription(group.title, group.summary),
+        dateCreated: group.period.start ?? undefined,
+        creator: {
+          "@type": "Person",
+          "@id": `${absoluteSiteUrl("/")}#anish-shah`,
+          name: "Anish Shah",
+        },
+        about: group.topics.map((topic) => humanizeWorkFilter(topic)),
+        sameAs: evidence
+          .map((source) => source.url)
+          .filter((url): url is string => Boolean(url)),
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${workUrl}#breadcrumbs`,
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: absoluteSiteUrl("/"),
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Work",
+            item: absoluteSiteUrl("/work"),
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: group.title,
+            item: workUrl,
+          },
+        ],
+      },
+    ],
+  };
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
+      <script
+        nonce={nonce}
+        suppressHydrationWarning
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }}
+      />
       <header
         className={styles.hero}
         id={!hasMultipleForms ? primary.id : undefined}

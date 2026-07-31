@@ -4,6 +4,10 @@ import {
   type ConnectorFetchResult,
   type SteamCredential,
 } from "./types";
+import {
+  normalizeSteamArtwork,
+  type StoredArtworkRef,
+} from "./artwork";
 
 const STEAM_API_ORIGIN = "https://api.steampowered.com";
 const MAX_RESPONSE_BYTES = 5_000_000;
@@ -21,6 +25,7 @@ type SteamGame = {
   name?: string;
   playtime_forever?: number;
   playtime_2weeks?: number;
+  img_icon_url?: string;
 };
 
 type PlayerSummariesResponse = {
@@ -149,6 +154,7 @@ function normalizedGame(
   title: string;
   totalMinutes: number;
   recentMinutes: number;
+  artwork?: StoredArtworkRef;
 } | null {
   if (
     typeof value !== "object" ||
@@ -170,11 +176,14 @@ function normalizedGame(
   const title = game.name.trim();
   if (!title || title.length > 240) return null;
 
+  const appId = String(game.appid);
+  const artwork = normalizeSteamArtwork(appId, game.img_icon_url);
   return {
-    appId: String(game.appid),
+    appId,
     title,
     totalMinutes: safeMinutes(game.playtime_forever),
     recentMinutes: safeMinutes(game.playtime_2weeks),
+    ...(artwork ? { artwork } : {}),
   };
 }
 
@@ -385,7 +394,7 @@ export async function fetchSteamSnapshot(
   return {
     publicPayload: {
       provider: "steam",
-      snapshotVersion: 2,
+      snapshotVersion: 3,
       profileUrl,
       coverage: "Complete public Steam library snapshot",
       totals: {
@@ -416,6 +425,7 @@ export async function fetchSteamSnapshot(
         recentHoursRounded: roundedHours(
           recentMinutesByAppId.get(game.appId) ?? 0,
         ),
+        ...(game.artwork ? { artwork: game.artwork } : {}),
       })),
     },
     itemCount: ownedGames.length,

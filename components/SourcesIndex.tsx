@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FilteredResultFocus } from "@/components/FilteredResultFocus";
 import { isKnownUnavailablePublicUrl } from "@/lib/public-url-health";
 import type { EvidenceSource } from "@/types/content";
 import styles from "./SourcesIndex.module.css";
@@ -72,9 +73,15 @@ export function SourcesIndex({
       <div className={styles.heading}>
         <div>
           <p className={styles.eyebrow}>Public bibliography</p>
-          <h2 id="source-index-title">{entries.length} sources, open to inspect.</h2>
+          <h2 id="source-index-title" tabIndex={-1}>
+            {entries.length} sources, open to inspect.
+          </h2>
         </div>
-        <form action="/sources" className={styles.filters} method="get">
+        <form
+          action="/sources#bibliography"
+          className={styles.filters}
+          method="get"
+        >
           <label>
             <span>Search sources</span>
             <input
@@ -105,13 +112,26 @@ export function SourcesIndex({
           </label>
           <button type="submit">Search</button>
           {isFiltering ? (
-            <Link className={styles.clear} href="/sources#bibliography">
+            <Link
+              className={styles.clear}
+              href="/sources#bibliography"
+              prefetch={false}
+            >
               Clear
             </Link>
           ) : null}
         </form>
       </div>
-      <div className={styles.count}>
+      <FilteredResultFocus
+        active={isFiltering || selectedPage > 1}
+        targetId="source-index-title"
+      />
+      <div
+        aria-atomic="true"
+        aria-live="polite"
+        className={styles.count}
+        role="status"
+      >
         <span>
           {isFiltering
             ? `${filtered.length} matching public sources`
@@ -131,6 +151,7 @@ export function SourcesIndex({
         <nav className={styles.pagination} aria-label="Bibliography pages">
           {selectedPage > 1 ? (
             <Link
+              prefetch={false}
               href={sourceIndexHref(
                 query,
                 selectedKind,
@@ -148,6 +169,7 @@ export function SourcesIndex({
           </span>
           {selectedPage < pageCount ? (
             <Link
+              prefetch={false}
               href={sourceIndexHref(
                 query,
                 selectedKind,
@@ -207,7 +229,9 @@ function SourceRows({
                   {context.slice(0, 2).map((entry, contextIndex) => (
                     <span key={entry.id}>
                       {contextIndex ? " · " : ""}
-                      <Link href={entry.href}>{entry.label}</Link>
+                      <Link href={entry.href} prefetch={false}>
+                        {entry.label}
+                      </Link>
                     </span>
                   ))}
                   {context.length > 2 ? ` · +${context.length - 2} more` : ""}

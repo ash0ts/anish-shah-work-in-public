@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  chatGPTSignOutPath,
+  authenticatedSignOutPath,
   requireChatGPTUser,
 } from "@/app/chatgpt-auth";
 import { getStudioOverview } from "@/lib/server/connectors";
@@ -13,6 +13,7 @@ import {
   StravaConnectorControls,
 } from "./ConnectorControls";
 import { EditorialRecords } from "./EditorialRecords";
+import { PlayPromotionControls } from "./PlayPromotionControls";
 import styles from "./studio.module.css";
 
 export const dynamic = "force-dynamic";
@@ -52,12 +53,12 @@ export default async function StudioPage() {
 
   if (ownerAuthorization.status === "forbidden") {
     return (
-      <main className={styles.shell}>
+      <main className={styles.shell} id="main">
         <div className={styles.topline}>
           <Link href="/" className={styles.wordmark}>
             AS / Studio
           </Link>
-          <a href={chatGPTSignOutPath("/")} className={styles.utilityLink}>
+          <a href={authenticatedSignOutPath(user, "/")} className={styles.utilityLink}>
             Sign out
           </a>
         </div>
@@ -71,7 +72,7 @@ export default async function StudioPage() {
 
   if (ownerAuthorization.status === "setup_required") {
     return (
-      <main className={styles.shell}>
+      <main className={styles.shell} id="main">
         <div className={styles.topline}>
           <Link href="/" className={styles.wordmark}>
             AS / Studio
@@ -101,7 +102,7 @@ export default async function StudioPage() {
       : null;
 
   return (
-    <main className={styles.shell}>
+    <main className={styles.shell} id="main">
       <div className={styles.topline}>
         <Link href="/" className={styles.wordmark}>
           AS / Studio
@@ -111,7 +112,7 @@ export default async function StudioPage() {
           {isLocalStudio ? (
             <span className={styles.localTag}>Local sandbox</span>
           ) : (
-            <a href={chatGPTSignOutPath("/")} className={styles.utilityLink}>
+            <a href={authenticatedSignOutPath(user, "/")} className={styles.utilityLink}>
               Sign out
             </a>
           )}
@@ -133,8 +134,9 @@ export default async function StudioPage() {
             </h2>
             <p>
               Credentials, snapshots, sync history, and editorial changes are
-              stored in project-local D1. Deploying the site does not copy any
-              of them to production.
+              stored in project-local D1. Deploying code does not copy them;
+              the one-time handoff below can promote only reviewed Play
+              provider settings.
             </p>
           </div>
           <ol className={styles.environmentPath}>
@@ -147,17 +149,11 @@ export default async function StudioPage() {
               <span>Ship validated code and intended non-secret settings.</span>
             </li>
             <li>
-              <strong>Connect production</strong>
+              <strong>Promote settings</strong>
               <span>
-                Re-enter credentials in the{" "}
-                <a
-                  href="https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site/studio"
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  HTTPS Studio
-                </a>
-                ; keep its encryption key unchanged.
+                Create a one-time code in production, stage portable settings
+                here, then validate and apply them there. Authorize
+                MyAnimeList separately.
               </span>
             </li>
           </ol>
@@ -175,6 +171,10 @@ export default async function StudioPage() {
             : "Review the public projection, make narrow editorial changes, and refresh personal streams without exposing private source data."}
         </p>
       </header>
+
+      <PlayPromotionControls
+        environment={isLocalStudio ? "local" : "hosted"}
+      />
 
       <section className={styles.section} aria-labelledby="connectors-title">
         <div className={styles.sectionIntro}>

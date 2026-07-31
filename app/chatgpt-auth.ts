@@ -2,7 +2,7 @@ import { headers } from "next/headers.js";
 import { redirect } from "next/navigation.js";
 
 export type ChatGPTUser = {
-  authSource: "chatgpt" | "local-development";
+  authSource: "chatgpt" | "cloudflare-access" | "local-development";
   displayName: string;
   email: string;
   fullName: string | null;
@@ -17,6 +17,8 @@ type LocalDevelopmentAuthEnvironment = {
 };
 
 const USER_EMAIL_HEADER = "oai-authenticated-user-email";
+const INTERNAL_USER_EMAIL_HEADER = "x-anish-authenticated-user-email";
+const INTERNAL_AUTH_SOURCE_HEADER = "x-anish-authenticated-auth-source";
 const USER_FULL_NAME_HEADER = "oai-authenticated-user-full-name";
 const USER_FULL_NAME_ENCODING_HEADER =
   "oai-authenticated-user-full-name-encoding";
@@ -27,6 +29,19 @@ const CALLBACK_PATH = "/callback";
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   const requestHeaders = await headers();
+  const accessEmail = requestHeaders.get(INTERNAL_USER_EMAIL_HEADER);
+  if (
+    accessEmail &&
+    requestHeaders.get(INTERNAL_AUTH_SOURCE_HEADER) === "cloudflare-access"
+  ) {
+    return {
+      authSource: "cloudflare-access",
+      displayName: accessEmail,
+      email: accessEmail,
+      fullName: null,
+    };
+  }
+
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!email) {
     return resolveLocalDevelopmentUser(requestHeaders);
@@ -99,6 +114,15 @@ export function chatGPTSignInPath(returnTo: string): string {
 export function chatGPTSignOutPath(returnTo = "/"): string {
   const safeReturnTo = safeAuthReturnPath(returnTo);
   return `${SIGN_OUT_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
+}
+
+export function authenticatedSignOutPath(
+  user: Pick<ChatGPTUser, "authSource">,
+  returnTo = "/",
+): string {
+  return user.authSource === "cloudflare-access"
+    ? "/cdn-cgi/access/logout"
+    : chatGPTSignOutPath(returnTo);
 }
 
 export function localStudioSetupPath(returnTo: string): string {

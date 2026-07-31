@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   EditorialRecord,
   EditorialRecordList,
@@ -40,6 +40,14 @@ export function EditorialRecords({
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<"save" | "publish" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const editorHeadingRef = useRef<HTMLHeadingElement>(null);
+  const focusEditorAfterSelection = useRef(false);
+
+  useEffect(() => {
+    if (!focusEditorAfterSelection.current || !draft) return;
+    focusEditorAfterSelection.current = false;
+    editorHeadingRef.current?.focus({ preventScroll: false });
+  }, [draft]);
 
   async function loadRecords(offset = 0, search = activeQuery) {
     setLoading(true);
@@ -238,8 +246,17 @@ export function EditorialRecords({
       </form>
 
       <div className={styles.recordWorkspace}>
-        <div className={styles.recordList} aria-busy={loading}>
-          <div className={styles.recordListMeta}>
+        <div
+          aria-busy={loading}
+          aria-label="Sanitized editorial records"
+          className={styles.recordList}
+        >
+          <div
+            aria-atomic="true"
+            aria-live="polite"
+            className={styles.recordListMeta}
+            role="status"
+          >
             <span>
               {pagination.total.toLocaleString()} record
               {pagination.total === 1 ? "" : "s"}
@@ -257,10 +274,15 @@ export function EditorialRecords({
             <button
               type="button"
               key={record.id}
+              aria-controls="editorial-record-editor"
+              aria-pressed={draft?.id === record.id}
               className={`${styles.recordButton} ${
                 draft?.id === record.id ? styles.recordButtonActive : ""
               }`}
-              onClick={() => setDraft({ ...record })}
+              onClick={() => {
+                focusEditorAfterSelection.current = true;
+                setDraft({ ...record });
+              }}
             >
               <span>{record.title}</span>
               <small>
@@ -302,12 +324,14 @@ export function EditorialRecords({
           </div>
         </div>
 
-        <div className={styles.recordEditor}>
+        <div className={styles.recordEditor} id="editorial-record-editor">
           {draft ? (
             <>
               <div className={styles.readonlyRecord}>
                 <span>{draft.recordType}</span>
-                <h4>{draft.title}</h4>
+                <h4 ref={editorHeadingRef} tabIndex={-1}>
+                  {draft.title}
+                </h4>
                 <p>{draft.summary || "No public summary supplied."}</p>
                 <code>{draft.id}</code>
               </div>

@@ -22,9 +22,9 @@
 
 .heading > div > p {
   margin-bottom: 0.5rem;
-  color: #8faaff;
+  color: #b9c8ff;
   font-family: var(--font-mono);
-  font-size: 0.56rem;
+  font-size: 0.75rem;
   letter-spacing: 0.075em;
   text-transform: uppercase;
 }
@@ -37,8 +37,8 @@
 
 .heading > p {
   max-width: 28rem;
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 0.78rem;
+  color: #c6ccd7;
+  font-size: 0.85rem;
   line-height: 1.5;
 }
 
@@ -61,6 +61,7 @@
 
 .track {
   --track-accent: #8faaff;
+  --track-text: #b9c8ff;
   display: grid;
   min-width: 0;
   grid-template-columns: minmax(10rem, 0.4fr) minmax(0, 1.35fr);
@@ -71,10 +72,12 @@
 
 .track[data-impact-track="taught"] {
   --track-accent: var(--reading-amber);
+  --track-text: #f4c879;
 }
 
 .track[data-impact-track="programs"] {
   --track-accent: var(--motion-mint);
+  --track-text: #73dcc5;
 }
 
 .track > header {
@@ -87,18 +90,18 @@
 .track > header > span,
 .track > header > small {
   font-family: var(--font-mono);
-  font-size: 0.52rem;
+  font-size: 0.75rem;
   letter-spacing: 0.065em;
   line-height: 1.45;
   text-transform: uppercase;
 }
 
 .track > header > span {
-  color: var(--track-accent);
+  color: var(--track-text);
 }
 
 .track > header > small {
-  color: rgba(255, 255, 255, 0.46);
+  color: #b4bcc9;
 }
 
 .track h3 {
@@ -180,16 +183,16 @@
 }
 
 .plot a > span {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.67rem;
+  color: #e0e4ea;
+  font-size: 0.78rem;
   font-weight: 650;
   line-height: 1.3;
 }
 
 .plot a > small {
-  color: rgba(255, 255, 255, 0.45);
+  color: #b4bcc9;
   font-family: var(--font-mono);
-  font-size: 0.45rem;
+  font-size: 0.75rem;
   letter-spacing: 0.035em;
   line-height: 1.4;
   text-transform: uppercase;
@@ -197,7 +200,7 @@
 
 .plot a:hover strong,
 .plot a:focus-visible strong {
-  color: var(--track-accent);
+  color: var(--track-text);
 }
 
 .returnMark,
@@ -238,9 +241,9 @@
   grid-template-columns: auto minmax(1rem, 1fr) auto;
   gap: 0.6rem;
   align-items: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: #bdc4cf;
   font-family: var(--font-mono);
-  font-size: 0.48rem;
+  font-size: 0.75rem;
   letter-spacing: 0.05em;
 }
 
@@ -253,16 +256,16 @@
   grid-column: 2;
   max-width: 54rem;
   margin: -0.45rem 0 0;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.66rem;
+  color: #bdc4cf;
+  font-size: 0.78rem;
   line-height: 1.45;
 }
 
 .qualifier span {
   margin-right: 0.4rem;
-  color: var(--track-accent);
+  color: var(--track-text);
   font-family: var(--font-mono);
-  font-size: 0.48rem;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -313,7 +316,7 @@
 
   .plot a {
     width: 100%;
-    grid-template-columns: minmax(6.5rem, auto) minmax(0, 1fr);
+    grid-template-columns: minmax(5.25rem, 34vw) minmax(0, 1fr);
     gap: 0.35rem 1rem;
     align-items: baseline;
     padding: 0.65rem 0;
@@ -332,5 +335,32 @@
   .associationMark,
   .programSpan {
     margin-top: 0.8rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .plot a {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.18rem;
+    align-items: start;
+  }
+
+  .plot a > small {
+    grid-column: 1;
+  }
+}
+
+@media (forced-colors: active) {
+  .signalLine,
+  .returnMark i,
+  .associationMark i,
+  .programSpan i {
+    background: CanvasText;
+  }
+
+  .plot > ol > li::before {
+    border-color: Canvas;
+    background: CanvasText;
+    box-shadow: 0 0 0 1px CanvasText;
   }
 }

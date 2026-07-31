@@ -73,10 +73,12 @@ development and outside localhost.
 
 Local connector tests use real provider requests but write credentials,
 snapshots, sync history, and editorial changes only to the local D1 sandbox.
-They do not propagate to production. Deploy code and non-secret configuration
-separately; then enter each provider credential again through the production
-HTTPS Studio and run **Refresh now**. Never copy the local D1 state or replace
-the existing production encryption key.
+Deploy code and non-secret configuration separately. After deployment, the
+owner may use Studio’s single-use transfer code to send only the encrypted
+Hardcover, Steam, and Strava setup to the production origin for review and
+validation. Snapshots and the local encryption key never transfer;
+MyAnimeList always requires production OAuth. Never copy local D1 state or
+replace the production encryption key.
 
 Useful checks:
 
@@ -92,13 +94,14 @@ deployed-artifact hygiene.
 
 ## Studio and connectors
 
-Studio and every write API require both Sign in with ChatGPT and an exact email
-match in `OWNER_EMAILS`. Connector credentials are AES-256-GCM encrypted before
-they enter D1 using `CONNECTOR_ENCRYPTION_KEY`.
+On the owner-controlled public Worker, Studio and every `/api/studio/**` route
+require a cryptographically verified Cloudflare Access session plus an exact
+email match in `OWNER_EMAILS`. Connector credentials are AES-256-GCM encrypted
+before they enter D1 using `CONNECTOR_ENCRYPTION_KEY`. The private Sites
+rollback retains its existing Sign in with ChatGPT access policy.
 
-Production authentication remains Sign in with ChatGPT. `LOCAL_OWNER_EMAIL`
-exists only to make the isolated localhost Studio testable and must never be
-configured in Sites.
+`LOCAL_OWNER_EMAIL` exists only to make the isolated localhost Studio testable
+and must never be configured in either hosted environment.
 
 MyAnimeList uses a complete owner-only authorization-code flow. Studio accepts
 the application client ID and secret, performs OAuth with a single-use
@@ -108,10 +111,12 @@ and renews access automatically. Hardcover uses its owner API token. Both use
 public result on transient provider failure. Their public profile links are
 derived from the authenticated provider identities.
 
-Strava is configured through Studio with an official public embed URL or iframe
-snippet. The server stores only a validated `https://strava-embeds.com/...`
-source, and `/play` still makes visitors opt in before any third-party content
-loads. Replacing the embed requires no rebuild or deployment.
+Strava is configured through Studio with a public athlete profile and an
+optional complete Strava-generated profile-feed, weekly-summary, activity, or
+route iframe. The server validates the exact official host and verifies that a
+widget is anonymously frameable before publishing it. `/play` still requires
+visitor consent before loading third-party content and falls back to the
+athlete profile when a cumulative widget redirects to sign-in.
 
 Steam uses an owner-supplied Web API key and SteamID64 only from the server,
 publishes bounded summaries of public game details, and keeps no more than two
@@ -131,5 +136,13 @@ provider credentials or encryption keys.
 
 ## Deployment
 
-This project is packaged and deployed through OpenAI Sites with the D1 binding
-declared in `.openai/hosting.json`. Checked-in migrations live under `drizzle/`.
+The public production path is an owner-controlled Cloudflare Worker and D1
+database. The existing OpenAI Sites deployment stays private and unchanged as
+a rollback environment; `.openai/hosting.json` remains only to preserve that
+packaging path. Checked-in migrations live under `drizzle/`.
+
+Follow [the Cloudflare release runbook](./docs/cloudflare-release.md) to create
+the Access application and D1 database, prepare an immutable Worker config,
+set secrets, apply migrations, deploy, and run logged-out smoke tests. Do not
+request workspace-admin access, expose a Sites bypass token, or make the GitHub
+repository public.

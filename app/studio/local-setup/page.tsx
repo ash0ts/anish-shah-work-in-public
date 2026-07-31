@@ -28,7 +28,7 @@ export default async function LocalStudioSetupPage({
   const returnTo = safeAuthReturnPath(query.return_to ?? "/studio");
 
   return (
-    <main className={styles.shell}>
+    <main className={styles.shell} id="main">
       <div className={styles.topline}>
         <span className={styles.wordmark}>AS / Local Studio</span>
         <span className={styles.localTag}>Access remains locked</span>

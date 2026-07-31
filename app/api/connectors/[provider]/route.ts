@@ -51,7 +51,7 @@ export async function GET(request: Request, context: RouteContext) {
         message: "This personal stream has not been published yet.",
       },
       {
-        status: 404,
+        status: 200,
         headers: { "cache-control": "no-store" },
       },
     );

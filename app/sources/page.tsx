@@ -5,15 +5,13 @@ import {
   getPublicContentView,
   publicMetricsFrom,
 } from "@/lib/server/public-content";
+import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
 import styles from "./sources.module.css";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Sources and methodology",
-  description:
-    "Counting rules, attribution language, caveats, and the public bibliography behind Anish Shah’s work archive.",
-};
+const sourcesDescription =
+  "Inspect the counting rules, attribution boundaries, claim periods, caveats, and public bibliography behind Anish Shah’s work archive.";
 
 const metricThemeDescriptions = {
   learning: "Enrollment and launch measures from three practical AI courses.",
@@ -27,6 +25,20 @@ type SourceSearchParams = Record<
   string,
   string | string[] | undefined
 >;
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SourceSearchParams>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  return publicPageMetadata({
+    title: "Sources and methodology",
+    description: sourcesDescription,
+    path: "/sources",
+    noindex: hasPublicQuery(params),
+  });
+}
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
@@ -320,6 +332,7 @@ export default async function SourcesPage({
                             <Link
                               href={`/sources?${query.toString()}#${source.id}`}
                               key={source.id}
+                              prefetch={false}
                             >
                               {source.title}
                             </Link>,

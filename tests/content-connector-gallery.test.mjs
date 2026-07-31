@@ -43,7 +43,7 @@ test("MyAnimeList gallery is filtered, sorted, and page bounded", () => {
   }));
   const payload = {
     provider: "myanimelist",
-    snapshotVersion: 2,
+    snapshotVersion: 3,
     profileUrl: "https://myanimelist.net/profile/anish",
     coverage: "Complete library snapshot",
     library,
@@ -85,7 +85,7 @@ test("Steam gallery exposes only a page-sized sanitized projection", () => {
     "steam",
     {
       provider: "steam",
-      snapshotVersion: 2,
+      snapshotVersion: 3,
       profileUrl:
         "https://steamcommunity.com/profiles/76561198000000000",
       coverage: "Complete public Steam library snapshot",
@@ -107,7 +107,7 @@ test("invalid gallery controls fall back to safe defaults", () => {
     "hardcover",
     {
       provider: "hardcover",
-      snapshotVersion: 2,
+      snapshotVersion: 3,
       profileUrl: "https://hardcover.app/@anish",
       coverage: "Complete library snapshot",
       library: [
@@ -127,7 +127,7 @@ test("invalid gallery controls fall back to safe defaults", () => {
 
   assert.equal(projected.gallery.query, "");
   assert.equal(projected.gallery.page, 1);
-  assert.equal(projected.gallery.pageSize, 24);
+  assert.equal(projected.gallery.pageSize, 12);
   assert.equal(projected.gallery.filter, "all");
   assert.equal(projected.gallery.sort, "recent");
 });

@@ -1,5 +1,6 @@
 import publicBundleJson from "@/content/public/anish-content.public.v1.json";
 import { validatePublicProjection } from "./editorial-policy";
+import { reconcileStalePublicRecords } from "./public-record-reconciliation";
 import { runtimeDatabase } from "./runtime-env";
 
 type PublicEvidence = {
@@ -334,16 +335,10 @@ export async function ensureSanitizedPublicRecords(
     await binding.batch(statements);
   }
 
-  const recordIds = records.map((record) => record.id);
-  const missingPredicate = recordIds.map(() => "?").join(", ");
+  const recordIds = new Set(records.map((record) => record.id));
+  await reconcileStalePublicRecords(binding, recordIds, importedAt);
+
   await binding.batch([
-    binding
-      .prepare(
-        `UPDATE public_records
-         SET publication_state = 'review_required', updated_at = ?
-         WHERE id NOT IN (${missingPredicate})`,
-      )
-      .bind(importedAt, ...recordIds),
     binding
       .prepare(
         `INSERT INTO editorial_settings (

@@ -20,14 +20,14 @@ export const metadata: Metadata = {
     description:
       "Products, education, open source, and technical communities—with the public work attached.",
     type: "website",
-    images: [{ url: "/og.png", width: 1200, height: 630 }],
+    images: [{ url: "/og.jpg", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Anish Shah — Applied AI, in public",
     description:
       "Products, education, open source, and technical communities—with the public work attached.",
-    images: ["/og.png"],
+    images: ["/og.jpg"],
   },
 };
 
@@ -40,13 +40,6 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.png" />
-        <link
-          rel="preload"
-          href="/fonts/recursive-kinetic.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
       </head>
       <body>
         <a className="skip-link" href="#main">

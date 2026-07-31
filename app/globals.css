@@ -190,7 +190,7 @@ code {
 .meta-label,
 .status-label {
   font-family: var(--font-mono);
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.09em;
   line-height: 1.45;
@@ -271,5 +271,22 @@ code {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    --hairline: CanvasText;
+    --hairline-strong: CanvasText;
+  }
+
+  :focus-visible {
+    outline: 3px solid Highlight;
+  }
+
+  .skip-link {
+    color: Canvas;
+    background: CanvasText;
+    forced-color-adjust: none;
   }
 }

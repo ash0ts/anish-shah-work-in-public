@@ -10,7 +10,7 @@ in source code, deployment artifacts, public APIs, or browser storage.
 | Watch | MyAnimeList | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current** |
 | Read | Hardcover | Personal API token | Token, with or without `Bearer` | **Refresh now → Current** |
 | Play | Steam | Web API key and 17-digit SteamID64 | Both values | **Refresh now → Current** |
-| Move | Strava | Current public activity or route embed | Numeric URL or complete modern placeholder snippet | Save, then consent-load it on Play |
+| Move | Strava | Public athlete URL and optional cumulative feed | Athlete URL + complete generated profile-feed/summary iframe | Save; Play uses the checked feed or profile-link fallback |
 
 MyAnimeList is the important distinction: its developer portal correctly gives
 you a **client ID** and **client secret**. Those identify the application.
@@ -28,19 +28,19 @@ Local and production are isolated on purpose:
 
 | | Local Studio | Production Studio |
 | --- | --- | --- |
-| Address | `http://localhost:3000/studio` | [Private HTTPS Studio](https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site/studio) |
-| Identity | Loopback-only development owner | Sign in with ChatGPT + exact owner allowlist |
-| Database | Project-local D1 in `.wrangler/state` | Sites-managed D1 |
+| Address | `http://localhost:3000/studio` | `${PRODUCTION_SITE_URL}/studio` on the public Worker |
+| Identity | Loopback-only development owner | Cloudflare Access + exact owner allowlist |
+| Database | Project-local D1 in `.wrangler/state` | Owner-controlled Cloudflare D1 |
 | Encryption | Local-only key | Existing production key; do not rotate |
-| Credentials | Test credentials or a separate local registration | Re-enter through HTTPS Studio |
-| Propagation | Nothing copies to production | Refresh publishes a sanitized snapshot |
+| Credentials | Test credentials or a separate local registration | Re-encrypted after explicit production review |
+| Propagation | One-time server-to-server handoff | Validation publishes a sanitized snapshot |
 
 ### Start the local Studio
 
 Run:
 
 ```bash
-cd "/Users/ashah/Documents/New project/anish-site"
+cd "/path/to/anish-site"
 npm install
 test -f .env.local || cp .env.example .env.local
 openssl rand -base64 32
@@ -54,6 +54,7 @@ LOCAL_OWNER_EMAIL=your-owner-email@example.com
 CONNECTOR_ENCRYPTION_KEY=<the newly generated local-only value>
 STEAM_DATA_STORAGE_COUNTRIES=United States
 SITE_URL=http://localhost:3000
+PRODUCTION_SITE_URL=https://anish-shah-work-in-public.<account>.workers.dev
 ```
 
 `LOCAL_OWNER_EMAIL` must exactly match an address in `OWNER_EMAILS`. Never add
@@ -66,7 +67,7 @@ Provider credentials and profile URLs are intentionally not loaded from
 URLs, and `NEXT_PUBLIC_STRAVA_EMBED_URL` do not connect a stream. Enter those
 values through Studio instead; the API-backed credentials are encrypted in D1,
 profile links are derived from the authenticated provider identity, and Strava
-stores only its validated public embed URL.
+stores only its validated athlete and generated embed URLs.
 
 Start the strict localhost server:
 
@@ -89,16 +90,24 @@ stay in the local D1 sandbox.
 
 1. Validate locally with `npm run lint && npm test`.
 2. Deploy code, migrations, and intentional non-secret settings.
-3. Preserve the existing production `CONNECTOR_ENCRYPTION_KEY`,
-   `OWNER_EMAILS`, D1 binding, site URL, and private access policy.
-4. Set production `STEAM_DATA_STORAGE_COUNTRIES=United States`. Never set
-   `LOCAL_OWNER_EMAIL`.
-5. Open the production HTTPS Studio and enter each credential again.
-6. Refresh MyAnimeList, Hardcover, and Steam; confirm **Current** and inspect
-   `/play`. Save Strava, then consent-load it on `/play`.
+3. Open the Access-protected production Studio and select **Create one-time
+   transfer code**. The code expires after ten minutes and works once.
+4. Paste that code into **Local → production** in the local Studio and select
+   **Stage in production**. The local server—not the browser—decrypts the local
+   Hardcover, Steam, and Strava settings and sends them to the exact
+   `PRODUCTION_SITE_URL` over HTTPS.
+5. Return to production Studio. Review the provider names, then select
+   **Validate and apply**. Production calls each provider before replacing its
+   current credential or snapshot, encrypts accepted credentials with the
+   production key, and leaves existing production state unchanged for a
+   provider that fails validation.
+6. Authorize MyAnimeList separately with the production API client, then
+   inspect all four streams on `/play`.
 
-Code propagates. Credentials do not. Never copy `.env.local`,
-`.wrangler/state`, encrypted D1 rows, or a local encryption key to production.
+The transfer never includes MyAnimeList app credentials or OAuth tokens,
+snapshots, audit history, `.wrangler/state`, or the local encryption key. A
+staged payload expires after thirty minutes. Production does not publish it
+until the allowlisted owner applies it.
 
 ## MyAnimeList
 
@@ -129,7 +138,7 @@ Use separate MyAnimeList API clients for local and production.
 2. Register this exact callback:
 
    ```text
-   https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site/api/connectors/myanimelist/oauth/callback
+   ${PRODUCTION_SITE_URL}/api/connectors/myanimelist/oauth/callback
    ```
 
 3. Enter that application’s client ID and client secret only in the production
@@ -188,7 +197,9 @@ The server stores the complete public library with rounded playtime so its
 totals and distribution are accurate. The public endpoint sends only one
 bounded gallery page plus no more than eight top-played and eight recent games.
 It excludes exact minutes, presence, friends, bans, achievements, inventories,
-real name, location, artwork, and raw provider payloads. If Game details becomes
+real name, location, remote artwork URLs, and raw provider payloads. Official
+game icons are reduced to host-free references and served through the bounded
+same-origin artwork endpoint. If Game details becomes
 private, a refresh immediately unpublishes the Steam stream. Retry 429 responses
 later rather than repeatedly refreshing.
 
@@ -197,30 +208,21 @@ later rather than repeatedly refreshing.
 Strava uses neither an API credential nor a custom API visualization.
 
 1. Follow Strava’s [official embed instructions](https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed).
-2. Make the activity or route you want to show public.
-3. Open that activity or route, choose **Share**, then **Embed**.
-4. In Studio’s Move panel, paste either:
-   - the complete modern placeholder and script snippet Strava provides, or
-   - its numeric `https://strava-embeds.com/activity/{id}` or
-     `https://strava-embeds.com/route/{id}` URL.
-5. Select **Save Strava embed**.
-6. Open Move on `/play`, choose to load third-party content, and inspect the
-   result in a logged-out window.
-
-Studio never executes pasted markup. It strictly reads the modern placeholder,
-confirms the exact Strava script source and numeric public activity or route,
-then stores a canonical `strava-embeds.com` iframe URL. It also accepts that
-canonical URL directly. Private-share tokens, unrelated paths, non-HTTPS URLs,
-URL credentials, explicit ports, fragments, and scripts from other hosts are
-rejected. Replacing the embed does not require a deployment. Visitors still
-must consent before any Strava request or iframe loads.
-
-Older cumulative profile widgets use a
-`www.strava.com/athletes/.../latest-rides/...` or `activity-summary` URL. Strava
-currently redirects those widgets to its sign-in page, which cannot be framed
-by this site. Studio reports **Needs attention** for a stored older widget and
-requires a current public activity or route embed instead. There is no
-site-side setting or credential that can safely bypass that redirect.
+2. In Studio’s Move panel, enter the public athlete URL, such as
+   `https://www.strava.com/athletes/37597587`.
+3. If Strava offers a recent profile feed or weekly summary, paste its complete
+   generated iframe. Keep the tokenized URL exactly as Strava generated it.
+4. Select **Save Strava settings**. Studio makes one anonymous, no-redirect
+   health check and records whether the iframe is currently frameable.
+5. Open Move on `/play`. If the check passed, choose to load third-party
+   content; otherwise verify the prominent athlete-profile link.
+Studio never executes pasted markup. It recognizes only exact generated
+`www.strava.com/athletes/.../latest-rides/...`, `activity-summary`, numeric
+`strava-embeds.com` activity, or route embed paths. Private-share query parameters, unrelated
+paths, non-HTTPS URLs, URL credentials, ports, fragments, and unrecognized
+iframe attributes are rejected. If a profile feed redirects to sign-in or
+blocks framing, the widget remains visible only to the owner for recovery and
+Play uses the public profile-link fallback. Replacing it requires no deployment.
 
 The public site does not fetch, copy, aggregate, or custom-visualize Strava API
 data. The official iframe remains the only Strava display surface.
@@ -229,16 +231,20 @@ data. The official iframe remains the only Strava display surface.
 
 | Purpose | Route | Owner request |
 | --- | --- | --- |
-| Start MyAnimeList OAuth | `POST /api/connectors/myanimelist/oauth/start` | `{ "clientId": "…", "clientSecret": "…" }`, or `{}` to reauthorize |
+| Start MyAnimeList OAuth | `POST /api/studio/connectors/myanimelist/oauth/start` | `{ "clientId": "…", "clientSecret": "…" }`, or `{}` to reauthorize |
 | Finish MyAnimeList OAuth | `GET /api/connectors/myanimelist/oauth/callback` | Provider redirect only |
-| Save/replace Hardcover | `POST /api/connectors/hardcover/credentials` | `{ "secret": "…" }` |
-| Save/replace Steam | `POST /api/connectors/steam/credentials` | `{ "apiKey": "…", "steamId64": "…" }` |
-| Refresh an API stream | `POST /api/connectors/[provider]/refresh` | No body |
+| Save/replace Hardcover | `POST /api/studio/connectors/hardcover/credentials` | `{ "secret": "…" }` |
+| Save/replace Steam | `POST /api/studio/connectors/steam/credentials` | `{ "apiKey": "…", "steamId64": "…" }` |
+| Refresh an API stream | `POST /api/studio/connectors/[provider]/refresh` | No body |
 | Read a public API stream | `GET /api/connectors/[provider]` | No owner credential |
-| Save/replace Strava | `PUT /api/connectors/strava/config` | `{ "embed": "URL or iframe" }` |
+| Save/replace Strava | `PUT /api/studio/connectors/strava/config` | `{ "profileUrl": "…", "embed": "optional iframe" }` |
 | Read public Strava config | `GET /api/connectors/strava` | No owner credential |
-| Disconnect API stream | `DELETE /api/connectors/[provider]/credentials` | No body |
-| Disconnect Strava | `DELETE /api/connectors/strava/config` | No body |
+| Disconnect API stream | `DELETE /api/studio/connectors/[provider]/credentials` | No body |
+| Disconnect Strava | `DELETE /api/studio/connectors/strava/config` | No body |
+| Issue one-time promotion code | `POST /api/studio/play-promotion/start` | No body; production only |
+| Stage local provider settings | `POST /api/studio/play-promotion/send` | `{ "transferCode": "…" }`; loopback only |
+| Review promotion queue | `GET /api/studio/play-promotion` | No body; production only |
+| Validate and apply promotion | `POST /api/studio/play-promotion/[id]/apply` | No body; production only |
 
 Every write requires same-origin access, Sign in with ChatGPT or the constrained
 local-development owner, and an exact email allowlist match. API credentials

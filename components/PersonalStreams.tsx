@@ -1,6 +1,7 @@
 "use client";
 
 import { animate, stagger } from "animejs";
+import Image from "next/image";
 import {
   type CSSProperties,
   type FormEvent,
@@ -15,6 +16,10 @@ import styles from "./PersonalStreams.module.css";
 type StatusCount = { label: string; count: number };
 type GalleryFilter = StatusCount & { id: string };
 type GallerySort = { id: string; label: string };
+type PublicArtwork = {
+  src: `/api/connector-artwork/${string}/${string}`;
+  aspect: "poster" | "square";
+};
 
 type PublicGallery<Item> = {
   ready: boolean;
@@ -40,6 +45,7 @@ type MalGalleryItem = {
   updatedAt: string | null;
   releaseYear?: number | null;
   genres?: string[];
+  artwork?: PublicArtwork;
 };
 
 type HardcoverGalleryItem = {
@@ -49,6 +55,7 @@ type HardcoverGalleryItem = {
   status: string;
   rating: number | null;
   updatedAt: string | null;
+  artwork?: PublicArtwork;
 };
 
 type SteamGalleryItem = {
@@ -58,6 +65,7 @@ type SteamGalleryItem = {
   recentlyPlayed: boolean;
   totalHoursRounded: number;
   recentHoursRounded: number;
+  artwork?: PublicArtwork;
 };
 
 type MalPayload = {
@@ -112,8 +120,13 @@ type GalleryItem = MalGalleryItem | HardcoverGalleryItem | SteamGalleryItem;
 
 type StravaPayload = {
   provider: "strava";
-  embedUrl: string;
-  coverage: string;
+  profileUrl: string;
+  embed: {
+    kind: "profile_feed" | "profile_summary" | "activity" | "route";
+    embedUrl: string;
+    checkedAt: string;
+  } | null;
+  embedStatus: "available" | "unavailable";
   updatedAt: string;
 };
 
@@ -319,13 +332,13 @@ function CollectionStream({ provider }: { provider: CollectionProvider }) {
     status: "idle",
   });
   const [busy, setBusy] = useState(false);
-  const [view, setView] = useState<CollectionView>("pattern");
+  const [view, setView] = useState<CollectionView>("gallery");
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("");
   const [sort, setSort] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<12 | 24 | 36>(24);
+  const [pageSize, setPageSize] = useState<12 | 24 | 36>(12);
   const transitionRoot = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -752,7 +765,7 @@ function GalleryView({
       </div>
 
       {gallery.items.length ? (
-        <ol className={styles.atlas}>
+        <ol className={styles.atlas} data-provider={provider}>
           {gallery.items.map((item, index) => (
             <GalleryTile
               index={start + index}
@@ -835,6 +848,25 @@ function GalleryTile({
   const presentation = galleryItemPresentation(provider, item, steamMaximum);
   const content = (
     <>
+      <span className={styles.artwork} data-aspect={item.artwork?.aspect ?? (provider === "steam" ? "square" : "poster")}>
+        <span aria-hidden="true" className={styles.artworkFallback}>
+          {provider === "steam" ? "PLAY" : provider === "hardcover" ? "READ" : "WATCH"}
+        </span>
+        {item.artwork ? (
+          <Image
+            alt=""
+            decoding="async"
+            height={item.artwork.aspect === "square" ? 480 : 720}
+            loading="lazy"
+            onError={(event) => {
+              event.currentTarget.hidden = true;
+            }}
+            src={item.artwork.src}
+            unoptimized
+            width={480}
+          />
+        ) : null}
+      </span>
       <span className={styles.tileNumber}>{String(index).padStart(2, "0")}</span>
       <strong>{item.title}</strong>
       <span className={styles.tileMeta}>{presentation.meta}</span>
@@ -927,6 +959,7 @@ function MovementProvider({
   const [state, setState] = useState<ConnectorState<StravaPayload>>({
     status: "loading",
   });
+  const embedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -939,6 +972,12 @@ function MovementProvider({
     });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (show && state.status === "ready" && state.payload.embed) {
+      requestAnimationFrame(() => embedRef.current?.focus());
+    }
+  }, [show, state]);
 
   if (state.status !== "ready") {
     if (state.status === "unavailable") {
@@ -959,19 +998,25 @@ function MovementProvider({
     <>
       <PanelHeading
         title="Outside, on purpose."
-        description={state.payload.coverage}
+        description="A cumulative public movement feed when Strava permits anonymous embedding, with the athlete profile always available."
       />
-      {show ? (
-        <div className={styles.embed}>
+      {show && state.payload.embed ? (
+        <div className={styles.embed} ref={embedRef} tabIndex={-1}>
           <iframe
             allowFullScreen
             loading="lazy"
             referrerPolicy="strict-origin-when-cross-origin"
-            src={state.payload.embedUrl}
-            title="Anish Shah’s public Strava activity"
+            src={state.payload.embed.embedUrl}
+            title={
+              state.payload.embed.kind === "profile_summary"
+                ? "Anish Shah’s weekly Strava summary"
+                : state.payload.embed.kind === "profile_feed"
+                  ? "Anish Shah’s recent Strava activity feed"
+                  : "Anish Shah’s public Strava activity"
+            }
           />
         </div>
-      ) : (
+      ) : state.payload.embedStatus === "available" && state.payload.embed ? (
         <div className={styles.consent}>
           <span>
             <strong>Third-party content is blocked by default.</strong>
@@ -980,13 +1025,30 @@ function MovementProvider({
             </small>
           </span>
           <button onClick={onShow} type="button">
-            Load public Strava activity
+            Load public Strava feed
           </button>
+        </div>
+      ) : (
+        <div className={styles.stravaFallback}>
+          <span>
+            <strong>The feed is not anonymously frameable right now.</strong>
+            <small>No third-party content was loaded.</small>
+          </span>
+          <a href={state.payload.profileUrl} rel="noreferrer" target="_blank">
+            View the full activity feed on Strava ↗
+          </a>
         </div>
       )}
       <div className={styles.status}>
-        <span>Loads only after interaction</span>
+        <span>
+          {state.payload.embedStatus === "available"
+            ? "Loads only after interaction"
+            : "Profile-link fallback"}
+        </span>
         <span>{publishedLabel(state.payload.updatedAt)}</span>
+        <a href={state.payload.profileUrl} rel="noreferrer" target="_blank">
+          Open Strava profile
+        </a>
       </div>
     </>
   );
