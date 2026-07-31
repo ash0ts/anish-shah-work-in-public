@@ -82,14 +82,14 @@ export function BodiesOfWork({ buckets }: { buckets: FeaturedBuckets }) {
     >
       <header className={styles.heading}>
         <div>
-          <p>Bodies of work · selected</p>
+          <p>Selected technical work</p>
           <h2 id="bodies-of-work-title">
-            Four bodies. One applied-AI practice.
+            Systems, curricula, writing, and technical sessions.
           </h2>
         </div>
         <p>
-          Products, learning, writing, and talks are different ways of moving
-          the same applied-AI work forward.
+          Representative projects, organized by how the work was built,
+          taught, documented, or delivered.
         </p>
       </header>
 
@@ -122,9 +122,9 @@ export function BodiesOfWork({ buckets }: { buckets: FeaturedBuckets }) {
                     <li data-work-row key={group.id}>
                       <Link href={`/work/${group.slug}`}>
                         <span>
-                          {workGroupPeriodLabel(group)} · {group.roleSummary}
+                          {workGroupPeriodLabel(group)} · {group.homeRole}
                         </span>
-                        <strong>{group.shortTitle || group.title}</strong>
+                        <strong>{group.homeTitle}</strong>
                         <i aria-hidden="true">↗</i>
                       </Link>
                     </li>

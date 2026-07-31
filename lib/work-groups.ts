@@ -48,6 +48,93 @@ export const workBuckets: WorkBucket[] = [
   },
 ];
 
+const homepageWorkBuckets: WorkBucket[] = [
+  {
+    id: "products-open-source",
+    title: "Systems & Open Source",
+    shortTitle: "Systems",
+    statement:
+      "Agent-facing interfaces, evaluation tooling, and ML infrastructure integrations released as public software.",
+  },
+  {
+    id: "courses-learning",
+    title: "Curricula & Workshops",
+    shortTitle: "Curricula",
+    statement:
+      "Courses and multi-session instruction spanning prompting, LLM evaluation, fine-tuning, and agent engineering.",
+  },
+  {
+    id: "writing-research",
+    title: "Technical Writing & Implementations",
+    shortTitle: "Writing",
+    statement:
+      "Articles and public implementations covering LLM support systems, prompt engineering, and arXiv summarization.",
+  },
+  {
+    id: "talks-programs",
+    title: "Technical Talks & Programs",
+    shortTitle: "Talks",
+    statement:
+      "Public sessions on agent architecture, model fine-tuning, and evaluation across conferences and practitioner programs.",
+  },
+];
+
+type HomepageWorkPresentation = {
+  title: string;
+  role: string;
+};
+
+const homepageWorkPresentationByGroupId = {
+  "group:products:wandb-mcp": {
+    title: "W&B MCP Server",
+    role: "Contributor · launch coauthor",
+  },
+  "group:products:evalforge": {
+    title: "EvalForge: evaluation-criteria generation & alignment",
+    role: "Creator",
+  },
+  "group:products:lightning-fabric": {
+    title: "W&B logging & checkpointing for Lightning Fabric",
+    role: "Contributor · three upstream pull requests",
+  },
+  "group:courses:ai-curriculum": {
+    title: "AI curriculum: prompting, evaluation & agents",
+    role: "Instructor · three courses",
+  },
+  "group:courses:agentic-llm-series": {
+    title: "Agentic LLM fine-tuning & evaluation",
+    role: "Speaker / co-instructor · three sessions",
+  },
+  "group:courses:startup-school": {
+    title: "Google Cloud Startup School: GenAI applications",
+    role: "Presenter · two regional broadcasts + replay",
+  },
+  "group:writing:wandbot": {
+    title: "WandBot: GPT-4 documentation support",
+    role: "Coauthor",
+  },
+  "group:writing:prompt-engineering-langchain": {
+    title: "Prompt engineering with LangChain & W&B",
+    role: "Author",
+  },
+  "group:writing:automated-pdf-summarization": {
+    title: "arXiv summarization with Claude & Weave",
+    role: "Author · cookbook implementation contributor",
+  },
+  "group:talks:architecting-agents": {
+    title: "Architecting & orchestrating AI agents",
+    role: "Speaker / instructor · four public deliveries",
+  },
+  "group:talks:llm-agent-fine-tuning": {
+    title: "LLM agent fine-tuning for task automation",
+    role: "Speaker · two public deliveries",
+  },
+  "group:talks:building-evaluating-agents": {
+    title: "Building agents with evaluation in the loop",
+    role: "Conference speaker",
+  },
+} satisfies Record<string, HomepageWorkPresentation>;
+
 const fallbackEntityIds: Record<WorkBucketId, string[]> = {
   "products-open-source": [
     "entity:wk-0001",
@@ -84,7 +171,7 @@ export function featuredWorkBucketsFrom(bundle: AnishContentBundle) {
   const groups = publicGroups.length
     ? publicGroups
     : fallbackGroupsFromEntities(bundle);
-  return workBuckets.map((bucket) => ({
+  return homepageWorkBuckets.map((bucket) => ({
     ...bucket,
     groups: groups
       .filter((group) => group.bucket === bucket.id)
@@ -95,7 +182,19 @@ export function featuredWorkBucketsFrom(bundle: AnishContentBundle) {
             (right.featuredOrder ?? Number.MAX_SAFE_INTEGER) ||
           left.title.localeCompare(right.title),
       )
-      .slice(0, 3),
+      .slice(0, 3)
+      .map((group) => {
+        const presentation =
+          homepageWorkPresentationByGroupId[
+            group.id as keyof typeof homepageWorkPresentationByGroupId
+          ];
+        return {
+          ...group,
+          homeTitle:
+            presentation?.title ?? (group.shortTitle || group.title),
+          homeRole: presentation?.role ?? group.roleSummary,
+        };
+      }),
   }));
 }
 

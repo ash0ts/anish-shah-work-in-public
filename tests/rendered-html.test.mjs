@@ -128,7 +128,7 @@ function visibleText(html) {
     .trim();
 }
 
-test("homepage renders four Bodies of Work and four qualified impact signals", async () => {
+test("homepage renders four technical-work bodies and four qualified impact signals", async () => {
   const html = await renderHtml("/");
   const markup = documentMarkup(html);
 
@@ -137,7 +137,7 @@ test("homepage renders four Bodies of Work and four qualified impact signals", a
   assert.match(markup, />Shah</);
   assert.match(html, /applied AI builder, educator, and technical storyteller/i);
   assert.match(html, /Explore my work/i);
-  assert.match(html, /Bodies of work/i);
+  assert.match(html, /Selected technical work/i);
   assert.equal((markup.match(/<details\b/g) ?? []).length, 4);
   assert.equal(
     (markup.match(/<a\b[^>]*href="\/work\/[^"]+"/g) ?? []).length,

@@ -318,6 +318,11 @@ function makePortfolioItems(rows, curation) {
         ? stableRouteSlug(row.title, id)
         : legacySlug;
     const presentation = curation.itemPresentation[legacyId] || {};
+    const publicStart = presentation.dateStart || start;
+    const publicEnd = presentation.dateEnd || row.date_end || null;
+    const publicDateBasis =
+      presentation.dateBasis ||
+      dateBasis({ ...row, date_start: publicStart, year: publicStart?.slice(0, 4) });
     const urls = [
       row.primary_url && { kind: "primary", url: canonicalPublicUrl(row.primary_url) },
       row.secondary_url && { kind: "secondary", url: canonicalPublicUrl(row.secondary_url) },
@@ -334,13 +339,13 @@ function makePortfolioItems(rows, curation) {
       displayTitle: presentation.displayTitle || row.title,
       shortTitle: presentation.shortTitle || presentation.displayTitle || row.title,
       date: {
-        start,
-        end: row.date_end || null,
-        precision: start ? datePrecision(start) : "unknown",
-        basis: dateBasis(row),
+        start: publicStart,
+        end: publicEnd,
+        precision: publicStart ? datePrecision(publicStart) : "unknown",
+        basis: publicDateBasis,
       },
       additionalDates: parseAdditionalDates(row),
-      year: row.year ? Number(row.year) : null,
+      year: publicStart ? Number(publicStart.slice(0, 4)) : null,
       role: row.role,
       organizationIds,
       location: {

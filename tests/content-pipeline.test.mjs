@@ -103,6 +103,49 @@ test("public bundle preserves the complete footprint inventory", () => {
   );
 });
 
+test("curated GitHub publication dates resolve every WorkGroup period", () => {
+  const expectedDates = new Map([
+    ["open_source_repo:undated:fugue", "2026-07-08"],
+    ["open_source_repo:undated:wandb-skills", "2026-03-03"],
+    ["open_source_repo:undated:groq-webinar-codegen-testing", "2024-08-01"],
+    ["open_source_pr:undated:pii-safeguards-6", "2024-12-02"],
+    [
+      "open_source_pr:undated:diffusers-w-and-b-integration-1209",
+      "2022-11-09",
+    ],
+    [
+      "open_source_pr:undated:diffusers-w-and-b-integration-1245",
+      "2022-11-10",
+    ],
+    ["open_source_pr:undated:openai-cookbook-419", "2023-05-12"],
+    ["open_source_pr:undated:openai-cookbook-420", "2023-05-12"],
+    ["open_source_pr:undated:open-interpreter-390", "2023-09-15"],
+    ["open_source_pr:undated:gpt-engineer-701", "2023-09-15"],
+    ["open_source_pr:undated:gpt-engineer-752", "2023-10-02"],
+    [
+      "open_source_pr:undated:google-cloud-generative-ai-1807",
+      "2025-03-07",
+    ],
+    ["open_source_pr:undated:nvidia-data-flywheel-11", "2025-06-03"],
+  ]);
+
+  for (const [legacyId, date] of expectedDates) {
+    const item = publicBundle.items.find((candidate) =>
+      candidate.legacyIds.includes(legacyId),
+    );
+    assert(item, legacyId);
+    assert.equal(item.date.start, date, legacyId);
+    assert.equal(item.date.basis, "publication_date", legacyId);
+  }
+
+  assert.equal(
+    publicBundle.workGroups.filter(
+      (group) => group.yearStart === null && group.yearEnd === null,
+    ).length,
+    0,
+  );
+});
+
 test("stable IDs and typed references resolve", () => {
   for (const values of [
     publicBundle.items,

@@ -57,11 +57,19 @@
   "itemPresentation": {
     "open_source_repo:undated:fugue": {
       "displayTitle": "Fugue — governed experiments for AI agents",
-      "shortTitle": "Fugue"
+      "shortTitle": "Fugue",
+      "dateStart": "2026-07-08",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://api.github.com/repos/ash0ts/fugue",
+      "dateRationale": "GitHub repository created_at; used as the public inception date."
     },
     "open_source_repo:undated:wandb-skills": {
       "displayTitle": "W&B Skills",
-      "shortTitle": "W&B Skills"
+      "shortTitle": "W&B Skills",
+      "dateStart": "2026-03-03",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://github.com/wandb/skills/pull/2",
+      "dateRationale": "First public contribution authored by ash0ts; used instead of the repository creation date."
     },
     "open_source_repo:undated:nemo-vertex-w-b-ptuning-llm": {
       "displayTitle": "NeMo prompt-tuning on Vertex AI with W&B",
@@ -82,6 +90,72 @@
     "recording:2023-11-21:large-language-models-agents": {
       "displayTitle": "Large Language Model Agents",
       "shortTitle": "LLM Agents"
+    },
+    "open_source_repo:undated:groq-webinar-codegen-testing": {
+      "dateStart": "2024-08-01",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://api.github.com/repos/ash0ts/groq-webinar-codegen-testing",
+      "dateRationale": "GitHub repository created_at; no separate authoritative webinar date was found."
+    },
+    "open_source_pr:undated:pii-safeguards-6": {
+      "dateStart": "2024-12-02",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://github.com/soumik12345/safeguards/pull/6",
+      "dateRationale": "GitHub pull request created_at."
+    },
+    "open_source_pr:undated:diffusers-w-and-b-integration-1209": {
+      "dateStart": "2022-11-09",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://github.com/huggingface/diffusers/pull/1209",
+      "dateRationale": "GitHub pull request created_at."
+    },
+    "open_source_pr:undated:diffusers-w-and-b-integration-1245": {
+      "dateStart": "2022-11-10",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://github.com/huggingface/diffusers/pull/1245",
+      "dateRationale": "GitHub pull request created_at."
+    },
+    "open_source_pr:undated:openai-cookbook-419": {
+      "dateStart": "2023-05-12",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://github.com/openai/openai-cookbook/pull/419",
+      "dateRationale": "GitHub pull request created_at."
+    },
+    "open_source_pr:undated:openai-cookbook-420": {
+      "dateStart": "2023-05-12",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://github.com/openai/openai-cookbook/pull/420",
+      "dateRationale": "GitHub pull request created_at."
+    },
+    "open_source_pr:undated:open-interpreter-390": {
+      "dateStart": "2023-09-15",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://github.com/openinterpreter/openinterpreter/pull/390",
+      "dateRationale": "GitHub pull request created_at."
+    },
+    "open_source_pr:undated:gpt-engineer-701": {
+      "dateStart": "2023-09-15",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://github.com/AntonOsika/gpt-engineer/pull/701",
+      "dateRationale": "GitHub pull request created_at."
+    },
+    "open_source_pr:undated:gpt-engineer-752": {
+      "dateStart": "2023-10-02",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://github.com/AntonOsika/gpt-engineer/pull/752",
+      "dateRationale": "GitHub pull request created_at."
+    },
+    "open_source_pr:undated:google-cloud-generative-ai-1807": {
+      "dateStart": "2025-03-07",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://github.com/GoogleCloudPlatform/generative-ai/pull/1807",
+      "dateRationale": "GitHub pull request created_at."
+    },
+    "open_source_pr:undated:nvidia-data-flywheel-11": {
+      "dateStart": "2025-06-03",
+      "dateBasis": "publication_date",
+      "dateSourceUrl": "https://github.com/NVIDIA-AI-Blueprints/data-flywheel/pull/11",
+      "dateRationale": "GitHub pull request created_at."
     }
   },
   "relationOverrides": [

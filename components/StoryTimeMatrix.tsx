@@ -3,7 +3,7 @@ import { workBuckets, type PublicWorkGroup } from "@/lib/work-groups";
 import type { WorkArchiveRecord } from "@/lib/work-index";
 import styles from "./StoryTimeMatrix.module.css";
 
-const years = [2021, 2022, 2023, 2024, 2025, 2026, "undated"] as const;
+const years = [2021, 2022, 2023, 2024, 2025, 2026] as const;
 
 type StoryTimeMatrixProps = {
   records: WorkArchiveRecord[];
@@ -39,7 +39,7 @@ export function StoryTimeMatrix({
               <th scope="col">Body of work</th>
               {years.map((year) => (
                 <th key={year} scope="col">
-                  {year === "undated" ? "Undated" : year}
+                  {year}
                 </th>
               ))}
             </tr>
@@ -109,9 +109,6 @@ function activeInYear(
   record: WorkArchiveRecord,
   year: (typeof years)[number],
 ) {
-  if (year === "undated") {
-    return record.yearStart === null && record.yearEnd === null;
-  }
   const start = record.yearStart ?? record.yearEnd;
   const end = record.yearEnd ?? record.yearStart;
   return start !== null && end !== null && year >= start && year <= end;

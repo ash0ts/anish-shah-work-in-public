@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.2",
-  "contentVersion": "53cf9612400b16cc",
+  "contentVersion": "f599c1af4ac9c3df",
   "generatedAt": "2026-07-30T00:00:00.000Z",
   "sourceSummary": {
     "footprintRows": 184,
@@ -8444,13 +8444,13 @@
       "displayTitle": "groq-webinar-codegen-testing",
       "shortTitle": "groq-webinar-codegen-testing",
       "date": {
-        "start": null,
+        "start": "2024-08-01",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2024,
       "role": "Repository owner",
       "organizationIds": [
         "org:github"
@@ -8492,13 +8492,13 @@
       "displayTitle": "Fugue — governed experiments for AI agents",
       "shortTitle": "Fugue",
       "date": {
-        "start": null,
+        "start": "2026-07-08",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2026,
       "role": "Repository owner",
       "organizationIds": [
         "org:github"
@@ -8589,13 +8589,13 @@
       "displayTitle": "W&B Skills",
       "shortTitle": "W&B Skills",
       "date": {
-        "start": null,
+        "start": "2026-03-03",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2026,
       "role": "Contributor",
       "organizationIds": [
         "org:weights-and-biases-github"
@@ -8984,13 +8984,13 @@
       "displayTitle": "PII safeguards #6",
       "shortTitle": "PII safeguards #6",
       "date": {
-        "start": null,
+        "start": "2024-12-02",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2024,
       "role": "Contributor",
       "organizationIds": [
         "org:github"
@@ -9133,13 +9133,13 @@
       "displayTitle": "Diffusers W&B integration #1209",
       "shortTitle": "Diffusers W&B integration #1209",
       "date": {
-        "start": null,
+        "start": "2022-11-09",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2022,
       "role": "Contributor",
       "organizationIds": [
         "org:hugging-face-github"
@@ -9181,13 +9181,13 @@
       "displayTitle": "Diffusers W&B integration #1245",
       "shortTitle": "Diffusers W&B integration #1245",
       "date": {
-        "start": null,
+        "start": "2022-11-10",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2022,
       "role": "Contributor",
       "organizationIds": [
         "org:hugging-face-github"
@@ -9229,13 +9229,13 @@
       "displayTitle": "OpenAI Cookbook #419",
       "shortTitle": "OpenAI Cookbook #419",
       "date": {
-        "start": null,
+        "start": "2023-05-12",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2023,
       "role": "Contributor",
       "organizationIds": [
         "org:openai-github"
@@ -9277,13 +9277,13 @@
       "displayTitle": "OpenAI Cookbook #420",
       "shortTitle": "OpenAI Cookbook #420",
       "date": {
-        "start": null,
+        "start": "2023-05-12",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2023,
       "role": "Contributor",
       "organizationIds": [
         "org:openai-github"
@@ -9325,13 +9325,13 @@
       "displayTitle": "Open Interpreter #390",
       "shortTitle": "Open Interpreter #390",
       "date": {
-        "start": null,
+        "start": "2023-09-15",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2023,
       "role": "Contributor",
       "organizationIds": [
         "org:open-interpreter-github"
@@ -9373,13 +9373,13 @@
       "displayTitle": "GPT Engineer #701",
       "shortTitle": "GPT Engineer #701",
       "date": {
-        "start": null,
+        "start": "2023-09-15",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2023,
       "role": "Contributor",
       "organizationIds": [
         "org:gpt-engineer-github"
@@ -9421,13 +9421,13 @@
       "displayTitle": "GPT Engineer #752",
       "shortTitle": "GPT Engineer #752",
       "date": {
-        "start": null,
+        "start": "2023-10-02",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2023,
       "role": "Contributor",
       "organizationIds": [
         "org:gpt-engineer-github"
@@ -9565,13 +9565,13 @@
       "displayTitle": "Google Cloud generative-ai #1807",
       "shortTitle": "Google Cloud generative-ai #1807",
       "date": {
-        "start": null,
+        "start": "2025-03-07",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2025,
       "role": "Contributor",
       "organizationIds": [
         "org:google-cloud-github"
@@ -9614,13 +9614,13 @@
       "displayTitle": "NVIDIA data-flywheel #11",
       "shortTitle": "NVIDIA data-flywheel #11",
       "date": {
-        "start": null,
+        "start": "2025-06-03",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
       "additionalDates": [],
-      "year": null,
+      "year": 2025,
       "role": "Contributor",
       "organizationIds": [
         "org:nvidia-github"
@@ -10888,12 +10888,12 @@
       "summary": "Selected representative report contribution",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2024-12-02",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2024,
       "role": "Contributor",
       "organizationIds": [
         "org:github"
@@ -11005,12 +11005,12 @@
       "summary": "Selected ecosystem integration",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2022-11-09",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2022,
       "role": "Contributor",
       "organizationIds": [
         "org:hugging-face-github"
@@ -11044,12 +11044,12 @@
       "summary": "Selected ecosystem integration",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2022-11-10",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2022,
       "role": "Contributor",
       "organizationIds": [
         "org:hugging-face-github"
@@ -11083,12 +11083,12 @@
       "summary": "Selected ecosystem integration",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2023-05-12",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2023,
       "role": "Contributor",
       "organizationIds": [
         "org:openai-github"
@@ -11122,12 +11122,12 @@
       "summary": "Selected ecosystem integration",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2023-05-12",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2023,
       "role": "Contributor",
       "organizationIds": [
         "org:openai-github"
@@ -11161,12 +11161,12 @@
       "summary": "Selected ecosystem integration",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2023-09-15",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2023,
       "role": "Contributor",
       "organizationIds": [
         "org:open-interpreter-github"
@@ -11200,12 +11200,12 @@
       "summary": "Selected ecosystem integration",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2023-09-15",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2023,
       "role": "Contributor",
       "organizationIds": [
         "org:gpt-engineer-github"
@@ -11239,12 +11239,12 @@
       "summary": "Selected ecosystem integration",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2023-10-02",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2023,
       "role": "Contributor",
       "organizationIds": [
         "org:gpt-engineer-github"
@@ -11278,12 +11278,12 @@
       "summary": "Selected ecosystem integration",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2025-03-07",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2025,
       "role": "Contributor",
       "organizationIds": [
         "org:google-cloud-github"
@@ -14022,12 +14022,12 @@
       "summary": "A public NVIDIA and W&B blueprint contribution represented in the source inventory by the upstream pull request.",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2025-06-03",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2025,
       "role": "Contributor",
       "organizationIds": [
         "org:nvidia-github"
@@ -15295,12 +15295,12 @@
       "summary": "Repository owner.",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2024-08-01",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2024,
       "role": "Repository owner",
       "organizationIds": [
         "org:github"
@@ -15334,12 +15334,12 @@
       "summary": "Repository owner.",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2026-07-08",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2026,
       "role": "Repository owner",
       "organizationIds": [
         "org:github"
@@ -15373,12 +15373,12 @@
       "summary": "Contributor.",
       "practice": "build",
       "representativeDate": {
-        "start": null,
+        "start": "2026-03-03",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "year": null,
+      "year": 2026,
       "role": "Contributor",
       "organizationIds": [
         "org:weights-and-biases-github"
@@ -15538,6 +15538,326 @@
       "verificationState": "verified"
     },
     {
+      "id": "group:standalone:wk-fp-0161",
+      "slug": "fugue",
+      "slugAliases": [],
+      "title": "Fugue — governed experiments for AI agents",
+      "shortTitle": "Fugue",
+      "summary": "Repository owner.",
+      "roleSummary": "Repository owner",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0161",
+      "memberEntityIds": [
+        "entity:wk-fp-0161"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0161"
+      ],
+      "period": {
+        "start": "2026-07-08",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "organizationIds": [
+        "org:github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_repo"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0163",
+      "slug": "wandb-skills",
+      "slugAliases": [],
+      "title": "W&B Skills",
+      "shortTitle": "W&B Skills",
+      "summary": "Contributor.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0163",
+      "memberEntityIds": [
+        "entity:wk-fp-0163"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0163"
+      ],
+      "period": {
+        "start": "2026-03-03",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "organizationIds": [
+        "org:weights-and-biases-github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_repo"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-0004",
+      "slug": "nvidia-data-flywheel-blueprint",
+      "slugAliases": [
+        "nvidia-data-flywheel-11"
+      ],
+      "title": "NVIDIA Data Flywheel Blueprint",
+      "shortTitle": "Data Flywheel Blueprint",
+      "summary": "A public NVIDIA and W&B blueprint contribution represented by its upstream implementation.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-0004",
+      "memberEntityIds": [
+        "entity:wk-0004"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0184"
+      ],
+      "period": {
+        "start": "2025-06-03",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:nvidia-github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:ar-fp-0183",
+      "slug": "google-cloud-generative-ai-1807",
+      "slugAliases": [],
+      "title": "Google Cloud Generative AI contribution",
+      "shortTitle": "Google Cloud Generative AI",
+      "summary": "A public contribution to Google Cloud's Generative AI repository.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0183",
+      "memberEntityIds": [
+        "entity:ar-fp-0183"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0183"
+      ],
+      "period": {
+        "start": "2025-03-07",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2025,
+      "yearEnd": 2025,
+      "organizationIds": [
+        "org:google-cloud-github"
+      ],
+      "topics": [
+        "cloud",
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:ar-fp-0171",
+      "slug": "pii-safeguards-6",
+      "slugAliases": [],
+      "title": "PII safeguards contribution",
+      "shortTitle": "PII safeguards",
+      "summary": "A public contribution to PII detection safeguards.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0171",
+      "memberEntityIds": [
+        "entity:ar-fp-0171"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0171"
+      ],
+      "period": {
+        "start": "2024-12-02",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:wk-fp-0160",
+      "slug": "groq-webinar-codegen-testing",
+      "slugAliases": [],
+      "title": "Groq code-generation testing demo",
+      "shortTitle": "Groq code-generation demo",
+      "summary": "A public code-generation testing demo created for a Groq webinar.",
+      "roleSummary": "Repository owner",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-fp-0160",
+      "memberEntityIds": [
+        "entity:wk-fp-0160"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0160"
+      ],
+      "period": {
+        "start": "2024-08-01",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2024,
+      "yearEnd": 2024,
+      "organizationIds": [
+        "org:github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_repo"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:products:gpt-engineer",
+      "slug": "gpt-engineer-contributions",
+      "slugAliases": [
+        "gpt-engineer-701",
+        "gpt-engineer-752"
+      ],
+      "title": "GPT Engineer contributions",
+      "shortTitle": "GPT Engineer",
+      "summary": "A related pair of public contributions to GPT Engineer.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0179",
+      "memberEntityIds": [
+        "entity:ar-fp-0179",
+        "entity:ar-fp-0180"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0179",
+        "item:fp-0180"
+      ],
+      "period": {
+        "start": "2023-09-15",
+        "end": "2023-10-02",
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:gpt-engineer-github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
+      "id": "group:standalone:ar-fp-0178",
+      "slug": "open-interpreter-390",
+      "slugAliases": [],
+      "title": "Open Interpreter integration",
+      "shortTitle": "Open Interpreter",
+      "summary": "A public integration contribution to Open Interpreter.",
+      "roleSummary": "Contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:ar-fp-0178",
+      "memberEntityIds": [
+        "entity:ar-fp-0178"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:fp-0178"
+      ],
+      "period": {
+        "start": "2023-09-15",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "yearStart": 2023,
+      "yearEnd": 2023,
+      "organizationIds": [
+        "org:open-interpreter-github"
+      ],
+      "topics": [
+        "open-source"
+      ],
+      "formats": [
+        "open_source_pr"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified"
+    },
+    {
       "id": "group:products:langchain-integrations",
       "slug": "langchain-wandb-integrations",
       "slugAliases": [
@@ -15584,292 +15904,6 @@
       "verificationState": "verified"
     },
     {
-      "id": "group:products:diffusers-wandb",
-      "slug": "diffusers-wandb-integrations",
-      "slugAliases": [
-        "diffusers-w-and-b-integration-1209",
-        "diffusers-w-and-b-integration-1245"
-      ],
-      "title": "Diffusers W&B integrations",
-      "shortTitle": "Diffusers integrations",
-      "summary": "A related pair of public contributions integrating W&B with Diffusers.",
-      "roleSummary": "Contributor",
-      "bucket": "products-open-source",
-      "featuredOrder": null,
-      "primaryEntityId": "entity:ar-fp-0174",
-      "memberEntityIds": [
-        "entity:ar-fp-0174",
-        "entity:ar-fp-0175"
-      ],
-      "programEntityIds": [],
-      "contextEntityIds": [],
-      "itemIds": [
-        "item:fp-0174",
-        "item:fp-0175"
-      ],
-      "period": {
-        "start": null,
-        "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
-      },
-      "yearStart": null,
-      "yearEnd": null,
-      "organizationIds": [
-        "org:hugging-face-github"
-      ],
-      "topics": [
-        "open-source"
-      ],
-      "formats": [
-        "open_source_pr"
-      ],
-      "publicationState": "public",
-      "verificationState": "verified"
-    },
-    {
-      "id": "group:standalone:wk-fp-0161",
-      "slug": "fugue",
-      "slugAliases": [],
-      "title": "Fugue — governed experiments for AI agents",
-      "shortTitle": "Fugue",
-      "summary": "Repository owner.",
-      "roleSummary": "Repository owner",
-      "bucket": "products-open-source",
-      "featuredOrder": null,
-      "primaryEntityId": "entity:wk-fp-0161",
-      "memberEntityIds": [
-        "entity:wk-fp-0161"
-      ],
-      "programEntityIds": [],
-      "contextEntityIds": [],
-      "itemIds": [
-        "item:fp-0161"
-      ],
-      "period": {
-        "start": null,
-        "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
-      },
-      "yearStart": null,
-      "yearEnd": null,
-      "organizationIds": [
-        "org:github"
-      ],
-      "topics": [
-        "open-source"
-      ],
-      "formats": [
-        "open_source_repo"
-      ],
-      "publicationState": "public",
-      "verificationState": "verified"
-    },
-    {
-      "id": "group:standalone:ar-fp-0183",
-      "slug": "google-cloud-generative-ai-1807",
-      "slugAliases": [],
-      "title": "Google Cloud Generative AI contribution",
-      "shortTitle": "Google Cloud Generative AI",
-      "summary": "A public contribution to Google Cloud's Generative AI repository.",
-      "roleSummary": "Contributor",
-      "bucket": "products-open-source",
-      "featuredOrder": null,
-      "primaryEntityId": "entity:ar-fp-0183",
-      "memberEntityIds": [
-        "entity:ar-fp-0183"
-      ],
-      "programEntityIds": [],
-      "contextEntityIds": [],
-      "itemIds": [
-        "item:fp-0183"
-      ],
-      "period": {
-        "start": null,
-        "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
-      },
-      "yearStart": null,
-      "yearEnd": null,
-      "organizationIds": [
-        "org:google-cloud-github"
-      ],
-      "topics": [
-        "cloud",
-        "open-source"
-      ],
-      "formats": [
-        "open_source_pr"
-      ],
-      "publicationState": "public",
-      "verificationState": "verified"
-    },
-    {
-      "id": "group:products:gpt-engineer",
-      "slug": "gpt-engineer-contributions",
-      "slugAliases": [
-        "gpt-engineer-701",
-        "gpt-engineer-752"
-      ],
-      "title": "GPT Engineer contributions",
-      "shortTitle": "GPT Engineer",
-      "summary": "A related pair of public contributions to GPT Engineer.",
-      "roleSummary": "Contributor",
-      "bucket": "products-open-source",
-      "featuredOrder": null,
-      "primaryEntityId": "entity:ar-fp-0179",
-      "memberEntityIds": [
-        "entity:ar-fp-0179",
-        "entity:ar-fp-0180"
-      ],
-      "programEntityIds": [],
-      "contextEntityIds": [],
-      "itemIds": [
-        "item:fp-0179",
-        "item:fp-0180"
-      ],
-      "period": {
-        "start": null,
-        "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
-      },
-      "yearStart": null,
-      "yearEnd": null,
-      "organizationIds": [
-        "org:gpt-engineer-github"
-      ],
-      "topics": [
-        "open-source"
-      ],
-      "formats": [
-        "open_source_pr"
-      ],
-      "publicationState": "public",
-      "verificationState": "verified"
-    },
-    {
-      "id": "group:standalone:wk-fp-0160",
-      "slug": "groq-webinar-codegen-testing",
-      "slugAliases": [],
-      "title": "Groq code-generation testing demo",
-      "shortTitle": "Groq code-generation demo",
-      "summary": "A public code-generation testing demo created for a Groq webinar.",
-      "roleSummary": "Repository owner",
-      "bucket": "products-open-source",
-      "featuredOrder": null,
-      "primaryEntityId": "entity:wk-fp-0160",
-      "memberEntityIds": [
-        "entity:wk-fp-0160"
-      ],
-      "programEntityIds": [],
-      "contextEntityIds": [],
-      "itemIds": [
-        "item:fp-0160"
-      ],
-      "period": {
-        "start": null,
-        "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
-      },
-      "yearStart": null,
-      "yearEnd": null,
-      "organizationIds": [
-        "org:github"
-      ],
-      "topics": [
-        "open-source"
-      ],
-      "formats": [
-        "open_source_repo"
-      ],
-      "publicationState": "public",
-      "verificationState": "verified"
-    },
-    {
-      "id": "group:standalone:wk-0004",
-      "slug": "nvidia-data-flywheel-blueprint",
-      "slugAliases": [
-        "nvidia-data-flywheel-11"
-      ],
-      "title": "NVIDIA Data Flywheel Blueprint",
-      "shortTitle": "Data Flywheel Blueprint",
-      "summary": "A public NVIDIA and W&B blueprint contribution represented by its upstream implementation.",
-      "roleSummary": "Contributor",
-      "bucket": "products-open-source",
-      "featuredOrder": null,
-      "primaryEntityId": "entity:wk-0004",
-      "memberEntityIds": [
-        "entity:wk-0004"
-      ],
-      "programEntityIds": [],
-      "contextEntityIds": [],
-      "itemIds": [
-        "item:fp-0184"
-      ],
-      "period": {
-        "start": null,
-        "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
-      },
-      "yearStart": null,
-      "yearEnd": null,
-      "organizationIds": [
-        "org:nvidia-github"
-      ],
-      "topics": [
-        "open-source"
-      ],
-      "formats": [
-        "open_source_pr"
-      ],
-      "publicationState": "public",
-      "verificationState": "verified"
-    },
-    {
-      "id": "group:standalone:ar-fp-0178",
-      "slug": "open-interpreter-390",
-      "slugAliases": [],
-      "title": "Open Interpreter integration",
-      "shortTitle": "Open Interpreter",
-      "summary": "A public integration contribution to Open Interpreter.",
-      "roleSummary": "Contributor",
-      "bucket": "products-open-source",
-      "featuredOrder": null,
-      "primaryEntityId": "entity:ar-fp-0178",
-      "memberEntityIds": [
-        "entity:ar-fp-0178"
-      ],
-      "programEntityIds": [],
-      "contextEntityIds": [],
-      "itemIds": [
-        "item:fp-0178"
-      ],
-      "period": {
-        "start": null,
-        "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
-      },
-      "yearStart": null,
-      "yearEnd": null,
-      "organizationIds": [
-        "org:open-interpreter-github"
-      ],
-      "topics": [
-        "open-source"
-      ],
-      "formats": [
-        "open_source_pr"
-      ],
-      "publicationState": "public",
-      "verificationState": "verified"
-    },
-    {
       "id": "group:products:openai-cookbook",
       "slug": "openai-cookbook-contributions",
       "slugAliases": [
@@ -15894,13 +15928,13 @@
         "item:fp-0177"
       ],
       "period": {
-        "start": null,
+        "start": "2023-05-12",
         "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "yearStart": null,
-      "yearEnd": null,
+      "yearStart": 2023,
+      "yearEnd": 2023,
       "organizationIds": [
         "org:openai-github"
       ],
@@ -15914,79 +15948,45 @@
       "verificationState": "verified"
     },
     {
-      "id": "group:standalone:ar-fp-0171",
-      "slug": "pii-safeguards-6",
-      "slugAliases": [],
-      "title": "PII safeguards contribution",
-      "shortTitle": "PII safeguards",
-      "summary": "A public contribution to PII detection safeguards.",
+      "id": "group:products:diffusers-wandb",
+      "slug": "diffusers-wandb-integrations",
+      "slugAliases": [
+        "diffusers-w-and-b-integration-1209",
+        "diffusers-w-and-b-integration-1245"
+      ],
+      "title": "Diffusers W&B integrations",
+      "shortTitle": "Diffusers integrations",
+      "summary": "A related pair of public contributions integrating W&B with Diffusers.",
       "roleSummary": "Contributor",
       "bucket": "products-open-source",
       "featuredOrder": null,
-      "primaryEntityId": "entity:ar-fp-0171",
+      "primaryEntityId": "entity:ar-fp-0174",
       "memberEntityIds": [
-        "entity:ar-fp-0171"
+        "entity:ar-fp-0174",
+        "entity:ar-fp-0175"
       ],
       "programEntityIds": [],
       "contextEntityIds": [],
       "itemIds": [
-        "item:fp-0171"
+        "item:fp-0174",
+        "item:fp-0175"
       ],
       "period": {
-        "start": null,
-        "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
+        "start": "2022-11-09",
+        "end": "2022-11-10",
+        "precision": "day",
+        "basis": "publication_date"
       },
-      "yearStart": null,
-      "yearEnd": null,
+      "yearStart": 2022,
+      "yearEnd": 2022,
       "organizationIds": [
-        "org:github"
+        "org:hugging-face-github"
       ],
       "topics": [
         "open-source"
       ],
       "formats": [
         "open_source_pr"
-      ],
-      "publicationState": "public",
-      "verificationState": "verified"
-    },
-    {
-      "id": "group:standalone:wk-fp-0163",
-      "slug": "wandb-skills",
-      "slugAliases": [],
-      "title": "W&B Skills",
-      "shortTitle": "W&B Skills",
-      "summary": "Contributor.",
-      "roleSummary": "Contributor",
-      "bucket": "products-open-source",
-      "featuredOrder": null,
-      "primaryEntityId": "entity:wk-fp-0163",
-      "memberEntityIds": [
-        "entity:wk-fp-0163"
-      ],
-      "programEntityIds": [],
-      "contextEntityIds": [],
-      "itemIds": [
-        "item:fp-0163"
-      ],
-      "period": {
-        "start": null,
-        "end": null,
-        "precision": "unknown",
-        "basis": "unknown"
-      },
-      "yearStart": null,
-      "yearEnd": null,
-      "organizationIds": [
-        "org:weights-and-biases-github"
-      ],
-      "topics": [
-        "open-source"
-      ],
-      "formats": [
-        "open_source_repo"
       ],
       "publicationState": "public",
       "verificationState": "verified"
