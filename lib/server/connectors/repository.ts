@@ -730,6 +730,7 @@ export async function startMyAnimeListOAuth(input: {
     authorizationUrl: buildMyAnimeListAuthorizationUrl({
       clientId: client.clientId,
       codeVerifier,
+      redirectUri: callbackUrl,
       state,
     }),
     callbackUrl,
@@ -1063,6 +1064,7 @@ export async function completeMyAnimeListOAuth(input: {
       clientSecret: transaction.clientSecret,
       authorizationCode: transaction.authorizationCode,
       codeVerifier: transaction.codeVerifier,
+      redirectUri: transaction.callbackUrl,
     });
   } catch (error) {
     try {

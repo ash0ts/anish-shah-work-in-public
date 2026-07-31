@@ -358,6 +358,7 @@ test("MyAnimeList OAuth state and plain PKCE are high entropy and URL-safe", asy
   const authorizationUrl = buildMyAnimeListAuthorizationUrl({
     clientId,
     codeVerifier: verifier,
+    redirectUri: oauthCallbackUrl,
     state,
   });
   const parsed = new URL(authorizationUrl);
@@ -369,6 +370,7 @@ test("MyAnimeList OAuth state and plain PKCE are high entropy and URL-safe", asy
   assert.equal(parsed.pathname, "/v1/oauth2/authorize");
   assert.equal(parsed.searchParams.get("response_type"), "code");
   assert.equal(parsed.searchParams.get("client_id"), clientId);
+  assert.equal(parsed.searchParams.get("redirect_uri"), oauthCallbackUrl);
   assert.equal(parsed.searchParams.get("code_challenge"), verifier);
   assert.equal(parsed.searchParams.get("code_challenge_method"), "plain");
   assert.equal(parsed.searchParams.get("state"), state);
@@ -819,6 +821,7 @@ test("authorization-code exchange sends secrets only in the token request body",
       clientSecret: "client-secret-value",
       authorizationCode: "authorization-code-value",
       codeVerifier: "pkce-verifier-value",
+      redirectUri: oauthCallbackUrl,
       now,
     }),
   );
@@ -833,6 +836,7 @@ test("authorization-code exchange sends secrets only in the token request body",
   assert.equal(body.get("client_secret"), "client-secret-value");
   assert.equal(body.get("code"), "authorization-code-value");
   assert.equal(body.get("code_verifier"), "pkce-verifier-value");
+  assert.equal(body.get("redirect_uri"), oauthCallbackUrl);
   assert.deepEqual(credential, {
     kind: "oauth",
     clientId: "client-id-value",

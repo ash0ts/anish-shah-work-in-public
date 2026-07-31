@@ -132,11 +132,13 @@ export function isValidMyAnimeListOAuthState(value: string): boolean {
 export function buildMyAnimeListAuthorizationUrl(input: {
   clientId: string;
   codeVerifier: string;
+  redirectUri: string;
   state: string;
 }): string {
   const url = new URL(MYANIMELIST_AUTHORIZATION_ENDPOINT);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", input.clientId);
+  url.searchParams.set("redirect_uri", input.redirectUri);
   url.searchParams.set("code_challenge", input.codeVerifier);
   url.searchParams.set("code_challenge_method", "plain");
   url.searchParams.set("state", input.state);
@@ -316,6 +318,7 @@ export async function exchangeMyAnimeListAuthorizationCode(input: {
   clientSecret: string;
   authorizationCode: string;
   codeVerifier: string;
+  redirectUri: string;
   now?: number;
 }): Promise<MyAnimeListOAuthCredential> {
   const body = await requestTokens(
@@ -323,6 +326,7 @@ export async function exchangeMyAnimeListAuthorizationCode(input: {
     new URLSearchParams({
       code: input.authorizationCode,
       code_verifier: input.codeVerifier,
+      redirect_uri: input.redirectUri,
     }),
     "authorization_code",
   );
