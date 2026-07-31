@@ -1344,12 +1344,30 @@ async function encryptedSteamCredential(key) {
   );
 }
 
-async function waitFor(predicate, attempts = 100) {
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    if (predicate()) return;
-    await new Promise((resolve) => setImmediate(resolve));
-  }
-  throw new Error("Timed out waiting for deterministic test boundary.");
+function deferredBoundary(label, timeoutMs = 10_000) {
+  let reach;
+  const reached = new Promise((resolve) => {
+    reach = resolve;
+  });
+  return {
+    reach,
+    async wait() {
+      let timeout;
+      try {
+        await Promise.race([
+          reached,
+          new Promise((_, reject) => {
+            timeout = setTimeout(
+              () => reject(new Error(`Timed out waiting for ${label}.`)),
+              timeoutMs,
+            );
+          }),
+        ]);
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
+  };
 }
 
 test("public snapshot returns stale cached data without discarding it", async () => {
@@ -1468,7 +1486,7 @@ test("duplicate manual refreshes share the database lock", async () => {
   const key = Buffer.alloc(32, 7).toString("base64");
   const credential = await encryptedMyAnimeListCredential(key);
   const database = new FakeD1({ credentials: { myanimelist: credential } });
-  let fetchStarted = false;
+  const fetchStarted = deferredBoundary("duplicate-refresh provider fetch");
   let releaseFetch;
   const pendingResponse = new Promise((resolve) => {
     releaseFetch = resolve;
@@ -1481,11 +1499,11 @@ test("duplicate manual refreshes share the database lock", async () => {
         if (String(input).includes("/v2/users/@me?")) {
           return jsonResponse({ id: 42, name: "anish" });
         }
-        fetchStarted = true;
+        fetchStarted.reach();
         return pendingResponse;
       }, async () => {
         const firstRefresh = refreshConnector("myanimelist", "manual", "anish@example.com");
-        await waitFor(() => fetchStarted);
+        await fetchStarted.wait();
         const duplicate = await refreshConnector(
           "myanimelist",
           "manual",
@@ -1510,7 +1528,7 @@ test("disconnect during a provider fetch cannot republish a snapshot", async () 
   const key = Buffer.alloc(32, 29).toString("base64");
   const credential = await encryptedMyAnimeListCredential(key);
   const database = new FakeD1({ credentials: { myanimelist: credential } });
-  let fetchStarted = false;
+  const fetchStarted = deferredBoundary("disconnect-during-fetch boundary");
   let releaseFetch;
   const pendingResponse = new Promise((resolve) => {
     releaseFetch = resolve;
@@ -1523,7 +1541,7 @@ test("disconnect during a provider fetch cannot republish a snapshot", async () 
         if (String(input).includes("/v2/users/@me?")) {
           return jsonResponse({ id: 42, name: "anish" });
         }
-        fetchStarted = true;
+        fetchStarted.reach();
         return pendingResponse;
       }, async () => {
         const refresh = refreshConnector(
@@ -1531,7 +1549,7 @@ test("disconnect during a provider fetch cannot republish a snapshot", async () 
           "manual",
           "anish@example.com",
         );
-        await waitFor(() => fetchStarted);
+        await fetchStarted.wait();
         await deleteConnectorCredential(
           "myanimelist",
           "anish@example.com",
@@ -1556,7 +1574,7 @@ test("credential replacement supersedes an in-flight provider fetch", async () =
   const key = Buffer.alloc(32, 31).toString("base64");
   const credential = await encryptedMyAnimeListCredential(key);
   const database = new FakeD1({ credentials: { myanimelist: credential } });
-  let fetchStarted = false;
+  const fetchStarted = deferredBoundary("credential-replacement provider fetch");
   let releaseFetch;
   const pendingResponse = new Promise((resolve) => {
     releaseFetch = resolve;
@@ -1569,7 +1587,7 @@ test("credential replacement supersedes an in-flight provider fetch", async () =
         if (String(input).includes("/v2/users/@me?")) {
           return jsonResponse({ id: 42, name: "anish" });
         }
-        fetchStarted = true;
+        fetchStarted.reach();
         return pendingResponse;
       }, async () => {
         const refresh = refreshConnector(
@@ -1577,7 +1595,7 @@ test("credential replacement supersedes an in-flight provider fetch", async () =
           "manual",
           "anish@example.com",
         );
-        await waitFor(() => fetchStarted);
+        await fetchStarted.wait();
         assert.deepEqual(
           await saveConnectorCredential(
             "myanimelist",

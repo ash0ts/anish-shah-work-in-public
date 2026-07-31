@@ -18,3 +18,11 @@
   full-tree advisory. The remaining development-only moderate advisories are
   inherited through Drizzle Kit’s retired esbuild loader; Drizzle Kit is never
   shipped in the Worker runtime and `npm audit --omit=dev` must remain clean.
+- GitHub's Dependency Review action requires GitHub Advanced Security for a
+  private repository, which is not enabled for this project. CI therefore runs
+  `npm run security:audit` on every change, blocking all runtime advisories and
+  all high/critical full-tree advisories. Dependabot separately proposes weekly
+  npm and GitHub Actions updates; reviewers must inspect the corresponding
+  `package-lock.json` changes. These controls are the private-repository
+  fallback, not a full replacement for GitHub Advanced Security. Reinstate the
+  Dependency Review workflow if GitHub Advanced Security is enabled later.
