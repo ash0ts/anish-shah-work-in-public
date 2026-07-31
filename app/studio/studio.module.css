@@ -1135,6 +1135,21 @@
   line-height: 1.45;
 }
 
+.authorizationLink {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 12px 17px;
+  border: 1px solid var(--ink);
+  color: white;
+  background: var(--ink);
+  font: 650 12px/1 "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
 .recoveryText {
   display: grid;
   min-width: 0;

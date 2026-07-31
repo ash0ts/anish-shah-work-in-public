@@ -274,6 +274,9 @@ export function ConnectorControls({
     "save" | "authorize" | "refresh" | "disconnect" | "copy" | null
   >(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [authorizationDestination, setAuthorizationDestination] = useState<
+    string | null
+  >(null);
   const connectorBlocked =
     !encryptionConfigured ||
     (isMyAnimeList && !myAnimeListCallbackUrl) ||
@@ -332,6 +335,7 @@ export function ConnectorControls({
     }
     setPending("authorize");
     setMessage(null);
+    setAuthorizationDestination(null);
     try {
       const response = await fetch(
         "/api/studio/connectors/myanimelist/oauth/start",
@@ -367,7 +371,10 @@ export function ConnectorControls({
         return;
       }
       setSecret("");
-      setMessage("Opening MyAnimeList authorization…");
+      setAuthorizationDestination(destination);
+      setMessage(
+        "MyAnimeList authorization is ready. If it does not open automatically, use Continue to MyAnimeList below.",
+      );
       window.location.assign(destination);
     } catch {
       setMessage("MyAnimeList authorization could not start. Try again.");
@@ -727,6 +734,15 @@ export function ConnectorControls({
           <p className={styles.formMessage} role="status">
             {message}
           </p>
+        ) : null}
+        {authorizationDestination ? (
+          <a
+            className={styles.authorizationLink}
+            href={authorizationDestination}
+            rel="noreferrer"
+          >
+            Continue to MyAnimeList
+          </a>
         ) : null}
       </div>
     </section>

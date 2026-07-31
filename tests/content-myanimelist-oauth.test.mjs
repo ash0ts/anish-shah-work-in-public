@@ -1036,3 +1036,15 @@ test("OAuth routes and migration preserve the server-only privacy boundary", asy
     /ADD `generation` integer DEFAULT 1 NOT NULL/,
   );
 });
+
+test("Studio keeps a manual MyAnimeList continuation when automatic navigation stalls", async () => {
+  const controls = await readFile(
+    new URL("../app/studio/ConnectorControls.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(controls, /safeAuthorizationUrl\(result\.authorizationUrl\)/);
+  assert.match(controls, /setAuthorizationDestination\(destination\)/);
+  assert.match(controls, /href=\{authorizationDestination\}/);
+  assert.match(controls, /Continue to MyAnimeList/);
+});
