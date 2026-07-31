@@ -309,5 +309,8 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.doesNotMatch(guide, /Renewal is manual/);
   assert.match(guide, /strava-embeds\.com/);
   assert.match(guide, /www\.strava\.com\/athletes/);
-  assert.match(guide, /redirect public visitors to Strava’s login page/);
+  assert.match(guide, /redirects some cumulative profile widgets to its login page/);
+  assert.match(guide, /do not enter credentials in\s+the embedded login/);
+  assert.match(guide, /Profile Page.*Everyone/is);
+  assert.match(guide, /Default Sport/);
 });

@@ -184,15 +184,20 @@ the Steam stream. Retry 429 responses later rather than repeatedly refreshing.
 Strava uses neither an API credential nor a custom API visualization.
 
 1. Follow Strava’s [official embed instructions](https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed).
-2. Copy one current public activity, route, or activity-feed embed.
-3. In the Move panel, paste either:
-   - its `https://strava-embeds.com/...` source URL, or
-   - the complete single `<iframe ...>` snippet, including the profile-feed
-     form whose source resembles
-     `https://www.strava.com/athletes/{athlete-id}/latest-rides/{embed-id}`.
-4. Select **Save Strava embed**.
-5. Open Move on `/play`, choose to load third-party content, and inspect the
-   result.
+2. For a cumulative profile feed, first set:
+   - **Profile Page** to **Everyone** in Privacy Controls.
+   - The recent activities you want represented to **Everyone**.
+   - The matching **Default Sport** under Display Preferences; profile feeds
+     include only that sport.
+3. Return to your profile, choose **Share your Activities**, and regenerate the
+   recent-activities or weekly-summary iframe after changing those settings.
+4. In the Move panel, paste either:
+   - the complete profile-feed iframe whose source resembles
+     `https://www.strava.com/athletes/{athlete-id}/latest-rides/{embed-id}`, or
+   - a current activity or route embed from `https://strava-embeds.com/...`.
+5. Select **Save Strava embed**.
+6. Open Move on `/play`, choose to load third-party content, and inspect the
+   result in a logged-out window.
 
 Studio extracts and stores only the source URL. It accepts the dedicated
 `strava-embeds.com` host plus Strava’s exact numeric-athlete `latest-rides` and
@@ -201,10 +206,12 @@ URLs, URL credentials, explicit ports, fragments, scripts, and multi-element
 snippets. Replacing the embed does not require a deployment. Visitors still
 must consent before any Strava request or iframe loads.
 
-After saving, test Move in a logged-out browser. Some Strava profile-feed
-widgets currently redirect public visitors to Strava’s login page even though
-Strava generated the iframe. If that happens, generate a fresh embed for one
-public activity or route and use its current `strava-embeds.com` URL instead.
+Strava currently redirects some cumulative profile widgets to its login page,
+including widgets whose profile and activity settings already appear public.
+If the regenerated feed still does that in a logged-out window, there is no
+additional site-side or login setting to bypass it: do not enter credentials in
+the embedded login. Keep the cumulative feed configured for a later Strava fix,
+or temporarily replace it with a current public activity or route embed.
 
 ## Routes, retention, and recovery
 
