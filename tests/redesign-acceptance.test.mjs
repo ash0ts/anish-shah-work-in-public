@@ -424,7 +424,10 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
     new RegExp(`class="[^"]*${escapedEnhancedClass}[^"]*"`),
     "The no-JavaScript selector must target the enhanced tab interface",
   );
-  assert.doesNotMatch(markup, /<iframe\b|strava-embeds\.com/i);
+  assert.doesNotMatch(
+    markup,
+    /<iframe\b|strava-embeds\.com|www\.strava\.com\/athletes/i,
+  );
 
   const source = await readFile(
     path.join(PROJECT_ROOT, "components/PersonalStreams.tsx"),

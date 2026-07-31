@@ -187,16 +187,24 @@ Strava uses neither an API credential nor a custom API visualization.
 2. Copy one current public activity, route, or activity-feed embed.
 3. In the Move panel, paste either:
    - its `https://strava-embeds.com/...` source URL, or
-   - the complete single `<iframe ...>` snippet, including a snippet that spans
-     multiple lines.
+   - the complete single `<iframe ...>` snippet, including the profile-feed
+     form whose source resembles
+     `https://www.strava.com/athletes/{athlete-id}/latest-rides/{embed-id}`.
 4. Select **Save Strava embed**.
 5. Open Move on `/play`, choose to load third-party content, and inspect the
    result.
 
-Studio extracts and stores only the source URL. It rejects non-HTTPS or legacy
-hosts, URL credentials, explicit ports, fragments, scripts, and multi-element
+Studio extracts and stores only the source URL. It accepts the dedicated
+`strava-embeds.com` host plus Strava’s exact numeric-athlete `latest-rides` and
+`activity-summary` feed paths. It rejects all other Strava pages, non-HTTPS
+URLs, URL credentials, explicit ports, fragments, scripts, and multi-element
 snippets. Replacing the embed does not require a deployment. Visitors still
 must consent before any Strava request or iframe loads.
+
+After saving, test Move in a logged-out browser. Some Strava profile-feed
+widgets currently redirect public visitors to Strava’s login page even though
+Strava generated the iframe. If that happens, generate a fresh embed for one
+public activity or route and use its current `strava-embeds.com` URL instead.
 
 ## Routes, retention, and recovery
 

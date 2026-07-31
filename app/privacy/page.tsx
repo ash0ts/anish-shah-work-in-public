@@ -69,10 +69,10 @@ export default function PrivacyPage() {
               <dt>Strava · Move</dt>
               <dd>
                 No Strava API credential or custom activity dataset is stored.
-                Studio keeps only one validated public{" "}
-                <code>https://strava-embeds.com/…</code> source URL. The
-                third-party iframe remains blocked until a visitor explicitly
-                chooses to load it.
+                Studio keeps only one validated public source URL: either a
+                current <code>https://strava-embeds.com/…</code> embed or an
+                exact Strava-generated athlete-feed URL. The third-party iframe
+                remains blocked until a visitor explicitly chooses to load it.
               </dd>
             </div>
           </dl>

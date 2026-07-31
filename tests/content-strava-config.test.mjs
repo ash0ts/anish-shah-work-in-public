@@ -126,6 +126,26 @@ test("Strava accepts one official URL or iframe and stores only the source", asy
         "https://strava-embeds.com/posts/67890?style=standard&from_embed=true",
     },
   );
+  assert.deepEqual(
+    normalizeStravaEmbed(
+      "<iframe height='454' width='300' frameborder='0' allowtransparency='true' scrolling='no' src='https://www.strava.com/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567'></iframe>",
+    ),
+    {
+      ok: true,
+      embedUrl:
+        "https://www.strava.com/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
+    },
+  );
+  assert.deepEqual(
+    normalizeStravaEmbed(
+      "https://www.strava.com/athletes/37597587/activity-summary/abcdef0123456789abcdef0123456789abcdef01",
+    ),
+    {
+      ok: true,
+      embedUrl:
+        "https://www.strava.com/athletes/37597587/activity-summary/abcdef0123456789abcdef0123456789abcdef01",
+    },
+  );
 });
 
 test("Strava rejects alternate origins, credentials, ports, and unsafe input", () => {
@@ -136,6 +156,15 @@ test("Strava rejects alternate origins, credentials, ports, and unsafe input", (
     "//strava-embeds.com/posts/1",
     "https://www.strava-embeds.com/posts/1",
     "https://strava-embeds.com.evil.test/posts/1",
+    "https://www.strava.com/athletes/37597587",
+    "https://www.strava.com/athletes/37597587/latest-rides/not-a-valid-id",
+    "https://www.strava.com/athletes/owner/latest-rides/0123456789abcdef0123456789abcdef01234567",
+    "https://www.strava.com/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567?style=standard",
+    "https://www.strava.com/activities/1234567890/embed/0123456789abcdef0123456789abcdef01234567",
+    "https://strava.com/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
+    "https://www.strava.com.evil.test/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
+    "https://user:password@www.strava.com/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
+    "https://www.strava.com:443/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
     "https://user:password@strava-embeds.com/posts/1",
     "https://strava-embeds.com:443/posts/1",
     "https://strava-embeds.com/posts/1#activity",

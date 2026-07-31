@@ -308,4 +308,6 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(guide, /npm run lint && npm test/);
   assert.doesNotMatch(guide, /Renewal is manual/);
   assert.match(guide, /strava-embeds\.com/);
+  assert.match(guide, /www\.strava\.com\/athletes/);
+  assert.match(guide, /redirect public visitors to Strava’s login page/);
 });
