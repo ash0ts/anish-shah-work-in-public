@@ -76,7 +76,10 @@ async function steamRequest<T>(
 ): Promise<T> {
   const response = await fetch(url, {
     method: "GET",
-    redirect: "error",
+    // Cloudflare Workers supports follow/manual, but not RequestRedirect
+    // "error". Manual keeps redirects fail-closed through the non-2xx path
+    // below without making the connector incompatible with the edge runtime.
+    redirect: "manual",
     signal: AbortSignal.timeout(20_000),
     headers: {
       Accept: "application/json",

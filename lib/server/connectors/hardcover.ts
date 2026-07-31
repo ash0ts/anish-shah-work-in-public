@@ -20,7 +20,7 @@ const ISO_DATE_TIME =
 type NormalizedHardcoverBook = {
   statusId?: number;
   rating?: number;
-  dateUpdated?: string;
+  updatedAt?: string;
   book?: {
     id?: number;
     title?: string;
@@ -171,7 +171,7 @@ function normalizeHardcoverBook(value: unknown): NormalizedHardcoverBook {
       "reading status",
     ),
     rating: optionalRating(value.rating),
-    dateUpdated: optionalDateTime(value.date_updated),
+    updatedAt: optionalDateTime(value.updated_at),
     book,
   };
 }
@@ -329,12 +329,12 @@ export async function fetchHardcoverSnapshot(
     `query Library($userId: Int!) {
       user_books(
         where: {user_id: {_eq: $userId}}
-        order_by: {date_updated: desc}
+        order_by: {updated_at: desc}
         limit: 250
       ) {
         status_id
         rating
-        date_updated
+        updated_at
         book {
           id
           title
@@ -377,7 +377,7 @@ export async function fetchHardcoverSnapshot(
         slug: entry.book.slug ?? null,
         status: hardcoverStatus(entry.statusId),
         rating: entry.rating ?? null,
-        updatedAt: entry.dateUpdated ?? null,
+        updatedAt: entry.updatedAt ?? null,
       },
     ];
   });

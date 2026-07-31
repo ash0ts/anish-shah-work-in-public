@@ -93,6 +93,7 @@ test("Steam success fixture is normalized, rounded, bounded, and secret-free", a
     assert.equal(url.searchParams.has("key"), false);
     assert.equal(url.search.includes(API_KEY), false);
     assert.equal(request.init.headers["x-webapi-key"], API_KEY);
+    assert.equal(request.init.redirect, "manual");
   }
 
   assert.equal(result.itemCount, 10);

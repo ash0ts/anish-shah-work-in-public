@@ -60,6 +60,14 @@ SITE_URL=http://localhost:3000
 `LOCAL_OWNER_EMAIL` to production, and never replace the production encryption
 key with this local key.
 
+Provider credentials and profile URLs are intentionally not loaded from
+`.env` or `.env.local`. Variables such as `MAL_CLIENT_ID`,
+`MAL_CLIENT_SECRET`, `HARDCOVER_API_KEY`, `STEAM_API_KEY`, provider profile
+URLs, and `NEXT_PUBLIC_STRAVA_EMBED_URL` do not connect a stream. Enter those
+values through Studio instead; the API-backed credentials are encrypted in D1,
+profile links are derived from the authenticated provider identity, and Strava
+stores only its validated public embed URL.
+
 Start the strict localhost server:
 
 ```bash

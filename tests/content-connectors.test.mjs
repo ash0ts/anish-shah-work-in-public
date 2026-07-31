@@ -215,7 +215,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           {
             status_id: 3,
             rating: 4.5,
-            date_updated: "2026-07-04T00:00:00Z",
+            updated_at: "2026-07-04T00:00:00Z",
             book: {
               id: 1,
               title: "Book A",
@@ -225,17 +225,17 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           },
           {
             status_id: 1,
-            date_updated: "2026-07-03T00:00:00Z",
+            updated_at: "2026-07-03T00:00:00Z",
             book: { id: 1, title: "Duplicate A" },
           },
           {
             status_id: 2,
-            date_updated: "2026-07-02T00:00:00Z",
+            updated_at: "2026-07-02T00:00:00Z",
             book: { id: 2, title: "Book B" },
           },
           {
             status_id: 4,
-            date_updated: "2026-07-01T00:00:00Z",
+            updated_at: "2026-07-01T00:00:00Z",
             book: { id: 3 },
           },
           { status_id: 3, book: { title: "Missing id" } },
@@ -254,7 +254,10 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
     assert.equal(requests[0].headers.authorization, "Bearer hardcover-secret");
     assert.match(JSON.parse(requests[0].body).query, /query Viewer/);
     assert.deepEqual(JSON.parse(requests[1].body).variables, { userId: 42 });
-    assert.doesNotMatch(JSON.parse(requests[1].body).query, /\bimage\b/i);
+    const libraryQuery = JSON.parse(requests[1].body).query;
+    assert.match(libraryQuery, /\bupdated_at\b/);
+    assert.doesNotMatch(libraryQuery, /\bdate_updated\b/);
+    assert.doesNotMatch(libraryQuery, /\bimage\b/i);
     assert.equal(result.itemCount, 3);
   assert.deepEqual(result.publicPayload, {
       provider: "hardcover",
@@ -553,7 +556,7 @@ test("Hardcover rejects wrong-type and unbounded public scalars", async (context
     {
       name: "invalid update date",
       entry: {
-        date_updated: "not-a-date",
+        updated_at: "not-a-date",
         book: { id: 1, title: "Date" },
       },
     },
