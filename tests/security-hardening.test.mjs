@@ -51,16 +51,24 @@ test("bounded JSON accepts valid input and rejects media-type and streaming bypa
 });
 
 test("the Worker verifies Access identity and strips forgeable forwarded identity", async () => {
-  const worker = await readFile(new URL("../worker/index.ts", import.meta.url), "utf8");
+  const [worker, accessVerifier] = await Promise.all([
+    readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
+    readFile(
+      new URL("../lib/server/cloudflare-access.ts", import.meta.url),
+      "utf8",
+    ),
+  ]);
   const accessStart = worker.indexOf("if (accessMode)");
   const accessBlock = worker.slice(
     accessStart,
     worker.indexOf('headers.set("content-security-policy"', accessStart),
   );
-  assert.match(worker, /crypto\.subtle\.verify/);
-  assert.match(worker, /claims\.iss !== issuer/);
-  assert.match(worker, /claims\.exp <= now/);
-  assert.match(worker, /tokenAudiences\.some/);
+  assert.match(accessVerifier, /createRemoteJWKSet/);
+  assert.match(accessVerifier, /jwtVerify/);
+  assert.match(accessVerifier, /issuer:\s*origin\.origin/);
+  assert.match(accessVerifier, /audience:\s*\[\.\.\.audiences\]/);
+  assert.match(accessVerifier, /payload\.email/);
+  assert.doesNotMatch(accessVerifier, /console\./);
   assert.match(accessBlock, /headers\.delete\(SITES_EMAIL_HEADER\)/);
   assert.match(accessBlock, /headers\.delete\(ACCESS_ASSERTION_HEADER\)/);
   assert.match(accessBlock, /headers\.set\(INTERNAL_EMAIL_HEADER/);

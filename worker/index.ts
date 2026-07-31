@@ -5,6 +5,10 @@ import {
   DEFAULT_IMAGE_SIZES,
 } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import {
+  cloudflareAccessConfigured,
+  verifyCloudflareAccess,
+} from "../lib/server/cloudflare-access";
 
 interface Env {
   ASSETS: Fetcher;
@@ -31,17 +35,6 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
-type AccessClaims = {
-  aud?: unknown;
-  email?: unknown;
-  exp?: unknown;
-  iat?: unknown;
-  iss?: unknown;
-  nbf?: unknown;
-};
-
-type AccessJwk = JsonWebKey & { kid?: string; alg?: string; use?: string };
-
 const INTERNAL_EMAIL_HEADER = "x-anish-authenticated-user-email";
 const INTERNAL_SOURCE_HEADER = "x-anish-authenticated-auth-source";
 const INTERNAL_NONCE_HEADER = "x-anish-csp-nonce";
@@ -50,8 +43,6 @@ const SITES_EMAIL_HEADER = "oai-authenticated-user-email";
 const SITES_NAME_HEADER = "oai-authenticated-user-full-name";
 const SITES_NAME_ENCODING_HEADER =
   "oai-authenticated-user-full-name-encoding";
-const MAX_ACCESS_TOKEN_BYTES = 16_384;
-const ACCESS_KEY_CACHE_MS = 5 * 60 * 1_000;
 const WRITE_BODY_LIMIT_BYTES = 16_384;
 const PROMOTION_BODY_LIMIT_BYTES = 65_536;
 const OWNER_RATE_LIMIT = 30;
@@ -59,236 +50,10 @@ const ARTWORK_RATE_LIMIT = 120;
 const PROMOTION_IMPORT_RATE_LIMIT = 6;
 const RATE_WINDOW_MS = 60_000;
 
-const accessKeyCache = new Map<
-  string,
-  { expiresAt: number; keys: Map<string, AccessJwk> }
->();
 const requestBuckets = new Map<
   string,
   { count: number; expiresAt: number }
 >();
-
-function base64UrlBytes(value: string): Uint8Array | null {
-  if (!/^[A-Za-z0-9_-]+$/.test(value)) return null;
-  try {
-    const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(
-      Math.ceil(value.length / 4) * 4,
-      "=",
-    );
-    const decoded = atob(padded);
-    return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
-  } catch {
-    return null;
-  }
-}
-
-function parseJwtPart<T>(value: string): T | null {
-  const bytes = base64UrlBytes(value);
-  if (!bytes) return null;
-  try {
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as T;
-  } catch {
-    return null;
-  }
-}
-
-function accessOrigin(raw: string | undefined): URL | null {
-  const value = raw?.trim();
-  if (!value || value.length > 255) return null;
-  try {
-    const url = new URL(value.includes("://") ? value : `https://${value}`);
-    if (
-      url.protocol !== "https:" ||
-      !url.hostname.endsWith(".cloudflareaccess.com") ||
-      url.port ||
-      url.username ||
-      url.password ||
-      (url.pathname !== "/" && url.pathname !== "") ||
-      url.search ||
-      url.hash
-    ) {
-      return null;
-    }
-    return new URL(url.origin);
-  } catch {
-    return null;
-  }
-}
-
-async function accessKeys(
-  origin: URL,
-  forceRefresh = false,
-): Promise<Map<string, AccessJwk> | null> {
-  const endpoint = new URL("/cdn-cgi/access/certs", origin).toString();
-  const cached = accessKeyCache.get(endpoint);
-  if (!forceRefresh && cached && cached.expiresAt > Date.now()) {
-    return cached.keys;
-  }
-
-  let response: Response;
-  try {
-    response = await fetch(endpoint, {
-      redirect: "error",
-      signal: AbortSignal.timeout(5_000),
-      headers: { accept: "application/json" },
-    });
-  } catch {
-    return null;
-  }
-  if (!response.ok) return null;
-  const contentLength = Number(response.headers.get("content-length") ?? "0");
-  if (Number.isFinite(contentLength) && contentLength > 64_000) return null;
-
-  let body: unknown;
-  try {
-    const text = await response.text();
-    if (text.length > 64_000) return null;
-    body = JSON.parse(text);
-  } catch {
-    return null;
-  }
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    !("keys" in body) ||
-    !Array.isArray(body.keys) ||
-    body.keys.length > 16
-  ) {
-    return null;
-  }
-
-  const keys = new Map<string, AccessJwk>();
-  for (const candidate of body.keys) {
-    if (
-      typeof candidate !== "object" ||
-      candidate === null ||
-      !("kid" in candidate) ||
-      typeof candidate.kid !== "string" ||
-      !/^[A-Za-z0-9._-]{1,160}$/.test(candidate.kid)
-    ) {
-      continue;
-    }
-    const key = candidate as AccessJwk;
-    if (key.kty !== "RSA" || (key.alg && key.alg !== "RS256")) continue;
-    keys.set(candidate.kid, key);
-  }
-  if (!keys.size) return null;
-  accessKeyCache.set(endpoint, {
-    expiresAt: Date.now() + ACCESS_KEY_CACHE_MS,
-    keys,
-  });
-  return keys;
-}
-
-function accessToken(request: Request): string | null {
-  const assertion = request.headers.get(ACCESS_ASSERTION_HEADER)?.trim();
-  if (assertion) return assertion;
-  const cookie = request.headers.get("cookie") ?? "";
-  for (const part of cookie.split(";")) {
-    const [name, ...rest] = part.trim().split("=");
-    if (name === "CF_Authorization") {
-      const value = rest.join("=").trim();
-      return value || null;
-    }
-  }
-  return null;
-}
-
-function expectedAudiences(raw: string | undefined): Set<string> {
-  return new Set(
-    (raw ?? "")
-      .split(",")
-      .map((value) => value.trim())
-      .filter((value) => /^[A-Za-z0-9_-]{8,160}$/.test(value)),
-  );
-}
-
-async function verifyCloudflareAccess(
-  request: Request,
-  env: Env,
-): Promise<{ email: string } | null> {
-  const token = accessToken(request);
-  const origin = accessOrigin(env.CF_ACCESS_TEAM_DOMAIN);
-  const audiences = expectedAudiences(env.CF_ACCESS_AUD);
-  if (
-    !token ||
-    token.length > MAX_ACCESS_TOKEN_BYTES ||
-    !origin ||
-    !audiences.size
-  ) {
-    return null;
-  }
-
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  const header = parseJwtPart<{ alg?: unknown; kid?: unknown; typ?: unknown }>(
-    parts[0],
-  );
-  const claims = parseJwtPart<AccessClaims>(parts[1]);
-  const signature = base64UrlBytes(parts[2]);
-  if (
-    !header ||
-    header.alg !== "RS256" ||
-    typeof header.kid !== "string" ||
-    !/^[A-Za-z0-9._-]{1,160}$/.test(header.kid) ||
-    !claims ||
-    !signature
-  ) {
-    return null;
-  }
-
-  const now = Math.floor(Date.now() / 1_000);
-  const issuer = origin.origin;
-  const tokenAudiences = Array.isArray(claims.aud)
-    ? claims.aud.filter((value): value is string => typeof value === "string")
-    : typeof claims.aud === "string"
-      ? [claims.aud]
-      : [];
-  if (
-    claims.iss !== issuer ||
-    typeof claims.exp !== "number" ||
-    !Number.isFinite(claims.exp) ||
-    claims.exp <= now ||
-    (typeof claims.nbf === "number" && claims.nbf > now + 30) ||
-    (typeof claims.iat === "number" && claims.iat > now + 30) ||
-    !tokenAudiences.some((audience) => audiences.has(audience)) ||
-    typeof claims.email !== "string" ||
-    claims.email.length > 320 ||
-    !/^[^\s@]+@[^\s@]+$/.test(claims.email)
-  ) {
-    return null;
-  }
-
-  let keys = await accessKeys(origin);
-  let jwk = keys?.get(header.kid);
-  if (!jwk && keys) {
-    keys = await accessKeys(origin, true);
-    jwk = keys?.get(header.kid);
-  }
-  if (!jwk) return null;
-  try {
-    const key = await crypto.subtle.importKey(
-      "jwk",
-      jwk,
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      false,
-      ["verify"],
-    );
-    const signatureBytes = Uint8Array.from(signature).buffer;
-    const signedBytes = new TextEncoder().encode(
-      `${parts[0]}.${parts[1]}`,
-    ).buffer;
-    const valid = await crypto.subtle.verify(
-      "RSASSA-PKCS1-v1_5",
-      key,
-      signatureBytes,
-      signedBytes,
-    );
-    return valid ? { email: claims.email } : null;
-  } catch {
-    return null;
-  }
-}
 
 function isProtectedOwnerPath(pathname: string): boolean {
   return (
@@ -568,7 +333,10 @@ const worker = {
       headers.delete(SITES_EMAIL_HEADER);
       headers.delete(SITES_NAME_HEADER);
       headers.delete(SITES_NAME_ENCODING_HEADER);
-      accessIdentity = await verifyCloudflareAccess(appRequest, env);
+      accessIdentity = await verifyCloudflareAccess(appRequest, {
+        audience: env.CF_ACCESS_AUD,
+        teamDomain: env.CF_ACCESS_TEAM_DOMAIN,
+      });
       headers.delete(ACCESS_ASSERTION_HEADER);
       if (accessIdentity) {
         headers.set(INTERNAL_EMAIL_HEADER, accessIdentity.email);
@@ -578,10 +346,10 @@ const worker = {
         return securedResponse(
           accessFailure(
             url.pathname,
-            Boolean(
-              accessOrigin(env.CF_ACCESS_TEAM_DOMAIN) &&
-                expectedAudiences(env.CF_ACCESS_AUD).size,
-            ),
+            cloudflareAccessConfigured({
+              audience: env.CF_ACCESS_AUD,
+              teamDomain: env.CF_ACCESS_TEAM_DOMAIN,
+            }),
           ),
           request,
           nonce,
