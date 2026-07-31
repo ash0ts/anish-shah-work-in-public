@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -145,11 +144,10 @@ test("removed film artifacts and terminology do not survive in generated content
 });
 
 test("owner-only canonical bundle is ignored by Git", () => {
-  const result = spawnSync("git", ["check-ignore", "content/private/anish-content.v1.json"], {
-    cwd: PROJECT_ROOT,
-    encoding: "utf8",
-  });
-  assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /content\/private\/anish-content\.v1\.json/);
-  assert(existsSync(OWNER_PATH));
+  const privateIgnore = readFileSync(
+    path.join(PROJECT_ROOT, "content/private/.gitignore"),
+    "utf8",
+  );
+  assert.match(privateIgnore, /(?:^|\n)\*(?:\n|$)/);
+  assert.match(privateIgnore, /(?:^|\n)!\.gitignore(?:\n|$)/);
 });

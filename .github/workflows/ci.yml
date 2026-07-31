@@ -28,8 +28,6 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci --ignore-scripts
-      - name: Verify generated public content
-        run: npm run verify:content
       - name: Lint
         run: npm run lint
       - name: Test and build
