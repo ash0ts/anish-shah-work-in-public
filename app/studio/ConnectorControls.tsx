@@ -10,6 +10,7 @@ type Props = {
   connector: ConnectorHealth;
   environment: Environment;
   encryptionConfigured: boolean;
+  myAnimeListCallbackUrl: string | null;
   steamStorageCountries: string | null;
 };
 
@@ -27,9 +28,6 @@ type ApiResult = {
   status?: string;
   updatedAt?: string;
 };
-
-const productionOrigin =
-  "https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site";
 
 const providerMeta = {
   myanimelist: {
@@ -111,12 +109,6 @@ const callbackResultMessages: Record<string, string> = {
   forbidden:
     "The authorization response was not associated with the allowlisted owner. Sign in with the owner account and start again.",
 };
-
-function callbackUrl(environment: Environment): string {
-  const origin =
-    environment === "local" ? "http://localhost:3000" : productionOrigin;
-  return `${origin}/api/connectors/myanimelist/oauth/callback`;
-}
 
 function connectorStatusLabel(
   connector: ConnectorHealth,
@@ -267,6 +259,7 @@ export function ConnectorControls({
   connector,
   environment,
   encryptionConfigured,
+  myAnimeListCallbackUrl,
   steamStorageCountries,
 }: Props) {
   const meta = providerMeta[connector.provider];
@@ -283,8 +276,11 @@ export function ConnectorControls({
   const [message, setMessage] = useState<string | null>(null);
   const connectorBlocked =
     !encryptionConfigured ||
+    (isMyAnimeList && !myAnimeListCallbackUrl) ||
     (connector.provider === "steam" && !steamStorageCountries);
-  const registeredCallback = callbackUrl(environment);
+  const registeredCallback = isMyAnimeList
+    ? myAnimeListCallbackUrl
+    : null;
 
   useEffect(() => {
     if (!isMyAnimeList) return;
@@ -310,6 +306,10 @@ export function ConnectorControls({
   }, [connector.configured, isMyAnimeList]);
 
   async function copyCallback(): Promise<void> {
+    if (!registeredCallback) {
+      setMessage("Set SITE_URL to the exact origin and restart Studio first.");
+      return;
+    }
     setPending("copy");
     try {
       await navigator.clipboard.writeText(registeredCallback);
@@ -322,6 +322,10 @@ export function ConnectorControls({
   }
 
   async function authorizeMyAnimeList(reuseStored: boolean): Promise<void> {
+    if (!registeredCallback) {
+      setMessage("Set SITE_URL to the exact origin and restart Studio first.");
+      return;
+    }
     if (!reuseStored && (!clientId.trim() || !secret)) {
       setMessage("Enter both the MyAnimeList client ID and client secret.");
       return;
@@ -515,11 +519,11 @@ export function ConnectorControls({
           <div className={styles.callbackBlock}>
             <span>Callback URL for this {environment === "local" ? "local client" : "production client"}</span>
             <div>
-              <code>{registeredCallback}</code>
+              <code>{registeredCallback ?? "SITE_URL is not configured"}</code>
               <button
                 className={styles.copyButton}
                 type="button"
-                disabled={pending !== null}
+                disabled={pending !== null || !registeredCallback}
                 onClick={() => void copyCallback()}
               >
                 {pending === "copy" ? "Copying…" : "Copy"}

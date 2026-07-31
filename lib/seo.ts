@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-
-const fallbackSiteUrl =
-  "https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site";
+import { PUBLIC_SITE_ORIGIN } from "./site-constants";
 
 export function siteOrigin(): string {
   return (
     process.env.SITE_URL ||
     process.env.PRODUCTION_SITE_URL ||
-    fallbackSiteUrl
+    PUBLIC_SITE_ORIGIN
   ).replace(/\/+$/, "");
 }
 

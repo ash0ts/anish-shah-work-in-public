@@ -979,6 +979,7 @@ test("OAuth routes and migration preserve the server-only privacy boundary", asy
   const [
     repository,
     callbackRoute,
+    resumeRoute,
     migration,
     generationMigration,
   ] = await Promise.all([
@@ -991,6 +992,10 @@ test("OAuth routes and migration preserve the server-only privacy boundary", asy
         "../app/api/connectors/myanimelist/oauth/callback/route.ts",
         import.meta.url,
       ),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/studio/oauth-resume/page.tsx", import.meta.url),
       "utf8",
     ),
     readFile(
@@ -1011,11 +1016,18 @@ test("OAuth routes and migration preserve the server-only privacy boundary", asy
   assert.match(repository, /consumed_at IS NULL AND expires_at > \?/);
   assert.match(repository, /owner_email AS ownerEmail/);
   assert.match(callbackRoute, /chatGPTSignInPath\(returnTo\)/);
+  assert.match(callbackRoute, /runtimeValue\("AUTH_MODE"\) === "cloudflare_access"/);
+  assert.match(callbackRoute, /new URL\("\/studio\/oauth-resume", site\)/);
   assert.match(callbackRoute, /\?resume=/);
   assert.match(callbackRoute, /runtimeValue\("SITE_URL"\)/);
   assert.match(callbackRoute, /configured\.origin !== requestUrl\.origin/);
   assert.doesNotMatch(callbackRoute, /rejectCrossOriginWrite/);
   assert.doesNotMatch(callbackRoute, /error_description/);
+  assert.match(resumeRoute, /requireChatGPTUser\(returnTo\)/);
+  assert.match(resumeRoute, /isValidMyAnimeListOAuthState\(resumeState\)/);
+  assert.match(resumeRoute, /ownerAuthorizationForEmail\(user\.email\)/);
+  assert.match(resumeRoute, /completeMyAnimeListOAuth\(/);
+  assert.match(resumeRoute, /requestUrl:\s*callbackUrl/);
   assert.match(migration, /`state_hash` text PRIMARY KEY NOT NULL/);
   assert.match(migration, /`ciphertext` text NOT NULL/);
   assert.doesNotMatch(migration, /authorization_code|client_secret|access_token/);

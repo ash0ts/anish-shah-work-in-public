@@ -4,10 +4,12 @@ import {
   authenticatedSignOutPath,
   requireChatGPTUser,
 } from "@/app/chatgpt-auth";
+import { resolveMyAnimeListCallbackUrl } from "@/lib/server/connectors/myanimelist-oauth";
 import { getStudioOverview } from "@/lib/server/connectors";
 import { listEditorialRecords } from "@/lib/server/editorial";
 import { ownerAuthorizationForEmail } from "@/lib/server/owner-auth";
 import { ensureSanitizedPublicRecords } from "@/lib/server/public-record-seed";
+import { runtimeValue } from "@/lib/server/runtime-env";
 import {
   ConnectorControls,
   StravaConnectorControls,
@@ -50,6 +52,14 @@ export default async function StudioPage() {
   const user = await requireChatGPTUser("/studio");
   const isLocalStudio = user.authSource === "local-development";
   const ownerAuthorization = ownerAuthorizationForEmail(user.email);
+  const configuredSiteUrl = runtimeValue("SITE_URL");
+  const myAnimeListCallbackUrl = configuredSiteUrl
+    ? resolveMyAnimeListCallbackUrl(
+        configuredSiteUrl,
+        configuredSiteUrl,
+        runtimeValue("NODE_ENV") ?? process.env.NODE_ENV,
+      )
+    : null;
 
   if (ownerAuthorization.status === "forbidden") {
     return (
@@ -229,6 +239,7 @@ export default async function StudioPage() {
               connector={connector}
               environment={isLocalStudio ? "local" : "hosted"}
               encryptionConfigured={overview.encryptionConfigured}
+              myAnimeListCallbackUrl={myAnimeListCallbackUrl}
               steamStorageCountries={overview.steamStorageCountries}
               key={connector.provider}
             />

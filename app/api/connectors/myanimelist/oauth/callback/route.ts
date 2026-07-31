@@ -87,6 +87,11 @@ async function finishOwnerBoundCallback(
     const returnTo =
       `/api/connectors/myanimelist/oauth/callback` +
       `?resume=${encodeURIComponent(resumeState)}`;
+    if (runtimeValue("AUTH_MODE") === "cloudflare_access") {
+      const accessResume = new URL("/studio/oauth-resume", site);
+      accessResume.searchParams.set("resume", resumeState);
+      return redirectResponse(accessResume, 302);
+    }
     const signInPath =
       site.origin === "http://localhost:3000" &&
       (runtimeValue("NODE_ENV") ?? process.env.NODE_ENV) === "development"

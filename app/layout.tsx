@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { PUBLIC_SITE_ORIGIN } from "@/lib/site-constants";
 import "./globals.css";
 
 const siteUrl =
   process.env.SITE_URL ||
-  "https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site";
+  process.env.PRODUCTION_SITE_URL ||
+  PUBLIC_SITE_ORIGIN;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

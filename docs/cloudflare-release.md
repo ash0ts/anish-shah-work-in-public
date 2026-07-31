@@ -25,7 +25,7 @@ Use a clean shell without `LOCAL_OWNER_EMAIL`:
 ```bash
 export CLOUDFLARE_D1_DATABASE_ID='<uuid returned by D1 create>'
 export CLOUDFLARE_D1_DATABASE_NAME='anish-shah-work-in-public'
-export PUBLIC_SITE_URL='https://anish-shah-work-in-public.<account>.workers.dev'
+export PUBLIC_SITE_URL='https://anish-shah-work-in-public.anish-shah-emails.workers.dev'
 export OWNER_EMAILS='<exact owner email>'
 export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
 export CF_ACCESS_AUD='<Access application audience>'
@@ -58,8 +58,14 @@ npm run cloudflare:migrate
 npm run cloudflare:deploy
 ```
 
-After deployment, register the exact Worker callback URL with the production
-MyAnimeList client, complete production OAuth, promote or re-enter the other
+After deployment, register this exact callback with the production MyAnimeList
+client:
+
+```text
+https://anish-shah-work-in-public.anish-shah-emails.workers.dev/api/connectors/myanimelist/oauth/callback
+```
+
+Complete production OAuth, promote or re-enter the other
 credentials through the Access-protected Studio, refresh each stream, and
 smoke-test from a logged-out browser. Anonymous public pages must succeed;
 Studio and every `/api/studio/**` request must fail closed.

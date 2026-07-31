@@ -1,15 +1,14 @@
 import type { MetadataRoute } from "next";
+import { PUBLIC_SITE_ORIGIN } from "@/lib/site-constants";
 import { getPublicContentView } from "@/lib/server/public-content";
 import { workArchiveRecordsFrom } from "@/lib/work-index";
 
-const fallbackSiteUrl =
-  "https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site";
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = (process.env.SITE_URL || fallbackSiteUrl).replace(
-    /\/+$/,
-    "",
-  );
+  const baseUrl = (
+    process.env.SITE_URL ||
+    process.env.PRODUCTION_SITE_URL ||
+    PUBLIC_SITE_ORIGIN
+  ).replace(/\/+$/, "");
   const { bundle } = await getPublicContentView();
   const lastModified = new Date(bundle.generatedAt);
   const publicRoutes: MetadataRoute.Sitemap = [

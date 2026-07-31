@@ -165,3 +165,20 @@ test("public Cloudflare release config is generated without embedding secrets", 
   assert.doesNotMatch(prepare, /CONNECTOR_ENCRYPTION_KEY\s*:/);
   assert.doesNotMatch(prepare, /RATE_LIMIT_SALT\s*:/);
 });
+
+test("production source contains no retired Sites origin", async () => {
+  const sources = await Promise.all([
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/robots.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/studio/ConnectorControls.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/seo.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/site-constants.ts", import.meta.url), "utf8"),
+  ]);
+  const combined = sources.join("\n");
+  assert.doesNotMatch(combined, /chatgpt\.site/i);
+  assert.match(
+    combined,
+    /https:\/\/anish-shah-work-in-public\.anish-shah-emails\.workers\.dev/,
+  );
+});

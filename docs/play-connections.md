@@ -54,7 +54,7 @@ LOCAL_OWNER_EMAIL=your-owner-email@example.com
 CONNECTOR_ENCRYPTION_KEY=<the newly generated local-only value>
 STEAM_DATA_STORAGE_COUNTRIES=United States
 SITE_URL=http://localhost:3000
-PRODUCTION_SITE_URL=https://anish-shah-work-in-public.<account>.workers.dev
+PRODUCTION_SITE_URL=https://anish-shah-work-in-public.anish-shah-emails.workers.dev
 ```
 
 `LOCAL_OWNER_EMAIL` must exactly match an address in `OWNER_EMAILS`. Never add
@@ -138,7 +138,7 @@ Use separate MyAnimeList API clients for local and production.
 2. Register this exact callback:
 
    ```text
-   ${PRODUCTION_SITE_URL}/api/connectors/myanimelist/oauth/callback
+   https://anish-shah-work-in-public.anish-shah-emails.workers.dev/api/connectors/myanimelist/oauth/callback
    ```
 
 3. Enter that application’s client ID and client secret only in the production

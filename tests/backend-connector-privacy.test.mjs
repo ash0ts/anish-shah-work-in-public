@@ -296,7 +296,7 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(controls, /canReuseOAuthClient/);
   assert.match(controls, /\/api\/studio\/connectors\/myanimelist\/oauth\/start/);
   assert.match(
-    controls,
+    setupSurface,
     /\/api\/connectors\/myanimelist\/oauth\/callback/,
   );
   assert.match(controls, /\/api\/studio\/connectors\/strava\/config/);

@@ -1,10 +1,12 @@
 import type { MetadataRoute } from "next";
-
-const fallbackSiteUrl =
-  "https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site";
+import { PUBLIC_SITE_ORIGIN } from "@/lib/site-constants";
 
 function siteUrl() {
-  return (process.env.SITE_URL || fallbackSiteUrl).replace(/\/+$/, "");
+  return (
+    process.env.SITE_URL ||
+    process.env.PRODUCTION_SITE_URL ||
+    PUBLIC_SITE_ORIGIN
+  ).replace(/\/+$/, "");
 }
 
 export default function robots(): MetadataRoute.Robots {
