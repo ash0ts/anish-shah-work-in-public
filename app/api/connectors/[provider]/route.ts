@@ -3,6 +3,10 @@ import {
   isConnectorProvider,
   refreshConnector,
 } from "@/lib/server/connectors";
+import {
+  connectorSnapshotNeedsUpgrade,
+  projectConnectorSnapshotForPublic,
+} from "@/lib/server/connectors/public-gallery";
 import { getRequestExecutionContext } from "vinext/shims/request-context";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +15,7 @@ type RouteContext = {
   params: Promise<{ provider: string }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { provider: candidate } = await context.params;
   if (!isConnectorProvider(candidate)) {
     return Response.json(
@@ -21,14 +25,19 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const snapshot = await getPublicConnectorSnapshot(candidate);
-  if (
+  const needsSchemaUpgrade =
+    snapshot.status === "ready" &&
+    connectorSnapshotNeedsUpgrade(snapshot.payload);
+  const needsStaleRefresh =
     (snapshot.status === "ready" && snapshot.stale) ||
     (snapshot.status === "unavailable" &&
-      snapshot.reason === "stale_expired")
-  ) {
-    const refresh = refreshConnector(candidate, "stale_revalidate", null).catch(
-      () => undefined,
-    );
+      snapshot.reason === "stale_expired");
+  if (needsSchemaUpgrade || needsStaleRefresh) {
+    const refresh = refreshConnector(
+      candidate,
+      needsSchemaUpgrade ? "schema_upgrade" : "stale_revalidate",
+      null,
+    ).catch(() => undefined);
     const executionContext = getRequestExecutionContext();
     if (executionContext) executionContext.waitUntil(refresh);
     else void refresh;
@@ -48,7 +57,18 @@ export async function GET(_request: Request, context: RouteContext) {
     );
   }
 
-  return Response.json(snapshot, {
-    headers: { "cache-control": "no-store" },
-  });
+  const searchParams = new URL(request.url).searchParams;
+  return Response.json(
+    {
+      ...snapshot,
+      payload: projectConnectorSnapshotForPublic(
+        candidate,
+        snapshot.payload,
+        searchParams,
+      ),
+    },
+    {
+      headers: { "cache-control": "no-store" },
+    },
+  );
 }

@@ -2178,7 +2178,7 @@ function buildPublicNarratives() {
     {
       id: "narrative:play:personal-streams",
       title: "Outside the work",
-      body: "Four consent-aware streams outside the work: watch through owner-authorized MyAnimeList, read through owner-authorized Hardcover, play through Steam, and move through official public Strava embeds loaded only after visitor intent.",
+      body: "Complete, sanitized collection snapshots reveal patterns across anime, books, and games; a page-sized gallery makes every public title explorable. Movement stays inside an official Strava embed loaded only after visitor intent.",
       placement: "play",
       publicationState: "public",
     },

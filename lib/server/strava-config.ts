@@ -2,9 +2,12 @@ import { runtimeDatabase } from "./runtime-env";
 
 const STRAVA_SETTING_KEY = "connector.strava.public_embed";
 const STRAVA_EMBED_HOST = "strava-embeds.com";
-const STRAVA_PROFILE_EMBED_HOST = "www.strava.com";
-const STRAVA_PROFILE_EMBED_PATH =
+const STRAVA_LEGACY_PROFILE_HOST = "www.strava.com";
+const STRAVA_LEGACY_PROFILE_PATH =
   /^\/athletes\/[1-9]\d{0,19}\/(?:latest-rides|activity-summary)\/[a-f0-9]{40}\/?$/i;
+const STRAVA_CURRENT_EMBED_PATH =
+  /^\/(activity|route)\/([1-9]\d{0,24})\/?$/;
+const STRAVA_MODERN_SCRIPT_URL = "https://strava-embeds.com/embed.js";
 const MAX_INPUT_LENGTH = 8192;
 const MAX_URL_LENGTH = 2048;
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
@@ -25,6 +28,7 @@ export type StravaConfigResult =
       reason:
         | "database_unavailable"
         | "not_configured"
+        | "legacy_embed"
         | "invalid_config";
     };
 
@@ -45,20 +49,135 @@ function unavailableEmbed(message: string): StravaEmbedValidation {
   return { ok: false, code: "invalid_embed", message };
 }
 
-function isSensitiveQueryKey(value: string): boolean {
-  const normalized = value.replaceAll(/[^a-z0-9]/gi, "").toLowerCase();
-  return (
-    normalized === "key" ||
-    normalized === "code" ||
-    normalized === "oauthcode" ||
-    normalized === "authorizationcode" ||
-    normalized.endsWith("apikey") ||
-    normalized.includes("authorization") ||
-    normalized.includes("credential") ||
-    normalized.includes("password") ||
-    normalized.includes("secret") ||
-    normalized.includes("token")
+function parseAttributes(value: string): Map<string, string | null> | null {
+  const attributes = new Map<string, string | null>();
+  const pattern =
+    /\s*([A-Za-z_:][A-Za-z0-9:._-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/y;
+  let offset = 0;
+
+  while (offset < value.length) {
+    if (!value.slice(offset).trim()) break;
+    pattern.lastIndex = offset;
+    const match = pattern.exec(value);
+    if (!match || match.index !== offset || pattern.lastIndex === offset) {
+      return null;
+    }
+    const name = match[1].toLowerCase();
+    if (attributes.has(name)) return null;
+    attributes.set(name, match[2] ?? match[3] ?? match[4] ?? null);
+    offset = pattern.lastIndex;
+  }
+
+  return attributes;
+}
+
+function canonicalEmbedUrl(
+  type: "activity" | "route",
+  id: string,
+  fullWidth = false,
+): string {
+  const search = new URLSearchParams();
+  search.set("fromEmbed", "true");
+  if (type === "route" && fullWidth) search.set("fullWidth", "true");
+  search.set("style", "standard");
+  return `https://${STRAVA_EMBED_HOST}/${type}/${id}?${search.toString()}`;
+}
+
+function modernPlaceholderSource(value: string): string | null {
+  const match = value.match(
+    /^<div\b([^>]*)>\s*<\/div>\s*<script\b([^>]*)>\s*<\/script>$/i,
   );
+  if (!match) return null;
+
+  const placeholder = parseAttributes(match[1]);
+  const script = parseAttributes(match[2]);
+  if (!placeholder || !script) return null;
+
+  const placeholderKeys = new Set([
+    "class",
+    "data-embed-id",
+    "data-embed-type",
+    "data-elevation-gain",
+    "data-elevation-profile",
+    "data-distance",
+    "data-from-embed",
+    "data-full-width",
+    "data-map-hash",
+    "data-slippy",
+    "data-style",
+    "data-surface-type",
+    "data-units",
+  ]);
+  const scriptKeys = new Set(["async", "defer", "src", "type"]);
+  if (
+    [...placeholder.keys()].some((key) => !placeholderKeys.has(key)) ||
+    [...script.keys()].some((key) => !scriptKeys.has(key))
+  ) {
+    return null;
+  }
+
+  if (
+    placeholder.get("class") !== "strava-embed-placeholder" ||
+    script.get("src") !== STRAVA_MODERN_SCRIPT_URL ||
+    (script.has("type") &&
+      script.get("type") !== "text/javascript" &&
+      script.get("type") !== "module") ||
+    (script.has("async") && script.get("async") !== null) ||
+    (script.has("defer") && script.get("defer") !== null)
+  ) {
+    return null;
+  }
+
+  const type = placeholder.get("data-embed-type");
+  const id = placeholder.get("data-embed-id");
+  const style = placeholder.get("data-style");
+  const fromEmbed = placeholder.get("data-from-embed");
+  const fullWidth = placeholder.get("data-full-width");
+  const booleanOptions = [
+    placeholder.get("data-elevation-profile"),
+    placeholder.get("data-slippy"),
+    placeholder.get("data-surface-type"),
+  ].filter((value): value is string | null => value !== undefined);
+  const distance = placeholder.get("data-distance");
+  const elevationGain = placeholder.get("data-elevation-gain");
+  const mapHash = placeholder.get("data-map-hash");
+  const units = placeholder.get("data-units");
+  if (
+    (type !== "activity" && type !== "route") ||
+    !id ||
+    !/^[1-9]\d{0,24}$/.test(id) ||
+    (style !== undefined && style !== "standard") ||
+    (fromEmbed !== undefined &&
+      fromEmbed !== "true" &&
+      fromEmbed !== "false") ||
+    (fullWidth !== undefined &&
+      fullWidth !== "true" &&
+      fullWidth !== "false") ||
+    (type !== "route" && fullWidth !== undefined) ||
+    booleanOptions.some((value) => value !== "true" && value !== "false") ||
+    (distance !== undefined &&
+      (distance === null ||
+        !/^\d{1,12}(?:\.\d{1,3})?$/.test(distance))) ||
+    (elevationGain !== undefined &&
+      (elevationGain === null ||
+        !/^\d{1,12}(?:\.\d{1,3})?$/.test(elevationGain))) ||
+    (mapHash !== undefined &&
+      (mapHash === null ||
+        !/^\d{1,2}(?:\.\d+)?\/-?\d{1,3}(?:\.\d+)?\/-?\d{1,3}(?:\.\d+)?$/.test(
+          mapHash,
+        ))) ||
+    (units !== undefined && units !== "metric" && units !== "imperial") ||
+    (type !== "route" &&
+      (distance !== undefined ||
+        elevationGain !== undefined ||
+        mapHash !== undefined ||
+        units !== undefined ||
+        booleanOptions.length > 0))
+  ) {
+    return null;
+  }
+
+  return canonicalEmbedUrl(type, id, fullWidth === "true");
 }
 
 function iframeSource(value: string): string | null {
@@ -79,13 +198,52 @@ function iframeSource(value: string): string | null {
   return matches[0][1] ?? matches[0][2] ?? matches[0][3] ?? null;
 }
 
-function isAllowedEmbedLocation(url: URL): boolean {
-  const host = url.hostname.toLowerCase();
-  if (host === STRAVA_EMBED_HOST) return true;
-  return (
-    host === STRAVA_PROFILE_EMBED_HOST &&
-    !url.search &&
-    STRAVA_PROFILE_EMBED_PATH.test(url.pathname)
+function isLegacyProfileEmbed(value: string): boolean {
+  try {
+    const url = new URL(value.replaceAll("&amp;", "&"));
+    const authority = value.match(/^https:\/\/([^/?#]+)/i)?.[1]?.toLowerCase();
+    return (
+      authority === STRAVA_LEGACY_PROFILE_HOST &&
+      url.protocol === "https:" &&
+      url.hostname.toLowerCase() === STRAVA_LEGACY_PROFILE_HOST &&
+      !url.port &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash &&
+      STRAVA_LEGACY_PROFILE_PATH.test(url.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function canonicalizeCurrentEmbed(url: URL): string | null {
+  const match = url.pathname.match(STRAVA_CURRENT_EMBED_PATH);
+  if (!match) return null;
+
+  const seen = new Set<string>();
+  for (const [key, value] of url.searchParams) {
+    if (seen.has(key)) return null;
+    seen.add(key);
+    if (key === "style" && value === "standard") continue;
+    if (key === "fromEmbed" && (value === "true" || value === "false")) {
+      continue;
+    }
+    if (
+      key === "fullWidth" &&
+      match[1] === "route" &&
+      (value === "true" || value === "false")
+    ) {
+      continue;
+    }
+    return null;
+  }
+
+  return canonicalEmbedUrl(
+    match[1] as "activity" | "route",
+    match[2],
+    url.searchParams.get("fullWidth") === "true",
   );
 }
 
@@ -107,7 +265,11 @@ export function normalizeStravaEmbed(
     );
   }
 
-  const source = iframeSource(input.trim());
+  const trimmed = input.trim();
+  const modernSource = modernPlaceholderSource(trimmed);
+  if (modernSource) return { ok: true, embedUrl: modernSource };
+
+  const source = iframeSource(trimmed);
   if (
     !source ||
     source.length > MAX_URL_LENGTH ||
@@ -118,15 +280,18 @@ export function normalizeStravaEmbed(
     );
   }
 
+  if (isLegacyProfileEmbed(source)) {
+    return unavailableEmbed(
+      "Strava is redirecting this older profile-feed widget to sign-in. Replace it with a current public activity or route embed from Strava’s Share menu.",
+    );
+  }
+
   let url: URL;
   const authority = source.match(/^https:\/\/([^/?#]+)/i)?.[1];
   const normalizedAuthority = authority?.toLowerCase();
-  if (
-    normalizedAuthority !== STRAVA_EMBED_HOST &&
-    normalizedAuthority !== STRAVA_PROFILE_EMBED_HOST
-  ) {
+  if (normalizedAuthority !== STRAVA_EMBED_HOST) {
     return unavailableEmbed(
-      "Use the exact HTTPS embed URL generated by Strava.",
+      "Use a current public Strava activity or route embed whose URL begins https://strava-embeds.com/.",
     );
   }
   try {
@@ -137,20 +302,26 @@ export function normalizeStravaEmbed(
 
   if (
     url.protocol !== "https:" ||
-    !isAllowedEmbedLocation(url) ||
+    url.hostname.toLowerCase() !== STRAVA_EMBED_HOST ||
     url.port ||
     url.username ||
     url.password ||
     url.hash ||
-    /%(?:0[0-9a-f]|1[0-9a-f]|7f)/i.test(url.toString()) ||
-    [...url.searchParams.keys()].some(isSensitiveQueryKey)
+    /%(?:0[0-9a-f]|1[0-9a-f]|7f)/i.test(url.toString())
   ) {
     return unavailableEmbed(
-      "Use a current strava-embeds.com URL or an exact Strava athlete-feed embed without credentials, control characters, a port, or a fragment.",
+      "Use a current public Strava activity or route embed without credentials, control characters, a port, or a fragment.",
     );
   }
 
-  return { ok: true, embedUrl: url.toString() };
+  const canonical = canonicalizeCurrentEmbed(url);
+  if (!canonical) {
+    return unavailableEmbed(
+      "Use Strava’s current numeric activity or route embed. Private-share tokens and unrelated Strava pages are not published.",
+    );
+  }
+
+  return { ok: true, embedUrl: canonical };
 }
 
 function databaseOrNull(
@@ -199,6 +370,10 @@ export async function getStravaPublicConfig(
     !isCanonicalIsoDateTime(stored.updatedAt)
   ) {
     return { status: "unavailable", reason: "invalid_config" };
+  }
+
+  if (isLegacyProfileEmbed(stored.embedUrl)) {
+    return { status: "unavailable", reason: "legacy_embed" };
   }
 
   const normalized = normalizeStravaEmbed(stored.embedUrl);

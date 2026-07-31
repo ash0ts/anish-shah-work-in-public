@@ -91,24 +91,25 @@ class FakeD1 {
   }
 }
 
-test("Strava accepts one official URL or iframe and stores only the source", async () => {
+test("Strava accepts current official activity and route embeds and canonicalizes them", async () => {
   assert.deepEqual(
     normalizeStravaEmbed(
-      "https://strava-embeds.com/posts/12345?style=standard",
-    ),
-    {
-      ok: true,
-      embedUrl: "https://strava-embeds.com/posts/12345?style=standard",
-    },
-  );
-  assert.deepEqual(
-    normalizeStravaEmbed(
-      '<iframe title="Activity" src="https://strava-embeds.com/posts/12345?style=standard&amp;from_embed=true" loading="lazy"></iframe>',
+      "https://strava-embeds.com/activity/12345?style=standard&fromEmbed=false",
     ),
     {
       ok: true,
       embedUrl:
-        "https://strava-embeds.com/posts/12345?style=standard&from_embed=true",
+        "https://strava-embeds.com/activity/12345?fromEmbed=true&style=standard",
+    },
+  );
+  assert.deepEqual(
+    normalizeStravaEmbed(
+      '<iframe title="Route" src="https://strava-embeds.com/route/3472594576660285996?style=standard&amp;fromEmbed=true&amp;fullWidth=true" loading="lazy"></iframe>',
+    ),
+    {
+      ok: true,
+      embedUrl:
+        "https://strava-embeds.com/route/3472594576660285996?fromEmbed=true&fullWidth=true&style=standard",
     },
   );
   const multilineEmbed = await readFile(
@@ -123,39 +124,46 @@ test("Strava accepts one official URL or iframe and stores only the source", asy
     {
       ok: true,
       embedUrl:
-        "https://strava-embeds.com/posts/67890?style=standard&from_embed=true",
+        "https://strava-embeds.com/activity/67890?fromEmbed=true&style=standard",
     },
   );
   assert.deepEqual(
     normalizeStravaEmbed(
-      "<iframe height='454' width='300' frameborder='0' allowtransparency='true' scrolling='no' src='https://www.strava.com/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567'></iframe>",
+      "<div class='strava-embed-placeholder' data-embed-type='route' data-embed-id='3472594576660285996' data-style='standard' data-full-width='true' data-slippy='true' data-map-hash='9.51/56.0936/9.8969' data-units='metric' data-distance='10000'></div><script defer src='https://strava-embeds.com/embed.js'></script>",
     ),
     {
       ok: true,
       embedUrl:
-        "https://www.strava.com/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
-    },
-  );
-  assert.deepEqual(
-    normalizeStravaEmbed(
-      "https://www.strava.com/athletes/37597587/activity-summary/abcdef0123456789abcdef0123456789abcdef01",
-    ),
-    {
-      ok: true,
-      embedUrl:
-        "https://www.strava.com/athletes/37597587/activity-summary/abcdef0123456789abcdef0123456789abcdef01",
+        "https://strava-embeds.com/route/3472594576660285996?fromEmbed=true&fullWidth=true&style=standard",
     },
   );
 });
 
-test("Strava rejects alternate origins, credentials, ports, and unsafe input", () => {
+test("Strava rejects legacy profile widgets with replacement guidance", () => {
+  const legacy = [
+    "https://www.strava.com/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
+    "<iframe height='454' width='300' src='https://www.strava.com/athletes/37597587/activity-summary/abcdef0123456789abcdef0123456789abcdef01'></iframe>",
+  ];
+
+  for (const value of legacy) {
+    const result = normalizeStravaEmbed(value);
+    assert.equal(result.ok, false);
+    assert.match(result.message, /redirecting.*sign-in/i);
+    assert.match(result.message, /current public activity or route/i);
+  }
+});
+
+test("Strava rejects alternate origins, paths, private tokens, and unsafe input", () => {
   const rejected = [
     null,
     "",
-    "http://strava-embeds.com/posts/1",
-    "//strava-embeds.com/posts/1",
-    "https://www.strava-embeds.com/posts/1",
-    "https://strava-embeds.com.evil.test/posts/1",
+    "http://strava-embeds.com/activity/1",
+    "//strava-embeds.com/activity/1",
+    "https://www.strava-embeds.com/activity/1",
+    "https://strava-embeds.com.evil.test/activity/1",
+    "https://strava-embeds.com/posts/1",
+    "https://strava-embeds.com/routes/1/embed",
+    "https://strava-embeds.com/activity/not-numeric",
     "https://www.strava.com/athletes/37597587",
     "https://www.strava.com/athletes/37597587/latest-rides/not-a-valid-id",
     "https://www.strava.com/athletes/owner/latest-rides/0123456789abcdef0123456789abcdef01234567",
@@ -165,21 +173,27 @@ test("Strava rejects alternate origins, credentials, ports, and unsafe input", (
     "https://www.strava.com.evil.test/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
     "https://user:password@www.strava.com/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
     "https://www.strava.com:443/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
-    "https://user:password@strava-embeds.com/posts/1",
-    "https://strava-embeds.com:443/posts/1",
-    "https://strava-embeds.com/posts/1#activity",
-    "https://strava-embeds.com/posts/1?access_token=secret",
-    "https://strava-embeds.com/posts/1?client_secret=secret",
-    "https://strava-embeds.com/posts/1?oauth_token=secret",
-    "https://strava-embeds.com/posts/1?refresh_token=secret",
-    "https://strava-embeds.com/posts/1?api-key=secret",
-    "https://strava-embeds.com/posts/1?code=oauth-code",
-    "https://strava-embeds.com/posts/%0aheader",
-    "https://strava-embeds.com/posts/\n1",
-    '<iframe src="https://strava-embeds.com/posts/\n1"></iframe>',
-    "<div><iframe src=\"https://strava-embeds.com/posts/1\"></iframe></div>",
+    "https://user:password@strava-embeds.com/activity/1",
+    "https://strava-embeds.com:443/activity/1",
+    "https://strava-embeds.com/activity/1#activity",
+    "https://strava-embeds.com/activity/1?access_token=secret",
+    "https://strava-embeds.com/activity/1?client_secret=secret",
+    "https://strava-embeds.com/activity/1?oauth_token=secret",
+    "https://strava-embeds.com/activity/1?refresh_token=secret",
+    "https://strava-embeds.com/route/1?token=private-share",
+    "https://strava-embeds.com/activity/1?api-key=secret",
+    "https://strava-embeds.com/activity/1?code=oauth-code",
+    "https://strava-embeds.com/activity/1?fromEmbed=true&fromEmbed=false",
+    "https://strava-embeds.com/activity/1?fullWidth=true",
+    "https://strava-embeds.com/activity/%0a1",
+    "https://strava-embeds.com/activity/\n1",
+    '<iframe src="https://strava-embeds.com/activity/\n1"></iframe>',
+    "<div><iframe src=\"https://strava-embeds.com/activity/1\"></iframe></div>",
     "<iframe title=\"Missing source\"></iframe>",
-    '<iframe src="https://strava-embeds.com/posts/1" src="https://strava-embeds.com/posts/2"></iframe>',
+    '<iframe src="https://strava-embeds.com/activity/1" src="https://strava-embeds.com/activity/2"></iframe>',
+    "<div class='strava-embed-placeholder' data-embed-type='activity' data-embed-id='1'></div><script src='https://evil.example/embed.js'></script>",
+    "<div class='strava-embed-placeholder' data-embed-type='activity' data-embed-id='1' onclick='steal()'></div><script src='https://strava-embeds.com/embed.js'></script>",
+    "<div class='strava-embed-placeholder' data-embed-type='activity' data-embed-id='1' data-token='private'></div><script src='https://strava-embeds.com/embed.js'></script>",
   ];
 
   for (const value of rejected) {
@@ -198,7 +212,7 @@ test("Strava rejects alternate origins, credentials, ports, and unsafe input", (
 test("Strava public storage is sanitized on write and again on read", async () => {
   const database = new FakeD1();
   const result = await saveStravaPublicConfig(
-    '<iframe src="https://strava-embeds.com/routes/123/embed"></iframe>',
+    '<iframe src="https://strava-embeds.com/route/123"></iframe>',
     "owner@example.com",
     database,
   );
@@ -206,7 +220,7 @@ test("Strava public storage is sanitized on write and again on read", async () =
   assert.equal(result.status, "saved");
   assert.equal(
     result.embedUrl,
-    "https://strava-embeds.com/routes/123/embed",
+    "https://strava-embeds.com/route/123?fromEmbed=true&style=standard",
   );
   const stored = JSON.parse(
     database.settings.get("connector.strava.public_embed"),
@@ -218,7 +232,8 @@ test("Strava public storage is sanitized on write and again on read", async () =
     status: "ready",
     config: {
       provider: "strava",
-      embedUrl: "https://strava-embeds.com/routes/123/embed",
+      embedUrl:
+        "https://strava-embeds.com/route/123?fromEmbed=true&style=standard",
       coverage: "Official public Strava activity, loaded only after consent.",
       updatedAt: result.updatedAt,
     },
@@ -227,7 +242,8 @@ test("Strava public storage is sanitized on write and again on read", async () =
   database.settings.set(
     "connector.strava.public_embed",
     JSON.stringify({
-      embedUrl: "https://strava-embeds.com/routes/123/embed",
+      embedUrl:
+        "https://strava-embeds.com/route/123?fromEmbed=true&style=standard",
       updatedAt: result.updatedAt,
       token: "must-never-publish",
       ownerEmail: "must-never-publish@example.com",
@@ -237,6 +253,19 @@ test("Strava public storage is sanitized on write and again on read", async () =
   assert.equal(safelyProjected.status, "ready");
   assert.equal(JSON.stringify(safelyProjected).includes("token"), false);
   assert.equal(JSON.stringify(safelyProjected).includes("ownerEmail"), false);
+
+  database.settings.set(
+    "connector.strava.public_embed",
+    JSON.stringify({
+      embedUrl:
+        "https://www.strava.com/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
+      updatedAt: result.updatedAt,
+    }),
+  );
+  assert.deepEqual(await getStravaPublicConfig(database), {
+    status: "unavailable",
+    reason: "legacy_embed",
+  });
 
   database.settings.set(
     "connector.strava.public_embed",
@@ -261,7 +290,7 @@ test("Strava public storage is sanitized on write and again on read", async () =
 test("Strava disconnect deletes config and provider-specific state", async () => {
   const database = new FakeD1();
   await saveStravaPublicConfig(
-    "https://strava-embeds.com/posts/12345",
+    "https://strava-embeds.com/activity/12345",
     "owner@example.com",
     database,
   );
@@ -313,6 +342,8 @@ test("Strava routes keep writes owner-only and the public response uncached", as
   assert.match(configRoute, /authorizeOwnerApi\(\)/);
   assert.match(configRoute, /private, no-store/);
   assert.match(publicRoute, /"cache-control": "no-store"/);
+  assert.match(publicRoute, /result\.reason === "legacy_embed"/);
+  assert.match(publicRoute, /saved Strava profile widget now redirects/);
   assert.doesNotMatch(publicRoute, /updated_by_email|details_json|actorEmail/);
   assert.match(play, /:\s*"strava";/);
   assert.match(play, /src=\{state\.payload\.embedUrl\}/);

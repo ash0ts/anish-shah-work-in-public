@@ -36,6 +36,34 @@ function oversizedJsonResponse() {
   return jsonResponse({ padding: "x".repeat(1_000_100) });
 }
 
+function malLibraryItem(id, overrides = {}) {
+  return {
+    node: {
+      id,
+      title: `Anime ${id}`,
+      start_date: "2020-01-01",
+      genres: [{ id: 1, name: "Action" }],
+    },
+    list_status: {
+      status: "completed",
+      score: 8,
+      num_episodes_watched: 12,
+      updated_at: "2026-07-01T12:00:00Z",
+    },
+    ...overrides,
+  };
+}
+
+function hardcoverLibraryItem(id, overrides = {}) {
+  return {
+    status_id: 3,
+    rating: 4,
+    updated_at: "2026-07-01T12:00:00Z",
+    book: { id, title: `Book ${id}`, slug: `book-${id}` },
+    ...overrides,
+  };
+}
+
 async function withFetch(mockFetch, callback) {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = mockFetch;
@@ -110,6 +138,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
           {
             node: {
               id: 99,
+              title: "Delta",
               start_date: "2014-01",
               genres: [{ id: 2, name: "Drama" }],
             },
@@ -141,7 +170,6 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
           },
         },
       ],
-      paging: { next: "https://malicious.example.test/steal-token" },
     }),
   ];
 
@@ -154,12 +182,15 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
     assert.equal(requests[0].init.headers.Authorization, "Bearer mal-secret");
     assert.match(requests[0].url, /^https:\/\/api\.myanimelist\.net\//);
     assert.match(requests[1].url, /^https:\/\/api\.myanimelist\.net\//);
+    assert.match(requests[1].url, /[?&]limit=1000(?:&|$)/);
+    assert.match(requests[1].url, /[?&]nsfw=true(?:&|$)/);
     assert.equal(result.itemCount, 4);
     assert.equal(result.etag, '"mal-v1"');
   assert.deepEqual(result.publicPayload, {
       provider: "myanimelist",
+      snapshotVersion: 2,
       profileUrl: "https://myanimelist.net/profile/anish",
-      coverage: "Current library",
+      coverage: "Complete anime library at sync",
       status: [
         { label: "Completed", count: 1 },
         { label: "On hold", count: 1 },
@@ -176,7 +207,20 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
         { label: "2000s", count: 1 },
         { label: "2010s", count: 1 },
       ],
+      scores: [
+        { label: "Unscored", count: 2 },
+        { label: "8", count: 1 },
+        { label: "9", count: 1 },
+      ],
       recent: [
+        {
+          id: "99",
+          title: "Delta",
+          status: "Other",
+          score: null,
+          episodesWatched: null,
+          updatedAt: "2026-07-04T12:00:00Z",
+        },
         {
           id: "1",
           title: "Alpha",
@@ -196,6 +240,52 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
         {
           id: "2",
           title: "Beta",
+          status: "Completed",
+          score: 9,
+          episodesWatched: 12,
+          updatedAt: "2026-07-01T12:00:00Z",
+        },
+      ],
+      library: [
+        {
+          id: "99",
+          title: "Delta",
+          startDate: "2014-01",
+          releaseYear: 2014,
+          genres: ["Drama"],
+          status: "Other",
+          score: null,
+          episodesWatched: null,
+          updatedAt: "2026-07-04T12:00:00Z",
+        },
+        {
+          id: "1",
+          title: "Alpha",
+          startDate: "1999-04-03",
+          releaseYear: 1999,
+          genres: ["Action", "Drama"],
+          status: "Watching",
+          score: 8,
+          episodesWatched: 3,
+          updatedAt: "2026-07-03T12:00:00Z",
+        },
+        {
+          id: "3",
+          title: "Gamma",
+          startDate: null,
+          releaseYear: null,
+          genres: ["Comedy"],
+          status: "On hold",
+          score: 0,
+          episodesWatched: 1,
+          updatedAt: "2026-07-02T12:00:00Z",
+        },
+        {
+          id: "2",
+          title: "Beta",
+          startDate: "2005-01-01",
+          releaseYear: 2005,
+          genres: ["Action"],
           status: "Completed",
           score: 9,
           episodesWatched: 12,
@@ -235,10 +325,10 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           },
           {
             status_id: 4,
+            rating: 5,
             updated_at: "2026-07-01T00:00:00Z",
-            book: { id: 3 },
+            book: { id: 3, title: "Book C" },
           },
-          { status_id: 3, book: { title: "Missing id" } },
         ],
       },
     }),
@@ -253,7 +343,11 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
     assert.equal(requests[0].method, "POST");
     assert.equal(requests[0].headers.authorization, "Bearer hardcover-secret");
     assert.match(JSON.parse(requests[0].body).query, /query Viewer/);
-    assert.deepEqual(JSON.parse(requests[1].body).variables, { userId: 42 });
+    assert.deepEqual(JSON.parse(requests[1].body).variables, {
+      userId: 42,
+      limit: 250,
+      offset: 0,
+    });
     const libraryQuery = JSON.parse(requests[1].body).query;
     assert.match(libraryQuery, /\bupdated_at\b/);
     assert.doesNotMatch(libraryQuery, /\bdate_updated\b/);
@@ -261,12 +355,18 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
     assert.equal(result.itemCount, 3);
   assert.deepEqual(result.publicPayload, {
       provider: "hardcover",
+      snapshotVersion: 2,
       profileUrl: "https://hardcover.app/@anish",
-      coverage: "Current library",
+      coverage: "Complete book library at sync",
       status: [
         { label: "Currently reading", count: 1 },
         { label: "Did not finish", count: 1 },
         { label: "Read", count: 1 },
+      ],
+      ratings: [
+        { label: "4.5", count: 1 },
+        { label: "5", count: 1 },
+        { label: "Unrated", count: 1 },
       ],
       recent: [
         {
@@ -285,8 +385,189 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           rating: null,
           updatedAt: "2026-07-02T00:00:00Z",
         },
+        {
+          id: "3",
+          title: "Book C",
+          slug: null,
+          status: "Did not finish",
+          rating: 5,
+          updatedAt: "2026-07-01T00:00:00Z",
+        },
+      ],
+      library: [
+        {
+          id: "1",
+          title: "Book A",
+          slug: "book-a",
+          status: "Read",
+          rating: 4.5,
+          updatedAt: "2026-07-04T00:00:00Z",
+        },
+        {
+          id: "2",
+          title: "Book B",
+          slug: null,
+          status: "Currently reading",
+          rating: null,
+          updatedAt: "2026-07-02T00:00:00Z",
+        },
+        {
+          id: "3",
+          title: "Book C",
+          slug: null,
+          status: "Did not finish",
+          rating: 5,
+          updatedAt: "2026-07-01T00:00:00Z",
+        },
       ],
   });
+});
+
+test("MyAnimeList follows every page and uses a fresh timeout per request", async () => {
+  const responses = [
+    jsonResponse({ id: 42, name: "anish" }),
+    jsonResponse({
+      data: Array.from({ length: 1_000 }, (_, index) =>
+        malLibraryItem(index + 1),
+      ),
+      paging: {
+        next:
+          "https://api.myanimelist.net/v2/users/@me/animelist" +
+          "?limit=1000&offset=1000",
+      },
+    }),
+    jsonResponse({ data: [malLibraryItem(1_001)] }),
+  ];
+  const signals = [];
+
+  const result = await withFetch(async (_input, init) => {
+    signals.push(init.signal);
+    return responses.shift();
+  }, () => fetchMyAnimeListSnapshot({ accessToken: "valid" }));
+
+  assert.equal(result.itemCount, 1_001);
+  assert.equal(result.publicPayload.library.length, 1_001);
+  assert.equal(result.publicPayload.snapshotVersion, 2);
+  assert.equal(signals.length, 3);
+  assert.equal(new Set(signals).size, signals.length);
+  assert(signals.every((signal) => signal instanceof AbortSignal));
+});
+
+test("MyAnimeList rejects unsafe paging and never publishes a partial library", async () => {
+  const responses = [
+    jsonResponse({ id: 42, name: "anish" }),
+    jsonResponse({
+      data: [malLibraryItem(1)],
+      paging: { next: "https://malicious.example.test/steal-token" },
+    }),
+  ];
+
+  await withFetch(
+    async () => responses.shift(),
+    () =>
+      expectConnectorError(
+        () => fetchMyAnimeListSnapshot({ accessToken: "valid" }),
+        { code: "provider_schema_changed" },
+      ),
+  );
+});
+
+test("MyAnimeList fails closed when a library exceeds 5,000 entries", async () => {
+  const responses = [jsonResponse({ id: 42, name: "anish" })];
+  for (let page = 0; page < 5; page += 1) {
+    responses.push(
+      jsonResponse({
+        data: Array.from({ length: 1_000 }, (_, index) =>
+          malLibraryItem(page * 1_000 + index + 1),
+        ),
+        paging: {
+          next:
+            "https://api.myanimelist.net/v2/users/@me/animelist" +
+            `?limit=1000&offset=${(page + 1) * 1_000}`,
+        },
+      }),
+    );
+  }
+
+  await withFetch(
+    async () => responses.shift(),
+    () =>
+      expectConnectorError(
+        () => fetchMyAnimeListSnapshot({ accessToken: "valid" }),
+        { code: "provider_collection_too_large" },
+      ),
+  );
+});
+
+test("Hardcover paginates the full library with per-request timeouts", async () => {
+  const responses = [
+    jsonResponse({ data: { me: [{ id: 42, username: "anish" }] } }),
+    jsonResponse({
+      data: {
+        user_books: Array.from({ length: 250 }, (_, index) =>
+          hardcoverLibraryItem(index + 1),
+        ),
+      },
+    }),
+    jsonResponse({
+      data: {
+        user_books: [
+          hardcoverLibraryItem(251),
+          hardcoverLibraryItem(252),
+        ],
+      },
+    }),
+  ];
+  const requests = [];
+
+  const result = await withFetch(async (_input, init) => {
+    requests.push(init);
+    return responses.shift();
+  }, () => fetchHardcoverSnapshot({ authorization: "valid" }));
+
+  assert.equal(result.itemCount, 252);
+  assert.equal(result.publicPayload.library.length, 252);
+  assert.equal(result.publicPayload.snapshotVersion, 2);
+  assert.deepEqual(
+    requests.slice(1).map((request) => JSON.parse(request.body).variables),
+    [
+      { userId: 42, limit: 250, offset: 0 },
+      { userId: 42, limit: 250, offset: 250 },
+    ],
+  );
+  const signals = requests.map((request) => request.signal);
+  assert.equal(new Set(signals).size, signals.length);
+  assert(signals.every((signal) => signal instanceof AbortSignal));
+});
+
+test("Hardcover probes and fails closed beyond 5,000 entries", async () => {
+  let libraryRequest = 0;
+  await withFetch(
+    async (_input, init) => {
+      const request = JSON.parse(init.body);
+      if (/query Viewer/.test(request.query)) {
+        return jsonResponse({
+          data: { me: [{ id: 42, username: "anish" }] },
+        });
+      }
+      const offset = libraryRequest * 250;
+      libraryRequest += 1;
+      const length = offset === 5_000 ? 1 : 250;
+      return jsonResponse({
+        data: {
+          user_books: Array.from({ length }, (_, index) =>
+            hardcoverLibraryItem(offset + index + 1),
+          ),
+        },
+      });
+    },
+    () =>
+      expectConnectorError(
+        () => fetchHardcoverSnapshot({ authorization: "valid" }),
+        { code: "provider_collection_too_large" },
+      ),
+  );
+  assert.equal(libraryRequest, 21);
 });
 
 test("Hardcover accepts bare or prefixed tokens and emits one Bearer prefix", () => {
@@ -431,7 +712,7 @@ test("provider collection sizes cannot exceed the requested bounds", async (cont
   await context.test("MyAnimeList page", async () => {
     const responses = [
       jsonResponse({ id: 42, name: "anish" }),
-      jsonResponse({ data: Array.from({ length: 101 }, () => ({})) }),
+      jsonResponse({ data: Array.from({ length: 1_001 }, () => ({})) }),
     ];
     await withFetch(
       async () => responses.shift(),

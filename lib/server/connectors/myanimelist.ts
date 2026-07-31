@@ -20,8 +20,22 @@ type NormalizedMalItem = {
   };
 };
 
-const MAX_PAGES = 5;
-const MAX_PAGE_ITEMS = 100;
+type PublicMalLibraryItem = {
+  id: string;
+  title: string;
+  startDate: string | null;
+  releaseYear: number | null;
+  genres: string[];
+  status: string;
+  score: number | null;
+  episodesWatched: number | null;
+  updatedAt: string | null;
+};
+
+const MAX_LIBRARY_ITEMS = 5_000;
+const PAGE_SIZE = 1_000;
+const MAX_PAGES = Math.ceil(MAX_LIBRARY_ITEMS / PAGE_SIZE);
+const MAX_PAGE_ITEMS = PAGE_SIZE;
 const MAX_RESPONSE_BYTES = 1_000_000;
 const MAX_GENRES_PER_ITEM = 64;
 const MAX_TITLE_LENGTH = 512;
@@ -29,6 +43,7 @@ const MAX_LABEL_LENGTH = 128;
 const MAX_PROFILE_NAME_LENGTH = 64;
 const MAX_URL_LENGTH = 2_048;
 const MAX_EPISODES_WATCHED = 1_000_000;
+const REQUEST_TIMEOUT_MS = 20_000;
 const MAL_API_ORIGIN = "https://api.myanimelist.net";
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 const ISO_DATE_TIME =
@@ -281,9 +296,16 @@ function normalizeMalPage(value: unknown): {
     );
   }
 
+  const nextUrl = next ? safeNextPage(next) : null;
+  if (next && !nextUrl) {
+    return providerSchemaError(
+      "MyAnimeList returned an unexpected paging URL.",
+    );
+  }
+
   return {
     data: value.data.map(normalizeMalItem),
-    nextUrl: safeNextPage(next),
+    nextUrl,
   };
 }
 
@@ -295,6 +317,10 @@ function safeNextPage(value: string | undefined): string | null {
   } catch {
     return null;
   }
+}
+
+function requestSignal(): AbortSignal {
+  return AbortSignal.timeout(REQUEST_TIMEOUT_MS);
 }
 
 function publicStatus(value: string | undefined): string {
@@ -342,15 +368,15 @@ export async function fetchMyAnimeListSnapshot(
   ].join(",");
   let nextUrl: string | null =
     `${MAL_API_ORIGIN}/v2/users/@me/animelist` +
-    `?limit=100&sort=list_updated_at&fields=${encodeURIComponent(fields)}`;
+    `?limit=${PAGE_SIZE}&sort=list_updated_at&nsfw=true&fields=${encodeURIComponent(fields)}`;
   const items: NormalizedMalItem[] = [];
+  const visitedPages = new Set<string>();
   let etag: string | undefined;
-  const signal = AbortSignal.timeout(25_000);
 
   const identityResponse = await fetch(
     `${MAL_API_ORIGIN}/v2/users/@me?fields=id,name`,
     {
-      signal,
+      signal: requestSignal(),
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
@@ -412,9 +438,23 @@ export async function fetchMyAnimeListSnapshot(
     );
   }
 
-  for (let page = 0; page < MAX_PAGES && nextUrl; page += 1) {
+  for (let page = 0; nextUrl; page += 1) {
+    if (page >= MAX_PAGES) {
+      throw new ConnectorFetchError(
+        `MyAnimeList contains more than ${MAX_LIBRARY_ITEMS} entries.`,
+        { code: "provider_collection_too_large" },
+      );
+    }
+    if (visitedPages.has(nextUrl)) {
+      throw new ConnectorFetchError(
+        "MyAnimeList returned a repeated pagination URL.",
+        { code: "provider_schema_changed" },
+      );
+    }
+    visitedPages.add(nextUrl);
+
     const response = await fetch(nextUrl, {
-      signal,
+      signal: requestSignal(),
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
@@ -444,70 +484,99 @@ export async function fetchMyAnimeListSnapshot(
       await boundedJsonResponse(response, "library"),
     );
     items.push(...body.data);
+    if (items.length > MAX_LIBRARY_ITEMS) {
+      throw new ConnectorFetchError(
+        `MyAnimeList contains more than ${MAX_LIBRARY_ITEMS} entries.`,
+        { code: "provider_collection_too_large" },
+      );
+    }
     nextUrl = body.nextUrl;
   }
+
+  const libraryById = new Map<string, PublicMalLibraryItem>();
+  for (const item of items) {
+    if (!item.node?.id || !item.node.title) {
+      return providerSchemaError(
+        "MyAnimeList returned an incomplete library item.",
+      );
+    }
+    const id = String(item.node.id);
+    if (libraryById.has(id)) continue;
+    const startDate = item.node.startDate ?? null;
+    const releaseYearValue = Number(startDate?.slice(0, 4));
+    libraryById.set(id, {
+      id,
+      title: item.node.title,
+      startDate,
+      releaseYear: Number.isFinite(releaseYearValue)
+        ? releaseYearValue
+        : null,
+      genres: [...new Set(item.node.genres.map((genre) => genre.name))],
+      status: publicStatus(item.listStatus?.status),
+      score: item.listStatus?.score ?? null,
+      episodesWatched: item.listStatus?.episodesWatched ?? null,
+      updatedAt: item.listStatus?.updatedAt ?? null,
+    });
+  }
+  const library = [...libraryById.values()].sort(
+    (left, right) =>
+      (right.updatedAt ?? "").localeCompare(left.updatedAt ?? "") ||
+      left.title.localeCompare(right.title) ||
+      left.id.localeCompare(right.id),
+  );
 
   const statusCounts = new Map<string, number>();
   const genreCounts = new Map<string, number>();
   const eraCounts = new Map<string, number>();
+  const scoreCounts = new Map<string, number>();
 
-  for (const item of items) {
-    const status = publicStatus(item.listStatus?.status);
-    statusCounts.set(status, (statusCounts.get(status) ?? 0) + 1);
+  for (const item of library) {
+    statusCounts.set(item.status, (statusCounts.get(item.status) ?? 0) + 1);
 
-    for (const genre of item.node?.genres ?? []) {
-      if (!genre.name) continue;
-      genreCounts.set(genre.name, (genreCounts.get(genre.name) ?? 0) + 1);
+    for (const genre of item.genres) {
+      genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
     }
 
-    const year = Number(item.node?.startDate?.slice(0, 4));
-    if (Number.isFinite(year)) {
-      const decade = `${Math.floor(year / 10) * 10}s`;
+    if (item.releaseYear !== null) {
+      const decade = `${Math.floor(item.releaseYear / 10) * 10}s`;
       eraCounts.set(decade, (eraCounts.get(decade) ?? 0) + 1);
     }
+
+    const scoreLabel =
+      item.score && item.score > 0 ? String(item.score) : "Unscored";
+    scoreCounts.set(scoreLabel, (scoreCounts.get(scoreLabel) ?? 0) + 1);
   }
 
-  const topEntries = (values: Map<string, number>, limit: number) =>
+  const rankedEntries = (values: Map<string, number>) =>
     [...values.entries()]
       .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-      .slice(0, limit)
       .map(([label, count]) => ({ label, count }));
 
-  const recent = [...items]
-    .sort((left, right) =>
-      (right.listStatus?.updatedAt ?? "").localeCompare(
-        left.listStatus?.updatedAt ?? "",
-      ),
-    )
+  const recent = library
     .slice(0, 12)
-    .flatMap((item) => {
-      if (!item.node?.id || !item.node.title) return [];
-      return [
-        {
-          id: String(item.node.id),
-          title: item.node.title,
-          status: publicStatus(item.listStatus?.status),
-          score: item.listStatus?.score ?? null,
-          episodesWatched: item.listStatus?.episodesWatched ?? null,
-          updatedAt: item.listStatus?.updatedAt ?? null,
-        },
-      ];
-    });
+    .map((item) => ({
+      id: item.id,
+      title: item.title,
+      status: item.status,
+      score: item.score,
+      episodesWatched: item.episodesWatched,
+      updatedAt: item.updatedAt,
+    }));
 
   return {
     publicPayload: {
       provider: "myanimelist",
+      snapshotVersion: 2,
       profileUrl,
-      coverage:
-        items.length === MAX_PAGES * 100
-          ? "Most recently updated 500 entries"
-          : "Current library",
-      status: topEntries(statusCounts, 8),
-      genres: topEntries(genreCounts, 8),
-      eras: topEntries(eraCounts, 8),
+      coverage: "Complete anime library at sync",
+      status: rankedEntries(statusCounts),
+      genres: rankedEntries(genreCounts),
+      eras: rankedEntries(eraCounts),
+      scores: rankedEntries(scoreCounts),
       recent,
+      library,
     },
-    itemCount: items.length,
+    itemCount: library.length,
     etag,
   };
 }

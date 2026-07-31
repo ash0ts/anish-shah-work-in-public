@@ -99,8 +99,9 @@ test("Steam success fixture is normalized, rounded, bounded, and secret-free", a
   assert.equal(result.itemCount, 10);
   assert.deepEqual(result.publicPayload, {
     provider: "steam",
+    snapshotVersion: 2,
     profileUrl: `https://steamcommunity.com/profiles/${STEAM_ID}`,
-    coverage: "Public Steam game details returned at sync",
+    coverage: "Complete public Steam library snapshot",
     totals: {
       publicGameCount: 10,
       playedGameCount: 9,
@@ -166,6 +167,95 @@ test("Steam success fixture is normalized, rounded, bounded, and secret-free", a
         totalHoursRounded: 4,
       },
     ],
+    playtime: [
+      { label: "Unplayed", count: 1 },
+      { label: "Under 2h", count: 1 },
+      { label: "2–10h", count: 5 },
+      { label: "10–50h", count: 2 },
+      { label: "50h+", count: 1 },
+    ],
+    library: [
+      {
+        appId: "101",
+        title: "Alpha",
+        played: true,
+        recentlyPlayed: true,
+        totalHoursRounded: 2,
+        recentHoursRounded: 2,
+      },
+      {
+        appId: "102",
+        title: "Beta",
+        played: false,
+        recentlyPlayed: true,
+        totalHoursRounded: 0,
+        recentHoursRounded: 1,
+      },
+      {
+        appId: "103",
+        title: "Gamma",
+        played: true,
+        recentlyPlayed: false,
+        totalHoursRounded: 10,
+        recentHoursRounded: 0,
+      },
+      {
+        appId: "104",
+        title: "Delta",
+        played: true,
+        recentlyPlayed: true,
+        totalHoursRounded: 50,
+        recentHoursRounded: 3,
+      },
+      {
+        appId: "105",
+        title: "Epsilon",
+        played: true,
+        recentlyPlayed: true,
+        totalHoursRounded: 1,
+        recentHoursRounded: 1,
+      },
+      {
+        appId: "106",
+        title: "Zeta",
+        played: true,
+        recentlyPlayed: true,
+        totalHoursRounded: 3,
+        recentHoursRounded: 2,
+      },
+      {
+        appId: "107",
+        title: "Eta",
+        played: true,
+        recentlyPlayed: true,
+        totalHoursRounded: 20,
+        recentHoursRounded: 4,
+      },
+      {
+        appId: "108",
+        title: "Theta",
+        played: true,
+        recentlyPlayed: true,
+        totalHoursRounded: 4,
+        recentHoursRounded: 0,
+      },
+      {
+        appId: "109",
+        title: "Iota",
+        played: true,
+        recentlyPlayed: true,
+        totalHoursRounded: 8,
+        recentHoursRounded: 0,
+      },
+      {
+        appId: "110",
+        title: "Kappa",
+        played: true,
+        recentlyPlayed: true,
+        totalHoursRounded: 6,
+        recentHoursRounded: 1,
+      },
+    ],
   });
 
   const publicPayload = {
@@ -192,6 +282,7 @@ test("Steam success fixture is normalized, rounded, bounded, and secret-free", a
   assert.equal(JSON.stringify(result.publicPayload).includes(API_KEY), false);
   assert.equal(result.publicPayload.topPlayed.length, 8);
   assert.equal(result.publicPayload.recent.length, 8);
+  assert.equal(result.publicPayload.library.length, result.itemCount);
 });
 
 test("Steam rejects invalid credentials before making a request", async () => {

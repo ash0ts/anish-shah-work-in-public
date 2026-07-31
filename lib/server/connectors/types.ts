@@ -5,7 +5,10 @@ export const CONNECTOR_PROVIDERS = [
 ] as const;
 
 export type ConnectorProvider = (typeof CONNECTOR_PROVIDERS)[number];
-export type SyncTrigger = "manual" | "stale_revalidate";
+export type SyncTrigger =
+  | "manual"
+  | "stale_revalidate"
+  | "schema_upgrade";
 
 export function isConnectorProvider(
   value: string,

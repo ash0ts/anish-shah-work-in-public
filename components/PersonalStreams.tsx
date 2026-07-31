@@ -1,9 +1,64 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { animate, stagger } from "animejs";
+import {
+  type CSSProperties,
+  type FormEvent,
+  type KeyboardEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import styles from "./PersonalStreams.module.css";
 
 type StatusCount = { label: string; count: number };
+type GalleryFilter = StatusCount & { id: string };
+type GallerySort = { id: string; label: string };
+
+type PublicGallery<Item> = {
+  ready: boolean;
+  items: Item[];
+  page: number;
+  pageSize: 12 | 24 | 36;
+  totalItems: number;
+  libraryTotal: number;
+  totalPages: number;
+  query: string;
+  filter: string;
+  sort: string;
+  filters: GalleryFilter[];
+  sorts: GallerySort[];
+};
+
+type MalGalleryItem = {
+  id: string;
+  title: string;
+  status: string;
+  score: number | null;
+  episodesWatched: number | null;
+  updatedAt: string | null;
+  releaseYear?: number | null;
+  genres?: string[];
+};
+
+type HardcoverGalleryItem = {
+  id: string;
+  title: string;
+  slug: string | null;
+  status: string;
+  rating: number | null;
+  updatedAt: string | null;
+};
+
+type SteamGalleryItem = {
+  appId: string;
+  title: string;
+  played: boolean;
+  recentlyPlayed: boolean;
+  totalHoursRounded: number;
+  recentHoursRounded: number;
+};
 
 type MalPayload = {
   provider: "myanimelist";
@@ -12,14 +67,9 @@ type MalPayload = {
   status: StatusCount[];
   genres: StatusCount[];
   eras: StatusCount[];
-  recent: Array<{
-    id: string;
-    title: string;
-    status: string;
-    score: number | null;
-    episodesWatched: number | null;
-    updatedAt: string | null;
-  }>;
+  scores?: StatusCount[];
+  recent: MalGalleryItem[];
+  gallery?: PublicGallery<MalGalleryItem>;
   syncedAt: string;
   freshUntil: string;
 };
@@ -29,14 +79,9 @@ type HardcoverPayload = {
   profileUrl: string | null;
   coverage: string;
   status: StatusCount[];
-  recent: Array<{
-    id: string;
-    title: string;
-    slug: string | null;
-    status: string;
-    rating: number | null;
-    updatedAt: string | null;
-  }>;
+  ratings?: StatusCount[];
+  recent: HardcoverGalleryItem[];
+  gallery?: PublicGallery<HardcoverGalleryItem>;
   syncedAt: string;
   freshUntil: string;
 };
@@ -55,15 +100,15 @@ type SteamPayload = {
     title: string;
     hoursRounded: number;
   }>;
-  recent: Array<{
-    appId: string;
-    title: string;
-    recentHoursRounded: number;
-    totalHoursRounded: number;
-  }>;
+  recent: SteamGalleryItem[];
+  playtime?: StatusCount[];
+  gallery?: PublicGallery<SteamGalleryItem>;
   syncedAt: string;
   freshUntil: string;
 };
+
+type CollectionPayload = MalPayload | HardcoverPayload | SteamPayload;
+type GalleryItem = MalGalleryItem | HardcoverGalleryItem | SteamGalleryItem;
 
 type StravaPayload = {
   provider: "strava";
@@ -79,30 +124,28 @@ type ConnectorState<T> =
   | { status: "ready"; payload: T; fetchedAt: string; stale: boolean };
 
 type StreamId = "watch" | "read" | "play" | "move";
-type ConnectorProvider =
-  | "myanimelist"
-  | "hardcover"
-  | "steam"
-  | "strava";
+type CollectionProvider = "myanimelist" | "hardcover" | "steam";
+type ConnectorProvider = CollectionProvider | "strava";
+type CollectionView = "pattern" | "gallery";
 
 const streams = [
   {
     id: "watch",
     label: "Watch",
     provider: "MyAnimeList",
-    fallback: "Public watch states, recent activity, and genre patterns.",
+    fallback: "Public watch states, genre patterns, eras, and recent activity.",
   },
   {
     id: "read",
     label: "Read",
     provider: "Hardcover",
-    fallback: "Reading states and recently updated books.",
+    fallback: "Reading states, ratings, and a public shelf.",
   },
   {
     id: "play",
     label: "Play",
     provider: "Steam",
-    fallback: "Rounded public library and playtime summaries.",
+    fallback: "Rounded library and playtime patterns.",
   },
   {
     id: "move",
@@ -116,6 +159,12 @@ const streams = [
   provider: string;
   fallback: string;
 }>;
+
+const providerTitles: Record<CollectionProvider, string> = {
+  myanimelist: "Watch states, not a ranking.",
+  hardcover: "A shelf in motion.",
+  steam: "A public library snapshot.",
+};
 
 function syncLabel(value: string) {
   const date = new Date(value);
@@ -139,10 +188,14 @@ function publishedLabel(value: string) {
 
 async function loadConnector<T>(
   provider: ConnectorProvider,
+  parameters = new URLSearchParams(),
+  signal?: AbortSignal,
 ): Promise<ConnectorState<T>> {
   try {
-    const response = await fetch(`/api/connectors/${provider}`, {
+    const suffix = parameters.size ? `?${parameters.toString()}` : "";
+    const response = await fetch(`/api/connectors/${provider}${suffix}`, {
       headers: { Accept: "application/json" },
+      signal,
     });
     const body = (await response.json()) as {
       status: string;
@@ -165,7 +218,8 @@ async function loadConnector<T>(
       fetchedAt: body.fetchedAt ?? "",
       stale: Boolean(body.stale),
     };
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw error;
     return {
       status: "unavailable",
       message: "The last public snapshot is temporarily unavailable.",
@@ -175,71 +229,7 @@ async function loadConnector<T>(
 
 export function PersonalStreams() {
   const [active, setActive] = useState<StreamId>("watch");
-  const [mal, setMal] = useState<ConnectorState<MalPayload>>({
-    status: "idle",
-  });
-  const [hardcover, setHardcover] = useState<ConnectorState<HardcoverPayload>>({
-    status: "idle",
-  });
-  const [steam, setSteam] = useState<ConnectorState<SteamPayload>>({
-    status: "idle",
-  });
-  const [strava, setStrava] = useState<ConnectorState<StravaPayload>>({
-    status: "idle",
-  });
   const [showStrava, setShowStrava] = useState(false);
-  const requestedProviders = useRef(new Set<ConnectorProvider>());
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    const provider: ConnectorProvider | null =
-      active === "watch"
-        ? "myanimelist"
-        : active === "read"
-          ? "hardcover"
-          : active === "play"
-            ? "steam"
-            : "strava";
-    if (requestedProviders.current.has(provider)) return;
-    requestedProviders.current.add(provider);
-
-    if (provider === "myanimelist") {
-      void loadConnector<MalPayload>(provider).then((state) => {
-        if (state.status !== "ready") {
-          requestedProviders.current.delete(provider);
-        }
-        if (mounted.current) setMal(state);
-      });
-    } else if (provider === "hardcover") {
-      void loadConnector<HardcoverPayload>(provider).then((state) => {
-        if (state.status !== "ready") {
-          requestedProviders.current.delete(provider);
-        }
-        if (mounted.current) setHardcover(state);
-      });
-    } else if (provider === "steam") {
-      void loadConnector<SteamPayload>(provider).then((state) => {
-        if (state.status !== "ready") {
-          requestedProviders.current.delete(provider);
-        }
-        if (mounted.current) setSteam(state);
-      });
-    } else {
-      void loadConnector<StravaPayload>(provider).then((state) => {
-        if (state.status !== "ready") {
-          requestedProviders.current.delete(provider);
-        }
-        if (mounted.current) setStrava(state);
-      });
-    }
-  }, [active]);
 
   const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     const current = streams.findIndex((stream) => stream.id === active);
@@ -260,11 +250,6 @@ export function PersonalStreams() {
     setActive(target.id);
     document.getElementById(`stream-tab-${target.id}`)?.focus();
   };
-  const compactPanel =
-    (active === "watch" && mal.status !== "ready") ||
-    (active === "read" && hardcover.status !== "ready") ||
-    (active === "play" && steam.status !== "ready") ||
-    (active === "move" && strava.status !== "ready");
 
   return (
     <section className={styles.streams} aria-label="Personal public streams">
@@ -305,17 +290,20 @@ export function PersonalStreams() {
 
         <div
           aria-labelledby={`stream-tab-${active}`}
-          className={`${styles.panel}${compactPanel ? ` ${styles.compactPanel}` : ""}`}
+          className={styles.panel}
           id={`stream-panel-${active}`}
           role="tabpanel"
           tabIndex={0}
         >
-          {active === "watch" ? <WatchStream state={mal} /> : null}
-          {active === "read" ? <ReadStream state={hardcover} /> : null}
-          {active === "play" ? <SteamStream state={steam} /> : null}
+          {active === "watch" ? (
+            <CollectionStream provider="myanimelist" />
+          ) : null}
+          {active === "read" ? (
+            <CollectionStream provider="hardcover" />
+          ) : null}
+          {active === "play" ? <CollectionStream provider="steam" /> : null}
           {active === "move" ? (
-            <MovementStream
-              state={strava}
+            <MovementProvider
               show={showStrava}
               onShow={() => setShowStrava(true)}
             />
@@ -326,147 +314,646 @@ export function PersonalStreams() {
   );
 }
 
-function WatchStream({ state }: { state: ConnectorState<MalPayload> }) {
-  if (state.status !== "ready") return <StreamEmpty state={state} />;
+function CollectionStream({ provider }: { provider: CollectionProvider }) {
+  const [state, setState] = useState<ConnectorState<CollectionPayload>>({
+    status: "idle",
+  });
+  const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<CollectionView>("pattern");
+  const [draftQuery, setDraftQuery] = useState("");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("");
+  const [sort, setSort] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<12 | 24 | 36>(24);
+  const transitionRoot = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const parameters = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    if (query) parameters.set("q", query);
+    if (filter) parameters.set("filter", filter);
+    if (sort) parameters.set("sort", sort);
+
+    queueMicrotask(() => {
+      if (controller.signal.aborted) return;
+      setBusy(true);
+      setState((current) =>
+        current.status === "idle" ? { status: "loading" } : current,
+      );
+      void loadConnector<CollectionPayload>(
+        provider,
+        parameters,
+        controller.signal,
+      )
+        .then((next) => {
+          if (!controller.signal.aborted) setState(next);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setBusy(false);
+        });
+    });
+    return () => controller.abort();
+  }, [filter, page, pageSize, provider, query, sort]);
+
+  const payload = state.status === "ready" ? state.payload : null;
+  const gallery = payload?.gallery;
+
+  useLayoutEffect(() => {
+    const root = transitionRoot.current;
+    if (
+      !root ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return;
+    }
+    const items = root.querySelectorAll<HTMLElement>("[data-stream-item]");
+    const targets = items.length ? items : root;
+    const motion = animate(targets, {
+      opacity: [0.72, 1],
+      translateY: ["0.25rem", 0],
+      duration: 220,
+      delay: items.length ? stagger(9) : 0,
+      ease: "out(3)",
+    });
+    return () => {
+      motion.cancel();
+    };
+  }, [gallery?.page, gallery?.sort, gallery?.filter, provider, view]);
+
+  if (state.status !== "ready" || !payload) {
+    return <StreamEmpty state={state} />;
+  }
+
+  const applySearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setQuery(draftQuery.trim());
+    setPage(1);
+  };
+
   return (
     <>
-      <PanelHeading
-        title="Watch states, not a ranking."
-        description={state.payload.coverage}
-      />
-      <div className={styles.counts}>
-        {state.payload.status.slice(0, 5).map((entry) => (
-          <span key={entry.label}>
-            <b>{entry.count}</b>
-            <small>{entry.label}</small>
-          </span>
-        ))}
+      <header className={styles.collectionHeader}>
+        <PanelHeading
+          title={providerTitles[provider]}
+          description={payload.coverage}
+        />
+        <div
+          className={styles.viewSwitch}
+          role="group"
+          aria-label="Collection view"
+        >
+          <button
+            aria-pressed={view === "pattern"}
+            onClick={() => setView("pattern")}
+            type="button"
+          >
+            Pattern
+          </button>
+          <button
+            aria-pressed={view === "gallery"}
+            onClick={() => setView("gallery")}
+            type="button"
+          >
+            Gallery
+          </button>
+        </div>
+      </header>
+
+      <div
+        aria-busy={busy}
+        className={styles.collectionBody}
+        ref={transitionRoot}
+      >
+        {view === "pattern" ? (
+          <PatternView payload={payload} provider={provider} />
+        ) : gallery?.ready ? (
+          <GalleryView
+            busy={busy}
+            draftQuery={draftQuery}
+            gallery={gallery}
+            onDraftQuery={setDraftQuery}
+            onFilter={(value) => {
+              setFilter(value);
+              setPage(1);
+            }}
+            onPage={setPage}
+            onPageSize={(value) => {
+              setPageSize(value);
+              setPage(1);
+            }}
+            onSearch={applySearch}
+            onSort={(value) => {
+              setSort(value);
+              setPage(1);
+            }}
+            provider={provider}
+          />
+        ) : (
+          <div className={styles.galleryUnavailable} aria-live="polite">
+            <strong>The full collection is preparing its first index.</strong>
+            <p>
+              The pattern view remains available. Refresh this provider once
+              from Studio to publish the searchable gallery.
+            </p>
+            <button onClick={() => setView("pattern")} type="button">
+              Return to pattern
+            </button>
+          </div>
+        )}
       </div>
-      <div className={styles.split}>
-        <CompactList
-          label="Recently updated"
-          entries={state.payload.recent.slice(0, 6).map((entry) => ({
+
+      {provider === "steam" ? (
+        <p className={styles.attribution}>
+          Data provided by Steam. This independent site is not affiliated with{" "}
+          <a
+            href="https://www.valvesoftware.com/"
+            rel="noreferrer"
+            target="_blank"
+          >
+            Valve
+          </a>
+          . Public data is shown as available.
+        </p>
+      ) : null}
+      <StreamStatus
+        profileUrl={payload.profileUrl}
+        stale={state.stale}
+        syncedAt={payload.syncedAt || state.fetchedAt}
+      />
+    </>
+  );
+}
+
+function PatternView({
+  provider,
+  payload,
+}: {
+  provider: CollectionProvider;
+  payload: CollectionPayload;
+}) {
+  if (provider === "myanimelist" && payload.provider === "myanimelist") {
+    const total =
+      payload.gallery?.libraryTotal ??
+      payload.status.reduce((sum, entry) => sum + entry.count, 0);
+    return (
+      <div className={styles.pattern}>
+        <PatternLead
+          value={total.toLocaleString()}
+          label="titles in the public watch library"
+        />
+        <Distribution title="Watch state" entries={payload.status} />
+        <Distribution title="Recurring genres" entries={payload.genres} />
+        <Distribution title="Release eras" entries={payload.eras} />
+        {payload.scores?.length ? (
+          <Distribution title="Score distribution" entries={payload.scores} />
+        ) : null}
+      </div>
+    );
+  }
+
+  if (provider === "hardcover" && payload.provider === "hardcover") {
+    const total =
+      payload.gallery?.libraryTotal ??
+      payload.status.reduce((sum, entry) => sum + entry.count, 0);
+    return (
+      <div className={styles.pattern}>
+        <PatternLead
+          value={total.toLocaleString()}
+          label="books in the public shelf"
+        />
+        <Distribution title="Reading state" entries={payload.status} />
+        {payload.ratings?.length ? (
+          <Distribution title="Rating distribution" entries={payload.ratings} />
+        ) : null}
+        <RecentIndex
+          entries={payload.recent.slice(0, 8).map((entry) => ({
             id: entry.id,
             title: entry.title,
-            meta: entry.status,
+            meta: entry.rating ? `${entry.rating}/5` : entry.status,
           }))}
+          label="Recently updated"
         />
-        <div>
-          <p className={styles.listLabel}>Recurring genres</p>
-          <div className={styles.tags}>
-            {state.payload.genres.slice(0, 8).map((entry) => (
-              <span key={entry.label}>
-                {entry.label} <b>{entry.count}</b>
-              </span>
-            ))}
-          </div>
-        </div>
       </div>
-      <StreamStatus
-        profileUrl={state.payload.profileUrl}
-        stale={state.stale}
-        syncedAt={state.payload.syncedAt || state.fetchedAt}
-      />
-    </>
-  );
-}
+    );
+  }
 
-function ReadStream({ state }: { state: ConnectorState<HardcoverPayload> }) {
-  if (state.status !== "ready") return <StreamEmpty state={state} />;
+  if (payload.provider !== "steam") return null;
   return (
-    <>
-      <PanelHeading title="A shelf in motion." description={state.payload.coverage} />
-      <div className={styles.counts}>
-        {state.payload.status.slice(0, 5).map((entry) => (
-          <span key={entry.label}>
-            <b>{entry.count}</b>
-            <small>{entry.label}</small>
-          </span>
-        ))}
-      </div>
-      <CompactList
-        label="Recently updated"
-        entries={state.payload.recent.slice(0, 6).map((entry) => ({
-          id: entry.id,
+    <div className={styles.pattern}>
+      <PatternLead
+        value={payload.totals.publicGameCount.toLocaleString()}
+        label="games in the public library"
+        aside={`${payload.totals.totalHoursRounded.toLocaleString()} rounded hours`}
+      />
+      {payload.playtime?.length ? (
+        <Distribution title="Lifetime playtime" entries={payload.playtime} />
+      ) : (
+        <Distribution
+          title="Library state"
+          entries={[
+            {
+              label: "Played",
+              count: payload.totals.playedGameCount,
+            },
+            {
+              label: "Unplayed",
+              count: Math.max(
+                payload.totals.publicGameCount -
+                  payload.totals.playedGameCount,
+                0,
+              ),
+            },
+          ]}
+        />
+      )}
+      <RecentIndex
+        entries={payload.topPlayed.slice(0, 8).map((entry) => ({
+          id: entry.appId,
           title: entry.title,
-          meta: entry.rating ? `${entry.rating}/5` : entry.status,
+          meta: `${entry.hoursRounded.toLocaleString()}h`,
         }))}
+        label="Most played"
       />
-      <StreamStatus
-        profileUrl={state.payload.profileUrl}
-        stale={state.stale}
-        syncedAt={state.payload.syncedAt || state.fetchedAt}
-      />
-    </>
+    </div>
   );
 }
 
-function SteamStream({ state }: { state: ConnectorState<SteamPayload> }) {
-  if (state.status !== "ready") return <StreamEmpty state={state} />;
+function PatternLead({
+  value,
+  label,
+  aside,
+}: {
+  value: string;
+  label: string;
+  aside?: string;
+}) {
   return (
-    <>
-      <PanelHeading
-        title="A public library snapshot."
-        description={state.payload.coverage}
-      />
-      <div className={styles.counts}>
-        <span>
-          <b>{state.payload.totals.publicGameCount}</b>
-          <small>Public games returned</small>
-        </span>
-        <span>
-          <b>{state.payload.totals.playedGameCount}</b>
-          <small>With public playtime</small>
-        </span>
-        <span>
-          <b>{state.payload.totals.totalHoursRounded.toLocaleString()}h</b>
-          <small>Rounded public hours</small>
-        </span>
-      </div>
-      <div className={styles.split}>
-        <CompactList
-          label="Most played"
-          entries={state.payload.topPlayed.slice(0, 5).map((game) => ({
-            id: game.appId,
-            title: game.title,
-            meta: `${game.hoursRounded.toLocaleString()}h`,
-          }))}
-        />
-        <CompactList
-          label="Recently played"
-          entries={state.payload.recent.slice(0, 5).map((game) => ({
-            id: game.appId,
-            title: game.title,
-            meta: `${game.recentHoursRounded.toLocaleString()}h recent`,
-          }))}
-        />
-      </div>
-      <p className={styles.attribution}>
-        Data provided by Steam. This independent site is not affiliated with{" "}
-        <a href="https://www.valvesoftware.com/" rel="noreferrer" target="_blank">
-          Valve
-        </a>
-        . Public data is shown as available.
-      </p>
-      <StreamStatus
-        profileUrl={state.payload.profileUrl}
-        stale={state.stale}
-        syncedAt={state.payload.syncedAt || state.fetchedAt}
-      />
-    </>
+    <div className={styles.patternLead} data-stream-item>
+      <strong>{value}</strong>
+      <span>{label}</span>
+      {aside ? <small>{aside}</small> : null}
+    </div>
   );
 }
 
-function MovementStream({
-  state,
+function Distribution({
+  title,
+  entries,
+}: {
+  title: string;
+  entries: StatusCount[];
+}) {
+  const visible = entries.filter((entry) => entry.count > 0).slice(0, 10);
+  const maximum = Math.max(...visible.map((entry) => entry.count), 1);
+  return (
+    <figure className={styles.distribution} data-stream-item>
+      <figcaption>{title}</figcaption>
+      <ol>
+        {visible.map((entry) => (
+          <li
+            aria-label={`${entry.label}: ${entry.count.toLocaleString()}`}
+            key={entry.label}
+          >
+            <span>{entry.label}</span>
+            <i aria-hidden="true">
+              <b
+                style={
+                  {
+                    "--share": `${(entry.count / maximum) * 100}%`,
+                  } as CSSProperties
+                }
+              />
+            </i>
+            <strong>{entry.count.toLocaleString()}</strong>
+          </li>
+        ))}
+      </ol>
+    </figure>
+  );
+}
+
+function RecentIndex({
+  label,
+  entries,
+}: {
+  label: string;
+  entries: Array<{ id: string; title: string; meta: string }>;
+}) {
+  return (
+    <section className={styles.recentIndex} data-stream-item>
+      <h3>{label}</h3>
+      <ol>
+        {entries.map((entry, index) => (
+          <li key={entry.id}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{entry.title}</strong>
+            <small>{entry.meta}</small>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function GalleryView({
+  provider,
+  gallery,
+  busy,
+  draftQuery,
+  onDraftQuery,
+  onSearch,
+  onFilter,
+  onSort,
+  onPageSize,
+  onPage,
+}: {
+  provider: CollectionProvider;
+  gallery: PublicGallery<GalleryItem>;
+  busy: boolean;
+  draftQuery: string;
+  onDraftQuery: (value: string) => void;
+  onSearch: (event: FormEvent<HTMLFormElement>) => void;
+  onFilter: (value: string) => void;
+  onSort: (value: string) => void;
+  onPageSize: (value: 12 | 24 | 36) => void;
+  onPage: (value: number) => void;
+}) {
+  const start = gallery.totalItems
+    ? (gallery.page - 1) * gallery.pageSize + 1
+    : 0;
+  const end = Math.min(
+    gallery.page * gallery.pageSize,
+    gallery.totalItems,
+  );
+  const steamMaximum =
+    provider === "steam"
+      ? Math.max(
+          ...gallery.items.map((item) =>
+            "totalHoursRounded" in item ? item.totalHoursRounded : 0,
+          ),
+          1,
+        )
+      : 1;
+
+  return (
+    <div className={styles.gallery}>
+      <form className={styles.galleryTools} onSubmit={onSearch}>
+        <label className={styles.gallerySearch}>
+          <span>Find a title</span>
+          <span>
+            <input
+              maxLength={80}
+              onChange={(event) => onDraftQuery(event.target.value)}
+              placeholder="Search this collection"
+              type="search"
+              value={draftQuery}
+            />
+            <button type="submit">Search</button>
+          </span>
+        </label>
+        <GallerySelect
+          label="Filter"
+          onChange={onFilter}
+          options={gallery.filters.map((entry) => ({
+            value: entry.id,
+            label: `${entry.label} · ${entry.count}`,
+          }))}
+          value={gallery.filter}
+        />
+        <GallerySelect
+          label="Sort"
+          onChange={onSort}
+          options={gallery.sorts.map((entry) => ({
+            value: entry.id,
+            label: entry.label,
+          }))}
+          value={gallery.sort}
+        />
+        <GallerySelect
+          label="Per page"
+          onChange={(value) => onPageSize(Number(value) as 12 | 24 | 36)}
+          options={[12, 24, 36].map((value) => ({
+            value: String(value),
+            label: String(value),
+          }))}
+          value={String(gallery.pageSize)}
+        />
+      </form>
+
+      <div className={styles.gallerySummary} aria-live="polite">
+        <span>
+          {start}—{end} of {gallery.totalItems.toLocaleString()}
+        </span>
+        <span>{busy ? "Updating view…" : "Public snapshot"}</span>
+      </div>
+
+      {gallery.items.length ? (
+        <ol className={styles.atlas}>
+          {gallery.items.map((item, index) => (
+            <GalleryTile
+              index={start + index}
+              item={item}
+              key={galleryItemKey(item)}
+              provider={provider}
+              steamMaximum={steamMaximum}
+            />
+          ))}
+        </ol>
+      ) : (
+        <div className={styles.noResults} data-stream-item>
+          <strong>No titles match this view.</strong>
+          <p>Change the search or filter to return to the collection.</p>
+        </div>
+      )}
+
+      <nav className={styles.galleryPagination} aria-label="Collection pages">
+        <button
+          disabled={gallery.page <= 1 || busy}
+          onClick={() => onPage(gallery.page - 1)}
+          type="button"
+        >
+          ← Previous
+        </button>
+        <span>
+          Page {gallery.page} of {gallery.totalPages}
+        </span>
+        <button
+          disabled={gallery.page >= gallery.totalPages || busy}
+          onClick={() => onPage(gallery.page + 1)}
+          type="button"
+        >
+          Next →
+        </button>
+      </nav>
+    </div>
+  );
+}
+
+function GallerySelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className={styles.gallerySelect}>
+      <span>{label}</span>
+      <select
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function GalleryTile({
+  provider,
+  item,
+  index,
+  steamMaximum,
+}: {
+  provider: CollectionProvider;
+  item: GalleryItem;
+  index: number;
+  steamMaximum: number;
+}) {
+  const presentation = galleryItemPresentation(provider, item, steamMaximum);
+  const content = (
+    <>
+      <span className={styles.tileNumber}>{String(index).padStart(2, "0")}</span>
+      <strong>{item.title}</strong>
+      <span className={styles.tileMeta}>{presentation.meta}</span>
+      <span className={styles.measure} aria-label={presentation.measureLabel}>
+        <i
+          aria-hidden="true"
+          style={
+            {
+              "--measure": `${presentation.measure * 100}%`,
+            } as CSSProperties
+          }
+        />
+      </span>
+      <small>{presentation.measureLabel}</small>
+      {presentation.href ? <b aria-hidden="true">↗</b> : null}
+    </>
+  );
+
+  return (
+    <li data-stream-item>
+      {presentation.href ? (
+        <a href={presentation.href} rel="noreferrer" target="_blank">
+          {content}
+        </a>
+      ) : (
+        <article>{content}</article>
+      )}
+    </li>
+  );
+}
+
+function galleryItemPresentation(
+  provider: CollectionProvider,
+  item: GalleryItem,
+  steamMaximum: number,
+) {
+  if (provider === "myanimelist" && "status" in item && "score" in item) {
+    const score = item.score ?? 0;
+    return {
+      href: `https://myanimelist.net/anime/${encodeURIComponent(item.id)}`,
+      meta: [item.status, item.releaseYear].filter(Boolean).join(" · "),
+      measure: score > 0 ? Math.min(score / 10, 1) : 0,
+      measureLabel: score > 0 ? `Score ${score}/10` : "Not scored",
+    };
+  }
+  if (provider === "hardcover" && "status" in item && "rating" in item) {
+    const rating = item.rating ?? 0;
+    return {
+      href: item.slug
+        ? `https://hardcover.app/books/${encodeURIComponent(item.slug)}`
+        : null,
+      meta: item.status,
+      measure: rating > 0 ? Math.min(rating / 5, 1) : 0,
+      measureLabel: rating > 0 ? `Rating ${rating}/5` : "Not rated",
+    };
+  }
+  const game =
+    "appId" in item
+      ? item
+      : {
+          appId: "",
+          totalHoursRounded: 0,
+          recentHoursRounded: 0,
+        };
+  return {
+    href: game.appId
+      ? `https://store.steampowered.com/app/${encodeURIComponent(game.appId)}`
+      : null,
+    meta:
+      game.recentHoursRounded > 0
+        ? `${game.recentHoursRounded.toLocaleString()}h recent`
+        : "Lifetime playtime",
+    measure: Math.min(game.totalHoursRounded / steamMaximum, 1),
+    measureLabel: `${game.totalHoursRounded.toLocaleString()} rounded hours`,
+  };
+}
+
+function galleryItemKey(item: GalleryItem) {
+  if ("appId" in item) return `steam:${item.appId}`;
+  return `${"rating" in item ? "hardcover" : "mal"}:${item.id}`;
+}
+
+function MovementProvider({
   show,
   onShow,
 }: {
-  state: ConnectorState<StravaPayload>;
   show: boolean;
   onShow: () => void;
 }) {
-  if (state.status !== "ready") return <StreamEmpty state={state} />;
+  const [state, setState] = useState<ConnectorState<StravaPayload>>({
+    status: "loading",
+  });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadConnector<StravaPayload>(
+      "strava",
+      new URLSearchParams(),
+      controller.signal,
+    ).then((next) => {
+      if (!controller.signal.aborted) setState(next);
+    });
+    return () => controller.abort();
+  }, []);
+
+  if (state.status !== "ready") {
+    if (state.status === "unavailable") {
+      return (
+        <div className={styles.empty} aria-live="polite">
+          <span aria-hidden="true">○</span>
+          <p>
+            {state.message} The public activity embed may be unpublished or
+            being replaced. No third-party content was loaded.
+          </p>
+        </div>
+      );
+    }
+    return <StreamEmpty state={state} />;
+  }
 
   return (
     <>
@@ -486,7 +973,12 @@ function MovementStream({
         </div>
       ) : (
         <div className={styles.consent}>
-          <span>Third-party content is blocked by default.</span>
+          <span>
+            <strong>Third-party content is blocked by default.</strong>
+            <small>
+              Loading shares the usual request information with Strava.
+            </small>
+          </span>
           <button onClick={onShow} type="button">
             Load public Strava activity
           </button>
@@ -508,32 +1000,9 @@ function PanelHeading({
   description: string;
 }) {
   return (
-    <header className={styles.panelHeading}>
+    <div className={styles.panelHeading}>
       <h2>{title}</h2>
       <p>{description}</p>
-    </header>
-  );
-}
-
-function CompactList({
-  label,
-  entries,
-}: {
-  label: string;
-  entries: Array<{ id: string; title: string; meta: string }>;
-}) {
-  return (
-    <div>
-      <p className={styles.listLabel}>{label}</p>
-      <ol className={styles.list}>
-        {entries.map((entry, index) => (
-          <li key={entry.id}>
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <strong>{entry.title}</strong>
-            <small>{entry.meta}</small>
-          </li>
-        ))}
-      </ol>
     </div>
   );
 }

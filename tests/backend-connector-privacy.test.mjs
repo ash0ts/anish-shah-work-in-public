@@ -228,22 +228,31 @@ test("Play fetches a personal-data provider only after its stream is active", as
     "utf8",
   );
 
-  assert.match(source, /requestedProviders = useRef\(new Set<ConnectorProvider>\(\)\)/);
-  assert.match(source, /requestedProviders\.current\.has\(provider\)/);
-  assert.equal(
-    (source.match(/requestedProviders\.current\.delete\(provider\)/g) ?? [])
-      .length,
-    4,
-    "Each personal-data provider must become retryable after an unavailable response",
-  );
-  assert.match(source, /active === "watch"\s*\?\s*"myanimelist"/);
-  assert.match(source, /active === "read"\s*\?\s*"hardcover"/);
-  assert.match(source, /active === "play"\s*\?\s*"steam"/);
-  assert.match(source, /:\s*"strava";/);
-  assert.doesNotMatch(
+  assert.match(
     source,
-    /loadConnector<(?:MalPayload|HardcoverPayload|SteamPayload)>\("(?:myanimelist|hardcover|steam)"\)/,
+    /active === "watch"[\s\S]*?<CollectionStream provider="myanimelist"/,
   );
+  assert.match(
+    source,
+    /active === "read"[\s\S]*?<CollectionStream provider="hardcover"/,
+  );
+  assert.match(
+    source,
+    /active === "play"[\s\S]*?<CollectionStream provider="steam"/,
+  );
+  assert.match(
+    source,
+    /active === "move"[\s\S]*?<MovementProvider/,
+  );
+  assert.match(
+    source,
+    /function CollectionStream[\s\S]*?loadConnector<CollectionPayload>\(\s*provider,/,
+  );
+  assert.match(
+    source,
+    /function MovementProvider[\s\S]*?loadConnector<StravaPayload>\(\s*"strava",/,
+  );
+  assert.doesNotMatch(source, /Promise\.all\([^)]*loadConnector/);
   assert.match(source, /show=\{showStrava\}/);
   assert.match(source, /onShow=\{\(\) => setShowStrava\(true\)\}/);
   assert.doesNotMatch(source, /NEXT_PUBLIC_STRAVA_EMBED_URL/);
@@ -304,13 +313,14 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(guide, /Re-enter through HTTPS Studio/);
   assert.match(guide, /Reauthorization required/);
   assert.match(guide, /one year/i);
-  assert.match(guide, /January 1/i);
+  assert.match(guide, /January\s+1/i);
   assert.match(guide, /npm run lint && npm test/);
   assert.doesNotMatch(guide, /Renewal is manual/);
   assert.match(guide, /strava-embeds\.com/);
   assert.match(guide, /www\.strava\.com\/athletes/);
-  assert.match(guide, /redirects some cumulative profile widgets to its login page/);
-  assert.match(guide, /do not enter credentials in\s+the embedded login/);
-  assert.match(guide, /Profile Page.*Everyone/is);
-  assert.match(guide, /Default Sport/);
+  assert.match(guide, /redirects those widgets to its sign-in page/);
+  assert.match(guide, /no\s+site-side setting or credential that can safely bypass/);
+  assert.match(guide, /does not fetch, copy, aggregate, or custom-visualize/);
+  assert.match(controls, /result\.code === "legacy_embed"/);
+  assert.match(controls, /Use the current embed format/);
 });

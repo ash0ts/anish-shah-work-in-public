@@ -16,6 +16,7 @@ type Props = {
 type ApiResult = {
   authorizationUrl?: string;
   callbackUrl?: string;
+  code?: string;
   embedUrl?: string;
   error?: string;
   expiresAt?: string;
@@ -728,6 +729,7 @@ export function ConnectorControls({
 type StravaState =
   | { phase: "loading" }
   | { phase: "unavailable" }
+  | { phase: "needs_replacement"; message: string }
   | { phase: "error"; message: string }
   | { phase: "ready"; embedUrl: string; updatedAt: string | null };
 
@@ -760,6 +762,17 @@ export function StravaConnectorControls({
             updatedAt: result.payload.updatedAt ?? null,
           });
           setShowForm(false);
+        } else if (
+          response.status === 409 &&
+          result.code === "legacy_embed"
+        ) {
+          setState({
+            phase: "needs_replacement",
+            message:
+              result.message ??
+              "The saved Strava profile widget must be replaced with a current public activity or route embed.",
+          });
+          setShowForm(true);
         } else if (response.status === 404) {
           setState({ phase: "unavailable" });
           setShowForm(true);
@@ -790,7 +803,9 @@ export function StravaConnectorControls({
 
   async function save(): Promise<void> {
     if (!embed.trim()) {
-      setMessage("Paste an official Strava embed URL or iframe snippet.");
+      setMessage(
+        "Paste a current public Strava activity or route embed URL or its complete embed snippet.",
+      );
       return;
     }
     setPending("save");
@@ -816,15 +831,10 @@ export function StravaConnectorControls({
       });
       setEmbed("");
       setShowForm(false);
-      const profileFeed = result.embedUrl.startsWith(
-        "https://www.strava.com/athletes/",
-      );
       setMessage(
-        profileFeed
-          ? "Cumulative feed saved. Test it while logged out after setting Profile Page and recent activities to Everyone and choosing the matching default sport. If it still shows login, Strava is not serving the widget publicly."
-          : environment === "local"
-            ? "Strava embed saved in local D1. Open the local Play page and grant consent to verify it."
-            : "Strava embed published. Visitors must still grant consent before it loads.",
+        environment === "local"
+          ? "Current Strava embed saved in local D1. Open the local Play page and grant consent to verify it."
+          : "Current Strava embed published. Visitors must still grant consent before it loads.",
       );
     } catch {
       setMessage("The Strava embed could not be saved. Try again.");
@@ -867,7 +877,8 @@ export function StravaConnectorControls({
       ? "Checking…"
       : state.phase === "ready"
         ? "Current"
-        : state.phase === "error"
+        : state.phase === "error" ||
+            state.phase === "needs_replacement"
           ? "Needs attention"
           : "Not configured";
 
@@ -884,7 +895,8 @@ export function StravaConnectorControls({
           className={`${styles.statusPill} ${
             state.phase === "ready"
               ? styles.status_healthy
-              : state.phase === "error"
+              : state.phase === "error" ||
+                  state.phase === "needs_replacement"
                 ? styles.status_error
                 : styles.status_setup_required
           }`}
@@ -895,8 +907,8 @@ export function StravaConnectorControls({
       <div className={styles.connectorMain}>
         <div className={styles.providerLead}>
           <p>
-            Publish one official public activity, route, or cumulative profile
-            feed. The site stores only its embed URL and loads Strava only after
+            Publish one current official public activity or route. The site
+            stores only a canonical embed URL and loads Strava only after
             visitor consent.
           </p>
           <nav aria-label="Strava setup resources">
@@ -908,25 +920,11 @@ export function StravaConnectorControls({
               Open embed guide
             </a>
             <a
-              href="https://support.strava.com/en-us/articles/15401967-profile-page-privacy-controls"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Profile privacy
-            </a>
-            <a
               href="https://support.strava.com/en-us/articles/15401987-activity-privacy-controls"
               rel="noreferrer"
               target="_blank"
             >
               Activity privacy
-            </a>
-            <a
-              href="https://www.strava.com/settings/display"
-              rel="noreferrer"
-              target="_blank"
-            >
-              Default sport
             </a>
           </nav>
         </div>
@@ -934,7 +932,7 @@ export function StravaConnectorControls({
         <dl className={styles.connectorFacts}>
           <div>
             <dt>You need</dt>
-            <dd>Official embed URL or iframe</dd>
+            <dd>Current activity or route embed</dd>
           </div>
           <div>
             <dt>Last updated</dt>
@@ -955,7 +953,8 @@ export function StravaConnectorControls({
             The Move stream is published. Its iframe remains blocked until a
             visitor explicitly chooses to load it.
           </p>
-        ) : state.phase === "error" ? (
+        ) : state.phase === "error" ||
+          state.phase === "needs_replacement" ? (
           <p className={styles.statusGuidance}>{state.message}</p>
         ) : (
           <p className={styles.statusGuidance}>
@@ -980,7 +979,7 @@ export function StravaConnectorControls({
             }}
           >
             <label className={styles.formField} htmlFor="strava-embed">
-              <span>Embed URL or iframe snippet</span>
+              <span>Current activity or route embed</span>
               <textarea
                 id="strava-embed"
                 value={embed}
@@ -988,7 +987,7 @@ export function StravaConnectorControls({
                 rows={3}
                 spellCheck={false}
                 onChange={(event) => setEmbed(event.target.value)}
-                placeholder={'https://strava-embeds.com/... or Strava’s complete profile-feed <iframe ...>'}
+                placeholder={'https://strava-embeds.com/activity/… or Strava’s complete <div class="strava-embed-placeholder" …><script …></script>'}
                 required
               />
             </label>
@@ -1036,13 +1035,15 @@ export function StravaConnectorControls({
         ) : null}
 
         <p className={styles.recoveryText}>
-          <strong>Cumulative feed checklist</strong>
-          Set Profile Page to Everyone; set the recent activities you want shown
-          to Everyone; choose the matching default sport in Display Preferences;
-          then regenerate and save the profile feed. Strava currently redirects
-          some <code>latest-rides</code> widgets to login even with public
-          settings, so verify in a logged-out window. Scripts, unrelated pages,
-          credentials, ports, and multi-element snippets remain rejected.
+          <strong>Use the current embed format</strong>
+          Open a public activity or route in Strava, choose Share and Embed, then
+          paste the complete code here. Studio safely extracts the numeric
+          activity or route and stores a canonical{" "}
+          <code>https://strava-embeds.com/…</code> URL. Older{" "}
+          <code>www.strava.com/athletes/…</code> profile widgets redirect to
+          sign-in and cannot be framed, so they must be replaced. Private-share
+          tokens, unrelated pages, credentials, and scripts from other hosts are
+          rejected.
         </p>
 
         {message ? (

@@ -40,9 +40,11 @@ export default function PrivacyPage() {
                 Studio stores an encrypted app client secret plus renewable
                 access and refresh tokens. A pending authorization stores only
                 a hashed state and encrypted transaction for at most ten
-                minutes. Public output is limited to watch-state counts, genre
-                and era patterns, recent updates, and a profile link derived
-                from the authorized identity.
+                minutes. D1 stores a complete sanitized library snapshot so
+                status, genre, era, and score distributions reflect the whole
+                collection. The public endpoint returns those distributions,
+                one bounded gallery page, and a profile link derived from the
+                authorized identity.
               </dd>
             </div>
             <div>
@@ -50,29 +52,32 @@ export default function PrivacyPage() {
               <dd>
                 Studio stores one encrypted owner API token. The authenticated
                 user ID is used only to request the owner library; it is not
-                published. Public output is limited to reading-state counts,
-                recent books, and a profile link derived from the authenticated
-                username.
+                published. D1 stores a complete sanitized shelf snapshot; the
+                public endpoint returns whole-shelf reading and rating
+                distributions, one bounded gallery page, recent books, and a
+                profile link derived from the authenticated username.
               </dd>
             </div>
             <div>
               <dt>Steam · Play</dt>
               <dd>
-                Studio encrypts the Web API key and SteamID64 together. Public
-                output contains rounded aggregate hours and at most eight
-                top-played and eight recent public titles. Passwords, exact
-                minutes, presence, friends, bans, achievements, inventories,
-                real names, locations, artwork, and raw responses are excluded.
+                Studio encrypts the Web API key and SteamID64 together. D1
+                stores the complete public game library with rounded hours.
+                The public endpoint returns whole-library totals and playtime
+                bands, one bounded gallery page, and at most eight highlighted
+                titles. Passwords, exact minutes, presence, friends, bans,
+                achievements, inventories, real names, locations, artwork, and
+                raw responses are excluded.
               </dd>
             </div>
             <div>
               <dt>Strava · Move</dt>
               <dd>
                 No Strava API credential or custom activity dataset is stored.
-                Studio keeps only one validated public source URL: either a
-                current <code>https://strava-embeds.com/…</code> embed or an
-                exact Strava-generated athlete-feed URL. The third-party iframe
-                remains blocked until a visitor explicitly chooses to load it.
+                Studio keeps only one validated current public activity or
+                route URL on <code>https://strava-embeds.com/…</code>. The
+                third-party iframe remains blocked until a visitor explicitly
+                chooses to load it.
               </dd>
             </div>
           </dl>
@@ -83,10 +88,11 @@ export default function PrivacyPage() {
           <p>
             MyAnimeList, Hardcover, and Steam refresh no more than once every
             12 hours unless the protected owner Studio requests a refresh. D1
-            retains at most the latest two sanitized snapshots for each
-            provider. Transient failures preserve the latest eligible
-            last-known-good snapshot; Steam’s public fallback expires after 72
-            hours.
+            retains at most the latest two complete sanitized snapshots for
+            each provider. A public request receives only a page-sized gallery
+            rather than the stored collection. Transient failures preserve the
+            latest eligible last-known-good snapshot; Steam’s public fallback
+            expires after 72 hours.
           </p>
           <p>
             Raw provider responses are processed in memory and discarded.

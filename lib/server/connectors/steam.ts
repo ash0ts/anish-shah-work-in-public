@@ -182,6 +182,14 @@ function roundedHours(minutes: number): number {
   return Math.round(minutes / 60);
 }
 
+function steamPlaytimeBand(minutes: number): string {
+  if (minutes === 0) return "Unplayed";
+  if (minutes < 2 * 60) return "Under 2h";
+  if (minutes < 10 * 60) return "2–10h";
+  if (minutes < 50 * 60) return "10–50h";
+  return "50h+";
+}
+
 export async function fetchSteamSnapshot(
   credential: SteamCredential,
 ): Promise<ConnectorFetchResult> {
@@ -322,12 +330,14 @@ export async function fetchSteamSnapshot(
       { code: "provider_schema_changed" },
     );
   }
-  const recentGames = (rawRecentGames ?? [])
-    .flatMap((game) => {
+  const allRecentGames = (rawRecentGames ?? []).flatMap((game) => {
       const normalized = normalizedGame(game);
       return normalized ? [normalized] : [];
-    })
-    .slice(0, MAX_PUBLIC_GAMES);
+    });
+  const recentGames = allRecentGames.slice(0, MAX_PUBLIC_GAMES);
+  const recentMinutesByAppId = new Map(
+    allRecentGames.map((game) => [game.appId, game.recentMinutes]),
+  );
 
   const topPlayed = [...ownedGames]
     .filter((game) => game.totalMinutes > 0)
@@ -347,6 +357,20 @@ export async function fetchSteamSnapshot(
     (sum, game) => sum + game.totalMinutes,
     0,
   );
+  const playtimeBandOrder = [
+    "Unplayed",
+    "Under 2h",
+    "2–10h",
+    "10–50h",
+    "50h+",
+  ];
+  const playtimeCounts = new Map(
+    playtimeBandOrder.map((label) => [label, 0]),
+  );
+  for (const game of ownedGames) {
+    const label = steamPlaytimeBand(game.totalMinutes);
+    playtimeCounts.set(label, (playtimeCounts.get(label) ?? 0) + 1);
+  }
   const profileUrl = normalizeConnectorProfileUrl(
     "steam",
     `https://steamcommunity.com/profiles/${steamId}`,
@@ -361,8 +385,9 @@ export async function fetchSteamSnapshot(
   return {
     publicPayload: {
       provider: "steam",
+      snapshotVersion: 2,
       profileUrl,
-      coverage: "Public Steam game details returned at sync",
+      coverage: "Complete public Steam library snapshot",
       totals: {
         publicGameCount: ownedGames.length,
         playedGameCount: ownedGames.filter(
@@ -376,6 +401,21 @@ export async function fetchSteamSnapshot(
         title: game.title,
         recentHoursRounded: roundedHours(game.recentMinutes),
         totalHoursRounded: roundedHours(game.totalMinutes),
+      })),
+      playtime: playtimeBandOrder.map((label) => ({
+        label,
+        count: playtimeCounts.get(label) ?? 0,
+      })),
+      library: ownedGames.map((game) => ({
+        appId: game.appId,
+        title: game.title,
+        played: game.totalMinutes > 0,
+        recentlyPlayed:
+          (recentMinutesByAppId.get(game.appId) ?? 0) > 0,
+        totalHoursRounded: roundedHours(game.totalMinutes),
+        recentHoursRounded: roundedHours(
+          recentMinutesByAppId.get(game.appId) ?? 0,
+        ),
       })),
     },
     itemCount: ownedGames.length,

@@ -10,7 +10,7 @@ in source code, deployment artifacts, public APIs, or browser storage.
 | Watch | MyAnimeList | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current** |
 | Read | Hardcover | Personal API token | Token, with or without `Bearer` | **Refresh now → Current** |
 | Play | Steam | Web API key and 17-digit SteamID64 | Both values | **Refresh now → Current** |
-| Move | Strava | Official public embed | URL or complete iframe snippet | Save, then consent-load it on Play |
+| Move | Strava | Current public activity or route embed | Numeric URL or complete modern placeholder snippet | Save, then consent-load it on Play |
 
 MyAnimeList is the important distinction: its developer portal correctly gives
 you a **client ID** and **client secret**. Those identify the application.
@@ -148,7 +148,9 @@ refresh token, Studio reports **Reauthorization required**:
 - If callback verification fails, keep the same Studio tab, verify the exact
   callback registration, and start again.
 
-The public Watch snapshot contains only bounded, sanitized list summaries and a
+The server stores a complete sanitized Watch snapshot so the distributions are
+not biased toward recent updates. The public endpoint sends whole-library
+distributions plus only the requested 12, 24, or 36-title gallery page and a
 profile link derived from the authorized MyAnimeList identity.
 
 ## Hardcover
@@ -159,13 +161,14 @@ profile link derived from the authorized MyAnimeList identity.
 3. Select **Connect**, then **Refresh now**.
 4. Confirm **Current** and inspect Read on `/play`.
 
-The server normalizes the authorization value and derives the public profile
-link from the authenticated identity. Hardcover documents that tokens expire
-after one year, reset on January 1, and may be reset without notice while the
-API is in beta; its current limit is 60 requests per minute. If Hardcover
-returns 401, copy a current token, choose **Replace credential**, and refresh.
-If rate-limited, wait before retrying—the last successful snapshot remains
-live.
+The server normalizes the authorization value, retrieves the complete sanitized
+shelf, and derives the public profile link from the authenticated identity. The
+public endpoint sends whole-shelf distributions plus only one bounded gallery
+page. Hardcover documents that tokens expire after one year, reset on January
+1, and may be reset without notice while the API is in beta; its current limit
+is 60 requests per minute. If Hardcover returns 401, copy a current token,
+choose **Replace credential**, and refresh. If rate-limited, wait before
+retrying—the last successful snapshot remains live.
 
 ## Steam
 
@@ -181,45 +184,46 @@ live.
    **Refresh now**.
 7. Confirm **Current** and inspect Play on `/play`.
 
-The public snapshot contains rounded totals and no more than eight top-played
-and eight recent games. It excludes exact minutes, presence, friends, bans,
-achievements, inventories, real name, location, artwork, and raw provider
-payloads. If Game details becomes private, a refresh immediately unpublishes
-the Steam stream. Retry 429 responses later rather than repeatedly refreshing.
+The server stores the complete public library with rounded playtime so its
+totals and distribution are accurate. The public endpoint sends only one
+bounded gallery page plus no more than eight top-played and eight recent games.
+It excludes exact minutes, presence, friends, bans, achievements, inventories,
+real name, location, artwork, and raw provider payloads. If Game details becomes
+private, a refresh immediately unpublishes the Steam stream. Retry 429 responses
+later rather than repeatedly refreshing.
 
 ## Strava
 
 Strava uses neither an API credential nor a custom API visualization.
 
 1. Follow Strava’s [official embed instructions](https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed).
-2. For a cumulative profile feed, first set:
-   - **Profile Page** to **Everyone** in Privacy Controls.
-   - The recent activities you want represented to **Everyone**.
-   - The matching **Default Sport** under Display Preferences; profile feeds
-     include only that sport.
-3. Return to your profile, choose **Share your Activities**, and regenerate the
-   recent-activities or weekly-summary iframe after changing those settings.
-4. In the Move panel, paste either:
-   - the complete profile-feed iframe whose source resembles
-     `https://www.strava.com/athletes/{athlete-id}/latest-rides/{embed-id}`, or
-   - a current activity or route embed from `https://strava-embeds.com/...`.
+2. Make the activity or route you want to show public.
+3. Open that activity or route, choose **Share**, then **Embed**.
+4. In Studio’s Move panel, paste either:
+   - the complete modern placeholder and script snippet Strava provides, or
+   - its numeric `https://strava-embeds.com/activity/{id}` or
+     `https://strava-embeds.com/route/{id}` URL.
 5. Select **Save Strava embed**.
 6. Open Move on `/play`, choose to load third-party content, and inspect the
    result in a logged-out window.
 
-Studio extracts and stores only the source URL. It accepts the dedicated
-`strava-embeds.com` host plus Strava’s exact numeric-athlete `latest-rides` and
-`activity-summary` feed paths. It rejects all other Strava pages, non-HTTPS
-URLs, URL credentials, explicit ports, fragments, scripts, and multi-element
-snippets. Replacing the embed does not require a deployment. Visitors still
+Studio never executes pasted markup. It strictly reads the modern placeholder,
+confirms the exact Strava script source and numeric public activity or route,
+then stores a canonical `strava-embeds.com` iframe URL. It also accepts that
+canonical URL directly. Private-share tokens, unrelated paths, non-HTTPS URLs,
+URL credentials, explicit ports, fragments, and scripts from other hosts are
+rejected. Replacing the embed does not require a deployment. Visitors still
 must consent before any Strava request or iframe loads.
 
-Strava currently redirects some cumulative profile widgets to its login page,
-including widgets whose profile and activity settings already appear public.
-If the regenerated feed still does that in a logged-out window, there is no
-additional site-side or login setting to bypass it: do not enter credentials in
-the embedded login. Keep the cumulative feed configured for a later Strava fix,
-or temporarily replace it with a current public activity or route embed.
+Older cumulative profile widgets use a
+`www.strava.com/athletes/.../latest-rides/...` or `activity-summary` URL. Strava
+currently redirects those widgets to its sign-in page, which cannot be framed
+by this site. Studio reports **Needs attention** for a stored older widget and
+requires a current public activity or route embed instead. There is no
+site-side setting or credential that can safely bypass that redirect.
+
+The public site does not fetch, copy, aggregate, or custom-visualize Strava API
+data. The official iframe remains the only Strava display surface.
 
 ## Routes, retention, and recovery
 

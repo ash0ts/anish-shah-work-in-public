@@ -7,7 +7,8 @@ import { normalizeConnectorProfileUrl } from "./public-payload-policy";
 
 const HARDCOVER_ENDPOINT = "https://api.hardcover.app/v1/graphql";
 const MAX_RESPONSE_BYTES = 1_000_000;
-const MAX_LIBRARY_ITEMS = 250;
+const MAX_LIBRARY_ITEMS = 5_000;
+const LIBRARY_PAGE_SIZE = 250;
 const MAX_IDENTITY_ROWS = 10;
 const MAX_GRAPHQL_ERRORS = 20;
 const MAX_TITLE_LENGTH = 512;
@@ -16,6 +17,7 @@ const GRAPHQL_INT_MAX = 2_147_483_647;
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 const ISO_DATE_TIME =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+const REQUEST_TIMEOUT_MS = 20_000;
 
 type NormalizedHardcoverBook = {
   statusId?: number;
@@ -26,6 +28,15 @@ type NormalizedHardcoverBook = {
     title?: string;
     slug?: string;
   };
+};
+
+type PublicHardcoverLibraryItem = {
+  id: string;
+  title: string;
+  slug: string | null;
+  status: string;
+  rating: number | null;
+  updatedAt: string | null;
 };
 
 function providerSchemaError(message: string): never {
@@ -202,7 +213,7 @@ async function queryHardcover<T>(
 ): Promise<T> {
   const response = await fetch(HARDCOVER_ENDPOINT, {
     method: "POST",
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers: {
       authorization,
       "content-type": "application/json",
@@ -324,83 +335,124 @@ export async function fetchHardcoverSnapshot(
       ? rawUsername
       : null;
 
-  const library = await queryHardcover<{ user_books?: unknown }>(
-    authorization,
-    `query Library($userId: Int!) {
-      user_books(
-        where: {user_id: {_eq: $userId}}
-        order_by: {updated_at: desc}
-        limit: 250
-      ) {
-        status_id
-        rating
-        updated_at
-        book {
-          id
-          title
-          slug
-        }
-      }
-    }`,
-    { userId: viewerId },
-  );
-  if (
-    !Array.isArray(library.user_books) ||
-    library.user_books.length > MAX_LIBRARY_ITEMS
+  const libraryQuery = `query Library(
+    $userId: Int!
+    $limit: Int!
+    $offset: Int!
   ) {
-    throw new ConnectorFetchError(
-      "Hardcover returned an unexpected library response.",
-      { code: "provider_schema_changed" },
+    user_books(
+      where: {user_id: {_eq: $userId}}
+      order_by: [{updated_at: desc}, {id: asc}]
+      limit: $limit
+      offset: $offset
+    ) {
+      status_id
+      rating
+      updated_at
+      book {
+        id
+        title
+        slug
+      }
+    }
+  }`;
+  const normalizedBooks: NormalizedHardcoverBook[] = [];
+
+  for (let offset = 0; offset <= MAX_LIBRARY_ITEMS; offset += LIBRARY_PAGE_SIZE) {
+    const limit =
+      offset === MAX_LIBRARY_ITEMS ? 1 : LIBRARY_PAGE_SIZE;
+    const libraryPage = await queryHardcover<{ user_books?: unknown }>(
+      authorization,
+      libraryQuery,
+      { userId: viewerId, limit, offset },
     );
+    if (
+      !Array.isArray(libraryPage.user_books) ||
+      libraryPage.user_books.length > limit
+    ) {
+      throw new ConnectorFetchError(
+        "Hardcover returned an unexpected library response.",
+        { code: "provider_schema_changed" },
+      );
+    }
+    if (offset === MAX_LIBRARY_ITEMS) {
+      if (libraryPage.user_books.length > 0) {
+        throw new ConnectorFetchError(
+          `Hardcover contains more than ${MAX_LIBRARY_ITEMS} entries.`,
+          { code: "provider_collection_too_large" },
+        );
+      }
+      break;
+    }
+
+    normalizedBooks.push(
+      ...libraryPage.user_books.map(normalizeHardcoverBook),
+    );
+    if (libraryPage.user_books.length < LIBRARY_PAGE_SIZE) break;
   }
-  const normalizedBooks = library.user_books.map(normalizeHardcoverBook);
 
   const seenBookIds = new Set<number>();
-  const uniqueBooks = normalizedBooks.filter((entry) => {
+  const publicLibrary: PublicHardcoverLibraryItem[] = [];
+  for (const entry of normalizedBooks) {
     const id = entry.book?.id;
-    if (!id || seenBookIds.has(id)) return false;
+    const title = entry.book?.title;
+    if (!id || !title) {
+      return providerSchemaError(
+        "Hardcover returned an incomplete library item.",
+      );
+    }
+    if (seenBookIds.has(id)) continue;
     seenBookIds.add(id);
-    return true;
-  });
-  const statusCounts = new Map<string, number>();
-  for (const entry of uniqueBooks) {
-    const status = hardcoverStatus(entry.statusId);
-    statusCounts.set(status, (statusCounts.get(status) ?? 0) + 1);
+    publicLibrary.push({
+      id: String(id),
+      title,
+      slug: entry.book?.slug ?? null,
+      status: hardcoverStatus(entry.statusId),
+      rating: entry.rating ?? null,
+      updatedAt: entry.updatedAt ?? null,
+    });
   }
 
-  const recent = uniqueBooks.slice(0, 12).flatMap((entry) => {
-    if (!entry.book?.id || !entry.book.title) return [];
-    return [
-      {
-        id: String(entry.book.id),
-        title: entry.book.title,
-        slug: entry.book.slug ?? null,
-        status: hardcoverStatus(entry.statusId),
-        rating: entry.rating ?? null,
-        updatedAt: entry.updatedAt ?? null,
-      },
-    ];
-  });
+  const statusCounts = new Map<string, number>();
+  const ratingCounts = new Map<string, number>();
+  for (const entry of publicLibrary) {
+    statusCounts.set(
+      entry.status,
+      (statusCounts.get(entry.status) ?? 0) + 1,
+    );
+    const ratingLabel =
+      entry.rating === null
+        ? "Unrated"
+        : Number.isInteger(entry.rating)
+          ? String(entry.rating)
+          : entry.rating.toFixed(1);
+    ratingCounts.set(ratingLabel, (ratingCounts.get(ratingLabel) ?? 0) + 1);
+  }
+
+  const rankedEntries = (values: Map<string, number>) =>
+    [...values.entries()]
+      .sort(
+        (left, right) =>
+          right[1] - left[1] || left[0].localeCompare(right[0]),
+      )
+      .map(([label, count]) => ({ label, count }));
+
+  const recent = publicLibrary.slice(0, 12);
 
   return {
     publicPayload: {
       provider: "hardcover",
+      snapshotVersion: 2,
       profileUrl: normalizeConnectorProfileUrl(
         "hardcover",
         username ? `https://hardcover.app/@${username}` : undefined,
       ),
-      coverage:
-        uniqueBooks.length === MAX_LIBRARY_ITEMS
-          ? "250 most recently updated books"
-          : "Current library",
-      status: [...statusCounts.entries()]
-        .sort(
-          (left, right) =>
-            right[1] - left[1] || left[0].localeCompare(right[0]),
-        )
-        .map(([label, count]) => ({ label, count })),
+      coverage: "Complete book library at sync",
+      status: rankedEntries(statusCounts),
+      ratings: rankedEntries(ratingCounts),
       recent,
+      library: publicLibrary,
     },
-    itemCount: uniqueBooks.length,
+    itemCount: publicLibrary.length,
   };
 }

@@ -470,12 +470,17 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
   );
   assert.match(
     source,
-    /active === "move" && strava\.status !== "ready"/,
+    /active === "move"[\s\S]*?<MovementProvider/,
   );
   assert.match(
     source,
-    /if \(state\.status !== "ready"\) return <StreamEmpty state=\{state\} \/>;/,
+    /function MovementProvider[\s\S]*?if \(state\.status !== "ready"\)/,
     "An unpublished Strava stream must render the compact empty row",
+  );
+  assert.match(
+    source,
+    /function MovementProvider[\s\S]*?show \? \([\s\S]*?<iframe/,
+    "The Strava iframe must remain behind explicit visitor intent",
   );
 });
 

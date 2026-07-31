@@ -20,7 +20,9 @@ export default async function PlayPage() {
   return (
     <main id="main" className={`site-main ${styles.page}`}>
       <header className={styles.intro}>
-        <p className={styles.eyebrow}>Play · four optional public streams</p>
+        <p className={styles.eyebrow}>
+          Play · four optional public streams · pattern / gallery
+        </p>
         <h1>Outside the work.</h1>
         <p>
           {narrative?.body ??
