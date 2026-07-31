@@ -1,0 +1,5 @@
+name: Anish Shah site CodeQL configuration
+
+paths-ignore:
+  - content/public/**
+  - tests/**

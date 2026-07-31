@@ -436,7 +436,14 @@ function countBy(values, getKey) {
 
 function evidenceKind(url, itemType) {
   const hostname = new URL(url).hostname;
-  if (hostname.includes("youtube.com") || hostname.includes("brighttalk.com")) return "video";
+  if (
+    hostname === "youtube.com" ||
+    hostname.endsWith(".youtube.com") ||
+    hostname === "brighttalk.com" ||
+    hostname.endsWith(".brighttalk.com")
+  ) {
+    return "video";
+  }
   if (hostname === "github.com" || hostname === "pypi.org") return "repository";
   if (itemType === "profile") return "profile";
   return "web_page";

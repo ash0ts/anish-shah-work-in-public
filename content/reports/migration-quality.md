@@ -1,6 +1,6 @@
 # Canonical content migration quality report
 
-Generated from four immutable source files plus reviewed canonical and presentation curation. Content version: `e8c96aa119dd58bd`.
+Generated from four immutable source files plus reviewed canonical and presentation curation. Content version: `c08c2fc612b67f74`.
 
 ## Source accounting
 
