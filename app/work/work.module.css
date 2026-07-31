@@ -224,43 +224,126 @@
 }
 
 .index {
-  padding: clamp(2.25rem, 5vw, 4.5rem) var(--gutter, 2rem) clamp(4rem, 8vw, 7rem);
+  min-width: 0;
+  padding: clamp(2.25rem, 5vw, 4.5rem) var(--gutter, 2rem)
+    clamp(4rem, 8vw, 7rem);
 }
 
 .indexHeader {
-  display: flex;
+  display: grid;
   min-width: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.45fr);
+  gap: clamp(1.5rem, 5vw, 5rem);
   align-items: end;
-  justify-content: space-between;
-  gap: 2rem;
   padding-bottom: 1.25rem;
 }
 
-.indexHeader > div {
-  min-width: 0;
-}
-
-.resultCount {
-  margin: 0 0 0.45rem;
-  color: var(--work-blue, #295dff);
+.indexHeader p,
+.indexHeader h2 {
+  margin: 0;
 }
 
 .indexHeader h2 {
-  margin: 0;
   font-size: clamp(1.85rem, 3.4vw, 3.4rem);
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
 
-.indexHeader > span {
-  flex: 0 0 auto;
+.indexHeader > p {
+  max-width: 34rem;
+  justify-self: end;
   color: var(--ink-muted, #5c6477);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.resultCount {
+  margin-bottom: 0.45rem !important;
+  color: var(--work-blue, #295dff);
+}
+
+.bodyIndex {
+  min-width: 0;
+  border-top: 1px solid var(--blueprint-ink, #17223b);
+}
+
+.body {
+  min-width: 0;
+  border-bottom: 1px solid var(--blueprint-ink, #17223b);
+}
+
+.body > summary {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto 1.25rem;
+  gap: clamp(1rem, 3vw, 3rem);
+  align-items: center;
+  min-height: 7.2rem;
+  padding: 1rem 0;
+  list-style: none;
+  cursor: pointer;
+}
+
+.body > summary::-webkit-details-marker {
+  display: none;
+}
+
+.body > summary > div {
+  min-width: 0;
+}
+
+.body > summary h3,
+.body > summary p {
+  margin: 0;
+}
+
+.body > summary h3 {
+  font-family: var(--font-display, sans-serif);
+  font-size: clamp(1.55rem, 3vw, 2.85rem);
+  font-variation-settings: "CASL" 0.56, "MONO" 0.03;
+  font-weight: 650;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.body > summary p {
+  max-width: 66ch;
+  margin-top: 0.45rem;
+  color: var(--ink-muted, #5c6477);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.body > summary > span {
+  color: var(--ink-muted, #5c6477);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.55rem;
+  letter-spacing: 0.055em;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.body > summary > i {
+  font-size: 1.15rem;
+  font-style: normal;
+  transition: transform 160ms ease;
+}
+
+.body[open] > summary > i {
+  transform: rotate(45deg);
+}
+
+.body > summary:hover h3,
+.body > summary:focus-visible h3 {
+  color: var(--work-blue, #295dff);
 }
 
 .workList {
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--blueprint-ink, #17223b);
+  border-top: 1px solid var(--hairline, rgba(23, 34, 59, 0.2));
   list-style: none;
 }
 
@@ -345,27 +428,6 @@
 
 .empty p {
   margin-bottom: 0.5rem;
-}
-
-.pagination {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 1rem;
-  align-items: center;
-  margin-top: 1.5rem;
-  font-family: var(--font-mono, monospace);
-  font-size: 0.58rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.pagination > span {
-  color: var(--ink-muted, #5c6477);
-  text-align: center;
-}
-
-.pagination a:last-child {
-  justify-self: end;
 }
 
 @media (max-width: 1050px) {
@@ -508,18 +570,6 @@
     align-self: center;
   }
 
-  .index {
-    padding-top: 2.25rem;
-  }
-
-  .indexHeader {
-    align-items: start;
-  }
-
-  .indexHeader > span {
-    margin-top: 0.3rem;
-  }
-
   .workRow {
     min-height: 0;
     grid-template-columns: 3.5rem minmax(0, 1fr) 1rem;
@@ -536,36 +586,36 @@
     grid-column: 3;
     grid-row: 1 / span 2;
   }
+
+  .indexHeader {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+
+  .indexHeader > p {
+    justify-self: start;
+  }
 }
 
 @media (max-width: 390px) {
-  .indexHeader {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+  .body > summary {
+    grid-template-columns: minmax(0, 1fr) 0.9rem;
+    min-height: 6.4rem;
     gap: 0.75rem;
+  }
+
+  .body > summary > span {
+    grid-column: 1;
+    grid-row: 2;
+    white-space: normal;
+  }
+
+  .body > summary > i {
+    grid-column: 2;
+    grid-row: 1 / span 2;
   }
 
   .workRow {
     grid-template-columns: 2.9rem minmax(0, 1fr) 0.8rem;
-  }
-
-  .pagination {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .pagination > :first-child {
-    grid-column: 1;
-    grid-row: 2;
-  }
-
-  .pagination > :nth-child(2) {
-    grid-column: 1 / -1;
-    grid-row: 1;
-  }
-
-  .pagination > :last-child {
-    grid-column: 2;
-    grid-row: 2;
-    justify-self: end;
   }
 }

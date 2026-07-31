@@ -209,17 +209,43 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   );
 });
 
-test("Work combines a semantic Story × Time matrix with one paginated WorkGroup index", async () => {
+test("Work pairs a four-line time calendar with four complete body folds", async () => {
   const html = await renderHtml("/work");
   const markup = documentMarkup(html);
-  const workList =
-    markup.match(/<ol\b[^>]*start="1"[^>]*>([\s\S]*?)<\/ol>/i)?.[1] ?? "";
-  const matrix =
+  const calendar =
     markup.match(/<table\b[\s\S]*?<\/table>/i)?.[0] ?? "";
-  assert.equal((workList.match(/<li\b/g) ?? []).length, 24);
-  assert.equal((matrix.match(/<tbody\b/g) ?? []).length, 1);
-  assert.equal((matrix.match(/<tr\b/g) ?? []).length, 5);
-  assert.match(matrix, /82 bodies|work|forms/i);
+  const calendarBody =
+    calendar.match(/<tbody\b[^>]*>([\s\S]*?)<\/tbody>/i)?.[1] ?? "";
+  const bodyDetails = [
+    ...markup.matchAll(/<details\b[^>]*data-work-body="([^"]+)"/gi),
+  ].map((match) => match[1]);
+  const workIds = [
+    ...markup.matchAll(/<li\b[^>]*data-work-id="([^"]+)"/gi),
+  ].map((match) => match[1]);
+
+  assert.deepEqual(bodyDetails, [
+    "products-open-source",
+    "courses-learning",
+    "writing-research",
+    "talks-programs",
+  ]);
+  assert.equal(workIds.length, 82);
+  assert.equal(new Set(workIds).size, 82);
+  assert.deepEqual(
+    new Set(workIds),
+    new Set(publicBundle.workGroups.map((group) => group.id)),
+  );
+  assert.equal((calendarBody.match(/<tr\b/g) ?? []).length, 4);
+  assert.equal((calendarBody.match(/<td\b/g) ?? []).length, 24);
+  assert.match(
+    calendar,
+    /Bodies of work by year, with exact work and public-form counts/i,
+  );
+  assert.match(calendar, /data-density="[1-5]"/i);
+  assert.match(
+    calendar,
+    /href="\/work\?bucket=products-open-source(?:&amp;|&)year=202[1-6]#work-index"/i,
+  );
   assert.equal((markup.match(/<input\b[^>]*type="search"/gi) ?? []).length, 1);
   for (const name of [
     "bucket",
@@ -231,7 +257,10 @@ test("Work combines a semantic Story × Time matrix with one paginated WorkGroup
   ]) {
     assert.match(markup, new RegExp(`<select\\b[^>]*name="${name}"`, "i"));
   }
-  assert.doesNotMatch(markup, /\bMap\b|Visual archive|Browse all 186|<canvas\b/i);
+  assert.doesNotMatch(
+    markup,
+    /\bMap\b|Visual archive|Complete grouped index|aria-pressed|<canvas\b|<svg\b/i,
+  );
   assert.doesNotMatch(markup, /name="practice"/i);
   assert.doesNotMatch(markup, /name="view"/i);
 });
@@ -479,14 +508,19 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
   }
   assert.deepEqual(overflowMasking, [
     {
-      file: "components/StoryTimeMatrix.module.css",
-      selector: ".tableFrame caption",
-    },
-    {
-      file: "components/StoryTimeMatrix.module.css",
-      selector: ".tableFrame thead",
+      file: "app/work/WorkTimeline.module.css",
+      selector: ".frame caption",
     },
   ]);
+  const timelineCss = await readFile(
+    path.join(PROJECT_ROOT, "app/work/WorkTimeline.module.css"),
+    "utf8",
+  );
+  assert.match(
+    timelineCss,
+    /\.frame\s*\{[\s\S]*?max-width:\s*100%[\s\S]*?overflow-x:\s*auto/,
+    "Only the bounded calendar frame may scroll horizontally",
+  );
   for (const width of [1050, 760, 390]) {
     assert.match(
       globalCss,

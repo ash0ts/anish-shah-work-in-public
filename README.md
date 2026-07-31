@@ -7,8 +7,9 @@ technical storytelling, and community programs from 2021 onward.
 
 - `/` — a concise introduction, four Bodies of Work, and a cross-year Impact
   Ledger
-- `/work` — 82 browsable WorkGroups, a Story × Time overview, and search across
-  186 nested public forms
+- `/work` — a semantic four-line 2021–2026 calendar heatmap, four unpaginated
+  body folds containing all 82 WorkGroups once, and search across 186 nested
+  public forms
 - `/work/[slug]` — one story page that keeps its appearances, recordings,
   translations, repositories, and references together
 - `/play` — consent-aware MyAnimeList, Hardcover, Steam, and Strava streams
@@ -17,10 +18,13 @@ technical storytelling, and community programs from 2021 onward.
   public evidence explorer
 - `/studio` — owner-only editorial and connector controls
 
-The homepage is deliberately two-dimensional: semantic HTML and CSS carry the
-work index, while Anime.js adds brief, cancellable transitions. The public
-runtime contains no 3D navigation, cinematic workspace, autoplay, or scroll
-hijacking. Strava content remains blocked until explicit interaction.
+The homepage and Work archive are deliberately two-dimensional: semantic HTML
+and CSS carry the work index, while Anime.js adds brief, cancellable
+transitions. Work’s server-rendered calendar uses one color per line and shade
+for density, keeps exact work and public-form counts in every populated cell,
+and filters the four body folds when a visitor chooses a year. The public
+runtime contains no Three.js, 3D navigation, cinematic workspace, autoplay, or
+scroll hijacking. Strava content remains blocked until explicit interaction.
 
 ## Canonical content
 

@@ -14,8 +14,10 @@ const [
   homeSource,
   introductionSource,
   bodySource,
-  matrixSource,
   workGroupsSource,
+  workPageSource,
+  timelineSource,
+  packageJson,
 ] =
   await Promise.all([
   readFile(
@@ -34,11 +36,13 @@ const [
     path.join(projectRoot, "components/BodiesOfWork.tsx"),
     "utf8",
   ),
+  readFile(path.join(projectRoot, "lib/work-groups.ts"), "utf8"),
+  readFile(path.join(projectRoot, "app/work/page.tsx"), "utf8"),
   readFile(
-    path.join(projectRoot, "components/StoryTimeMatrix.tsx"),
+    path.join(projectRoot, "app/work/WorkTimeline.tsx"),
     "utf8",
   ),
-  readFile(path.join(projectRoot, "lib/work-groups.ts"), "utf8"),
+  readFile(path.join(projectRoot, "package.json"), "utf8").then(JSON.parse),
 ]);
 
 const expectedFeatured = {
@@ -71,6 +75,26 @@ test("Bodies of Work resolves four parallel buckets with three featured stories 
     (group) => group.publicationState === "public",
   );
   assert.equal(publicGroups.length, 82);
+  assert.deepEqual(
+    Object.fromEntries(
+      Object.keys(expectedFeatured).map((bucket) => [
+        bucket,
+        publicGroups.filter((group) => group.bucket === bucket).length,
+      ]),
+    ),
+    {
+      "products-open-source": 14,
+      "courses-learning": 3,
+      "writing-research": 22,
+      "talks-programs": 43,
+    },
+  );
+  assert(
+    publicGroups.every((group) =>
+      Object.hasOwn(expectedFeatured, group.bucket),
+    ),
+    "Every public WorkGroup must fold into exactly one visible body",
+  );
 
   for (const [bucket, expectedIds] of Object.entries(expectedFeatured)) {
     const featured = publicGroups
@@ -98,7 +122,7 @@ test("Home is semantic HTML with one expanded bucket and no numbered decoration"
   assert.doesNotMatch(bodySource, /canvas|three|webgl/i);
 });
 
-test("Home uses technical presentation copy without changing archive taxonomy", () => {
+test("Home and Work share one expert-facing four-body taxonomy", () => {
   for (const label of [
     "Systems & Open Source",
     "Curricula & Workshops",
@@ -123,11 +147,12 @@ test("Home uses technical presentation copy without changing archive taxonomy", 
   ]) {
     assert(workGroupsSource.includes(title), title);
   }
-  assert.match(workGroupsSource, /title: "Products \/ Open Source"/);
-  assert.match(workGroupsSource, /title: "Courses \/ Learning"/);
-  assert.match(workGroupsSource, /title: "Writing \/ Research"/);
-  assert.match(workGroupsSource, /title: "Talks \/ Programs"/);
-  assert.match(workGroupsSource, /return homepageWorkBuckets\.map/);
+  assert.doesNotMatch(workGroupsSource, /title: "Products \/ Open Source"/);
+  assert.doesNotMatch(workGroupsSource, /title: "Courses \/ Learning"/);
+  assert.doesNotMatch(workGroupsSource, /title: "Writing \/ Research"/);
+  assert.doesNotMatch(workGroupsSource, /title: "Talks \/ Programs"/);
+  assert.doesNotMatch(workGroupsSource, /homepageWorkBuckets/);
+  assert.match(workGroupsSource, /return workBuckets\.map/);
 });
 
 test("Bodies of Work motion enhances native details without hiding SSR content", () => {
@@ -151,14 +176,50 @@ test("Home introduction motion is synchronous, cancellable, and always readable"
   assert.doesNotMatch(introductionSource, /opacity:\s*\[0,\s*1\]/);
 });
 
-test("Story × Time is a table whose cells filter the complete WorkGroup index", () => {
-  assert.match(matrixSource, /<table>/);
-  assert.match(matrixSource, /workBuckets\.map/);
-  assert.match(matrixSource, /records\s*\.filter/);
-  assert.match(matrixSource, /formCount/);
-  assert.match(matrixSource, /bucket, year/);
-  assert.doesNotMatch(matrixSource, /"undated"|>Undated</);
-  assert.doesNotMatch(matrixSource, /canvas|three|webgl/i);
+test("Work pairs its four-body SSR index with a semantic body-by-year color calendar", () => {
+  assert.match(workPageSource, /workBuckets\.map/);
+  assert.match(workPageSource, /data-work-body=\{bucket\.id\}/);
+  assert.match(workPageSource, /<WorkTimeline/);
+  assert.doesNotMatch(
+    workPageSource,
+    /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot|pagination/i,
+  );
+
+  assert.match(
+    timelineSource,
+    /const years = \[2021, 2022, 2023, 2024, 2025, 2026\] as const/,
+  );
+  assert.match(timelineSource, /workBuckets\.flatMap/);
+  assert.match(timelineSource, /years\.map/);
+  assert.match(timelineSource, /<table>/);
+  assert.match(timelineSource, /<thead>/);
+  assert.match(timelineSource, /<tbody>/);
+  assert.match(timelineSource, /scope="col"/);
+  assert.match(timelineSource, /scope="row"/);
+  assert.match(timelineSource, /data-bucket=\{bucket\.id\}/);
+  assert.match(timelineSource, /data-year=\{year\}/);
+  assert.match(timelineSource, /data-density=\{density \|\| undefined\}/);
+  assert.match(timelineSource, /workArchiveHref\(query,/);
+  assert.match(timelineSource, /formCount/);
+  assert.match(timelineSource, /densityLevel\(/);
+  assert.doesNotMatch(
+    timelineSource,
+    /@observablehq|canvas|three|webgl/i,
+  );
+  assert.equal(
+    existsSync(path.join(projectRoot, "components/StoryTimeMatrix.tsx")),
+    false,
+  );
+  assert.equal(
+    existsSync(path.join(projectRoot, "app/work/WorkArchiveExplorer.tsx")),
+    false,
+  );
+  assert.equal(
+    existsSync(path.join(projectRoot, "app/work/WorkPlot.tsx")),
+    false,
+  );
+  assert.equal(packageJson.dependencies["@observablehq/plot"], undefined);
+  assert.equal(packageJson.dependencies.three, undefined);
 });
 
 test("the superseded chapter-stack and Three.js implementation is gone", () => {

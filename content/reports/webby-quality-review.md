@@ -1,10 +1,10 @@
 # Webby-quality release review
 
-Review date: 2026-07-30
+Review date: 2026-07-31
 
 Release candidate: Bodies of Work v1.3
 
-Content version: `53cf9612400b16cc`
+Content version: `f599c1af4ac9c3df`
 
 This is an internal review against the seven Webby website criteria, not an
 award result. The exact release candidate described here completed the
@@ -41,26 +41,33 @@ verification record below.
 
 - The primary navigation stays compact: Work, About, and Play, with Sources and
   Privacy in the footer.
-- Work opens with a semantic Story × Time index, then one paginated WorkGroup
-  archive. Search includes nested titles and aliases while returning the parent
-  story.
+- Work opens as four server-rendered body folds. Together they contain all 82
+  WorkGroups exactly once, so the complete archive is present without
+  pagination. A semantic four-line calendar heatmap summarizes 2021–2026 above
+  them; each populated cell reports exact WorkGroup and public-form counts.
+  Search includes nested titles and aliases while returning the parent story.
 - Bucket, topic, year, and format controls expose the useful dimensions without
   asking visitors to learn an internal taxonomy.
+- Calendar cells are ordinary links that filter the same four body folds by
+  line and year, keeping one archive and one interaction model.
 - Group pages give public forms a clear home instead of presenting a second
   competing archive.
-- Legacy redirects, context-only references, pagination, child-title search,
-  and long-query filter states passed rendered-route verification.
+- Legacy redirects, context-only references, body filtering, child-title
+  search, and long-query filter states passed rendered-route verification.
 
 ## Visual design — 8.2 / 10
 
 - The expressive choice is typographic organization, not a decorative
-  dashboard: four ruled work rows, the Story × Time table, and the Impact
+  dashboard: four ruled homepage rows, four archive body folds, and the Impact
   Ledger all encode real structure.
 - Recursive, Hanken Grotesk, and IBM Plex Mono retain distinct display,
   reading, and evidence roles. Trace white, blueprint ink, and work blue keep
   the palette controlled.
+- The 2021–2026 calendar uses color to identify each line of work and five
+  shade levels to show relative density. Exact work and public-form counts stay
+  visible, so color never has to carry meaning alone.
 - Removing the 3D navigator makes the hierarchy more legible and avoids
-  occlusion, tiny hit targets, and a second navigation model.
+  occlusion, tiny hit targets, and an opaque navigation model.
 - The design now depends on precision in spacing, wrapping, and responsive
   hierarchy. Visual checks at 320, 390, 768, 1024, 1440, and 1920px found no
   viewport crossings, and the social image was replaced with the finished
@@ -87,22 +94,27 @@ verification record below.
 
 - Interactions are intentionally restrained: native disclosures and links work
   first, while Anime.js supports short row, name, and route transitions.
-- The Story × Time index remains selectable, searchable, and understandable
-  without a canvas or motion.
+- The complete calendar, all four body folds, and every WorkGroup link arrive
+  in server HTML. Selecting a populated year cell applies its line and year as
+  normal GET filters, then moves directly to the filtered folds.
+- Row headers filter by line, exact counts label every populated cell, and the
+  wide calendar remains a bounded horizontal scroll region on small screens.
 - Play fetches only the active personal stream and gives unpublished or stale
   data a compact, directed state.
 - The direction is coherent but deliberately less spectacular than the former
-  WebGL concept. Native disclosure behavior, transition cancellation,
-  reduced-motion final states, keyboard flow, and connector retry behavior are
-  all covered by the release checks.
+  WebGL concept. Native disclosure behavior, calendar filtering, transition
+  cancellation, reduced-motion final states, keyboard flow, and connector
+  retry behavior are all covered by the release checks.
 
 ## Innovation — 7.9 / 10
 
 - The strongest original idea is editorial rather than technical: one body of
   work can have many public forms without multiplying the apparent number of
   accomplishments.
-- Story × Time turns a complicated public footprint into an inspectable career
-  map using ordinary web structure, keeping the technology invisible.
+- Four complete body folds turn a complicated public footprint into an
+  inspectable archive using ordinary web structure. The color-and-density
+  calendar adds a compact chronological lens without becoming another taxonomy
+  or navigation requirement.
 - The Impact Ledger combines reach, participation, supported pipeline, and
   product usage without pretending they are directly comparable units.
 - The model is differentiated by its content logic more than by a novel
@@ -112,7 +124,8 @@ verification record below.
 ## Overall experience — 8.2 / 10
 
 - The v1.3 direction is substantially clearer: one thesis, four bodies of work,
-  one archive model, one impact ledger, and a small footer.
+  one complete archive with a six-year calendar, one impact ledger, and a
+  small footer.
 - Visitors can scan the narrative before deciding whether to inspect all 82
   WorkGroups, their 186 public forms, or the evidence behind a claim.
 - The absence of 3D and cinematic navigation is a product decision, not a
@@ -125,18 +138,21 @@ verification record below.
 1. Deterministic migration check: 184 footprint rows, 85 impact rows, 186
    public forms, 82 WorkGroups, 13 rounded public measures, 198 evidence
    records, and 64 typed relations.
-2. Automated checks: typecheck, lint, 84 content tests, 17 backend tests, 20
+2. Automated checks: typecheck, lint, 137 content tests, 27 backend tests, 20
    rendered acceptance tests, production build, dependency audit, and privacy
    scans.
-3. Responsive audit: Home, Work, a long WorkGroup detail, Sources, Play, About,
+3. Work archive audit: all 82 WorkGroups appear exactly once across four
+   server-rendered body folds; the four-line 2021–2026 calendar exposes exact
+   work/form counts and filters those folds through standard links.
+4. Responsive audit: Home, Work, a long WorkGroup detail, Sources, Play, About,
    and Privacy at 320, 390, 768, 1024, 1440, and 1920px, with no viewport
    crossings.
-4. Interaction audit: keyboard order, visible focus, native disclosures,
-   cancellable Anime.js enhancement, reduced motion, active-stream loading, and
-   the Strava consent boundary.
-5. Mobile Lighthouse against the production Worker build: Performance 95,
+5. Interaction audit: keyboard order, visible focus, native disclosures,
+   calendar filters, cancellable Anime.js enhancement, reduced motion,
+   active-stream loading, and the Strava consent boundary.
+6. Mobile Lighthouse against the production Worker build: Performance 95,
    Accessibility 100, Best Practices 100, SEO 100, and CLS 0.
-6. Final social preview: 1200 × 630 typographic asset inspected against the
+7. Final social preview: 1200 × 630 typographic asset inspected against the
    release palette and information hierarchy.
 
 Release status: **validated for private deployment**.

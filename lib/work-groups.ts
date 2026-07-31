@@ -20,37 +20,6 @@ export type WorkBucket = {
 export const workBuckets: WorkBucket[] = [
   {
     id: "products-open-source",
-    title: "Products / Open Source",
-    shortTitle: "Products",
-    statement:
-      "Interfaces and integrations that make AI systems easier to inspect and operate.",
-  },
-  {
-    id: "courses-learning",
-    title: "Courses / Learning",
-    shortTitle: "Learning",
-    statement:
-      "Curricula and workshops that turn emerging practice into something builders can use.",
-  },
-  {
-    id: "writing-research",
-    title: "Writing / Research",
-    shortTitle: "Writing",
-    statement:
-      "Technical articles and investigations grounded in working implementations.",
-  },
-  {
-    id: "talks-programs",
-    title: "Talks / Programs",
-    shortTitle: "Talks",
-    statement:
-      "Public sessions and field programs that carry the work into communities.",
-  },
-];
-
-const homepageWorkBuckets: WorkBucket[] = [
-  {
-    id: "products-open-source",
     title: "Systems & Open Source",
     shortTitle: "Systems",
     statement:
@@ -171,7 +140,7 @@ export function featuredWorkBucketsFrom(bundle: AnishContentBundle) {
   const groups = publicGroups.length
     ? publicGroups
     : fallbackGroupsFromEntities(bundle);
-  return homepageWorkBuckets.map((bucket) => ({
+  return workBuckets.map((bucket) => ({
     ...bucket,
     groups: groups
       .filter((group) => group.bucket === bucket.id)

@@ -1,4 +1,5 @@
 import type { WorkArchiveRecord } from "@/lib/work-index";
+import { workFacetsForRecord } from "@/lib/work-facets";
 
 export type WorkSearchParams = Record<
   string,
@@ -185,6 +186,7 @@ export function filterWorkArchiveRecords(
 ): WorkArchiveRecord[] {
   const needle = normalized(query.query);
   return records.filter((work) => {
+    const facets = workFacetsForRecord(work);
     const searchMatches =
       !needle ||
       parentSearchText(work).includes(needle) ||
@@ -192,16 +194,29 @@ export function filterWorkArchiveRecords(
     return (
       searchMatches &&
       (!query.bucket || work.bucket === query.bucket) &&
-      (!query.topic || work.topics.includes(query.topic)) &&
+      (!query.topic ||
+        work.topics.includes(query.topic) ||
+        facets.theme.includes(
+          query.topic as (typeof facets.theme)[number],
+        )) &&
       (!query.year ||
         (query.year === "undated"
           ? work.yearStart === null && work.yearEnd === null
           : Number(query.year) >= (work.yearStart ?? Number.MAX_SAFE_INTEGER) &&
             Number(query.year) <= (work.yearEnd ?? Number.MIN_SAFE_INTEGER))) &&
-      (!query.format || work.formats.includes(query.format)) &&
+      (!query.format ||
+        work.formats.includes(query.format) ||
+        facets.media.includes(
+          query.format as (typeof facets.media)[number],
+        )) &&
       (!query.organization ||
-        work.organizationIds.includes(query.organization)) &&
-      (!query.role || work.role === query.role) &&
+        work.organizationIds.includes(query.organization) ||
+        facets.ecosystem.includes(
+          query.organization as (typeof facets.ecosystem)[number],
+        )) &&
+      (!query.role ||
+        work.role === query.role ||
+        facets.contribution === query.role) &&
       (!query.practice || work.practice === query.practice)
     );
   });

@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { StoryTimeMatrix } from "@/components/StoryTimeMatrix";
 import {
   filterWorkArchiveRecords,
-  humanizeWorkFilter,
   legacyMapRedirectPath,
   matchingChildForQuery,
   parseWorkArchiveQuery,
-  workArchiveHref,
   type WorkSearchParams,
 } from "@/lib/work-archive-query";
-import { getPublicContentView } from "@/lib/server/public-content";
-import { workArchiveRecordsFrom } from "@/lib/work-index";
+import {
+  countWorkFacetOptions,
+  ecosystemFacetDefinitions,
+  mediaFacetDefinitions,
+  themeFacetDefinitions,
+  workFacetsForRecord,
+} from "@/lib/work-facets";
 import { workBuckets } from "@/lib/work-groups";
+import { workArchiveRecordsFrom, type WorkArchiveRecord } from "@/lib/work-index";
+import { getPublicContentView } from "@/lib/server/public-content";
 import { WorkFilterBehavior } from "./WorkFilterBehavior";
+import { WorkTimeline } from "./WorkTimeline";
 import styles from "./work.module.css";
 
 export const dynamic = "force-dynamic";
@@ -22,10 +27,13 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Work",
   description:
-    "An index of Anish Shah’s applied AI products, courses, writing, open-source work, talks, and their public forms.",
+    "An index of Anish Shah’s applied AI systems, curricula, technical writing, open-source work, and public sessions.",
 };
 
 const collator = new Intl.Collator("en", { sensitivity: "base" });
+const mediaLabels = new Map(
+  mediaFacetDefinitions.map(({ id, label }) => [id, label]),
+);
 
 export default async function WorkPage({
   searchParams,
@@ -46,51 +54,30 @@ export default async function WorkPage({
       collator.compare(left.title, right.title),
   );
   const filtered = filterWorkArchiveRecords(allWorks, query);
-  const perPage = 24;
-  const pageCount = Math.max(Math.ceil(filtered.length / perPage), 1);
-  const page = Math.min(query.page, pageCount);
-  const pageWorks = filtered.slice((page - 1) * perPage, page * perPage);
-  const organizationNames = new Map(
-    bundle.organizations.map((entry) => [entry.id, entry.name]),
+  const timelineRecords = filterWorkArchiveRecords(allWorks, {
+    ...query,
+    bucket: "",
+    year: "",
+  });
+  const totalForms = allWorks.reduce(
+    (count, work) => count + work.formCount,
+    0,
+  );
+  const filteredForms = filtered.reduce(
+    (count, work) => count + work.formCount,
+    0,
   );
   const options = {
-    buckets: workBuckets,
-    topics: [...new Set(allWorks.flatMap((work) => work.topics))]
-      .filter(Boolean)
-      .sort(collator.compare),
-    years: [
-      ...new Set(
-        allWorks.flatMap((work) => {
-          if (work.yearStart === null && work.yearEnd === null) {
-            return ["undated"];
-          }
-          const start = work.yearStart ?? work.yearEnd!;
-          const end = work.yearEnd ?? work.yearStart!;
-          return Array.from(
-            { length: Math.max(end - start + 1, 1) },
-            (_, index) => String(start + index),
-          );
-        }),
-      ),
-    ].sort(
-      (left, right) =>
-        left === "undated"
-          ? 1
-          : right === "undated"
-            ? -1
-            : Number(right) - Number(left),
-    ),
-    formats: [...new Set(allWorks.flatMap((work) => work.formats))]
-      .filter(Boolean)
-      .sort(collator.compare),
-    organizations: [
-      ...new Set(allWorks.flatMap((work) => work.organizationIds)),
-    ]
-      .map((id) => ({ id, name: organizationNames.get(id) ?? id }))
-      .sort((left, right) => collator.compare(left.name, right.name)),
-    roles: [...new Set(allWorks.map((work) => work.role).filter(Boolean))].sort(
-      collator.compare,
-    ),
+    buckets: workBuckets.map((bucket) => ({
+      value: bucket.id,
+      label: bucket.shortTitle,
+      count: allWorks.filter((work) => work.bucket === bucket.id).length,
+    })),
+    topics: countWorkFacetOptions(allWorks, "theme"),
+    years: availableYears(allWorks),
+    formats: countWorkFacetOptions(allWorks, "media"),
+    organizations: countWorkFacetOptions(allWorks, "ecosystem"),
+    roles: countWorkFacetOptions(allWorks, "contribution"),
   };
   const activeFilterCount = [
     query.bucket,
@@ -103,21 +90,31 @@ export default async function WorkPage({
   const secondaryFilterCount = [query.organization, query.role].filter(
     Boolean,
   ).length;
-  const showStoryTime =
-    !query.query && activeFilterCount === 0 && !query.practice;
+  const hasScopedResults = Boolean(
+    query.query || activeFilterCount || query.practice,
+  );
+  const resultLabel = `${filtered.length} ${
+    filtered.length === 1 ? "body of work" : "bodies of work"
+  } · ${filteredForms} public ${filteredForms === 1 ? "form" : "forms"}`;
+  const explorerHeading = query.query
+    ? `Results for “${query.query}”`
+    : activeFilterCount
+      ? "Filtered work"
+      : "All work, inside four bodies.";
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
       <header className={styles.masthead}>
         <p className={styles.eyebrow}>
-          {allWorks.length} bodies of work · 2021—now
+          {allWorks.length} bodies of work · {totalForms} public forms ·
+          2021—now
         </p>
         <div className={styles.mastheadBody}>
-          <h1>Work, grouped by the story it tells.</h1>
+          <h1>One body of work. Every public form attached.</h1>
           <p>
-            One body of work can surface as a product, course, article, talk,
-            recording, repository, or regional appearance. Those forms remain
-            attached here.
+            Systems, curricula, technical writing, and public sessions are the
+            durable units. Recordings, translations, repositories, and
+            appearances remain nested beneath them.
           </p>
         </div>
       </header>
@@ -137,62 +134,48 @@ export default async function WorkPage({
             />
           </label>
 
-          <details
-            className={styles.filterDisclosure}
-            id="work-filters"
-          >
+          <details className={styles.filterDisclosure} id="work-filters">
             <summary>
               <span>Filters</span>
               <span>
                 {activeFilterCount
                   ? `${activeFilterCount} active`
-                  : "Body, topic, year, format"}
+                  : "Body, theme, year, medium"}
               </span>
             </summary>
             <div className={styles.filterBody}>
               <div className={styles.primaryFilters}>
                 <FilterSelect
+                  allLabel="All bodies"
                   label="Body"
                   name="bucket"
                   value={query.bucket}
-                  options={options.buckets.map((bucket) => ({
-                    value: bucket.id,
-                    label: bucket.shortTitle,
-                  }))}
+                  options={options.buckets}
                 />
                 <FilterSelect
-                  label="Topic"
+                  allLabel="All themes"
+                  label="Theme"
                   name="topic"
                   value={query.topic}
-                  options={options.topics.map((value) => ({
-                    value,
-                    label: humanizeWorkFilter(value),
-                  }))}
+                  options={options.topics}
                 />
                 <FilterSelect
+                  allLabel="All years"
                   label="Year"
                   name="year"
                   value={query.year}
-                  options={options.years.map((value) => ({
-                    value: String(value),
-                    label: value === "undated" ? "Undated" : String(value),
-                  }))}
+                  options={options.years}
                 />
                 <FilterSelect
-                  label="Format"
+                  allLabel="All media"
+                  label="Medium"
                   name="format"
                   value={query.format}
-                  options={options.formats.map((value) => ({
-                    value,
-                    label: humanizeWorkFilter(value),
-                  }))}
+                  options={options.formats}
                 />
               </div>
 
-              <details
-                className={styles.moreFilters}
-                id="work-more-filters"
-              >
+              <details className={styles.moreFilters} id="work-more-filters">
                 <summary>
                   More filters
                   {secondaryFilterCount
@@ -201,22 +184,18 @@ export default async function WorkPage({
                 </summary>
                 <div className={styles.secondaryFilters}>
                   <FilterSelect
-                    label="Organization"
+                    allLabel="All ecosystems"
+                    label="Ecosystem"
                     name="organization"
                     value={query.organization}
-                    options={options.organizations.map(({ id, name }) => ({
-                      value: id,
-                      label: name,
-                    }))}
+                    options={options.organizations}
                   />
                   <FilterSelect
-                    label="Role"
+                    allLabel="All contributions"
+                    label="Contribution"
                     name="role"
                     value={query.role}
-                    options={options.roles.map((value) => ({
-                      value,
-                      label: value,
-                    }))}
+                    options={options.roles}
                   />
                 </div>
               </details>
@@ -235,142 +214,181 @@ export default async function WorkPage({
         </form>
       </section>
 
-      {showStoryTime ? (
-        <StoryTimeMatrix records={allWorks} />
-      ) : null}
+      <WorkTimeline query={query} records={timelineRecords} />
 
       <section
-        className={styles.index}
         aria-labelledby="work-index-title"
+        className={styles.index}
         id="work-index"
       >
         <header className={styles.indexHeader}>
           <div>
-            <p className={styles.resultCount}>
-              {filtered.length}{" "}
-              {filtered.length === 1 ? "body of work" : "bodies of work"}
-            </p>
-            <h2 id="work-index-title">
-              {query.query
-                ? `Results for “${query.query}”`
-                : "Complete grouped index"}
-            </h2>
+            <p className={styles.resultCount}>{resultLabel}</p>
+            <h2 id="work-index-title">{explorerHeading}</h2>
           </div>
-          <span>
-            Page {page} of {pageCount}
-          </span>
+          <p>Open a line to inspect every work and its public forms.</p>
         </header>
 
-        <ol
-          className={styles.workList}
-          start={(page - 1) * perPage + 1}
-        >
-          {pageWorks.map((work) => {
-            const matchingChild = matchingChildForQuery(work, query.query);
+        <div className={styles.bodyIndex}>
+          {workBuckets.map((bucket, bucketIndex) => {
+            const works = filtered.filter(
+              (work) => work.bucket === bucket.id,
+            );
+            if (!works.length && hasScopedResults) return null;
+            const formCount = works.reduce(
+              (count, work) => count + work.formCount,
+              0,
+            );
             return (
-              <li key={work.id}>
-                <Link
-                  className={styles.workRow}
-                  href={`/work/${work.slug}${
-                    matchingChild ? `#${matchingChild.id}` : ""
-                  }`}
-                >
-                  <span className={styles.year}>{work.year ?? "Undated"}</span>
-                  <span className={styles.workTitle}>
-                    <strong>{work.title}</strong>
-                    {matchingChild ? (
-                      <small>
-                        Matched public record: {matchingChild.displayTitle}
-                      </small>
-                    ) : (
-                      <small>
-                        {work.role}
-                        {work.bucket
-                          ? ` · ${
-                              workBuckets.find(
-                                (bucket) => bucket.id === work.bucket,
-                              )?.shortTitle ?? ""
-                            }`
-                          : ""}
-                      </small>
-                    )}
+              <details
+                className={styles.body}
+                data-work-body={bucket.id}
+                key={bucket.id}
+                open={
+                  hasScopedResults ? works.length > 0 : bucketIndex === 0
+                }
+              >
+                <summary>
+                  <div>
+                    <h3>{bucket.title}</h3>
+                    <p>{bucket.statement}</p>
+                  </div>
+                  <span>
+                    {works.length} {works.length === 1 ? "work" : "works"} ·{" "}
+                    {formCount} {formCount === 1 ? "form" : "forms"}
                   </span>
-                  <span className={styles.workMeta}>
-                    {work.formats
-                      .slice(0, 2)
-                      .map(humanizeWorkFilter)
-                      .join(" · ")}
-                    {work.formCount > 1
-                      ? ` · ${work.formCount} nested forms`
-                      : " · 1 public form"}
-                  </span>
-                  <i aria-hidden="true">↗</i>
-                </Link>
-              </li>
+                  <i aria-hidden="true">+</i>
+                </summary>
+                <ol className={styles.workList}>
+                  {works.map((work) => (
+                    <WorkRow
+                      key={work.id}
+                      query={query.query}
+                      work={work}
+                    />
+                  ))}
+                </ol>
+              </details>
             );
           })}
-        </ol>
+        </div>
 
-        {!pageWorks.length ? (
+        {!filtered.length ? (
           <div className={styles.empty}>
             <p>No work matches those filters.</p>
             <Link href="/work">Clear the search</Link>
           </div>
-        ) : null}
-
-        {pageCount > 1 ? (
-          <nav className={styles.pagination} aria-label="Archive pages">
-            {page > 1 ? (
-              <Link href={workArchiveHref(query, { page: page - 1 })}>
-                ← Previous
-              </Link>
-            ) : (
-              <span />
-            )}
-            <span>
-              {(page - 1) * perPage + 1}—
-              {Math.min(page * perPage, filtered.length)} of {filtered.length}
-            </span>
-            {page < pageCount ? (
-              <Link href={workArchiveHref(query, { page: page + 1 })}>
-                Next →
-              </Link>
-            ) : (
-              <span />
-            )}
-          </nav>
         ) : null}
       </section>
     </main>
   );
 }
 
+function WorkRow({
+  query,
+  work,
+}: {
+  query: string;
+  work: WorkArchiveRecord;
+}) {
+  const matchingChild = matchingChildForQuery(work, query);
+  const facets = workFacetsForRecord(work);
+  const medium = facets.media
+    .map((id) => mediaLabels.get(id))
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(" · ");
+
+  return (
+    <li data-work-id={work.id}>
+      <Link
+        className={styles.workRow}
+        href={`/work/${work.slug}${
+          matchingChild ? `#${matchingChild.id}` : ""
+        }`}
+      >
+        <span className={styles.year}>{periodLabel(work)}</span>
+        <span className={styles.workTitle}>
+          <strong>{work.title}</strong>
+          {matchingChild ? (
+            <small>Matched public record: {matchingChild.displayTitle}</small>
+          ) : (
+            <small>{work.role}</small>
+          )}
+        </span>
+        <span className={styles.workMeta}>
+          {medium}
+          {medium ? " · " : ""}
+          {work.formCount} {work.formCount === 1 ? "form" : "forms"}
+        </span>
+        <i aria-hidden="true">↗</i>
+      </Link>
+    </li>
+  );
+}
+
 function FilterSelect({
+  allLabel,
   label,
   name,
   value,
   options,
 }: {
+  allLabel: string;
   label: string;
   name: string;
   value: string;
-  options: Array<{ value: string; label: string }>;
+  options: Array<{ value: string; label: string; count: number }>;
 }) {
   return (
     <label className={styles.select}>
       <span>{label}</span>
       <select defaultValue={value} name={name}>
-        <option value="">
-          {label === "Body"
-            ? "All bodies"
-            : `All ${label.toLocaleLowerCase()}s`}
-        </option>
+        <option value="">{allLabel}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
-            {option.label}
+            {option.label} · {option.count}
           </option>
         ))}
       </select>
     </label>
   );
+}
+
+function availableYears(records: WorkArchiveRecord[]) {
+  const years = [
+    ...new Set(
+      records.flatMap((work) => {
+        const start = work.yearStart ?? work.yearEnd;
+        const end = work.yearEnd ?? work.yearStart;
+        if (start === null || end === null) return [];
+        return Array.from(
+          { length: Math.max(end - start + 1, 1) },
+          (_, index) => start + index,
+        );
+      }),
+    ),
+  ].sort((left, right) => right - left);
+  return years.map((year) => ({
+    value: String(year),
+    label: String(year),
+    count: records.filter((work) => activeInYear(work, year)).length,
+  }));
+}
+
+function activeInYear(work: WorkArchiveRecord, year: number) {
+  const start = work.yearStart ?? work.yearEnd;
+  const end = work.yearEnd ?? work.yearStart;
+  return start !== null && end !== null && year >= start && year <= end;
+}
+
+function periodLabel(work: WorkArchiveRecord) {
+  if (
+    work.yearStart &&
+    work.yearEnd &&
+    work.yearStart !== work.yearEnd
+  ) {
+    return `${work.yearStart}—${String(work.yearEnd).slice(-2)}`;
+  }
+  return String(work.yearEnd ?? work.yearStart ?? "Date unavailable");
 }

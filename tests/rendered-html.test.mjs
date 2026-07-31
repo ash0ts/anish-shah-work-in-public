@@ -163,14 +163,20 @@ test("all public routes expose useful server-rendered content", async () => {
     {
       path: "/work",
       required: [
-        /Work, grouped by the story it tells\./i,
-        /Story × Time/i,
+        /One body of work\. Every public form attached\./i,
+        /Four lines, six years\./i,
+        /All work, inside four bodies\./i,
         /Search work and public forms/i,
         /name="bucket"/i,
         /name="topic"/i,
         /name="year"/i,
         /name="format"/i,
-        /Complete grouped index/i,
+        /name="organization"/i,
+        /name="role"/i,
+        /Systems &amp; Open Source/i,
+        /Curricula &amp; Workshops/i,
+        /Technical Writing &amp; Implementations/i,
+        /Technical Talks &amp; Programs/i,
       ],
     },
     {
@@ -414,7 +420,7 @@ test("the public surface and build contain no removed experience or private prov
   assert((await stat(path.join(DIST_ROOT, "client/favicon.png"))).size > 0);
 });
 
-test("Three.js and canvas navigation are absent from Home and Work", async () => {
+test("Home and Work omit 3D, canvas, and chart-library payloads", async () => {
   const workSource = await readFile(
     path.join(PROJECT_ROOT, "app/work/page.tsx"),
     "utf8",
@@ -423,11 +429,19 @@ test("Three.js and canvas navigation are absent from Home and Work", async () =>
 
   for (const pathname of ["/", "/work"]) {
     const html = await renderHtml(pathname);
-    assert.doesNotMatch(documentMarkup(html), /<canvas\b/i);
+    const markup = documentMarkup(html);
+    assert.doesNotMatch(markup, /<canvas\b/i);
+    assert.doesNotMatch(markup, /<svg\b/i);
     const assets = [
       ...html.matchAll(/<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"/gi),
     ].map((match) => match[1]);
     assert(assets.every((asset) => !/three/i.test(asset)));
+    if (pathname === "/work") {
+      assert(
+        assets.every((asset) => !/observablehq|WorkPlot|plot-/i.test(asset)),
+        "The work calendar must not load a separate charting runtime",
+      );
+    }
   }
 });
 
