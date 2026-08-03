@@ -612,8 +612,20 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
       selector: ".stage",
     },
     {
+      file: "components/play/room-platform/RoomExperienceProvider.module.css",
+      selector: ".announcer",
+    },
+    {
       file: "components/play/room-platform/RoomOverview.module.css",
       selector: ".posterField",
+    },
+    {
+      file: "components/play/room-platform/RoomRuntime.module.css",
+      selector: ".announcer",
+    },
+    {
+      file: "components/play/room-platform/RoomRuntime.module.css",
+      selector: ".posterFallback",
     },
     {
       file: "components/play/room-screens/RoomScreens.module.css",

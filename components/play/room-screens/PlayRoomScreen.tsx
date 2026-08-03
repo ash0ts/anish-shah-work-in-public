@@ -20,7 +20,7 @@ export default function PlayRoomScreen({
   return (
     <main data-room-screen id="main" className={`${styles.page} ${styles.playPage}`} tabIndex={-1}>
       <ScreenNavigation object={object} />
-      <header className={styles.playHeader}>
+      <header className={styles.playHeader} id="play-system-note">
         <p>Steam · Public library snapshot</p>
         <h1>{object.title}</h1>
         <span>Games, recent sessions, and rounded time—organized like files on the family computer.</span>
@@ -28,20 +28,43 @@ export default function PlayRoomScreen({
       <section className={styles.computer} aria-label="Steam collection">
         <div className={styles.computerBezel}>
           <div className={styles.computerBar} aria-hidden="true">
-            <span>MY GAMES</span><i>_ □ ×</i>
+            <span>C:\ASH\MY_GAMES</span><i>_ □ ×</i>
           </div>
-          <MatchCutSurface
-            className={styles.computerDisplay}
-            objectId={object.id}
-            surface={object.matchCutSurface}
-          >
-            <CollectionStream
-              initialQuery={initialQuery}
-              initialState={initialState}
-              provider="steam"
-              routePath="/play/play"
-            />
-          </MatchCutSurface>
+          <div className={styles.desktopWorkspace}>
+            <nav className={styles.desktopShortcuts} aria-label="Desktop Library shortcuts">
+              <a href="#play-system-note">
+                <span aria-hidden="true">?</span>
+                System note
+              </a>
+              <a href="#play-library">
+                <span aria-hidden="true">▦</span>
+                Game library
+              </a>
+            </nav>
+            <MatchCutSurface
+              className={styles.computerDisplay}
+              objectId={object.id}
+              surface={object.matchCutSurface}
+            >
+              <div
+                className={styles.desktopProgram}
+                data-room-collection-presentation="desktop-library"
+                id="play-library"
+              >
+                <CollectionStream
+                  initialQuery={initialQuery}
+                  initialState={initialState}
+                  provider="steam"
+                  routePath="/play/play"
+                />
+              </div>
+            </MatchCutSurface>
+          </div>
+          <div className={styles.computerTaskbar} aria-hidden="true">
+            <b>START</b>
+            <span>MY_GAMES.EXE</span>
+            <i>PUBLIC SNAPSHOT</i>
+          </div>
           <div className={styles.computerBadge} aria-hidden="true">POWER ●</div>
         </div>
         <div className={styles.computerStand} aria-hidden="true"><i /><b /></div>

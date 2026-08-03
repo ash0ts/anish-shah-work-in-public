@@ -6,10 +6,11 @@ const source = (path) =>
   readFile(new URL("../" + path, import.meta.url), "utf8");
 
 test("Collect is a sixth lazy Play stream with a complete semantic fallback", async () => {
-  const [streams, discogs, page] = await Promise.all([
+  const [streams, discogs, page, classic] = await Promise.all([
     source("components/PersonalStreams.tsx"),
     source("components/play/DiscogsStream.tsx"),
     source("app/play/page.tsx"),
+    source("components/play/ClassicPlayExperience.tsx"),
   ]);
 
   const order = ["watch", "read", "listen", "collect", "play", "move"].map(
@@ -28,11 +29,13 @@ test("Collect is a sixth lazy Play stream with a complete semantic fallback", as
   );
   assert.match(discogs, /loadConnector<DiscogsPublicSnapshot>\([\s\S]*?"discogs"/);
   assert.match(discogs, /new URLSearchParams\([\s\S]*?pageSize/);
-  assert.match(page, /six optional public streams/);
   assert.match(page, /streamIdFromValue\(query\.stream\)/);
-  assert.match(page, /initialStream=\{initialStream\}/);
+  assert.match(page, /initialStream=\{streamIdFromValue\(query\.stream\)\}/);
+  assert.match(classic, /six optional public streams/);
+  assert.match(classic, /initialStream=\{initialStream\}/);
   assert.match(streams, /window\.history\.replaceState/);
   assert.match(streams, /url\.searchParams\.set\("stream", stream\)/);
+  assert.match(page, /six bounded public collections/);
 });
 
 test("Discogs uses a ruled shelf and an accessible pressing matrix", async () => {

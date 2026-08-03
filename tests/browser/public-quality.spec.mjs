@@ -207,6 +207,7 @@ test("Spotify rank navigation and consent remain keyboard-first", async ({ page 
 });
 
 test("Discogs remains lazy and the six Play streams use keyboard selection", async ({ page }) => {
+  test.skip(roomMode, "Classic Play owns the tabbed Discogs interaction.");
   const requests = [];
   await installDiscogsFixture(page, requests);
   await page.goto("/play", { waitUntil: "networkidle" });
@@ -272,6 +273,7 @@ test("Play stream deep links survive reload and reject unknown selections", asyn
 });
 
 test("Discogs Pattern and Gallery support filters and pagination", async ({ page }) => {
+  test.skip(roomMode, "Classic Play exercises the shared Discogs presentation with browser fixtures.");
   const requests = [];
   await installDiscogsFixture(page, requests);
   await page.goto("/play", { waitUntil: "networkidle" });
@@ -332,6 +334,7 @@ test("Discogs Pattern and Gallery support filters and pagination", async ({ page
 });
 
 test("Discogs Pattern and Gallery fit 320–1920px viewports", async ({ page }) => {
+  test.skip(roomMode, "Room routes receive server-selected connector state; their layout matrix is covered separately.");
   await installDiscogsFixture(page);
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });

@@ -150,6 +150,7 @@ export function RoomStage({
         className={[styles.stage, hoveredId ? styles.hasHover : "", className]
           .filter(Boolean)
           .join(" ")}
+        data-room-hovered-object={hoveredId ?? undefined}
         data-room-poster-stage
         data-projection="wide-perspective"
       >
@@ -172,6 +173,9 @@ export function RoomStage({
             stencil: false,
           }}
           onCreated={({ camera, gl }) => {
+            gl.domElement.setAttribute("aria-hidden", "true");
+            gl.domElement.setAttribute("role", "presentation");
+            gl.domElement.tabIndex = -1;
             camera.lookAt(0, 1.25, -0.15);
             camera.updateMatrixWorld();
             gl.setClearColor(ROOM_PALETTE.backdrop, 1);

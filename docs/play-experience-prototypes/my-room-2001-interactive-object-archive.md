@@ -2310,7 +2310,8 @@ health event is approved, it may report only a code such as
 
 ## 65. Performance budgets
 
-These are release gates, not estimates:
+These are hard release gates except where a row is explicitly labeled as an
+optimization target:
 
 | Measurement | Maximum or requirement |
 | --- | ---: |
@@ -2319,7 +2320,7 @@ These are release gates, not estimates:
 | Inactive provider/artwork requests | 0 |
 | Base room-platform JS increase | 12 KB gzip |
 | Each screen presentation increment | 30 KB gzip |
-| Deferred Three/R3F room runtime | 225 KB gzip target |
+| Deferred Three/R3F room renderer | 225 KiB gzip optimization target; 325 KiB gzip hard release ceiling |
 | Core room GLB | 1.1 MB |
 | Core texture payload | 512 KB |
 | Total cold room activation | 2 MB compressed |
@@ -2342,6 +2343,26 @@ These are release gates, not estimates:
 
 Do not add BVH for the initial six objects. A small fixed proxy list does not
 justify another dependency.
+
+The 225 KiB value is the original optimization target, not the release-blocking
+limit. The approved implementation plan sets 325 KiB gzip as the hard ceiling.
+The bundle gate resolves `RoomStage.tsx` through Vite's client manifest, follows
+and de-duplicates its complete transitive static-import closure, and includes
+each entry's emitted JavaScript, CSS, and declared assets. It reports that
+absolute closure for diagnosis. The hard ceiling applies to the deferred
+renderer transfer: files already present in the `RoomRuntime.tsx` pre-render
+closure are subtracted because the browser has fetched them before resolving
+the RoomStage dynamic import. This still counts any Three/R3F dependency that
+Vite splits away from the named RoomStage file, so chunk splitting cannot evade
+the gate. Each emitted file is gzipped independently before the transfer sizes
+are summed, matching HTTP delivery more closely than gzipping concatenated
+files.
+
+Manifest `dynamicImports` are separate conditional fetches and are not part of
+the static closure. A future RoomStage-owned dynamic entry requires its own
+explicit activation and bundle gate rather than being hidden inside this one.
+Exceeding 225 KiB is recorded as optimization debt; exceeding 325 KiB blocks a
+release.
 
 ## 66. Context loss and failure behavior
 

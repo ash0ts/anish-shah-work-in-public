@@ -41,6 +41,61 @@ class RoomRuntimeBoundary extends Component<
   }
 }
 
+function RoomPosterFallback({
+  detail,
+  title,
+}: {
+  detail: string;
+  title: string;
+}) {
+  return (
+    <div className={styles.posterFallback} role="status">
+      <picture>
+        <source
+          srcSet="/assets/play/my-room-2001-neutral.ef2efa0dfd41.avif"
+          type="image/avif"
+        />
+        <img
+          alt=""
+          decoding="async"
+          height="900"
+          src="/assets/play/my-room-2001-neutral.9a4abb831261.webp"
+          width="1600"
+        />
+      </picture>
+      <p>
+        <strong>{title}</strong>
+        <span>{detail}</span>
+      </p>
+    </div>
+  );
+}
+
+const CAPABILITY_MESSAGES: Record<string, string> = {
+  checking: "Checking this device for the interactive room.",
+  "coarse-pointer": "The still room is easier to use with this pointer.",
+  "document-hidden": "The still room paused while this page was in the background.",
+  "forced-colors": "The still room respects this high-contrast display mode.",
+  "narrow-viewport": "The still room is composed for this screen size.",
+  "reduced-motion": "The still room respects reduced-motion preferences.",
+  "save-data": "The still room avoids the 3D download while Save-Data is on.",
+  "webgl2-unavailable": "The still room is available without WebGL.",
+  zoomed: "The still room remains readable at this zoom level.",
+};
+
+function capabilityDetail(capability: RoomCapabilityResult | null) {
+  if (!capability || capability.reasons.length === 0) {
+    return "Every collection remains available through the object directory.";
+  }
+  return capability.reasons
+    .map(
+      (reason) =>
+        CAPABILITY_MESSAGES[reason] ??
+        "Every collection remains available through the object directory.",
+    )
+    .join(" ");
+}
+
 export function RoomRuntime() {
   const room = useRoomExperience();
   const notifyRuntimeMounted = room.notifyRuntimeMounted;
@@ -120,45 +175,46 @@ export function RoomRuntime() {
         </button>
       </div>
 
-      <Room3DGate
-        fallback={
-          <div className={styles.fallback} role="status">
-            <strong>The room is staying still on this device.</strong>
-            <p>
-              Use the six labeled objects below. Every collection remains
-              available without WebGL or motion.
-            </p>
-            {capability?.reasons.length ? (
-              <small>{capability.reasons.join(" · ")}</small>
-            ) : null}
-          </div>
-        }
-        onCapabilityChange={capabilityChanged}
-      >
-        <RoomRuntimeBoundary
-          onFailure={() => room.setFallback("room-runtime-failed")}
-        >
-          <Suspense
-            fallback={
-              <div className={styles.fallback} role="status">
-                <strong>Setting out the room…</strong>
-                <p>The object directory is already available.</p>
-              </div>
-            }
-          >
-            <LazyRoomStage
-              focusedId={room.focusedId}
-              onContextLoss={() => room.setFallback("webgl-context-lost")}
-              onHoverChange={room.focusObject}
-              onReady={() => setReady(true)}
-              onRotationChange={room.rotate}
-              onSelect={room.selectObject}
-              rotation={room.rotation}
-              selectedId={room.selectedId}
+      <div className={styles.stageSlot} data-room-stage-shell>
+        <Room3DGate
+          fallback={
+            <RoomPosterFallback
+              detail={capabilityDetail(capability)}
+              title="The room is staying still on this device."
             />
-          </Suspense>
-        </RoomRuntimeBoundary>
-      </Room3DGate>
+          }
+          onCapabilityChange={capabilityChanged}
+        >
+          <RoomRuntimeBoundary
+            onFailure={() => room.setFallback("room-runtime-failed")}
+          >
+            <Suspense fallback={null}>
+              <LazyRoomStage
+                focusedId={room.focusedId}
+                onContextLoss={() => room.setFallback("webgl-context-lost")}
+                onHoverChange={room.focusObject}
+                onReady={() => setReady(true)}
+                onRotationChange={room.rotate}
+                onSelect={room.selectObject}
+                rotation={room.rotation}
+                selectedId={room.selectedId}
+              />
+            </Suspense>
+            {!ready ? (
+              <RoomPosterFallback
+                detail="The semantic object directory is already available."
+                title="Setting out the room…"
+              />
+            ) : null}
+          </RoomRuntimeBoundary>
+        </Room3DGate>
+        {room.focusedId ? (
+          <p aria-hidden="true" className={styles.objectCue} data-room-object-cue>
+            <span>{ROOM_OBJECTS.find(({ id }) => id === room.focusedId)?.object}</span>
+            <strong>{ROOM_OBJECTS.find(({ id }) => id === room.focusedId)?.label}</strong>
+          </p>
+        ) : null}
+      </div>
 
       <div className={styles.controls} aria-label="Room view controls" role="group">
         <button
@@ -204,6 +260,7 @@ export function RoomRuntime() {
             <li key={object.id}>
               <button
                 aria-pressed={room.selectedId === object.id}
+                data-focused={room.focusedId === object.id || undefined}
                 data-room-object-control={object.id}
                 data-room-object-link={object.id}
                 onClick={() => room.selectObject(object.id)}

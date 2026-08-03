@@ -2,7 +2,10 @@ import { useThree } from "@react-three/fiber";
 import { type Mesh, MathUtils } from "three";
 import { useCallback, useRef, useState } from "react";
 
-import type { RoomObjectId } from "../room-platform/room-types";
+import {
+  ROOM_OBJECT_IDS,
+  type RoomObjectId,
+} from "../room-platform/room-types";
 import { RoomApproachRig } from "./RoomApproachRig";
 import { RoomInteractionController } from "./RoomInteractionController";
 import {
@@ -17,6 +20,18 @@ import {
 import type { RoomRotation } from "./room-math";
 import type { RoomApproachPoseId } from "./room-approach";
 import { ROOM_PALETTE } from "./room-palette";
+
+const ROOM_SCENE_OBJECT_BY_ID = {
+  watch: WatchTelevision,
+  read: ReadingShelf,
+  listen: PocketPlayer,
+  collect: RecordCrate,
+  play: BeigeComputer,
+  move: CardioTelevision,
+} as const satisfies Record<
+  RoomObjectId,
+  typeof WatchTelevision
+>;
 
 export type RoomSceneProps = {
   approachPoseId: RoomApproachPoseId | null;
@@ -78,30 +93,16 @@ export function RoomScene({
           ]}
         >
           <RoomShell />
-          <WatchTelevision
-            active={isActive("watch")}
-            registerHitTarget={registerHitTarget}
-          />
-          <ReadingShelf
-            active={isActive("read")}
-            registerHitTarget={registerHitTarget}
-          />
-          <PocketPlayer
-            active={isActive("listen")}
-            registerHitTarget={registerHitTarget}
-          />
-          <RecordCrate
-            active={isActive("collect")}
-            registerHitTarget={registerHitTarget}
-          />
-          <BeigeComputer
-            active={isActive("play")}
-            registerHitTarget={registerHitTarget}
-          />
-          <CardioTelevision
-            active={isActive("move")}
-            registerHitTarget={registerHitTarget}
-          />
+          {ROOM_OBJECT_IDS.map((id) => {
+            const SceneObject = ROOM_SCENE_OBJECT_BY_ID[id];
+            return (
+              <SceneObject
+                active={isActive(id)}
+                key={id}
+                registerHitTarget={registerHitTarget}
+              />
+            );
+          })}
           <RoomInteractionController
             disabled={selectedId !== null}
             hitTargets={hitTargets}

@@ -2,6 +2,13 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
+import { gzipSync } from "node:zlib";
+
+import {
+  collectViteStaticDependencyClosure,
+  findViteManifestEntryBySource,
+  subtractManifestFiles,
+} from "../scripts/lib/vite-manifest-closure.mjs";
 
 import {
   evaluateRoomCapability,
@@ -33,6 +40,8 @@ const capableEnvironment = {
   documentVisible: true,
   webgl2Available: true,
 };
+const ROOM_RENDERER_GZIP_OPTIMIZATION_TARGET_BYTES = 225 * 1024;
+const ROOM_RENDERER_GZIP_HARD_CEILING_BYTES = 325 * 1024;
 
 test("room capability fails closed for every ineligible environment", () => {
   assert.deepEqual(evaluateRoomCapability(capableEnvironment), {
@@ -153,13 +162,22 @@ test("the static room poster is first-party, content-hashed, and bounded", async
     "my-room-2001-neutral.ef2efa0dfd41.avif",
     "my-room-2001-neutral.9a4abb831261.webp",
   ];
-  const overview = await readFile(
-    new URL(
-      "../components/play/room-platform/RoomOverview.tsx",
-      import.meta.url,
+  const [overview, runtime] = await Promise.all([
+    readFile(
+      new URL(
+        "../components/play/room-platform/RoomOverview.tsx",
+        import.meta.url,
+      ),
+      "utf8",
     ),
-    "utf8",
-  );
+    readFile(
+      new URL(
+        "../components/play/room-platform/RoomRuntime.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ]);
 
   for (const filename of posterFiles) {
     const url = new URL(`../public/assets/play/${filename}`, import.meta.url);
@@ -168,11 +186,104 @@ test("the static room poster is first-party, content-hashed, and bounded", async
     assert.match(filename, new RegExp(`\\.${digest}\\.`));
     assert.ok(metadata.size <= 200_000);
     assert.match(overview, new RegExp(filename.replaceAll(".", "\\.")));
+    assert.match(runtime, new RegExp(filename.replaceAll(".", "\\.")));
   }
 
   assert.match(overview, /<picture>/);
   assert.match(overview, /alt=""/);
   assert.doesNotMatch(overview, /https?:\/\//);
+});
+
+test("Vite manifest closure traversal includes transitive static files once", () => {
+  const manifest = {
+    "src/RoomStage.tsx": {
+      file: "assets/RoomStage.js",
+      src: "src/RoomStage.tsx",
+      imports: ["_three.js", "_shared.js"],
+      dynamicImports: ["src/OptionalInspector.tsx"],
+      css: ["assets/RoomStage.css"],
+    },
+    "_three.js": {
+      file: "assets/three.js",
+      imports: ["_shared.js"],
+    },
+    "_shared.js": {
+      file: "assets/shared.js",
+      assets: ["assets/shared.bin"],
+    },
+    "src/OptionalInspector.tsx": {
+      file: "assets/OptionalInspector.js",
+    },
+  };
+  const entryKey = findViteManifestEntryBySource(
+    manifest,
+    "src/RoomStage.tsx",
+  );
+  const closure = collectViteStaticDependencyClosure(manifest, entryKey);
+
+  assert.deepEqual([...closure.entryKeys].sort(), [
+    "_shared.js",
+    "_three.js",
+    "src/RoomStage.tsx",
+  ]);
+  assert.deepEqual([...closure.files].sort(), [
+    "assets/RoomStage.css",
+    "assets/RoomStage.js",
+    "assets/shared.bin",
+    "assets/shared.js",
+    "assets/three.js",
+  ]);
+  assert.deepEqual(
+    [...subtractManifestFiles(closure.files, new Set(["assets/shared.js"]))]
+      .sort(),
+    [
+      "assets/RoomStage.css",
+      "assets/RoomStage.js",
+      "assets/shared.bin",
+      "assets/three.js",
+    ],
+  );
+});
+
+test("the deferred room renderer reports its target and stays below its hard ceiling", async () => {
+  const client = new URL("../dist/client/", import.meta.url);
+  const manifest = JSON.parse(
+    await readFile(new URL(".vite/manifest.json", client), "utf8"),
+  );
+  const stageKey = findViteManifestEntryBySource(
+    manifest,
+    "components/play/room-3d/RoomStage.tsx",
+  );
+  const runtimeKey = findViteManifestEntryBySource(
+    manifest,
+    "components/play/room-platform/RoomRuntime.tsx",
+  );
+  const stageClosure = collectViteStaticDependencyClosure(manifest, stageKey);
+  const runtimeClosure = collectViteStaticDependencyClosure(
+    manifest,
+    runtimeKey,
+  );
+  const deferredFiles = subtractManifestFiles(
+    stageClosure.files,
+    runtimeClosure.files,
+  );
+
+  assert.ok(stageClosure.entryKeys.size > 1);
+  assert.ok(stageClosure.files.size > 1);
+  assert.ok(deferredFiles.has(manifest[stageKey].file));
+
+  let gzipBytes = 0;
+  for (const outputFile of deferredFiles) {
+    gzipBytes += gzipSync(await readFile(new URL(outputFile, client))).byteLength;
+  }
+  assert.ok(
+    ROOM_RENDERER_GZIP_OPTIMIZATION_TARGET_BYTES <
+      ROOM_RENDERER_GZIP_HARD_CEILING_BYTES,
+  );
+  assert.ok(
+    gzipBytes <= ROOM_RENDERER_GZIP_HARD_CEILING_BYTES,
+    `Deferred RoomStage manifest closure is ${gzipBytes} gzip bytes (optimization target ${ROOM_RENDERER_GZIP_OPTIMIZATION_TARGET_BYTES}; hard ceiling ${ROOM_RENDERER_GZIP_HARD_CEILING_BYTES})`,
+  );
 });
 
 test("procedural scene stays inside reviewed draw and material budgets", async () => {

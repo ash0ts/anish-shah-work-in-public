@@ -394,6 +394,10 @@ test("Work source renders four body folds and a semantic server-rendered color c
     source,
     /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot|const perPage|pagination/i,
   );
+  assert.doesNotMatch(
+    source,
+    /from\s+["'](?:three|@react-three\/)|import\(["'](?:three|@react-three\/)/,
+  );
   for (const name of [
     "bucket",
     "topic",
@@ -426,7 +430,6 @@ test("Work source renders four body folds and a semantic server-rendered color c
   assert.match(timeline, /Math\.ceil\(Math\.sqrt\(count \/ maximum\) \* 5\)/);
   assert.doesNotMatch(timeline, /@observablehq|canvas|three|webgl/i);
   assert.equal(packageJson.dependencies["@observablehq/plot"], undefined);
-  assert.equal(packageJson.dependencies.three, undefined);
 
   assert.doesNotMatch(
     source,

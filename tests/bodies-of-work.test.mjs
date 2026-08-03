@@ -185,6 +185,10 @@ test("Work pairs its four-body SSR index with a semantic body-by-year color cale
     workPageSource,
     /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot|pagination/i,
   );
+  assert.doesNotMatch(
+    workPageSource,
+    /from\s+["'](?:three|@react-three\/)|import\(["'](?:three|@react-three\/)/,
+  );
 
   assert.match(
     timelineSource,
@@ -220,7 +224,6 @@ test("Work pairs its four-body SSR index with a semantic body-by-year color cale
     false,
   );
   assert.equal(packageJson.dependencies["@observablehq/plot"], undefined);
-  assert.equal(packageJson.dependencies.three, undefined);
 });
 
 test("the superseded chapter-stack and Three.js implementation is gone", () => {

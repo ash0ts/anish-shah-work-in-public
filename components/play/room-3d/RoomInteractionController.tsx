@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import type { RoomObjectId } from "../room-platform/room-types";
+import { isRoomObjectId } from "../room-platform/room-registry";
 import { ROOM_BASIC_MATERIALS } from "./room-materials";
 import {
   crossedRoomDragThreshold,
@@ -46,17 +47,6 @@ type RoomInteractionControllerProps = {
   onSelect: (id: RoomObjectId) => void;
   rotation: RoomRotation;
 };
-
-function isRoomObjectId(value: unknown): value is RoomObjectId {
-  return (
-    value === "watch" ||
-    value === "read" ||
-    value === "listen" ||
-    value === "collect" ||
-    value === "play" ||
-    value === "move"
-  );
-}
 
 function resolveObjectFromRay(
   ray: Ray,
@@ -199,6 +189,7 @@ export function RoomInteractionController({
     }
 
     event.stopPropagation();
+    event.nativeEvent.preventDefault();
 
     if (intent.current.kind !== "idle") {
       cancelGesture(true);

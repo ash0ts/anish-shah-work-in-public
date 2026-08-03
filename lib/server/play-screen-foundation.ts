@@ -17,54 +17,17 @@ import {
   getSpotifyPublicFallback,
 } from "./connectors";
 import { projectConnectorSnapshotForPublic } from "./connectors/public-gallery";
+import {
+  collectionQueryFrom,
+  collectionQueryFromGallery,
+  discogsQueryFrom,
+  discogsQueryFromGallery,
+  type PlayRouteSearchParams,
+} from "./play-query";
 import { getStravaPublicConfig } from "./strava-config";
 
-export type PlayRouteSearchParams = Record<
-  string,
-  string | string[] | undefined
->;
-
-const PAGE_SIZES = new Set([12, 24, 36]);
-
-function firstValue(value: string | string[] | undefined): string {
-  return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
-}
-
-function positiveInteger(value: string, fallback: number): number {
-  const parsed = Number.parseInt(value, 10);
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-export function collectionQueryFrom(
-  values: PlayRouteSearchParams,
-): CollectionQueryState {
-  const pageSizeCandidate = positiveInteger(firstValue(values.pageSize), 12);
-  return {
-    query: firstValue(values.q).trim().slice(0, 80),
-    filter: firstValue(values.filter),
-    sort: firstValue(values.sort),
-    page: positiveInteger(firstValue(values.page), 1),
-    pageSize: PAGE_SIZES.has(pageSizeCandidate)
-      ? (pageSizeCandidate as 12 | 24 | 36)
-      : 12,
-  };
-}
-
-export function discogsQueryFrom(
-  values: PlayRouteSearchParams,
-): DiscogsQueryState {
-  const pageSizeCandidate = positiveInteger(firstValue(values.pageSize), 12);
-  return {
-    query: firstValue(values.q).trim().slice(0, 80),
-    format: firstValue(values.format),
-    decade: firstValue(values.decade),
-    sort: firstValue(values.sort),
-    page: positiveInteger(firstValue(values.page), 1),
-    pageSize: PAGE_SIZES.has(pageSizeCandidate)
-      ? (pageSizeCandidate as 12 | 24 | 36)
-      : 12,
-  };
-}
+export type { PlayRouteSearchParams } from "./play-query";
+export { collectionQueryFrom, discogsQueryFrom } from "./play-query";
 
 function collectionSearch(query: CollectionQueryState): URLSearchParams {
   const parameters = new URLSearchParams({
@@ -96,7 +59,7 @@ export async function getCollectionScreenFoundation(
   state: ConnectorState<CollectionPayload>;
   query: CollectionQueryState;
 }> {
-  const query = collectionQueryFrom(values);
+  const query = collectionQueryFrom(values, provider);
   const snapshot = await getPublicConnectorSnapshot(provider);
   if (snapshot.status !== "ready") {
     return {
@@ -108,15 +71,20 @@ export async function getCollectionScreenFoundation(
     };
   }
 
+  const payload = projectConnectorSnapshotForPublic(
+    provider,
+    snapshot.payload,
+    collectionSearch(query),
+  ) as CollectionPayload;
+  const gallery = payload.gallery;
+
   return {
-    query,
+    query: gallery
+      ? collectionQueryFromGallery(gallery, provider)
+      : collectionQueryFrom({}, provider),
     state: {
       status: "ready",
-      payload: projectConnectorSnapshotForPublic(
-        provider,
-        snapshot.payload,
-        collectionSearch(query),
-      ) as CollectionPayload,
+      payload,
       fetchedAt: snapshot.fetchedAt,
       stale: snapshot.stale,
     },
@@ -141,15 +109,17 @@ export async function getDiscogsScreenFoundation(
     };
   }
 
+  const payload = projectConnectorSnapshotForPublic(
+    "discogs",
+    snapshot.payload,
+    discogsSearch(query),
+  ) as DiscogsPublicSnapshot;
+
   return {
-    query,
+    query: discogsQueryFromGallery(payload.gallery),
     state: {
       status: "ready",
-      payload: projectConnectorSnapshotForPublic(
-        "discogs",
-        snapshot.payload,
-        discogsSearch(query),
-      ) as DiscogsPublicSnapshot,
+      payload,
       fetchedAt: snapshot.fetchedAt,
       stale: snapshot.stale,
     },

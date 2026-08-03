@@ -3,6 +3,7 @@
 import { animate } from "animejs";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Component,
   createContext,
   lazy,
   type ReactNode,
@@ -55,6 +56,66 @@ const LazyRoomRuntime = lazy(() =>
 
 let sessionRoomFailure: string | null = null;
 
+class LazyRoomBoundary extends Component<
+  { children: ReactNode; onFailure: () => void },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch() {
+    this.props.onFailure();
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+function LazyRoomFallback({ onLeave }: { onLeave: () => void }) {
+  const leaveRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      leaveRef.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  return (
+    <section
+      aria-label="Interactive room"
+      aria-modal="true"
+      className={styles.runtimeLoading}
+      data-room-runtime-loading
+      role="dialog"
+    >
+      <picture>
+        <source
+          srcSet="/assets/play/my-room-2001-neutral.ef2efa0dfd41.avif"
+          type="image/avif"
+        />
+        <img
+          alt=""
+          decoding="async"
+          height="900"
+          src="/assets/play/my-room-2001-neutral.9a4abb831261.webp"
+          width="1600"
+        />
+      </picture>
+      <div>
+        <p role="status">Opening the room…</p>
+        <button onClick={onLeave} ref={leaveRef} type="button">
+          Leave room
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function routeObject(pathname: string): RoomObjectId | null {
   const match = /^\/play\/([^/]+)\/?$/.exec(pathname);
   return match && isRoomObjectId(match[1]) ? match[1] : null;
@@ -101,6 +162,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
   const activeObjectRouteOrigin = useRef<ObjectRouteOrigin | null>(null);
   const previousRouteObject = useRef<RoomObjectId | null>(routeObject(pathname));
   const focusRequestEpoch = useRef(0);
+  const focusRequestCleanup = useRef<() => void>(() => undefined);
   const announcementEpoch = useRef(0);
   const roomEntered = useRef(state.entered);
 
@@ -112,24 +174,66 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const focusAfterPaint = useCallback((selectors: string | string[]) => {
+    focusRequestCleanup.current();
     const requestEpoch = ++focusRequestEpoch.current;
     const candidates = Array.isArray(selectors) ? selectors : [selectors];
     let attempts = 0;
+    let stableFrames = 0;
+    let frame: number | null = null;
+    let cancelled = false;
+
+    const cleanup = () => {
+      if (cancelled) return;
+      cancelled = true;
+      if (frame !== null) cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", cancelForUserInput, true);
+      window.removeEventListener("pointerdown", cancelForUserInput, true);
+      if (focusRequestCleanup.current === cleanup) {
+        focusRequestCleanup.current = () => undefined;
+      }
+    };
+
+    const cancelForUserInput = () => cleanup();
+    focusRequestCleanup.current = cleanup;
+    window.addEventListener("keydown", cancelForUserInput, true);
+    window.addEventListener("pointerdown", cancelForUserInput, true);
 
     const focusAvailableTarget = () => {
-      if (requestEpoch !== focusRequestEpoch.current) return;
+      frame = null;
+      if (cancelled || requestEpoch !== focusRequestEpoch.current) {
+        cleanup();
+        return;
+      }
       for (const selector of candidates) {
         const element = document.querySelector<HTMLElement>(selector);
         if (!element || element.closest("[inert]")) continue;
-        element.focus({ preventScroll: true });
+        if (document.activeElement !== element) {
+          element.focus({ preventScroll: true });
+        }
+        stableFrames = document.activeElement === element ? stableFrames + 1 : 0;
+        attempts += 1;
+        if (stableFrames < 12 && attempts < 180) {
+          frame = requestAnimationFrame(focusAvailableTarget);
+        } else {
+          cleanup();
+        }
         return;
       }
+      stableFrames = 0;
       attempts += 1;
-      if (attempts < 12) requestAnimationFrame(focusAvailableTarget);
+      if (attempts < 180) frame = requestAnimationFrame(focusAvailableTarget);
+      else cleanup();
     };
 
-    requestAnimationFrame(focusAvailableTarget);
+    frame = requestAnimationFrame(focusAvailableTarget);
   }, []);
+
+  useEffect(
+    () => () => {
+      focusRequestCleanup.current();
+    },
+    [],
+  );
 
   useEffect(() => {
     if (sessionRoomFailure) {
@@ -144,6 +248,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
   const resetTransitionVisuals = useCallback(() => {
     for (const selector of [
       "[data-room-runtime]",
+      "[data-room-stage-shell]",
       "[data-room-screen]",
       "[data-room-object-control]",
     ]) {
@@ -198,7 +303,6 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     finishTransitionVisuals();
     const activeRouteObject = routeObject(pathname);
     const priorRouteObject = previousRouteObject.current;
-    const priorRouteOrigin = activeObjectRouteOrigin.current;
     previousRouteObject.current = activeRouteObject;
     dispatch({ type: "route", id: activeRouteObject });
 
@@ -214,7 +318,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       pendingRoomNavigation.current = null;
       const object = ROOM_OBJECT_BY_ID[activeRouteObject];
       announce(`Opened ${object.label}: ${object.title}.`);
-      if (enteredFromRoom) focusAfterPaint("[data-room-screen]");
+      if (enteredFromRoom) focusAfterPaint("[data-room-screen-entry-focus]");
       return;
     }
 
@@ -226,7 +330,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       const object = ROOM_OBJECT_BY_ID[target];
       announce(`Returned to the room. ${object.label} is selected.`);
       focusAfterPaint(
-        priorRouteOrigin === "room"
+        roomEntered.current
           ? [
               `[data-room-object-control="${target}"]`,
               `[data-room-overview] [data-room-object-link="${target}"]`,
@@ -301,13 +405,13 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const runtime = document.querySelector<HTMLElement>(
-        "[data-room-runtime]",
+      const transitionSurface = document.querySelector<HTMLElement>(
+        "[data-room-stage-shell]",
       );
       const control = document.querySelector<HTMLElement>(
         `[data-room-object-control="${id}"]`,
       );
-      if (!runtime) {
+      if (!transitionSurface) {
         navigate();
         return;
       }
@@ -316,7 +420,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
         if (epoch !== transitionEpoch.current) return;
         dispatch({ type: "phase", phase: "navigating", epoch });
         trackAnimation(
-          animate(runtime, {
+          animate(transitionSurface, {
             opacity: [0.94, 0],
             scale: [1.012, 1.025],
             duration: 180,
@@ -329,7 +433,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
         if (epoch !== transitionEpoch.current) return;
         dispatch({ type: "phase", phase: "approaching", epoch });
         trackAnimation(
-          animate(runtime, {
+          animate(transitionSurface, {
             opacity: [1, 0.94],
             scale: [1, 1.012],
             duration: 260,
@@ -340,7 +444,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       };
 
       trackAnimation(
-        animate(control ?? runtime, {
+        animate(control ?? transitionSurface, {
           scale: control ? [1, 1.035, 1] : [1, 1.004, 1],
           duration: 140,
           ease: "out(3)",
@@ -408,8 +512,12 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       announce(
         "The interactive room is unavailable. The six collection links remain available.",
       );
+      const target = lastInvoker.current ?? state.focusedId ?? "watch";
+      focusAfterPaint(
+        `[data-room-overview] [data-room-object-link="${target}"]`,
+      );
     },
-    [announce, cancelTransition],
+    [announce, cancelTransition, focusAfterPaint, state.focusedId],
   );
 
   const notifyRuntimeMounted = useCallback(() => {
@@ -489,9 +597,13 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
         {statusMessage}
       </p>
       {state.entered ? (
-        <Suspense fallback={null}>
-          <LazyRoomRuntime />
-        </Suspense>
+        <LazyRoomBoundary
+          onFailure={() => setFallback("room-runtime-chunk-failed")}
+        >
+          <Suspense fallback={<LazyRoomFallback onLeave={exitRoom} />}>
+            <LazyRoomRuntime />
+          </Suspense>
+        </LazyRoomBoundary>
       ) : null}
       {children}
     </RoomExperienceContext.Provider>

@@ -116,8 +116,8 @@ export const ROOM_FOCUS_TARGET_BY_ID = {
     `[data-room-object-link="${RoomObjectId}"]`
   >;
 
-export function isRoomObjectId(value: string): value is RoomObjectId {
-  return Object.hasOwn(ROOM_OBJECT_BY_ID, value);
+export function isRoomObjectId(value: unknown): value is RoomObjectId {
+  return typeof value === "string" && Object.hasOwn(ROOM_OBJECT_BY_ID, value);
 }
 
 export function roomObject(value: string): RoomObjectDefinition | null {

@@ -104,6 +104,94 @@
   font-size: 0.68rem;
 }
 
+.stageSlot {
+  position: relative;
+  min-width: 0;
+  min-height: min(58rem, 65svh);
+}
+
+.stageSlot > .posterFallback {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+}
+
+.posterFallback {
+  position: relative;
+  min-width: 0;
+  min-height: min(58rem, 65svh);
+  overflow: clip;
+  border: 1px solid #17223b;
+  background: #ddd6e5;
+}
+
+.posterFallback picture,
+.posterFallback img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.posterFallback picture {
+  position: absolute;
+  inset: 0;
+}
+
+.posterFallback img {
+  object-fit: cover;
+  object-position: center;
+}
+
+.posterFallback p {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  display: grid;
+  max-width: min(28rem, calc(100% - 1.5rem));
+  gap: 0.2rem;
+  padding: 0.65rem 0.75rem;
+  margin: 0;
+  border: 1px solid #17223b;
+  background: rgb(244 247 248 / 92%);
+}
+
+.posterFallback strong {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 2vw, 1.55rem);
+}
+
+.posterFallback span {
+  font-size: 0.8rem;
+}
+
+.objectCue {
+  position: absolute;
+  z-index: 4;
+  top: 0.75rem;
+  left: 0.75rem;
+  display: grid;
+  min-width: min(15rem, calc(100% - 1.5rem));
+  gap: 0.1rem;
+  padding: 0.55rem 0.7rem;
+  margin: 0;
+  border: 1px solid #17223b;
+  color: #17223b;
+  background: rgb(244 247 248 / 94%);
+  pointer-events: none;
+}
+
+.objectCue span {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.objectCue strong {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
 .controls {
   display: flex;
   min-width: 0;
@@ -129,6 +217,7 @@
 .controls button:focus-visible,
 .objects button:hover,
 .objects button:focus-visible,
+.objects button[data-focused="true"],
 .objects button[aria-pressed="true"] {
   color: #fff;
   background: #295dff;
@@ -199,8 +288,15 @@
 
 @media (forced-colors: active) {
   .runtime,
-  .fallback {
+  .fallback,
+  .posterFallback,
+  .posterFallback p,
+  .objectCue {
     color: CanvasText;
     background: Canvas;
+  }
+
+  .posterFallback picture {
+    display: none;
   }
 }

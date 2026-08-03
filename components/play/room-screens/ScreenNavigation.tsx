@@ -14,6 +14,7 @@ export function ScreenNavigation({
   return (
     <nav className={styles.screenNavigation} aria-label="Room navigation">
       <Link
+        data-room-screen-entry-focus
         data-room-return
         href="/play"
         onClick={(event) => {

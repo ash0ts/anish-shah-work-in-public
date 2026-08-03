@@ -3,6 +3,12 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const { isPlayPath } = await import("../worker/security-headers.ts");
+const {
+  collectionQueryFrom,
+  collectionQueryFromGallery,
+  discogsQueryFrom,
+  discogsQueryFromGallery,
+} = await import("../lib/server/play-query.ts");
 
 const source = async (path) =>
   readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -50,7 +56,7 @@ test("the room registry is closed, unique, and maps six routes to six providers"
   assert.match(registry, /satisfies RoomObjectRegistry/);
   assert.match(registry, /satisfies RoomFocusTargetRegistry/);
   assert.match(registry, /Record<RoomObjectId, RoomObjectDefinition>/);
-  assert.match(registry, /isRoomObjectId\(value: string\)/);
+  assert.match(registry, /isRoomObjectId\(value: unknown\)/);
   assert.match(registry, /Object\.hasOwn\(ROOM_OBJECT_BY_ID, value\)/);
   assert.match(registry, /return isRoomObjectId\(value\) \? ROOM_OBJECT_BY_ID\[value\] : null/);
   assert.doesNotMatch(registry, /Object\.fromEntries|as Record|includes\(value as/);
@@ -139,12 +145,134 @@ test("classic is the fail-safe Play mode", async () => {
   assert.match(mode, /runtimeValue\("PLAY_EXPERIENCE_MODE"\)/);
 });
 
-test("direct collection parameters are bounded before projection", async () => {
-  const foundation = await source("lib/server/play-screen-foundation.ts");
-  assert.match(foundation, /PAGE_SIZES = new Set\(\[12, 24, 36\]\)/);
-  assert.match(foundation, /firstValue\(values\.q\)\.trim\(\)\.slice\(0, 80\)/);
-  assert.match(foundation, /positiveInteger\(firstValue\(values\.page\), 1\)/);
-  assert.match(foundation, /projectConnectorSnapshotForPublic/);
+test("direct collection parameters are bounded and provider-allowlisted", () => {
+  assert.deepEqual(
+    collectionQueryFrom(
+      {
+        q: `  ${"x".repeat(100)}  `,
+        filter: "Watching-Now",
+        sort: "score",
+        page: "42",
+        pageSize: "24",
+      },
+      "myanimelist",
+    ),
+    {
+      query: "x".repeat(80),
+      filter: "watching-now",
+      sort: "score",
+      page: 42,
+      pageSize: 24,
+    },
+  );
+
+  assert.deepEqual(
+    collectionQueryFrom(
+      {
+        q: "unsafe\u0000query",
+        filter: "../../private",
+        sort: "score",
+        page: "999999999999999999999",
+        pageSize: "24items",
+      },
+      "hardcover",
+    ),
+    {
+      query: "",
+      filter: "",
+      sort: "",
+      page: 1,
+      pageSize: 12,
+    },
+  );
+
+  assert.equal(
+    collectionQueryFrom({ sort: "playtime" }, "steam").sort,
+    "playtime",
+  );
+  assert.equal(
+    collectionQueryFrom({ sort: "playtime" }, "myanimelist").sort,
+    "",
+  );
+});
+
+test("Discogs parameters reject unknown sorts and unsafe dynamic tokens", () => {
+  assert.deepEqual(
+    discogsQueryFrom({
+      q: "  Blue Logic  ",
+      format: "Vinyl",
+      decade: "1990s",
+      sort: "year",
+      page: "2",
+      pageSize: "36",
+    }),
+    {
+      query: "Blue Logic",
+      format: "vinyl",
+      decade: "1990s",
+      sort: "year",
+      page: 2,
+      pageSize: 36,
+    },
+  );
+
+  assert.deepEqual(
+    discogsQueryFrom({
+      format: "vinyl<script>",
+      decade: "1990s/../../",
+      sort: "recent",
+      page: "2oops",
+      pageSize: "0",
+    }),
+    {
+      query: "",
+      format: "",
+      decade: "",
+      sort: "",
+      page: 1,
+      pageSize: 12,
+    },
+  );
+});
+
+test("projected gallery state is canonicalized before RSC serialization", () => {
+  assert.deepEqual(
+    collectionQueryFromGallery(
+      {
+        query: "  finished  ",
+        filter: "Completed",
+        sort: "rating",
+        page: 3,
+        pageSize: 24,
+      },
+      "hardcover",
+    ),
+    {
+      query: "finished",
+      filter: "completed",
+      sort: "rating",
+      page: 3,
+      pageSize: 24,
+    },
+  );
+  assert.deepEqual(
+    discogsQueryFromGallery({
+      query: "ambient",
+      format: "vinyl",
+      decade: "2000s",
+      sort: "artist",
+      page: 4,
+      pageSize: 12,
+    }),
+    {
+      query: "ambient",
+      format: "vinyl",
+      decade: "2000s",
+      sort: "artist",
+      page: 4,
+      pageSize: 12,
+    },
+  );
 });
 
 test("Play overview is provider-free while validated direct routes use closed dispatch", async () => {
@@ -233,6 +361,60 @@ test("six authored screens preserve provider and consent boundaries", async () =
   assert.match(combined, /provider="hardcover"/);
   assert.match(combined, /provider="steam"/);
   assert.match(combined, /setShowStrava\(true\)/);
-  assert.match(combined, /no provider request made/i);
+  assert.match(combined, /<DiscogsStream/);
+  assert.match(combined, /routePath="\/play\/collect"/);
   assert.doesNotMatch(combined, /from\s+["']three["']|<canvas\b|autoplay/i);
+});
+
+test("Watch, Read, and Play have provider-specific semantic appliances", async () => {
+  const [watch, read, play, css] = await Promise.all([
+    source("components/play/room-screens/WatchRoomScreen.tsx"),
+    source("components/play/room-screens/ReadRoomScreen.tsx"),
+    source("components/play/room-screens/PlayRoomScreen.tsx"),
+    source("components/play/room-screens/RoomScreens.module.css"),
+  ]);
+
+  assert.match(watch, /aria-label="Midnight Broadcast sections"/);
+  assert.match(watch, /href="#watch-program-note"/);
+  assert.match(watch, /href="#watch-library"/);
+  assert.match(watch, /data-room-collection-presentation="broadcast-guide"/);
+
+  assert.match(read, /aria-label="Borrowed Shelf sections"/);
+  assert.match(read, /href="#read-desk-note"/);
+  assert.match(read, /href="#read-library"/);
+  assert.match(read, /data-room-collection-presentation="circulation-shelf"/);
+  assert.match(read, /<dl>/);
+
+  assert.match(play, /aria-label="Desktop Library shortcuts"/);
+  assert.match(play, /href="#play-system-note"/);
+  assert.match(play, /href="#play-library"/);
+  assert.match(play, /data-room-collection-presentation="desktop-library"/);
+
+  for (const [screen, provider] of [
+    [watch, "myanimelist"],
+    [read, "hardcover"],
+    [play, "steam"],
+  ]) {
+    assert.match(screen, new RegExp(`provider="${provider}"`));
+    assert.match(screen, /<CollectionStream/);
+    assert.doesNotMatch(screen, /CollectionGallery|CollectionPattern/);
+  }
+
+  assert.match(css, /\.watchProgram ol\[data-provider="myanimelist"\]/);
+  assert.match(css, /\.readCatalog ol\[data-provider="hardcover"\]/);
+  assert.match(css, /\.desktopProgram ol\[data-provider="steam"\]/);
+});
+
+test("each object screen has a distinct cancellable match-cut enhancement", async () => {
+  const matchCut = await source(
+    "components/play/room-screens/MatchCutSurface.tsx",
+  );
+  for (const id of ["watch", "read", "listen", "collect", "play", "move"]) {
+    assert.match(matchCut, new RegExp(`^  ${id}: \\{`, "m"));
+  }
+  assert.match(matchCut, /import \{ animate \} from "animejs"/);
+  assert.match(matchCut, /prefers-reduced-motion: reduce/);
+  assert.match(matchCut, /animation\.cancel\(\)/);
+  assert.match(matchCut, /onComplete: \(\) => element\.removeAttribute\("style"\)/);
+  assert.doesNotMatch(matchCut, /style=\{preset\.initial\}/);
 });
