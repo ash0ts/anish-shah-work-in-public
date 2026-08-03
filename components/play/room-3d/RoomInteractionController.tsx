@@ -30,14 +30,15 @@ type PointerIntent =
       downObject: RoomObjectId | null;
       origin: readonly [number, number];
       viewAtStart: RoomRotation;
-      captureTarget: HTMLCanvasElement | null;
+      captureTarget: Element | null;
     }
   | {
       kind: "dragging";
       pointerId: number;
       origin: readonly [number, number];
       viewAtStart: RoomRotation;
-      captureTarget: HTMLCanvasElement | null;
+      latestView: RoomRotation;
+      captureTarget: Element | null;
     };
 
 type RoomInteractionControllerProps = {
@@ -45,7 +46,8 @@ type RoomInteractionControllerProps = {
   hitTargets: MutableRefObject<Map<RoomObjectId, Mesh>>;
   occluders: MutableRefObject<Set<Mesh>>;
   onHoverChange: (id: RoomObjectId | null) => void;
-  onRotationChange: (rotation: RoomRotation) => void;
+  onRotationCommit: (rotation: RoomRotation) => void;
+  onRotationPreview: (rotation: RoomRotation) => void;
   onSelect: (id: RoomObjectId) => void;
   rotation: RoomRotation;
 };
@@ -65,7 +67,7 @@ function resolveObjectFromRay(
 
 function pointerCaptureTarget(event: ThreeEvent<PointerEvent>) {
   const target = event.nativeEvent.currentTarget;
-  return target instanceof HTMLCanvasElement ? target : null;
+  return target instanceof Element ? target : null;
 }
 
 export function RoomInteractionController({
@@ -73,7 +75,8 @@ export function RoomInteractionController({
   hitTargets,
   occluders,
   onHoverChange,
-  onRotationChange,
+  onRotationCommit,
+  onRotationPreview,
   onSelect,
   rotation,
 }: RoomInteractionControllerProps) {
@@ -115,12 +118,12 @@ export function RoomInteractionController({
         current.captureTarget.releasePointerCapture(current.pointerId);
       }
       if (restoreView && current.kind === "dragging") {
-        onRotationChange(current.viewAtStart);
+        onRotationPreview(current.viewAtStart);
       }
       intent.current = { kind: "idle" };
       onHoverChange(null);
     },
-    [cancelHoverFrame, onHoverChange, onRotationChange],
+    [cancelHoverFrame, onHoverChange, onRotationPreview],
   );
 
   useEffect(() => {
@@ -235,6 +238,7 @@ export function RoomInteractionController({
         pointerId: current.pointerId,
         origin: current.origin,
         viewAtStart: current.viewAtStart,
+        latestView: current.viewAtStart,
         captureTarget: current.captureTarget,
       };
       onHoverChange(null);
@@ -243,13 +247,13 @@ export function RoomInteractionController({
     const updated = intent.current;
     if (updated.kind !== "dragging") return;
 
-    onRotationChange(
-      rotationFromPointerDelta(
-        updated.viewAtStart,
-        point[0] - updated.origin[0],
-        point[1] - updated.origin[1],
-      ),
+    const nextView = rotationFromPointerDelta(
+      updated.viewAtStart,
+      point[0] - updated.origin[0],
+      point[1] - updated.origin[1],
     );
+    intent.current = { ...updated, latestView: nextView };
+    onRotationPreview(nextView);
   };
 
   const handlePointerUp = (event: ThreeEvent<PointerEvent>) => {
@@ -269,16 +273,24 @@ export function RoomInteractionController({
       captureTarget.releasePointerCapture(event.pointerId);
     }
 
+    const resumeHoverFromRelease = current.kind === "pending";
     if (current.kind === "pending") {
       const upObject = resolveObjectFromRay(event.ray, hitTargets, occluders);
       if (current.downObject && current.downObject === upObject) {
         onSelect(current.downObject);
       }
+    } else {
+      onRotationCommit(current.latestView);
     }
 
     intent.current = { kind: "idle" };
-    if (isRoomInteractivePointer(event.nativeEvent.pointerType)) {
+    if (
+      resumeHoverFromRelease &&
+      isRoomInteractivePointer(event.nativeEvent.pointerType)
+    ) {
       queueHover(event.ray);
+    } else {
+      onHoverChange(null);
     }
   };
 

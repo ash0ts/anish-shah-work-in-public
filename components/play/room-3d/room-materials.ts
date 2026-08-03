@@ -1,43 +1,60 @@
 import {
+  DataTexture,
   DoubleSide,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  MeshToonMaterial,
+  NearestFilter,
+  RedFormat,
 } from "three";
 
 import { ROOM_PALETTE as color } from "./room-palette.ts";
 
+const toonGradient = new DataTexture(
+  new Uint8Array([124, 178, 224, 255]),
+  4,
+  1,
+  RedFormat,
+);
+toonGradient.magFilter = NearestFilter;
+toonGradient.minFilter = NearestFilter;
+toonGradient.generateMipmaps = false;
+toonGradient.needsUpdate = true;
+
+function toon(materialColor: string) {
+  return new MeshToonMaterial({
+    color: materialColor,
+    gradientMap: toonGradient,
+  });
+}
+
 export const ROOM_MATERIALS = Object.freeze({
-  shell: new MeshStandardMaterial({ color: color.shell, roughness: 0.82 }),
-  shellLight: new MeshStandardMaterial({ color: color.shellLight, roughness: 0.82 }),
-  coral: new MeshStandardMaterial({ color: color.coral, roughness: 0.82 }),
-  mint: new MeshStandardMaterial({ color: color.mint, roughness: 0.82 }),
-  violet: new MeshStandardMaterial({ color: color.violet, roughness: 0.82 }),
-  violetGlass: new MeshStandardMaterial({
-    color: color.violet,
-    opacity: 0.72,
-    roughness: 0.76,
-    transparent: true,
-  }),
-  graphite: new MeshStandardMaterial({ color: color.graphite, roughness: 0.82 }),
-  graphiteSoft: new MeshStandardMaterial({ color: color.graphiteSoft, roughness: 0.82 }),
-  amber: new MeshStandardMaterial({ color: color.amber, roughness: 0.76 }),
-  amberGlow: new MeshStandardMaterial({
+  shell: toon(color.shell),
+  shellLight: toon(color.shellLight),
+  coral: toon(color.coral),
+  mintDark: toon(color.mintDark),
+  violet: toon(color.violet),
+  violetDark: toon(color.violetDark),
+  graphite: toon(color.graphite),
+  graphiteSoft: toon(color.graphiteSoft),
+  amber: toon(color.amber),
+  amberGlow: new MeshToonMaterial({
     color: color.amber,
     emissive: color.amber,
     emissiveIntensity: 0.72,
-    roughness: 0.72,
+    gradientMap: toonGradient,
   }),
-  wood: new MeshStandardMaterial({ color: color.wood, roughness: 0.86 }),
-  woodLight: new MeshStandardMaterial({ color: color.woodLight, roughness: 0.86 }),
-  beige: new MeshStandardMaterial({ color: color.beige, roughness: 0.82 }),
-  beigeDark: new MeshStandardMaterial({ color: color.beigeDark, roughness: 0.82 }),
-  paper: new MeshStandardMaterial({ color: color.paper, roughness: 0.88 }),
+  wood: toon(color.wood),
+  woodLight: toon(color.woodLight),
+  beige: toon(color.beige),
+  beigeDark: toon(color.beigeDark),
+  paper: toon(color.paper),
   screen: new MeshStandardMaterial({ color: color.screen, roughness: 0.68 }),
-  screenAnime: new MeshStandardMaterial({
-    color: "#5a4765",
-    emissive: color.anime,
-    emissiveIntensity: 0.26,
-    roughness: 0.65,
+  screenPhosphor: new MeshStandardMaterial({
+    color: "#17464e",
+    emissive: color.mint,
+    emissiveIntensity: 0.12,
+    roughness: 0.68,
   }),
   screenBlue: new MeshStandardMaterial({
     color: "#44547e",
@@ -51,18 +68,27 @@ export const ROOM_MATERIALS = Object.freeze({
     emissiveIntensity: 0.55,
     roughness: 0.65,
   }),
-  workBlueGlow: new MeshStandardMaterial({
+  workBlueGlow: new MeshToonMaterial({
     color: color.workBlue,
     emissive: color.workBlue,
     emissiveIntensity: 0.85,
-    roughness: 0.68,
+    gradientMap: toonGradient,
   }),
-  instanceColor: new MeshStandardMaterial({ color: "#ffffff", roughness: 0.84 }),
+  instanceColor: new MeshToonMaterial({
+    color: "#ffffff",
+    gradientMap: toonGradient,
+  }),
 });
 
 export type RoomMaterialKey = keyof typeof ROOM_MATERIALS;
 
 export const ROOM_BASIC_MATERIALS = Object.freeze({
+  shadow: new MeshBasicMaterial({
+    color: "#02050a",
+    depthWrite: false,
+    opacity: 0.11,
+    transparent: true,
+  }),
   workBlue: new MeshBasicMaterial({
     color: color.workBlue,
     opacity: 0.92,

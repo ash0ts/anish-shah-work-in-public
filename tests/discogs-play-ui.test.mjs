@@ -45,6 +45,9 @@ test("Discogs uses a ruled shelf and an accessible pressing matrix", async () =>
   ]);
 
   assert.match(discogs, /Pressings and releases, kept distinct/);
+  assert.match(discogs, /presentation === "crate"/);
+  assert.match(discogs, /The physical catalog/);
+  assert.match(discogs, /Flip through/);
   assert.match(discogs, /physical items/);
   assert.match(discogs, /distinct releases/);
   assert.match(

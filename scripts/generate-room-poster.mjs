@@ -17,7 +17,7 @@ const pipeline = sharp(source)
   .rotate()
   .resize({
     width: 1600,
-    height: 900,
+    height: 1000,
     fit: "cover",
     position: "centre",
     withoutEnlargement: false,

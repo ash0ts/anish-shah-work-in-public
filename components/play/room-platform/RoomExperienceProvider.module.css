@@ -69,6 +69,186 @@
   text-transform: uppercase;
 }
 
+.returnSignal {
+  position: fixed;
+  z-index: 980;
+  inset: 0;
+  display: grid;
+  min-width: 0;
+  min-height: 100dvh;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 3rem);
+  color: #eee4cf;
+  background:
+    radial-gradient(circle at 50% 42%, rgb(69 215 177 / 13%), transparent 32rem),
+    #050912;
+  outline: none;
+}
+
+.returnSignal::before {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 3px,
+    rgb(200 184 255 / 5%) 3px 4px
+  );
+  content: "";
+  pointer-events: none;
+}
+
+.returnSignalPanel {
+  position: relative;
+  display: grid;
+  width: min(100%, 54rem);
+  min-width: 0;
+  grid-template-columns: minmax(10rem, 0.6fr) minmax(0, 1fr);
+  gap: clamp(1.25rem, 4vw, 3rem);
+  align-items: center;
+  padding: clamp(1rem, 3vw, 2rem);
+  border: 1px solid #45d7b1;
+  background: rgb(10 17 29 / 96%);
+  box-shadow:
+    0 0 0 0.45rem rgb(10 17 29 / 80%),
+    0 0 4rem rgb(69 215 177 / 13%);
+}
+
+.returnSignalPicture {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  aspect-ratio: 4 / 3;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  align-content: end;
+  padding: 1rem;
+  border: 0.55rem solid #252b45;
+  border-radius: 1.2rem;
+  background:
+    linear-gradient(145deg, transparent 0 46%, rgb(69 215 177 / 16%) 46% 54%, transparent 54%),
+    #121a2a;
+  box-shadow: inset 0 0 1.8rem rgb(69 215 177 / 14%);
+  clip-path: inset(0 round 0.65rem);
+}
+
+.returnSignalPicture::after {
+  position: absolute;
+  inset: -35% 0 auto;
+  height: 45%;
+  background: linear-gradient(transparent, rgb(69 215 177 / 30%), transparent);
+  content: "";
+  animation: return-scan 920ms steps(6, end) infinite;
+}
+
+.returnSignalPicture span {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.75rem;
+  color: #45d7b1;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+}
+
+.returnSignalPicture i {
+  display: block;
+  min-width: 0;
+  height: clamp(2.1rem, 5vw, 3.5rem);
+  border: 1px solid #c8b8ff;
+  background: #483b79;
+}
+
+.returnSignalPicture i:nth-of-type(2),
+.returnSignalPicture i:nth-of-type(5) {
+  background: #ff6847;
+}
+
+.returnSignalPicture i:nth-of-type(3),
+.returnSignalPicture i:nth-of-type(6) {
+  background: #45d7b1;
+}
+
+.returnSignalCopy {
+  min-width: 0;
+}
+
+.returnSignalCopy p,
+.returnSignalCopy span {
+  margin: 0;
+  font-family: var(--font-mono);
+}
+
+.returnSignalCopy p {
+  color: #45d7b1;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.returnSignalCopy h2 {
+  max-width: 10ch;
+  margin: 0.65rem 0 0.8rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.3rem, 6vw, 5.3rem);
+  font-variation-settings: "CASL" 0.48, "wght" 760;
+  letter-spacing: -0.07em;
+  line-height: 0.86;
+}
+
+.returnSignalCopy span {
+  display: block;
+  max-width: 34rem;
+  color: #b9b2ca;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.returnSignalTrack {
+  position: relative;
+  grid-column: 1 / -1;
+  height: 0.35rem;
+  clip-path: inset(0);
+  background: #252b45;
+}
+
+.returnSignalTrack i {
+  position: absolute;
+  inset: 0 auto 0 -28%;
+  width: 28%;
+  background: #ff6847;
+  animation: return-track 720ms steps(8, end) infinite;
+}
+
+@keyframes return-scan {
+  to { transform: translateY(310%); }
+}
+
+@keyframes return-track {
+  to { transform: translateX(460%); }
+}
+
+@media (max-width: 560px) {
+  .returnSignalPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .returnSignalPicture {
+    width: min(100%, 16rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .returnSignalPicture::after,
+  .returnSignalTrack i {
+    animation: none;
+  }
+
+  .returnSignalTrack i {
+    inset-inline: 0;
+    width: 100%;
+  }
+}
+
 @media (forced-colors: active) {
   .runtimeLoading {
     color: CanvasText;
@@ -77,5 +257,18 @@
 
   .runtimeLoading picture {
     display: none;
+  }
+
+  .returnSignal,
+  .returnSignalPanel,
+  .returnSignalPicture {
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .returnSignalPicture i,
+  .returnSignalTrack {
+    border: 1px solid CanvasText;
+    background: Canvas;
   }
 }

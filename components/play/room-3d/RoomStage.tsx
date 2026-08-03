@@ -1,5 +1,6 @@
 "use client";
 
+import { Fisheye } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   Component,
@@ -14,10 +15,16 @@ import type { RoomObjectId } from "../room-platform/room-types";
 import { ROOM_OBJECT_BY_ID } from "../room-platform/room-registry";
 import { ROOM_PALETTE } from "./room-palette";
 import { RoomScene } from "./RoomScene";
+import {
+  createFisheyeHealthState,
+  recordCompletedFisheyeFrame,
+} from "./room-fisheye-health";
 import type { RoomRotation } from "./room-math";
 import styles from "./RoomStage.module.css";
 
-export type RoomProjection = "wide-perspective";
+export type RoomProjection = "fisheye" | "wide-perspective";
+
+const FISHEYE_SESSION_DOWNGRADE_KEY = "anish-room-fisheye-downgrade-v2";
 
 export type RoomStageProps = {
   className?: string;
@@ -48,6 +55,36 @@ class RoomStageBoundary extends Component<
 
   render() {
     return this.state.failed ? null : this.props.children;
+  }
+}
+
+class RoomProjectionBoundary extends Component<
+  { children: ReactNode; onFailure: () => void },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch() {
+    this.props.onFailure();
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+function initialProjection(): RoomProjection {
+  if (typeof window === "undefined") return "fisheye";
+  try {
+    return window.sessionStorage.getItem(FISHEYE_SESSION_DOWNGRADE_KEY) === "1"
+      ? "wide-perspective"
+      : "fisheye";
+  } catch {
+    return "fisheye";
   }
 }
 
@@ -89,6 +126,71 @@ function StableFrameSignal({ onStable }: { onStable: () => void }) {
   return null;
 }
 
+function FisheyeFrameMonitor({
+  onPerformanceMiss,
+  onStable,
+}: {
+  onPerformanceMiss: () => void;
+  onStable: () => void;
+}) {
+  const frameStartedAt = useRef(0);
+  const completedFrameCount = useRef(0);
+  const health = useRef(createFisheyeHealthState());
+  const stableSent = useRef(false);
+  const tripped = useRef(false);
+  const { invalidate } = useThree();
+
+  useEffect(() => invalidate(), [invalidate]);
+
+  useFrame(() => {
+    frameStartedAt.current = performance.now();
+  }, -4);
+
+  useFrame(() => {
+    if (document.visibilityState !== "visible" || tripped.current) return;
+
+    completedFrameCount.current += 1;
+    const result = recordCompletedFisheyeFrame(
+      health.current,
+      performance.now() - frameStartedAt.current,
+    );
+    health.current = result.state;
+
+    if (completedFrameCount.current === 1) {
+      invalidate();
+    } else if (!stableSent.current) {
+      stableSent.current = true;
+      queueMicrotask(onStable);
+    }
+
+    if (result.downgrade) {
+      tripped.current = true;
+      queueMicrotask(onPerformanceMiss);
+    }
+  }, 2);
+
+  return null;
+}
+
+function ResponsiveFisheye({ children }: { children: ReactNode }) {
+  const { height, width } = useThree((state) => state.size);
+  const sizeKey = `${Math.round(width)}x${Math.round(height)}`;
+
+  // Drei 10.7.7 captures its event-projection sphere on mount. Remounting
+  // after a CSS-size change keeps the visible fisheye and pointer ray in sync.
+  return (
+    <Fisheye
+      key={sizeKey}
+      renderPriority={1}
+      resolution={640}
+      segments={32}
+      zoom={0.72}
+    >
+      {children}
+    </Fisheye>
+  );
+}
+
 export function RoomStage({
   className,
   focusedId = null,
@@ -103,7 +205,11 @@ export function RoomStage({
 }: RoomStageProps) {
   const [failed, setFailed] = useState(false);
   const [hoveredId, setHoveredId] = useState<RoomObjectId | null>(null);
+  const [projection, setProjection] = useState<RoomProjection>(initialProjection);
   const readySent = useRef(false);
+  const projectionStable = useRef(false);
+  const sceneSettled = useRef(false);
+  const initializationWatchdog = useRef<number | null>(null);
   const approachPoseId = selectedId
     ? ROOM_OBJECT_BY_ID[selectedId].approachPoseId
     : null;
@@ -113,13 +219,62 @@ export function RoomStage({
     onContextLoss();
   }, [onContextLoss]);
 
-  const handleStableFrame = useCallback(() => {
-    if (!readySent.current) {
-      readySent.current = true;
-      onProjectionChange?.("wide-perspective");
-      onReady?.();
+  const clearInitializationWatchdog = useCallback(() => {
+    if (initializationWatchdog.current === null) return;
+    window.clearTimeout(initializationWatchdog.current);
+    initializationWatchdog.current = null;
+  }, []);
+
+  const reportReadyIfStable = useCallback(() => {
+    if (
+      readySent.current ||
+      !projectionStable.current ||
+      !sceneSettled.current
+    ) {
+      return;
     }
-  }, [onProjectionChange, onReady]);
+    readySent.current = true;
+    onProjectionChange?.(projection);
+    onReady?.();
+  }, [onProjectionChange, onReady, projection]);
+
+  const handleStableFrame = useCallback(() => {
+    clearInitializationWatchdog();
+    projectionStable.current = true;
+    reportReadyIfStable();
+  }, [clearInitializationWatchdog, reportReadyIfStable]);
+
+  const handleSceneSettled = useCallback(() => {
+    sceneSettled.current = true;
+    reportReadyIfStable();
+  }, [reportReadyIfStable]);
+
+  const downgradeProjection = useCallback(() => {
+    clearInitializationWatchdog();
+    try {
+      window.sessionStorage.setItem(FISHEYE_SESSION_DOWNGRADE_KEY, "1");
+    } catch {
+      // A blocked storage API must not prevent the perspective fallback.
+    }
+    setHoveredId(null);
+    onHoverChange?.(null);
+    readySent.current = false;
+    projectionStable.current = false;
+    sceneSettled.current = false;
+    setProjection((current) =>
+      current === "fisheye" ? "wide-perspective" : current,
+    );
+  }, [clearInitializationWatchdog, onHoverChange]);
+
+  useEffect(() => {
+    if (projection !== "fisheye" || readySent.current) return;
+    clearInitializationWatchdog();
+    initializationWatchdog.current = window.setTimeout(
+      downgradeProjection,
+      2_000,
+    );
+    return clearInitializationWatchdog;
+  }, [clearInitializationWatchdog, downgradeProjection, projection]);
 
   const handleHoverChange = useCallback(
     (id: RoomObjectId | null) => {
@@ -136,12 +291,22 @@ export function RoomStage({
       approachPoseId={approachPoseId}
       focusedId={focusedId}
       onHoverChange={handleHoverChange}
+      onSettled={handleSceneSettled}
       onRotationChange={onRotationChange}
       onSelect={onSelect}
       rotation={rotation}
       selectedId={selectedId}
     />
   );
+
+  const projectedRoom =
+    projection === "fisheye" ? (
+      <RoomProjectionBoundary onFailure={downgradeProjection}>
+        <ResponsiveFisheye>{roomScene}</ResponsiveFisheye>
+      </RoomProjectionBoundary>
+    ) : (
+      roomScene
+    );
 
   return (
     <RoomStageBoundary onFailure={fail}>
@@ -152,15 +317,15 @@ export function RoomStage({
           .join(" ")}
         data-room-hovered-object={hoveredId ?? undefined}
         data-room-poster-stage
-        data-projection="wide-perspective"
+        data-projection={projection}
       >
         <Canvas
           aria-hidden="true"
           camera={{
             far: 50,
-            fov: 38,
+            fov: 46,
             near: 0.1,
-            position: [6.05, 4.7, 7.05],
+            position: [4.8, 4.3, 5.5],
           }}
           dpr={[1, 1.25]}
           frameloop="demand"
@@ -176,7 +341,7 @@ export function RoomStage({
             gl.domElement.setAttribute("aria-hidden", "true");
             gl.domElement.setAttribute("role", "presentation");
             gl.domElement.tabIndex = -1;
-            camera.lookAt(0, 1.25, -0.15);
+            camera.lookAt(0, 1.05, -0.42);
             camera.updateMatrixWorld();
             gl.setClearColor(ROOM_PALETTE.backdrop, 1);
           }}
@@ -184,8 +349,16 @@ export function RoomStage({
           tabIndex={-1}
         >
           <ContextLossMonitor onContextLoss={fail} />
-          {roomScene}
-          <StableFrameSignal onStable={handleStableFrame} />
+          {projectedRoom}
+          {projection === "fisheye" ? (
+            <FisheyeFrameMonitor
+              key={projection}
+              onPerformanceMiss={downgradeProjection}
+              onStable={handleStableFrame}
+            />
+          ) : (
+            <StableFrameSignal key={projection} onStable={handleStableFrame} />
+          )}
         </Canvas>
       </div>
     </RoomStageBoundary>

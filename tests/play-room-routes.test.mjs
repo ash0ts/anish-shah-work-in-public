@@ -9,6 +9,10 @@ const {
   discogsQueryFrom,
   discogsQueryFromGallery,
 } = await import("../lib/server/play-query.ts");
+const {
+  INITIAL_ROOM_STATE,
+  roomExperienceReducer,
+} = await import("../components/play/room-platform/room-reducer.ts");
 
 const source = async (path) =>
   readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -110,6 +114,33 @@ test("the room reducer clamps rotation and ignores stale transitions", async () 
   assert.match(reducer, /fallbackReason: state\.fallbackReason/);
 });
 
+test("room hover and rotation actions are idempotent", () => {
+  const focused = roomExperienceReducer(INITIAL_ROOM_STATE, {
+    type: "focus",
+    id: "watch",
+  });
+  assert.equal(
+    roomExperienceReducer(focused, { type: "focus", id: "watch" }),
+    focused,
+  );
+
+  const rotated = roomExperienceReducer(INITIAL_ROOM_STATE, {
+    type: "rotate",
+    rotation: { x: 4, y: -4 },
+  });
+  assert.equal(
+    roomExperienceReducer(rotated, {
+      type: "rotate",
+      rotation: { x: 4, y: -4 },
+    }),
+    rotated,
+  );
+  assert.equal(
+    roomExperienceReducer(INITIAL_ROOM_STATE, { type: "reset-view" }),
+    INITIAL_ROOM_STATE,
+  );
+});
+
 test("room transitions are cancellable, phased, and restore semantic focus", async () => {
   const [provider, runtime, entry, screens] = await Promise.all([
     source("components/play/room-platform/RoomExperienceProvider.tsx"),
@@ -140,8 +171,17 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
   assert.match(provider, /else \{[\s\S]*routeWithPreviewFixture\([\s\S]*"\/play"/);
   assert.match(provider, /previewFixtureFromSearch\(window\.location\.search\)/);
   assert.match(provider, /notifyRuntimeMounted/);
+  assert.match(provider, /const focusObject = useCallback/);
+  assert.match(provider, /const resetView = useCallback/);
+  assert.match(provider, /const rotate = useCallback/);
+  assert.doesNotMatch(provider, /focusObject: \(id\) => dispatch/);
   assert.match(provider, /Opened \$\{object\.label\}: \$\{object\.title\}\./);
   assert.match(provider, /Returned to the room/);
+  assert.match(provider, /data-room-return-status/);
+  assert.match(provider, /Rewinding to My Room/);
+  assert.match(provider, /requestAnimationFrame\(navigate\)/);
+  assert.match(runtime, /const presenting = room\.objectRouteActive && !returning/);
+  assert.match(runtime, /data-returning=\{returning \|\| undefined\}/);
   assert.match(runtime, /const atLeftBound = room\.rotation\.y <= -12/);
   assert.match(runtime, /const atRightBound = room\.rotation\.y >= 12/);
   assert.match(runtime, /const atUpperBound = room\.rotation\.x <= -7/);
@@ -387,6 +427,7 @@ test("six authored screens preserve provider and consent boundaries", async () =
   assert.match(combined, /provider="steam"/);
   assert.match(combined, /setShowStrava\(true\)/);
   assert.match(combined, /<DiscogsStream/);
+  assert.match(combined, /presentation="crate"/);
   assert.match(combined, /routePath="\/play\/collect"/);
   assert.doesNotMatch(combined, /from\s+["']three["']|<canvas\b|autoplay/i);
 });
@@ -444,7 +485,7 @@ test("each object screen has a distinct cancellable match-cut enhancement", asyn
   assert.doesNotMatch(matchCut, /style=\{preset\.initial\}/);
 });
 
-test("Collect defines readable ink directly against its procedural wood", async () => {
+test("Collect defines readable ink directly against its recessed catalog", async () => {
   const css = await source(
     "components/play/room-screens/RoomScreens.module.css",
   );
@@ -455,12 +496,12 @@ test("Collect defines readable ink directly against its procedural wood", async 
     assert.ok(value, `Expected a literal --${name} color`);
     return value;
   };
-  const surface = color("crate-surface");
+  const surface = color("paper");
   for (const token of ["ink", "muted", "blue"]) {
     assert.ok(
       contrastRatio(color(token), surface) >= 4.5,
-      `Expected --${token} to meet 4.5:1 against the wood surface`,
+      `Expected --${token} to meet 4.5:1 against the catalog surface`,
     );
   }
-  assert.match(css, /\.crateFront\s*\{[\s\S]*var\(--crate-surface\)/);
+  assert.match(css, /\.crateWell\s*\{[\s\S]*var\(--paper\)/);
 });

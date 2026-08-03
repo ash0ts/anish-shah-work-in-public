@@ -22,10 +22,15 @@ import {
   rotationFromPointerDelta,
 } from "../components/play/room-3d/room-math.ts";
 import {
+  FISHEYE_FRAME_RENDER_BUDGET,
   PROCEDURAL_ROOM_RENDER_BUDGET,
   PROCEDURAL_ROOM_RENDER_METRICS,
 } from "../components/play/room-3d/room-render-metrics.ts";
 import { ROOM_APPROACH_POSES } from "../components/play/room-3d/room-approach.ts";
+import {
+  createFisheyeHealthState,
+  recordCompletedFisheyeFrame,
+} from "../components/play/room-3d/room-fisheye-health.ts";
 import {
   isCompetingRoomPointer,
   isRoomInteractivePointer,
@@ -153,11 +158,20 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
 
   assert.match(stage, /frameloop="demand"/);
   assert.match(stage, /dpr=\{\[1, 1\.25\]\}/);
-  assert.match(stage, /data-projection="wide-perspective"/);
-  assert.match(stage, /fov: 38/);
-  assert.match(stage, /position: \[6\.05, 4\.7, 7\.05\]/);
+  assert.match(stage, /data-projection=\{projection\}/);
+  assert.match(stage, /fov: 46/);
+  assert.match(stage, /position: \[4\.8, 4\.3, 5\.5\]/);
   assert.match(stage, /setClearColor\(ROOM_PALETTE\.backdrop, 1\)/);
-  assert.doesNotMatch(stage, /Fisheye|fisheye/);
+  assert.match(stage, /function ResponsiveFisheye/);
+  assert.match(stage, /key=\{sizeKey\}/);
+  assert.match(stage, /<ResponsiveFisheye>\{roomScene\}<\/ResponsiveFisheye>/);
+  assert.match(stage, /resolution=\{640\}/);
+  assert.match(stage, /segments=\{32\}/);
+  assert.match(stage, /zoom=\{0\.72\}/);
+  assert.match(stage, /<FisheyeFrameMonitor/);
+  assert.match(stage, /window\.setTimeout\([\s\S]*downgradeProjection,[\s\S]*2_000/);
+  assert.match(stage, /"fisheye" \| "wide-perspective"/);
+  assert.match(stage, /sessionStorage\.setItem\(FISHEYE_SESSION_DOWNGRADE_KEY/);
   assert.match(stage, /ROOM_OBJECT_BY_ID\[selectedId\]\.approachPoseId/);
   assert.match(stage, /webglcontextlost/);
   assert.match(stage, /failIfMajorPerformanceCaveat: true/);
@@ -180,17 +194,59 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
   assert.match(controller, /isCompetingRoomPointer/);
   assert.match(controller, /visibilitychange/);
   assert.match(controller, /onLostPointerCapture/);
+  assert.match(controller, /target instanceof Element/);
+  assert.match(controller, /onRotationPreview\(nextView\)/);
+  assert.match(controller, /onRotationCommit\(current\.latestView\)/);
+  assert.match(controller, /resumeHoverFromRelease/);
   assert.match(controller, /usePathname/);
   assert.match(controller, /resolveRoomRayHit/);
   assert.doesNotMatch(controller, /onClick=/);
   assert.match(objects, /roomOccluder = true/);
+  assert.match(objects, /interactionTarget: ReactNode/);
+  assert.match(objects, /\{interactionTarget\}[\s\S]*ref=\{visual\}/);
   assert.ok((objects.match(/<Occluder/g) ?? []).length >= 3);
+  assert.equal(FISHEYE_FRAME_RENDER_BUDGET.cubemapFaces, 6);
+  assert.ok(
+    FISHEYE_FRAME_RENDER_BUDGET.actualDrawCalls >
+      PROCEDURAL_ROOM_RENDER_BUDGET.visibleDrawCalls,
+  );
+});
+
+test("fisheye health ignores warmup and downgrades only after sustained misses", () => {
+  let state = createFisheyeHealthState();
+  for (const duration of [90, 80, 70, 60]) {
+    ({ state } = recordCompletedFisheyeFrame(state, duration));
+  }
+  assert.equal(state.samples.length, 0);
+
+  for (const duration of [16, 18, 60, 17, 19]) {
+    const result = recordCompletedFisheyeFrame(state, duration);
+    state = result.state;
+    assert.equal(result.downgrade, false);
+  }
+
+  state = createFisheyeHealthState();
+  for (const duration of [16, 16, 16, 16, 40, 42]) {
+    ({ state } = recordCompletedFisheyeFrame(state, duration));
+  }
+  const degraded = recordCompletedFisheyeFrame(state, 41);
+  assert.equal(degraded.downgrade, true);
+  assert.equal(
+    recordCompletedFisheyeFrame(degraded.state, 90).downgrade,
+    false,
+  );
+
+  state = createFisheyeHealthState();
+  for (const duration of [16, 16, 16, 16, 55]) {
+    ({ state } = recordCompletedFisheyeFrame(state, duration));
+  }
+  assert.equal(recordCompletedFisheyeFrame(state, 56).downgrade, true);
 });
 
 test("the static room poster is first-party, content-hashed, and bounded", async () => {
   const posterFiles = [
-    "my-room-2001-neutral.ef2efa0dfd41.avif",
-    "my-room-2001-neutral.9a4abb831261.webp",
+    "my-room-2001-neutral.50f82f186444.avif",
+    "my-room-2001-neutral.af662c65ec99.webp",
   ];
   const [overview, runtime] = await Promise.all([
     readFile(
@@ -329,11 +385,12 @@ test("procedural scene stays inside reviewed draw and material budgets", async (
     PROCEDURAL_ROOM_RENDER_METRICS.visibleTriangleUpperBound <=
       PROCEDURAL_ROOM_RENDER_BUDGET.visibleTriangles,
   );
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleDrawCallUpperBound, 40);
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.materialSlots, 23);
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleTriangleUpperBound, 20_196);
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.instancedDrawCalls, 8);
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.repeatedMeshesCollapsed, 32);
+  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleDrawCallUpperBound, 52);
+  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.materialSlots, 24);
+  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleTriangleUpperBound, 28_000);
+  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.roundedBoxCount, 33);
+  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.instancedDrawCalls, 11);
+  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.repeatedMeshesCollapsed, 56);
 
   const objects = await readFile(
     new URL(
@@ -342,8 +399,8 @@ test("procedural scene stays inside reviewed draw and material budgets", async (
     ),
     "utf8",
   );
-  assert.equal((objects.match(/<SoftBox/g) ?? []).length, 26);
-  assert.equal((objects.match(/<Instances/g) ?? []).length, 8);
+  assert.equal((objects.match(/<SoftBox/g) ?? []).length, 33);
+  assert.equal((objects.match(/<Instances/g) ?? []).length, 11);
   assert.doesNotMatch(objects, /<mesh(?:Standard|Basic)Material/);
 });
 

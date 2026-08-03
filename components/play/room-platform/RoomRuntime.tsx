@@ -52,14 +52,14 @@ function RoomPosterFallback({
     <div className={styles.posterFallback} role="status">
       <picture>
         <source
-          srcSet="/assets/play/my-room-2001-neutral.ef2efa0dfd41.avif"
+          srcSet="/assets/play/my-room-2001-neutral.50f82f186444.avif"
           type="image/avif"
         />
         <img
           alt=""
           decoding="async"
-          height="900"
-          src="/assets/play/my-room-2001-neutral.9a4abb831261.webp"
+          height="1000"
+          src="/assets/play/my-room-2001-neutral.af662c65ec99.webp"
           width="1600"
         />
       </picture>
@@ -99,13 +99,25 @@ function capabilityDetail(capability: RoomCapabilityResult | null) {
 export function RoomRuntime() {
   const room = useRoomExperience();
   const notifyRuntimeMounted = room.notifyRuntimeMounted;
+  const setRoomFallback = room.setFallback;
   const runtimeRef = useRef<HTMLElement>(null);
   const [ready, setReady] = useState(false);
   const [capability, setCapability] = useState<RoomCapabilityResult | null>(null);
-  const presenting = room.objectRouteActive;
+  const returning = room.phase === "returning";
+  const presenting = room.objectRouteActive && !returning;
+  const blocked = presenting || returning;
   const capabilityChanged = useCallback((result: RoomCapabilityResult) => {
     setCapability(result);
   }, []);
+  const markReady = useCallback(() => setReady(true), []);
+  const reportContextLoss = useCallback(
+    () => setRoomFallback("webgl-context-lost"),
+    [setRoomFallback],
+  );
+  const reportRuntimeFailure = useCallback(
+    () => setRoomFallback("room-runtime-failed"),
+    [setRoomFallback],
+  );
 
   useEffect(() => {
     notifyRuntimeMounted();
@@ -140,14 +152,16 @@ export function RoomRuntime() {
 
   return (
     <section
-      aria-hidden={presenting || undefined}
+      aria-hidden={blocked || undefined}
+      aria-busy={returning || undefined}
       aria-label="Interactive room"
       aria-modal="true"
       className={styles.runtime}
       data-room-runtime
       data-room-transition-phase={room.phase}
       data-presenting={presenting}
-      inert={presenting}
+      data-returning={returning || undefined}
+      inert={blocked}
       onKeyDown={containFocus}
       ref={runtimeRef}
       role="dialog"
@@ -185,15 +199,13 @@ export function RoomRuntime() {
           }
           onCapabilityChange={capabilityChanged}
         >
-          <RoomRuntimeBoundary
-            onFailure={() => room.setFallback("room-runtime-failed")}
-          >
+          <RoomRuntimeBoundary onFailure={reportRuntimeFailure}>
             <Suspense fallback={null}>
               <LazyRoomStage
                 focusedId={room.focusedId}
-                onContextLoss={() => room.setFallback("webgl-context-lost")}
+                onContextLoss={reportContextLoss}
                 onHoverChange={room.focusObject}
-                onReady={() => setReady(true)}
+                onReady={markReady}
                 onRotationChange={room.rotate}
                 onSelect={room.selectObject}
                 rotation={room.rotation}

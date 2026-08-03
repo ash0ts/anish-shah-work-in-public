@@ -83,6 +83,9 @@ test.describe("My Room 2001 visual review evidence", () => {
     };
 
     await captureRoom("neutral");
+    await room.locator("[data-room-poster-stage]").screenshot({
+      path: path.join(reviewDirectory, "room-neutral-stage.png"),
+    });
     await click("Turn left", 3);
     await captureRoom("rotation-left");
     await room.getByRole("button", { name: "Reset view" }).click();

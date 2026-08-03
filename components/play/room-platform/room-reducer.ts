@@ -32,6 +32,7 @@ export function roomExperienceReducer(
     return { ...state, entered: true, phase: "idle" };
   }
   if (action.type === "focus") {
+    if (state.focusedId === action.id) return state;
     return { ...state, focusedId: action.id };
   }
   if (action.type === "select") {
@@ -73,9 +74,17 @@ export function roomExperienceReducer(
     };
   }
   if (action.type === "rotate") {
-    return { ...state, rotation: boundedRotation(action.rotation) };
+    const rotation = boundedRotation(action.rotation);
+    if (
+      state.rotation.x === rotation.x &&
+      state.rotation.y === rotation.y
+    ) {
+      return state;
+    }
+    return { ...state, rotation };
   }
   if (action.type === "reset-view") {
+    if (state.rotation.x === 0 && state.rotation.y === 0) return state;
     return { ...state, rotation: INITIAL_ROOM_ROTATION };
   }
   return {

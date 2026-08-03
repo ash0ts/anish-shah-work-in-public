@@ -10,8 +10,8 @@
   overflow: auto;
   overscroll-behavior: contain;
   padding: clamp(0.75rem, 2vw, 1.5rem);
-  color: #17223b;
-  background: #ede9f2;
+  color: #eee4cf;
+  background: #050912;
   opacity: 1;
   transition: opacity 180ms ease, visibility 180ms ease;
 }
@@ -42,6 +42,8 @@
   gap: 1rem;
   align-items: center;
   padding-bottom: 0.65rem;
+  width: min(100%, 98rem);
+  margin: 0 auto;
 }
 
 .runtimeBar > span {
@@ -53,7 +55,7 @@
 }
 
 .runtimeBar small {
-  color: #6e6476;
+  color: #55e4d0;
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 500;
@@ -65,15 +67,16 @@
 .controls button,
 .objects button {
   min-height: 44px;
-  border: 1px solid #17223b;
-  background: transparent;
+  border: 1px solid #3b526f;
+  color: #eee4cf;
+  background: #101a29;
   cursor: pointer;
 }
 
 .runtimeBar button {
   padding: 0.55rem 0.8rem;
-  color: #fff;
-  background: #17223b;
+  color: #07101b;
+  background: #ff6a2a;
   font-family: var(--font-mono);
   font-size: 0.72rem;
   text-transform: uppercase;
@@ -107,7 +110,10 @@
 .stageSlot {
   position: relative;
   min-width: 0;
-  min-height: min(58rem, 65svh);
+  width: min(100%, 70rem, max(32rem, calc(160dvh - 18rem)));
+  min-height: 0;
+  aspect-ratio: 8 / 5;
+  margin: 0 auto;
 }
 
 .stageSlot > .posterFallback {
@@ -119,10 +125,12 @@
 .posterFallback {
   position: relative;
   min-width: 0;
-  min-height: min(58rem, 65svh);
+  min-height: 0;
+  height: 100%;
   overflow: clip;
-  border: 1px solid #17223b;
-  background: #ddd6e5;
+  border: 1px solid #3b526f;
+  border-radius: clamp(1.4rem, 3vw, 3.5rem);
+  background: #050912;
 }
 
 .posterFallback picture,
@@ -151,8 +159,9 @@
   gap: 0.2rem;
   padding: 0.65rem 0.75rem;
   margin: 0;
-  border: 1px solid #17223b;
-  background: rgb(244 247 248 / 92%);
+  border: 1px solid #55e4d0;
+  color: #eee4cf;
+  background: rgb(5 9 18 / 92%);
 }
 
 .posterFallback strong {
@@ -174,9 +183,9 @@
   gap: 0.1rem;
   padding: 0.55rem 0.7rem;
   margin: 0;
-  border: 1px solid #17223b;
-  color: #17223b;
-  background: rgb(244 247 248 / 94%);
+  border: 1px solid #55e4d0;
+  color: #eee4cf;
+  background: rgb(5 9 18 / 94%);
   pointer-events: none;
 }
 
@@ -199,6 +208,8 @@
   justify-content: center;
   gap: 0.45rem;
   padding: 0.65rem 0;
+  width: min(100%, 98rem);
+  margin: 0 auto;
 }
 
 .controls button {
@@ -219,8 +230,14 @@
 .objects button:focus-visible,
 .objects button[data-focused="true"],
 .objects button[aria-pressed="true"] {
-  color: #fff;
-  background: #295dff;
+  border-color: #55e4d0;
+  color: #06131b;
+  background: #55e4d0;
+}
+
+.objects {
+  width: min(100%, 98rem);
+  margin: 0 auto;
 }
 
 .objects ol {
@@ -251,7 +268,7 @@
 }
 
 .objects span {
-  color: currentColor;
+  color: #ffb26c;
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.03em;
@@ -260,6 +277,13 @@
 .objects strong {
   font-family: var(--font-display);
   font-size: 1rem;
+}
+
+.objects button:hover span,
+.objects button:focus-visible span,
+.objects button[data-focused="true"] span,
+.objects button[aria-pressed="true"] span {
+  color: #06131b;
 }
 
 @media (max-width: 1099px),

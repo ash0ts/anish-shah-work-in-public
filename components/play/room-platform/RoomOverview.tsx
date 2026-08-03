@@ -33,15 +33,15 @@ export function RoomOverview({
         <div className={styles.posterField} aria-hidden="true">
           <picture>
             <source
-              srcSet="/assets/play/my-room-2001-neutral.ef2efa0dfd41.avif"
+              srcSet="/assets/play/my-room-2001-neutral.50f82f186444.avif"
               type="image/avif"
             />
             <img
               alt=""
               decoding="async"
-              height="900"
+              height="1000"
               loading="eager"
-              src="/assets/play/my-room-2001-neutral.9a4abb831261.webp"
+              src="/assets/play/my-room-2001-neutral.af662c65ec99.webp"
               width="1600"
             />
           </picture>

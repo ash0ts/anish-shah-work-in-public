@@ -3,7 +3,8 @@
   min-width: 0;
   margin: 0 auto;
   padding: clamp(2.5rem, 6vw, 6rem) var(--gutter) clamp(3rem, 7vw, 7rem);
-  background: #ede9f2;
+  color: #eee4cf;
+  background: #050912;
 }
 
 .intro {
@@ -18,7 +19,7 @@
 .intro > p {
   grid-column: 1 / -1;
   margin: 0;
-  color: #755a83;
+  color: #55e4d0;
   font-family: var(--font-mono);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -42,7 +43,7 @@
 
 .intro > div > p {
   margin: 0;
-  color: #51475a;
+  color: #b8c4cf;
   line-height: 1.55;
 }
 
@@ -56,9 +57,9 @@
   width: fit-content;
   min-height: 44px;
   padding: 0.75rem 1rem;
-  border: 1px solid #17223b;
-  color: #fff;
-  background: #17223b;
+  border: 1px solid #ff6a2a;
+  color: #07101b;
+  background: #ff6a2a;
   font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 620;
@@ -68,13 +69,13 @@
 
 .entryControl button:hover,
 .entryControl button:focus-visible {
-  border-color: #295dff;
-  background: #295dff;
+  border-color: #55e4d0;
+  background: #55e4d0;
 }
 
 .entryControl span {
   max-width: 32rem;
-  color: #6e6476;
+  color: #93a2b0;
   font-size: 0.75rem;
   line-height: 1.45;
 }
@@ -83,16 +84,16 @@
   display: grid;
   min-width: 0;
   grid-template-columns: minmax(22rem, 1.2fr) minmax(22rem, 0.8fr);
-  border: 1px solid #17223b;
-  background: #f7f5f8;
+  border: 1px solid #3b526f;
+  background: #0b1421;
 }
 
 .posterField {
   position: relative;
   min-width: 0;
   min-height: clamp(32rem, 50vw, 52rem);
-  border-right: 1px solid #17223b;
-  background: #ded8ea;
+  border-right: 1px solid #3b526f;
+  background: #050912;
   overflow: clip;
 }
 
@@ -119,9 +120,9 @@
   gap: 0.2rem;
   margin: 0;
   padding: 0.65rem 0.75rem;
-  border: 1px solid rgba(23, 34, 59, 0.55);
-  color: #17223b;
-  background: rgba(244, 247, 248, 0.88);
+  border: 1px solid rgb(85 228 208 / 70%);
+  color: #eee4cf;
+  background: rgb(5 9 18 / 90%);
   font-family: var(--font-mono);
   font-size: 0.65rem;
   letter-spacing: 0.08em;
@@ -150,7 +151,7 @@
 
 .directory header p {
   margin: 0 0 0.5rem;
-  color: #755a83;
+  color: #ff9c58;
   font-family: var(--font-mono);
   font-size: 0.7rem;
   letter-spacing: 0.08em;
@@ -166,13 +167,13 @@
 .directory ol {
   margin: 0;
   padding: 0;
-  border-top: 1px solid #17223b;
+  border-top: 1px solid #3b526f;
   list-style: none;
 }
 
 .directory li {
   min-width: 0;
-  border-bottom: 1px solid rgba(23, 34, 59, 0.24);
+  border-bottom: 1px solid rgb(59 82 111 / 70%);
 }
 
 .directory a {
@@ -182,13 +183,13 @@
   gap: 0.3rem 0.8rem;
   align-items: baseline;
   padding: 1rem 0;
-  color: #17223b;
+  color: #eee4cf;
   text-decoration: none;
 }
 
 .directory a > span,
 .directory a > small {
-  color: #6e6476;
+  color: #93a2b0;
   font-family: var(--font-mono);
   font-size: 0.68rem;
 }
@@ -206,7 +207,7 @@
 
 .directory a:hover strong,
 .directory a:focus-visible strong {
-  color: #295dff;
+  color: #55e4d0;
 }
 
 @media (max-width: 900px) {
@@ -222,7 +223,7 @@
   .posterField {
     min-height: clamp(27rem, 88vw, 42rem);
     border-right: 0;
-    border-bottom: 1px solid #17223b;
+    border-bottom: 1px solid #3b526f;
   }
 }
 

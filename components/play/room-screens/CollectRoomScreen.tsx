@@ -30,20 +30,33 @@ export default function CollectRoomScreen({
       </header>
       <section className={styles.recordCrate} aria-labelledby="collect-status-title">
         <div className={styles.recordSleeves} aria-hidden="true">
-          {Array.from({ length: 10 }, (_, index) => <i key={index} />)}
+          {Array.from({ length: 8 }, (_, index) => (
+            <i key={index}>
+              <span />
+            </i>
+          ))}
         </div>
         <MatchCutSurface
           className={styles.crateFront}
           objectId={object.id}
           surface={object.matchCutSurface}
         >
-          <p id="collect-status-title">12″ · 10″ · 7″ · physical catalog</p>
-          <DiscogsStream
-            fixture={fixture}
-            initialQuery={initialQuery}
-            initialState={initialState}
-            routePath="/play/collect"
-          />
+          <div className={styles.crateLabel}>
+            <p id="collect-status-title">Crate 01 · Public physical collection</p>
+            <span>Cataloged without flattening duplicate copies</span>
+          </div>
+          <div className={styles.crateWell}>
+            <DiscogsStream
+              fixture={fixture}
+              initialQuery={initialQuery}
+              initialState={initialState}
+              presentation="crate"
+              routePath="/play/collect"
+            />
+          </div>
+          <div className={styles.crateRails} aria-hidden="true">
+            {Array.from({ length: 7 }, (_, index) => <i key={index} />)}
+          </div>
         </MatchCutSurface>
       </section>
     </main>

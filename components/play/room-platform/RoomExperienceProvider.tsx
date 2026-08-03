@@ -106,14 +106,14 @@ function LazyRoomFallback({ onLeave }: { onLeave: () => void }) {
     >
       <picture>
         <source
-          srcSet="/assets/play/my-room-2001-neutral.ef2efa0dfd41.avif"
+          srcSet="/assets/play/my-room-2001-neutral.50f82f186444.avif"
           type="image/avif"
         />
         <img
           alt=""
           decoding="async"
-          height="900"
-          src="/assets/play/my-room-2001-neutral.9a4abb831261.webp"
+          height="1000"
+          src="/assets/play/my-room-2001-neutral.af662c65ec99.webp"
           width="1600"
         />
       </picture>
@@ -122,6 +122,42 @@ function LazyRoomFallback({ onLeave }: { onLeave: () => void }) {
         <button onClick={onLeave} ref={leaveRef} type="button">
           Leave room
         </button>
+      </div>
+    </section>
+  );
+}
+
+function ReturnSignal({ objectId }: { objectId: RoomObjectId }) {
+  const object = ROOM_OBJECT_BY_ID[objectId];
+
+  return (
+    <section
+      aria-atomic="true"
+      aria-label="Returning to the interactive room"
+      aria-live="assertive"
+      className={styles.returnSignal}
+      data-room-return-status
+      role="status"
+      tabIndex={-1}
+    >
+      <div className={styles.returnSignalPanel}>
+        <div aria-hidden="true" className={styles.returnSignalPicture}>
+          <span>ROOM 01</span>
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
+          <i />
+        </div>
+        <div className={styles.returnSignalCopy}>
+          <p>Return channel · {object.object}</p>
+          <h2>Rewinding to My Room…</h2>
+          <span>{object.label} stays selected while the room signal returns.</span>
+        </div>
+        <div aria-hidden="true" className={styles.returnSignalTrack}>
+          <i />
+        </div>
       </div>
     </section>
   );
@@ -439,7 +475,6 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
         trackAnimation(
           animate(transitionSurface, {
             opacity: [0.94, 0],
-            scale: [1.012, 1.025],
             duration: 180,
             ease: "in(3)",
             onComplete: navigate,
@@ -452,7 +487,6 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
         trackAnimation(
           animate(transitionSurface, {
             opacity: [1, 0.94],
-            scale: [1, 1.012],
             duration: 260,
             ease: "inOut(3)",
             onComplete: matchCut,
@@ -486,6 +520,11 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     const target = activeRouteObject ?? lastInvoker.current ?? state.focusedId;
     if (target) pendingFocus.current = target;
     const returnWithBrowserHistory = activeObjectRouteOrigin.current === "room";
+    announce(
+      target
+        ? `Rewinding to My Room. ${ROOM_OBJECT_BY_ID[target].label} will remain selected.`
+        : "Rewinding to My Room.",
+    );
     dispatch({ type: "return" });
     let navigated = false;
     const navigate = () => {
@@ -502,31 +541,15 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
         );
       }
     };
-    const screen = document.querySelector<HTMLElement>("[data-room-screen]");
-    if (
-      !screen ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      navigate();
-      return;
-    }
-    trackAnimation(
-      animate(screen, {
-        opacity: [1, 0.76],
-        translateY: [0, 8],
-        duration: 180,
-        ease: "in(3)",
-        onComplete: navigate,
-      }),
-    );
-    guaranteeTransitionCompletion(220, epoch, navigate);
+    focusAfterPaint("[data-room-return-status]");
+    requestAnimationFrame(navigate);
   }, [
+    announce,
     cancelTransition,
-    guaranteeTransitionCompletion,
+    focusAfterPaint,
     pathname,
     router,
     state.focusedId,
-    trackAnimation,
   ]);
 
   const setFallback = useCallback(
@@ -556,6 +579,18 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "enter" });
   }, [announce]);
 
+  const focusObject = useCallback((id: RoomObjectId | null) => {
+    dispatch({ type: "focus", id });
+  }, []);
+
+  const resetView = useCallback(() => {
+    dispatch({ type: "reset-view" });
+  }, []);
+
+  const rotate = useCallback((rotation: RoomRotation) => {
+    dispatch({ type: "rotate", rotation });
+  }, []);
+
   const exitRoom = useCallback(() => {
     cancelTransition();
     dispatch({ type: "exit" });
@@ -583,12 +618,12 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       ...state,
       enterRoom,
       exitRoom,
-      focusObject: (id) => dispatch({ type: "focus", id }),
+      focusObject,
       notifyRuntimeMounted,
       objectRouteActive,
-      resetView: () => dispatch({ type: "reset-view" }),
+      resetView,
       returnToRoom,
-      rotate: (rotation) => dispatch({ type: "rotate", rotation }),
+      rotate,
       setFallback,
       selectObject,
       statusMessage,
@@ -596,9 +631,12 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     [
       enterRoom,
       exitRoom,
+      focusObject,
       notifyRuntimeMounted,
       objectRouteActive,
+      resetView,
       returnToRoom,
+      rotate,
       selectObject,
       setFallback,
       state,
@@ -629,6 +667,11 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
             <LazyRoomRuntime />
           </Suspense>
         </LazyRoomBoundary>
+      ) : null}
+      {state.phase === "returning" && objectRouteActive ? (
+        <ReturnSignal
+          objectId={routeObject(pathname) ?? state.focusedId ?? "watch"}
+        />
       ) : null}
       {children}
     </RoomExperienceContext.Provider>

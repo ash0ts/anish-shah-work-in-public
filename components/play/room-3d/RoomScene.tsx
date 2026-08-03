@@ -1,12 +1,15 @@
 import { useThree } from "@react-three/fiber";
-import { type Mesh, MathUtils } from "three";
+import { type Mesh } from "three";
 import { useCallback, useRef, useState } from "react";
 
 import {
   ROOM_OBJECT_IDS,
   type RoomObjectId,
 } from "../room-platform/room-types";
-import { RoomApproachRig } from "./RoomApproachRig";
+import {
+  RoomApproachRig,
+  type RoomApproachRigHandle,
+} from "./RoomApproachRig";
 import { RoomInteractionController } from "./RoomInteractionController";
 import {
   BeigeComputer,
@@ -37,6 +40,7 @@ export type RoomSceneProps = {
   approachPoseId: RoomApproachPoseId | null;
   focusedId?: RoomObjectId | null;
   onHoverChange?: (id: RoomObjectId | null) => void;
+  onSettled?: () => void;
   onRotationChange: (rotation: RoomRotation) => void;
   onSelect: (id: RoomObjectId) => void;
   rotation: RoomRotation;
@@ -47,12 +51,14 @@ export function RoomScene({
   approachPoseId,
   focusedId = null,
   onHoverChange,
+  onSettled,
   onRotationChange,
   onSelect,
   rotation,
   selectedId,
 }: RoomSceneProps) {
   const { invalidate } = useThree();
+  const motionRig = useRef<RoomApproachRigHandle>(null);
   const hitTargets = useRef(new Map<RoomObjectId, Mesh>());
   const occluders = useRef(new Set<Mesh>());
   const [hoveredId, setHoveredId] = useState<RoomObjectId | null>(null);
@@ -84,23 +90,28 @@ export function RoomScene({
     [invalidate, onHoverChange],
   );
 
+  const previewRotation = useCallback((nextRotation: RoomRotation) => {
+    motionRig.current?.previewRotation(nextRotation);
+  }, []);
+
   const isActive = (id: RoomObjectId) =>
     id === hoveredId || id === focusedId || id === selectedId;
 
   return (
     <>
       <color attach="background" args={[ROOM_PALETTE.backdrop]} />
-      <hemisphereLight args={["#fff6ea", "#505769", 2.15]} />
-      <directionalLight color="#fff0dc" intensity={2.4} position={[5, 8, 6]} />
+      <ambientLight color="#fff6ee" intensity={0.9} />
+      <hemisphereLight args={["#fff7ec", "#796f9c", 1.1]} />
+      <directionalLight color="#ffe3c2" intensity={1.25} position={[5, 8, 6]} />
 
-      <RoomApproachRig approachPoseId={approachPoseId}>
+      <RoomApproachRig
+        approachPoseId={approachPoseId}
+        onSettled={onSettled}
+        ref={motionRig}
+        rotation={rotation}
+      >
         <group
-          position={[0, -0.65, 0]}
-          rotation={[
-            MathUtils.degToRad(rotation.x),
-            MathUtils.degToRad(rotation.y),
-            0,
-          ]}
+          position={[0, -0.55, 0]}
         >
           <RoomShell registerOccluder={registerOccluder} />
           {ROOM_OBJECT_IDS.map((id) => {
@@ -118,7 +129,8 @@ export function RoomScene({
             hitTargets={hitTargets}
             occluders={occluders}
             onHoverChange={setHovered}
-            onRotationChange={onRotationChange}
+            onRotationCommit={onRotationChange}
+            onRotationPreview={previewRotation}
             onSelect={onSelect}
             rotation={rotation}
           />

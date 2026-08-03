@@ -39,11 +39,13 @@ export function DiscogsStream({
   initialQuery = DEFAULT_DISCOGS_QUERY,
   routePath,
   fixture,
+  presentation = "default",
 }: {
   initialState?: ConnectorState<DiscogsPublicSnapshot>;
   initialQuery?: DiscogsQueryState;
   routePath?: "/play/collect";
   fixture?: PreviewFixtureScenario;
+  presentation?: "default" | "crate";
 } = {}) {
   const [state, setState] = useState<ConnectorState<DiscogsPublicSnapshot>>(
     initialState ?? { status: "idle" },
@@ -168,13 +170,21 @@ export function DiscogsStream({
     setPage(1);
   };
 
-  return (
+  const content = (
     <>
       <header className={styles.collectionHeader}>
-        <PanelHeading
-          title="Pressings and releases, kept distinct."
-          description={payload.coverage}
-        />
+        {presentation === "crate" ? (
+          <div className={styles.cratePanelHeading}>
+            <span>Public collection · Discogs</span>
+            <h2>The physical catalog.</h2>
+            <p>{payload.coverage}</p>
+          </div>
+        ) : (
+          <PanelHeading
+            title="Pressings and releases, kept distinct."
+            description={payload.coverage}
+          />
+        )}
         <div
           className={styles.viewSwitch}
           role="group"
@@ -188,7 +198,7 @@ export function DiscogsStream({
             }}
             type="button"
           >
-            Pattern
+            {presentation === "crate" ? "Inventory" : "Pattern"}
           </button>
           <button
             aria-pressed={view === "gallery"}
@@ -198,7 +208,7 @@ export function DiscogsStream({
             }}
             type="button"
           >
-            Gallery
+            {presentation === "crate" ? "Flip through" : "Gallery"}
           </button>
         </div>
       </header>
@@ -287,6 +297,18 @@ export function DiscogsStream({
         syncedAt={payload.syncedAt || state.fetchedAt}
       />
     </>
+  );
+
+  return presentation === "crate" ? (
+    <section
+      aria-label="Discogs physical catalog"
+      className={styles.discogsCrate}
+      data-discogs-presentation="crate"
+    >
+      {content}
+    </section>
+  ) : (
+    content
   );
 }
 
@@ -750,7 +772,7 @@ function DiscogsReleaseRow({
   );
 
   return (
-    <li data-stream-item>
+    <li data-format={release.format.toLowerCase().replaceAll(" ", "-")} data-stream-item>
       {validReleaseId ? (
         <a
           href={

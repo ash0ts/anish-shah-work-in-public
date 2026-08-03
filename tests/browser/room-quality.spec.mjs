@@ -328,6 +328,55 @@ async function findInteractiveRoomPoint(page) {
   throw new Error("No procedural room object responded to a real pointer ray.");
 }
 
+async function findAllInteractiveRoomPoints(page) {
+  const stage = page.locator("[data-room-poster-stage]");
+  const bounds = await stage.boundingBox();
+  if (!bounds) throw new Error("The interactive room has no visible stage.");
+
+  const points = new Map();
+  for (let row = 1; row <= 17 && points.size < objects.length; row += 1) {
+    for (let column = 1; column <= 27 && points.size < objects.length; column += 1) {
+      const x = bounds.x + (bounds.width * column) / 28;
+      const y = bounds.y + (bounds.height * row) / 18;
+      await page.mouse.move(x, y);
+      await page.evaluate(
+        () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          ),
+      );
+      const id = await stage.getAttribute("data-room-hovered-object");
+      if (id && !points.has(id)) points.set(id, { id, x, y });
+    }
+  }
+
+  return points;
+}
+
+async function sampleNormalizedRoomHitMap(page, columns = 18, rows = 12) {
+  const stage = page.locator("[data-room-poster-stage]");
+  const bounds = await stage.boundingBox();
+  if (!bounds) throw new Error("The interactive room has no visible stage.");
+
+  const hits = [];
+  for (let row = 1; row < rows; row += 1) {
+    for (let column = 1; column < columns; column += 1) {
+      const x = bounds.x + (bounds.width * column) / columns;
+      const y = bounds.y + (bounds.height * row) / rows;
+      await page.mouse.move(x, y);
+      await page.evaluate(
+        () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          ),
+      );
+      hits.push(await stage.getAttribute("data-room-hovered-object"));
+    }
+  }
+
+  return { bounds, hits };
+}
+
 async function activeElementReport(page) {
   return page.evaluate(() => {
     const element = document.activeElement;
@@ -477,7 +526,7 @@ test.describe("My Room 2001 browser quality", () => {
       "/play/collect?fixture=maximum-density&pageSize=12",
       { waitUntil: "domcontentloaded" },
     );
-    await page.getByRole("button", { name: "Gallery" }).click();
+    await page.getByRole("button", { name: "Flip through" }).click();
     await expect(page.locator('input[name="fixture"]')).toHaveValue(
       "maximum-density",
     );
@@ -488,6 +537,27 @@ test.describe("My Room 2001 browser quality", () => {
     expect(
       new URL(nextHref, "http://preview.test").searchParams.get("fixture"),
     ).toBe("maximum-density");
+  });
+
+  test("selecting a room object does not recurse through the fisheye portal", async ({
+    page,
+  }) => {
+    const pageErrors = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/play?fixture=ready", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Enter the room" }).click();
+    await expect(page.getByText("Room ready")).toBeVisible();
+
+    const watch = page.locator('[data-room-object-control="watch"]');
+    await expect(watch).toBeVisible();
+    await watch.click();
+    await expect(page).toHaveURL(/\/play\/watch\?fixture=ready$/);
+    expect(
+      pageErrors.filter((message) =>
+        message.includes("Maximum update depth exceeded"),
+      ),
+    ).toEqual([]);
   });
 
   test("Enter traps focus and Leave restores the invoking control", async ({ page }) => {
@@ -612,23 +682,23 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(enter).toBeFocused();
   });
 
-  test("the shipped perspective room stays inside the actual draw-call gate", async ({
+  test("the shipped fisheye room stays inside its measured composite-render gate", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await instrumentDrawCalls(page);
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
-    await expect(page.locator('[data-projection="wide-perspective"]')).toBeVisible();
+    await expect(page.locator('[data-projection="fisheye"]')).toBeVisible();
     await expect(page.getByText("Room ready")).toBeVisible();
     await page.getByRole("button", { name: "Turn right" }).click();
     await page.waitForTimeout(150);
 
     const metrics = await page.evaluate(() => window.__roomDrawMetrics);
     expect(metrics.total).toBeGreaterThan(0);
-    expect(metrics.maximumFrame).toBeLessThanOrEqual(50);
+    expect(metrics.maximumFrame).toBeLessThanOrEqual(320);
     expect(metrics.maximumTriangles).toBeGreaterThan(0);
-    expect(metrics.maximumTriangles).toBeLessThanOrEqual(80_000);
+    expect(metrics.maximumTriangles).toBeLessThanOrEqual(190_000);
     const pixelRatio = await page.locator("canvas").evaluate((canvas) => ({
       x: canvas.width / canvas.clientWidth,
       y: canvas.height / canvas.clientHeight,
@@ -636,11 +706,91 @@ test.describe("My Room 2001 browser quality", () => {
     expect(pixelRatio.x).toBeLessThanOrEqual(1.26);
     expect(pixelRatio.y).toBeLessThanOrEqual(1.26);
 
-    await page.waitForTimeout(250);
+    await page.evaluate(() => {
+      window.__roomIdleProbe = {
+        changedAt: performance.now(),
+        total: window.__roomDrawMetrics.total,
+      };
+    });
+    await page.waitForFunction(() => {
+      const probe = window.__roomIdleProbe;
+      const total = window.__roomDrawMetrics.total;
+      if (total !== probe.total) {
+        probe.changedAt = performance.now();
+        probe.total = total;
+      }
+      return performance.now() - probe.changedAt >= 350;
+    });
     const idleStart = await page.evaluate(() => window.__roomDrawMetrics.total);
     await page.waitForTimeout(500);
     const idleEnd = await page.evaluate(() => window.__roomDrawMetrics.total);
     expect(idleEnd).toBe(idleStart);
+  });
+
+  test("sustained slow completed fisheye frames downgrade for the session", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.__roomForceSlowFrame = false;
+      let animationFrame = 0;
+      let delayedAnimationFrame = -1;
+      const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (callback) =>
+        nativeRequestAnimationFrame((time) => {
+          animationFrame += 1;
+          callback(time);
+        });
+
+      for (const Context of [
+        window.WebGL2RenderingContext,
+        window.WebGLRenderingContext,
+      ].filter(Boolean)) {
+        for (const method of [
+          "drawArrays",
+          "drawElements",
+          "drawArraysInstanced",
+          "drawElementsInstanced",
+        ]) {
+          const original = Context.prototype[method];
+          if (typeof original !== "function") continue;
+          Context.prototype[method] = function (...args) {
+            if (
+              window.__roomForceSlowFrame &&
+              delayedAnimationFrame !== animationFrame
+            ) {
+              delayedAnimationFrame = animationFrame;
+              const startedAt = performance.now();
+              while (performance.now() - startedAt < 55) {
+                // Test-only simulation of a completed frame missing its budget.
+              }
+            }
+            return original.apply(this, args);
+          };
+        }
+      }
+    });
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/play", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Enter the room" }).click();
+    const room = page.getByRole("dialog", { name: "Interactive room" });
+    await expect(page.locator('[data-projection="fisheye"]')).toBeVisible();
+    await expect(page.getByText("Room ready")).toBeVisible();
+
+    await room.getByRole("button", { name: "Turn right" }).click();
+    await room.getByRole("button", { name: "Turn left" }).click();
+    await page.evaluate(() => {
+      window.__roomForceSlowFrame = true;
+    });
+    await room.getByRole("button", { name: "Turn right" }).click();
+    await room.getByRole("button", { name: "Turn left" }).click();
+    await expect(page.locator('[data-projection="wide-perspective"]')).toBeVisible();
+
+    await room.getByRole("button", { name: "Leave room" }).click();
+    await page.reload({ waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Enter the room" }).click();
+    await expect(page.locator('[data-projection="wide-perspective"]')).toBeVisible();
+    await expect(page.getByText("Room ready")).toBeVisible();
   });
 
   test("WebGL context loss permanently restores the static semantic room", async ({
@@ -682,7 +832,9 @@ test.describe("My Room 2001 browser quality", () => {
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
     await expect(page.getByText("Room ready")).toBeVisible();
-    const point = await findInteractiveRoomPoint(page);
+    const points = await findAllInteractiveRoomPoints(page);
+    expect([...points.keys()].sort()).toEqual(objects.map(({ id }) => id).sort());
+    const point = points.get("watch") ?? (await findInteractiveRoomPoint(page));
     const room = page.getByRole("dialog", { name: "Interactive room" });
 
     for (let index = 0; index < 20; index += 1) {
@@ -728,6 +880,57 @@ test.describe("My Room 2001 browser quality", () => {
         page.locator(`[data-room-object-control="${point.id}"]`),
       ).toBeFocused();
     }
+  });
+
+  test("fisheye hit regions stay aligned through hover motion, resize, and pointer capture", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/play", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Enter the room" }).click();
+    await expect(page.getByText("Room ready")).toBeVisible();
+
+    const initial = await sampleNormalizedRoomHitMap(page);
+    const stage = page.locator("[data-room-poster-stage]");
+    const points = await findAllInteractiveRoomPoints(page);
+    expect([...points.keys()].sort()).toEqual(objects.map(({ id }) => id).sort());
+
+    const watch = points.get("watch");
+    if (!watch) throw new Error("The television has no pointer hit region.");
+    await page.mouse.move(watch.x, watch.y);
+    await expect(stage).toHaveAttribute("data-room-hovered-object", "watch");
+    await page.waitForTimeout(450);
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(page).toHaveURL(/\/play\/watch$/, { timeout: 10_000 });
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+    await expect(
+      page.getByRole("dialog", { name: "Interactive room" }),
+    ).toHaveAttribute("data-room-transition-phase", "idle");
+
+    await page.setViewportSize({ width: 1200, height: 700 });
+    await page.waitForFunction(
+      () =>
+        (document.querySelector("[data-room-poster-stage]")?.getBoundingClientRect()
+          .width ?? Infinity) < 900,
+    );
+    const resized = await sampleNormalizedRoomHitMap(page);
+    expect(resized.hits).toEqual(initial.hits);
+
+    const resizedPoints = await findAllInteractiveRoomPoints(page);
+    const collect = resizedPoints.get("collect");
+    if (!collect) throw new Error("The record crate has no pointer hit region.");
+    await page.mouse.move(collect.x, collect.y);
+    await page.mouse.down();
+    await page.mouse.move(resized.bounds.x - 20, resized.bounds.y - 20);
+    await page.mouse.up();
+    await page.mouse.move(collect.x, collect.y);
+    await expect(stage).toHaveAttribute("data-room-hovered-object", "collect");
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(page).toHaveURL(/\/play\/collect$/, { timeout: 10_000 });
   });
 
   test("room-originated Back and Escape use browser history and restore exact focus", async ({
@@ -783,6 +986,42 @@ test.describe("My Room 2001 browser quality", () => {
         room.locator(`[data-room-object-control="${object.id}"]`),
       ).toBeFocused();
     }
+  });
+
+  test("a slow room return is acknowledged immediately without exposing controls", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/play?fixture=ready", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Enter the room" }).click();
+    let room = page.getByRole("dialog", { name: "Interactive room" });
+    await room.locator('[data-room-object-control="collect"]').click();
+    await expect(page).toHaveURL(/\/play\/collect\?fixture=ready$/);
+
+    let releaseReturn;
+    const returnReleased = new Promise((resolve) => {
+      releaseReturn = resolve;
+    });
+    await page.route(/\/play\.rsc(?:\?|$)/, async (route) => {
+      await returnReleased;
+      await route.continue();
+    });
+
+    await page.getByRole("link", { name: "Back to room" }).click();
+    const status = page.locator("[data-room-return-status]");
+    await expect(status).toBeVisible();
+    await expect(status).toContainText("Rewinding to My Room");
+    room = page.locator("[data-room-runtime]");
+    await expect(room).toBeVisible();
+    await expect(room).toHaveAttribute("data-room-transition-phase", "returning");
+    await expect(room).toHaveAttribute("inert", "");
+
+    releaseReturn();
+    await expect(page).toHaveURL(/\/play\?fixture=ready$/, { timeout: 10_000 });
+    await expect(status).toHaveCount(0);
+    await expect(
+      page.locator('[data-room-object-control="collect"]'),
+    ).toBeFocused();
   });
 
   test("direct object return pushes the room route and restores each semantic link", async ({
