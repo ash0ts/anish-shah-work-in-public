@@ -105,15 +105,27 @@ jobs:
           url="https://pr-${PREVIEW_PR_NUMBER}.anish-shah-is.online"
           headers="$(mktemp)"
           trap 'rm -f "$headers"' EXIT
-          result="$(curl --silent --show-error \
-            --connect-timeout 5 --max-time 20 --proto '=https' --tlsv1.2 \
-            -H "CF-Access-Client-Id: ${ACCESS_CLIENT_ID}" \
-            -H "CF-Access-Client-Secret: ${ACCESS_CLIENT_SECRET}" \
-            -D "$headers" -o /dev/null \
-            --write-out '%{http_code} %{url_effective}' "${url}/play")"
-          test "$result" = "200 ${url}/play"
-          grep -Eiq '^x-robots-tag:.*noindex' "$headers"
-          grep -Eiq '^cache-control: private, no-store' "$headers"
+          ready=false
+          for attempt in $(seq 1 18); do
+            : > "$headers"
+            if result="$(curl --silent --show-error \
+              --connect-timeout 5 --max-time 20 --proto '=https' --tlsv1.2 \
+              -H "CF-Access-Client-Id: ${ACCESS_CLIENT_ID}" \
+              -H "CF-Access-Client-Secret: ${ACCESS_CLIENT_SECRET}" \
+              -D "$headers" -o /dev/null \
+              --write-out '%{http_code} %{url_effective}' "${url}/play")" &&
+              test "$result" = "200 ${url}/play" &&
+              grep -Eiq '^x-robots-tag:.*noindex' "$headers" &&
+              grep -Eiq '^cache-control: private, no-store' "$headers"; then
+              ready=true
+              break
+            fi
+            if [ "$attempt" -lt 18 ]; then sleep 5; fi
+          done
+          if [ "$ready" != true ]; then
+            echo "Preview did not become DNS-, TLS-, Access-, and application-ready within 90 seconds." >&2
+            exit 1
+          fi
       - name: Update the persistent PR preview comment
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

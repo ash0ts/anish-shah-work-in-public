@@ -662,6 +662,9 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
   assert.match(deploy, /gh api "\$endpoint" --jq '\[\.state, \.head\.sha, \.head\.repo\.full_name\] \| @tsv'/);
   assert.match(deploy, /Recheck the PR immediately before privileged deployment/);
   assert.match(deploy, /--connect-timeout 5 --max-time 20 --proto '=https'/);
+  assert.match(deploy, /for attempt in \$\(seq 1 18\)/);
+  assert.match(deploy, /if \[ "\$attempt" -lt 18 \]; then sleep 5; fi/);
+  assert.match(deploy, /DNS-, TLS-, Access-, and application-ready within 90 seconds/);
   assert.doesNotMatch(deploy, /curl[^\n]*--location/);
   assert.match(deploy, /printf '%s\\nPreview: %s\\n\\nValidated SHA:/);
   assert.match(deploy, /CLOUDFLARE_PREVIEW_API_TOKEN/);
