@@ -43,6 +43,59 @@
   line-height: 1.6;
 }
 
+.spotifyNoScript {
+  min-width: 0;
+  padding-bottom: 1rem;
+}
+
+.spotifyNoScript > p {
+  max-width: 48rem;
+  margin: 0 0 0.75rem;
+  color: var(--muted, #5f6878);
+}
+
+.spotifyNoScript ol {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line, #d5dbe4);
+  list-style: none;
+}
+
+.spotifyNoScript li {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 2rem minmax(0, 1fr) minmax(7rem, auto);
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.58rem 0;
+  border-bottom: 1px solid var(--line, #d5dbe4);
+}
+
+.spotifyNoScript li > span,
+.spotifyNoScript li > small {
+  color: var(--muted, #5f6878);
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 0.75rem;
+}
+
+.spotifyNoScript li > span {
+  color: var(--blue, #295dff);
+}
+
+.spotifyNoScript li > a {
+  min-width: 0;
+  color: var(--ink, #17223b);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+  text-underline-offset: 0.2em;
+}
+
+.spotifyNoScript li > small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
 @media (max-width: 760px) {
   .page {
     padding-top: 3.5rem;
@@ -55,5 +108,14 @@
 
   .eyebrow {
     grid-column: 1;
+  }
+
+  .spotifyNoScript li {
+    grid-template-columns: 1.5rem minmax(0, 1fr);
+  }
+
+  .spotifyNoScript li > small {
+    grid-column: 2;
+    text-align: left;
   }
 }

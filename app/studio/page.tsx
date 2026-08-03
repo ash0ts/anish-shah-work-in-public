@@ -5,6 +5,7 @@ import {
   requireChatGPTUser,
 } from "@/app/chatgpt-auth";
 import { resolveMyAnimeListCallbackUrl } from "@/lib/server/connectors/myanimelist-oauth";
+import { resolveSpotifyCallbackUrl } from "@/lib/server/connectors/spotify-oauth";
 import { getStudioOverview } from "@/lib/server/connectors";
 import { listEditorialRecords } from "@/lib/server/editorial";
 import { ownerAuthorizationForEmail } from "@/lib/server/owner-auth";
@@ -55,6 +56,13 @@ export default async function StudioPage() {
   const configuredSiteUrl = runtimeValue("SITE_URL");
   const myAnimeListCallbackUrl = configuredSiteUrl
     ? resolveMyAnimeListCallbackUrl(
+        configuredSiteUrl,
+        configuredSiteUrl,
+        runtimeValue("NODE_ENV") ?? process.env.NODE_ENV,
+      )
+    : null;
+  const spotifyCallbackUrl = configuredSiteUrl
+    ? resolveSpotifyCallbackUrl(
         configuredSiteUrl,
         configuredSiteUrl,
         runtimeValue("NODE_ENV") ?? process.env.NODE_ENV,
@@ -163,7 +171,7 @@ export default async function StudioPage() {
               <span>
                 Create a one-time code in production, stage portable settings
                 here, then validate and apply them there. Authorize
-                MyAnimeList separately.
+                MyAnimeList and Spotify separately.
               </span>
             </li>
           </ol>
@@ -240,6 +248,7 @@ export default async function StudioPage() {
               environment={isLocalStudio ? "local" : "hosted"}
               encryptionConfigured={overview.encryptionConfigured}
               myAnimeListCallbackUrl={myAnimeListCallbackUrl}
+              spotifyCallbackUrl={spotifyCallbackUrl}
               steamStorageCountries={overview.steamStorageCountries}
               key={connector.provider}
             />

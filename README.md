@@ -1,148 +1,101 @@
 # Anish Shah — Work in Public
 
-An authored portfolio about applied AI products, education, open source,
+An authored portfolio of applied AI products, education, open source,
 technical storytelling, and community programs from 2021 onward.
 
-## Experience
+## What is here
 
-- `/` — identity, current technical focus, a compact career arc, four Bodies
-  of Work, and three qualified impact stories
-- `/work` — a semantic four-line 2021–2026 calendar heatmap, four unpaginated
-  body folds containing all 82 WorkGroups once, and search across 186 nested
-  public forms
-- `/work/[slug]` — one story page that keeps its appearances, recordings,
-  translations, repositories, and references together
-- `/play` — consent-aware MyAnimeList, Hardcover, Steam, and Strava streams
-- `/sources` — archive accounting, claim context, counting rules, and the
-  public evidence explorer
+- `/` — technical focus, career arc, Bodies of Work, and qualified impact
+- `/work` — 82 WorkGroups connecting 186 searchable public forms
+- `/work/[slug]` — one story with its appearances, artifacts, and evidence
+- `/play` — consent-aware MyAnimeList, Hardcover, Spotify, Steam, and Strava
+- `/sources` — archive accounting, claim context, and public bibliography
 - `/studio` — owner-only editorial and connector controls
 
-Legacy `/about` links permanently redirect to the profile section on `/`.
+The public site is semantic HTML first. Anime.js adds bounded enhancement;
+there is no Three.js archive navigation, autoplay, or scroll hijacking.
 
-The homepage and Work archive are deliberately two-dimensional: semantic HTML
-and CSS carry the work index and impact small multiples, while Anime.js adds
-brief, cancellable transitions. Work’s server-rendered calendar uses one color
-per line and shade for density, keeps exact work and public-form counts in
-every populated cell, and filters the four body folds when a visitor chooses a
-year. The public runtime contains no Three.js, 3D navigation, cinematic
-workspace, autoplay, or scroll hijacking. Strava content remains blocked until
-explicit interaction.
+## Start locally
 
-## Canonical content
-
-The four source CSV/Markdown files one directory above this project are
-immutable migration inputs. Generate and verify the canonical bundles with:
+Use Node `24.18.0` and npm `11.6.2`.
 
 ```bash
-node scripts/build-content.mjs
-node scripts/build-content.mjs --check
-```
-
-The current public projection accounts for:
-
-- 184 public-footprint source observations — not 184 unique works
-- 85 impact source observations
-- 82 WorkGroups
-- 186 public forms nested beneath those stories
-- 13 rounded public measures in four impact families
-- 198 public evidence records
-
-`content/public/anish-content.public.v1.json` is the only canonical content
-bundle available to the application. The exact owner bundle is generated under
-`content/private/`, ignored by Git, and excluded from deployments.
-
-## Local development
-
-Requires Node.js `>=24.0.0`.
-
-```bash
-npm install
+npm install --global npm@11.6.2 --ignore-scripts
+npm ci
+cp .env.example .env.local
+# Set matching OWNER_EMAILS and LOCAL_OWNER_EMAIL values, then generate the two
+# independent local-only values described in .env.example:
+# CONNECTOR_ENCRYPTION_KEY and RATE_LIMIT_SALT.
+npm run local:security:setup
 npm run dev:studio
 ```
 
-`dev:studio` applies pending migrations to the project-local D1 sandbox under
-`.wrangler/state`, then starts the development site on strict
-`localhost:3000`. Its migration wrapper always uses Wrangler’s local mode and
-cannot target production. To open the protected Studio locally, create an
-ignored `.env.local` from
-[.env.example](./.env.example), set the same email in `OWNER_EMAILS` and
-`LOCAL_OWNER_EMAIL`, and generate a local-only
-`CONNECTOR_ENCRYPTION_KEY`. Then visit
-`http://localhost:3000/studio`. The local identity fallback is rejected outside
-development and outside localhost.
+Open `http://localhost:3000/studio`. Local credentials, snapshots, and D1 data
+remain under the ignored local environment. `LOCAL_OWNER_EMAIL` is rejected in
+hosted environments.
 
-Local connector tests use real provider requests but write credentials,
-snapshots, sync history, and editorial changes only to the local D1 sandbox.
-Deploy code and non-secret configuration separately. After deployment, the
-owner may use Studio’s single-use transfer code to send only the encrypted
-Hardcover, Steam, and Strava setup to the production origin for review and
-validation. Snapshots and the local encryption key never transfer;
-MyAnimeList always requires production OAuth. Never copy local D1 state or
-replace the production encryption key.
-
-Useful checks:
+## Validate
 
 ```bash
-npm run typecheck
-npm run lint
-npm test
+npm run validate
 ```
 
-`npm test` verifies canonical accounting and privacy, backend authorization and
-encryption boundaries, the production build, public route rendering, and
-deployed-artifact hygiene.
+That command verifies the checked-in public-content attestation, lint,
+typechecking, a clean local D1 migration, content/privacy behavior, backend
+authorization, the production build, rendered routes, release-bundle hygiene,
+and dependency gates.
 
-## Studio and connectors
+`npm run validate:browser` builds the Worker, checks public routes in Chromium
+at six viewport widths, runs Axe against key pages, and enforces mobile
+Lighthouse scores of at least 90 with CLS at most 0.1. Reports remain local and
+are never uploaded to a third party.
 
-On the owner-controlled public Worker, Studio and every `/api/studio/**` route
-require a cryptographically verified Cloudflare Access session plus an exact
-email match in `OWNER_EMAILS`. Connector credentials are AES-256-GCM encrypted
-before they enter D1 using `CONNECTOR_ENCRYPTION_KEY`. The private Sites
-rollback retains its existing Sign in with ChatGPT access policy.
+## Content boundary
 
-`LOCAL_OWNER_EMAIL` exists only to make the isolated localhost Studio testable
-and must never be configured in either hosted environment.
+The four private CSV/Markdown source files live one directory above this
+project. They are immutable migration inputs and never enter Git or deployment
+artifacts. The application reads only
+`content/public/anish-content.public.v1.json`; its safe checksums and counts live
+beside it in `anish-content.public.v1.attestation.json`.
 
-MyAnimeList uses a complete owner-only authorization-code flow. Studio accepts
-the application client ID and secret, performs OAuth with a single-use
-owner-bound PKCE transaction, encrypts the resulting access and refresh tokens,
-and renews access automatically. Hardcover uses its owner API token. Both use
-12-hour stale-while-revalidate snapshots and preserve the last successful
-public result on transient provider failure. Their public profile links are
-derived from the authenticated provider identities.
+For an owner content release:
 
-Strava is configured through Studio with a public athlete profile and an
-optional complete Strava-generated profile-feed, weekly-summary, activity, or
-route iframe. The server validates the exact official host and verifies that a
-widget is anonymously frameable before publishing it. `/play` still requires
-visitor consent before loading third-party content and falls back to the
-athlete profile when a cumulative widget redirects to sign-in.
+```bash
+node scripts/build-content.mjs
+npm run verify:content
+npm run content:attest:write
+npm run content:attest
+```
 
-Steam uses an owner-supplied Web API key and SteamID64 only from the server,
-publishes bounded summaries of public game details, and keeps no more than two
-sanitized snapshots. Configure the actual D1 storage country or countries in
-`STEAM_DATA_STORAGE_COUNTRIES` before connecting it. If public game visibility
-is removed, the public snapshots and prior sync history are purged.
-Disconnecting any Play provider deletes its credentials or configuration,
-snapshots, pending OAuth transactions, sync history, and provider-specific
-audit history, then unpublishes that stream. The public
-[privacy page](./app/privacy/page.tsx) records retrieval, storage, retention,
-and deletion behavior.
+The ignored exact owner bundle remains under `content/private/`. See
+[the content architecture](./docs/architecture/content-and-state.md).
 
-Follow the exact owner workflow in
-[Play connections: owner setup](./docs/play-connections.md) and use
-[.env.example](./.env.example) for local configuration. Never commit real
-provider credentials or encryption keys.
+## Production
 
-## Deployment
+Public production is an owner-controlled Cloudflare Worker with D1 as the
+publication authority and a versioned Workers KV last-known-good cache.
+Cloudflare Access plus an exact application allowlist protects `/studio/**` and
+`/api/studio/**`. The private OpenAI Sites deployment is a recovery/reference
+environment, not a public rollback target.
 
-The public production path is an owner-controlled Cloudflare Worker and D1
-database. The existing OpenAI Sites deployment stays private and unchanged as
-a rollback environment; `.openai/hosting.json` remains only to preserve that
-packaging path. Checked-in migrations live under `drizzle/`.
+Release only a clean, pushed, validated commit. The release gate binds the
+exact `dist/client` and `dist/server` bytes with a deterministic manifest,
+alongside three exact-commit CI runs. Capture a D1 Time Travel bookmark and both
+Worker version IDs, then record the result under `releases/`.
+Follow the [release runbook](./docs/operations/release.md) and
+[rollback runbook](./docs/operations/rollback.md). No command in this repository
+automatically weakens Access or copies production credentials.
 
-Follow [the Cloudflare release runbook](./docs/cloudflare-release.md) to create
-the Access application and D1 database, prepare an immutable Worker config,
-set secrets, apply migrations, deploy, and run logged-out smoke tests. Do not
-request workspace-admin access, expose a Sites bypass token, or make the GitHub
-repository public.
+## Documentation
+
+- [Architecture and trust boundaries](./docs/architecture/overview.md)
+- [Content and state](./docs/architecture/content-and-state.md)
+- [Testing](./docs/testing.md)
+- [Play connector setup](./docs/play-connections.md)
+- [Release](./docs/operations/release.md)
+- [Rollback and D1 restore](./docs/operations/rollback.md)
+- [Incidents and credential recovery](./docs/operations/incidents.md)
+- [Observability](./docs/operations/observability.md)
+- [Contributing](./CONTRIBUTING.md) and [security reporting](./SECURITY.md)
+
+The repository is private and intentionally has no open-source license.

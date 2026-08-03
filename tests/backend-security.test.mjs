@@ -192,6 +192,7 @@ test("D1 migrations contain the scoped tables and encrypted credential fields", 
     editorialMigration,
     oauthMigration,
     generationMigration,
+    maintenanceMigration,
     hosting,
   ] = await Promise.all([
     readFile(
@@ -213,11 +214,18 @@ test("D1 migrations contain the scoped tables and encrypted credential fields", 
       ),
       "utf8",
     ),
+    readFile(
+      new URL(
+        "../drizzle/0005_steady_publication_guard.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
   const migration =
     `${initialMigration}\n${editorialMigration}\n` +
-    `${oauthMigration}\n${generationMigration}`;
+    `${oauthMigration}\n${generationMigration}\n${maintenanceMigration}`;
 
   for (const table of [
     "public_records",
@@ -228,6 +236,7 @@ test("D1 migrations contain the scoped tables and encrypted credential fields", 
     "sync_runs",
     "audit_log",
     "publication_snapshots",
+    "maintenance_state",
   ]) {
     assert.match(migration, new RegExp(`CREATE TABLE \\\`${table}\\\``));
   }
@@ -254,7 +263,9 @@ test("local Studio migrations are pinned to the isolated local D1 sandbox", asyn
   );
 
   assert.match(migrationScript, /"--local"/);
-  assert.match(migrationScript, /\.wrangler\/state/);
+  assert.match(migrationScript, /localWranglerDirectory/);
+  assert.match(migrationScript, /"state"/);
+  assert.match(migrationScript, /"--clean"/);
   assert.match(
     migrationScript,
     /00000000-0000-4000-8000-000000000000/,

@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { PersonalStreams } from "@/components/PersonalStreams";
+import {
+  getPublicConnectorSnapshot,
+  getSpotifyPublicFallback,
+} from "@/lib/server/connectors";
 import { getPublicContentView } from "@/lib/server/public-content";
 import { publicPageMetadata } from "@/lib/seo";
 import styles from "./play.module.css";
@@ -9,29 +13,136 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = publicPageMetadata({
   title: "Play",
   description:
-    "Explore Anish Shah’s public anime, reading, gaming, and movement collections through bounded, owner-controlled snapshots.",
+    "Explore Anish Shah’s public anime, reading, music, gaming, and movement collections through bounded, owner-controlled snapshots.",
   path: "/play",
 });
 
 export default async function PlayPage() {
-  const { bundle } = await getPublicContentView();
+  const [{ bundle }, spotifySnapshot, spotifyFallback] = await Promise.all([
+    getPublicContentView(),
+    getPublicConnectorSnapshot("spotify"),
+    getSpotifyPublicFallback(),
+  ]);
   const narrative = bundle.narratives.find(
     (entry) => entry.id === "narrative:play:personal-streams",
   );
+  const spotifyTracks =
+    spotifySnapshot.status === "ready"
+      ? noScriptSpotifyTracks(spotifySnapshot.payload)
+      : [];
+  const spotifyProfileUrl =
+    spotifySnapshot.status === "ready" &&
+    typeof spotifySnapshot.payload.profileUrl === "string"
+      ? spotifySnapshot.payload.profileUrl
+      : spotifyFallback.profileUrl;
+  const spotifyFallbackUrl = spotifyFallback.fallbackEmbed
+    ? `https://open.spotify.com/${spotifyFallback.fallbackEmbed.kind}/${encodeURIComponent(spotifyFallback.fallbackEmbed.spotifyId)}`
+    : null;
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
       <header className={styles.intro}>
         <p className={styles.eyebrow}>
-          Play · four optional public streams · pattern / gallery
+          Play · five optional public streams · pattern / gallery / groove
         </p>
         <h1>Outside the work.</h1>
         <p>
           {narrative?.body ??
-            "Watch, read, play, and move—published from owner-controlled snapshots and consent-gated embeds."}
+            "Watch, read, listen, play, and move—published from owner-controlled snapshots and consent-gated embeds."}
         </p>
       </header>
-      <PersonalStreams />
+      <PersonalStreams
+        spotifyNoScript={
+          <div className={styles.spotifyNoScript}>
+            <p>
+              Spotify-calculated Top Tracks for the last approximately four
+              weeks, in returned order—not play counts.
+            </p>
+            {spotifyTracks.length ? (
+              <ol>
+                {spotifyTracks.map((track) => (
+                  <li key={`${track.id}:${track.position}`}>
+                    <span>{String(track.position).padStart(2, "0")}</span>
+                    <a
+                      href={`https://open.spotify.com/track/${encodeURIComponent(track.id)}`}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {track.title}
+                    </a>
+                    <small>{track.artists}</small>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p>No public Top Tracks snapshot is available.</p>
+            )}
+            {spotifyFallbackUrl ? (
+              <p>
+                <a href={spotifyFallbackUrl} rel="noreferrer" target="_blank">
+                  Open the owner-selected Spotify {spotifyFallback.fallbackEmbed?.kind}
+                </a>
+              </p>
+            ) : null}
+            {spotifyProfileUrl ? (
+              <p>
+                <a href={spotifyProfileUrl} rel="noreferrer" target="_blank">
+                  Open Spotify profile
+                </a>
+              </p>
+            ) : null}
+          </div>
+        }
+      />
     </main>
   );
+}
+
+type NoScriptSpotifyTrack = {
+  id: string;
+  position: number;
+  title: string;
+  artists: string;
+};
+
+function noScriptSpotifyTracks(
+  payload: Record<string, unknown>,
+): NoScriptSpotifyTrack[] {
+  const windows = payload.windows;
+  if (!isRecord(windows)) return [];
+  const shortTerm = windows.short_term;
+  if (!isRecord(shortTerm) || !Array.isArray(shortTerm.tracks)) return [];
+
+  return shortTerm.tracks.slice(0, 12).flatMap((value, index) => {
+    if (!isRecord(value)) return [];
+    const id = typeof value.id === "string" ? value.id : "";
+    const title = typeof value.title === "string" ? value.title : "";
+    const artists = Array.isArray(value.artists)
+      ? value.artists
+          .flatMap((artist) =>
+            isRecord(artist) && typeof artist.name === "string"
+              ? [artist.name]
+              : [],
+          )
+          .join(", ")
+      : "";
+    if (!/^[A-Za-z0-9]{22}$/.test(id) || !title || !artists) return [];
+    return [
+      {
+        id,
+        position:
+          typeof value.position === "number" &&
+          Number.isSafeInteger(value.position) &&
+          value.position > 0
+            ? value.position
+            : index + 1,
+        title,
+        artists,
+      },
+    ];
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

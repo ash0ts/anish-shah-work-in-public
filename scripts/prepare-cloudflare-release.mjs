@@ -50,6 +50,10 @@ const databaseId = required("CLOUDFLARE_D1_DATABASE_ID");
 if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(databaseId)) {
   throw new Error("CLOUDFLARE_D1_DATABASE_ID must be a D1 UUID.");
 }
+const publicationKvId = required("CLOUDFLARE_PUBLICATION_CACHE_ID");
+if (!/^[0-9a-f]{32}$/i.test(publicationKvId)) {
+  throw new Error("CLOUDFLARE_PUBLICATION_CACHE_ID must be a KV namespace ID.");
+}
 const databaseName =
   process.env.CLOUDFLARE_D1_DATABASE_NAME?.trim() ||
   "anish-shah-work-in-public";
@@ -78,6 +82,19 @@ const publicSiteUrl = exactHttpsOrigin(
   required("PUBLIC_SITE_URL"),
   "PUBLIC_SITE_URL",
 );
+const releaseSha = required("RELEASE_VALIDATED_SHA").toLowerCase();
+if (!/^[a-f0-9]{40}$/.test(releaseSha)) {
+  throw new Error("RELEASE_VALIDATED_SHA must be an exact 40-character commit SHA.");
+}
+const publicBundle = JSON.parse(
+  await readFile(
+    resolve(root, "content/public/anish-content.public.v1.json"),
+    "utf8",
+  ),
+);
+if (!/^[a-f0-9]{16}$/.test(publicBundle.contentVersion)) {
+  throw new Error("The public content bundle has an invalid content version.");
+}
 const config = JSON.parse(await readFile(generatedConfigPath, "utf8"));
 config.name = "anish-shah-work-in-public";
 config.topLevelName = config.name;
@@ -91,6 +108,34 @@ config.d1_databases = [
     migrations_dir: "../../drizzle",
   },
 ];
+config.kv_namespaces = [
+  {
+    binding: "PUBLICATION_CACHE",
+    id: publicationKvId,
+  },
+];
+config.ratelimits = [
+  {
+    name: "OWNER_RATE_LIMITER",
+    namespace_id: "88001001",
+    simple: { limit: 30, period: 60 },
+  },
+  {
+    name: "ARTWORK_RATE_LIMITER",
+    namespace_id: "88001002",
+    simple: { limit: 120, period: 60 },
+  },
+  {
+    name: "PROMOTION_RATE_LIMITER",
+    namespace_id: "88001003",
+    simple: { limit: 6, period: 60 },
+  },
+  {
+    name: "OAUTH_CALLBACK_RATE_LIMITER",
+    namespace_id: "88001004",
+    simple: { limit: 20, period: 60 },
+  },
+];
 config.vars = {
   AUTH_MODE: "cloudflare_access",
   CF_ACCESS_AUD: audiences.join(","),
@@ -100,8 +145,16 @@ config.vars = {
   PRODUCTION_SITE_URL: publicSiteUrl,
   SITE_URL: publicSiteUrl,
   STEAM_DATA_STORAGE_COUNTRIES: "United States",
+  RELEASE_SHA: releaseSha,
+  CONTENT_VERSION: publicBundle.contentVersion,
+  PUBLIC_CONTENT_MODE: "d1_kv_required",
 };
-config.observability = { enabled: true, head_sampling_rate: 0.1 };
+config.observability = {
+  enabled: true,
+  head_sampling_rate: 0.1,
+  logs: { enabled: true, invocation_logs: false },
+};
+config.triggers = { crons: ["17 * * * *"] };
 
 await writeFile(releaseConfigPath, `${JSON.stringify(config, null, 2)}\n`, {
   mode: 0o600,

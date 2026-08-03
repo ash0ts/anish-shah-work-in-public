@@ -981,14 +981,17 @@ test("malformed token responses and provider failures stay safely classified", a
 
 test("OAuth routes and migration preserve the server-only privacy boundary", async () => {
   const [
-    repository,
+    oauthRepository,
     callbackRoute,
     resumeRoute,
     migration,
     generationMigration,
   ] = await Promise.all([
     readFile(
-      new URL("../lib/server/connectors/repository.ts", import.meta.url),
+      new URL(
+        "../lib/server/connectors/repository-myanimelist-oauth.ts",
+        import.meta.url,
+      ),
       "utf8",
     ),
     readFile(
@@ -1015,10 +1018,10 @@ test("OAuth routes and migration preserve the server-only privacy boundary", asy
     ),
   ]);
 
-  assert.match(repository, /hashMyAnimeListOAuthState\(state\)/);
-  assert.match(repository, /encryptCredential\(/);
-  assert.match(repository, /consumed_at IS NULL AND expires_at > \?/);
-  assert.match(repository, /owner_email AS ownerEmail/);
+  assert.match(oauthRepository, /hashMyAnimeListOAuthState\(state\)/);
+  assert.match(oauthRepository, /encryptCredential\(/);
+  assert.match(oauthRepository, /consumed_at IS NULL AND expires_at > \?/);
+  assert.match(oauthRepository, /owner_email AS ownerEmail/);
   assert.match(callbackRoute, /chatGPTSignInPath\(returnTo\)/);
   assert.match(callbackRoute, /runtimeValue\("AUTH_MODE"\) === "cloudflare_access"/);
   assert.match(callbackRoute, /new URL\("\/studio\/oauth-resume", site\)/);
@@ -1042,13 +1045,22 @@ test("OAuth routes and migration preserve the server-only privacy boundary", asy
 });
 
 test("Studio keeps a manual MyAnimeList continuation when automatic navigation stalls", async () => {
-  const controls = await readFile(
-    new URL("../app/studio/ConnectorControls.tsx", import.meta.url),
-    "utf8",
-  );
+  const controls = (
+    await Promise.all(
+      [
+        "../app/studio/ConnectorControls.tsx",
+        "../app/studio/connectors/ApiConnectorPanel.tsx",
+        "../app/studio/connectors/helpers.ts",
+        "../app/studio/connectors/MyAnimeListConnectorPanel.tsx",
+      ].map((path) => readFile(new URL(path, import.meta.url), "utf8")),
+    )
+  ).join("\n");
 
-  assert.match(controls, /safeAuthorizationUrl\(result\.authorizationUrl\)/);
+  assert.match(
+    controls,
+    /safeAuthorizationUrl\(\s*oauth\.provider,\s*result\.authorizationUrl/,
+  );
   assert.match(controls, /setAuthorizationDestination\(destination\)/);
   assert.match(controls, /href=\{authorizationDestination\}/);
-  assert.match(controls, /Continue to MyAnimeList/);
+  assert.match(controls, /Continue to \{oauthProviderTitle\}/);
 });

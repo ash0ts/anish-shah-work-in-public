@@ -1,6 +1,7 @@
 export const CONNECTOR_PROVIDERS = [
   "myanimelist",
   "hardcover",
+  "spotify",
   "steam",
 ] as const;
 
@@ -42,9 +43,20 @@ export type SteamCredential = {
   steamId: string;
 };
 
+export type SpotifyOAuthCredential = {
+  kind: "oauth";
+  clientId: string;
+  clientSecret: string;
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresAt: string;
+  scopes: ["user-top-read", "user-read-private"];
+};
+
 export type ConnectorCredential =
   | MyAnimeListCredential
   | HardcoverCredential
+  | SpotifyOAuthCredential
   | SteamCredential;
 
 export type ConnectorCredentialInput =

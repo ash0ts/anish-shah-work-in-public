@@ -1,0 +1,159 @@
+const PUBLIC_SITE_ORIGIN =
+  "https://anish-shah-work-in-public.anish-shah-emails.workers.dev";
+
+const RATE_LIMITS = new Map([
+  ["OWNER_RATE_LIMITER", { namespaceId: "88001001", limit: 30 }],
+  ["ARTWORK_RATE_LIMITER", { namespaceId: "88001002", limit: 120 }],
+  ["PROMOTION_RATE_LIMITER", { namespaceId: "88001003", limit: 6 }],
+  ["OAUTH_CALLBACK_RATE_LIMITER", { namespaceId: "88001004", limit: 20 }],
+]);
+
+function required(env, name) {
+  const value = env[name]?.trim();
+  if (!value) throw new Error(`${name} is required for release preflight.`);
+  return value;
+}
+
+function exactHttpsOrigin(value, name) {
+  let url;
+  try {
+    url = new URL(value.includes("://") ? value : `https://${value}`);
+  } catch {
+    throw new Error(`${name} must be a valid HTTPS origin.`);
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash ||
+    url.username ||
+    url.password ||
+    url.port
+  ) {
+    throw new Error(`${name} must be an exact HTTPS origin.`);
+  }
+  return url.origin;
+}
+
+export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
+  const siteUrl = exactHttpsOrigin(required(env, "PUBLIC_SITE_URL"), "PUBLIC_SITE_URL");
+  if (siteUrl !== PUBLIC_SITE_ORIGIN) {
+    throw new Error("PUBLIC_SITE_URL must be the repository's pinned Worker origin.");
+  }
+  const teamDomain = exactHttpsOrigin(
+    required(env, "CF_ACCESS_TEAM_DOMAIN"),
+    "CF_ACCESS_TEAM_DOMAIN",
+  );
+  if (!new URL(teamDomain).hostname.endsWith(".cloudflareaccess.com")) {
+    throw new Error("CF_ACCESS_TEAM_DOMAIN must be a Cloudflare Access team origin.");
+  }
+  const ownerEmails = [...new Set(
+    required(env, "OWNER_EMAILS")
+      .split(",")
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean),
+  )];
+  if (
+    !ownerEmails.length ||
+    ownerEmails.some((value) => value.length > 320 || !/^[^\s@]+@[^\s@]+$/.test(value))
+  ) {
+    throw new Error("OWNER_EMAILS must contain valid exact-match addresses.");
+  }
+  const audiences = required(env, "CF_ACCESS_AUD")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (
+    !audiences.length ||
+    audiences.some((value) => !/^[A-Za-z0-9_-]{8,160}$/.test(value))
+  ) {
+    throw new Error("CF_ACCESS_AUD must contain valid Access audiences.");
+  }
+  const databaseId = required(env, "CLOUDFLARE_D1_DATABASE_ID");
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(databaseId)) {
+    throw new Error("CLOUDFLARE_D1_DATABASE_ID must be a D1 UUID.");
+  }
+  const publicationCacheId = required(env, "CLOUDFLARE_PUBLICATION_CACHE_ID");
+  if (!/^[0-9a-f]{32}$/i.test(publicationCacheId)) {
+    throw new Error("CLOUDFLARE_PUBLICATION_CACHE_ID must be a KV namespace ID.");
+  }
+  const databaseName =
+    env.CLOUDFLARE_D1_DATABASE_NAME?.trim() || "anish-shah-work-in-public";
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(databaseName)) {
+    throw new Error("CLOUDFLARE_D1_DATABASE_NAME is invalid.");
+  }
+  return {
+    head,
+    contentVersion,
+    siteUrl,
+    teamDomain,
+    ownerEmails: ownerEmails.join(","),
+    audiences: audiences.join(","),
+    databaseId,
+    databaseName,
+    publicationCacheId,
+  };
+}
+
+export function assertPublicReleaseConfig(config, expected) {
+  const vars = config?.vars ?? {};
+  const expectedVars = {
+    AUTH_MODE: "cloudflare_access",
+    CF_ACCESS_AUD: expected.audiences,
+    CF_ACCESS_TEAM_DOMAIN: expected.teamDomain,
+    NODE_ENV: "production",
+    OWNER_EMAILS: expected.ownerEmails,
+    PRODUCTION_SITE_URL: expected.siteUrl,
+    SITE_URL: expected.siteUrl,
+    STEAM_DATA_STORAGE_COUNTRIES: "United States",
+    RELEASE_SHA: expected.head,
+    CONTENT_VERSION: expected.contentVersion,
+    PUBLIC_CONTENT_MODE: "d1_kv_required",
+  };
+  const exactVars =
+    JSON.stringify(Object.keys(vars).sort()) ===
+      JSON.stringify(Object.keys(expectedVars).sort()) &&
+    Object.entries(expectedVars).every(([name, value]) => vars[name] === value);
+  const database = config?.d1_databases?.[0];
+  const publicationCache = config?.kv_namespaces?.[0];
+  const rateLimits = new Map(
+    Array.isArray(config?.ratelimits)
+      ? config.ratelimits.map((binding) => [binding?.name, binding])
+      : [],
+  );
+  const exactRateLimits =
+    rateLimits.size === RATE_LIMITS.size &&
+    [...RATE_LIMITS].every(([name, expectedRate]) => {
+      const actual = rateLimits.get(name);
+      return (
+        actual?.namespace_id === expectedRate.namespaceId &&
+        actual?.simple?.limit === expectedRate.limit &&
+        actual?.simple?.period === 60
+      );
+    });
+  if (
+    config?.name !== "anish-shah-work-in-public" ||
+    config?.topLevelName !== "anish-shah-work-in-public" ||
+    config?.workers_dev !== true ||
+    config?.preview_urls !== false ||
+    config?.d1_databases?.length !== 1 ||
+    database?.binding !== "DB" ||
+    database?.database_id !== expected.databaseId ||
+    database?.database_name !== expected.databaseName ||
+    database?.migrations_dir !== "../../drizzle" ||
+    config?.kv_namespaces?.length !== 1 ||
+    publicationCache?.binding !== "PUBLICATION_CACHE" ||
+    publicationCache?.id !== expected.publicationCacheId ||
+    !exactRateLimits ||
+    !exactVars ||
+    config?.observability?.enabled !== true ||
+    config?.observability?.head_sampling_rate !== 0.1 ||
+    config?.observability?.logs?.enabled !== true ||
+    config?.observability?.logs?.invocation_logs !== false ||
+    JSON.stringify(config?.triggers?.crons) !== JSON.stringify(["17 * * * *"])
+  ) {
+    throw new Error(
+      "Prepared Worker configuration does not satisfy the exact public-release boundary.",
+    );
+  }
+}

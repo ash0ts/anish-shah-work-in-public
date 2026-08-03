@@ -225,7 +225,7 @@
 
 .frame td > a > small {
   grid-column: 1 / -1;
-  color: var(--ink-muted, #5c6477);
+  color: var(--blueprint-ink, #17223b);
 }
 
 .frame td > a:hover,

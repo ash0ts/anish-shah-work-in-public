@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "1.0",
+  "contentVersion": "1f95080f1833343b",
+  "generatedAt": "2026-07-30T00:00:00.000Z",
+  "artifacts": [
+    {
+      "path": "content/public/anish-content.public.v1.json",
+      "bytes": 673389,
+      "sha256": "b7d0a4c5d195af8cc880b689bdbd46c88e652ebcedf0915a1650c1f1a935bd34"
+    },
+    {
+      "path": "content/schema/anish-content.schema.json",
+      "bytes": 33131,
+      "sha256": "1bd38b0abde37200b88357b32bb4d55ad1292cbbcbd579468ac09e0830e57cb7"
+    },
+    {
+      "path": "types/content.ts",
+      "bytes": 8034,
+      "sha256": "c8930c9374ef8cde32152e57eb684887886314ed7d571694babe6e779866df04"
+    },
+    {
+      "path": "content/curation/content-v1.1.json",
+      "bytes": 16937,
+      "sha256": "b7b03a01543af87af5fa1af8c69cc2711158e086c62d4d8153aebcb8a2dde8e0"
+    },
+    {
+      "path": "content/curation/public-claim-upgrades.v1.json",
+      "bytes": 2290,
+      "sha256": "d2b89fc1ad4b3c0c158b49635ae88cf7c17a6c42913e6474a9323591c17e4788"
+    },
+    {
+      "path": "content/curation/work-groups.v1.json",
+      "bytes": 18301,
+      "sha256": "dc5f38cf0fba3a6f80b805fcdef8a5cedf8507403cdd4e9d47601f675119099e"
+    },
+    {
+      "path": "content/presentation/metric-groups.v1.json",
+      "bytes": 1700,
+      "sha256": "9f1d59591325c53883164b8a47a1ef1b3ac4918e15a31cd0f64fe0694473acd8"
+    }
+  ],
+  "generator": {
+    "moduleCount": 12,
+    "sha256": "78a57e6ec6d9617a7fe48566b11659afb0bf4120abba1de91c8ed9bf8864b8c3"
+  },
+  "counts": {
+    "items": 186,
+    "entities": 137,
+    "workGroups": 82,
+    "metrics": 13,
+    "metricGroups": 4,
+    "evidence": 198,
+    "relations": 64,
+    "collections": 9,
+    "narratives": 6,
+    "sourceSnapshots": 2
+  },
+  "sourceSummary": {
+    "footprintRows": 184,
+    "impactRows": 85,
+    "supplementalArtifacts": 2,
+    "publicItems": 186,
+    "approvedMetricCount": 13,
+    "footprintBackedUniqueWorks": 99,
+    "supplementalUniqueWorks": 1
+  }
+}

@@ -34,8 +34,23 @@ interface Fetcher {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
 }
 
+interface KVNamespace {
+  get(key: string, type?: "text"): Promise<string | null>;
+  put(
+    key: string,
+    value: string,
+    options?: { expirationTtl?: number; metadata?: Record<string, unknown> },
+  ): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+
+interface RateLimitBinding {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 interface CloudflareRuntimeEnv {
   DB?: D1Database;
+  PUBLICATION_CACHE?: KVNamespace;
   [key: string]: unknown;
 }
 

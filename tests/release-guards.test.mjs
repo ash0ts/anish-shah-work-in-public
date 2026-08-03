@@ -1,0 +1,422 @@
+import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import test from "node:test";
+
+import {
+  assertReleaseMarker,
+  assertProductionDeployment,
+  assertRequiredValidationRuns,
+  assertVerifiedActionsRun,
+  exactMigrationNames,
+  exactVersionIds,
+  githubRepositoryFromRemoteUrl,
+  parseRemoteReleaseMarker,
+  publicationCheckpointForPlan,
+  requireExactUploadedVersion,
+  runGuardedMigration,
+} from "../scripts/lib/release-contract.mjs";
+import {
+  assertPublicReleaseConfig,
+  expectedPublicReleaseConfig,
+} from "../scripts/lib/release-config-contract.mjs";
+import {
+  buildDeployableArtifactManifest,
+  verifyDeployableArtifactManifest,
+} from "../scripts/lib/deployable-artifact-contract.mjs";
+
+function validReleaseConfigFixture() {
+  const head = "a".repeat(40);
+  const contentVersion = "b".repeat(16);
+  const environment = {
+    PUBLIC_SITE_URL:
+      "https://anish-shah-work-in-public.anish-shah-emails.workers.dev",
+    CF_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
+    OWNER_EMAILS: "owner@example.com",
+    CF_ACCESS_AUD: "example-access-audience",
+    CLOUDFLARE_D1_DATABASE_ID: "00000000-0000-4000-8000-000000000000",
+    CLOUDFLARE_D1_DATABASE_NAME: "anish-shah-work-in-public",
+    CLOUDFLARE_PUBLICATION_CACHE_ID: "0".repeat(32),
+  };
+  const expected = expectedPublicReleaseConfig(environment, {
+    head,
+    contentVersion,
+  });
+  return {
+    expected,
+    config: {
+      name: "anish-shah-work-in-public",
+      topLevelName: "anish-shah-work-in-public",
+      workers_dev: true,
+      preview_urls: false,
+      d1_databases: [
+        {
+          binding: "DB",
+          database_id: expected.databaseId,
+          database_name: expected.databaseName,
+          migrations_dir: "../../drizzle",
+        },
+      ],
+      kv_namespaces: [
+        { binding: "PUBLICATION_CACHE", id: expected.publicationCacheId },
+      ],
+      ratelimits: [
+        ["OWNER_RATE_LIMITER", "88001001", 30],
+        ["ARTWORK_RATE_LIMITER", "88001002", 120],
+        ["PROMOTION_RATE_LIMITER", "88001003", 6],
+        ["OAUTH_CALLBACK_RATE_LIMITER", "88001004", 20],
+      ].map(([name, namespace_id, limit]) => ({
+        name,
+        namespace_id,
+        simple: { limit, period: 60 },
+      })),
+      vars: {
+        AUTH_MODE: "cloudflare_access",
+        CF_ACCESS_AUD: expected.audiences,
+        CF_ACCESS_TEAM_DOMAIN: expected.teamDomain,
+        NODE_ENV: "production",
+        OWNER_EMAILS: expected.ownerEmails,
+        PRODUCTION_SITE_URL: expected.siteUrl,
+        SITE_URL: expected.siteUrl,
+        STEAM_DATA_STORAGE_COUNTRIES: "United States",
+        RELEASE_SHA: head,
+        CONTENT_VERSION: contentVersion,
+        PUBLIC_CONTENT_MODE: "d1_kv_required",
+      },
+      observability: {
+        enabled: true,
+        head_sampling_rate: 0.1,
+        logs: { enabled: true, invocation_logs: false },
+      },
+      triggers: { crons: ["17 * * * *"] },
+    },
+  };
+}
+
+test("release parsers return exact migration and Worker version identifiers", () => {
+  assert.deepEqual(
+    exactMigrationNames("pending 0005_steady_publication_guard.sql; unrelated.sql"),
+    ["0005_steady_publication_guard.sql"],
+  );
+  const version = "dc8dcd28-271b-4367-9840-6c244f84cb40";
+  assert.deepEqual(exactVersionIds(`prefix ${version} suffix`), [version]);
+  assert.throws(
+    () => requireExactUploadedVersion(`prefix ${version.slice(0, 12)} suffix`, version),
+    /not present/,
+  );
+});
+
+test("release preflight rejects a configuration that weakens production boundaries", () => {
+  const { config, expected } = validReleaseConfigFixture();
+  assert.doesNotThrow(() => assertPublicReleaseConfig(config, expected));
+  assert.throws(
+    () =>
+      assertPublicReleaseConfig(
+        { ...config, vars: { ...config.vars, NODE_ENV: "development" } },
+        expected,
+      ),
+    /exact public-release boundary/,
+  );
+  assert.throws(
+    () =>
+      assertPublicReleaseConfig(
+        { ...config, vars: { ...config.vars, AUTH_MODE: "sites" } },
+        expected,
+      ),
+    /exact public-release boundary/,
+  );
+  assert.throws(
+    () =>
+      assertPublicReleaseConfig(
+        { ...config, d1_databases: [] },
+        expected,
+      ),
+    /exact public-release boundary/,
+  );
+});
+
+test("deployable artifact manifest rejects one changed ignored build asset", async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "anish-deployable-"));
+  try {
+    mkdirSync(path.join(directory, "dist/client"), { recursive: true });
+    mkdirSync(path.join(directory, "dist/server"), { recursive: true });
+    writeFileSync(path.join(directory, "dist/client/app.js"), "safe-client\n");
+    writeFileSync(path.join(directory, "dist/server/worker.js"), "safe-worker\n");
+    const manifest = await buildDeployableArtifactManifest(directory);
+    assert.equal(manifest.fileCount, 2);
+    await assert.doesNotReject(() =>
+      verifyDeployableArtifactManifest(directory, manifest),
+    );
+    writeFileSync(path.join(directory, "dist/client/app.js"), "changed-client\n");
+    await assert.rejects(
+      () => verifyDeployableArtifactManifest(directory, manifest),
+      /do not match the prepared deterministic manifest/,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("pending migration mismatch stops before mutation", async () => {
+  let applied = false;
+  await assert.rejects(
+    () =>
+      runGuardedMigration({
+        planned: ["0005_expected.sql"],
+        listPending: async () => ["0006_unreviewed.sql"],
+        apply: async () => {
+          applied = true;
+        },
+      }),
+    /do not exactly match/,
+  );
+  assert.equal(applied, false);
+});
+
+test("matching migration is applied once and post-apply state is verified", async () => {
+  let listCalls = 0;
+  let applyCalls = 0;
+  const result = await runGuardedMigration({
+    planned: ["0005_expected.sql"],
+    listPending: async () =>
+      listCalls++ === 0 ? ["0005_expected.sql"] : [],
+    apply: async () => {
+      applyCalls += 1;
+    },
+  });
+  assert.deepEqual(result, { applied: true });
+  assert.equal(applyCalls, 1);
+  assert.equal(listCalls, 2);
+});
+
+test("a migration remaining after apply fails the release", async () => {
+  await assert.rejects(
+    () =>
+      runGuardedMigration({
+        planned: ["0005_expected.sql"],
+        listPending: async () => ["0005_expected.sql"],
+        apply: async () => {},
+      }),
+    /remain after apply/,
+  );
+});
+
+test("GitHub evidence must be successful and bind the exact SHA and URL", () => {
+  const evidence = {
+    headSha: "a".repeat(40),
+    conclusion: "success",
+    name: "Validate",
+    url: "https://github.com/example/repo/actions/runs/123",
+  };
+  assert.doesNotThrow(() =>
+    assertVerifiedActionsRun(evidence, {
+      head: evidence.headSha,
+      url: `${evidence.url}/`,
+      name: "Validate",
+    }),
+  );
+  assert.throws(
+    () =>
+      assertVerifiedActionsRun(
+        { ...evidence, conclusion: "failure" },
+        { head: evidence.headSha, url: evidence.url, name: "Validate" },
+      ),
+    /not the required successful validation/,
+  );
+  assert.throws(
+    () =>
+      assertVerifiedActionsRun(evidence, {
+        head: evidence.headSha,
+        url: evidence.url,
+        name: "CodeQL",
+      }),
+    /required successful validation/,
+  );
+});
+
+test("release evidence requires three distinct exact-commit security runs", () => {
+  const head = "a".repeat(40);
+  const runs = [
+    ["validate", "Validate", "101"],
+    ["gitleaks", "Gitleaks", "102"],
+    ["codeql", "CodeQL", "103"],
+  ].map(([kind, name, id]) => ({
+    kind,
+    name,
+    headSha: head,
+    conclusion: "success",
+    url: `https://github.com/example/repo/actions/runs/${id}`,
+  }));
+  assert.doesNotThrow(() => assertRequiredValidationRuns(runs, head));
+  assert.throws(
+    () => assertRequiredValidationRuns(runs.slice(0, 2), head),
+    /Validate, Gitleaks, and CodeQL/,
+  );
+  assert.throws(
+    () =>
+      assertRequiredValidationRuns(
+        runs.map((run, index) =>
+          index === 2 ? { ...run, url: runs[0].url } : run,
+        ),
+        head,
+      ),
+    /distinct/,
+  );
+  assert.throws(
+    () => assertRequiredValidationRuns(runs, head, "different/repository"),
+    /configured upstream repository/,
+  );
+});
+
+test("release evidence derives and binds the GitHub upstream repository", () => {
+  assert.equal(
+    githubRepositoryFromRemoteUrl(
+      "https://github.com/ash0ts/anish-shah-work-in-public.git",
+    ),
+    "ash0ts/anish-shah-work-in-public",
+  );
+  assert.equal(
+    githubRepositoryFromRemoteUrl(
+      "git@github.com:ash0ts/anish-shah-work-in-public.git",
+    ),
+    "ash0ts/anish-shah-work-in-public",
+  );
+  assert.throws(
+    () => githubRepositoryFromRemoteUrl("https://example.com/fork/repo.git"),
+    /supported GitHub remote/,
+  );
+});
+
+test("publication compatibility and zero-traffic bootstrap are explicit", () => {
+  const releaseContentVersion = "a".repeat(16);
+  const ready = publicationCheckpointForPlan({
+    hash: "b".repeat(64),
+    contentVersion: releaseContentVersion,
+    kvPointerMatches: true,
+    releaseContentVersion,
+    bootstrapPlanned: false,
+    previousVersion: "old-version",
+  });
+  assert.equal(ready.status, "compatible");
+
+  assert.throws(
+    () =>
+      publicationCheckpointForPlan({
+        hash: "none",
+        contentVersion: "none",
+        kvPointerMatches: false,
+        releaseContentVersion,
+        bootstrapPlanned: false,
+        previousVersion: "old-version",
+      }),
+    /zero-traffic pre-deploy bootstrap/,
+  );
+  const bootstrap = publicationCheckpointForPlan({
+    hash: "none",
+    contentVersion: "none",
+    kvPointerMatches: false,
+    releaseContentVersion,
+    bootstrapPlanned: true,
+    previousVersion: "old-version",
+  });
+  assert.equal(bootstrap.status, "predeploy_bootstrap_required");
+  assert.throws(
+    () =>
+      publicationCheckpointForPlan({
+        hash: "none",
+        contentVersion: "none",
+        kvPointerMatches: false,
+        releaseContentVersion,
+        bootstrapPlanned: true,
+        previousVersion: null,
+      }),
+    /requires an existing Worker version/,
+  );
+});
+
+test("remote release marker binds staged SHA to the current publication", () => {
+  const head = "a".repeat(40);
+  const contentVersion = "b".repeat(16);
+  const contentHash = "c".repeat(64);
+  const checkedAt = "2026-08-03T12:00:00.000Z";
+  const marker = parseRemoteReleaseMarker(
+    JSON.stringify([
+      {
+        results: [
+          {
+            status: "ready",
+            detailsJson: JSON.stringify({
+              releaseSha: head,
+              contentVersion,
+              contentHash,
+              verifiedAt: checkedAt,
+            }),
+            checkedAt,
+            currentContentHash: contentHash,
+            currentContentVersion: contentVersion,
+          },
+        ],
+      },
+    ]),
+  );
+  assert.doesNotThrow(() =>
+    assertReleaseMarker(marker, {
+      head,
+      contentVersion,
+      preparedAt: "2026-08-03T11:59:00.000Z",
+    }),
+  );
+  assert.throws(
+    () =>
+      assertReleaseMarker(
+        { ...marker, currentContentHash: "d".repeat(64) },
+        {
+          head,
+          contentVersion,
+          preparedAt: "2026-08-03T11:59:00.000Z",
+        },
+      ),
+    /missing, stale, or does not match/,
+  );
+  assert.throws(
+    () =>
+      assertReleaseMarker(marker, {
+        head,
+        contentVersion,
+        preparedAt: "2026-08-03T12:01:00.000Z",
+      }),
+    /missing, stale, or does not match/,
+  );
+});
+
+test("final release evidence requires the exact version at 100 percent", () => {
+  const version = "dc8dcd28-271b-4367-9840-6c244f84cb40";
+  assert.deepEqual(
+    assertProductionDeployment(
+      JSON.stringify({
+        id: "deployment_123456",
+        versions: [{ version_id: version, percentage: 100 }],
+      }),
+      version,
+    ),
+    {
+      deploymentId: "deployment_123456",
+      versionId: version,
+      percentage: 100,
+    },
+  );
+  assert.throws(
+    () =>
+      assertProductionDeployment(
+        JSON.stringify({
+          versions: [
+            { version_id: version, percentage: 99 },
+            { version_id: "other-version", percentage: 1 },
+          ],
+        }),
+        version,
+      ),
+    /100% production traffic/,
+  );
+});

@@ -490,7 +490,7 @@
 
 .connectorFacts dt {
   margin-bottom: 6px;
-  color: rgba(23, 34, 59, 0.62);
+  color: rgba(23, 34, 59, 0.68);
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 12px;
   letter-spacing: 0.08em;
@@ -798,6 +798,10 @@
   --provider-accent: #bc7715;
 }
 
+.connectorPanel[data-provider="spotify"] {
+  --provider-accent: #137542;
+}
+
 .connectorPanel[data-provider="steam"] {
   --provider-accent: var(--blue);
 }
@@ -870,6 +874,10 @@
 }
 
 .providerLead a {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: flex-end;
   color: var(--ink);
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 12px;
@@ -920,7 +928,7 @@
 }
 
 .status_setup_required {
-  color: rgba(23, 34, 59, 0.58);
+  color: rgba(23, 34, 59, 0.68);
 }
 
 .connectorFacts {
@@ -945,7 +953,7 @@
 
 .connectorFacts dt {
   margin-bottom: 6px;
-  color: rgba(23, 34, 59, 0.58);
+  color: rgba(23, 34, 59, 0.68);
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 12px;
   font-weight: 700;
@@ -980,11 +988,174 @@
   background: rgba(255, 255, 255, 0.48);
 }
 
+.spotifyPublication {
+  min-width: 0;
+  margin-top: 26px;
+  padding: clamp(18px, 2.6vw, 28px);
+  border: 1px solid var(--ink);
+  box-shadow: inset 5px 0 0 var(--provider-accent);
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--provider-accent) 7%, transparent),
+      transparent 44%
+    ),
+    rgba(255, 255, 255, 0.5);
+}
+
+.spotifyPublicationLead {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.7fr);
+  gap: 18px 34px;
+  align-items: end;
+}
+
+.spotifyPublicationLabel {
+  margin: 0 0 7px;
+  color: var(--provider-accent);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.spotifyPublication h4 {
+  margin: 0;
+  font-family: "Recursive", "Arial Black", sans-serif;
+  font-size: clamp(23px, 2.6vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.spotifyPublicationLead dl {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border-block: 1px solid rgba(23, 34, 59, 0.28);
+}
+
+.spotifyPublicationLead dl > div {
+  min-width: 0;
+  padding: 10px 12px 11px 0;
+}
+
+.spotifyPublicationLead dl > div + div {
+  padding-left: 12px;
+  border-left: 1px solid rgba(23, 34, 59, 0.28);
+}
+
+.spotifyPublicationLead dt {
+  margin-bottom: 4px;
+  color: rgba(23, 34, 59, 0.68);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.spotifyPublicationLead dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.spotifyPublicationForm {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.publicationSwitch,
+.publicationAcknowledgement {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  cursor: pointer;
+}
+
+.publicationSwitch {
+  padding-block: 14px;
+  border-block: 1px solid rgba(23, 34, 59, 0.28);
+}
+
+.publicationAcknowledgement {
+  padding: 14px;
+  border: 1px solid var(--provider-accent);
+  background: color-mix(in srgb, var(--provider-accent) 7%, white);
+  color: rgba(23, 34, 59, 0.78);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.publicationSwitch input,
+.publicationAcknowledgement input {
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--provider-accent);
+}
+
+.publicationSwitch strong,
+.publicationSwitch small {
+  display: block;
+}
+
+.publicationSwitch strong {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.045em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.publicationSwitch small {
+  max-width: 680px;
+  margin-top: 4px;
+  color: rgba(23, 34, 59, 0.68);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.fieldHelp,
+.spotifyIsolationNote,
+.configStatus {
+  overflow-wrap: anywhere;
+  color: rgba(23, 34, 59, 0.66);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.fieldHelp {
+  max-width: 720px;
+  margin: -8px 0 0;
+}
+
+.spotifyIsolationNote,
+.configStatus {
+  margin: 16px 0 0;
+}
+
+.spotifyIsolationNote {
+  padding-top: 14px;
+  border-top: 1px solid rgba(23, 34, 59, 0.24);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
 .callbackBlock > span,
 .currentConfig > span {
   display: block;
   margin-bottom: 8px;
-  color: rgba(23, 34, 59, 0.62);
+  color: rgba(23, 34, 59, 0.68);
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 12px;
   font-weight: 700;
@@ -1018,7 +1189,7 @@
 
 .callbackBlock > p {
   margin: 8px 0 0;
-  color: rgba(23, 34, 59, 0.62);
+  color: rgba(23, 34, 59, 0.68);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -1354,6 +1525,11 @@
     grid-template-columns: 1fr;
   }
 
+  .spotifyPublicationLead {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
   .providerLead > nav {
     justify-self: start;
     text-align: left;
@@ -1395,6 +1571,16 @@
 
   .fieldPair {
     grid-template-columns: 1fr;
+  }
+
+  .spotifyPublicationLead dl {
+    grid-template-columns: 1fr;
+  }
+
+  .spotifyPublicationLead dl > div + div {
+    padding-left: 0;
+    border-top: 1px solid rgba(23, 34, 59, 0.28);
+    border-left: 0;
   }
 
   .callbackBlock > div {

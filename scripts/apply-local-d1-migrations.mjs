@@ -1,10 +1,15 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const localStateDirectory = resolve(projectRoot, ".wrangler/state");
+const clean = process.argv.includes("--clean");
+const localWranglerDirectory = resolve(projectRoot, ".wrangler");
+mkdirSync(localWranglerDirectory, { recursive: true });
+const localStateDirectory = clean
+  ? mkdtempSync(resolve(localWranglerDirectory, "validation-d1-"))
+  : resolve(localWranglerDirectory, "state");
 const temporaryConfig = resolve(
   projectRoot,
   `.wrangler/local-d1-${process.pid}.json`,
@@ -65,4 +70,5 @@ try {
   if (result.status !== 0) process.exitCode = result.status ?? 1;
 } finally {
   rmSync(temporaryConfig, { force: true });
+  if (clean) rmSync(localStateDirectory, { force: true, recursive: true });
 }

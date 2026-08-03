@@ -29,6 +29,8 @@ before(async () => {
       "--ip",
       "127.0.0.1",
       "--local",
+      "--var",
+      "NODE_ENV:development",
       "--log-level",
       "error",
       "--persist-to",

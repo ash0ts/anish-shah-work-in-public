@@ -16,11 +16,35 @@ const syncedAt = "2026-07-30T18:00:00.000Z";
 const freshUntil = "2026-07-31T06:00:00.000Z";
 
 function safePayload(provider, profileUrl) {
+  assert.equal(provider, "myanimelist");
   return {
     provider,
+    snapshotVersion: 3,
     profileUrl,
-    coverage: "Current library",
-    recent: [{ id: "1", title: "A safe title", updatedAt: syncedAt }],
+    coverage: "Complete anime library at sync",
+    status: [{ label: "Completed", count: 1 }],
+    genres: [{ label: "Action", count: 1 }],
+    eras: [{ label: "2020s", count: 1 }],
+    scores: [{ label: "8", count: 1 }],
+    recent: [{
+      id: "1",
+      title: "A safe title",
+      status: "Completed",
+      score: 8,
+      episodesWatched: 12,
+      updatedAt: syncedAt,
+    }],
+    library: [{
+      id: "1",
+      title: "A safe title",
+      startDate: "2020-01-01",
+      releaseYear: 2020,
+      genres: ["Action"],
+      status: "Completed",
+      score: 8,
+      episodesWatched: 12,
+      updatedAt: syncedAt,
+    }],
     syncedAt,
     freshUntil,
   };
@@ -84,15 +108,64 @@ test("connector public payload policy permits only the allowlisted profile URL",
     "https://myanimelist.net/profile/anish",
   );
   assert.equal(validateConnectorPublicPayload("myanimelist", safe), true);
+  assert.equal(
+    validateConnectorPublicPayload("myanimelist", {
+      ...safe,
+      syncedAt: "2026-07-30T18:00:00Z",
+    }),
+    false,
+  );
   assert.deepEqual(
     parseStoredConnectorPublicPayload("myanimelist", JSON.stringify(safe)),
     safe,
   );
+  assert.equal(
+    validateConnectorPublicPayload("myanimelist", {
+      ...safe,
+      library: [{ ...safe.library[0], providerMetadata: "not public" }],
+    }),
+    false,
+  );
+  const safeHardcover = {
+    provider: "hardcover",
+    snapshotVersion: 3,
+    profileUrl: "https://hardcover.app/@anish",
+    coverage: "Complete book library at sync",
+    status: [{ label: "Read", count: 1 }],
+    ratings: [{ label: "5", count: 1 }],
+    recent: [{
+      id: "1",
+      title: "Safe Book",
+      slug: "safe-book",
+      status: "Read",
+      rating: 5,
+      updatedAt: syncedAt,
+    }],
+    library: [{
+      id: "1",
+      title: "Safe Book",
+      slug: "safe-book",
+      status: "Read",
+      rating: 5,
+      updatedAt: syncedAt,
+    }],
+    syncedAt,
+    freshUntil,
+  };
+  assert.equal(validateConnectorPublicPayload("hardcover", safeHardcover), true);
+  assert.equal(
+    validateConnectorPublicPayload("hardcover", {
+      ...safeHardcover,
+      rawResponse: {},
+    }),
+    false,
+  );
   const safeSteam = {
     provider: "steam",
+    snapshotVersion: 3,
     profileUrl:
       "https://steamcommunity.com/profiles/76561198000000000",
-    coverage: "Public Steam game details returned at sync",
+    coverage: "Complete public Steam library snapshot",
     totals: {
       publicGameCount: 1,
       playedGameCount: 1,
@@ -102,6 +175,21 @@ test("connector public payload policy permits only the allowlisted profile URL",
       { appId: "10", title: "Safe Game", hoursRounded: 10 },
     ],
     recent: [],
+    playtime: [
+      { label: "Unplayed", count: 0 },
+      { label: "Under 2h", count: 0 },
+      { label: "2–10h", count: 0 },
+      { label: "10–50h", count: 1 },
+      { label: "50h+", count: 0 },
+    ],
+    library: [{
+      appId: "10",
+      title: "Safe Game",
+      played: true,
+      recentlyPlayed: false,
+      totalHoursRounded: 10,
+      recentHoursRounded: 0,
+    }],
     syncedAt,
     freshUntil,
   };
@@ -169,22 +257,46 @@ test("connector public payload policy permits only the allowlisted profile URL",
 });
 
 test("connector repository validates public payloads before D1 writes and reads", async () => {
-  const repository = await readFile(
-    new URL("../lib/server/connectors/repository.ts", import.meta.url),
-    "utf8",
-  );
-  const writeBoundary = repository.indexOf(
+  const [snapshotReads, refreshWrites] = await Promise.all([
+    readFile(
+      new URL(
+        "../lib/server/connectors/repository-snapshots.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../lib/server/connectors/repository-refresh.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ]);
+  const writeBoundary = refreshWrites.indexOf(
     "if (!validateConnectorPublicPayload(provider, publicPayload))",
   );
-  const serialization = repository.indexOf(
+  const serialization = refreshWrites.indexOf(
     "JSON.stringify(publicPayload)",
     writeBoundary,
   );
 
   assert(writeBoundary >= 0);
   assert(serialization > writeBoundary);
-  assert.match(repository, /parseStoredConnectorPublicPayload\(\s*provider,/);
-  assert.match(repository, /reason: "invalid_snapshot"/);
+  assert.match(snapshotReads, /parseStoredConnectorPublicPayload\(\s*provider,/);
+  assert.match(snapshotReads, /reason: "invalid_snapshot"/);
+});
+
+test("collection projectors enumerate provider fields instead of spreading stored records", async () => {
+  const source = await readFile(
+    new URL("../lib/server/connectors/public-gallery.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /function projectMyAnimeListItem/);
+  assert.match(source, /function projectHardcoverItem/);
+  assert.match(source, /function projectSteamItem/);
+  assert.doesNotMatch(source, /\.\.\.publicItem/);
+  assert.doesNotMatch(source, /const \{\s*library[^}]*\.\.\./);
 });
 
 test("public connector responses are never reusable after disconnect", async () => {
@@ -223,10 +335,24 @@ test("provider normalizers reduce artwork to host-free references", async () => 
 });
 
 test("Play fetches a personal-data provider only after its stream is active", async () => {
-  const source = await readFile(
-    new URL("../components/PersonalStreams.tsx", import.meta.url),
-    "utf8",
-  );
+  const [source, collection, movement, spotify] = await Promise.all([
+    readFile(
+      new URL("../components/PersonalStreams.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/play/CollectionStream.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/play/MovementStream.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/SpotifyStream.tsx", import.meta.url),
+      "utf8",
+    ),
+  ]);
 
   assert.match(
     source,
@@ -238,33 +364,49 @@ test("Play fetches a personal-data provider only after its stream is active", as
   );
   assert.match(
     source,
+    /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/,
+  );
+  assert.match(
+    source,
     /active === "play"[\s\S]*?<CollectionStream provider="steam"/,
   );
   assert.match(
     source,
-    /active === "move"[\s\S]*?<MovementProvider/,
+    /active === "move"[\s\S]*?<MovementStream/,
   );
   assert.match(
-    source,
+    collection,
     /function CollectionStream[\s\S]*?loadConnector<CollectionPayload>\(\s*provider,/,
   );
   assert.match(
-    source,
-    /function MovementProvider[\s\S]*?loadConnector<StravaPayload>\(\s*"strava",/,
+    movement,
+    /function MovementStream[\s\S]*?loadConnector<StravaPayload>\(\s*"strava",/,
+  );
+  assert.match(
+    spotify,
+    /function SpotifyStream[\s\S]*?loadSpotify\(controller\.signal\)/,
   );
   assert.doesNotMatch(source, /Promise\.all\([^)]*loadConnector/);
   assert.match(source, /show=\{showStrava\}/);
   assert.match(source, /onShow=\{\(\) => setShowStrava\(true\)\}/);
   assert.doesNotMatch(source, /NEXT_PUBLIC_STRAVA_EMBED_URL/);
-  assert.match(source, /src=\{state\.payload\.embed\.embedUrl\}/);
+  assert.match(movement, /src=\{state\.payload\.embed\.embedUrl\}/);
 });
 
 test("Studio documents setup, replacement, and official provider sources", async () => {
-  const [page, controls, editorial, guide] = await Promise.all([
+  const [page, connectorSources, editorial, guide] = await Promise.all([
     readFile(new URL("../app/studio/page.tsx", import.meta.url), "utf8"),
-    readFile(
-      new URL("../app/studio/ConnectorControls.tsx", import.meta.url),
-      "utf8",
+    Promise.all(
+      [
+        "../app/studio/ConnectorControls.tsx",
+        "../app/studio/connectors/ApiConnectorPanel.tsx",
+        "../app/studio/connectors/helpers.ts",
+        "../app/studio/connectors/MyAnimeListConnectorPanel.tsx",
+        "../app/studio/connectors/HardcoverConnectorPanel.tsx",
+        "../app/studio/connectors/SpotifyConnectorPanel.tsx",
+        "../app/studio/connectors/SteamConnectorPanel.tsx",
+        "../app/studio/connectors/StravaConnectorPanel.tsx",
+      ].map((path) => readFile(new URL(path, import.meta.url), "utf8")),
     ),
     readFile(
       new URL("../app/studio/EditorialRecords.tsx", import.meta.url),
@@ -272,12 +414,14 @@ test("Studio documents setup, replacement, and official provider sources", async
     ),
     readFile(new URL("../docs/play-connections.md", import.meta.url), "utf8"),
   ]);
+  const controls = connectorSources.join("\n");
 
   const setupSurface = `${page}\n${controls}\n${guide}`;
   for (const officialUrl of [
     "https://myanimelist.net/apiconfig",
     "https://hardcover.app/account/api",
     "https://docs.hardcover.app/api/getting-started/",
+    "https://developer.spotify.com/dashboard",
     "https://partner.steamgames.com/doc/webapi_overview",
     "https://steamcommunity.com/dev/apikey",
     "https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed",
@@ -295,6 +439,7 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(controls, /Cancel pending authorization/);
   assert.match(controls, /canReuseOAuthClient/);
   assert.match(controls, /\/api\/studio\/connectors\/myanimelist\/oauth\/start/);
+  assert.match(controls, /\/api\/studio\/connectors\/spotify\/oauth\/start/);
   assert.match(
     setupSurface,
     /\/api\/connectors\/myanimelist\/oauth\/callback/,
@@ -310,7 +455,7 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(guide, /client ID.*client secret/is);
   assert.match(guide, /Refresh now.*Current/is);
   assert.match(guide, /one-time[\s\S]*transfer code/i);
-  assert.match(guide, /Authorize MyAnimeList separately/i);
+  assert.match(guide, /Authorize MyAnimeList and Spotify separately/i);
   assert.match(guide, /Reauthorization required/);
   assert.match(guide, /one year/i);
   assert.match(guide, /January\s+1/i);

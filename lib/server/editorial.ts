@@ -1,5 +1,21 @@
-import publicBundleJson from "@/content/public/anish-content.public.v1.json";
-import { runtimeDatabase } from "./runtime-env";
+import publicBundleJson from "../../content/public/anish-content.public.v1.json" with {
+  type: "json",
+};
+import {
+  runtimeDatabase,
+  runtimePublicationKv,
+  runtimeValue,
+} from "./runtime-env";
+import {
+  PUBLICATION_FALLBACK_KEY,
+  publicationFallbackEnvelope,
+  publicationFallbackPointer,
+  publicationVersionKey,
+} from "./publication-fallback";
+import {
+  PUBLICATION_MAINTENANCE_KEY,
+  recordMaintenanceState,
+} from "./maintenance";
 import {
   type EditorialRecordPatch,
   type EditorialVisibility,
@@ -398,6 +414,50 @@ export async function createPublicationSnapshot(
     publishedAt,
   });
 
+  const fallbackStore = runtimePublicationKv();
+  const productionAccess = runtimeValue("AUTH_MODE") === "cloudflare_access";
+  const requiredPublicationMode =
+    runtimeValue("PUBLIC_CONTENT_MODE") === "d1_kv_required";
+  if (productionAccess && !requiredPublicationMode) {
+    throw new EditorialError(
+      "publication_mode_unavailable",
+      "The production publication mode is not configured.",
+      503,
+    );
+  }
+  if (productionAccess && !fallbackStore) {
+    throw new EditorialError(
+      "publication_fallback_unavailable",
+      "The production publication fallback is not configured.",
+      503,
+    );
+  }
+
+  const fallbackVersionKey = publicationVersionKey(contentHash, publishedAt);
+  if (fallbackStore) {
+    try {
+      // Stage the immutable failover copy first. The current pointer stays on
+      // the prior known-good publication until the D1 transaction succeeds.
+      await fallbackStore.put(
+        fallbackVersionKey,
+        JSON.stringify(
+          publicationFallbackEnvelope(
+            { snapshotJson, contentHash },
+            publishedAt,
+          ),
+        ),
+      );
+    } catch {
+      if (productionAccess) {
+        throw new EditorialError(
+          "publication_fallback_unavailable",
+          "The production publication fallback could not be prepared.",
+          503,
+        );
+      }
+    }
+  }
+
   await binding.batch([
     binding
       .prepare(
@@ -451,6 +511,52 @@ export async function createPublicationSnapshot(
         publishedAt,
       ),
   ]);
+
+  if (fallbackStore) {
+    try {
+      await fallbackStore.put(
+        PUBLICATION_FALLBACK_KEY,
+        JSON.stringify(
+          publicationFallbackPointer(
+            fallbackVersionKey,
+            contentHash,
+            publishedAt,
+          ),
+        ),
+      );
+      await recordMaintenanceState(
+        binding,
+        PUBLICATION_MAINTENANCE_KEY,
+        "ready",
+        {
+          snapshotId: id,
+          releaseSha: runtimeValue("RELEASE_SHA") ?? null,
+          contentVersion: CURRENT_CONTENT_VERSION,
+          contentHash,
+        },
+        publishedAt,
+      );
+    } catch {
+      try {
+        await recordMaintenanceState(
+          binding,
+          PUBLICATION_MAINTENANCE_KEY,
+          "error",
+          { code: "replication_failed" },
+          publishedAt,
+        );
+      } catch {
+        // Preserve the original, safely classified publication error.
+      }
+      if (productionAccess) {
+        throw new EditorialError(
+          "publication_fallback_failed",
+          "The publication was stored but its failover copy could not be verified. Publish again before release.",
+          503,
+        );
+      }
+    }
+  }
 
   return {
     id,

@@ -1,0 +1,11 @@
+# The owner reviews every change; sensitive boundaries are listed explicitly so
+# GitHub surfaces them even if this repository cannot enforce branch protection.
+* @ash0ts
+/.github/ @ash0ts
+/content/curation/ @ash0ts
+/content/presentation/ @ash0ts
+/drizzle/ @ash0ts
+/lib/server/ @ash0ts
+/scripts/prepare-cloudflare-release.mjs @ash0ts
+/scripts/release-preflight.mjs @ash0ts
+/worker/ @ash0ts
