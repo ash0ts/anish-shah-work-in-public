@@ -237,6 +237,36 @@ test("Discogs remains lazy and the six Play streams use keyboard selection", asy
     page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
   ).toBeVisible();
   await expect.poll(() => requests.length).toBe(1);
+  await expect(page).toHaveURL(/\/play\?stream=collect$/);
+});
+
+test("Play stream deep links survive reload and reject unknown selections", async ({ page }) => {
+  const requests = [];
+  await installDiscogsFixture(page, requests);
+
+  await page.goto("/play?stream=collect", { waitUntil: "networkidle" });
+  const collect = page.getByRole("tab", { name: /Collect.*Discogs/i });
+  await expect(collect).toHaveAttribute("aria-selected", "true");
+  await expect(
+    page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
+  ).toBeVisible();
+  await expect.poll(() => requests.length).toBe(1);
+
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(collect).toHaveAttribute("aria-selected", "true");
+  await expect(
+    page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
+  ).toBeVisible();
+  await expect.poll(() => requests.length).toBe(2);
+
+  await page.goto("/play?stream=unknown", { waitUntil: "networkidle" });
+  await expect(
+    page.getByRole("tab", { name: /Watch.*MyAnimeList/i }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    "noindex, follow",
+  );
 });
 
 test("Discogs Pattern and Gallery support filters and pagination", async ({ page }) => {

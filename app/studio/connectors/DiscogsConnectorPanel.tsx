@@ -279,6 +279,13 @@ function DiscogsPresentationControls({
           {message}
         </p>
       ) : null}
+      {config?.publishCollection ? (
+        <p className={styles.publicStreamLink}>
+          <a href="/play?stream=collect" rel="noreferrer" target="_blank">
+            View the published Collect stream
+          </a>
+        </p>
+      ) : null}
       <p className={styles.spotifyIsolationNote}>
         {environment === "local"
           ? "Local authorization, snapshots, and publication choice stay on this machine. Discogs is excluded from the production handoff."
