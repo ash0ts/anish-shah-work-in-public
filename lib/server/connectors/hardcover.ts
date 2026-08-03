@@ -148,7 +148,7 @@ function optionalDateTime(value: unknown): string | undefined {
       "Hardcover returned an unexpected update date value.",
     );
   }
-  return normalized;
+  return new Date(normalized).toISOString();
 }
 
 function normalizeHardcoverBook(value: unknown): NormalizedHardcoverBook {

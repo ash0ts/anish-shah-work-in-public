@@ -181,7 +181,7 @@ function optionalDateTime(value: unknown): string | undefined {
       "MyAnimeList returned an unexpected update date value.",
     );
   }
-  return normalized;
+  return new Date(normalized).toISOString();
 }
 
 function normalizeMalItem(value: unknown): NormalizedMalItem {

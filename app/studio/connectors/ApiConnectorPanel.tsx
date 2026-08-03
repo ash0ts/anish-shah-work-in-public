@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "../studio.module.css";
 import {
   callbackResultMessages,
@@ -24,6 +25,7 @@ export function ApiConnectorPanel({
   steamStorageCountries = null,
   children,
 }: ApiConnectorPanelProps) {
+  const router = useRouter();
   const isSpotify = connector.provider === "spotify";
   const isOAuthProvider = Boolean(oauth);
   const oauthProvider = oauth?.provider ?? "myanimelist";
@@ -41,6 +43,9 @@ export function ApiConnectorPanel({
   const [authorizationDestination, setAuthorizationDestination] = useState<
     string | null
   >(null);
+  const focusAfterMutation = useRef<"credential" | "refresh" | null>(null);
+  const firstCredentialField = useRef<HTMLInputElement>(null);
+  const refreshButton = useRef<HTMLButtonElement>(null);
   const connectorBlocked =
     !encryptionConfigured ||
     (isOAuthProvider && !oauth?.callbackUrl) ||
@@ -74,6 +79,17 @@ export function ApiConnectorPanel({
       if (updateTimer !== null) window.clearTimeout(updateTimer);
     };
   }, [connector.configured, isOAuthProvider, oauthProvider, oauthProviderTitle]);
+
+  useEffect(() => {
+    if (pending !== null || focusAfterMutation.current === null) return;
+    const target =
+      focusAfterMutation.current === "refresh"
+        ? refreshButton.current
+        : firstCredentialField.current;
+    if (!target) return;
+    focusAfterMutation.current = null;
+    target.focus();
+  }, [pending, showCredentialForm]);
 
   async function copyCallback(): Promise<void> {
     if (!registeredCallback) {
@@ -201,15 +217,21 @@ export function ApiConnectorPanel({
       const result = await responseJson(response);
       if (!response.ok) {
         setMessage(result.error ?? `Request failed (${response.status}).`);
-        if (action === "refresh") {
-          window.setTimeout(() => window.location.reload(), 1_500);
-        }
         return;
       }
 
       setSecret("");
       setSteamId("");
-      if (action === "save") setShowCredentialForm(false);
+      if (action === "save") {
+        focusAfterMutation.current = "refresh";
+        setShowCredentialForm(false);
+      }
+      if (action === "disconnect") {
+        focusAfterMutation.current = "credential";
+        setClientId("");
+        setAuthorizationDestination(null);
+        setShowCredentialForm(true);
+      }
       setMessage(
         action === "save"
           ? environment === "local"
@@ -228,7 +250,7 @@ export function ApiConnectorPanel({
                   "Steam game details are not public, so the stream was unpublished."
                 : `${environment === "local" ? "Local sync" : "Sync"} complete${typeof result.itemCount === "number" ? ` · ${result.itemCount} items` : ""}.`,
       );
-      window.setTimeout(() => window.location.reload(), 1_100);
+      router.refresh();
     } catch {
       setMessage("The request could not be completed. Try again.");
     } finally {
@@ -380,6 +402,7 @@ export function ApiConnectorPanel({
                   <span>Client ID</span>
                   <input
                     id={`${oauthProvider}-client-id`}
+                    ref={firstCredentialField}
                     type="text"
                     value={clientId}
                     minLength={8}
@@ -416,6 +439,7 @@ export function ApiConnectorPanel({
                   <span>SteamID64</span>
                   <input
                     id="steam-id"
+                    ref={firstCredentialField}
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]{17}"
@@ -450,6 +474,7 @@ export function ApiConnectorPanel({
                 <span>API token · Bearer optional</span>
                 <input
                   id="hardcover-secret"
+                  ref={firstCredentialField}
                   type="password"
                   value={secret}
                   minLength={8}
@@ -512,6 +537,7 @@ export function ApiConnectorPanel({
         ) : (
           <div className={styles.actionRow}>
             <button
+              ref={refreshButton}
               type="button"
               disabled={pending !== null || connectorBlocked}
               onClick={() => void request("refresh")}

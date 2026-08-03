@@ -117,7 +117,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
               status: "watching",
               score: 8,
               num_episodes_watched: 3,
-              updated_at: "2026-07-03T12:00:00Z",
+              updated_at: "2026-07-03T08:00:00-04:00",
             },
           },
           {
@@ -144,7 +144,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
             },
             list_status: {
               status: "provider_new_status",
-              updated_at: "2026-07-04T12:00:00Z",
+              updated_at: "2026-07-04T12:00:00.987654321Z",
             },
           },
         ],
@@ -219,7 +219,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
           status: "Other",
           score: null,
           episodesWatched: null,
-          updatedAt: "2026-07-04T12:00:00Z",
+          updatedAt: "2026-07-04T12:00:00.987Z",
         },
         {
           id: "1",
@@ -227,7 +227,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
           status: "Watching",
           score: 8,
           episodesWatched: 3,
-          updatedAt: "2026-07-03T12:00:00Z",
+          updatedAt: "2026-07-03T12:00:00.000Z",
         },
         {
           id: "3",
@@ -235,7 +235,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
           status: "On hold",
           score: 0,
           episodesWatched: 1,
-          updatedAt: "2026-07-02T12:00:00Z",
+          updatedAt: "2026-07-02T12:00:00.000Z",
         },
         {
           id: "2",
@@ -243,7 +243,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
           status: "Completed",
           score: 9,
           episodesWatched: 12,
-          updatedAt: "2026-07-01T12:00:00Z",
+          updatedAt: "2026-07-01T12:00:00.000Z",
         },
       ],
       library: [
@@ -256,7 +256,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
           status: "Other",
           score: null,
           episodesWatched: null,
-          updatedAt: "2026-07-04T12:00:00Z",
+          updatedAt: "2026-07-04T12:00:00.987Z",
         },
         {
           id: "1",
@@ -267,7 +267,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
           status: "Watching",
           score: 8,
           episodesWatched: 3,
-          updatedAt: "2026-07-03T12:00:00Z",
+          updatedAt: "2026-07-03T12:00:00.000Z",
         },
         {
           id: "3",
@@ -278,7 +278,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
           status: "On hold",
           score: 0,
           episodesWatched: 1,
-          updatedAt: "2026-07-02T12:00:00Z",
+          updatedAt: "2026-07-02T12:00:00.000Z",
         },
         {
           id: "2",
@@ -289,7 +289,7 @@ test("MyAnimeList success payload is normalized, sorted, bounded, and origin-saf
           status: "Completed",
           score: 9,
           episodesWatched: 12,
-          updatedAt: "2026-07-01T12:00:00Z",
+          updatedAt: "2026-07-01T12:00:00.000Z",
         },
       ],
   });
@@ -305,7 +305,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           {
             status_id: 3,
             rating: 4.5,
-            updated_at: "2026-07-04T00:00:00Z",
+            updated_at: "2026-07-04T00:00:00.123456789Z",
             book: {
               id: 1,
               title: "Book A",
@@ -320,7 +320,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           },
           {
             status_id: 2,
-            updated_at: "2026-07-02T00:00:00Z",
+            updated_at: "2026-07-01T20:00:00-04:00",
             book: { id: 2, title: "Book B" },
           },
           {
@@ -375,7 +375,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           slug: "book-a",
           status: "Read",
           rating: 4.5,
-          updatedAt: "2026-07-04T00:00:00Z",
+          updatedAt: "2026-07-04T00:00:00.123Z",
         },
         {
           id: "2",
@@ -383,7 +383,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           slug: null,
           status: "Currently reading",
           rating: null,
-          updatedAt: "2026-07-02T00:00:00Z",
+          updatedAt: "2026-07-02T00:00:00.000Z",
         },
         {
           id: "3",
@@ -391,7 +391,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           slug: null,
           status: "Did not finish",
           rating: 5,
-          updatedAt: "2026-07-01T00:00:00Z",
+          updatedAt: "2026-07-01T00:00:00.000Z",
         },
       ],
       library: [
@@ -401,7 +401,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           slug: "book-a",
           status: "Read",
           rating: 4.5,
-          updatedAt: "2026-07-04T00:00:00Z",
+          updatedAt: "2026-07-04T00:00:00.123Z",
         },
         {
           id: "2",
@@ -409,7 +409,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           slug: null,
           status: "Currently reading",
           rating: null,
-          updatedAt: "2026-07-02T00:00:00Z",
+          updatedAt: "2026-07-02T00:00:00.000Z",
         },
         {
           id: "3",
@@ -417,7 +417,7 @@ test("Hardcover success payload deduplicates books and normalizes public fields"
           slug: null,
           status: "Did not finish",
           rating: 5,
-          updatedAt: "2026-07-01T00:00:00Z",
+          updatedAt: "2026-07-01T00:00:00.000Z",
         },
       ],
   });
@@ -798,6 +798,13 @@ test("MyAnimeList rejects wrong-type and unbounded public scalars", async (conte
       item: {
         node: { id: 1, title: "Updated" },
         list_status: { updated_at: 20260730 },
+      },
+    },
+    {
+      name: "non-ISO update date",
+      item: {
+        node: { id: 1, title: "Updated" },
+        list_status: { updated_at: "2026-07-30 00:00:00Z" },
       },
     },
   ];
@@ -1343,8 +1350,45 @@ function storedMalPayload({ id = "1", title, syncedAt, freshUntil, profileUrl = 
   };
 }
 
+function storedHardcoverPayload({
+  id = "1",
+  title,
+  syncedAt,
+  freshUntil,
+  profileUrl = "https://hardcover.app/@anish",
+}) {
+  const libraryItem = {
+    id,
+    title,
+    slug: `book-${id}`,
+    status: "Read",
+    rating: 4,
+    updatedAt: syncedAt,
+  };
+  return {
+    provider: "hardcover",
+    snapshotVersion: 3,
+    profileUrl,
+    coverage: "Complete book library at sync",
+    status: [{ label: "Read", count: 1 }],
+    ratings: [{ label: "4", count: 1 }],
+    recent: [libraryItem],
+    library: [libraryItem],
+    syncedAt,
+    freshUntil,
+  };
+}
+
 async function encryptedMyAnimeListCredential(key) {
   return encryptCredential({ accessToken: "repository-token" }, key, "myanimelist");
+}
+
+async function encryptedHardcoverCredential(key) {
+  return encryptCredential(
+    { authorization: "Bearer repository-hardcover-token" },
+    key,
+    "hardcover",
+  );
 }
 
 async function encryptedMyAnimeListOAuthCredential(
@@ -1723,11 +1767,24 @@ test("MyAnimeList proactively refreshes and persists rotated OAuth tokens", asyn
           return jsonResponse({ id: 42, name: "anish" });
         }
         assert.equal(init.headers.Authorization, "Bearer new-access-token");
-        return jsonResponse({ data: [], paging: {} });
+        return jsonResponse({
+          data: [
+            malLibraryItem(42, {
+              list_status: {
+                status: "completed",
+                score: 9,
+                num_episodes_watched: 24,
+                updated_at: "2026-07-31T15:42:13.987654321-04:00",
+              },
+            }),
+          ],
+          paging: {},
+        });
       }, () => refreshConnector("myanimelist", "manual", "anish@example.com")),
   );
 
   assert.equal(result.status, "complete");
+  assert.equal(result.itemCount, 1);
   assert.equal(
     requests.filter(({ url }) => url.endsWith("/v1/oauth2/token")).length,
     1,
@@ -1740,6 +1797,147 @@ test("MyAnimeList proactively refreshes and persists rotated OAuth tokens", asyn
   assert.equal(stored.accessToken, "new-access-token");
   assert.equal(stored.refreshToken, "new-refresh-token");
   assert(Date.parse(stored.accessTokenExpiresAt) > Date.now());
+
+  const published = await withRuntimeBindings({ DB: database }, () =>
+    getPublicConnectorSnapshot("myanimelist"),
+  );
+  assert.equal(published.status, "ready");
+  assert.equal(published.payload.library.length, 1);
+  assert.equal(
+    published.payload.library[0].updatedAt,
+    "2026-07-31T19:42:13.987Z",
+  );
+  assert.equal(published.payload.recent[0].updatedAt, "2026-07-31T19:42:13.987Z");
+});
+
+test("Hardcover refresh accepts provider timestamps and publishes a ready snapshot", async () => {
+  const key = Buffer.alloc(32, 37).toString("base64");
+  const credential = await encryptedHardcoverCredential(key);
+  const database = new FakeD1({ credentials: { hardcover: credential } });
+  const providerTimestamps = [
+    "2026-07-31T15:42:13Z",
+    "2026-07-31T11:42:13-04:00",
+    "2026-07-31T15:42:13.987654321Z",
+  ];
+
+  const result = await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(async (_input, init) => {
+        const request = JSON.parse(init.body);
+        if (/query Viewer/.test(request.query)) {
+          return jsonResponse({
+            data: { me: [{ id: 42, username: "anish" }] },
+          });
+        }
+        return jsonResponse({
+          data: {
+            user_books: Array.from({ length: 30 }, (_, index) =>
+              hardcoverLibraryItem(index + 1, {
+                updated_at: providerTimestamps[index % providerTimestamps.length],
+              }),
+            ),
+          },
+        });
+      }, () => refreshConnector("hardcover", "manual", "anish@example.com")),
+  );
+
+  assert.equal(result.status, "complete");
+  assert.equal(result.itemCount, 30);
+  assert.equal(database.runs.at(-1).status, "complete");
+  assert.equal(database.snapshots.length, 1);
+
+  const published = await withRuntimeBindings({ DB: database }, () =>
+    getPublicConnectorSnapshot("hardcover"),
+  );
+  assert.equal(published.status, "ready");
+  assert.equal(published.payload.library.length, 30);
+  assert.deepEqual(
+    published.payload.library.slice(0, 3).map((book) => book.updatedAt),
+    [
+      "2026-07-31T15:42:13.000Z",
+      "2026-07-31T15:42:13.000Z",
+      "2026-07-31T15:42:13.987Z",
+    ],
+  );
+});
+
+test("Hardcover provider failures preserve the last public snapshot", async (context) => {
+  for (const scenario of [
+    {
+      name: "401 credential expiry",
+      status: 401,
+      code: "credential_expired",
+      retryable: false,
+    },
+    {
+      name: "429 rate limit",
+      status: 429,
+      code: "rate_limited",
+      retryable: true,
+    },
+  ]) {
+    await context.test(scenario.name, async () => {
+      const key = Buffer.alloc(32, scenario.status === 401 ? 39 : 41).toString(
+        "base64",
+      );
+      const credential = await encryptedHardcoverCredential(key);
+      const fetchedAt = new Date(
+        Date.now() - 24 * 60 * 60 * 1_000,
+      ).toISOString();
+      const freshUntil = new Date(
+        Date.parse(fetchedAt) + 12 * 60 * 60 * 1_000,
+      ).toISOString();
+      const oldPayload = storedHardcoverPayload({
+        title: "Last known good book",
+        syncedAt: fetchedAt,
+        freshUntil,
+      });
+      const database = new FakeD1({
+        credentials: { hardcover: credential },
+        snapshots: [
+          storedSnapshot("hardcover", oldPayload, { fetchedAt, freshUntil }),
+        ],
+      });
+
+      await withRuntimeBindings(
+        { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+        () =>
+          withFetch(
+            async () =>
+              jsonResponse(
+                { error: scenario.code },
+                { status: scenario.status },
+              ),
+            async () => {
+              const refresh = await refreshConnector(
+                "hardcover",
+                "manual",
+                "anish@example.com",
+              );
+              assert.deepEqual(refresh, {
+                status: "failed",
+                provider: "hardcover",
+                code: scenario.code,
+                retryable: scenario.retryable,
+              });
+              assert.equal(database.runs.at(-1).errorCode, scenario.code);
+              assert.equal(database.snapshots.length, 1);
+              assert(
+                !database.statementLog.some(({ sql }) =>
+                  sql.includes("INSERT INTO connector_snapshots"),
+                ),
+              );
+
+              const published = await getPublicConnectorSnapshot("hardcover");
+              assert.equal(published.status, "ready");
+              assert.equal(published.stale, true);
+              assert.deepEqual(published.payload, oldPayload);
+            },
+          ),
+      );
+    });
+  }
 });
 
 test("MyAnimeList refreshes once after API 401 and retries with the new token", async () => {

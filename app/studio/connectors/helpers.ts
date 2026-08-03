@@ -92,10 +92,8 @@ export function statusGuidance(
     connector.itemCount === null
       ? ""
       : environment === "local"
-        ? " The last successful local snapshot remains available."
-        : connector.provider === "steam"
-          ? " The latest eligible snapshot remains available for up to 72 hours."
-          : " The last successful public snapshot remains available.";
+        ? " Any previously accepted local snapshot remains unchanged."
+        : " Any previously accepted public snapshot remains unchanged.";
 
   if (
     connector.status === "reauthorization_required" ||
@@ -140,15 +138,18 @@ export function statusGuidance(
     return `The snapshot is due for refresh.${preservedSnapshot}`;
   }
   if (connector.status === "syncing") {
-    return "A refresh is already running. Reload shortly to see its result.";
+    return "A refresh is already running. Check this panel again in a moment.";
   }
   if (connector.status === "visibility_required") {
     return "Set both the Steam profile and Game details to Public, then refresh. The previous Steam snapshot is unpublished.";
   }
+  if (connector.lastErrorCode === "public_payload_rejected") {
+    return "The provider responded, but no new snapshot passed public validation. Do not replace the credential; any previously accepted snapshot remains unchanged.";
+  }
   if (connector.lastErrorCode === "rate_limited") {
     return `The provider rate-limited the last request. Wait before refreshing again.${preservedSnapshot}`;
   }
-  return `The last refresh failed. Try once more; replace or reauthorize only if the error continues.${preservedSnapshot}`;
+  return "The last refresh failed. No new snapshot was published; any previously accepted snapshot remains unchanged.";
 }
 
 export function formatTimestamp(value: string | null): string {
