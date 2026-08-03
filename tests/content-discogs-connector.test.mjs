@@ -675,13 +675,13 @@ test("Discogs publication is opt-in, expires after six hours, and disconnect rem
 
 test("Discogs Retry-After state blocks manual and scheduled provider calls", async () => {
   const database = new DiscogsD1();
-  const now = Date.parse("2026-08-03T12:00:00.000Z");
+  const now = Date.now();
   const notBefore = await retryState.recordDiscogsRetryAfter(
     database,
     120,
     now,
   );
-  assert.equal(notBefore, "2026-08-03T12:02:00.000Z");
+  assert.equal(notBefore, new Date(now + 120_000).toISOString());
   assert.equal(
     await retryState.discogsRetryNotBefore(database, now),
     notBefore,

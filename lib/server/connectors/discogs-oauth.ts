@@ -317,6 +317,77 @@ async function oauthAuthorizationHeader(input: {
 }
 
 /**
+ * Discogs documents PLAINTEXT signatures for its OAuth token endpoints. Keep
+ * this provider-specific signer isolated from authenticated catalog requests,
+ * which continue to use RFC 5849 HMAC-SHA1 through
+ * buildDiscogsAuthorizationHeader(). The credential-bearing header is sent
+ * only to the fixed HTTPS Discogs token endpoints and is never logged.
+ */
+function discogsTokenAuthorizationHeader(input: {
+  client: DiscogsOAuthClient;
+  token?: string;
+  tokenSecret?: string;
+  callback?: string;
+  verifier?: string;
+  nonce?: string;
+  timestamp?: number;
+}): string {
+  const client = normalizeDiscogsOAuthClient(
+    input.client.consumerKey,
+    input.client.consumerSecret,
+  );
+  if (!client) throw new TypeError("Discogs OAuth client is invalid.");
+
+  const parameters: OAuthParameter[] = [
+    ["oauth_consumer_key", client.consumerKey],
+    ["oauth_nonce", normalizedNonce(input.nonce)],
+    ["oauth_signature_method", "PLAINTEXT"],
+    ["oauth_timestamp", normalizedTimestamp(input.timestamp)],
+  ];
+  if (input.token !== undefined) {
+    const token = normalizedOAuthValue(input.token);
+    if (!token) throw new TypeError("Discogs OAuth token is invalid.");
+    parameters.push(["oauth_token", token]);
+  }
+  if (input.callback !== undefined) {
+    const callback = new URL(input.callback);
+    if (
+      !["http:", "https:"].includes(callback.protocol) ||
+      callback.username ||
+      callback.password ||
+      callback.hash
+    ) {
+      throw new TypeError("Discogs OAuth callback is invalid.");
+    }
+    parameters.push(["oauth_callback", callback.toString()]);
+  }
+  if (input.verifier !== undefined) {
+    const verifier = normalizedOAuthValue(input.verifier);
+    if (!verifier) throw new TypeError("Discogs OAuth verifier is invalid.");
+    parameters.push(["oauth_verifier", verifier]);
+  }
+
+  const tokenSecret = input.tokenSecret ?? "";
+  if (tokenSecret && !normalizedOAuthValue(tokenSecret)) {
+    throw new TypeError("Discogs OAuth token secret is invalid.");
+  }
+  parameters.push([
+    "oauth_signature",
+    `${discogsPercentEncode(client.consumerSecret)}&${discogsPercentEncode(tokenSecret)}`,
+  ]);
+
+  return `OAuth ${parameters
+    .sort(([left], [right]) =>
+      left === right ? 0 : left < right ? -1 : 1,
+    )
+    .map(
+      ([name, value]) =>
+        `${discogsPercentEncode(name)}="${discogsPercentEncode(value)}"`,
+    )
+    .join(", ")}`;
+}
+
+/**
  * Signs an authenticated Discogs API request without exposing token material
  * in the request URL. Optional nonce/timestamp inputs exist for deterministic
  * RFC 5849 tests; production callers should omit them.
@@ -513,8 +584,7 @@ async function oauthFailure(
   );
 }
 
-async function oauthPost(input: {
-  endpoint: string;
+async function oauthTokenRequest(input: {
   client: DiscogsOAuthClient;
   token?: string;
   tokenSecret?: string;
@@ -522,29 +592,32 @@ async function oauthPost(input: {
   verifier?: string;
   phase: "request_token" | "access_token";
 }): Promise<URLSearchParams> {
-  const authorization = await oauthAuthorizationHeader({
-    method: "POST",
-    url: input.endpoint,
-    consumerKey: input.client.consumerKey,
-    consumerSecret: input.client.consumerSecret,
+  const endpoint =
+    input.phase === "request_token"
+      ? DISCOGS_REQUEST_TOKEN_ENDPOINT
+      : DISCOGS_ACCESS_TOKEN_ENDPOINT;
+  const method = input.phase === "request_token" ? "GET" : "POST";
+  const authorization = discogsTokenAuthorizationHeader({
+    client: input.client,
     token: input.token,
     tokenSecret: input.tokenSecret,
     callback: input.callback,
     verifier: input.verifier,
   });
+  const headers: Record<string, string> = {
+    Accept: "application/x-www-form-urlencoded, text/plain",
+    Authorization: authorization,
+    "Content-Type": "application/x-www-form-urlencoded",
+    "User-Agent": DISCOGS_USER_AGENT,
+  };
   let response: Response;
   try {
-    response = await fetch(input.endpoint, {
-      method: "POST",
+    response = await fetch(endpoint, {
+      method,
       redirect: "error",
       signal: AbortSignal.timeout(OAUTH_TIMEOUT_MS),
-      headers: {
-        Accept: "application/x-www-form-urlencoded",
-        Authorization: authorization,
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": DISCOGS_USER_AGENT,
-      },
-      body: "",
+      headers,
+      ...(method === "POST" ? { body: "" } : {}),
     });
   } catch {
     throw new ConnectorFetchError(
@@ -558,7 +631,10 @@ async function oauthPost(input: {
     ?.split(";", 1)[0]
     ?.trim()
     .toLowerCase();
-  if (mediaType !== "application/x-www-form-urlencoded") {
+  if (
+    mediaType !== "application/x-www-form-urlencoded" &&
+    mediaType !== "text/plain"
+  ) {
     throw invalidOAuthResponse();
   }
   return new URLSearchParams(await boundedResponseText(response));
@@ -568,8 +644,7 @@ export async function requestDiscogsTemporaryCredential(
   client: DiscogsOAuthClient,
   callbackUrl: string,
 ): Promise<DiscogsTemporaryCredential> {
-  const parameters = await oauthPost({
-    endpoint: DISCOGS_REQUEST_TOKEN_ENDPOINT,
+  const parameters = await oauthTokenRequest({
     client,
     callback: callbackUrl,
     phase: "request_token",
@@ -592,8 +667,7 @@ export async function exchangeDiscogsAccessToken(input: {
   requestTokenSecret: string;
   oauthVerifier: string;
 }): Promise<DiscogsOAuthCredential> {
-  const parameters = await oauthPost({
-    endpoint: DISCOGS_ACCESS_TOKEN_ENDPOINT,
+  const parameters = await oauthTokenRequest({
     client: input.client,
     token: input.requestToken,
     tokenSecret: input.requestTokenSecret,

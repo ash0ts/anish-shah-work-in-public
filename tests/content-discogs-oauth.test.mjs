@@ -19,6 +19,7 @@ const {
   discogsOAuthBrowserNonceFromRequest,
   DISCOGS_ACCESS_TOKEN_ENDPOINT,
   DISCOGS_REQUEST_TOKEN_ENDPOINT,
+  requestDiscogsTemporaryCredential,
   resolveDiscogsCallbackUrl,
 } = oauth;
 const {
@@ -42,11 +43,29 @@ const callbackUrl =
 const localResumeUrl =
   "http://localhost:3000/api/connectors/discogs/oauth/callback";
 
-function form(body, status = 200) {
+function form(
+  body,
+  status = 200,
+  contentType = "application/x-www-form-urlencoded",
+) {
   return new Response(body, {
     status,
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    headers: { "content-type": contentType },
   });
+}
+
+function oauthHeaderParameters(header) {
+  assert.match(header, /^OAuth /);
+  return new Map(
+    header
+      .slice("OAuth ".length)
+      .split(", ")
+      .map((entry) => {
+        const match = /^([^=]+)="([^"\r\n]*)"$/.exec(entry);
+        assert(match, `Invalid OAuth header entry: ${entry}`);
+        return [decodeURIComponent(match[1]), decodeURIComponent(match[2])];
+      }),
+  );
 }
 
 async function withFetch(mock, callback) {
@@ -280,23 +299,69 @@ class DiscogsOAuthD1 {
   }
 }
 
-function requestTokenFetch({ accessStatus = 200 } = {}) {
+function requestTokenFetch({
+  accessStatus = 200,
+  requestStatus = 200,
+  responseContentType = "application/x-www-form-urlencoded",
+} = {}) {
   return async (url, init) => {
     assert.equal(init.redirect, "error");
-    assert.match(init.headers.Authorization, /^OAuth /);
-    assert.equal(init.headers.Authorization.includes("consumer-secret-one"), false);
+    const parameters = oauthHeaderParameters(init.headers.Authorization);
+    assert.equal(parameters.get("oauth_signature_method"), "PLAINTEXT");
+    assert.equal(parameters.get("oauth_consumer_key"), "discogs-consumer-key-one");
+    assert.match(parameters.get("oauth_nonce"), /^[A-Za-z0-9_-]{43}$/);
+    assert.match(parameters.get("oauth_timestamp"), /^\d{10}$/);
+    for (const forbidden of [
+      "consumer-secret-one",
+      "request-token-one",
+      "request-secret-one",
+      "verifier-one",
+    ]) {
+      assert.equal(String(url).includes(forbidden), false);
+      assert.equal(String(init.body ?? "").includes(forbidden), false);
+    }
     if (url === DISCOGS_REQUEST_TOKEN_ENDPOINT) {
+      assert.equal(init.method, "GET");
+      assert.equal(init.body, undefined);
+      assert.equal(
+        init.headers["Content-Type"],
+        "application/x-www-form-urlencoded",
+      );
+      assert.equal(parameters.has("oauth_token"), false);
+      assert.equal(parameters.has("oauth_verifier"), false);
+      assert.equal(parameters.get("oauth_callback"), callbackUrl);
+      assert.equal(
+        parameters.get("oauth_signature"),
+        "discogs-consumer-secret-one&",
+      );
+      if (requestStatus !== 200) return form("", requestStatus);
       return form(
         "oauth_token=discogs-request-token-one&" +
           "oauth_token_secret=discogs-request-secret-one&" +
           "oauth_callback_confirmed=true",
+        200,
+        responseContentType,
       );
     }
     assert.equal(url, DISCOGS_ACCESS_TOKEN_ENDPOINT);
+    assert.equal(init.method, "POST");
+    assert.equal(init.body, "");
+    assert.equal(
+      init.headers["Content-Type"],
+      "application/x-www-form-urlencoded",
+    );
+    assert.equal(parameters.get("oauth_token"), "discogs-request-token-one");
+    assert.match(parameters.get("oauth_verifier"), /^discogs-verifier-/);
+    assert.equal(
+      parameters.get("oauth_signature"),
+      "discogs-consumer-secret-one&discogs-request-secret-one",
+    );
     if (accessStatus !== 200) return form("", accessStatus);
     return form(
       "oauth_token=discogs-access-token-one&" +
         "oauth_token_secret=discogs-access-secret-one",
+      200,
+      responseContentType,
     );
   };
 }
@@ -340,6 +405,39 @@ test("Discogs signing matches the corrected RFC 5849 HMAC-SHA1 vector", async ()
   );
   assert.equal(header.includes("j49sk3j29djd"), false);
   assert.equal(header.includes("dh893hdasih9"), false);
+});
+
+test("Discogs token signing percent-encodes reserved secret characters", async () => {
+  const consumerSecret = ["discogs-reserved-secret", "/with+chars="].join("");
+  const credential = await withFetch(async (url, init) => {
+    assert.equal(url, DISCOGS_REQUEST_TOKEN_ENDPOINT);
+    assert.equal(init.method, "GET");
+    assert.equal(init.body, undefined);
+    assert.equal(String(url).includes(consumerSecret), false);
+    const parameters = oauthHeaderParameters(init.headers.Authorization);
+    assert.equal(parameters.get("oauth_signature_method"), "PLAINTEXT");
+    assert.equal(
+      parameters.get("oauth_signature"),
+      "discogs-reserved-secret%2Fwith%2Bchars%3D&",
+    );
+    return form(
+      "oauth_token=discogs-request-token-one&" +
+        "oauth_token_secret=discogs-request-secret-one&" +
+        "oauth_callback_confirmed=true",
+    );
+  }, () =>
+    requestDiscogsTemporaryCredential(
+      {
+        consumerKey: "discogs-consumer-key-one",
+        consumerSecret,
+      },
+      callbackUrl,
+    ),
+  );
+  assert.deepEqual(credential, {
+    requestToken: "discogs-request-token-one",
+    requestTokenSecret: "discogs-request-secret-one",
+  });
 });
 
 test("Discogs callbacks are pinned to exact local and apex origins", () => {
@@ -456,6 +554,142 @@ test("Discogs request-token state is hashed, encrypted, owner/callback/browser-b
     }),
   );
   assert.deepEqual(wrongBrowser, { status: "invalid_state" });
+});
+
+test("Discogs token exchanges accept bounded form text and reject other media", async () => {
+  const textDatabase = new DiscogsOAuthD1();
+  const browserNonce = createDiscogsOAuthBrowserNonce();
+  const started = await begin(textDatabase, browserNonce, {
+    responseContentType: "text/plain; charset=utf-8",
+  });
+  assert.equal(started.status, "authorization_required");
+  const staged = await withRuntime(textDatabase, () =>
+    stageDiscogsOAuthCallback({
+      requestToken: new URL(started.authorizationUrl).searchParams.get(
+        "oauth_token",
+      ),
+      oauthVerifier: "discogs-verifier-one",
+      browserNonce,
+      requestUrl: callbackUrl,
+    }),
+  );
+  const completed = await withRuntime(textDatabase, () =>
+    withFetch(
+      requestTokenFetch({ responseContentType: "text/plain; charset=utf-8" }),
+      () =>
+        completeDiscogsOAuth({
+          resumeState: staged.resumeState,
+          actorEmail: ownerEmail,
+          browserNonce,
+          requestUrl: localResumeUrl,
+        }),
+    ),
+  );
+  assert.deepEqual(completed, { status: "connected" });
+
+  const invalidDatabase = new DiscogsOAuthD1();
+  const invalid = await withRuntime(invalidDatabase, () =>
+    withFetch(
+      async () =>
+        form(
+          JSON.stringify({ oauth_token: "not-a-form-response" }),
+          200,
+          "application/json",
+        ),
+      () =>
+        startDiscogsOAuth({
+          consumerKey: "discogs-consumer-key-one",
+          consumerSecret: "discogs-consumer-secret-one",
+          actorEmail: ownerEmail,
+          browserNonce: createDiscogsOAuthBrowserNonce(),
+          requestUrl: startUrl,
+        }),
+    ),
+  );
+  assert.deepEqual(invalid, { status: "token_exchange_failed" });
+  assert.equal(invalidDatabase.transactions.size, 0);
+});
+
+test("Discogs request-token failures stay sanitized and persist no transaction", async () => {
+  for (const [requestStatus, expected] of [
+    [401, { status: "invalid", reason: "credential" }],
+    [429, { status: "rate_limited" }],
+    [503, { status: "provider_unavailable" }],
+  ]) {
+    const database = new DiscogsOAuthD1();
+    const result = await begin(database, createDiscogsOAuthBrowserNonce(), {
+      requestStatus,
+    });
+    assert.deepEqual(result, expected);
+    assert.equal(database.transactions.size, 0);
+    assert.equal(JSON.stringify(result).includes("discogs-consumer"), false);
+  }
+
+  const database = new DiscogsOAuthD1();
+  const result = await withRuntime(database, () =>
+    withFetch(
+      async () => {
+        throw new TypeError("synthetic provider transport failure");
+      },
+      () =>
+        startDiscogsOAuth({
+          consumerKey: "discogs-consumer-key-one",
+          consumerSecret: "discogs-consumer-secret-one",
+          actorEmail: ownerEmail,
+          browserNonce: createDiscogsOAuthBrowserNonce(),
+          requestUrl: startUrl,
+        }),
+    ),
+  );
+  assert.deepEqual(result, { status: "provider_unavailable" });
+  assert.equal(database.transactions.size, 0);
+});
+
+test("Discogs token responses reject duplicates, missing media, and oversized bodies", async () => {
+  const invalidResponses = [
+    () => new Response(
+      "oauth_token=first&oauth_token=second&" +
+        "oauth_token_secret=secret&oauth_callback_confirmed=true",
+      {
+        status: 200,
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+        },
+      },
+    ),
+    () => new Response(
+      new TextEncoder().encode(
+        "oauth_token=token&oauth_token_secret=secret&" +
+          "oauth_callback_confirmed=true",
+      ),
+      { status: 200 },
+    ),
+    () => new Response("x".repeat(32 * 1024 + 1), {
+      status: 200,
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+      },
+    }),
+  ];
+
+  for (const providerResponse of invalidResponses) {
+    const database = new DiscogsOAuthD1();
+    const result = await withRuntime(database, () =>
+      withFetch(
+        async () => providerResponse(),
+        () =>
+          startDiscogsOAuth({
+            consumerKey: "discogs-consumer-key-one",
+            consumerSecret: "discogs-consumer-secret-one",
+            actorEmail: ownerEmail,
+            browserNonce: createDiscogsOAuthBrowserNonce(),
+            requestUrl: startUrl,
+          }),
+      ),
+    );
+    assert.deepEqual(result, { status: "token_exchange_failed" });
+    assert.equal(database.transactions.size, 0);
+  }
 });
 
 test("Discogs callback consumes before exchange, rejects wrong owner, and prevents replay", async () => {
