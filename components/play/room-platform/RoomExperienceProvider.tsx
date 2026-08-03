@@ -349,6 +349,25 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     finishTransitionVisuals();
     const activeRouteObject = routeObject(pathname);
+    const intendedRouteObject = pendingRoomNavigation.current;
+
+    // A completed router transition cannot be cancelled. If an older object
+    // route commits after a newer room selection, replace that stale entry
+    // with the latest intent before it can clear the pending room navigation.
+    if (
+      activeRouteObject &&
+      intendedRouteObject &&
+      activeRouteObject !== intendedRouteObject
+    ) {
+      router.replace(
+        routeWithPreviewFixture(
+          `/play/${intendedRouteObject}`,
+          previewFixtureFromSearch(window.location.search),
+        ),
+        { scroll: false },
+      );
+      return;
+    }
     const priorRouteObject = previousRouteObject.current;
     previousRouteObject.current = activeRouteObject;
     dispatch({ type: "route", id: activeRouteObject });
@@ -388,7 +407,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     }
 
     if (priorRouteObject) pendingFocus.current = null;
-  }, [announce, finishTransitionVisuals, focusAfterPaint, pathname]);
+  }, [announce, finishTransitionVisuals, focusAfterPaint, pathname, router]);
 
   useEffect(() => {
     const roomIsForeground =

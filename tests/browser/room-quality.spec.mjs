@@ -1076,11 +1076,39 @@ test.describe("My Room 2001 browser quality", () => {
     await page.getByRole("button", { name: "Enter the room" }).click();
     const room = page.getByRole("dialog", { name: "Interactive room" });
     await expect(room).toBeVisible();
+    await expect(room.getByText("Room ready", { exact: true })).toBeVisible({
+      timeout: 10_000,
+    });
+
+    let signalWatchRequest;
+    let releaseWatchRequest;
+    const watchRequestStarted = new Promise((resolve) => {
+      signalWatchRequest = resolve;
+    });
+    const watchRequestReleased = new Promise((resolve) => {
+      releaseWatchRequest = resolve;
+    });
+    await page.route(/\/play\/watch\.rsc(?:\?|$)/, async (route) => {
+      signalWatchRequest();
+      await watchRequestReleased;
+      await route.continue();
+    });
+
     await room.locator('[data-room-object-control="watch"]').click();
-    await room.locator('[data-room-object-control="play"]').click();
-    await expect(page).toHaveURL(/\/play\/play$/);
+    await watchRequestStarted;
+    await room
+      .locator('[data-room-object-control="play"]')
+      .dispatchEvent("click");
+    releaseWatchRequest();
+
+    await expect(page).toHaveURL(/\/play\/play$/, { timeout: 10_000 });
     await expect(page.getByRole("heading", { name: "Desktop Library" })).toBeVisible();
     await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
+    await page.getByRole("link", { name: "Back to room" }).click();
+    await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+    await expect(
+      page.locator('[data-room-object-control="play"]'),
+    ).toBeFocused();
   });
 
   test("Spotify remains consent-gated on the Listen object route", async ({ page }) => {
