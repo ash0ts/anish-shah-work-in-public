@@ -11,22 +11,37 @@ import {
   activePreviewFixtureRuntime,
   previewFixtureScenario,
 } from "@/lib/server/preview-connector-fixtures";
+import { streamIdFromValue } from "@/components/play/connector-model";
+import { hasPublicQuery } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = publicPageMetadata({
-  title: "Play",
-  description:
-    "Explore Anish Shah’s anime, reading, music, physical-media, gaming, and movement collections through bounded public snapshots.",
-  path: "/play",
-});
+const playDescription =
+  "Explore Anish Shah’s anime, reading, music, physical-media, gaming, and movement collections through bounded public snapshots.";
+
+type PlaySearchParams = Record<string, string | string[] | undefined>;
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<PlaySearchParams>;
+}): Promise<Metadata> {
+  const query = await searchParams;
+  return publicPageMetadata({
+    title: "Play",
+    description: playDescription,
+    path: "/play",
+    noindex: hasPublicQuery(query),
+  });
+}
 
 export default async function PlayPage({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<PlaySearchParams>;
 }) {
   const query = await searchParams;
+  const initialStream = streamIdFromValue(query.stream);
   const fixture = activePreviewFixtureRuntime()
     ? previewFixtureScenario(
         new URLSearchParams(
@@ -70,6 +85,7 @@ export default async function PlayPage({
       </header>
       <PersonalStreams
         fixture={fixture}
+        initialStream={initialStream}
         spotifyNoScript={
           <div className={styles.spotifyNoScript}>
             <p>

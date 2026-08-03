@@ -29,6 +29,10 @@ test("Collect is a sixth lazy Play stream with a complete semantic fallback", as
   assert.match(discogs, /loadConnector<DiscogsPublicSnapshot>\([\s\S]*?"discogs"/);
   assert.match(discogs, /new URLSearchParams\([\s\S]*?pageSize/);
   assert.match(page, /six optional public streams/);
+  assert.match(page, /streamIdFromValue\(query\.stream\)/);
+  assert.match(page, /initialStream=\{initialStream\}/);
+  assert.match(streams, /window\.history\.replaceState/);
+  assert.match(streams, /url\.searchParams\.set\("stream", stream\)/);
 });
 
 test("Discogs uses a ruled shelf and an accessible pressing matrix", async () => {
@@ -91,6 +95,7 @@ test("Studio exposes Discogs OAuth1 and an explicit publication gate", async () 
   assert.match(panel, /acknowledgeNoncommercial/);
   assert.match(panel, /personal, noncommercial catalog/);
   assert.match(panel, /excluded from the production handoff/);
+  assert.match(panel, /href="\/play\?stream=collect"/);
   assert.match(
     sharedPanel,
     /\[oauthCredentialShape\.requestKeys\.id\]: credentialId\.trim\(\)/,

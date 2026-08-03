@@ -181,6 +181,23 @@ export type StreamId =
   | "collect"
   | "play"
   | "move";
+
+export const streamIds = [
+  "watch",
+  "read",
+  "listen",
+  "collect",
+  "play",
+  "move",
+] as const satisfies readonly StreamId[];
+
+export function streamIdFromValue(value: unknown): StreamId {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return typeof candidate === "string" &&
+    streamIds.includes(candidate as StreamId)
+    ? (candidate as StreamId)
+    : "watch";
+}
 export type CollectionProvider = "myanimelist" | "hardcover" | "steam";
 export type ConnectorProvider = CollectionProvider | "discogs" | "strava";
 export type CollectionView = "pattern" | "gallery";

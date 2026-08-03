@@ -55,14 +55,31 @@ const streams = [
 }>;
 
 export function PersonalStreams({
+  initialStream = "watch",
   spotifyNoScript,
   fixture,
 }: {
+  initialStream?: StreamId;
   spotifyNoScript?: ReactNode;
   fixture?: PreviewFixtureScenario;
 }) {
-  const [active, setActive] = useState<StreamId>("watch");
+  const [active, setActive] = useState<StreamId>(initialStream);
   const [showStrava, setShowStrava] = useState(false);
+
+  const selectStream = (stream: StreamId) => {
+    setActive(stream);
+    const url = new URL(window.location.href);
+    if (stream === "watch") {
+      url.searchParams.delete("stream");
+    } else {
+      url.searchParams.set("stream", stream);
+    }
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  };
 
   const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     const current = streams.findIndex((stream) => stream.id === active);
@@ -80,7 +97,7 @@ export function PersonalStreams({
     }
     event.preventDefault();
     const target = streams[next];
-    setActive(target.id);
+    selectStream(target.id);
     document.getElementById(`stream-tab-${target.id}`)?.focus();
   };
 
@@ -89,8 +106,8 @@ export function PersonalStreams({
       <noscript>
         <style>{`.${styles.enhanced}{display:none!important}`}</style>
         <div className={styles.noScript}>
-          {streams.map((stream, index) => (
-            <details key={stream.id} open={index === 0}>
+          {streams.map((stream) => (
+            <details key={stream.id} open={stream.id === initialStream}>
               <summary>
                 {stream.label} · {stream.provider}
               </summary>
@@ -113,7 +130,7 @@ export function PersonalStreams({
               className={active === stream.id ? styles.activeTab : undefined}
               id={`stream-tab-${stream.id}`}
               key={stream.id}
-              onClick={() => setActive(stream.id)}
+              onClick={() => selectStream(stream.id)}
               onKeyDown={onTabKeyDown}
               role="tab"
               tabIndex={active === stream.id ? 0 : -1}

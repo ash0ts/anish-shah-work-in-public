@@ -1310,6 +1310,22 @@
   line-height: 1.45;
 }
 
+.publicStreamLink {
+  margin: 0;
+  padding: 0 0 var(--space-4);
+}
+
+.publicStreamLink a {
+  color: var(--blue);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.25em;
+  text-transform: uppercase;
+}
+
 .authorizationLink {
   display: inline-flex;
   min-height: 44px;
