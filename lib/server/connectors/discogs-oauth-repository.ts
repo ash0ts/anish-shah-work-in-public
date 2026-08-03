@@ -39,7 +39,11 @@ export type DiscogsOAuthStartResult =
       expiresAt: string;
     }
   | { status: "invalid"; reason: "credential" }
-  | { status: "provider_unavailable" | "rate_limited" | "token_exchange_failed" }
+  | {
+      status: "provider_unavailable";
+      reason: "transport" | "timeout" | "redirect" | "upstream";
+    }
+  | { status: "rate_limited" | "token_exchange_failed" }
   | {
       status: "setup_required";
       reason: "database" | "encryption_key" | "callback_url";
@@ -169,8 +173,17 @@ function startProviderFailure(
     return { status: "invalid", reason: "credential" };
   }
   if (error.code === "rate_limited") return { status: "rate_limited" };
+  if (error.code === "provider_transport") {
+    return { status: "provider_unavailable", reason: "transport" };
+  }
+  if (error.code === "provider_timeout") {
+    return { status: "provider_unavailable", reason: "timeout" };
+  }
+  if (error.code === "provider_redirect") {
+    return { status: "provider_unavailable", reason: "redirect" };
+  }
   if (error.code === "provider_error") {
-    return { status: "provider_unavailable" };
+    return { status: "provider_unavailable", reason: "upstream" };
   }
   return { status: "token_exchange_failed" };
 }
@@ -217,6 +230,7 @@ export async function startDiscogsOAuth(input: {
     return (
       startProviderFailure(error) ?? {
         status: "provider_unavailable",
+        reason: "transport",
       }
     );
   }
@@ -680,7 +694,12 @@ export async function completeDiscogsOAuth(input: {
       if (error.code === "rate_limited") {
         return { status: "rate_limited" };
       }
-      if (error.code === "provider_error") {
+      if (
+        error.code === "provider_error" ||
+        error.code === "provider_transport" ||
+        error.code === "provider_timeout" ||
+        error.code === "provider_redirect"
+      ) {
         return { status: "provider_unavailable" };
       }
     }
