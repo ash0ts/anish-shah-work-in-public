@@ -505,6 +505,9 @@ test("release promotion requires a protected current-publication marker", async 
   assert.match(contract, /release\.publication_ready/);
   assert.match(snippet, /\/api\/studio\/release-checkpoint/);
   assert.match(snippet, /bootstrapRequired \?/);
+  assert.match(snippet, /typeof body\.code === "string"/);
+  assert.match(snippet, /\^\[a-z0-9_\]\{1,64\}\$/);
+  assert.doesNotMatch(snippet, /body\.error/);
   for (const variable of [
     "RELEASE_VALIDATION_URL",
     "RELEASE_GITLEAKS_URL",
