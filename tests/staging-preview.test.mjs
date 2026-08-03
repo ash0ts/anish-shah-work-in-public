@@ -719,6 +719,79 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
   assert.doesNotMatch(`${deploy}\n${cleanup}\n${validate}`, /pull_request_target/);
 });
 
+test("browser quality bounds workerd lifecycles without weakening review evidence", async () => {
+  const [workflow, runner, config, packageJson] = await Promise.all([
+    readFile(new URL("../.github/workflows/browser-quality.yml", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/run-browser-quality.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../playwright.config.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../package.json", import.meta.url), "utf8").then(JSON.parse),
+  ]);
+
+  assert.match(runner, /segment: "public"/);
+  assert.match(runner, /"tests\/browser\/public-quality\.spec\.mjs"/);
+  assert.match(runner, /const roomShardCount = 5;/);
+  assert.match(runner, /"tests\/browser\/room-quality\.spec\.mjs"/);
+  assert.match(runner, /"--fully-parallel"/);
+  assert.match(runner, /`--shard=\$\{shard\}\/\$\{roomShardCount\}`/);
+  assert.match(runner, /BROWSER_QUALITY_PORT: String\(port\)/);
+  assert.match(runner, /BROWSER_QUALITY_SEGMENT: segment/);
+  assert.match(runner, /ROOM_CAPTURE_VISUALS: "0"/);
+  assert.match(runner, /continueOnFailure: true/);
+  assert.match(config, /process\.env\.BROWSER_QUALITY_PORT/);
+  assert.match(config, /process\.env\.BROWSER_QUALITY_SEGMENT/);
+  assert.match(workflow, /^  room_review:/m);
+  assert.match(workflow, /name: room review/);
+  assert.match(workflow, /^  browser:\n    name: browser\n    if: always\(\)/m);
+  assert.match(workflow, /BROWSER_TESTS_RESULT: \$\{\{ needs\.browser_tests\.result \}\}/);
+  assert.match(workflow, /ROOM_REVIEW_RESULT: \$\{\{ needs\.room_review\.result \}\}/);
+  assert.match(workflow, /name: Upload browser failure evidence\n        if: failure\(\)/);
+  assert.match(workflow, /name: Build room review candidate\n        run: npm run build/);
+  assert.match(workflow, /name: Capture room review evidence\n        run: npm run capture:room-review/);
+  assert.match(workflow, /\.playwright\/results-room-review/);
+  assert.match(workflow, /\.playwright\/report-room-review/);
+  assert.match(packageJson.scripts["capture:room-review"], /BROWSER_QUALITY_PORT=4180/);
+  assert.match(packageJson.scripts["capture:room-review"], /BROWSER_QUALITY_SEGMENT=review/);
+
+  const listRoomTests = (arguments_) => {
+    const result = spawnSync(
+      process.execPath,
+      ["node_modules/@playwright/test/cli.js", "test", ...arguments_, "--list"],
+      {
+        cwd: path.resolve(fileURLToPath(new URL("..", import.meta.url))),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          BROWSER_PLAY_MODE: "room",
+          BROWSER_QUALITY_PORT: "4190",
+          BROWSER_QUALITY_SEGMENT: "partition-check",
+          BROWSER_QUALITY_STATE_DIR: ".wrangler/browser-quality-partition-check",
+          ROOM_CAPTURE_VISUALS: "0",
+        },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    return result.stdout
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.includes(" › "));
+  };
+  const complete = listRoomTests(["tests/browser/room-quality.spec.mjs"]);
+  const partitioned = [];
+  for (let shard = 1; shard <= 5; shard += 1) {
+    partitioned.push(
+      ...listRoomTests([
+        "tests/browser/room-quality.spec.mjs",
+        "--fully-parallel",
+        `--shard=${shard}/5`,
+      ]),
+    );
+  }
+  assert.equal(complete.length, 40);
+  assert.equal(partitioned.length, complete.length);
+  assert.equal(new Set(partitioned).size, partitioned.length);
+  assert.deepEqual([...partitioned].sort(), [...complete].sort());
+});
+
 test("Play propagates a preview fixture through every active stream", async () => {
   const [
     page,
