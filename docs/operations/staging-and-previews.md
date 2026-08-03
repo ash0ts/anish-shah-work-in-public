@@ -50,6 +50,11 @@ https://staging.anish-shah-is.online/api/connectors/discogs/oauth/callback
 Enter all staging credentials through staging Studio. Never copy a production
 token, snapshot, database, KV value, or encryption key.
 
+Staging Studio does not render production handoff controls, and staging routes
+cannot issue, accept, stage, or apply a production promotion code. Local and
+production retain their existing reviewed handoff; staging remains a separate
+credential island.
+
 ## Prepare a staging candidate
 
 Use the corporate-CA shell when the VPN is enabled:
@@ -194,3 +199,26 @@ The same scenarios are selectable at page level with
 tier and then forwards it to whichever stream the reviewer activates. Ready
 fixtures include neutral first-party placeholder artwork, while
 `missing-artwork` deliberately omits the artwork contract.
+
+## Visual review evidence
+
+The Browser quality workflow produces a 14-day `room-browser-review-<SHA>`
+artifact for each tested commit. It contains an interaction recording and
+synthetic screenshots for:
+
+- The static poster and neutral interactive room.
+- All four authored rotation bounds.
+- Each of the six focused room objects.
+- Every object screen in ready, empty, stale, unavailable, long-title, and
+  missing-artwork states.
+- One ready mobile composition per object screen.
+
+Generate the same ignored evidence locally after a build:
+
+```bash
+npm run capture:room-review
+```
+
+Review `.playwright/room-review/manifest.json` and the accompanying images.
+These captures never read D1, provider APIs, or owner data; the preview runtime
+serves only deterministic synthetic fixtures and first-party placeholders.

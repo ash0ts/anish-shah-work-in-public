@@ -1,0 +1,253 @@
+.page {
+  width: min(100%, 100rem);
+  min-width: 0;
+  margin: 0 auto;
+  padding: clamp(2.5rem, 6vw, 6rem) var(--gutter) clamp(3rem, 7vw, 7rem);
+  color: #eee4cf;
+  background: #050912;
+}
+
+.intro {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.48fr);
+  gap: 0.7rem clamp(2rem, 7vw, 8rem);
+  align-items: end;
+  margin-bottom: clamp(2.5rem, 6vw, 6rem);
+}
+
+.intro > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #55e4d0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.intro h1 {
+  max-width: 10ch;
+  margin: 0;
+  font-size: clamp(4rem, 9vw, 9.5rem);
+  font-variation-settings: "CASL" 0.55, "wght" 775;
+  letter-spacing: -0.075em;
+  line-height: 0.78;
+}
+
+.intro > div {
+  display: grid;
+  min-width: 0;
+  gap: 1.5rem;
+}
+
+.intro > div > p {
+  margin: 0;
+  color: #b8c4cf;
+  line-height: 1.55;
+}
+
+.entryControl {
+  display: grid;
+  min-width: 0;
+  gap: 0.65rem;
+}
+
+.entryControl button {
+  width: fit-content;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ff6a2a;
+  color: #07101b;
+  background: #ff6a2a;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 620;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.entryControl button:hover,
+.entryControl button:focus-visible {
+  border-color: #55e4d0;
+  background: #55e4d0;
+}
+
+.entryControl span {
+  max-width: 32rem;
+  color: #93a2b0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.poster {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(22rem, 1.2fr) minmax(22rem, 0.8fr);
+  border: 1px solid #3b526f;
+  background: #0b1421;
+}
+
+.posterField {
+  position: relative;
+  min-width: 0;
+  min-height: clamp(32rem, 50vw, 52rem);
+  border-right: 1px solid #3b526f;
+  background: #050912;
+  overflow: clip;
+}
+
+.posterField picture,
+.posterField img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.posterField img {
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+
+.posterField > p {
+  position: absolute;
+  z-index: 1;
+  inset: auto auto 1rem 1rem;
+  display: grid;
+  max-width: calc(100% - 2rem);
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgb(85 228 208 / 70%);
+  color: #eee4cf;
+  background: rgb(5 9 18 / 90%);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(0.35rem);
+}
+
+.posterField > p span {
+  font-weight: 700;
+}
+
+.posterField > p b {
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: none;
+}
+
+.directory {
+  min-width: 0;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.directory header {
+  margin-bottom: 1.5rem;
+}
+
+.directory header p {
+  margin: 0 0 0.5rem;
+  color: #ff9c58;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.directory h2 {
+  max-width: 11ch;
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 4.2rem);
+}
+
+.directory ol {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid #3b526f;
+  list-style: none;
+}
+
+.directory li {
+  min-width: 0;
+  border-bottom: 1px solid rgb(59 82 111 / 70%);
+}
+
+.directory a {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  gap: 0.3rem 0.8rem;
+  align-items: baseline;
+  padding: 1rem 0;
+  color: #eee4cf;
+  text-decoration: none;
+}
+
+.directory a > span,
+.directory a > small {
+  color: #93a2b0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.directory a > small {
+  grid-column: 2 / -1;
+  line-height: 1.45;
+}
+
+.directory a > strong {
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-variation-settings: "CASL" 0.35, "wght" 680;
+}
+
+.directory a:hover strong,
+.directory a:focus-visible strong {
+  color: #55e4d0;
+}
+
+@media (max-width: 900px) {
+  .intro,
+  .poster {
+    grid-template-columns: 1fr;
+  }
+
+  .intro h1 {
+    max-width: 12ch;
+  }
+
+  .posterField {
+    min-height: clamp(27rem, 88vw, 42rem);
+    border-right: 0;
+    border-bottom: 1px solid #3b526f;
+  }
+}
+
+@media (max-width: 520px) {
+  .page { padding-top: 3rem; }
+  .intro h1 { font-size: clamp(3.7rem, 18vw, 6rem); }
+  .poster { display: block; }
+  .posterField { min-height: 25rem; }
+  .directory { padding: 1rem; }
+  .directory a { grid-template-columns: 1.6rem minmax(0, 1fr) auto; }
+}
+
+@media (forced-colors: active) {
+  .page,
+  .poster,
+  .posterField {
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .posterField > p,
+  .entryControl button {
+    color: ButtonText;
+    background: ButtonFace;
+    forced-color-adjust: auto;
+  }
+}

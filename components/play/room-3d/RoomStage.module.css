@@ -1,0 +1,57 @@
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: clip;
+  border: 1px solid rgb(37 43 69 / 48%);
+  border-radius: clamp(1.4rem, 3vw, 3.5rem);
+  background: #c8b8ff;
+  isolation: isolate;
+}
+
+.stage::before,
+.stage::after {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+.stage::before {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgb(37 43 69 / 0.8%) 3px,
+    rgb(37 43 69 / 0.8%) 4px
+  );
+}
+
+.stage::after {
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 28%),
+    inset 0 0 3.25rem rgb(37 43 69 / 10%),
+    inset 0 -0.4rem 0 rgb(255 104 71 / 8%);
+}
+
+.stage canvas {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
+  outline: none;
+  cursor: grab;
+}
+
+.hasHover canvas {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce), (forced-colors: active) {
+  .stage {
+    display: none;
+  }
+}

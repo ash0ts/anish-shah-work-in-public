@@ -4,6 +4,7 @@ import { installDiscogsFixture } from "./fixtures/discogs.mjs";
 
 const routes = ["/", "/work", "/play", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
+const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 
 async function pageOverflow(page) {
   return page.evaluate(() => {
@@ -117,6 +118,7 @@ test("skip navigation reaches the main content", async ({ page }) => {
 });
 
 test("Spotify rank navigation and consent remain keyboard-first", async ({ page }) => {
+  test.skip(roomMode, "Classic Play owns the tabbed Spotify interaction.");
   const timestamp = "2026-08-02T12:00:00.000Z";
   const tracks = [
     {
@@ -205,6 +207,7 @@ test("Spotify rank navigation and consent remain keyboard-first", async ({ page 
 });
 
 test("Discogs remains lazy and the six Play streams use keyboard selection", async ({ page }) => {
+  test.skip(roomMode, "Classic Play owns the tabbed Discogs interaction.");
   const requests = [];
   await installDiscogsFixture(page, requests);
   await page.goto("/play", { waitUntil: "networkidle" });
@@ -241,6 +244,7 @@ test("Discogs remains lazy and the six Play streams use keyboard selection", asy
 });
 
 test("Play stream deep links survive reload and reject unknown selections", async ({ page }) => {
+  test.skip(roomMode, "Classic Play owns stream query deep links.");
   const requests = [];
   await installDiscogsFixture(page, requests);
 
@@ -270,6 +274,7 @@ test("Play stream deep links survive reload and reject unknown selections", asyn
 });
 
 test("Discogs Pattern and Gallery support filters and pagination", async ({ page }) => {
+  test.skip(roomMode, "Classic Play exercises the shared Discogs presentation with browser fixtures.");
   const requests = [];
   await installDiscogsFixture(page, requests);
   await page.goto("/play", { waitUntil: "networkidle" });
@@ -330,6 +335,7 @@ test("Discogs Pattern and Gallery support filters and pagination", async ({ page
 });
 
 test("Discogs Pattern and Gallery fit 320–1920px viewports", async ({ page }) => {
+  test.skip(roomMode, "Room routes receive server-selected connector state; their layout matrix is covered separately.");
   await installDiscogsFixture(page);
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
@@ -389,7 +395,11 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
   }
   await page.goto("/play", { waitUntil: "load" });
-  await expect(page.locator("noscript details")).toHaveCount(6);
+  if (roomMode) {
+    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(6);
+  } else {
+    await expect(page.locator("noscript details")).toHaveCount(6);
+  }
   await expect(page.locator("iframe")).toHaveCount(0);
   await context.close();
 });

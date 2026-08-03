@@ -13,15 +13,19 @@ import type { PreviewFixtureScenario } from "./play/connector-model";
 
 export function SpotifyStream({
   active = true,
+  initialState,
   serverFallback,
   fixture,
 }: {
   active?: boolean;
+  initialState?: SpotifyState;
   serverFallback?: ReactNode;
   fixture?: PreviewFixtureScenario;
 }) {
-  const [state, setState] = useState<SpotifyState>({ status: "loading" });
-  const requested = useRef(false);
+  const [state, setState] = useState<SpotifyState>(
+    initialState ?? { status: "loading" },
+  );
+  const requested = useRef(initialState !== undefined);
 
   useEffect(() => {
     if (!active || requested.current) return;

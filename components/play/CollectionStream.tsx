@@ -14,9 +14,11 @@ import {
   providerTitles,
   type CollectionPayload,
   type CollectionProvider,
+  type CollectionQueryState,
   type CollectionView,
   type ConnectorState,
   type PreviewFixtureScenario,
+  DEFAULT_COLLECTION_QUERY,
 } from "./connector-model";
 import { GalleryView } from "./CollectionGallery";
 import { PatternView } from "./CollectionPattern";
@@ -25,24 +27,66 @@ import { PanelHeading, StreamEmpty, StreamStatus } from "./StreamChrome";
 export function CollectionStream({
   provider,
   fixture,
+  initialState,
+  initialQuery = DEFAULT_COLLECTION_QUERY,
+  routePath,
 }: {
   provider: CollectionProvider;
   fixture?: PreviewFixtureScenario;
+  initialState?: ConnectorState<CollectionPayload>;
+  initialQuery?: CollectionQueryState;
+  routePath?: `/play/${string}`;
 }) {
-  const [state, setState] = useState<ConnectorState<CollectionPayload>>({
-    status: "idle",
-  });
+  const [state, setState] = useState<ConnectorState<CollectionPayload>>(
+    initialState ?? { status: "idle" },
+  );
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<CollectionView>("gallery");
-  const [draftQuery, setDraftQuery] = useState("");
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("");
-  const [sort, setSort] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<12 | 24 | 36>(12);
+  const [draftQuery, setDraftQuery] = useState(initialQuery.query);
+  const [query, setQuery] = useState(initialQuery.query);
+  const [filter, setFilter] = useState(initialQuery.filter);
+  const [sort, setSort] = useState(initialQuery.sort);
+  const [page, setPage] = useState(initialQuery.page);
+  const [pageSize, setPageSize] = useState<12 | 24 | 36>(
+    initialQuery.pageSize,
+  );
   const transitionRoot = useRef<HTMLDivElement>(null);
+  const skipInitialRequest = useRef(initialState !== undefined);
+
+  const syncRoute = (next: Partial<CollectionQueryState>) => {
+    if (!routePath || typeof window === "undefined") return;
+    const resolved = {
+      query,
+      filter,
+      sort,
+      page,
+      pageSize,
+      ...next,
+    };
+    const parameters = new URLSearchParams();
+    if (resolved.query) parameters.set("q", resolved.query);
+    if (resolved.filter && resolved.filter !== "all") {
+      parameters.set("filter", resolved.filter);
+    }
+    if (resolved.sort) parameters.set("sort", resolved.sort);
+    if (resolved.page > 1) parameters.set("page", String(resolved.page));
+    if (resolved.pageSize !== 12) {
+      parameters.set("pageSize", String(resolved.pageSize));
+    }
+    if (fixture) parameters.set("fixture", fixture);
+    const search = parameters.toString();
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${routePath}${search ? `?${search}` : ""}`,
+    );
+  };
 
   useEffect(() => {
+    if (skipInitialRequest.current) {
+      skipInitialRequest.current = false;
+      return;
+    }
     const controller = new AbortController();
     const parameters = new URLSearchParams({
       page: String(page),
@@ -105,7 +149,9 @@ export function CollectionStream({
 
   const applySearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setQuery(draftQuery.trim());
+    const nextQuery = draftQuery.trim();
+    syncRoute({ query: nextQuery, page: 1 });
+    setQuery(nextQuery);
     setPage(1);
   };
 
@@ -149,23 +195,31 @@ export function CollectionStream({
           <GalleryView
             busy={busy}
             draftQuery={draftQuery}
+            fixture={fixture}
             gallery={gallery}
             onDraftQuery={setDraftQuery}
             onFilter={(value) => {
+              syncRoute({ filter: value, page: 1 });
               setFilter(value);
               setPage(1);
             }}
-            onPage={setPage}
+            onPage={(value) => {
+              syncRoute({ page: value });
+              setPage(value);
+            }}
             onPageSize={(value) => {
+              syncRoute({ pageSize: value, page: 1 });
               setPageSize(value);
               setPage(1);
             }}
             onSearch={applySearch}
             onSort={(value) => {
+              syncRoute({ sort: value, page: 1 });
               setSort(value);
               setPage(1);
             }}
             provider={provider}
+            routePath={routePath}
           />
         ) : (
           <div className={styles.galleryUnavailable} aria-live="polite">

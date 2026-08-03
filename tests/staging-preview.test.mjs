@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { register } from "node:module";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   assertPreviewConfiguration,
@@ -31,6 +36,13 @@ const { previewConnectorSnapshot, previewStravaSnapshot } = await import(
 const { projectConnectorSnapshotForPublic } = await import(
   "../lib/server/connectors/public-gallery.ts"
 );
+const {
+  getCollectionScreenFoundation,
+  getDiscogsScreenFoundation,
+  getMovementScreenFoundation,
+  getSpotifyScreenFoundation,
+  previewFixtureForPlayRoute,
+} = await import("../lib/server/play-screen-foundation.ts");
 
 const contentVersion = "b".repeat(16);
 const releaseSha = "a".repeat(40);
@@ -91,6 +103,7 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
   ]);
   assert.equal(config.vars.DEPLOYMENT_TIER, "staging");
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "d1_kv_required");
+  assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
   assert.equal(config.vars.PRODUCTION_SITE_URL, "https://anish-shah-is.online");
   assert.equal(config.observability.logs.invocation_logs, false);
   assert.deepEqual(config.triggers.crons, ["47 * * * *"]);
@@ -141,6 +154,7 @@ test("preview config has no durable, secret, cron, Studio, or OAuth capability",
   assert.equal(config.triggers, undefined);
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "static_preview");
   assert.equal(config.vars.DEPLOYMENT_TIER, "preview");
+  assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
   assert.equal("OWNER_EMAILS" in config.vars, false);
   assert.equal("CONNECTOR_ENCRYPTION_KEY" in config.vars, false);
   assert.doesNotThrow(() =>
@@ -207,13 +221,24 @@ test("host routing accepts only the exact origin for each declared tier", () => 
 
 test("staging callbacks alone bypass identity while preview remains fully gated", () => {
   assert.equal(requiresHostedAccessIdentity("/work", "staging"), true);
-  assert.equal(
-    requiresHostedAccessIdentity(
-      "/api/connectors/myanimelist/oauth/callback",
-      "staging",
-    ),
-    false,
-  );
+  for (const provider of ["myanimelist", "spotify", "discogs"]) {
+    assert.equal(
+      requiresHostedAccessIdentity(
+        `/api/connectors/${provider}/oauth/callback`,
+        "staging",
+      ),
+      false,
+      provider,
+    );
+    assert.equal(
+      requiresHostedAccessIdentity(
+        `/api/connectors/${provider}/oauth/callback/extra`,
+        "staging",
+      ),
+      true,
+      `${provider} near miss`,
+    );
+  }
   assert.equal(
     requiresHostedAccessIdentity("/api/connectors/spotify/oauth/callback", "preview"),
     true,
@@ -237,6 +262,51 @@ test("staging callbacks alone bypass identity while preview remains fully gated"
     ),
     null,
   );
+});
+
+test("sitemap publishes room routes only for the production-facing room mode", async () => {
+  const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+  const sitemap = (await import("../app/sitemap.ts")).default;
+  try {
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      PLAY_EXPERIENCE_MODE: "classic",
+    };
+    const classic = await sitemap();
+    assert.equal(
+      classic.filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move)$/.test(url)).length,
+      0,
+    );
+
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      PLAY_EXPERIENCE_MODE: "my-room-2001",
+    };
+    const room = await sitemap();
+    assert.deepEqual(
+      room
+        .filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move)$/.test(url))
+        .map(({ url }) => new URL(url).pathname)
+        .sort(),
+      [
+        "/play/collect",
+        "/play/listen",
+        "/play/move",
+        "/play/play",
+        "/play/read",
+        "/play/watch",
+      ],
+    );
+
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      DEPLOYMENT_TIER: "staging",
+      SITE_URL: "https://staging.anish-shah-is.online",
+      PRODUCTION_SITE_URL: "https://anish-shah-is.online",
+      PUBLIC_CONTENT_MODE: "d1_kv_required",
+      PLAY_EXPERIENCE_MODE: "my-room-2001",
+    };
+    assert.deepEqual(await sitemap(), []);
+  } finally {
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
+  }
 });
 
 test("staging and preview responses are private and unindexable", () => {
@@ -285,10 +355,9 @@ test("RSC presentation reads hosted tier from Cloudflare runtime bindings", asyn
       noarchive: true,
       nosnippet: true,
     });
-    assert.match(
-      renderToStaticMarkup(PreviewEnvironmentNotice()),
-      /Synthetic preview data · PR #42/,
-    );
+    const notice = renderToStaticMarkup(PreviewEnvironmentNotice());
+    assert.match(notice, /Synthetic preview data · PR #42/);
+    assert.match(notice, /Synthetic · PR #42/);
     assert.deepEqual(robotsModule.default(), {
       rules: { userAgent: "*", disallow: "/" },
     });
@@ -297,6 +366,17 @@ test("RSC presentation reads hosted tier from Cloudflare runtime bindings", asyn
   } finally {
     globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
   }
+});
+
+test("the preview marker stays in the header gap instead of covering page controls", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const rule = css.match(/\.preview-environment-notice\s*\{([\s\S]*?)\n\}/)?.[1];
+  assert.ok(rule, "Expected the preview notice rule");
+  assert.match(rule, /top:\s*0\.75rem/);
+  assert.match(rule, /left:\s*50%/);
+  assert.match(rule, /transform:\s*translateX\(-50%\)/);
+  assert.doesNotMatch(rule, /bottom:|right:/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*preview-environment-notice__compact/);
 });
 
 test("preview blocks provider frames and serves only neutral artwork", async () => {
@@ -437,10 +517,14 @@ test("preview fixtures activate only under an exact preview runtime", () => {
       )?.status,
       "unavailable",
     );
-    assert.equal(
-      previewStravaSnapshot(new URLSearchParams())?.payload.previewNotice,
-      "Synthetic preview data",
+    const strava = previewStravaSnapshot(new URLSearchParams());
+    assert.equal(strava?.status, "ready");
+    assert.equal(strava?.payload.embedStatus, "available");
+    assert.match(
+      strava?.payload.embed.embedUrl,
+      /^https:\/\/www\.strava\.com\/athletes\/99999999999999999999\/latest-rides\/[a-f0-9]{40}$/,
     );
+    assert.equal("previewNotice" in strava.payload, false);
     process.env.SITE_URL = "https://anish-shah-is.online";
     assert.equal(previewConnectorSnapshot("hardcover", new URLSearchParams()), null);
   } finally {
@@ -448,6 +532,66 @@ test("preview fixtures activate only under an exact preview runtime", () => {
       if (previous[name] === undefined) delete process.env[name];
       else process.env[name] = previous[name];
     }
+  }
+});
+
+test("all six direct room foundations use projected preview data without durable state", async () => {
+  const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+  globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+    DEPLOYMENT_TIER: "preview",
+    PREVIEW_PR_NUMBER: "42",
+    SITE_URL: "https://pr-42.anish-shah-is.online",
+    PRODUCTION_SITE_URL: "https://anish-shah-is.online",
+    PUBLIC_CONTENT_MODE: "static_preview",
+  };
+  try {
+    const [watch, read, collect, play, listen, move, stale] = await Promise.all([
+      getCollectionScreenFoundation("myanimelist", {
+        fixture: "maximum-density",
+        pageSize: "36",
+      }),
+      getCollectionScreenFoundation("hardcover", {
+        fixture: "long-title",
+        q: "記憶",
+      }),
+      getDiscogsScreenFoundation({
+        fixture: "maximum-density",
+        pageSize: "36",
+      }),
+      getCollectionScreenFoundation("steam", { fixture: "ready" }),
+      getSpotifyScreenFoundation({ fixture: "ready" }),
+      getMovementScreenFoundation({ fixture: "ready" }),
+      getCollectionScreenFoundation("myanimelist", { fixture: "stale" }),
+    ]);
+
+    assert.equal(watch.state.status, "ready");
+    assert.equal(watch.state.payload.gallery.items.length, 36);
+    assert.equal(read.state.status, "ready");
+    assert.equal(
+      read.state.payload.gallery.items.some((item) =>
+        /記憶と機械/.test(item.title),
+      ),
+      true,
+    );
+    assert.equal(collect.state.status, "ready");
+    assert.equal(collect.state.payload.gallery.items.length, 36);
+    assert.equal(play.state.status, "ready");
+    assert.equal(listen.status, "ready");
+    assert.equal(listen.payload.windows.short_term.tracks.length, 12);
+    assert.equal(move.status, "ready");
+    assert.equal(move.payload.embedStatus, "available");
+    assert.equal(stale.state.status, "ready");
+    assert.equal(stale.state.stale, true);
+    assert.ok(
+      new Date(stale.state.payload.freshUntil).getTime() < Date.now(),
+    );
+    assert.equal(
+      previewFixtureForPlayRoute({ fixture: "missing-artwork" }),
+      "missing-artwork",
+    );
+    assert.equal(previewFixtureForPlayRoute({}), undefined);
+  } finally {
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
   }
 });
 
@@ -493,15 +637,22 @@ test("preview Discogs fixtures preserve format and decade variation", () => {
 });
 
 test("preview workflows use trusted workflow_run deployment and never pull_request_target", async () => {
-  const [deploy, cleanup, validate, metadata, prepare, cleanupScript] = await Promise.all([
+  const [deploy, cleanup, validate, browserQuality, gitleaks, codeql, metadata, prepare, cleanupScript] = await Promise.all([
     readFile(new URL("../.github/workflows/preview-deploy.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/preview-cleanup.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/browser-quality.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/gitleaks.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/codeql.yml", import.meta.url), "utf8"),
     readFile(new URL("../scripts/write-preview-metadata.mjs", import.meta.url), "utf8"),
     readFile(new URL("../scripts/prepare-hosted-environment.mjs", import.meta.url), "utf8"),
     readFile(new URL("../scripts/preview-cleanup.mjs", import.meta.url), "utf8"),
   ]);
   assert.match(deploy, /workflow_run:/);
+  assert.match(
+    deploy,
+    /group: preview-\$\{\{ github\.event\.workflow_run\.event \}\}-\$\{\{ github\.event\.workflow_run\.pull_requests\[0\]\.number \|\| github\.event\.workflow_run\.id \}\}/,
+  );
   assert.match(deploy, /ref: \$\{\{ github\.workflow_sha \}\}/);
   assert.match(
     deploy,
@@ -511,17 +662,45 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
   assert.match(deploy, /gh api "\$endpoint" --jq '\[\.state, \.head\.sha, \.head\.repo\.full_name\] \| @tsv'/);
   assert.match(deploy, /Recheck the PR immediately before privileged deployment/);
   assert.match(deploy, /--connect-timeout 5 --max-time 20 --proto '=https'/);
+  assert.match(deploy, /for attempt in \$\(seq 1 18\)/);
+  assert.match(deploy, /if \[ "\$attempt" -lt 18 \]; then sleep 5; fi/);
+  assert.match(deploy, /DNS-, TLS-, Access-, and application-ready within 90 seconds/);
   assert.doesNotMatch(deploy, /curl[^\n]*--location/);
   assert.match(deploy, /printf '%s\\nPreview: %s\\n\\nValidated SHA:/);
   assert.match(deploy, /CLOUDFLARE_PREVIEW_API_TOKEN/);
   assert.match(deploy, /preview-production-guard\.mjs capture/);
   assert.match(deploy, /preview-production-guard\.mjs verify/);
+  assert.match(deploy, /id: production_guard_capture/);
   assert.match(
     deploy,
-    /Verify production integrity guard[\s\S]*if: always\(\)/,
+    /if: \$\{\{ always\(\) && steps\.production_guard_capture\.outcome == 'success' \}\}/,
   );
   assert.match(validate, /Upload immutable preview build/);
   assert.match(validate, /github\.event\.pull_request\.head\.sha/);
+  assert.match(
+    browserQuality,
+    /ref: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+  );
+  assert.match(
+    browserQuality,
+    /EXPECTED_SHA: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+  );
+  assert.match(
+    browserQuality,
+    /name: room-browser-review-\$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+  );
+  assert.doesNotMatch(browserQuality, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
+  for (const workflow of [gitleaks, codeql]) {
+    assert.match(
+      workflow,
+      /ref: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+    );
+    assert.match(
+      workflow,
+      /EXPECTED_SHA: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+    );
+    assert.doesNotMatch(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
+  }
   assert.match(validate, /PREVIEW_WORKFLOW_SHA/);
   assert.match(
     validate,
@@ -540,23 +719,119 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
   assert.doesNotMatch(`${deploy}\n${cleanup}\n${validate}`, /pull_request_target/);
 });
 
+test("browser quality bounds workerd lifecycles without weakening review evidence", async () => {
+  const [workflow, runner, config, packageJson] = await Promise.all([
+    readFile(new URL("../.github/workflows/browser-quality.yml", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/run-browser-quality.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../playwright.config.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../package.json", import.meta.url), "utf8").then(JSON.parse),
+  ]);
+
+  assert.match(runner, /segment: "public"/);
+  assert.match(runner, /"tests\/browser\/public-quality\.spec\.mjs"/);
+  assert.match(runner, /const roomShardCount = 5;/);
+  assert.match(runner, /"tests\/browser\/room-quality\.spec\.mjs"/);
+  assert.match(runner, /"--fully-parallel"/);
+  assert.match(runner, /`--shard=\$\{shard\}\/\$\{roomShardCount\}`/);
+  assert.match(runner, /BROWSER_QUALITY_PORT: String\(port\)/);
+  assert.match(runner, /BROWSER_QUALITY_SEGMENT: segment/);
+  assert.match(runner, /ROOM_CAPTURE_VISUALS: "0"/);
+  assert.match(runner, /continueOnFailure: true/);
+  assert.match(config, /process\.env\.BROWSER_QUALITY_PORT/);
+  assert.match(config, /process\.env\.BROWSER_QUALITY_SEGMENT/);
+  assert.match(workflow, /^  room_review:/m);
+  assert.match(workflow, /name: room review/);
+  assert.match(workflow, /^  browser:\n    name: browser\n    if: always\(\)/m);
+  assert.match(workflow, /BROWSER_TESTS_RESULT: \$\{\{ needs\.browser_tests\.result \}\}/);
+  assert.match(workflow, /ROOM_REVIEW_RESULT: \$\{\{ needs\.room_review\.result \}\}/);
+  assert.match(workflow, /name: Upload browser failure evidence\n        if: failure\(\)/);
+  assert.match(workflow, /name: Build room review candidate\n        run: npm run build/);
+  assert.match(workflow, /name: Capture room review evidence\n        run: npm run capture:room-review/);
+  assert.match(workflow, /\.playwright\/results-room-review/);
+  assert.match(workflow, /\.playwright\/report-room-review/);
+  assert.match(packageJson.scripts["capture:room-review"], /BROWSER_QUALITY_PORT=4180/);
+  assert.match(packageJson.scripts["capture:room-review"], /BROWSER_QUALITY_SEGMENT=review/);
+
+  const listRoomTests = (arguments_) => {
+    const result = spawnSync(
+      process.execPath,
+      ["node_modules/@playwright/test/cli.js", "test", ...arguments_, "--list"],
+      {
+        cwd: path.resolve(fileURLToPath(new URL("..", import.meta.url))),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          BROWSER_PLAY_MODE: "room",
+          BROWSER_QUALITY_PORT: "4190",
+          BROWSER_QUALITY_SEGMENT: "partition-check",
+          BROWSER_QUALITY_STATE_DIR: ".wrangler/browser-quality-partition-check",
+          ROOM_CAPTURE_VISUALS: "0",
+        },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    return result.stdout
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.includes(" › "));
+  };
+  const complete = listRoomTests(["tests/browser/room-quality.spec.mjs"]);
+  const partitioned = [];
+  for (let shard = 1; shard <= 5; shard += 1) {
+    partitioned.push(
+      ...listRoomTests([
+        "tests/browser/room-quality.spec.mjs",
+        "--fully-parallel",
+        `--shard=${shard}/5`,
+      ]),
+    );
+  }
+  assert.equal(complete.length, 40);
+  assert.equal(partitioned.length, complete.length);
+  assert.equal(new Set(partitioned).size, partitioned.length);
+  assert.deepEqual([...partitioned].sort(), [...complete].sort());
+});
+
 test("Play propagates a preview fixture through every active stream", async () => {
-  const [page, streams, collection, spotify, movement] = await Promise.all([
+  const [
+    page,
+    classic,
+    streams,
+    collection,
+    gallery,
+    discogs,
+    spotify,
+    movement,
+  ] = await Promise.all([
     readFile(new URL("../app/play/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/play/ClassicPlayExperience.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/PersonalStreams.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/CollectionStream.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/play/CollectionGallery.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/play/DiscogsStream.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/SpotifyStream.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/MovementStream.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /activePreviewFixtureRuntime\(\)/);
-  assert.match(page, /<PersonalStreams[\s\S]*fixture=\{fixture\}/);
+  assert.match(
+    page,
+    /<ClassicPlayExperience[\s\S]*fixture=\{fixture\}[\s\S]*initialStream=\{streamIdFromValue\(query\.stream\)\}/,
+  );
+  assert.match(classic, /<PersonalStreams[\s\S]*fixture=\{fixture\}/);
+  assert.match(classic, /initialStream=\{initialStream\}/);
   assert.match(streams, /CollectionStream provider="myanimelist" fixture=\{fixture\}/);
+  assert.match(streams, /DiscogsStream fixture=\{fixture\}/);
   assert.match(streams, /SpotifyStream[\s\S]*fixture=\{fixture\}/);
   assert.match(streams, /MovementStream[\s\S]*fixture=\{fixture\}/);
   assert.match(collection, /parameters\.set\("fixture", fixture\)/);
+  assert.match(discogs, /parameters\.set\("fixture", fixture\)/);
   assert.match(spotify, /loadSpotifyFixture\(controller\.signal, fixture\)/);
   assert.match(spotify, /loadSpotify\(controller\.signal\)/);
   assert.match(movement, /new URLSearchParams\(\{ fixture \}\)/);
+  assert.match(gallery, /input name="fixture" type="hidden" value=\{fixture\}/);
+  assert.match(gallery, /parameters\.set\("fixture", fixture\)/);
+  assert.match(discogs, /input name="fixture" type="hidden" value=\{fixture\}/);
+  assert.match(discogs, /parameters\.set\("fixture", fixture\)/);
 });
 
 test("preview production guard pins the apex and production Worker", async () => {
@@ -576,6 +851,50 @@ test("preview production guard pins the apex and production Worker", async () =>
   assert.match(source, /wrangler\.preview\.json/);
 });
 
+test("preview production guard preserves a redacted Wrangler failure diagnostic", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "anish-preview-guard-"));
+  const token = "test-preview-token-must-not-leak";
+  try {
+    const wranglerPath = path.join(
+      directory,
+      "node_modules/wrangler/bin/wrangler.js",
+    );
+    mkdirSync(path.dirname(wranglerPath), { recursive: true });
+    writeFileSync(
+      wranglerPath,
+      'process.stderr.write("\\u001b[31mCloudflare authentication failed for " + process.env.CLOUDFLARE_API_TOKEN + "\\u001b[0m\\n");\nprocess.exitCode = 1;\n',
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(
+          new URL("../scripts/preview-production-guard.mjs", import.meta.url),
+        ),
+        "capture",
+        path.join(directory, "guard.json"),
+      ],
+      {
+        cwd: directory,
+        encoding: "utf8",
+        env: { ...process.env, CLOUDFLARE_API_TOKEN: token },
+      },
+    );
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /Unable to read the production Worker deployment \(exit 1\)\./,
+    );
+    assert.match(
+      result.stderr,
+      /Wrangler diagnostic:\nCloudflare authentication failed for \[redacted\]/,
+    );
+    assert.doesNotMatch(result.stderr, new RegExp(token));
+    assert.doesNotMatch(result.stderr, /\u001B/);
+  } finally {
+    rmSync(directory, { force: true, recursive: true });
+  }
+});
+
 test("staging release bootstraps and verifies its isolated D1/KV publication", async () => {
   const [script, packageJson] = await Promise.all([
     readFile(new URL("../scripts/staging-release.mjs", import.meta.url), "utf8"),
@@ -590,4 +909,19 @@ test("staging release bootstraps and verifies its isolated D1/KV publication", a
   assert.match(script, /\/api\/studio\/publication-checkpoint/);
   assert.match(script, /kvPointerMatches !== true/);
   assert.match(script, /STAGING_SITE_ORIGIN/);
+});
+
+test("staging Studio renders an explicit non-promotable boundary", async () => {
+  const [page, promotion] = await Promise.all([
+    readFile(new URL("../app/studio/page.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/studio/PlayPromotionControls.tsx", import.meta.url),
+      "utf8",
+    ),
+  ]);
+  assert.match(page, /deploymentTier === "staging"[\s\S]*\? "staging"/);
+  assert.match(promotion, /environment: "local" \| "staging" \| "hosted"/);
+  assert.match(promotion, /Staging stays isolated\./);
+  assert.match(promotion, /cannot issue, stage, accept, or apply production transfer codes/);
+  assert.match(promotion, /environment === "staging" \? null/);
 });

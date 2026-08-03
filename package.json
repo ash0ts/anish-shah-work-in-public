@@ -18,12 +18,13 @@
     "content:attest:write": "node scripts/public-content-attestation.mjs --write",
     "test:content": "node --test tests/content-pipeline.test.mjs tests/content-privacy.test.mjs tests/content-connectors.test.mjs tests/content-connector-gallery.test.mjs tests/content-connector-artwork.test.mjs tests/content-myanimelist-oauth.test.mjs tests/content-spotify-connector.test.mjs tests/content-spotify-oauth.test.mjs tests/content-discogs-connector.test.mjs tests/content-discogs-oauth.test.mjs tests/content-steam-connector.test.mjs tests/content-workgroups.test.mjs tests/bodies-of-work.test.mjs tests/work-facets.test.mjs tests/work-archive-v12.test.mjs",
     "test:backend": "node --test tests/backend-security.test.mjs tests/security-hardening.test.mjs tests/cloudflare-access.test.mjs tests/backend-public-content.test.mjs tests/backend-connector-privacy.test.mjs tests/content-strava-config.test.mjs tests/play-promotion.test.mjs tests/public-record-seed.test.mjs tests/release-guards.test.mjs tests/spotify-studio-surface.test.mjs tests/staging-preview.test.mjs",
-    "test:rendered": "node --test tests/spotify-play-ui.test.mjs tests/discogs-play-ui.test.mjs tests/rendered-html.test.mjs && node --test tests/redesign-acceptance.test.mjs",
+    "test:rendered": "node --test tests/spotify-play-ui.test.mjs tests/discogs-play-ui.test.mjs tests/play-room-routes.test.mjs tests/play-room-3d.test.mjs tests/rendered-html.test.mjs && node --test tests/redesign-acceptance.test.mjs",
     "test:maintenance-skill": "node --test .agents/skills/maintain-anish-site/tests/check-change.test.mjs",
     "test": "npm run test:maintenance-skill && npm run typecheck && npm run test:content && npm run test:backend && npm run build && npm run bundle:scan && npm run test:rendered",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "validate": "npm run content:attest && npm run lint && npm run db:local:migrate:clean && npm test && npm run security:audit",
     "validate:browser": "npm run build && node scripts/run-browser-quality.mjs",
+    "capture:room-review": "BROWSER_PLAY_MODE=room BROWSER_QUALITY_PORT=4180 BROWSER_QUALITY_SEGMENT=review ROOM_CAPTURE_VISUALS=1 BROWSER_QUALITY_STATE_DIR=.wrangler/browser-quality-room-review node node_modules/@playwright/test/cli.js test tests/browser/room-review.spec.mjs",
     "validate:release": "npm run validate && npm run validate:browser && npm run cloudflare:prepare && node scripts/release-preflight.mjs",
     "release:plan": "node scripts/write-release-plan.mjs",
     "release:attest": "node scripts/write-release-attestation.mjs",
@@ -57,13 +58,16 @@
     "bundle:scan": "node scripts/scan-release-bundle.mjs"
   },
   "dependencies": {
+    "@react-three/drei": "10.7.7",
+    "@react-three/fiber": "9.6.1",
     "animejs": "4.5.0",
     "drizzle-orm": "0.45.2",
     "jose": "6.2.5",
     "next": "16.2.12",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-server-dom-webpack": "19.2.8"
+    "react-server-dom-webpack": "19.2.8",
+    "three": "0.185.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
@@ -72,6 +76,7 @@
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@types/three": "0.185.1",
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
     "chrome-launcher": "1.2.1",
@@ -92,7 +97,8 @@
     "js-yaml": "4.3.0",
     "minimatch": "10.2.5",
     "postcss": "8.5.25",
-    "sharp": "0.35.3"
+    "sharp": "0.35.3",
+    "undici": "7.29.0"
   },
   "type": "module"
 }

@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,15 +25,70 @@ if (missing.length > 0) {
   );
 }
 
-function run(binary, arguments_) {
+function run(binary, arguments_, environment = {}, { continueOnFailure = false } = {}) {
   const result = spawnSync(binary, arguments_, {
     cwd: root,
-    env: process.env,
+    env: { ...process.env, ...environment },
     stdio: "inherit",
   });
   if (result.error) throw result.error;
-  if (result.status !== 0) process.exit(result.status ?? 1);
+  const status = result.status ?? 1;
+  if (status !== 0 && !continueOnFailure) process.exit(status);
+  return status;
 }
 
-run(process.execPath, ["node_modules/@playwright/test/cli.js", "test"]);
-run(process.execPath, ["scripts/run-lighthouse-quality.mjs"]);
+function runPlaywright({ mode, port, segment = "", arguments_ = [] }) {
+  const suffix = segment ? `-${segment}` : "";
+  const relativeStateDirectory = `.wrangler/browser-quality-${mode}${suffix}`;
+  const stateDirectory = path.join(root, relativeStateDirectory);
+  rmSync(stateDirectory, { force: true, recursive: true });
+  return run(
+    process.execPath,
+    ["node_modules/@playwright/test/cli.js", "test", ...arguments_],
+    {
+      BROWSER_PLAY_MODE: mode,
+      BROWSER_QUALITY_PORT: String(port),
+      BROWSER_QUALITY_SEGMENT: segment,
+      BROWSER_QUALITY_STATE_DIR: relativeStateDirectory,
+      ROOM_CAPTURE_VISUALS: "0",
+    },
+    { continueOnFailure: true },
+  );
+}
+
+let failed = false;
+if (runPlaywright({ mode: "classic", port: 4173 }) !== 0) failed = true;
+
+if (runPlaywright({
+  mode: "room",
+  port: 4174,
+  segment: "public",
+  arguments_: ["tests/browser/public-quality.spec.mjs"],
+}) !== 0) failed = true;
+
+const roomShardCount = 5;
+for (let shard = 1; shard <= roomShardCount; shard += 1) {
+  if (runPlaywright({
+    mode: "room",
+    port: 4174 + shard,
+    segment: `quality-shard-${shard}`,
+    arguments_: [
+      "tests/browser/room-quality.spec.mjs",
+      "--fully-parallel",
+      `--shard=${shard}/${roomShardCount}`,
+    ],
+  }) !== 0) failed = true;
+}
+
+if (
+  run(
+    process.execPath,
+    ["scripts/run-lighthouse-quality.mjs"],
+    {},
+    { continueOnFailure: true },
+  ) !== 0
+) {
+  failed = true;
+}
+
+if (failed) process.exit(1);

@@ -8,9 +8,13 @@ import * as chromeLauncher from "chrome-launcher";
 import lighthouse from "lighthouse";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const baseUrl = "http://127.0.0.1:4174";
+const lighthousePort = 4174;
+const baseUrl = `http://127.0.0.1:${lighthousePort}`;
 const reportDirectory = path.join(root, ".lighthouse");
-const routes = ["/", "/work", "/play", "/sources", "/privacy"];
+const audits = [
+  { mode: "classic", routes: ["/", "/work", "/play", "/sources", "/privacy"] },
+  { mode: "room", routes: ["/play"] },
+];
 const categories = ["performance", "accessibility", "best-practices", "seo"];
 const minimumScore = 0.9;
 const maximumCls = 0.1;
@@ -62,8 +66,9 @@ async function stopProcess(child) {
   if (child.exitCode === null) child.kill("SIGKILL");
 }
 
-function reportName(route) {
-  return route === "/" ? "home" : route.slice(1).replaceAll("/", "-");
+function reportName(route, mode) {
+  const routeName = route === "/" ? "home" : route.slice(1).replaceAll("/", "-");
+  return `${mode}-${routeName}`;
 }
 
 async function launchChrome() {
@@ -92,109 +97,133 @@ async function launchChrome() {
 
 await mkdir(reportDirectory, { recursive: true });
 
-const server = spawn(
-  process.execPath,
-  [
-    "node_modules/wrangler/bin/wrangler.js",
-    "dev",
-    "--config",
-    "dist/server/wrangler.json",
-    "--port",
-    "4174",
-    "--ip",
-    "127.0.0.1",
-    "--local",
-    "--var",
-    "NODE_ENV:development",
-    "--log-level",
-    "error",
-    "--persist-to",
-    ".wrangler/lighthouse-quality",
-  ],
-  {
-    cwd: root,
-    env: process.env,
-    stdio: ["ignore", "pipe", "pipe"],
-  },
-);
+function launchWorker(mode) {
+  const experienceMode = mode === "room" ? "my-room-2001" : "classic";
+  const server = spawn(
+    process.execPath,
+    [
+      "node_modules/wrangler/bin/wrangler.js",
+      "dev",
+      "--config",
+      "dist/server/wrangler.json",
+      "--port",
+      String(lighthousePort),
+      "--ip",
+      "127.0.0.1",
+      "--local",
+      "--var",
+      "NODE_ENV:development",
+      "--var",
+      `PLAY_EXPERIENCE_MODE:${experienceMode}`,
+      "--log-level",
+      "error",
+      "--persist-to",
+      ".wrangler/lighthouse-quality",
+    ],
+    {
+      cwd: root,
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
 
-let serverOutput = "";
-server.stdout.on("data", (chunk) => {
-  serverOutput = boundedOutput(serverOutput, chunk);
-});
-server.stderr.on("data", (chunk) => {
-  serverOutput = boundedOutput(serverOutput, chunk);
-});
+  let output = "";
+  server.stdout.on("data", (chunk) => {
+    output = boundedOutput(output, chunk);
+  });
+  server.stderr.on("data", (chunk) => {
+    output = boundedOutput(output, chunk);
+  });
+  return { server, output: () => output };
+}
+
+async function runRouteAudit(route, mode) {
+  const { server, output } = launchWorker(mode);
+  try {
+    await waitForServer(server);
+    await assertRouteAvailable(route, server, output);
+    const chrome = await launchChrome();
+    try {
+      return await lighthouse(new URL(route, baseUrl).href, {
+        port: chrome.port,
+        output: "json",
+        logLevel: "error",
+        onlyCategories: categories,
+        formFactor: "mobile",
+        screenEmulation: {
+          mobile: true,
+          width: 390,
+          height: 844,
+          deviceScaleFactor: 2,
+          disabled: false,
+        },
+      });
+    } finally {
+      await chrome.kill();
+    }
+  } catch (error) {
+    const detail = output();
+    if (detail && error instanceof Error) {
+      error.message = `${error.message}\n${detail}`;
+    }
+    throw error;
+  } finally {
+    await stopProcess(server);
+  }
+}
 
 const failures = [];
 
-try {
-  await waitForServer(server);
-
-  for (const route of routes) {
-    const url = new URL(route, baseUrl).href;
-    let result;
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
-      await assertRouteAvailable(route, server, () => serverOutput);
-      const chrome = await launchChrome();
-      try {
-        result = await lighthouse(url, {
-          port: chrome.port,
-          output: "json",
-          logLevel: "error",
-          onlyCategories: categories,
-          formFactor: "mobile",
-          screenEmulation: {
-            mobile: true,
-            width: 390,
-            height: 844,
-            deviceScaleFactor: 2,
-            disabled: false,
-          },
-        });
-      } finally {
-        await chrome.kill();
-      }
-
+for (const { mode, routes } of audits) {
+ for (const route of routes) {
+  let result;
+  let lastError;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      result = await runRouteAudit(route, mode);
       if (!result?.lhr.runtimeError) break;
-      if (attempt === 1) {
-        console.warn(
-          `${route} Lighthouse navigation failed once (${result.lhr.runtimeError.code}); retrying with a fresh browser.`,
-        );
-      }
+      lastError = new Error(
+        `${result.lhr.runtimeError.code} — ${result.lhr.runtimeError.message}`,
+      );
+    } catch (error) {
+      lastError = error;
     }
-
-    if (!result) throw new Error(`Lighthouse returned no result for ${route}.`);
-    if (result.lhr.runtimeError) {
-      throw new Error(
-        `Lighthouse could not audit ${route}: ${result.lhr.runtimeError.code} — ${result.lhr.runtimeError.message}`,
+    if (attempt === 1) {
+      const reason =
+        result?.lhr.runtimeError?.code ??
+        (lastError instanceof Error ? lastError.message.split("\n", 1)[0] : "unknown");
+      console.warn(
+        `${mode} ${route} Lighthouse audit failed once (${reason}); retrying with a fresh Worker and browser.`,
       );
     }
-    const reportPath = path.join(reportDirectory, `${reportName(route)}.report.json`);
-    await writeFile(reportPath, result.report, "utf8");
-
-    const summary = {};
-    for (const category of categories) {
-      const score = result.lhr.categories[category]?.score;
-      summary[category] = score;
-      if (typeof score !== "number" || score < minimumScore) {
-        failures.push(`${route} ${category}: ${score ?? "missing"} < ${minimumScore}`);
-      }
-    }
-
-    const cls = result.lhr.audits["cumulative-layout-shift"]?.numericValue;
-    summary.cls = cls;
-    if (typeof cls !== "number" || cls > maximumCls) {
-      failures.push(`${route} CLS: ${cls ?? "missing"} > ${maximumCls}`);
-    }
-
-    console.log(`${route} ${JSON.stringify(summary)}`);
   }
-} catch (error) {
-  if (serverOutput) console.error(serverOutput);
-  throw error;
-} finally {
-  await stopProcess(server);
+
+  if (!result || result.lhr.runtimeError) {
+    throw lastError ?? new Error(`Lighthouse returned no result for ${mode} ${route}.`);
+  }
+  const reportPath = path.join(
+    reportDirectory,
+    `${reportName(route, mode)}.report.json`,
+  );
+  await writeFile(reportPath, result.report, "utf8");
+
+  const summary = {};
+  for (const category of categories) {
+    const score = result.lhr.categories[category]?.score;
+    summary[category] = score;
+    if (typeof score !== "number" || score < minimumScore) {
+      failures.push(`${mode} ${route} ${category}: ${score ?? "missing"} < ${minimumScore}`);
+    }
+  }
+
+  const cls = result.lhr.audits["cumulative-layout-shift"]?.numericValue;
+  summary.cls = cls;
+  if (typeof cls !== "number" || cls > maximumCls) {
+    failures.push(`${mode} ${route} CLS: ${cls ?? "missing"} > ${maximumCls}`);
+  }
+
+  console.log(`${mode} ${route} ${JSON.stringify(summary)}`);
+ }
 }
 
 if (failures.length > 0) {

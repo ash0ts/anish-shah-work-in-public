@@ -414,26 +414,33 @@ test("Work-detail outcomes are direct while wider measures remain contextual", a
   }
 });
 
-test("Three.js, WebGL, and canvas navigation are absent from public runtime code", async () => {
+test("Three.js stays inside the deferred Play room and out of archive navigation", async () => {
   const sourceEntries = await Promise.all(
     (await runtimeSourceFiles())
       .filter((file) => /\.(?:js|mjs|ts|tsx)$/i.test(file))
+      .filter((file) => !file.includes("components/play/room-3d/"))
       .map(async (file) => ({ file, text: await readFile(file, "utf8") })),
   );
   for (const { file, text } of sourceEntries) {
     assert.doesNotMatch(
       text,
       /(?:from\s*["']three["']|import\(\s*["']three["']\s*\)|WebGLRenderer|<canvas\b)/i,
-      `${path.relative(PROJECT_ROOT, file)} contains removed 3D navigation`,
+      `${path.relative(PROJECT_ROOT, file)} contains out-of-scope 3D navigation`,
     );
   }
 
   const manifest = JSON.parse(await readFile(CLIENT_MANIFEST_PATH, "utf8"));
-  const entries = Object.entries(manifest);
-  const threeEntries = entries.filter(
-    ([, entry]) => /node_modules\/three\//.test(entry.src ?? ""),
+  const roomStage = manifest["components/play/room-3d/RoomStage.tsx"];
+  assert.equal(
+    roomStage?.isDynamicEntry,
+    true,
+    "the Three.js room must remain a dynamic entry",
   );
-  assert.equal(threeEntries.length, 0);
+  assert.match(
+    roomStage?.file ?? "",
+    /^assets\/RoomStage-[\w-]+\.js$/,
+    "the Three.js room must retain an independently cacheable chunk",
+  );
   for (const pathname of ["/", "/work"]) {
     assert.doesNotMatch(documentMarkup(await renderHtml(pathname)), /<canvas\b/i);
   }
@@ -491,7 +498,10 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
         "components/spotify/SpotifyFallback.tsx",
       ].map((file) => readFile(path.join(PROJECT_ROOT, file), "utf8")),
     ).then((files) => files.join("\n")),
-    readFile(path.join(PROJECT_ROOT, "app/play/page.tsx"), "utf8"),
+    readFile(
+      path.join(PROJECT_ROOT, "components/play/ClassicPlayExperience.tsx"),
+      "utf8",
+    ),
   ]);
   assert.match(
     source,
@@ -596,6 +606,42 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
     {
       file: "components/PersonalStreams.module.css",
       selector: ".visuallyHidden",
+    },
+    {
+      file: "components/play/room-3d/RoomStage.module.css",
+      selector: ".stage",
+    },
+    {
+      file: "components/play/room-platform/RoomExperienceProvider.module.css",
+      selector: ".announcer",
+    },
+    {
+      file: "components/play/room-platform/RoomOverview.module.css",
+      selector: ".posterField",
+    },
+    {
+      file: "components/play/room-platform/RoomRuntime.module.css",
+      selector: ".announcer",
+    },
+    {
+      file: "components/play/room-platform/RoomRuntime.module.css",
+      selector: ".posterFallback",
+    },
+    {
+      file: "components/play/room-screens/RoomScreens.module.css",
+      selector: ".televisionGlass",
+    },
+    {
+      file: "components/play/room-screens/RoomScreens.module.css",
+      selector: ".playerDisplay",
+    },
+    {
+      file: "components/play/room-screens/RoomScreens.module.css",
+      selector: ".computerDisplay",
+    },
+    {
+      file: "components/play/room-screens/RoomScreens.module.css",
+      selector: ".cardioDisplay",
     },
   ]);
   const timelineCss = await readFile(

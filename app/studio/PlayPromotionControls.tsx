@@ -58,7 +58,7 @@ function formatExpiry(value: string): string {
 export function PlayPromotionControls({
   environment,
 }: {
-  environment: "local" | "hosted";
+  environment: "local" | "staging" | "hosted";
 }) {
   const [transferCode, setTransferCode] = useState("");
   const [issued, setIssued] = useState<{
@@ -210,16 +210,24 @@ export function PlayPromotionControls({
   return (
     <section className={styles.promotionPanel} aria-labelledby="promotion-title">
       <div className={styles.promotionIntro}>
-        <p className={styles.eyebrow}>Local → production</p>
-        <h2 id="promotion-title">Promote settings without exposing secrets.</h2>
+        <p className={styles.eyebrow}>
+          {environment === "staging" ? "Staging boundary" : "Local → production"}
+        </p>
+        <h2 id="promotion-title">
+          {environment === "staging"
+            ? "Staging stays isolated."
+            : "Promote settings without exposing secrets."}
+        </h2>
         <p>
-          {environment === "local"
+          {environment === "staging"
+            ? "This environment cannot issue, stage, accept, or apply production transfer codes. Enter staging connector credentials independently and keep them here."
+            : environment === "local"
             ? "Paste a one-time code from production. This local server sends portable provider settings directly over HTTPS; the browser never receives those credentials."
             : "Create a short-lived code for the local Studio, then review the staged provider names here before production validates and re-encrypts them."}
         </p>
       </div>
 
-      {environment === "local" ? (
+      {environment === "staging" ? null : environment === "local" ? (
         <form
           className={styles.promotionForm}
           onSubmit={(event) => {

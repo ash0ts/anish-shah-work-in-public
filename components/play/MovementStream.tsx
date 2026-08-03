@@ -15,17 +15,24 @@ export function MovementStream({
   show,
   onShow,
   fixture,
+  initialState,
 }: {
   show: boolean;
   onShow: () => void;
   fixture?: PreviewFixtureScenario;
+  initialState?: ConnectorState<StravaPayload>;
 }) {
-  const [state, setState] = useState<ConnectorState<StravaPayload>>({
-    status: "loading",
-  });
+  const [state, setState] = useState<ConnectorState<StravaPayload>>(
+    initialState ?? { status: "loading" },
+  );
   const embedRef = useRef<HTMLDivElement>(null);
+  const skipInitialRequest = useRef(initialState !== undefined);
 
   useEffect(() => {
+    if (skipInitialRequest.current) {
+      skipInitialRequest.current = false;
+      return;
+    }
     const controller = new AbortController();
     void loadConnector<StravaPayload>(
       "strava",

@@ -714,12 +714,16 @@ test("checked-in static content is available only when failClosed is false", asy
 
 test("public runtime reads publication snapshots, never editable drafts", async () => {
   const root = new URL("../", import.meta.url);
-  const [runtime, home, work, detail, play, sources] = await Promise.all([
+  const [runtime, home, work, detail, play, classicPlay, sources] = await Promise.all([
     readFile(new URL("lib/server/public-content.ts", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/work/page.tsx", root), "utf8"),
     readFile(new URL("app/work/[slug]/page.tsx", root), "utf8"),
     readFile(new URL("app/play/page.tsx", root), "utf8"),
+    readFile(
+      new URL("components/play/ClassicPlayExperience.tsx", root),
+      "utf8",
+    ),
     readFile(new URL("app/sources/page.tsx", root), "utf8"),
   ]);
 
@@ -734,10 +738,14 @@ test("public runtime reads publication snapshots, never editable drafts", async 
   assert.match(runtime, /PublicContentUnavailableError/);
   assert.match(runtime, /resolveKvFallback/);
   assert.doesNotMatch(runtime, /FROM public_records/);
-  for (const route of [home, work, detail, play, sources]) {
+  for (const route of [home, work, detail, classicPlay, sources]) {
     assert.match(route, /getPublicContentView/);
+  }
+  for (const route of [home, work, detail, play, sources]) {
     assert.match(route, /dynamic = "force-dynamic"/);
   }
+  assert.match(play, /<ClassicPlayExperience/);
+  assert.match(play, /<RoomOverview/);
   assert.equal(
     [...detail.matchAll(/\bresolveGroup\(/g)].length >= 3,
     true,

@@ -12,6 +12,8 @@ export const DISCOGS_ACCESS_TOKEN_ENDPOINT =
 export const DISCOGS_CALLBACK_PATH =
   "/api/connectors/discogs/oauth/callback";
 export const DISCOGS_PRODUCTION_ORIGIN = "https://anish-shah-is.online";
+export const DISCOGS_STAGING_ORIGIN =
+  "https://staging.anish-shah-is.online";
 export const DISCOGS_LOCAL_STUDIO_ORIGIN = "http://localhost:3000";
 export const DISCOGS_LOCAL_CALLBACK_ORIGIN = "http://127.0.0.1:3000";
 export const DISCOGS_OAUTH_BROWSER_COOKIE = "anish_discogs_oauth_browser";
@@ -453,12 +455,14 @@ export function resolveDiscogsCallbackUrl(
     return `${DISCOGS_LOCAL_CALLBACK_ORIGIN}${DISCOGS_CALLBACK_PATH}`;
   }
   if (
-    site.origin !== DISCOGS_PRODUCTION_ORIGIN ||
-    request.origin !== DISCOGS_PRODUCTION_ORIGIN
+    ![DISCOGS_PRODUCTION_ORIGIN, DISCOGS_STAGING_ORIGIN].includes(
+      site.origin,
+    ) ||
+    request.origin !== site.origin
   ) {
     return null;
   }
-  return `${DISCOGS_PRODUCTION_ORIGIN}${DISCOGS_CALLBACK_PATH}`;
+  return `${site.origin}${DISCOGS_CALLBACK_PATH}`;
 }
 
 export function isDiscogsLocalCallbackBridgeRequest(

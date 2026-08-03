@@ -4,6 +4,7 @@ import styles from "../PersonalStreams.module.css";
 import type {
   CollectionProvider,
   GalleryItem,
+  PreviewFixtureScenario,
   PublicGallery,
 } from "./connector-model";
 
@@ -18,6 +19,8 @@ export function GalleryView({
   onSort,
   onPageSize,
   onPage,
+  routePath,
+  fixture,
 }: {
   provider: CollectionProvider;
   gallery: PublicGallery<GalleryItem>;
@@ -29,6 +32,8 @@ export function GalleryView({
   onSort: (value: string) => void;
   onPageSize: (value: 12 | 24 | 36) => void;
   onPage: (value: number) => void;
+  routePath?: `/play/${string}`;
+  fixture?: PreviewFixtureScenario;
 }) {
   const start = gallery.totalItems
     ? (gallery.page - 1) * gallery.pageSize + 1
@@ -49,12 +54,19 @@ export function GalleryView({
 
   return (
     <div className={styles.gallery}>
-      <form className={styles.galleryTools} onSubmit={onSearch}>
+      <form
+        action={routePath}
+        className={styles.galleryTools}
+        method="get"
+        onSubmit={onSearch}
+      >
+        {fixture ? <input name="fixture" type="hidden" value={fixture} /> : null}
         <label className={styles.gallerySearch}>
           <span>Find a title</span>
           <span>
             <input
               maxLength={80}
+              name="q"
               onChange={(event) => onDraftQuery(event.target.value)}
               placeholder="Search this collection"
               type="search"
@@ -65,6 +77,7 @@ export function GalleryView({
         </label>
         <GallerySelect
           label="Filter"
+          name="filter"
           onChange={onFilter}
           options={gallery.filters.map((entry) => ({
             value: entry.id,
@@ -74,6 +87,7 @@ export function GalleryView({
         />
         <GallerySelect
           label="Sort"
+          name="sort"
           onChange={onSort}
           options={gallery.sorts.map((entry) => ({
             value: entry.id,
@@ -83,6 +97,7 @@ export function GalleryView({
         />
         <GallerySelect
           label="Per page"
+          name="pageSize"
           onChange={(value) => onPageSize(Number(value) as 12 | 24 | 36)}
           options={[12, 24, 36].map((value) => ({
             value: String(value),
@@ -119,23 +134,69 @@ export function GalleryView({
       )}
 
       <nav className={styles.galleryPagination} aria-label="Collection pages">
-        <button
-          disabled={gallery.page <= 1 || busy}
-          onClick={() => onPage(gallery.page - 1)}
-          type="button"
-        >
-          ← Previous
-        </button>
+        {routePath ? (
+          <a
+            aria-disabled={gallery.page <= 1 || busy}
+            href={
+              gallery.page <= 1
+                ? undefined
+                : galleryPageUrl(
+                    routePath,
+                    gallery,
+                    gallery.page - 1,
+                    fixture,
+                  )
+            }
+            onClick={(event) => {
+              event.preventDefault();
+              if (gallery.page > 1 && !busy) onPage(gallery.page - 1);
+            }}
+          >
+            ← Previous
+          </a>
+        ) : (
+          <button
+            disabled={gallery.page <= 1 || busy}
+            onClick={() => onPage(gallery.page - 1)}
+            type="button"
+          >
+            ← Previous
+          </button>
+        )}
         <span>
           Page {gallery.page} of {gallery.totalPages}
         </span>
-        <button
-          disabled={gallery.page >= gallery.totalPages || busy}
-          onClick={() => onPage(gallery.page + 1)}
-          type="button"
-        >
-          Next →
-        </button>
+        {routePath ? (
+          <a
+            aria-disabled={gallery.page >= gallery.totalPages || busy}
+            href={
+              gallery.page >= gallery.totalPages
+                ? undefined
+                : galleryPageUrl(
+                    routePath,
+                    gallery,
+                    gallery.page + 1,
+                    fixture,
+                  )
+            }
+            onClick={(event) => {
+              event.preventDefault();
+              if (gallery.page < gallery.totalPages && !busy) {
+                onPage(gallery.page + 1);
+              }
+            }}
+          >
+            Next →
+          </a>
+        ) : (
+          <button
+            disabled={gallery.page >= gallery.totalPages || busy}
+            onClick={() => onPage(gallery.page + 1)}
+            type="button"
+          >
+            Next →
+          </button>
+        )}
       </nav>
     </div>
   );
@@ -143,11 +204,13 @@ export function GalleryView({
 
 function GallerySelect({
   label,
+  name,
   value,
   options,
   onChange,
 }: {
   label: string;
+  name: string;
   value: string;
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
@@ -156,6 +219,7 @@ function GallerySelect({
     <label className={styles.gallerySelect}>
       <span>{label}</span>
       <select
+        name={name}
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
@@ -167,6 +231,25 @@ function GallerySelect({
       </select>
     </label>
   );
+}
+
+function galleryPageUrl(
+  routePath: `/play/${string}`,
+  gallery: PublicGallery<GalleryItem>,
+  page: number,
+  fixture?: PreviewFixtureScenario,
+) {
+  const parameters = new URLSearchParams({
+    page: String(page),
+    pageSize: String(gallery.pageSize),
+  });
+  if (gallery.query) parameters.set("q", gallery.query);
+  if (gallery.filter && gallery.filter !== "all") {
+    parameters.set("filter", gallery.filter);
+  }
+  if (gallery.sort) parameters.set("sort", gallery.sort);
+  if (fixture) parameters.set("fixture", fixture);
+  return `${routePath}?${parameters.toString()}`;
 }
 
 function GalleryTile({

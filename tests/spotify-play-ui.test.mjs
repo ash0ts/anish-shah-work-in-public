@@ -17,7 +17,10 @@ const streamsSourceUrl = new URL(
   "../components/PersonalStreams.tsx",
   import.meta.url,
 );
-const playPageUrl = new URL("../app/play/page.tsx", import.meta.url);
+const playPageUrl = new URL(
+  "../components/play/ClassicPlayExperience.tsx",
+  import.meta.url,
+);
 
 async function spotifySource() {
   return (await Promise.all(spotifySourceUrls.map((url) => readFile(url, "utf8")))).join(

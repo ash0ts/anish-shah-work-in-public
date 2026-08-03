@@ -18,6 +18,8 @@ const previewConfigPath = path.join(
 );
 const action = process.argv[2];
 const statePath = process.argv[3];
+const MAX_WRANGLER_DIAGNOSTIC_LENGTH = 8 * 1024;
+const ANSI_ESCAPE_SEQUENCE = /\u001B\[[0-?]*[ -/]*[@-~]/g;
 
 if (!new Set(["capture", "verify"]).has(action) || !statePath) {
   throw new Error(
@@ -27,6 +29,19 @@ if (!new Set(["capture", "verify"]).has(action) || !statePath) {
 
 const cloudflareToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
 if (!cloudflareToken) throw new Error("CLOUDFLARE_API_TOKEN is required.");
+
+function wranglerDiagnostic(result) {
+  const diagnostic = [result.stderr, result.stdout]
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean)
+    .join("\n")
+    .replaceAll(cloudflareToken, "[redacted]")
+    .replace(ANSI_ESCAPE_SEQUENCE, "")
+    .trim();
+  if (!diagnostic) return "";
+  if (diagnostic.length <= MAX_WRANGLER_DIAGNOSTIC_LENGTH) return diagnostic;
+  return `[diagnostic truncated]\n${diagnostic.slice(-MAX_WRANGLER_DIAGNOSTIC_LENGTH)}`;
+}
 
 function productionDeployment() {
   const result = spawnSync(
@@ -53,8 +68,12 @@ function productionDeployment() {
   );
   if (result.error) throw result.error;
   if (result.status !== 0) {
+    const diagnostic = wranglerDiagnostic(result);
     throw new Error(
-      `Unable to read the production Worker deployment (exit ${result.status}).`,
+      [
+        `Unable to read the production Worker deployment (exit ${result.status}).`,
+        diagnostic ? `Wrangler diagnostic:\n${diagnostic}` : "",
+      ].filter(Boolean).join("\n"),
     );
   }
   try {

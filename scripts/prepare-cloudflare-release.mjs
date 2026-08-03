@@ -95,6 +95,16 @@ const publicSiteUrl = exactHttpsOrigin(
 if (publicSiteUrl !== PUBLIC_SITE_ORIGIN) {
   throw new Error("PUBLIC_SITE_URL must be the repository's pinned canonical origin.");
 }
+const playExperienceMode =
+  process.env.PLAY_EXPERIENCE_MODE?.trim() || "classic";
+if (
+  playExperienceMode !== "classic" &&
+  playExperienceMode !== "my-room-2001"
+) {
+  throw new Error(
+    "PLAY_EXPERIENCE_MODE must be classic or my-room-2001.",
+  );
+}
 const releaseSha = required("RELEASE_VALIDATED_SHA").toLowerCase();
 if (!/^[a-f0-9]{40}$/.test(releaseSha)) {
   throw new Error("RELEASE_VALIDATED_SHA must be an exact 40-character commit SHA.");
@@ -164,7 +174,7 @@ config.vars = {
   CONTENT_VERSION: publicBundle.contentVersion,
   PUBLIC_CONTENT_MODE: "d1_kv_required",
   DEPLOYMENT_TIER: "production",
-  PLAY_EXPERIENCE_MODE: "classic",
+  PLAY_EXPERIENCE_MODE: playExperienceMode,
 };
 config.observability = {
   enabled: true,

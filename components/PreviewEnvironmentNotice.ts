@@ -6,8 +6,24 @@ export function PreviewEnvironmentNotice() {
   return previewNotice
     ? createElement(
         "aside",
-        { className: "preview-environment-notice", role: "status" },
-        previewNotice,
+        {
+          "aria-label": previewNotice,
+          className: "preview-environment-notice",
+          role: "status",
+        },
+        createElement(
+          "span",
+          { className: "preview-environment-notice__full" },
+          previewNotice,
+        ),
+        createElement(
+          "span",
+          {
+            "aria-hidden": true,
+            className: "preview-environment-notice__compact",
+          },
+          previewNotice.replace(" preview data", ""),
+        ),
       )
     : null;
 }
