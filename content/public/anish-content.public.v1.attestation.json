@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0",
-  "contentVersion": "37d20d8859b2308b",
+  "contentVersion": "1f95080f1833343b",
   "generatedAt": "2026-07-30T00:00:00.000Z",
   "artifacts": [
     {
       "path": "content/public/anish-content.public.v1.json",
       "bytes": 673389,
-      "sha256": "175f77271539d30a9fe963aca06a25dd20060fc1830b96baf662d9b008d69920"
+      "sha256": "b7d0a4c5d195af8cc880b689bdbd46c88e652ebcedf0915a1650c1f1a935bd34"
     },
     {
       "path": "content/schema/anish-content.schema.json",
@@ -41,7 +41,7 @@
   ],
   "generator": {
     "moduleCount": 12,
-    "sha256": "d873e2e073834d30a4fda0817323408fef863248819b5286cb37555d384dc5d9"
+    "sha256": "78a57e6ec6d9617a7fe48566b11659afb0bf4120abba1de91c8ed9bf8864b8c3"
   },
   "counts": {
     "items": 186,
