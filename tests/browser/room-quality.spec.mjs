@@ -313,6 +313,14 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(
       page.locator('[data-room-runtime-loading] button', { hasText: "Leave room" }),
     ).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(
+      page.locator('[data-room-runtime-loading] button', { hasText: "Leave room" }),
+    ).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(
+      page.locator('[data-room-runtime-loading] button', { hasText: "Leave room" }),
+    ).toBeFocused();
     expect(runtimeIntercepted).toBe(true);
     releaseRoomRuntime();
     await expect(

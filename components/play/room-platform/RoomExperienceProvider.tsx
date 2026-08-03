@@ -78,6 +78,12 @@ class LazyRoomBoundary extends Component<
 function LazyRoomFallback({ onLeave }: { onLeave: () => void }) {
   const leaveRef = useRef<HTMLButtonElement>(null);
 
+  const containFocus = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Tab") return;
+    event.preventDefault();
+    leaveRef.current?.focus({ preventScroll: true });
+  };
+
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       leaveRef.current?.focus({ preventScroll: true });
@@ -91,6 +97,7 @@ function LazyRoomFallback({ onLeave }: { onLeave: () => void }) {
       aria-modal="true"
       className={styles.runtimeLoading}
       data-room-runtime-loading
+      onKeyDown={containFocus}
       role="dialog"
     >
       <picture>

@@ -16,6 +16,8 @@ export type HitTargetRegistration = (
   mesh: Mesh | null,
 ) => void;
 
+export type OccluderRegistration = (mesh: Mesh, active: boolean) => void;
+
 type ObjectProps = {
   active: boolean;
   registerHitTarget: HitTargetRegistration;
@@ -131,6 +133,42 @@ function HitTarget({
   );
 }
 
+function Occluder({
+  position,
+  register,
+  size,
+}: {
+  position: readonly [number, number, number];
+  register: OccluderRegistration;
+  size: readonly [number, number, number];
+}) {
+  const ref = useRef<Mesh>(null);
+
+  const connect = useCallback(
+    (mesh: Mesh | null) => {
+      if (ref.current) register(ref.current, false);
+      ref.current = mesh;
+      if (mesh) {
+        mesh.userData.roomOccluder = true;
+        register(mesh, true);
+      }
+    },
+    [register],
+  );
+
+  return (
+    <mesh
+      ref={connect}
+      material={ROOM_BASIC_MATERIALS.invisible}
+      position={position}
+      renderOrder={-1}
+      visible={false}
+    >
+      <boxGeometry args={[size[0], size[1], size[2]]} />
+    </mesh>
+  );
+}
+
 function SelectionMarker({ active, radius = 0.85 }: { active: boolean; radius?: number }) {
   return (
     <mesh
@@ -169,9 +207,28 @@ function ObjectRoot({
   );
 }
 
-export function RoomShell() {
+export function RoomShell({
+  registerOccluder,
+}: {
+  registerOccluder: OccluderRegistration;
+}) {
   return (
     <group>
+      <Occluder
+        position={[-4.76, 2.15, -0.2]}
+        register={registerOccluder}
+        size={[0.26, 4.65, 6.2]}
+      />
+      <Occluder
+        position={[4.76, 1.5, -1.45]}
+        register={registerOccluder}
+        size={[0.24, 3.25, 3.7]}
+      />
+      <Occluder
+        position={[-3.55, 0.32, -0.18]}
+        register={registerOccluder}
+        size={[1.9, 0.65, 3.05]}
+      />
       <SoftBox
         material={color.mint}
         position={[0, -0.22, 0]}

@@ -11,7 +11,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lighthousePort = 4174;
 const baseUrl = `http://127.0.0.1:${lighthousePort}`;
 const reportDirectory = path.join(root, ".lighthouse");
-const routes = ["/", "/work", "/play", "/sources", "/privacy"];
+const audits = [
+  { mode: "classic", routes: ["/", "/work", "/play", "/sources", "/privacy"] },
+  { mode: "room", routes: ["/play"] },
+];
 const categories = ["performance", "accessibility", "best-practices", "seo"];
 const minimumScore = 0.9;
 const maximumCls = 0.1;
@@ -63,8 +66,9 @@ async function stopProcess(child) {
   if (child.exitCode === null) child.kill("SIGKILL");
 }
 
-function reportName(route) {
-  return route === "/" ? "home" : route.slice(1).replaceAll("/", "-");
+function reportName(route, mode) {
+  const routeName = route === "/" ? "home" : route.slice(1).replaceAll("/", "-");
+  return `${mode}-${routeName}`;
 }
 
 async function launchChrome() {
@@ -93,7 +97,8 @@ async function launchChrome() {
 
 await mkdir(reportDirectory, { recursive: true });
 
-function launchWorker() {
+function launchWorker(mode) {
+  const experienceMode = mode === "room" ? "my-room-2001" : "classic";
   const server = spawn(
     process.execPath,
     [
@@ -108,6 +113,8 @@ function launchWorker() {
       "--local",
       "--var",
       "NODE_ENV:development",
+      "--var",
+      `PLAY_EXPERIENCE_MODE:${experienceMode}`,
       "--log-level",
       "error",
       "--persist-to",
@@ -130,8 +137,8 @@ function launchWorker() {
   return { server, output: () => output };
 }
 
-async function runRouteAudit(route) {
-  const { server, output } = launchWorker();
+async function runRouteAudit(route, mode) {
+  const { server, output } = launchWorker(mode);
   try {
     await waitForServer(server);
     await assertRouteAvailable(route, server, output);
@@ -167,12 +174,13 @@ async function runRouteAudit(route) {
 
 const failures = [];
 
-for (const route of routes) {
+for (const { mode, routes } of audits) {
+ for (const route of routes) {
   let result;
   let lastError;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
-      result = await runRouteAudit(route);
+      result = await runRouteAudit(route, mode);
       if (!result?.lhr.runtimeError) break;
       lastError = new Error(
         `${result.lhr.runtimeError.code} — ${result.lhr.runtimeError.message}`,
@@ -185,15 +193,18 @@ for (const route of routes) {
         result?.lhr.runtimeError?.code ??
         (lastError instanceof Error ? lastError.message.split("\n", 1)[0] : "unknown");
       console.warn(
-        `${route} Lighthouse audit failed once (${reason}); retrying with a fresh Worker and browser.`,
+        `${mode} ${route} Lighthouse audit failed once (${reason}); retrying with a fresh Worker and browser.`,
       );
     }
   }
 
   if (!result || result.lhr.runtimeError) {
-    throw lastError ?? new Error(`Lighthouse returned no result for ${route}.`);
+    throw lastError ?? new Error(`Lighthouse returned no result for ${mode} ${route}.`);
   }
-  const reportPath = path.join(reportDirectory, `${reportName(route)}.report.json`);
+  const reportPath = path.join(
+    reportDirectory,
+    `${reportName(route, mode)}.report.json`,
+  );
   await writeFile(reportPath, result.report, "utf8");
 
   const summary = {};
@@ -201,17 +212,18 @@ for (const route of routes) {
     const score = result.lhr.categories[category]?.score;
     summary[category] = score;
     if (typeof score !== "number" || score < minimumScore) {
-      failures.push(`${route} ${category}: ${score ?? "missing"} < ${minimumScore}`);
+      failures.push(`${mode} ${route} ${category}: ${score ?? "missing"} < ${minimumScore}`);
     }
   }
 
   const cls = result.lhr.audits["cumulative-layout-shift"]?.numericValue;
   summary.cls = cls;
   if (typeof cls !== "number" || cls > maximumCls) {
-    failures.push(`${route} CLS: ${cls ?? "missing"} > ${maximumCls}`);
+    failures.push(`${mode} ${route} CLS: ${cls ?? "missing"} > ${maximumCls}`);
   }
 
-  console.log(`${route} ${JSON.stringify(summary)}`);
+  console.log(`${mode} ${route} ${JSON.stringify(summary)}`);
+ }
 }
 
 if (failures.length > 0) {

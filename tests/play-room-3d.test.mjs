@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 import { gzipSync } from "node:zlib";
+import { BoxGeometry, Mesh, MeshBasicMaterial, Ray, Vector3 } from "three";
 
 import {
   collectViteStaticDependencyClosure,
@@ -29,6 +30,7 @@ import {
   isCompetingRoomPointer,
   isRoomInteractivePointer,
 } from "../components/play/room-3d/room-pointer-policy.ts";
+import { resolveRoomRayHit } from "../components/play/room-3d/room-hit-resolution.ts";
 
 const capableEnvironment = {
   viewportWidth: ROOM_MINIMUM_VIEWPORT_WIDTH,
@@ -89,6 +91,31 @@ test("room pointer policy reserves WebGL gestures for one mouse or pen", () => {
   assert.equal(isCompetingRoomPointer(null, 2), false);
   assert.equal(isCompetingRoomPointer(2, 2), false);
   assert.equal(isCompetingRoomPointer(2, 3), true);
+});
+
+test("room hit resolution accepts only the nearest unoccluded object", () => {
+  const material = new MeshBasicMaterial();
+  const geometry = new BoxGeometry(1, 1, 1);
+  const target = new Mesh(geometry, material);
+  target.position.z = -4;
+  target.userData.roomObjectId = "watch";
+  target.updateMatrixWorld(true);
+
+  const occluder = new Mesh(geometry, material);
+  occluder.position.z = -2;
+  occluder.userData.roomOccluder = true;
+  occluder.updateMatrixWorld(true);
+
+  const ray = new Ray(new Vector3(0, 0, 0), new Vector3(0, 0, -1));
+  assert.equal(resolveRoomRayHit(ray, [target], []), "watch");
+  assert.equal(resolveRoomRayHit(ray, [target], [occluder]), null);
+
+  occluder.position.z = -6;
+  occluder.updateMatrixWorld(true);
+  assert.equal(resolveRoomRayHit(ray, [target], [occluder]), "watch");
+
+  geometry.dispose();
+  material.dispose();
 });
 
 test("room presentation rotation clamps to reviewed bounds", () => {
@@ -154,7 +181,10 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
   assert.match(controller, /visibilitychange/);
   assert.match(controller, /onLostPointerCapture/);
   assert.match(controller, /usePathname/);
+  assert.match(controller, /resolveRoomRayHit/);
   assert.doesNotMatch(controller, /onClick=/);
+  assert.match(objects, /roomOccluder = true/);
+  assert.ok((objects.match(/<Occluder/g) ?? []).length >= 3);
 });
 
 test("the static room poster is first-party, content-hashed, and bounded", async () => {

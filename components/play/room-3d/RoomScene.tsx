@@ -54,12 +54,22 @@ export function RoomScene({
 }: RoomSceneProps) {
   const { invalidate } = useThree();
   const hitTargets = useRef(new Map<RoomObjectId, Mesh>());
+  const occluders = useRef(new Set<Mesh>());
   const [hoveredId, setHoveredId] = useState<RoomObjectId | null>(null);
 
   const registerHitTarget = useCallback(
     (id: RoomObjectId, mesh: Mesh | null) => {
       if (mesh) hitTargets.current.set(id, mesh);
       else hitTargets.current.delete(id);
+      invalidate();
+    },
+    [invalidate],
+  );
+
+  const registerOccluder = useCallback(
+    (mesh: Mesh, active: boolean) => {
+      if (active) occluders.current.add(mesh);
+      else occluders.current.delete(mesh);
       invalidate();
     },
     [invalidate],
@@ -92,7 +102,7 @@ export function RoomScene({
             0,
           ]}
         >
-          <RoomShell />
+          <RoomShell registerOccluder={registerOccluder} />
           {ROOM_OBJECT_IDS.map((id) => {
             const SceneObject = ROOM_SCENE_OBJECT_BY_ID[id];
             return (
@@ -106,6 +116,7 @@ export function RoomScene({
           <RoomInteractionController
             disabled={selectedId !== null}
             hitTargets={hitTargets}
+            occluders={occluders}
             onHoverChange={setHovered}
             onRotationChange={onRotationChange}
             onSelect={onSelect}

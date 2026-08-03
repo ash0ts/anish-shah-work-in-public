@@ -1,6 +1,6 @@
 import type { ThreeEvent } from "@react-three/fiber";
 import { usePathname } from "next/navigation";
-import { Ray, Raycaster, type Mesh } from "three";
+import { Ray, type Mesh } from "three";
 import {
   type MutableRefObject,
   useCallback,
@@ -11,6 +11,7 @@ import {
 import type { RoomObjectId } from "../room-platform/room-types";
 import { isRoomObjectId } from "../room-platform/room-registry";
 import { ROOM_BASIC_MATERIALS } from "./room-materials";
+import { resolveRoomRayHit } from "./room-hit-resolution";
 import {
   crossedRoomDragThreshold,
   rotationFromPointerDelta,
@@ -42,6 +43,7 @@ type PointerIntent =
 type RoomInteractionControllerProps = {
   disabled: boolean;
   hitTargets: MutableRefObject<Map<RoomObjectId, Mesh>>;
+  occluders: MutableRefObject<Set<Mesh>>;
   onHoverChange: (id: RoomObjectId | null) => void;
   onRotationChange: (rotation: RoomRotation) => void;
   onSelect: (id: RoomObjectId) => void;
@@ -51,24 +53,14 @@ type RoomInteractionControllerProps = {
 function resolveObjectFromRay(
   ray: Ray,
   hitTargets: MutableRefObject<Map<RoomObjectId, Mesh>>,
+  occluders: MutableRefObject<Set<Mesh>>,
 ) {
-  const targets = [...hitTargets.current.values()];
-  if (targets.length === 0) return null;
-
-  const raycaster = new Raycaster(
-    ray.origin.clone(),
-    ray.direction.clone(),
-    0,
-    80,
+  const candidate = resolveRoomRayHit(
+    ray,
+    hitTargets.current.values(),
+    occluders.current.values(),
   );
-  const intersections = raycaster.intersectObjects(targets, false);
-
-  for (const intersection of intersections) {
-    const id = intersection.object.userData.roomObjectId;
-    if (isRoomObjectId(id)) return id;
-  }
-
-  return null;
+  return isRoomObjectId(candidate) ? candidate : null;
 }
 
 function pointerCaptureTarget(event: ThreeEvent<PointerEvent>) {
@@ -79,6 +71,7 @@ function pointerCaptureTarget(event: ThreeEvent<PointerEvent>) {
 export function RoomInteractionController({
   disabled,
   hitTargets,
+  occluders,
   onHoverChange,
   onRotationChange,
   onSelect,
@@ -103,11 +96,12 @@ export function RoomInteractionController({
 
       hoverFrame.current = requestAnimationFrame(() => {
         hoverFrame.current = null;
-        const id = resolveObjectFromRay(hoverRay.current, hitTargets);
-        onHoverChange(id);
+        onHoverChange(
+          resolveObjectFromRay(hoverRay.current, hitTargets, occluders),
+        );
       });
     },
-    [hitTargets, onHoverChange],
+    [hitTargets, occluders, onHoverChange],
   );
 
   const cancelGesture = useCallback(
@@ -201,7 +195,7 @@ export function RoomInteractionController({
     intent.current = {
       kind: "pending",
       pointerId: event.pointerId,
-      downObject: resolveObjectFromRay(event.ray, hitTargets),
+      downObject: resolveObjectFromRay(event.ray, hitTargets, occluders),
       origin,
       viewAtStart: rotation,
       captureTarget,
@@ -276,7 +270,7 @@ export function RoomInteractionController({
     }
 
     if (current.kind === "pending") {
-      const upObject = resolveObjectFromRay(event.ray, hitTargets);
+      const upObject = resolveObjectFromRay(event.ray, hitTargets, occluders);
       if (current.downObject && current.downObject === upObject) {
         onSelect(current.downObject);
       }
