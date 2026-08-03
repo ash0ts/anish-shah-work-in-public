@@ -305,7 +305,9 @@ function requestTokenFetch({
   responseContentType = "application/x-www-form-urlencoded",
 } = {}) {
   return async (url, init) => {
-    assert.equal(init.redirect, "error");
+    assert.equal(init.cache, "no-store");
+    assert.equal(init.redirect, "manual");
+    assert.equal(init.signal instanceof AbortSignal, true);
     const parameters = oauthHeaderParameters(init.headers.Authorization);
     assert.equal(parameters.get("oauth_signature_method"), "PLAINTEXT");
     assert.equal(parameters.get("oauth_consumer_key"), "discogs-consumer-key-one");
@@ -614,7 +616,7 @@ test("Discogs request-token failures stay sanitized and persist no transaction",
   for (const [requestStatus, expected] of [
     [401, { status: "invalid", reason: "credential" }],
     [429, { status: "rate_limited" }],
-    [503, { status: "provider_unavailable" }],
+    [503, { status: "provider_unavailable", reason: "upstream" }],
   ]) {
     const database = new DiscogsOAuthD1();
     const result = await begin(database, createDiscogsOAuthBrowserNonce(), {
@@ -641,8 +643,130 @@ test("Discogs request-token failures stay sanitized and persist no transaction",
         }),
     ),
   );
-  assert.deepEqual(result, { status: "provider_unavailable" });
+  assert.deepEqual(result, {
+    status: "provider_unavailable",
+    reason: "transport",
+  });
   assert.equal(database.transactions.size, 0);
+
+  const redirectDatabase = new DiscogsOAuthD1();
+  const redirected = await withRuntime(redirectDatabase, () =>
+    withFetch(
+      async () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: "https://example.invalid/not-followed" },
+        }),
+      () =>
+        startDiscogsOAuth({
+          consumerKey: "discogs-consumer-key-one",
+          consumerSecret: "discogs-consumer-secret-one",
+          actorEmail: ownerEmail,
+          browserNonce: createDiscogsOAuthBrowserNonce(),
+          requestUrl: startUrl,
+        }),
+    ),
+  );
+  assert.deepEqual(redirected, {
+    status: "provider_unavailable",
+    reason: "redirect",
+  });
+  assert.equal(redirectDatabase.transactions.size, 0);
+});
+
+test("Discogs retries one transient request-token failure with a fresh nonce", async () => {
+  const database = new DiscogsOAuthD1();
+  const nonces = [];
+  let requests = 0;
+  const result = await withRuntime(database, () =>
+    withFetch(
+      async (url, init) => {
+        assert.equal(url, DISCOGS_REQUEST_TOKEN_ENDPOINT);
+        const parameters = oauthHeaderParameters(init.headers.Authorization);
+        nonces.push(parameters.get("oauth_nonce"));
+        requests += 1;
+        if (requests === 1) return form("", 503);
+        return form(
+          "oauth_token=discogs-request-token-one&" +
+            "oauth_token_secret=discogs-request-secret-one&" +
+            "oauth_callback_confirmed=true",
+        );
+      },
+      () =>
+        startDiscogsOAuth({
+          consumerKey: "discogs-consumer-key-one",
+          consumerSecret: "discogs-consumer-secret-one",
+          actorEmail: ownerEmail,
+          browserNonce: createDiscogsOAuthBrowserNonce(),
+          requestUrl: startUrl,
+        }),
+    ),
+  );
+
+  assert.equal(result.status, "authorization_required");
+  assert.equal(requests, 2);
+  assert.equal(nonces.length, 2);
+  assert.notEqual(nonces[0], nonces[1]);
+  assert.equal(database.transactions.size, 1);
+});
+
+test("Discogs bounds a stalled request-token response body by the OAuth timeout", async () => {
+  const database = new DiscogsOAuthD1();
+  const nativeSetTimeout = globalThis.setTimeout;
+  const nativeClearTimeout = globalThis.clearTimeout;
+  let oauthTimerCleared = 0;
+
+  globalThis.setTimeout = (callback, delay, ...arguments_) =>
+    nativeSetTimeout(callback, delay === 25_000 ? 5 : delay, ...arguments_);
+  globalThis.clearTimeout = (handle) => {
+    oauthTimerCleared += 1;
+    return nativeClearTimeout(handle);
+  };
+
+  try {
+    const result = await withRuntime(database, () =>
+      withFetch(
+        async (_url, init) => {
+          const body = new ReadableStream({
+            start(controller) {
+              init.signal.addEventListener(
+                "abort",
+                () =>
+                  controller.error(
+                    new DOMException("The request was aborted.", "AbortError"),
+                  ),
+                { once: true },
+              );
+            },
+          });
+          return new Response(body, {
+            status: 200,
+            headers: {
+              "content-type": "application/x-www-form-urlencoded",
+            },
+          });
+        },
+        () =>
+          startDiscogsOAuth({
+            consumerKey: "discogs-consumer-key-one",
+            consumerSecret: "discogs-consumer-secret-one",
+            actorEmail: ownerEmail,
+            browserNonce: createDiscogsOAuthBrowserNonce(),
+            requestUrl: startUrl,
+          }),
+      ),
+    );
+    assert.deepEqual(result, {
+      status: "provider_unavailable",
+      reason: "timeout",
+    });
+  } finally {
+    globalThis.setTimeout = nativeSetTimeout;
+    globalThis.clearTimeout = nativeClearTimeout;
+  }
+
+  assert.equal(database.transactions.size, 0);
+  assert.equal(oauthTimerCleared, 1);
 });
 
 test("Discogs token responses reject duplicates, missing media, and oversized bodies", async () => {
@@ -786,6 +910,43 @@ test("Discogs callback consumes before exchange, rejects wrong owner, and preven
     }),
   );
   assert.deepEqual(replay, { status: "invalid_state" });
+});
+
+test("Discogs never retries the consumed access-token exchange", async () => {
+  const database = new DiscogsOAuthD1();
+  const browserNonce = createDiscogsOAuthBrowserNonce();
+  const started = await begin(database, browserNonce);
+  const staged = await withRuntime(database, () =>
+    stageDiscogsOAuthCallback({
+      requestToken: new URL(started.authorizationUrl).searchParams.get(
+        "oauth_token",
+      ),
+      oauthVerifier: "discogs-verifier-one",
+      browserNonce,
+      requestUrl: callbackUrl,
+    }),
+  );
+  let exchanges = 0;
+  const completed = await withRuntime(database, () =>
+    withFetch(
+      async (url) => {
+        assert.equal(url, DISCOGS_ACCESS_TOKEN_ENDPOINT);
+        exchanges += 1;
+        return form("", 503);
+      },
+      () =>
+        completeDiscogsOAuth({
+          resumeState: staged.resumeState,
+          actorEmail: ownerEmail,
+          browserNonce,
+          requestUrl: localResumeUrl,
+        }),
+    ),
+  );
+
+  assert.deepEqual(completed, { status: "provider_unavailable" });
+  assert.equal(exchanges, 1);
+  assert.equal(database.credentials.size, 0);
 });
 
 test("Discogs denial and 401 completion are safe terminal states", async () => {

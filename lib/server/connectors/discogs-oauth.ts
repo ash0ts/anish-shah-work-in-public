@@ -584,14 +584,18 @@ async function oauthFailure(
   );
 }
 
-async function oauthTokenRequest(input: {
+type DiscogsOAuthTokenRequest = {
   client: DiscogsOAuthClient;
   token?: string;
   tokenSecret?: string;
   callback?: string;
   verifier?: string;
   phase: "request_token" | "access_token";
-}): Promise<URLSearchParams> {
+};
+
+async function oauthTokenAttempt(
+  input: DiscogsOAuthTokenRequest,
+): Promise<URLSearchParams> {
   const endpoint =
     input.phase === "request_token"
       ? DISCOGS_REQUEST_TOKEN_ENDPOINT
@@ -610,34 +614,79 @@ async function oauthTokenRequest(input: {
     "Content-Type": "application/x-www-form-urlencoded",
     "User-Agent": DISCOGS_USER_AGENT,
   };
-  let response: Response;
+  const abortController = new AbortController();
+  const timeout = setTimeout(() => abortController.abort(), OAUTH_TIMEOUT_MS);
   try {
-    response = await fetch(endpoint, {
+    const response = await fetch(endpoint, {
       method,
-      redirect: "error",
-      signal: AbortSignal.timeout(OAUTH_TIMEOUT_MS),
+      cache: "no-store",
+      redirect: "manual",
+      signal: abortController.signal,
       headers,
       ...(method === "POST" ? { body: "" } : {}),
     });
-  } catch {
+    if (response.status >= 300 && response.status < 400) {
+      throw new ConnectorFetchError(
+        "Discogs returned an unexpected authorization redirect.",
+        {
+          code: "provider_redirect",
+          httpStatus: response.status,
+        },
+      );
+    }
+    if (!response.ok) throw await oauthFailure(response, input.phase);
+    const mediaType = response.headers
+      .get("content-type")
+      ?.split(";", 1)[0]
+      ?.trim()
+      .toLowerCase();
+    if (
+      mediaType !== "application/x-www-form-urlencoded" &&
+      mediaType !== "text/plain"
+    ) {
+      throw invalidOAuthResponse();
+    }
+    return new URLSearchParams(await boundedResponseText(response));
+  } catch (error) {
+    if (error instanceof ConnectorFetchError) throw error;
     throw new ConnectorFetchError(
       "Discogs authorization is temporarily unavailable.",
-      { code: "provider_error", retryable: true },
+      {
+        code: abortController.signal.aborted
+          ? "provider_timeout"
+          : "provider_transport",
+        retryable: true,
+      },
     );
+  } finally {
+    clearTimeout(timeout);
   }
-  if (!response.ok) throw await oauthFailure(response, input.phase);
-  const mediaType = response.headers
-    .get("content-type")
-    ?.split(";", 1)[0]
-    ?.trim()
-    .toLowerCase();
-  if (
-    mediaType !== "application/x-www-form-urlencoded" &&
-    mediaType !== "text/plain"
-  ) {
-    throw invalidOAuthResponse();
+}
+
+function shouldRetryRequestToken(error: unknown): boolean {
+  return (
+    error instanceof ConnectorFetchError &&
+    (error.code === "provider_transport" ||
+      (error.code === "provider_error" &&
+        error.httpStatus !== null &&
+        [502, 503, 504].includes(error.httpStatus)))
+  );
+}
+
+async function oauthTokenRequest(
+  input: DiscogsOAuthTokenRequest,
+): Promise<URLSearchParams> {
+  try {
+    return await oauthTokenAttempt(input);
+  } catch (error) {
+    if (
+      input.phase !== "request_token" ||
+      !shouldRetryRequestToken(error)
+    ) {
+      throw error;
+    }
   }
-  return new URLSearchParams(await boundedResponseText(response));
+  return oauthTokenAttempt(input);
 }
 
 export async function requestDiscogsTemporaryCredential(
