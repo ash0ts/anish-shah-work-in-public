@@ -2,6 +2,7 @@ export const CONNECTOR_PROVIDERS = [
   "myanimelist",
   "hardcover",
   "spotify",
+  "discogs",
   "steam",
 ] as const;
 
@@ -53,10 +54,19 @@ export type SpotifyOAuthCredential = {
   scopes: ["user-top-read", "user-read-private"];
 };
 
+export type DiscogsOAuthCredential = {
+  kind: "oauth1";
+  consumerKey: string;
+  consumerSecret: string;
+  accessToken: string;
+  accessTokenSecret: string;
+};
+
 export type ConnectorCredential =
   | MyAnimeListCredential
   | HardcoverCredential
   | SpotifyOAuthCredential
+  | DiscogsOAuthCredential
   | SteamCredential;
 
 export type ConnectorCredentialInput =
@@ -76,6 +86,7 @@ export class ConnectorFetchError extends Error {
   readonly code: string;
   readonly httpStatus: number | null;
   readonly retryable: boolean;
+  readonly retryAfterSeconds: number | null;
 
   constructor(
     message: string,
@@ -83,6 +94,7 @@ export class ConnectorFetchError extends Error {
       code: string;
       httpStatus?: number | null;
       retryable?: boolean;
+      retryAfterSeconds?: number | null;
     },
   ) {
     super(message);
@@ -90,5 +102,6 @@ export class ConnectorFetchError extends Error {
     this.code = options.code;
     this.httpStatus = options.httpStatus ?? null;
     this.retryable = options.retryable ?? false;
+    this.retryAfterSeconds = options.retryAfterSeconds ?? null;
   }
 }

@@ -30,7 +30,7 @@ Preserve the site's content, privacy, accessibility, connector, and release cont
 - Put new owner mutations under `/api/studio/**`. Apply same-origin rejection, owner authorization, then bounded JSON parsing.
 - Keep OAuth callbacks public only when protected by encrypted, owner-bound, expiring, single-use state.
 - Do not assume Strava uses the generic connector repository.
-- Do not transfer MyAnimeList or Spotify OAuth credentials through local promotion.
+- Do not transfer MyAnimeList, Spotify, or Discogs OAuth credentials through local promotion.
 - Add a new D1 migration; never rewrite an applied migration.
 - Do not deploy, migrate remote D1, rotate keys, weaken Access, or alter the private Sites reference/recovery environment unless the user explicitly requests that action.
 
@@ -40,5 +40,5 @@ Preserve the site's content, privacy, accessibility, connector, and release cont
 - `--run` executes only the checks selected from the changed paths.
 - `--full` runs `validate` and `validate:browser`; it still never deploys, migrates production, rotates credentials, or mutates Git.
 - Owner write routes, Access/authentication code, and OAuth code require a security or connector regression-test file in the same change.
-- Responsive Spotify changes require the browser quality gate. Release-related changes require `validate:release`, which validates prepared release metadata but performs no production mutation.
+- Responsive Play-stream changes require the browser quality gate. Release-related changes require `validate:release`, which validates prepared release metadata but performs no production mutation.
 - Run `npm run test:maintenance-skill` after changing the helper or its policy. Do not add broad directory exemptions for tests, docs, or generated files.

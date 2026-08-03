@@ -446,14 +446,15 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
     "MyAnimeList",
     "Hardcover",
     "Spotify",
+    "Discogs",
     "Steam",
     "Strava",
   ]) {
     assert.match(markup, new RegExp(provider));
   }
-  assert.equal((markup.match(/role="tab"/g) ?? []).length, 5);
+  assert.equal((markup.match(/role="tab"/g) ?? []).length, 6);
   const noScript = markup.match(/<noscript\b[\s\S]*?<\/noscript>/i)?.[0] ?? "";
-  assert.equal((noScript.match(/<details\b/g) ?? []).length, 5);
+  assert.equal((noScript.match(/<details\b/g) ?? []).length, 6);
   const rawNoScript =
     html.match(/<noscript\b[\s\S]*?<\/noscript>/i)?.[0] ?? "";
   assert.doesNotMatch(rawNoScript, /\.undefined\b/);
@@ -495,6 +496,11 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
   assert.match(
     source,
     /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/,
+  );
+  assert.match(
+    source,
+    /active === "collect"[\s\S]*?<DiscogsStream/,
+    "Discogs must mount only after Collect is selected",
   );
   assert.match(
     playPage,
@@ -586,6 +592,10 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
     {
       file: "app/work/WorkTimeline.module.css",
       selector: ".frame caption",
+    },
+    {
+      file: "components/PersonalStreams.module.css",
+      selector: ".visuallyHidden",
     },
   ]);
   const timelineCss = await readFile(

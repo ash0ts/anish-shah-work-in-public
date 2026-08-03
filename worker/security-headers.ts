@@ -84,6 +84,7 @@ export function securedResponse(
   request: Request,
   nonce: string,
   development: boolean,
+  pathname = new URL(request.url).pathname,
 ): Response {
   if (response.status === 101) return response;
   const url = new URL(request.url);
@@ -101,14 +102,14 @@ export function securedResponse(
   if (url.protocol === "https:") {
     headers.set("strict-transport-security", "max-age=31536000");
   }
-  if (isPrivatePath(url.pathname)) {
+  if (isPrivatePath(pathname)) {
     headers.set("cache-control", "private, no-store");
     headers.set("x-robots-tag", "noindex, nofollow, noarchive");
-  } else if (url.pathname === "/play" || url.pathname === "/play/") {
+  } else if (pathname === "/play" || pathname === "/play/") {
     // Play includes publication-gated provider state in its server-rendered
     // fallback. Never let a shared cache outlive an unpublish or disconnect.
     headers.set("cache-control", "private, no-store");
-  } else if (isPublicHtmlRequest(request, url.pathname) && response.ok) {
+  } else if (isPublicHtmlRequest(request, pathname) && response.ok) {
     headers.set(
       "cache-control",
       "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",

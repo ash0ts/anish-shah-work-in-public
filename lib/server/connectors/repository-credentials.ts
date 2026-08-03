@@ -5,6 +5,8 @@ import {
   type EncryptedCredential,
 } from "../credential-crypto";
 import { normalizeHardcoverAuthorization } from "./hardcover";
+import { DISCOGS_PRESENTATION_SETTING_KEY } from "./discogs-presentation";
+import { DISCOGS_RETRY_MAINTENANCE_KEY } from "./discogs-retry";
 import { normalizeMyAnimeListAccessToken } from "./myanimelist";
 import { databaseOrNull } from "./repository-primitives";
 import { normalizeSteamApiKey, normalizeSteamId } from "./steam";
@@ -152,11 +154,22 @@ export async function deleteConnectorCredential(
          WHERE entity_type = 'connector' AND entity_id = ?`,
       )
       .bind(provider),
-    ...(provider === "spotify"
+    ...(provider === "spotify" || provider === "discogs"
       ? [
           database
             .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
-            .bind(SPOTIFY_PRESENTATION_SETTING_KEY),
+            .bind(
+              provider === "spotify"
+                ? SPOTIFY_PRESENTATION_SETTING_KEY
+                : DISCOGS_PRESENTATION_SETTING_KEY,
+            ),
+        ]
+      : []),
+    ...(provider === "discogs"
+      ? [
+          database
+            .prepare(`DELETE FROM maintenance_state WHERE key = ?`)
+            .bind(DISCOGS_RETRY_MAINTENANCE_KEY),
         ]
       : []),
     database

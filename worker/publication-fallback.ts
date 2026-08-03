@@ -37,12 +37,12 @@ export async function publicationAvailabilityResponse(
   request: Request,
   env: WorkerEnv,
   directProduction: boolean,
+  pathname = new URL(request.url).pathname,
 ): Promise<Response | null> {
-  const url = new URL(request.url);
   if (
     !directProduction ||
     !["GET", "HEAD"].includes(request.method) ||
-    !isContentBackedPublicPath(url.pathname)
+    !isContentBackedPublicPath(pathname)
   ) {
     return null;
   }

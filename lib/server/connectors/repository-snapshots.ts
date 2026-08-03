@@ -1,3 +1,4 @@
+import { getDiscogsPresentationConfig } from "./discogs-presentation";
 import { getSpotifyPresentationConfig } from "./spotify-presentation";
 import { parseStoredConnectorPublicPayload } from "./public-payload-policy";
 import { databaseOrNull } from "./repository-primitives";
@@ -6,6 +7,7 @@ import type { ConnectorProvider } from "./types";
 
 const STEAM_MAX_PUBLIC_AGE_MS = 72 * 60 * 60 * 1000;
 const SPOTIFY_MAX_PUBLIC_AGE_MS = 72 * 60 * 60 * 1000;
+const DISCOGS_MAX_PUBLIC_AGE_MS = 6 * 60 * 60 * 1000;
 
 function canonicalIsoTimestamp(value: string): boolean {
   const parsed = new Date(value);
@@ -25,6 +27,19 @@ export async function getPublicConnectorSnapshot(
     if (
       presentation.status !== "ready" ||
       !presentation.config.publishTopTracks
+    ) {
+      return {
+        status: "unavailable",
+        provider,
+        reason: "visibility_withheld",
+      };
+    }
+  }
+  if (provider === "discogs") {
+    const presentation = await getDiscogsPresentationConfig(database);
+    if (
+      presentation.status !== "ready" ||
+      !presentation.config.publishCollection
     ) {
       return {
         status: "unavailable",
@@ -76,14 +91,20 @@ export async function getPublicConnectorSnapshot(
       ) {
         continue;
       }
-      if (provider === "steam" || provider === "spotify") {
+      if (
+        provider === "steam" ||
+        provider === "spotify" ||
+        provider === "discogs"
+      ) {
         const fetchedTime = Date.parse(snapshot.fetchedAt);
         if (
           !Number.isFinite(fetchedTime) ||
           Date.now() - fetchedTime >
             (provider === "steam"
               ? STEAM_MAX_PUBLIC_AGE_MS
-              : SPOTIFY_MAX_PUBLIC_AGE_MS)
+              : provider === "spotify"
+                ? SPOTIFY_MAX_PUBLIC_AGE_MS
+                : DISCOGS_MAX_PUBLIC_AGE_MS)
         ) {
           return {
             status: "unavailable",

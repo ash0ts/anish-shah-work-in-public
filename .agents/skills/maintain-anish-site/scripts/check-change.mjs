@@ -286,7 +286,7 @@ const connectorChanged = paths.some((value) =>
     /^app\/api\/(?:studio\/)?connectors\//,
     /^app\/studio\/(?:ConnectorControls|connectors\/)/,
     /^components\/(?:PersonalStreams|SpotifyStream|play\/|spotify\/)/,
-    /^lib\/server\/(?:connectors|http\/connector|http\/myanimelist|http\/spotify|strava-config|play-promotion)/,
+    /^lib\/server\/(?:connectors|http\/(?:connector|myanimelist|spotify|discogs)|strava-config|play-promotion)/,
     /^drizzle\//,
   ]),
 );
@@ -317,10 +317,9 @@ const dependencyChanged = paths.some((value) =>
 const skillChanged = paths.some(
   (value) => value === "AGENTS.md" || value.startsWith(".agents/skills/"),
 );
-const responsiveSpotifyChanged = paths.some((value) =>
+const responsivePlayChanged = paths.some((value) =>
   matchesAny(value, [
-    /^components\/(?:SpotifyStream|spotify\/)/,
-    /^components\/play\/.*Spotify/i,
+    /^components\/(?:PersonalStreams|SpotifyStream|spotify\/|play\/)/,
     /^app\/play\//,
   ]),
 );
@@ -390,7 +389,7 @@ if (skillChanged) {
   notes.push("Validate changed skills with skill-creator's quick_validate.py before handoff.");
   addCheck("npm run test:maintenance-skill");
 }
-if (responsiveSpotifyChanged) {
+if (responsivePlayChanged) {
   addCheck("npm run validate:browser");
 }
 if (releaseChanged) {

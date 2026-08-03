@@ -802,6 +802,10 @@
   --provider-accent: #137542;
 }
 
+.connectorPanel[data-provider="discogs"] {
+  --provider-accent: #68449a;
+}
+
 .connectorPanel[data-provider="steam"] {
   --provider-accent: var(--blue);
 }

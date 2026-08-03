@@ -42,7 +42,7 @@ or release automation require explicit owner review through `CODEOWNERS`.
 Localhost uses a project-local D1 sandbox and a loopback-only development owner.
 Production uses Cloudflare Access, a separate D1 database, durable production
 encryption, and separate OAuth applications. Deployments move code and reviewed
-non-secret settings. MyAnimeList and Spotify always require production OAuth;
+non-secret settings. MyAnimeList, Spotify, and Discogs always require production OAuth;
 the bounded promotion flow can stage only the explicitly supported portable
 provider settings.
 

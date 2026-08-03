@@ -100,6 +100,59 @@ export type SteamPayload = {
   freshUntil: string;
 };
 
+export type DiscogsFormat =
+  | "Box set"
+  | "Vinyl"
+  | "CD"
+  | "Cassette"
+  | "Other";
+
+export type DiscogsReleaseSummary = {
+  releaseId: string;
+  title: string;
+  artists: string[];
+  releaseYear: number | null;
+  format: DiscogsFormat;
+  copyCount: number;
+};
+
+export type DiscogsGallery = {
+  ready: boolean;
+  items: DiscogsReleaseSummary[];
+  page: number;
+  pageSize: 12 | 24 | 36;
+  totalItems: number;
+  libraryTotal: number;
+  totalPages: number;
+  query: string;
+  format: string;
+  decade: string;
+  sort: string;
+  formats: GalleryFilter[];
+  decades: GalleryFilter[];
+  sorts: GallerySort[];
+};
+
+export type DiscogsPublicSnapshot = {
+  provider: "discogs";
+  profileUrl: string;
+  coverage: string;
+  totals: {
+    physicalItems: number;
+    distinctReleases: number;
+  };
+  formats: Array<{ label: DiscogsFormat; count: number }>;
+  decades: StatusCount[];
+  formatDecadeMatrix: Array<{
+    format: DiscogsFormat;
+    decade: string;
+    count: number;
+  }>;
+  gallery: DiscogsGallery;
+  syncedAt: string;
+  freshUntil: string;
+};
+
 export type CollectionPayload = MalPayload | HardcoverPayload | SteamPayload;
 export type GalleryItem = MalGalleryItem | HardcoverGalleryItem | SteamGalleryItem;
 
@@ -121,9 +174,15 @@ export type ConnectorState<T> =
   | { status: "unavailable"; message: string }
   | { status: "ready"; payload: T; fetchedAt: string; stale: boolean };
 
-export type StreamId = "watch" | "read" | "listen" | "play" | "move";
+export type StreamId =
+  | "watch"
+  | "read"
+  | "listen"
+  | "collect"
+  | "play"
+  | "move";
 export type CollectionProvider = "myanimelist" | "hardcover" | "steam";
-export type ConnectorProvider = CollectionProvider | "strava";
+export type ConnectorProvider = CollectionProvider | "discogs" | "strava";
 export type CollectionView = "pattern" | "gallery";
 
 export const providerTitles: Record<CollectionProvider, string> = {

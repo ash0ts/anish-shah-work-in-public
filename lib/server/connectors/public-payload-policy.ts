@@ -18,6 +18,10 @@ const PROFILE_POLICIES: Record<
     hosts: new Set(["open.spotify.com"]),
     path: /^\/user\/[a-z0-9._~-]{1,128}\/?$/i,
   },
+  discogs: {
+    hosts: new Set(["discogs.com", "www.discogs.com"]),
+    path: /^\/user\/[a-z0-9._~-]{1,64}\/collection\/?$/i,
+  },
   steam: {
     hosts: new Set(["steamcommunity.com", "www.steamcommunity.com"]),
     path: /^\/profiles\/\d{17}\/?$/,
@@ -49,6 +53,14 @@ const SPOTIFY_TIME_RANGES = [
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 const DECIMAL_ID = /^[1-9]\d{0,24}$/;
 const PARTIAL_DATE = /^\d{4}(?:-\d{2}(?:-\d{2})?)?$/;
+const DISCOGS_FORMATS = [
+  "Box set",
+  "Vinyl",
+  "CD",
+  "Cassette",
+  "Other",
+] as const;
+const DISCOGS_DECADE = /^(?:\d{4}s|Undated)$/;
 
 function hasOnlyKeys(
   value: Record<string, unknown>,
@@ -483,6 +495,185 @@ function validSpotifyPayload(payload: Record<string, unknown>): boolean {
   });
 }
 
+function validDiscogsRelease(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const release = value as Record<string, unknown>;
+  return (
+    hasOnlyKeys(release, [
+      "releaseId",
+      "title",
+      "artists",
+      "releaseYear",
+      "format",
+      "copyCount",
+    ]) &&
+    typeof release.releaseId === "string" &&
+    DECIMAL_ID.test(release.releaseId) &&
+    boundedPublicString(release.title, 512) &&
+    Array.isArray(release.artists) &&
+    release.artists.length >= 1 &&
+    release.artists.length <= 64 &&
+    release.artists.every((artist) => boundedPublicString(artist, 512)) &&
+    new Set(release.artists).size === release.artists.length &&
+    (release.releaseYear === null ||
+      validInteger(release.releaseYear, 1_000, 9_999)) &&
+    DISCOGS_FORMATS.includes(
+      release.format as (typeof DISCOGS_FORMATS)[number],
+    ) &&
+    validInteger(release.copyCount, 1, 5_000)
+  );
+}
+
+function validDiscogsMatrix(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length <= 5_000 &&
+    value.every((entry) => {
+      if (
+        typeof entry !== "object" ||
+        entry === null ||
+        Array.isArray(entry)
+      ) {
+        return false;
+      }
+      const record = entry as Record<string, unknown>;
+      return (
+        hasOnlyKeys(record, ["format", "decade", "count"]) &&
+        DISCOGS_FORMATS.includes(
+          record.format as (typeof DISCOGS_FORMATS)[number],
+        ) &&
+        typeof record.decade === "string" &&
+        DISCOGS_DECADE.test(record.decade) &&
+        validInteger(record.count, 1, 5_000)
+      );
+    })
+  );
+}
+
+function discogsDecade(year: unknown): string {
+  return typeof year === "number"
+    ? `${Math.floor(year / 10) * 10}s`
+    : "Undated";
+}
+
+function validDiscogsPayload(payload: Record<string, unknown>): boolean {
+  if (
+    !hasOnlyKeys(payload, [
+      "provider",
+      "snapshotVersion",
+      "profileUrl",
+      "coverage",
+      "totals",
+      "formats",
+      "decades",
+      "formatDecadeMatrix",
+      "library",
+      "syncedAt",
+      "freshUntil",
+    ]) ||
+    payload.provider !== "discogs" ||
+    payload.snapshotVersion !== 1 ||
+    payload.coverage !==
+      "Physical releases returned from the public Discogs collection" ||
+    typeof payload.profileUrl !== "string" ||
+    !validIsoTimestamp(payload.syncedAt) ||
+    !validIsoTimestamp(payload.freshUntil) ||
+    typeof payload.totals !== "object" ||
+    payload.totals === null ||
+    Array.isArray(payload.totals) ||
+    !validCountSeries(payload.formats, DISCOGS_FORMATS.length) ||
+    !validCountSeries(payload.decades, 1_000) ||
+    !validDiscogsMatrix(payload.formatDecadeMatrix) ||
+    !Array.isArray(payload.library) ||
+    payload.library.length > 5_000 ||
+    !payload.library.every(validDiscogsRelease)
+  ) {
+    return false;
+  }
+
+  const totals = payload.totals as Record<string, unknown>;
+  if (
+    !hasOnlyKeys(totals, ["physicalItems", "distinctReleases"]) ||
+    !validInteger(totals.physicalItems, 0, 5_000) ||
+    !validInteger(totals.distinctReleases, 0, 5_000)
+  ) {
+    return false;
+  }
+  const library = payload.library as Array<Record<string, unknown>>;
+  const releaseIds = library.map((release) => release.releaseId);
+  if (
+    new Set(releaseIds).size !== releaseIds.length ||
+    totals.distinctReleases !== library.length ||
+    totals.physicalItems !==
+      library.reduce((count, release) => count + Number(release.copyCount), 0)
+  ) {
+    return false;
+  }
+
+  const formats = payload.formats as Array<Record<string, unknown>>;
+  if (
+    formats.length !== DISCOGS_FORMATS.length ||
+    formats.some((entry, index) => entry.label !== DISCOGS_FORMATS[index])
+  ) {
+    return false;
+  }
+  const expectedFormats = new Map<string, number>(
+    DISCOGS_FORMATS.map((format) => [format, 0]),
+  );
+  const expectedDecades = new Map<string, number>();
+  const expectedMatrix = new Map<string, number>();
+  for (const release of library) {
+    const copyCount = Number(release.copyCount);
+    const format = String(release.format);
+    const decade = discogsDecade(release.releaseYear);
+    expectedFormats.set(format, (expectedFormats.get(format) ?? 0) + copyCount);
+    expectedDecades.set(decade, (expectedDecades.get(decade) ?? 0) + copyCount);
+    const matrixKey = `${format}\u0000${decade}`;
+    expectedMatrix.set(
+      matrixKey,
+      (expectedMatrix.get(matrixKey) ?? 0) + copyCount,
+    );
+  }
+  if (
+    formats.some(
+      (entry) =>
+        entry.count !== expectedFormats.get(String(entry.label)),
+    )
+  ) {
+    return false;
+  }
+
+  const decades = payload.decades as Array<Record<string, unknown>>;
+  const decadeLabels = decades.map((entry) => entry.label);
+  if (
+    new Set(decadeLabels).size !== decadeLabels.length ||
+    decades.length !== expectedDecades.size ||
+    decades.some(
+      (entry) =>
+        typeof entry.label !== "string" ||
+        !DISCOGS_DECADE.test(entry.label) ||
+        entry.count !== expectedDecades.get(entry.label),
+    )
+  ) {
+    return false;
+  }
+
+  const matrix = payload.formatDecadeMatrix as Array<Record<string, unknown>>;
+  const matrixKeys = matrix.map(
+    (entry) => `${entry.format}\u0000${entry.decade}`,
+  );
+  return (
+    new Set(matrixKeys).size === matrixKeys.length &&
+    matrix.length === expectedMatrix.size &&
+    matrix.every(
+      (entry, index) =>
+        entry.count === expectedMatrix.get(matrixKeys[index]),
+    )
+  );
+}
+
 export function normalizeConnectorProfileUrl(
   provider: ConnectorProvider,
   value: string | undefined,
@@ -597,7 +788,9 @@ export function validateConnectorPublicPayload(
         ? validHardcoverPayload(payload)
         : provider === "steam"
           ? validSteamPayload(payload)
-          : validSpotifyPayload(payload);
+          : provider === "spotify"
+            ? validSpotifyPayload(payload)
+            : validDiscogsPayload(payload);
   return (
     payload.provider === provider &&
     exactSchemaValid &&

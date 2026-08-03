@@ -1,8 +1,46 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { installDiscogsFixture } from "./fixtures/discogs.mjs";
 
 const routes = ["/", "/work", "/play", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
+
+async function pageOverflow(page) {
+  return page.evaluate(() => {
+    const limit = window.innerWidth + 1;
+    const isInsideBoundedScroller = (element) => {
+      let ancestor = element.parentElement;
+      while (ancestor && ancestor !== document.body) {
+        const overflowX = getComputedStyle(ancestor).overflowX;
+        if (overflowX === "auto" || overflowX === "scroll") {
+          const box = ancestor.getBoundingClientRect();
+          return box.left >= -1 && box.right <= limit;
+        }
+        ancestor = ancestor.parentElement;
+      }
+      return false;
+    };
+    const offenders = [...document.querySelectorAll("body *")]
+      .filter((element) => {
+        const box = element.getBoundingClientRect();
+        return (
+          (box.right > limit || box.left < -1) &&
+          !isInsideBoundedScroller(element)
+        );
+      })
+      .slice(0, 12)
+      .map((element) => ({
+        tag: element.tagName.toLowerCase(),
+        id: element.id,
+        className: String(element.className).slice(0, 120),
+      }));
+    return {
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+      offenders,
+    };
+  });
+}
 
 for (const width of widths) {
   test(`public routes fit a ${width}px viewport`, async ({ page }) => {
@@ -166,6 +204,131 @@ test("Spotify rank navigation and consent remain keyboard-first", async ({ page 
   await expect(listenHere).toBeFocused();
 });
 
+test("Discogs remains lazy and the six Play streams use keyboard selection", async ({ page }) => {
+  const requests = [];
+  await installDiscogsFixture(page, requests);
+  await page.goto("/play", { waitUntil: "networkidle" });
+
+  const tabs = page.getByRole("tab");
+  await expect(tabs).toHaveCount(6);
+  await expect(tabs).toHaveText([
+    /Watch\s*MyAnimeList/,
+    /Read\s*Hardcover/,
+    /Listen\s*Spotify/,
+    /Collect\s*Discogs/,
+    /Play\s*Steam/,
+    /Move\s*Strava/,
+  ]);
+  expect(requests).toHaveLength(0);
+
+  const watch = page.getByRole("tab", { name: /Watch.*MyAnimeList/i });
+  const read = page.getByRole("tab", { name: /Read.*Hardcover/i });
+  const listen = page.getByRole("tab", { name: /Listen.*Spotify/i });
+  const collect = page.getByRole("tab", { name: /Collect.*Discogs/i });
+  await watch.focus();
+  await watch.press("ArrowRight");
+  await expect(read).toBeFocused();
+  await read.press("ArrowRight");
+  await expect(listen).toBeFocused();
+  await listen.press("ArrowRight");
+  await expect(collect).toBeFocused();
+  await expect(collect).toHaveAttribute("aria-selected", "true");
+  await expect(
+    page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
+  ).toBeVisible();
+  await expect.poll(() => requests.length).toBe(1);
+});
+
+test("Discogs Pattern and Gallery support filters and pagination", async ({ page }) => {
+  const requests = [];
+  await installDiscogsFixture(page, requests);
+  await page.goto("/play", { waitUntil: "networkidle" });
+  await page.getByRole("tab", { name: /Collect.*Discogs/i }).click();
+
+  const physicalTotal = page.getByText("physical items", { exact: true }).locator("..");
+  const releaseTotal = page.getByText("distinct releases", { exact: true }).locator("..");
+  await expect(physicalTotal.getByText("29", { exact: true })).toBeVisible();
+  await expect(releaseTotal.getByText("26", { exact: true })).toBeVisible();
+  const matrix = page.getByRole("table", {
+    name: "Physical item counts by format and release decade",
+  });
+  await expect(matrix).toBeVisible();
+  await expect(matrix.getByRole("columnheader", { name: "Format" })).toBeVisible();
+  let axe = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(
+    axe.violations.filter(({ impact }) =>
+      ["serious", "critical"].includes(impact),
+    ),
+    JSON.stringify(axe.violations, null, 2),
+  ).toEqual([]);
+
+  await page.getByRole("button", { name: "Gallery" }).click();
+  await expect(page.getByText("1—12 of 26 releases")).toBeVisible();
+  await expect(page.locator("ol li").filter({ has: page.locator('a[href*="discogs.com/release/"]') })).toHaveCount(12);
+
+  await page.getByRole("button", { name: "Next →" }).click();
+  await expect(page.getByText("13—24 of 26 releases")).toBeVisible();
+  await expect(page.locator("ol[role='list']")).toHaveAttribute("start", "13");
+  await expect.poll(() => requests.at(-1)?.searchParams.get("page")).toBe("2");
+
+  await page.getByRole("combobox", { name: /^Per page/ }).selectOption("24");
+  await expect(page.getByText("1—24 of 26 releases")).toBeVisible();
+  await expect.poll(() => requests.at(-1)?.searchParams.get("pageSize")).toBe("24");
+
+  await page.getByRole("combobox", { name: /^Format/ }).selectOption("vinyl");
+  await expect.poll(() => requests.at(-1)?.searchParams.get("format")).toBe("vinyl");
+  await page.getByRole("combobox", { name: /^Sort/ }).selectOption("year");
+  await expect.poll(() => requests.at(-1)?.searchParams.get("sort")).toBe("year");
+
+  await page.getByRole("searchbox", { name: /^Find a title or artist/ }).fill("Blue Logic");
+  await page.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByText("1—1 of 1 releases")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Blue Logic.*Arc Lab/i })).toBeVisible();
+  await expect.poll(() => requests.at(-1)?.searchParams.get("q")).toBe("Blue Logic");
+
+  axe = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(
+    axe.violations.filter(({ impact }) =>
+      ["serious", "critical"].includes(impact),
+    ),
+    JSON.stringify(axe.violations, null, 2),
+  ).toEqual([]);
+});
+
+test("Discogs Pattern and Gallery fit 320–1920px viewports", async ({ page }) => {
+  await installDiscogsFixture(page);
+  for (const width of [320, 390, 768, 1024, 1440, 1920]) {
+    await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+    await page.goto("/play", { waitUntil: "networkidle" });
+    await page.getByRole("tab", { name: /Collect.*Discogs/i }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
+    ).toBeVisible();
+
+    let overflow = await pageOverflow(page);
+    expect(overflow, `Pattern @ ${width}px: ${JSON.stringify(overflow.offenders)}`).toMatchObject({
+      documentWidth: expect.any(Number),
+      viewportWidth: width,
+      offenders: [],
+    });
+    expect(overflow.documentWidth).toBeLessThanOrEqual(width + 1);
+
+    await page.getByRole("button", { name: "Gallery" }).click();
+    await expect(page.getByText("1—12 of 26 releases")).toBeVisible();
+    overflow = await pageOverflow(page);
+    expect(overflow, `Gallery @ ${width}px: ${JSON.stringify(overflow.offenders)}`).toMatchObject({
+      documentWidth: expect.any(Number),
+      viewportWidth: width,
+      offenders: [],
+    });
+    expect(overflow.documentWidth).toBeLessThanOrEqual(width + 1);
+  }
+});
+
 test("forced colors and text spacing retain readable public content", async ({ browser }) => {
   const context = await browser.newContext({
     forcedColors: "active",
@@ -196,7 +359,7 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
   }
   await page.goto("/play", { waitUntil: "load" });
-  await expect(page.locator("noscript details")).toHaveCount(5);
+  await expect(page.locator("noscript details")).toHaveCount(6);
   await expect(page.locator("iframe")).toHaveCount(0);
   await context.close();
 });

@@ -34,6 +34,7 @@ The checked-in sanitized bundle is the static base. At runtime, `lib/server/publ
 - `scripts/build-content.mjs` is a thin facade; generator ownership lives in `scripts/content/*`. Content changes must identify the normalization, grouping, metrics, evidence, privacy, reporting, and output modules they affect and must refresh the checked-in attestation.
 - `lib/server/connectors/repository.ts` is a public facade over the `repository-*` modules. Follow provider changes through contracts, credentials/OAuth, refresh locks, snapshots/public projectors, audit, and retention rather than adding behavior to the facade.
 - Studio provider ownership lives in `app/studio/connectors/*`; the shared shell remains in `app/studio/ConnectorControls.tsx`. Play stream ownership lives in `components/play/*`, while Spotify groove, inspector, consent, and gallery behavior lives in `components/spotify/*`.
+- Discogs uses a bespoke text-first Play stream and OAuth 1.0a flow. Do not pass it through the artwork-based generic collection gallery or assume an unknown provider is Steam.
 - Cross-module changes to provider state must keep Studio, public Play, exact runtime projectors, D1 persistence, privacy scans, and connector tests in sync.
 - Status/date formatting and provider-state presentation are duplicated across public Play and Studio. Reuse an existing formatter where possible; do not create a third vocabulary.
 - Several tests assert source structure with regular expressions. Retain those backstops, but add response- or behavior-level coverage before structural refactors.

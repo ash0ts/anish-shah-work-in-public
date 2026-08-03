@@ -1,6 +1,6 @@
 # Play connections: owner setup
 
-The protected Studio connects five personal streams without putting credentials
+The protected Studio connects six personal streams without putting credentials
 in source code, deployment artifacts, public APIs, or browser storage.
 
 ## Credential map
@@ -10,6 +10,7 @@ in source code, deployment artifacts, public APIs, or browser storage.
 | Watch | MyAnimeList | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current** |
 | Read | Hardcover | Personal API token | Token, with or without `Bearer` | **Refresh now → Current** |
 | Listen | Spotify | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
+| Collect | Discogs | Consumer key and consumer secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
 | Play | Steam | Web API key and 17-digit SteamID64 | Both values | **Refresh now → Current** |
 | Move | Strava | Public athlete URL and optional cumulative feed | Athlete URL + complete generated profile-feed/summary iframe | Save; Play uses the checked feed or profile-link fallback |
 
@@ -23,6 +24,12 @@ Spotify follows the same application-then-authorization pattern. Its Top
 Tracks response is an affinity ranking for the selected time window, not a
 play-count history. Studio never requests listening history or derives minutes,
 genres, trends, or a taste profile from Spotify data.
+
+Discogs labels its application credentials **consumer key** and **consumer
+secret**. Studio uses them to complete Discogs OAuth 1.0a; it never asks for
+the account password or exposes the resulting access-token pair. The public
+collection remains off until the owner reviews the normalized physical-media
+catalog and explicitly enables publication.
 
 For every API-backed stream, the verification sequence is **Connect or
 authorize → Refresh now → confirm Current**. Saving a credential alone does not
@@ -71,6 +78,7 @@ key with this local key.
 Provider credentials and profile URLs are intentionally not loaded from
 `.env` or `.env.local`. Variables such as `MAL_CLIENT_ID`,
 `MAL_CLIENT_SECRET`, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`,
+`DISCOGS_CONSUMER_KEY`, `DISCOGS_CONSUMER_SECRET`,
 `HARDCOVER_API_KEY`, `STEAM_API_KEY`, provider profile URLs, and
 `NEXT_PUBLIC_STRAVA_EMBED_URL` do not connect a stream. Enter those
 values through Studio instead; the API-backed credentials are encrypted in D1,
@@ -109,12 +117,13 @@ stay in the local D1 sandbox.
    current credential or snapshot, encrypts accepted credentials with the
    production key, and leaves existing production state unchanged for a
    provider that fails validation.
-6. Authorize MyAnimeList and Spotify separately with their production API
-   clients, then inspect all five streams on `/play`.
+6. Authorize MyAnimeList, Spotify, and Discogs separately with their production
+   applications, then inspect all six streams on `/play`.
 
-The transfer never includes MyAnimeList or Spotify app credentials or OAuth
-tokens, Spotify snapshots or publication approval, any provider snapshots,
-audit history, `.wrangler/state`, or the local encryption key. A
+The transfer never includes MyAnimeList, Spotify, or Discogs app credentials or
+OAuth tokens; Spotify or Discogs snapshots and publication approval; any other
+provider snapshots; audit history; `.wrangler/state`; or the local encryption
+key. A
 staged payload expires after thirty minutes. Production does not publish it
 until the allowlisted owner applies it.
 
@@ -265,6 +274,60 @@ Spotify is deliberately excluded from the local-to-production transfer.
 Deploy code normally, then authorize and review the separate production
 application in production Studio.
 
+## Discogs
+
+Use separate Discogs applications for local testing and production. Discogs
+calls the two application values a consumer key and consumer secret.
+
+### Local application
+
+1. Open [Discogs developer settings](https://www.discogs.com/settings/developers)
+   and create a local application.
+2. Register this exact callback:
+
+   ```text
+   http://127.0.0.1:3000/api/connectors/discogs/oauth/callback
+   ```
+
+3. In local Studio, open **Collect · Discogs** and confirm the displayed
+   callback matches. Enter the consumer key and consumer secret, then select
+   **Authorize with Discogs**.
+4. Approve access to the owner account. Studio completes the signed token
+   exchange behind the owner session; OAuth tokens never appear in the page.
+5. Select **Refresh now**, confirm **Current**, and inspect Pattern and Gallery
+   on the local Play page. Leave public publication off while testing.
+
+### Production application and publication review
+
+1. Create or select the production application and register:
+
+   ```text
+   https://anish-shah-is.online/api/connectors/discogs/oauth/callback
+   ```
+
+2. Enter the production consumer key and secret only in the Access-protected
+   production Studio, then authorize the owner account.
+3. Select **Refresh now**. Review physical-item and distinct-release totals,
+   formats, decades, and a sample of the ruled collection shelf.
+4. Acknowledge that this is a personal, noncommercial public collection, then
+   enable **Publish collection publicly**.
+5. Open Collect in a logged-out browser and confirm the attribution,
+   non-affiliation notice, filters, sorting, and pagination.
+
+Studio retrieves the authenticated identity and folder `0`, then publishes
+only titles, artists, release years, normalized physical formats, copy counts,
+reconciled distributions, and constructed Discogs links. It excludes cover
+images, folders, conditions, ratings, notes, acquisition dates, marketplace
+data, pricing, wantlists, account identifiers, and raw provider responses.
+
+Discogs becomes eligible for refresh after four hours. The hourly Worker job
+retries a due failed synchronization, but the public catalog becomes
+unavailable six hours after its last successful refresh. A 401 requires
+reauthorization; for a 429, wait for the provider retry interval. Disconnect
+deletes the application credentials, OAuth state, collection snapshot, sync
+history, and publication approval. Discogs is deliberately excluded from the
+local-to-production transfer.
+
 ## Steam
 
 1. Read the [Steam Web API overview](https://partner.steamgames.com/doc/webapi_overview).
@@ -323,6 +386,10 @@ data. The official iframe remains the only Strava display surface.
 | Finish Spotify OAuth | `GET /api/connectors/spotify/oauth/callback` | Provider redirect only |
 | Review Spotify display | `GET /api/studio/connectors/spotify/config` | No body |
 | Save Spotify display | `PUT /api/studio/connectors/spotify/config` | `{ "publishTopTracks": false, "fallbackEmbed": "optional official URL" }`; publishing also requires explicit acknowledgement |
+| Start Discogs OAuth | `POST /api/studio/connectors/discogs/oauth/start` | `{ "consumerKey": "…", "consumerSecret": "…" }`, or `{}` to reauthorize |
+| Finish Discogs OAuth | `GET /api/connectors/discogs/oauth/callback` | Provider redirect only |
+| Review Discogs display | `GET /api/studio/connectors/discogs/config` | No body |
+| Save Discogs display | `PUT /api/studio/connectors/discogs/config` | `{ "publishCollection": false }`; publishing also requires explicit acknowledgement |
 | Save/replace Hardcover | `POST /api/studio/connectors/hardcover/credentials` | `{ "secret": "…" }` |
 | Save/replace Steam | `POST /api/studio/connectors/steam/credentials` | `{ "apiKey": "…", "steamId64": "…" }` |
 | Refresh an API stream | `POST /api/studio/connectors/[provider]/refresh` | No body |

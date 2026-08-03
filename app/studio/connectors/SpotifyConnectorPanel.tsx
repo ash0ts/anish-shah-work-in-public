@@ -92,7 +92,11 @@ function SpotifyPresentationControls({
       .then(async (response) => {
         const result = await responseJson(response);
         if (!active) return;
-        if (response.ok && result.config) {
+        if (
+          response.ok &&
+          result.config &&
+          "publishTopTracks" in result.config
+        ) {
           setState({ phase: "ready", config: result.config });
           setPublishTopTracks(result.config.publishTopTracks);
           setFallbackEmbed(spotifyFallbackUrl(result.config.fallbackEmbed));
@@ -143,7 +147,11 @@ function SpotifyPresentationControls({
         }),
       });
       const result = await responseJson(response);
-      if (!response.ok || !result.config) {
+      if (
+        !response.ok ||
+        !result.config ||
+        !("publishTopTracks" in result.config)
+      ) {
         setMessage(
           result.error ??
             "Use an official open.spotify.com track, album, or playlist URL, then try again.",

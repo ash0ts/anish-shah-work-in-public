@@ -7,14 +7,15 @@ const { readBoundedJsonBody } = await tsImport(
   "../lib/server/request-security.ts",
   import.meta.url,
 );
-const { authenticateRequest, isSitesRuntime } = await tsImport(
-  "../worker/access.ts",
-  import.meta.url,
-);
-const { throttleOAuthCallback, throttleOwnerWrite } = await tsImport(
-  "../worker/rate-limiting.ts",
-  import.meta.url,
-);
+const { authenticateRequest, isProtectedOwnerPath, isSitesRuntime } =
+  await tsImport("../worker/access.ts", import.meta.url);
+const {
+  requiresConfiguredRateLimit,
+  throttleArtwork,
+  throttleDiscogsPublicRead,
+  throttleOAuthCallback,
+  throttleOwnerWrite,
+} = await tsImport("../worker/rate-limiting.ts", import.meta.url);
 const {
   beginRequestObservation,
   correlatedResponse,
@@ -27,6 +28,10 @@ const { productionOriginResponse } = await tsImport(
 );
 const { boundedApiWrite } = await tsImport(
   "../worker/request-limits.ts",
+  import.meta.url,
+);
+const { canonicalSecurityPathname } = await tsImport(
+  "../worker/request-path.ts",
   import.meta.url,
 );
 const { pruneConnectorRetention } = await tsImport(
@@ -134,12 +139,122 @@ test("extracted Worker access and request guards preserve fail-closed behavior",
   assert.equal(wrongType.status, 415);
 });
 
+test("encoded route segments are canonicalized before Worker security decisions", async () => {
+  const workerSource = await readFile(
+    new URL("../worker/index.ts", import.meta.url),
+    "utf8",
+  );
+  const canonicalization = workerSource.indexOf(
+    "const pathname = canonicalSecurityPathname(url.pathname)",
+  );
+  const malformedRejection = workerSource.indexOf("if (pathname === null)");
+  const originGuard = workerSource.indexOf("const originFailure");
+  assert(canonicalization >= 0);
+  assert(malformedRejection > canonicalization);
+  assert(originGuard > malformedRejection);
+
+  const encodedPublic = new Request(
+    "https://anish-shah-is.online/api/connectors/%64iscogs?page=2",
+    { headers: { "cf-connecting-ip": "203.0.113.51" } },
+  );
+  const publicPath = canonicalSecurityPathname(
+    new URL(encodedPublic.url).pathname,
+  );
+  assert.equal(publicPath, "/api/connectors/discogs");
+
+  const encodedCallback = new Request(
+    "https://anish-shah-is.online/api/connectors/%64iscogs/oauth/%63allback?oauth_token=private",
+    { headers: { "cf-connecting-ip": "203.0.113.52" } },
+  );
+  const callbackPath = canonicalSecurityPathname(
+    new URL(encodedCallback.url).pathname,
+  );
+  assert.equal(callbackPath, "/api/connectors/discogs/oauth/callback");
+
+  const encodedStudio = new Request(
+    "https://anish-shah-is.online/api/%73tudio/connectors/discogs/refresh",
+    { method: "POST" },
+  );
+  const studioPath = canonicalSecurityPathname(
+    new URL(encodedStudio.url).pathname,
+  );
+  assert.equal(studioPath, "/api/studio/connectors/discogs/refresh");
+  assert.equal(isProtectedOwnerPath(studioPath), true);
+
+  const capturedKeys = [];
+  const environment = {
+    NODE_ENV: "production",
+    RATE_LIMIT_SALT: "test-only-rate-limit-salt-value-1234567890",
+    ARTWORK_RATE_LIMITER: {
+      async limit({ key }) {
+        capturedKeys.push(key);
+        return { success: true };
+      },
+    },
+    OAUTH_CALLBACK_RATE_LIMITER: {
+      async limit({ key }) {
+        capturedKeys.push(key);
+        return { success: true };
+      },
+    },
+    OWNER_RATE_LIMITER: {
+      async limit({ key }) {
+        capturedKeys.push(key);
+        return { success: true };
+      },
+    },
+  };
+  assert.equal(
+    await throttleDiscogsPublicRead(
+      environment,
+      encodedPublic,
+      false,
+      publicPath,
+    ),
+    null,
+  );
+  assert.equal(
+    await throttleOAuthCallback(
+      environment,
+      encodedCallback,
+      false,
+      callbackPath,
+    ),
+    null,
+  );
+  assert.equal(
+    await throttleOwnerWrite(
+      environment,
+      encodedStudio,
+      { email: "owner@example.com" },
+      false,
+      studioPath,
+    ),
+    null,
+  );
+  assert.match(capturedKeys[0], /^discogs-public-read:/);
+  assert.match(capturedKeys[1], /^discogs-oauth-callback:/);
+  assert.match(capturedKeys[2], /^owner-write:/);
+
+  assert.equal(
+    canonicalSecurityPathname("/api/connectors/discogs/%"),
+    null,
+  );
+  assert.equal(
+    canonicalSecurityPathname("/api/connectors/discogs/%zz"),
+    null,
+  );
+});
+
 test("extracted Worker throttling and response hardening keep exact boundaries", async () => {
   const spotifyRequest = new Request(
     "http://localhost:3000/api/connectors/spotify/oauth/callback?code=private",
   );
   const myAnimeListRequest = new Request(
     "http://localhost:3000/api/connectors/myanimelist/oauth/callback?code=private",
+  );
+  const discogsRequest = new Request(
+    "http://127.0.0.1:3000/api/connectors/discogs/oauth/callback?oauth_token=private",
   );
   const environment = {
     NODE_ENV: "development",
@@ -153,6 +268,10 @@ test("extracted Worker throttling and response hardening keep exact boundaries",
   }
   assert.equal(
     await throttleOAuthCallback(environment, myAnimeListRequest, true),
+    null,
+  );
+  assert.equal(
+    await throttleOAuthCallback(environment, discogsRequest, true),
     null,
   );
   const limited = await throttleOAuthCallback(environment, spotifyRequest, true);
@@ -173,6 +292,89 @@ test("extracted Worker throttling and response hardening keep exact boundaries",
   assert.equal(
     (await throttleOwnerWrite(environment, ownerWrite, null, true))?.status,
     429,
+  );
+
+  const capturedKeys = [];
+  const productionThrottle = {
+    ...environment,
+    NODE_ENV: "production",
+    ARTWORK_RATE_LIMITER: {
+      async limit({ key }) {
+        capturedKeys.push(key);
+        return { success: true };
+      },
+    },
+  };
+  const discogsRead = new Request(
+    "https://anish-shah-is.online/api/connectors/discogs?page=2",
+    { headers: { "cf-connecting-ip": "203.0.113.42" } },
+  );
+  assert.equal(
+    await throttleDiscogsPublicRead(productionThrottle, discogsRead, false),
+    null,
+  );
+  assert.equal(
+    await throttleArtwork(
+      productionThrottle,
+      new Request(
+        "https://anish-shah-is.online/api/connector-artwork/spotify/item",
+        { headers: { "cf-connecting-ip": "203.0.113.42" } },
+      ),
+      false,
+    ),
+    null,
+  );
+  assert.match(capturedKeys[0], /^discogs-public-read:[a-f0-9]{32}$/);
+  assert.match(capturedKeys[1], /^artwork:[a-f0-9]{32}$/);
+  assert.notEqual(capturedKeys[0], capturedKeys[1]);
+  assert.equal(capturedKeys.some((key) => key.includes("203.0.113.42")), false);
+
+  const missingBinding = await throttleDiscogsPublicRead(
+    environment,
+    discogsRead,
+    false,
+  );
+  assert.equal(missingBinding?.status, 503);
+  assert.equal(
+    requiresConfiguredRateLimit(
+      environment,
+      "/api/connectors/discogs",
+      true,
+      true,
+    ),
+    true,
+  );
+  assert.equal(
+    requiresConfiguredRateLimit(
+      productionThrottle,
+      "/api/connectors/discogs",
+      true,
+      true,
+    ),
+    false,
+  );
+
+  const limitedDiscogsRead = await throttleDiscogsPublicRead(
+    {
+      ...productionThrottle,
+      ARTWORK_RATE_LIMITER: {
+        async limit() {
+          return { success: false };
+        },
+      },
+    },
+    discogsRead,
+    false,
+  );
+  assert.equal(limitedDiscogsRead?.status, 429);
+  assert.equal(limitedDiscogsRead?.headers.get("retry-after"), "60");
+  assert.equal(
+    await throttleDiscogsPublicRead(
+      productionThrottle,
+      new Request("https://anish-shah-is.online/api/connectors/spotify"),
+      false,
+    ),
+    null,
   );
 
   const secured = securedResponse(
@@ -435,7 +637,7 @@ test("the Worker applies the required secure response policy", async () => {
   assert.doesNotMatch(headers, /script-src[^\n]*unsafe-inline/);
   assert.match(
     headers,
-    /url\.pathname === "\/play"[\s\S]{0,500}private, no-store/,
+    /pathname === "\/play"[\s\S]{0,500}private, no-store/,
   );
   assert.match(worker, /securedResponse/);
   assert.match(worker, /withRequestSecurityHeaders/);
@@ -464,6 +666,29 @@ test("provider OAuth callbacks are one-way throttled before application routing"
   assert.match(rateLimit, /consumeRateLimit\(/);
   assert.match(rateLimit, /function rateLimitResponse/);
   assert.match(rateLimit, /"retry-after"/);
+});
+
+test("anonymous Discogs reads are one-way throttled before publication storage is read", async () => {
+  const [worker, rateLimit] = await Promise.all([
+    readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../worker/rate-limiting.ts", import.meta.url), "utf8"),
+  ]);
+  const throttleStart = worker.indexOf(
+    "const discogsReadLimited = await throttleDiscogsPublicRead",
+  );
+  const publicationRead = worker.indexOf(
+    "const unavailable = await publicationAvailabilityResponse",
+  );
+  const applicationRoute = worker.indexOf("routeApplicationRequest(appRequest");
+
+  assert(throttleStart >= 0);
+  assert(publicationRead > throttleStart);
+  assert(applicationRoute > publicationRead);
+  assert.match(rateLimit, /request\.method !== "GET"/);
+  assert.match(rateLimit, /"discogs-public-read"/);
+  assert.match(rateLimit, /env\.ARTWORK_RATE_LIMITER/);
+  assert.match(rateLimit, /const DISCOGS_PUBLIC_READ_RATE_LIMIT = 120/);
+  assert.match(rateLimit, /Discogs collection requests are temporarily limited/);
 });
 
 test("retention cleanup has an hourly scheduled Worker trigger", async () => {
@@ -726,6 +951,10 @@ test("publication failover and maintenance health fail closed", async () => {
   );
   assert.match(maintenance, /canonicalOrigin\.status === "setup_required"/);
   assert.match(maintenance, /expected:\s*PUBLIC_SITE_ORIGIN/);
+  assert.match(
+    maintenance,
+    /CONNECTOR_PROVIDERS\s*=\s*\[[\s\S]*?"discogs"[\s\S]*?\]\s*as const/,
+  );
 });
 
 test("custom Worker observability never records raw request identifiers", async () => {
@@ -848,6 +1077,7 @@ test("production source contains no retired Sites origin", async () => {
     readFile(new URL("../app/studio/connectors/MyAnimeListConnectorPanel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/studio/connectors/HardcoverConnectorPanel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/studio/connectors/SpotifyConnectorPanel.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/studio/connectors/DiscogsConnectorPanel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/studio/connectors/SteamConnectorPanel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/studio/connectors/StravaConnectorPanel.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/seo.ts", import.meta.url), "utf8"),
