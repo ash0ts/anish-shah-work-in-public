@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "1.1",
+  "releasedAt": "2026-08-03T08:46:25.078Z",
+  "smokeTestedAt": "2026-08-03T08:46:24.000Z",
+  "commitSha": "41a340d7cc8cd12355722e00cbb806db16112f5e",
+  "contentVersion": "1f95080f1833343b",
+  "publicContentSha256": "b7d0a4c5d195af8cc880b689bdbd46c88e652ebcedf0915a1650c1f1a935bd34",
+  "deployableArtifacts": {
+    "artifactSetSha256": "10af37df644959ffde6b728237fd67a3dad95a6f621ce068174563a48cf1a952",
+    "fileCount": 72,
+    "totalBytes": 3834803
+  },
+  "publicationCheckpoint": {
+    "status": "compatible",
+    "contentHash": "8421b9f5629201b900479c22bb72dbb69b0c35a585d9fcfccb269d01f2647b8f",
+    "contentVersion": "1f95080f1833343b",
+    "kvPointerMatches": true
+  },
+  "releasePublication": {
+    "status": "ready",
+    "releaseSha": "41a340d7cc8cd12355722e00cbb806db16112f5e",
+    "contentVersion": "1f95080f1833343b",
+    "contentHash": "8421b9f5629201b900479c22bb72dbb69b0c35a585d9fcfccb269d01f2647b8f",
+    "verifiedAt": "2026-08-03T08:33:00.365Z"
+  },
+  "validationRuns": [
+    {
+      "kind": "validate",
+      "name": "Validate",
+      "headSha": "41a340d7cc8cd12355722e00cbb806db16112f5e",
+      "conclusion": "success",
+      "url": "https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/30794191489"
+    },
+    {
+      "kind": "gitleaks",
+      "name": "Gitleaks",
+      "headSha": "41a340d7cc8cd12355722e00cbb806db16112f5e",
+      "conclusion": "success",
+      "url": "https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/30794196542"
+    },
+    {
+      "kind": "codeql",
+      "name": "CodeQL",
+      "headSha": "41a340d7cc8cd12355722e00cbb806db16112f5e",
+      "conclusion": "success",
+      "url": "https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/30794201339"
+    }
+  ],
+  "worker": {
+    "name": "anish-shah-work-in-public",
+    "previousVersion": "ff60fb95-78fc-4952-b909-548b609ee9a6",
+    "currentVersion": "d755399c-e0ce-4606-9056-2bf029faf40b",
+    "deploymentId": "67193a53-acbb-4b69-83b4-31ba37245443",
+    "trafficPercentage": 100
+  },
+  "d1": {
+    "preMigrationBookmark": "00000039-00000000-000050bc-ec1b28b56b70d61daee9b93d5623338a",
+    "migrations": []
+  },
+  "smokeTests": [
+    {
+      "id": "public_routes",
+      "status": "pass"
+    },
+    {
+      "id": "studio_access",
+      "status": "pass"
+    },
+    {
+      "id": "non_owner_denial",
+      "status": "pass"
+    },
+    {
+      "id": "connector_galleries",
+      "status": "pass"
+    },
+    {
+      "id": "oauth_callbacks",
+      "status": "pass"
+    },
+    {
+      "id": "security_headers",
+      "status": "pass"
+    },
+    {
+      "id": "owner_health",
+      "status": "pass"
+    }
+  ],
+  "checksums": {
+    "publicContentAttestationSha256": "e433a02458dcc9723bc64b003089434410722995d3809eb47f781aeb71a19fef",
+    "preparedWorkerConfigSha256": "88e8253bfb878b6c2def19f92c09b8c600ee0432da0e4892b531334cd28ac62a",
+    "deployableArtifactManifestSha256": "c588009b5986d2af6d285cec9ef342253337c65b89c9d0cb4902ea42a44361b3",
+    "releasePlanSha256": "b5844acccdccf05857fc98243df87f8da3003efce047238115dc35763761a33c"
+  }
+}
