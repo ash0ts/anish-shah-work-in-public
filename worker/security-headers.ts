@@ -13,6 +13,10 @@ export function isPrivatePath(pathname: string): boolean {
   );
 }
 
+export function isPlayPath(pathname: string): boolean {
+  return pathname === "/play" || pathname === "/play/" || pathname.startsWith("/play/");
+}
+
 function isPublicHtmlRequest(request: Request, pathname: string): boolean {
   if (request.method !== "GET" && request.method !== "HEAD") return false;
   if (isPrivatePath(pathname) || pathname.startsWith("/_")) return false;
@@ -126,7 +130,7 @@ export function securedResponse(
   } else if (isPrivatePath(pathname)) {
     headers.set("cache-control", "private, no-store");
     headers.set("x-robots-tag", "noindex, nofollow, noarchive");
-  } else if (pathname === "/play" || pathname === "/play/") {
+  } else if (isPlayPath(pathname)) {
     // Play includes publication-gated provider state in its server-rendered
     // fallback. Never let a shared cache outlive an unpublish or disconnect.
     headers.set("cache-control", "private, no-store");

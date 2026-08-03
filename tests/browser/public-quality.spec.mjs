@@ -4,6 +4,7 @@ import { installDiscogsFixture } from "./fixtures/discogs.mjs";
 
 const routes = ["/", "/work", "/play", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
+const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 
 async function pageOverflow(page) {
   return page.evaluate(() => {
@@ -117,6 +118,7 @@ test("skip navigation reaches the main content", async ({ page }) => {
 });
 
 test("Spotify rank navigation and consent remain keyboard-first", async ({ page }) => {
+  test.skip(roomMode, "Classic Play owns the tabbed Spotify interaction.");
   const timestamp = "2026-08-02T12:00:00.000Z";
   const tracks = [
     {
@@ -389,7 +391,11 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
   }
   await page.goto("/play", { waitUntil: "load" });
-  await expect(page.locator("noscript details")).toHaveCount(6);
+  if (roomMode) {
+    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(6);
+  } else {
+    await expect(page.locator("noscript details")).toHaveCount(6);
+  }
   await expect(page.locator("iframe")).toHaveCount(0);
   await context.close();
 });

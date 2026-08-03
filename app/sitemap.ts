@@ -1,8 +1,10 @@
 import type { MetadataRoute } from "next";
-import { canonicalMetadataOrigin } from "../lib/deployment-environment";
-import { getPublicContentView } from "../lib/server/public-content";
-import { runtimeHostedDeploymentPresentation } from "../lib/server/deployment-presentation";
-import { workArchiveRecordsFrom } from "../lib/work-index";
+import { ROOM_OBJECTS } from "@/components/play/room-platform/room-registry";
+import { canonicalMetadataOrigin } from "@/lib/deployment-environment";
+import { roomExperienceEnabled } from "@/lib/server/play-experience";
+import { getPublicContentView } from "@/lib/server/public-content";
+import { runtimeHostedDeploymentPresentation } from "@/lib/server/deployment-presentation";
+import { workArchiveRecordsFrom } from "@/lib/work-index";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (runtimeHostedDeploymentPresentation().nonProductionHosted) {
@@ -53,5 +55,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...publicRoutes, ...workRoutes];
+  const playRoutes: MetadataRoute.Sitemap = roomExperienceEnabled()
+    ? ROOM_OBJECTS.map((object) => ({
+        url: `${baseUrl}${object.route}`,
+        lastModified,
+        changeFrequency: "weekly" as const,
+        priority: 0.4,
+      }))
+    : [];
+
+  return [...publicRoutes, ...playRoutes, ...workRoutes];
 }

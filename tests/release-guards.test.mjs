@@ -51,12 +51,14 @@ function validReleaseConfigFixture() {
     CLOUDFLARE_D1_DATABASE_ID: productionD1Id,
     CLOUDFLARE_D1_DATABASE_NAME: "anish-shah-work-in-public",
     CLOUDFLARE_PUBLICATION_CACHE_ID: productionKvId,
+    PLAY_EXPERIENCE_MODE: "my-room-2001",
   };
   const expected = expectedPublicReleaseConfig(environment, {
     head,
     contentVersion,
   });
   return {
+    environment,
     expected,
     config: {
       name: "anish-shah-work-in-public",
@@ -99,7 +101,7 @@ function validReleaseConfigFixture() {
         CONTENT_VERSION: contentVersion,
         PUBLIC_CONTENT_MODE: "d1_kv_required",
         DEPLOYMENT_TIER: "production",
-        PLAY_EXPERIENCE_MODE: "classic",
+        PLAY_EXPERIENCE_MODE: expected.playExperienceMode,
       },
       observability: {
         enabled: true,
@@ -154,8 +156,17 @@ test("release parsers return exact migration and Worker version identifiers", ()
 });
 
 test("release preflight rejects a configuration that weakens production boundaries", () => {
-  const { config, expected } = validReleaseConfigFixture();
+  const { config, environment, expected } = validReleaseConfigFixture();
   assert.doesNotThrow(() => assertPublicReleaseConfig(config, expected));
+  assert.equal(expected.playExperienceMode, "my-room-2001");
+  assert.throws(
+    () =>
+      expectedPublicReleaseConfig(
+        { ...environment, PLAY_EXPERIENCE_MODE: "experimental" },
+        { head: expected.head, contentVersion: expected.contentVersion },
+      ),
+    /classic or my-room-2001/,
+  );
   assert.throws(
     () =>
       assertPublicReleaseConfig(

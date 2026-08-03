@@ -210,6 +210,40 @@ export type PreviewFixtureScenario =
   | "missing-artwork"
   | "maximum-density";
 
+export type CollectionQueryState = {
+  query: string;
+  filter: string;
+  sort: string;
+  page: number;
+  pageSize: 12 | 24 | 36;
+};
+
+export type DiscogsQueryState = {
+  query: string;
+  format: string;
+  decade: string;
+  sort: string;
+  page: number;
+  pageSize: 12 | 24 | 36;
+};
+
+export const DEFAULT_COLLECTION_QUERY: CollectionQueryState = {
+  query: "",
+  filter: "",
+  sort: "",
+  page: 1,
+  pageSize: 12,
+};
+
+export const DEFAULT_DISCOGS_QUERY: DiscogsQueryState = {
+  query: "",
+  format: "",
+  decade: "",
+  sort: "",
+  page: 1,
+  pageSize: 12,
+};
+
 export const providerTitles: Record<CollectionProvider, string> = {
   myanimelist: "Watch states, not a ranking.",
   hardcover: "A shelf in motion.",

@@ -8,12 +8,14 @@ technical storytelling, and community programs from 2021 onward.
 - `/` — technical focus, career arc, Bodies of Work, and qualified impact
 - `/work` — 82 WorkGroups connecting 186 searchable public forms
 - `/work/[slug]` — one story with its appearances, artifacts, and evidence
-- `/play` — bounded MyAnimeList, Hardcover, Spotify, Discogs, Steam, and Strava streams
+- `/play` — a semantic six-object room directory for bounded MyAnimeList, Hardcover, Spotify, Discogs, Steam, and Strava streams
+- `/play/[object]` — one provider-specific collection screen, usable without the optional 3D room
 - `/sources` — archive accounting, claim context, and public bibliography
 - `/studio` — owner-only editorial and connector controls
 
-The public site is semantic HTML first. Anime.js adds bounded enhancement;
-there is no Three.js archive navigation, autoplay, or scroll hijacking.
+The public site is semantic HTML first. Anime.js adds bounded enhancement. The
+Work archive remains entirely two-dimensional; only the explicitly activated
+Play room may lazy-load Three.js. There is no autoplay or scroll hijacking.
 
 ## Start locally
 
@@ -33,6 +35,16 @@ npm run dev:studio
 Open `http://localhost:3000/studio`. Local credentials, snapshots, and D1 data
 remain under the ignored local environment. `LOCAL_OWNER_EMAIL` is rejected in
 hosted environments.
+
+The Play redesign is server-gated while it is reviewed:
+
+```bash
+PLAY_EXPERIENCE_MODE=my-room-2001 npm run dev:studio
+```
+
+With the variable omitted, `/play` retains the classic six-stream interface.
+The room overview reads no provider data; each direct object route reads only
+its associated sanitized public connector snapshot.
 
 ## Validate
 
@@ -102,6 +114,7 @@ promote data to production. See the
 - [Content and state](./docs/architecture/content-and-state.md)
 - [Testing](./docs/testing.md)
 - [Play connector setup](./docs/play-connections.md)
+- [My Room, 2001 interaction RFC](./docs/play-experience-prototypes/my-room-2001-interactive-object-archive.md)
 - [Release](./docs/operations/release.md)
 - [Staging and PR previews](./docs/operations/staging-and-previews.md)
 - [Rollback and D1 restore](./docs/operations/rollback.md)

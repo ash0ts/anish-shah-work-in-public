@@ -62,6 +62,7 @@
 .galleryTools select:focus-visible,
 .galleryTools button:focus-visible,
 .galleryPagination button:focus-visible,
+.galleryPagination a:focus-visible,
 .galleryUnavailable button:focus-visible,
 .consent button:focus-visible,
 .stravaFallback a:focus-visible,
@@ -800,6 +801,7 @@
 }
 
 .galleryPagination button,
+.galleryPagination a,
 .galleryUnavailable button {
   width: fit-content;
   min-height: 2.75rem;
@@ -810,15 +812,19 @@
   font: inherit;
   font-size: 0.75rem;
   cursor: pointer;
+  text-decoration: none;
 }
 
-.galleryPagination button:last-child {
+.galleryPagination button:last-child,
+.galleryPagination a:last-child {
   justify-self: end;
 }
 
-.galleryPagination button:disabled {
+.galleryPagination button:disabled,
+.galleryPagination a[aria-disabled="true"] {
   cursor: not-allowed;
   opacity: 0.35;
+  pointer-events: none;
 }
 
 .galleryPagination span {

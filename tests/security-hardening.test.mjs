@@ -639,7 +639,7 @@ test("the Worker applies the required secure response policy", async () => {
   assert.doesNotMatch(headers, /script-src[^\n]*unsafe-inline/);
   assert.match(
     headers,
-    /pathname === "\/play"[\s\S]{0,500}private, no-store/,
+    /isPlayPath\(pathname\)[\s\S]{0,500}private, no-store/,
   );
   assert.match(worker, /securedResponse/);
   assert.match(worker, /withRequestSecurityHeaders/);

@@ -1,0 +1,206 @@
+.runtime {
+  position: fixed;
+  z-index: 900;
+  inset: 0;
+  display: grid;
+  width: 100vw;
+  height: 100dvh;
+  min-width: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  color: #17223b;
+  background: #ede9f2;
+  opacity: 1;
+  transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.runtime[data-presenting="true"] {
+  visibility: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.announcer {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.runtimeBar {
+  display: flex;
+  min-width: 0;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding-bottom: 0.65rem;
+}
+
+.runtimeBar > span {
+  display: grid;
+  gap: 0.1rem;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-variation-settings: "CASL" 0.45, "wght" 720;
+}
+
+.runtimeBar small {
+  color: #6e6476;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.runtimeBar button,
+.controls button,
+.objects button {
+  min-height: 44px;
+  border: 1px solid #17223b;
+  background: transparent;
+  cursor: pointer;
+}
+
+.runtimeBar button {
+  padding: 0.55rem 0.8rem;
+  color: #fff;
+  background: #17223b;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.fallback {
+  display: grid;
+  min-height: min(58rem, 65svh);
+  place-content: center;
+  padding: 2rem;
+  border: 1px solid #17223b;
+  text-align: center;
+}
+
+.fallback strong {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 4rem);
+}
+
+.fallback p {
+  max-width: 34rem;
+  margin: 0.75rem auto;
+}
+
+.fallback small {
+  color: #6e6476;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.controls {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.65rem 0;
+}
+
+.controls button {
+  padding: 0.45rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.controls button:hover,
+.controls button:focus-visible,
+.objects button:hover,
+.objects button:focus-visible,
+.objects button[aria-pressed="true"] {
+  color: #fff;
+  background: #295dff;
+}
+
+.objects ol {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.objects li,
+.objects button {
+  min-width: 0;
+}
+
+.objects button {
+  display: grid;
+  width: 100%;
+  gap: 0.18rem;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+}
+
+.objects button + button,
+.objects li + li button {
+  border-left: 0;
+}
+
+.objects span {
+  color: currentColor;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+}
+
+.objects strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+@media (max-width: 1099px),
+  (prefers-reduced-motion: reduce),
+  (forced-colors: active) {
+  .runtime {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .controls {
+    display: none;
+  }
+
+  .objects ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .objects li:nth-child(odd):not(:first-child) button {
+    border-left: 1px solid #17223b;
+  }
+
+  .objects li:nth-child(n + 3) button {
+    border-top: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .runtime,
+  .fallback {
+    color: CanvasText;
+    background: Canvas;
+  }
+}

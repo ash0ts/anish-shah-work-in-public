@@ -15,7 +15,9 @@ import {
   type DiscogsFormat,
   type DiscogsGallery,
   type DiscogsPublicSnapshot,
+  type DiscogsQueryState,
   type DiscogsReleaseSummary,
+  DEFAULT_DISCOGS_QUERY,
   loadConnector,
 } from "./connector-model";
 import { PanelHeading, StreamEmpty, StreamStatus } from "./StreamChrome";
@@ -31,22 +33,67 @@ const formatOrder: DiscogsFormat[] = [
   "Other",
 ];
 
-export function DiscogsStream() {
-  const [state, setState] = useState<ConnectorState<DiscogsPublicSnapshot>>({
-    status: "idle",
-  });
+export function DiscogsStream({
+  initialState,
+  initialQuery = DEFAULT_DISCOGS_QUERY,
+  routePath,
+}: {
+  initialState?: ConnectorState<DiscogsPublicSnapshot>;
+  initialQuery?: DiscogsQueryState;
+  routePath?: "/play/collect";
+} = {}) {
+  const [state, setState] = useState<ConnectorState<DiscogsPublicSnapshot>>(
+    initialState ?? { status: "idle" },
+  );
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<DiscogsView>("pattern");
-  const [draftQuery, setDraftQuery] = useState("");
-  const [query, setQuery] = useState("");
-  const [format, setFormat] = useState("");
-  const [decade, setDecade] = useState("");
-  const [sort, setSort] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<PageSize>(12);
+  const [draftQuery, setDraftQuery] = useState(initialQuery.query);
+  const [query, setQuery] = useState(initialQuery.query);
+  const [format, setFormat] = useState(initialQuery.format);
+  const [decade, setDecade] = useState(initialQuery.decade);
+  const [sort, setSort] = useState(initialQuery.sort);
+  const [page, setPage] = useState(initialQuery.page);
+  const [pageSize, setPageSize] = useState<PageSize>(initialQuery.pageSize);
   const transitionRoot = useRef<HTMLDivElement>(null);
+  const skipInitialRequest = useRef(initialState !== undefined);
+
+  const syncRoute = (next: Partial<DiscogsQueryState>) => {
+    if (!routePath || typeof window === "undefined") return;
+    const resolved = {
+      query,
+      format,
+      decade,
+      sort,
+      page,
+      pageSize,
+      ...next,
+    };
+    const parameters = new URLSearchParams();
+    if (resolved.query) parameters.set("q", resolved.query);
+    if (resolved.format && resolved.format !== "all") {
+      parameters.set("format", resolved.format);
+    }
+    if (resolved.decade && resolved.decade !== "all") {
+      parameters.set("decade", resolved.decade);
+    }
+    if (resolved.sort) parameters.set("sort", resolved.sort);
+    if (resolved.page > 1) parameters.set("page", String(resolved.page));
+    if (resolved.pageSize !== 12) {
+      parameters.set("pageSize", String(resolved.pageSize));
+    }
+    const search = parameters.toString();
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${routePath}${search ? `?${search}` : ""}`,
+    );
+  };
 
   useEffect(() => {
+    if (skipInitialRequest.current) {
+      skipInitialRequest.current = false;
+      return;
+    }
     const controller = new AbortController();
     const parameters = new URLSearchParams({
       page: String(page),
@@ -108,7 +155,9 @@ export function DiscogsStream() {
 
   const applySearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setQuery(draftQuery.trim());
+    const nextQuery = draftQuery.trim();
+    syncRoute({ query: nextQuery, page: 1 });
+    setQuery(nextQuery);
     setPage(1);
   };
 
@@ -156,25 +205,33 @@ export function DiscogsStream() {
             format={format || gallery.format}
             gallery={gallery}
             onDecade={(value) => {
+              syncRoute({ decade: value, page: 1 });
               setDecade(value);
               setPage(1);
             }}
             onDraftQuery={setDraftQuery}
             onFormat={(value) => {
+              syncRoute({ format: value, page: 1 });
               setFormat(value);
               setPage(1);
             }}
-            onPage={setPage}
+            onPage={(value) => {
+              syncRoute({ page: value });
+              setPage(value);
+            }}
             onPageSize={(value) => {
+              syncRoute({ pageSize: value, page: 1 });
               setPageSize(value);
               setPage(1);
             }}
             onSearch={applySearch}
             onSort={(value) => {
+              syncRoute({ sort: value, page: 1 });
               setSort(value);
               setPage(1);
             }}
             pageSize={pageSize}
+            routePath={routePath}
             sort={sort || gallery.sort}
           />
         ) : (
@@ -370,6 +427,7 @@ function DiscogsGallery({
   onSort,
   onPageSize,
   onPage,
+  routePath,
 }: {
   gallery: DiscogsGallery;
   busy: boolean;
@@ -385,6 +443,7 @@ function DiscogsGallery({
   onSort: (value: string) => void;
   onPageSize: (value: PageSize) => void;
   onPage: (value: number) => void;
+  routePath?: "/play/collect";
 }) {
   const start = gallery.totalItems
     ? (gallery.page - 1) * gallery.pageSize + 1
@@ -397,7 +456,9 @@ function DiscogsGallery({
   return (
     <div className={styles.gallery}>
       <form
+        action={routePath}
         className={styles.galleryTools + " " + styles.discogsTools}
+        method="get"
         onSubmit={onSearch}
       >
         <div className={styles.gallerySearch}>
@@ -406,6 +467,7 @@ function DiscogsGallery({
             <input
               id="discogs-gallery-search"
               maxLength={80}
+              name="q"
               onChange={(event) => onDraftQuery(event.target.value)}
               placeholder="Search the record shelf"
               type="search"
@@ -416,6 +478,7 @@ function DiscogsGallery({
         </div>
         <DiscogsSelect
           label="Format"
+          name="format"
           onChange={onFormat}
           options={gallery.formats.map((entry) => ({
             value: entry.id,
@@ -425,6 +488,7 @@ function DiscogsGallery({
         />
         <DiscogsSelect
           label="Decade"
+          name="decade"
           onChange={onDecade}
           options={gallery.decades.map((entry) => ({
             value: entry.id,
@@ -434,6 +498,7 @@ function DiscogsGallery({
         />
         <DiscogsSelect
           label="Sort"
+          name="sort"
           onChange={onSort}
           options={gallery.sorts.map((entry) => ({
             value: entry.id,
@@ -448,6 +513,7 @@ function DiscogsGallery({
         />
         <DiscogsSelect
           label="Per page"
+          name="pageSize"
           onChange={(value) => onPageSize(Number(value) as PageSize)}
           options={[12, 24, 36].map((value) => ({
             value: String(value),
@@ -482,23 +548,59 @@ function DiscogsGallery({
       )}
 
       <nav className={styles.galleryPagination} aria-label="Discogs catalog pages">
-        <button
-          disabled={gallery.page <= 1 || busy}
-          onClick={() => onPage(gallery.page - 1)}
-          type="button"
-        >
-          ← Previous
-        </button>
+        {routePath ? (
+          <a
+            aria-disabled={gallery.page <= 1 || busy}
+            href={
+              gallery.page <= 1
+                ? undefined
+                : discogsPageUrl(routePath, gallery, gallery.page - 1)
+            }
+            onClick={(event) => {
+              event.preventDefault();
+              if (gallery.page > 1 && !busy) onPage(gallery.page - 1);
+            }}
+          >
+            ← Previous
+          </a>
+        ) : (
+          <button
+            disabled={gallery.page <= 1 || busy}
+            onClick={() => onPage(gallery.page - 1)}
+            type="button"
+          >
+            ← Previous
+          </button>
+        )}
         <span>
           Page {gallery.page} of {gallery.totalPages}
         </span>
-        <button
-          disabled={gallery.page >= gallery.totalPages || busy}
-          onClick={() => onPage(gallery.page + 1)}
-          type="button"
-        >
-          Next →
-        </button>
+        {routePath ? (
+          <a
+            aria-disabled={gallery.page >= gallery.totalPages || busy}
+            href={
+              gallery.page >= gallery.totalPages
+                ? undefined
+                : discogsPageUrl(routePath, gallery, gallery.page + 1)
+            }
+            onClick={(event) => {
+              event.preventDefault();
+              if (gallery.page < gallery.totalPages && !busy) {
+                onPage(gallery.page + 1);
+              }
+            }}
+          >
+            Next →
+          </a>
+        ) : (
+          <button
+            disabled={gallery.page >= gallery.totalPages || busy}
+            onClick={() => onPage(gallery.page + 1)}
+            type="button"
+          >
+            Next →
+          </button>
+        )}
       </nav>
     </div>
   );
@@ -506,11 +608,13 @@ function DiscogsGallery({
 
 function DiscogsSelect({
   label,
+  name,
   value,
   options,
   onChange,
 }: {
   label: string;
+  name: string;
   value: string;
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
@@ -518,7 +622,11 @@ function DiscogsSelect({
   return (
     <label className={styles.gallerySelect}>
       <span>{label}</span>
-      <select onChange={(event) => onChange(event.target.value)} value={value}>
+      <select
+        name={name}
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -527,6 +635,26 @@ function DiscogsSelect({
       </select>
     </label>
   );
+}
+
+function discogsPageUrl(
+  routePath: "/play/collect",
+  gallery: DiscogsGallery,
+  page: number,
+) {
+  const parameters = new URLSearchParams({
+    page: String(page),
+    pageSize: String(gallery.pageSize),
+  });
+  if (gallery.query) parameters.set("q", gallery.query);
+  if (gallery.format && gallery.format !== "all") {
+    parameters.set("format", gallery.format);
+  }
+  if (gallery.decade && gallery.decade !== "all") {
+    parameters.set("decade", gallery.decade);
+  }
+  if (gallery.sort) parameters.set("sort", gallery.sort);
+  return `${routePath}?${parameters.toString()}`;
 }
 
 function DiscogsReleaseRow({

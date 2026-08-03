@@ -124,6 +124,16 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(databaseName)) {
     throw new Error("CLOUDFLARE_D1_DATABASE_NAME is invalid.");
   }
+  const playExperienceMode =
+    env.PLAY_EXPERIENCE_MODE?.trim() || "classic";
+  if (
+    playExperienceMode !== "classic" &&
+    playExperienceMode !== "my-room-2001"
+  ) {
+    throw new Error(
+      "PLAY_EXPERIENCE_MODE must be classic or my-room-2001.",
+    );
+  }
   return {
     head,
     contentVersion,
@@ -134,6 +144,7 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
     databaseId,
     databaseName,
     publicationCacheId,
+    playExperienceMode,
     accountId: PUBLIC_CLOUDFLARE_ACCOUNT_ID,
   };
 }
@@ -153,7 +164,7 @@ export function assertPublicReleaseConfig(config, expected) {
     CONTENT_VERSION: expected.contentVersion,
     PUBLIC_CONTENT_MODE: "d1_kv_required",
     DEPLOYMENT_TIER: "production",
-    PLAY_EXPERIENCE_MODE: "classic",
+    PLAY_EXPERIENCE_MODE: expected.playExperienceMode,
   };
   const exactVars =
     JSON.stringify(Object.keys(vars).sort()) ===

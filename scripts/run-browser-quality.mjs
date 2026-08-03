@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,15 +25,27 @@ if (missing.length > 0) {
   );
 }
 
-function run(binary, arguments_) {
+function run(binary, arguments_, environment = {}) {
   const result = spawnSync(binary, arguments_, {
     cwd: root,
-    env: process.env,
+    env: { ...process.env, ...environment },
     stdio: "inherit",
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-run(process.execPath, ["node_modules/@playwright/test/cli.js", "test"]);
+for (const mode of ["classic", "room"]) {
+  const relativeStateDirectory = `.wrangler/browser-quality-${mode}`;
+  const stateDirectory = path.join(root, relativeStateDirectory);
+  rmSync(stateDirectory, { force: true, recursive: true });
+  run(
+    process.execPath,
+    ["node_modules/@playwright/test/cli.js", "test"],
+    {
+      BROWSER_PLAY_MODE: mode,
+      BROWSER_QUALITY_STATE_DIR: relativeStateDirectory,
+    },
+  );
+}
 run(process.execPath, ["scripts/run-lighthouse-quality.mjs"]);
