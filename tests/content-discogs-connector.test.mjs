@@ -147,6 +147,7 @@ test("Discogs catalog normalization reconciles copies and drops private provider
   ];
 
   const result = await withFetch(async (input, init) => {
+    assert.equal(typeof input, "string");
     requests.push({ url: String(input), init });
     if (String(input).endsWith("/oauth/identity")) {
       return json({
@@ -167,7 +168,9 @@ test("Discogs catalog normalization reconciles copies and drops private provider
   assert.equal(requests.length, 2);
   for (const request of requests) {
     assert.equal(request.init.method, "GET");
-    assert.equal(request.init.redirect, "error");
+    assert.equal(request.init.cache, "no-store");
+    assert.equal(request.init.redirect, "manual");
+    assert.equal(request.init.signal instanceof AbortSignal, true);
     assert.match(request.init.headers.Authorization, /^OAuth /);
     assert.equal(request.url.includes("access-token-example"), false);
   }
@@ -214,6 +217,152 @@ test("Discogs catalog normalization reconciles copies and drops private provider
     payloadPolicy.validateConnectorPublicPayload("discogs", accepted),
     true,
   );
+});
+
+test("Discogs classifies redirects without following credential-bearing requests", async () => {
+  let requests = 0;
+  await assert.rejects(
+    withFetch(
+      async () => {
+        requests += 1;
+        return new Response(null, {
+          status: 302,
+          headers: { location: "https://example.invalid/not-followed" },
+        });
+      },
+      () => discogs.fetchDiscogsSnapshot(credential),
+    ),
+    (error) =>
+      error?.code === "provider_redirect" && error?.httpStatus === 302,
+  );
+  assert.equal(requests, 1);
+});
+
+test("Discogs retries one transient GET failure with a fresh OAuth nonce", async () => {
+  const nonces = [];
+  let requests = 0;
+  const result = await withFetch(async (input, init) => {
+    requests += 1;
+    const nonce = /oauth_nonce="([^"]+)"/.exec(
+      init.headers.Authorization,
+    )?.[1];
+    nonces.push(nonce);
+    if (requests === 1) throw new TypeError("simulated transport failure");
+    const url = new URL(String(input));
+    if (url.pathname === "/oauth/identity") {
+      return json({ username: "collection_example" });
+    }
+    return json({
+      pagination: { page: 1, pages: 1, per_page: 100, items: 0 },
+      releases: [],
+    });
+  }, () => discogs.fetchDiscogsSnapshot(credential));
+
+  assert.equal(result.itemCount, 0);
+  assert.equal(requests, 3);
+  assert.equal(nonces.every(Boolean), true);
+  assert.notEqual(nonces[0], nonces[1]);
+});
+
+test("Discogs bounds repeated transport failure to two attempts", async () => {
+  let requests = 0;
+  await assert.rejects(
+    withFetch(
+      async () => {
+        requests += 1;
+        throw new TypeError("simulated repeated transport failure");
+      },
+      () => discogs.fetchDiscogsSnapshot(credential),
+    ),
+    (error) => error?.code === "provider_transport",
+  );
+  assert.equal(requests, 2);
+});
+
+test("Discogs bounds a stalled successful response body by the request timeout", async () => {
+  const nativeSetTimeout = globalThis.setTimeout;
+  const nativeClearTimeout = globalThis.clearTimeout;
+  let timersCleared = 0;
+  let requests = 0;
+
+  globalThis.setTimeout = (callback, delay, ...arguments_) =>
+    nativeSetTimeout(callback, delay === 25_000 ? 5 : delay, ...arguments_);
+  globalThis.clearTimeout = (handle) => {
+    timersCleared += 1;
+    return nativeClearTimeout(handle);
+  };
+
+  try {
+    await assert.rejects(
+      withFetch(
+        async (_input, init) => {
+          requests += 1;
+          const body = new ReadableStream({
+            start(controller) {
+              init.signal.addEventListener(
+                "abort",
+                () =>
+                  controller.error(
+                    new DOMException("The request was aborted.", "AbortError"),
+                  ),
+                { once: true },
+              );
+            },
+          });
+          return new Response(body, {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        },
+        () => discogs.fetchDiscogsSnapshot(credential),
+      ),
+      (error) =>
+        error?.code === "provider_timeout" && error?.httpStatus === null,
+    );
+  } finally {
+    globalThis.setTimeout = nativeSetTimeout;
+    globalThis.clearTimeout = nativeClearTimeout;
+  }
+
+  assert.equal(requests, 1);
+  assert.equal(timersCleared, 1);
+});
+
+test("Discogs retries only transient gateway responses", async () => {
+  for (const [status, expectedCode] of [
+    [401, "reauthorization_required"],
+    [429, "rate_limited"],
+    [500, "provider_error"],
+  ]) {
+    let requests = 0;
+    await assert.rejects(
+      withFetch(
+        async () => {
+          requests += 1;
+          return json({}, status, status === 429 ? { "retry-after": "60" } : {});
+        },
+        () => discogs.fetchDiscogsSnapshot(credential),
+      ),
+      (error) => error?.code === expectedCode && error?.httpStatus === status,
+    );
+    assert.equal(requests, 1);
+  }
+
+  let gatewayRequests = 0;
+  const recovered = await withFetch(async (input) => {
+    gatewayRequests += 1;
+    if (gatewayRequests === 1) return json({}, 503);
+    const url = new URL(String(input));
+    return url.pathname === "/oauth/identity"
+      ? json({ username: "collection_example" })
+      : json({
+          pagination: { page: 1, pages: 1, per_page: 100, items: 0 },
+          releases: [],
+        });
+  }, () => discogs.fetchDiscogsSnapshot(credential));
+
+  assert.equal(recovered.itemCount, 0);
+  assert.equal(gatewayRequests, 3);
 });
 
 test("Discogs follows pagination sequentially and collapses a duplicate release", async () => {

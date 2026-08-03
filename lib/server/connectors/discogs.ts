@@ -209,67 +209,130 @@ export function parseDiscogsRetryAfter(
   return seconds <= MAX_RETRY_AFTER_SECONDS ? seconds : null;
 }
 
-async function discogsGet<T>(
-  url: URL,
-  credential: DiscogsOAuthCredential,
-  context: string,
-  maximumBytes: number,
-): Promise<DiscogsResponse<T>> {
+type DiscogsGetRequest = {
+  url: URL;
+  credential: DiscogsOAuthCredential;
+  context: string;
+  maximumBytes: number;
+};
+
+async function discardResponseBody(response: Response): Promise<void> {
+  await response.body?.cancel().catch(() => undefined);
+}
+
+async function discogsGetAttempt<T>({
+  url,
+  credential,
+  context,
+  maximumBytes,
+}: DiscogsGetRequest): Promise<DiscogsResponse<T>> {
+  // Keep signing outside the transport catch so an unexpected WebCrypto
+  // failure is not mislabeled or retried as a provider-network failure.
   const authorization = await buildDiscogsAuthorizationHeader({
     method: "GET",
     url: url.toString(),
     credential,
   });
-  let response: Response;
+  const abortController = new AbortController();
+  const timeout = setTimeout(
+    () => abortController.abort(),
+    REQUEST_TIMEOUT_MS,
+  );
   try {
-    response = await fetch(url, {
+    const response = await fetch(url.toString(), {
       method: "GET",
-      redirect: "error",
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      cache: "no-store",
+      redirect: "manual",
+      signal: abortController.signal,
       headers: {
         Accept: "application/json",
         Authorization: authorization,
         "User-Agent": DISCOGS_USER_AGENT,
       },
     });
-  } catch {
+    if (response.status >= 300 && response.status < 400) {
+      await discardResponseBody(response);
+      throw new ConnectorFetchError(
+        "Discogs returned an unexpected synchronization redirect.",
+        {
+          code: "provider_redirect",
+          httpStatus: response.status,
+        },
+      );
+    }
+    if (!response.ok) {
+      const retryAfterSeconds =
+        response.status === 429
+          ? parseDiscogsRetryAfter(response.headers.get("retry-after")) ??
+            3_600
+          : null;
+      await discardResponseBody(response);
+      throw new ConnectorFetchError(
+        response.status === 401
+          ? "Discogs authorization needs to be renewed."
+          : response.status === 429
+            ? "Discogs is temporarily rate-limiting synchronization."
+            : "Discogs could not be synchronized.",
+        {
+          code:
+            response.status === 401
+              ? "reauthorization_required"
+              : response.status === 429
+                ? "rate_limited"
+                : "provider_error",
+          httpStatus: response.status,
+          retryable: response.status === 429 || response.status >= 500,
+          retryAfterSeconds,
+        },
+      );
+    }
+    return {
+      body: (await boundedJson(response, maximumBytes, context)) as T,
+      etag: response.headers.get("etag") ?? undefined,
+      rateLimitExhausted: rateLimitRemaining(response) === 0,
+      retryAfterSeconds: parseDiscogsRetryAfter(
+        response.headers.get("retry-after"),
+      ),
+    };
+  } catch (error) {
+    if (error instanceof ConnectorFetchError) throw error;
     throw new ConnectorFetchError(
       "Discogs synchronization is temporarily unavailable.",
-      { code: "provider_error", retryable: true },
-    );
-  }
-  if (!response.ok) {
-    const retryAfterSeconds =
-      response.status === 429
-        ? parseDiscogsRetryAfter(response.headers.get("retry-after")) ?? 3_600
-        : null;
-    throw new ConnectorFetchError(
-      response.status === 401
-        ? "Discogs authorization needs to be renewed."
-        : response.status === 429
-          ? "Discogs is temporarily rate-limiting synchronization."
-          : "Discogs could not be synchronized.",
       {
-        code:
-          response.status === 401
-            ? "reauthorization_required"
-            : response.status === 429
-              ? "rate_limited"
-              : "provider_error",
-        httpStatus: response.status,
-        retryable: response.status === 429 || response.status >= 500,
-        retryAfterSeconds,
+        code: abortController.signal.aborted
+          ? "provider_timeout"
+          : "provider_transport",
+        retryable: true,
       },
     );
+  } finally {
+    clearTimeout(timeout);
   }
-  return {
-    body: (await boundedJson(response, maximumBytes, context)) as T,
-    etag: response.headers.get("etag") ?? undefined,
-    rateLimitExhausted: rateLimitRemaining(response) === 0,
-    retryAfterSeconds: parseDiscogsRetryAfter(
-      response.headers.get("retry-after"),
-    ),
-  };
+}
+
+function shouldRetryDiscogsGet(error: unknown): boolean {
+  return (
+    error instanceof ConnectorFetchError &&
+    (error.code === "provider_transport" ||
+      (error.code === "provider_error" &&
+        error.httpStatus !== null &&
+        [502, 503, 504].includes(error.httpStatus)))
+  );
+}
+
+async function discogsGet<T>(
+  url: URL,
+  credential: DiscogsOAuthCredential,
+  context: string,
+  maximumBytes: number,
+): Promise<DiscogsResponse<T>> {
+  const request = { url, credential, context, maximumBytes };
+  try {
+    return await discogsGetAttempt<T>(request);
+  } catch (error) {
+    if (!shouldRetryDiscogsGet(error)) throw error;
+  }
+  return discogsGetAttempt<T>(request);
 }
 
 function collectionUrl(username: string, page: number): URL {
