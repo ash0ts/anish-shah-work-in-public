@@ -51,10 +51,12 @@ export async function connectorRefreshPost(
       : result.status === "failed"
         ? result.code === "credential_expired" ||
           result.code === "reauthorization_required"
-          ? "The provider credential needs to be renewed."
+          ? "The provider credential needs to be renewed. No new snapshot was published; any previously accepted snapshot remains unchanged."
           : result.code === "rate_limited"
-            ? "The provider is rate-limiting requests. The previous snapshot is still live."
-            : "The provider could not be refreshed. The previous snapshot is still live."
+            ? "The provider is rate-limiting requests. No new snapshot was published; any previously accepted snapshot remains unchanged."
+            : result.code === "public_payload_rejected"
+              ? "The provider responded, but no new snapshot passed public validation. Do not replace the credential; any previously accepted snapshot remains unchanged."
+              : "No new snapshot was published. Any previously accepted snapshot remains unchanged."
         : undefined;
   const message =
     result.status === "withheld"

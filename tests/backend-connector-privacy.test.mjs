@@ -469,3 +469,97 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(controls, /anonymous frame check/);
   assert.match(controls, /Use only Strava-generated values/);
 });
+
+test("Studio connector mutations preserve the page and give safe refresh guidance", async () => {
+  const [panel, helpers, refreshHandler] = await Promise.all([
+    readFile(
+      new URL("../app/studio/connectors/ApiConnectorPanel.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/studio/connectors/helpers.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../lib/server/http/connector-refresh.ts", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(panel, /import \{ useRouter \} from "next\/navigation"/);
+  assert.match(panel, /const router = useRouter\(\)/);
+  assert.match(
+    panel,
+    /focusAfterMutation\.current === "refresh"[\s\S]*?refreshButton\.current[\s\S]*?firstCredentialField\.current/,
+  );
+  assert.match(panel, /target\.focus\(\)/);
+  assert.equal(
+    [...panel.matchAll(/ref=\{firstCredentialField\}/g)].length,
+    3,
+    "every credential form should expose its first field for focus recovery",
+  );
+  assert.equal(
+    [...panel.matchAll(/ref=\{refreshButton\}/g)].length,
+    1,
+    "the post-save refresh control should expose a stable focus target",
+  );
+  const failedResponse = panel.match(
+    /if \(!response\.ok\) \{([\s\S]*?)\n      \}\n\n      setSecret/,
+  );
+  assert.ok(failedResponse, "failed response branch should remain explicit");
+  assert.match(failedResponse[1], /setMessage\(/);
+  assert.match(failedResponse[1], /return;/);
+  assert.doesNotMatch(failedResponse[1], /router\.refresh/);
+  assert.match(
+    panel,
+    /\} catch \{\n      setMessage\("The request could not be completed\. Try again\."\);\n    \} finally/,
+  );
+  assert.match(
+    panel,
+    /if \(action === "save"\) \{[\s\S]*?focusAfterMutation\.current = "refresh"[\s\S]*?setShowCredentialForm\(false\)/,
+  );
+  assert.match(
+    panel,
+    /if \(action === "disconnect"\) \{[\s\S]*?focusAfterMutation\.current = "credential"[\s\S]*?setShowCredentialForm\(true\)/,
+  );
+  assert.match(panel, /setMessage\([\s\S]*?router\.refresh\(\)/);
+  assert.doesNotMatch(panel, /window\.location\.reload/);
+  assert.doesNotMatch(panel, /setTimeout\([^)]*location\.reload/);
+  const refreshControl = panel.match(
+    /<button\s+ref=\{refreshButton\}([\s\S]*?)<\/button>/,
+  );
+  assert.ok(refreshControl, "Refresh now should retain a dedicated button");
+  assert.match(refreshControl[0], /type="button"/);
+  assert.match(refreshControl[0], /onClick=\{\(\) => void request\("refresh"\)\}/);
+  assert.match(
+    refreshControl[0],
+    /disabled=\{pending !== null \|\| connectorBlocked\}/,
+  );
+  assert.match(refreshControl[0], /Refreshing…/);
+  assert.match(panel, /className=\{styles\.formMessage\} role="status"/);
+  assert.match(
+    helpers,
+    /A refresh is already running\. Check this panel again in a moment/,
+  );
+  assert.match(
+    helpers,
+    /lastErrorCode === "public_payload_rejected"[\s\S]*?no new snapshot passed public validation\.[\s\S]*?Do not replace the credential; any previously accepted snapshot remains unchanged/,
+  );
+  assert.match(
+    helpers,
+    /The last refresh failed\. No new snapshot was published; any previously accepted snapshot remains unchanged\./,
+  );
+  assert.match(
+    helpers,
+    /Any previously accepted public snapshot remains unchanged\./,
+  );
+  assert.doesNotMatch(helpers, /snapshot remains available/);
+  assert.match(
+    refreshHandler,
+    /public_payload_rejected[\s\S]*?no new snapshot passed public validation\.[\s\S]*?Do not replace the credential/,
+  );
+  assert.match(
+    refreshHandler,
+    /No new snapshot was published\. Any previously accepted snapshot remains unchanged\./,
+  );
+});
