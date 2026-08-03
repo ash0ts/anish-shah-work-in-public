@@ -9,6 +9,7 @@ import {
   cloudflareAccessConfigured,
   verifyCloudflareAccess,
 } from "../lib/server/cloudflare-access";
+import { pruneConnectorRetention } from "../lib/server/connectors/repository";
 
 interface Env {
   ASSETS: Fetcher;
@@ -35,6 +36,12 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
+interface ScheduledController {
+  scheduledTime: number;
+  cron: string;
+  noRetry(): void;
+}
+
 const INTERNAL_EMAIL_HEADER = "x-anish-authenticated-user-email";
 const INTERNAL_SOURCE_HEADER = "x-anish-authenticated-auth-source";
 const INTERNAL_NONCE_HEADER = "x-anish-csp-nonce";
@@ -48,7 +55,10 @@ const PROMOTION_BODY_LIMIT_BYTES = 65_536;
 const OWNER_RATE_LIMIT = 30;
 const ARTWORK_RATE_LIMIT = 120;
 const PROMOTION_IMPORT_RATE_LIMIT = 6;
+const SPOTIFY_OAUTH_CALLBACK_RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
+const SPOTIFY_OAUTH_CALLBACK_PATH =
+  "/api/connectors/spotify/oauth/callback";
 
 const requestBuckets = new Map<
   string,
@@ -106,7 +116,7 @@ function securityPolicy(nonce: string, development: boolean): string {
     "media-src 'self'",
     "worker-src 'self'",
     "manifest-src 'self'",
-    "frame-src https://strava-embeds.com https://www.strava.com",
+    "frame-src https://open.spotify.com https://strava-embeds.com https://www.strava.com",
     ...(development ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");
 }
@@ -302,6 +312,10 @@ function securedResponse(
   if (isPrivatePath(url.pathname)) {
     headers.set("cache-control", "private, no-store");
     headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+  } else if (url.pathname === "/play" || url.pathname === "/play/") {
+    // Play includes publication-gated provider state in its server-rendered
+    // fallback. Never let a shared cache outlive an unpublish or disconnect.
+    headers.set("cache-control", "private, no-store");
   } else if (isPublicHtmlRequest(request, url.pathname) && response.ok) {
     headers.set(
       "cache-control",
@@ -362,7 +376,8 @@ const worker = {
       (!env.RATE_LIMIT_SALT || env.RATE_LIMIT_SALT.trim().length < 32) &&
       (isProtectedOwnerPath(url.pathname) ||
         url.pathname.startsWith("/api/connector-artwork/") ||
-        url.pathname === "/api/play-promotion/import")
+        url.pathname === "/api/play-promotion/import" ||
+        url.pathname === SPOTIFY_OAUTH_CALLBACK_PATH)
     ) {
       return securedResponse(
         privateJson(
@@ -378,6 +393,29 @@ const worker = {
     headers.set("content-security-policy", securityPolicy(nonce, development));
     headers.set(INTERNAL_NONCE_HEADER, nonce);
     appRequest = new Request(appRequest, { headers });
+
+    if (
+      appRequest.method === "GET" &&
+      url.pathname === SPOTIFY_OAUTH_CALLBACK_PATH
+    ) {
+      const key = await oneWayBucketKey(
+        env,
+        appRequest,
+        "spotify-oauth-callback",
+      );
+      const retryAfter = key
+        ? consumeBucket(key, SPOTIFY_OAUTH_CALLBACK_RATE_LIMIT)
+        : null;
+      if (retryAfter) {
+        const limited = privateJson(
+          "Too many Spotify authorization callbacks. Try again shortly.",
+          "rate_limited",
+          429,
+        );
+        limited.headers.set("retry-after", String(retryAfter));
+        return securedResponse(limited, request, nonce, development);
+      }
+    }
 
     if (
       appRequest.method === "POST" &&
@@ -467,6 +505,19 @@ const worker = {
     }
 
     return securedResponse(response, request, nonce, development);
+  },
+
+  async scheduled(
+    controller: ScheduledController,
+    env: Env,
+    ctx: ExecutionContext,
+  ): Promise<void> {
+    ctx.waitUntil(
+      pruneConnectorRetention(
+        env.DB,
+        new Date(controller.scheduledTime),
+      ),
+    );
   },
 };
 

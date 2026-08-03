@@ -1047,8 +1047,11 @@ test("Studio keeps a manual MyAnimeList continuation when automatic navigation s
     "utf8",
   );
 
-  assert.match(controls, /safeAuthorizationUrl\(result\.authorizationUrl\)/);
+  assert.match(
+    controls,
+    /safeAuthorizationUrl\(\s*oauthProvider,\s*result\.authorizationUrl/,
+  );
   assert.match(controls, /setAuthorizationDestination\(destination\)/);
   assert.match(controls, /href=\{authorizationDestination\}/);
-  assert.match(controls, /Continue to MyAnimeList/);
+  assert.match(controls, /Continue to \{oauthProviderTitle\}/);
 });

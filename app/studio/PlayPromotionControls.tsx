@@ -165,7 +165,7 @@ export function PlayPromotionControls({
       const labels = (result.providers ?? []).map((provider) => providerLabels[provider]);
       setTransferCode("");
       setMessage(
-        `${labels.join(", ")} staged in production. Return to production Studio to review and apply them. MyAnimeList still requires production OAuth.`,
+        `${labels.join(", ")} staged in production. Return to production Studio to review and apply them. MyAnimeList and Spotify still require separate production OAuth.`,
       );
     } catch {
       setMessage("The local server could not reach the configured production origin.");
@@ -306,7 +306,8 @@ export function PlayPromotionControls({
             )}
           </div>
           <p className={styles.promotionBoundary}>
-            MyAnimeList is intentionally excluded. Authorize the separate production app in its connector panel.
+            MyAnimeList and Spotify are intentionally excluded. Authorize each
+            separate production app in its connector panel.
           </p>
         </div>
       )}

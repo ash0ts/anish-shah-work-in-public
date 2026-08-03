@@ -38,6 +38,16 @@ import {
   normalizeSteamId,
 } from "./steam";
 import { steamStorageCountries } from "./steam-policy";
+import { fetchSpotifySnapshot } from "./spotify";
+import {
+  isSpotifyOAuthCredential,
+  refreshSpotifyOAuthCredential,
+  shouldRefreshSpotifyToken,
+} from "./spotify-oauth";
+import {
+  getSpotifyPresentationConfig,
+  SPOTIFY_PRESENTATION_SETTING_KEY,
+} from "./spotify-presentation";
 import {
   CONNECTOR_PROVIDERS,
   ConnectorFetchError,
@@ -48,6 +58,7 @@ import {
   type HardcoverCredential,
   type MyAnimeListCredential,
   type MyAnimeListOAuthCredential,
+  type SpotifyOAuthCredential,
   type SteamCredential,
   type SyncTrigger,
 } from "./types";
@@ -55,6 +66,8 @@ import {
 const FRESHNESS_WINDOW_MS = 12 * 60 * 60 * 1000;
 const RUN_LOCK_WINDOW_MS = 10 * 60 * 1000;
 const STEAM_MAX_PUBLIC_AGE_MS = 72 * 60 * 60 * 1000;
+const SPOTIFY_MAX_PUBLIC_AGE_MS = 72 * 60 * 60 * 1000;
+const SPOTIFY_SNAPSHOT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const OAUTH_TRANSACTION_WINDOW_MS = 10 * 60 * 1000;
 const OAUTH_TRANSACTION_RETENTION_MS = 24 * 60 * 60 * 1000;
 const SYNC_RUN_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
@@ -78,6 +91,8 @@ export type ConnectorHealth = {
     | "error";
   lastSyncedAt: string | null;
   freshUntil: string | null;
+  credentialExpiresAt: string | null;
+  authorizedAt: string | null;
   lastRunStatus: string | null;
   lastErrorCode: string | null;
   itemCount: number | null;
@@ -214,6 +229,8 @@ function placeholderHealth(provider: ConnectorProvider): ConnectorHealth {
     status: "setup_required",
     lastSyncedAt: null,
     freshUntil: null,
+    credentialExpiresAt: null,
+    authorizedAt: null,
     lastRunStatus: null,
     lastErrorCode: null,
     itemCount: null,
@@ -224,7 +241,7 @@ function asCount(value: unknown): number {
   return typeof value === "number" ? value : Number(value) || 0;
 }
 
-async function pruneConnectorRetention(
+export async function pruneConnectorRetention(
   database: D1Database,
   now = new Date(),
 ): Promise<void> {
@@ -236,6 +253,9 @@ async function pruneConnectorRetention(
   ).toISOString();
   const auditCutoff = new Date(
     now.getTime() - AUDIT_RETENTION_MS,
+  ).toISOString();
+  const spotifySnapshotCutoff = new Date(
+    now.getTime() - SPOTIFY_SNAPSHOT_RETENTION_MS,
   ).toISOString();
   await database.batch([
     database
@@ -253,6 +273,12 @@ async function pruneConnectorRetention(
     database
       .prepare(`DELETE FROM audit_log WHERE created_at < ?`)
       .bind(auditCutoff),
+    database
+      .prepare(
+        `DELETE FROM connector_snapshots
+         WHERE provider = 'spotify' AND fetched_at < ?`,
+      )
+      .bind(spotifySnapshotCutoff),
   ]);
 }
 
@@ -295,7 +321,8 @@ export async function getStudioOverview(
       const credential = await database
         .prepare(
           `SELECT provider, credential_label AS credentialLabel,
-                  updated_at AS updatedAt
+                  expires_at AS credentialExpiresAt,
+                  created_at AS authorizedAt, updated_at AS updatedAt
            FROM connector_credentials
            WHERE provider = ?
            LIMIT 1`,
@@ -304,6 +331,8 @@ export async function getStudioOverview(
         .first<{
           provider: string;
           credentialLabel: string;
+          credentialExpiresAt: string | null;
+          authorizedAt: string;
           updatedAt: string;
         }>();
       const snapshot = await database
@@ -339,18 +368,18 @@ export async function getStudioOverview(
           finishedAt: string | null;
         }>();
       const pendingAuthorization =
-        provider === "myanimelist"
+        provider === "myanimelist" || provider === "spotify"
           ? await database
               .prepare(
                 `SELECT state_hash AS stateHash
                  FROM connector_oauth_transactions
-                 WHERE provider = 'myanimelist'
+                 WHERE provider = ?
                    AND owner_email = ?
                    AND consumed_at IS NULL
                    AND expires_at > ?
                  LIMIT 1`,
               )
-              .bind(normalizedOwnerEmail(actorEmail), now)
+              .bind(provider, normalizedOwnerEmail(actorEmail), now)
               .first<{ stateHash: string }>()
           : null;
 
@@ -393,11 +422,13 @@ export async function getStudioOverview(
         provider,
         configured,
         canReuseOAuthClient:
-          provider === "myanimelist" &&
+          (provider === "myanimelist" || provider === "spotify") &&
           credential?.credentialLabel === "Owner OAuth authorization",
         status,
         lastSyncedAt: snapshot?.fetchedAt ?? null,
         freshUntil: snapshot?.freshUntil ?? null,
+        credentialExpiresAt: credential?.credentialExpiresAt ?? null,
+        authorizedAt: credential?.authorizedAt ?? null,
         lastRunStatus: run?.status ?? null,
         lastErrorCode: run?.errorCode ?? null,
         itemCount:
@@ -452,6 +483,20 @@ export async function getPublicConnectorSnapshot(
     return { status: "unavailable", provider, reason: "database_unavailable" };
   }
 
+  if (provider === "spotify") {
+    const presentation = await getSpotifyPresentationConfig();
+    if (
+      presentation.status !== "ready" ||
+      !presentation.config.publishTopTracks
+    ) {
+      return {
+        status: "unavailable",
+        provider,
+        reason: "visibility_withheld",
+      };
+    }
+  }
+
   try {
     const snapshots = await database
       .prepare(
@@ -486,11 +531,14 @@ export async function getPublicConnectorSnapshot(
         snapshot.publicPayloadJson,
       );
       if (!payload) continue;
-      if (provider === "steam") {
+      if (provider === "steam" || provider === "spotify") {
         const fetchedTime = Date.parse(snapshot.fetchedAt);
         if (
           !Number.isFinite(fetchedTime) ||
-          Date.now() - fetchedTime > STEAM_MAX_PUBLIC_AGE_MS
+          Date.now() - fetchedTime >
+            (provider === "steam"
+              ? STEAM_MAX_PUBLIC_AGE_MS
+              : SPOTIFY_MAX_PUBLIC_AGE_MS)
         ) {
           return {
             status: "unavailable",
@@ -1241,6 +1289,13 @@ export async function deleteConnectorCredential(
          WHERE entity_type = 'connector' AND entity_id = ?`,
       )
       .bind(provider),
+    ...(provider === "spotify"
+      ? [
+          database
+            .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
+            .bind(SPOTIFY_PRESENTATION_SETTING_KEY),
+        ]
+      : []),
     database
       .prepare(
         `INSERT INTO audit_log (
@@ -1351,6 +1406,51 @@ async function persistRefreshedMyAnimeListCredential(
   }
 }
 
+async function persistRefreshedSpotifyCredential(
+  database: D1Database,
+  credential: SpotifyOAuthCredential,
+  expectedGeneration: number,
+): Promise<void> {
+  const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
+  if (!encryptionKey) {
+    throw new ConnectorFetchError(
+      "Connector encryption is not configured.",
+      { code: "encryption_key_missing" },
+    );
+  }
+  let encrypted: EncryptedCredential;
+  try {
+    encrypted = await encryptCredential(credential, encryptionKey, "spotify");
+  } catch {
+    throw new ConnectorFetchError(
+      "Connector encryption is not configured.",
+      { code: "encryption_key_missing" },
+    );
+  }
+  const result = await database
+    .prepare(
+      `UPDATE connector_credentials
+       SET ciphertext = ?, iv = ?, key_version = ?, expires_at = ?,
+           credential_label = 'Owner OAuth authorization', updated_at = ?
+       WHERE provider = 'spotify' AND generation = ?`,
+    )
+    .bind(
+      encrypted.ciphertext,
+      encrypted.iv,
+      encrypted.keyVersion,
+      credential.accessTokenExpiresAt,
+      new Date().toISOString(),
+      expectedGeneration,
+    )
+    .run();
+  if ((result.meta.changes ?? 0) !== 1) {
+    throw new ConnectorFetchError(
+      "Spotify authorization could not be saved.",
+      { code: "credential_changed" },
+    );
+  }
+}
+
 async function fetchConnectorSnapshot(
   database: D1Database,
   provider: ConnectorProvider,
@@ -1401,6 +1501,40 @@ async function fetchConnectorSnapshot(
     }
     case "hardcover":
       return fetchHardcoverSnapshot(credential as HardcoverCredential);
+    case "spotify": {
+      let current = credential as SpotifyOAuthCredential;
+      if (!isSpotifyOAuthCredential(current)) {
+        throw new ConnectorFetchError(
+          "Spotify authorization needs to be renewed.",
+          { code: "reauthorization_required" },
+        );
+      }
+      if (shouldRefreshSpotifyToken(current)) {
+        current = await refreshSpotifyOAuthCredential(current);
+        await persistRefreshedSpotifyCredential(
+          database,
+          current,
+          expectedGeneration,
+        );
+      }
+      try {
+        return await fetchSpotifySnapshot(current);
+      } catch (error) {
+        if (
+          !(error instanceof ConnectorFetchError) ||
+          error.code !== "credential_expired"
+        ) {
+          throw error;
+        }
+      }
+      current = await refreshSpotifyOAuthCredential(current);
+      await persistRefreshedSpotifyCredential(
+        database,
+        current,
+        expectedGeneration,
+      );
+      return fetchSpotifySnapshot(current);
+    }
     case "steam":
       return fetchSteamSnapshot(credential as SteamCredential);
   }

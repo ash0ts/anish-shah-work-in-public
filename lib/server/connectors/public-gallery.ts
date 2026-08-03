@@ -30,6 +30,13 @@ type GallerySpec = {
 export function connectorSnapshotNeedsUpgrade(
   payload: Record<string, unknown>,
 ): boolean {
+  if (payload.provider === "spotify") {
+    return (
+      payload.snapshotVersion !== 1 ||
+      typeof payload.windows !== "object" ||
+      payload.windows === null
+    );
+  }
   return payload.snapshotVersion !== 3 || !Array.isArray(payload.library);
 }
 
@@ -38,6 +45,9 @@ export function projectConnectorSnapshotForPublic(
   payload: Record<string, unknown>,
   searchParams: URLSearchParams,
 ): Record<string, unknown> {
+  if (provider === "spotify") {
+    return projectSpotifySnapshot(payload);
+  }
   const { library: rawLibrary, ...summary } = payload;
   if (!Array.isArray(rawLibrary)) {
     return {
@@ -121,6 +131,73 @@ export function projectConnectorSnapshotForPublic(
       ],
       sorts: spec.sorts,
     },
+  };
+}
+
+function projectSpotifySnapshot(
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  const windows = payload.windows;
+  if (typeof windows !== "object" || windows === null || Array.isArray(windows)) {
+    return { provider: "spotify", windows: {} };
+  }
+  return {
+    provider: "spotify",
+    snapshotVersion: 1,
+    profileUrl: payload.profileUrl,
+    coverage: payload.coverage,
+    syncedAt: payload.syncedAt,
+    freshUntil: payload.freshUntil,
+    windows: Object.fromEntries(
+      ["short_term", "medium_term", "long_term"].map(
+        (range) => {
+          const rawWindow = (windows as Record<string, unknown>)[range];
+          if (typeof rawWindow !== "object" || rawWindow === null) {
+            return [range, { tracks: [] }];
+          }
+          const tracks = (rawWindow as Record<string, unknown>).tracks;
+          return [
+            range,
+            {
+              tracks: Array.isArray(tracks)
+                ? tracks.flatMap((track) => {
+                    if (typeof track !== "object" || track === null) return [];
+                    const record = track as Record<string, unknown>;
+                    const id = stringValue(record.id);
+                    const album = record.album;
+                    if (typeof album !== "object" || album === null) {
+                      return [];
+                    }
+                    const albumRecord = album as Record<string, unknown>;
+                    const storedArtwork = albumRecord.artwork;
+                    const artwork = publicArtworkForItem(
+                      "spotify",
+                      id,
+                      storedArtwork,
+                    );
+                    return [
+                      {
+                        id,
+                        position: record.position,
+                        title: record.title,
+                        artists: record.artists,
+                        album: {
+                          id: albumRecord.id,
+                          title: albumRecord.title,
+                          releaseYear: albumRecord.releaseYear,
+                          ...(artwork ? { artwork } : {}),
+                        },
+                        durationMs: record.durationMs,
+                        explicit: record.explicit,
+                      },
+                    ];
+                  })
+                : [],
+            },
+          ];
+        },
+      ),
+    ),
   };
 }
 

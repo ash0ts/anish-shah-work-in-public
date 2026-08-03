@@ -91,6 +91,7 @@ test("the Worker applies the required secure response policy", async () => {
     "referrer-policy",
     "permissions-policy",
     "frame-ancestors 'none'",
+    "https://open.spotify.com",
     "https://strava-embeds.com",
     "https://www.strava.com",
     "private, no-store",
@@ -99,6 +100,44 @@ test("the Worker applies the required secure response policy", async () => {
     assert.match(worker, new RegExp(policy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
   assert.doesNotMatch(worker, /script-src[^\n]*unsafe-inline/);
+  assert.match(
+    worker,
+    /url\.pathname === "\/play"[\s\S]{0,500}private, no-store/,
+  );
+});
+
+test("Spotify callbacks are one-way throttled before application routing", async () => {
+  const worker = await readFile(new URL("../worker/index.ts", import.meta.url), "utf8");
+  const callbackStart = worker.indexOf(
+    'url.pathname === SPOTIFY_OAUTH_CALLBACK_PATH',
+  );
+  const applicationRoute = worker.indexOf(
+    'if (url.pathname === "/_vinext/image")',
+    callbackStart,
+  );
+  const callbackBlock = worker.slice(callbackStart, applicationRoute);
+
+  assert(callbackStart >= 0);
+  assert(applicationRoute > callbackStart);
+  assert.match(callbackBlock, /oneWayBucketKey/);
+  assert.match(callbackBlock, /"spotify-oauth-callback"/);
+  assert.match(
+    callbackBlock,
+    /consumeBucket\(key, SPOTIFY_OAUTH_CALLBACK_RATE_LIMIT\)/,
+  );
+  assert.match(callbackBlock, /retry-after/);
+});
+
+test("retention cleanup has a daily scheduled Worker trigger", async () => {
+  const [worker, repository, release] = await Promise.all([
+    readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/connectors/repository.ts", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/prepare-cloudflare-release.mjs", import.meta.url), "utf8"),
+  ]);
+  assert.match(repository, /export async function pruneConnectorRetention/);
+  assert.match(worker, /async scheduled\(/);
+  assert.match(worker, /pruneConnectorRetention\(/);
+  assert.match(release, /config\.triggers = \{ crons: \["17 4 \* \* \*"\] \}/);
 });
 
 test("the public promotion import is rate-limited before its body is read", async () => {

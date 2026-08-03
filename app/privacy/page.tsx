@@ -23,14 +23,14 @@ export default function PrivacyPage() {
         <p>
           These connectors retrieve Anish’s own public activity after
           owner-authorized setup. They do not collect a visitor’s Steam,
-          MyAnimeList, Hardcover, or Strava account data.
+          Spotify, MyAnimeList, Hardcover, or Strava account data.
         </p>
         <small>Owner-controlled · sanitized public snapshots only</small>
       </header>
 
       <article className={styles.policy}>
         <section>
-          <h2>Four deliberately different connections</h2>
+          <h2>Five deliberately different connections</h2>
           <p>
             Each provider has a narrow input, a bounded public output, and an
             explicit deletion path.
@@ -65,6 +65,23 @@ export default function PrivacyPage() {
               </dd>
             </div>
             <div>
+              <dt>Spotify · Listen</dt>
+              <dd>
+                Studio stores an encrypted app client secret plus renewable
+                access and refresh tokens. It requests only the permissions
+                needed to identify the owner and retrieve Spotify’s Top Tracks
+                affinity for its approximate four-week, six-month, and
+                one-year windows. D1 stores at most twelve ordered tracks per
+                window, reduced artwork references, synchronization dates,
+                and the owner’s separate publication choice. The site does not
+                store play counts, listening history, popularity, preview
+                audio, country, subscription, or raw provider responses; it
+                does not infer listening time, genre, trends, or a taste
+                profile. An optional official track, album, or playlist Embed
+                is blocked until a visitor explicitly chooses to load it.
+              </dd>
+            </div>
+            <div>
               <dt>Steam · Play</dt>
               <dd>
                 Studio encrypts the Web API key and SteamID64 together. D1
@@ -96,13 +113,15 @@ export default function PrivacyPage() {
         <section>
           <h2>Storage and retention</h2>
           <p>
-            MyAnimeList, Hardcover, and Steam refresh no more than once every
-            12 hours unless the protected owner Studio requests a refresh. D1
-            retains at most the latest two complete sanitized snapshots for
-            each provider. A public request receives only a page-sized gallery
-            rather than the stored collection. Transient failures preserve the
-            latest eligible last-known-good snapshot; Steam’s public fallback
-            expires after 72 hours.
+            MyAnimeList, Hardcover, Spotify, and Steam refresh no more than
+            once every 12 hours unless the protected owner Studio requests a
+            refresh. D1 retains at most the latest two complete sanitized
+            snapshots for each provider. A public request receives only a
+            page-sized gallery rather than the stored collection. Transient
+            failures preserve the latest eligible last-known-good snapshot.
+            Steam’s public fallback
+            and Spotify’s API-derived display expire after 72 hours; expired
+            Spotify metadata is deleted after 30 days.
           </p>
           <p>
             Raw provider responses are processed in memory and discarded.
@@ -139,11 +158,30 @@ export default function PrivacyPage() {
         <section>
           <h2>Visitors and provider terms</h2>
           <p>
-            Selecting Watch, Read, or Play requests only this site’s sanitized
-            first-party snapshot. Selecting Move requests the stored embed
-            configuration, but no request reaches Strava until the visitor
-            grants consent. The site does not collect a visitor’s account data
-            from any of these providers.
+            Selecting Watch, Read, Listen, or Play requests only this site’s
+            sanitized first-party snapshot. Spotify album artwork is requested
+            only after Listen is active. The Spotify player has a separate
+            consent gate and is not requested until the visitor chooses to load
+            it. Selecting Move requests the stored embed configuration, but no
+            request reaches Strava until the visitor grants consent. The site
+            does not collect a visitor’s account data from any of these
+            providers.
+          </p>
+          <p>
+            Spotify content is attributed to Spotify and links back to the
+            corresponding Spotify surface. Top Tracks means
+            Spotify-calculated affinity for the labeled time window, not play
+            counts or a listening-history export. This is a personal,
+            noncommercial Spotify surface. The optional Spotify Embed may set
+            or read provider cookies after consent. Review the{" "}
+            <a href="https://developer.spotify.com/terms">
+              Spotify Developer Terms
+            </a>{" "}
+            and{" "}
+            <a href="https://developer.spotify.com/documentation/embeds/terms">
+              Spotify Embed Terms
+            </a>
+            .
           </p>
           <p>
             Data provided by Steam. This independent personal site is not

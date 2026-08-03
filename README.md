@@ -12,7 +12,7 @@ technical storytelling, and community programs from 2021 onward.
   public forms
 - `/work/[slug]` — one story page that keeps its appearances, recordings,
   translations, repositories, and references together
-- `/play` — consent-aware MyAnimeList, Hardcover, Steam, and Strava streams
+- `/play` — consent-aware MyAnimeList, Hardcover, Spotify, Steam, and Strava streams
 - `/sources` — archive accounting, claim context, counting rules, and the
   public evidence explorer
 - `/studio` — owner-only editorial and connector controls
@@ -77,7 +77,7 @@ Deploy code and non-secret configuration separately. After deployment, the
 owner may use Studio’s single-use transfer code to send only the encrypted
 Hardcover, Steam, and Strava setup to the production origin for review and
 validation. Snapshots and the local encryption key never transfer;
-MyAnimeList always requires production OAuth. Never copy local D1 state or
+MyAnimeList and Spotify always require production OAuth. Never copy local D1 state or
 replace the production encryption key.
 
 Useful checks:
@@ -110,6 +110,14 @@ and renews access automatically. Hardcover uses its owner API token. Both use
 12-hour stale-while-revalidate snapshots and preserve the last successful
 public result on transient provider failure. Their public profile links are
 derived from the authenticated provider identities.
+
+Spotify uses a separate owner-only OAuth client in local and production Studio.
+Its optional public surface preserves Spotify's returned Top Tracks order for
+one official time window at a time, with no inferred play counts or listening
+analytics. The ranked groove is only an ordinal navigator; playback remains in
+one consent-gated official Spotify embed. Top Tracks publication is disabled by
+default and Spotify credentials, tokens, and snapshots never enter the local
+promotion handoff.
 
 Strava is configured through Studio with a public athlete profile and an
 optional complete Strava-generated profile-feed, weekly-summary, activity, or

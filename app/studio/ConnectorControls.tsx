@@ -11,6 +11,7 @@ type Props = {
   environment: Environment;
   encryptionConfigured: boolean;
   myAnimeListCallbackUrl: string | null;
+  spotifyCallbackUrl: string | null;
   steamStorageCountries: string | null;
 };
 
@@ -27,6 +28,18 @@ type ApiResult = {
   embedStatus?: "available" | "unavailable";
   status?: string;
   updatedAt?: string;
+  config?: SpotifyPresentationConfig;
+};
+
+type SpotifyPresentationConfig = {
+  publishTopTracks: boolean;
+  reviewedAt: string | null;
+  updatedAt: string | null;
+  updatedByEmail: string | null;
+  fallbackEmbed: {
+    kind: "track" | "album" | "playlist";
+    spotifyId: string;
+  } | null;
 };
 
 const providerMeta = {
@@ -64,6 +77,29 @@ const providerMeta = {
     recovery:
       "Tokens expire after one year and reset on January 1; Hardcover may also reset them during beta. If refresh returns 401, copy a current token, choose Replace credential, and refresh again. For rate limits, wait before retrying.",
   },
+  spotify: {
+    stream: "Listen",
+    title: "Spotify",
+    requirement: "Client ID + client secret",
+    sources: [
+      {
+        href: "https://developer.spotify.com/dashboard",
+        label: "Open developer dashboard",
+      },
+      {
+        href: "https://developer.spotify.com/documentation/web-api/concepts/redirect_uri",
+        label: "Review redirect rules",
+      },
+      {
+        href: "https://developer.spotify.com/documentation/web-api/concepts/quota-modes",
+        label: "Review development mode",
+      },
+    ],
+    summary:
+      "Authorize the owner account, synchronize Spotify-calculated Top Tracks, then make a separate decision about public display. Rankings are affinity—not play counts.",
+    recovery:
+      "Development-mode apps require the app owner to keep Spotify Premium and the authorized account on the app allowlist. Spotify refresh tokens expire after six months; when Studio requests reauthorization, authorize again rather than retrying. Replace app credentials only when the registration changed, and respect Retry-After before retrying a rate limit.",
+  },
   steam: {
     stream: "Play",
     title: "Steam",
@@ -89,26 +125,31 @@ const providerMeta = {
   },
 } as const;
 
-const callbackResultMessages: Record<string, string> = {
-  connected:
-    "MyAnimeList authorization is complete. Select Refresh now to verify the connection and create the sanitized snapshot.",
-  denied:
-    "MyAnimeList authorization was denied. Nothing was connected; start authorization again when ready.",
+const callbackResultMessages: Record<string, (provider: string) => string> = {
+  connected: (provider) =>
+    `${provider} authorization is complete. Select Refresh now to verify the connection and create the sanitized snapshot.`,
+  denied: (provider) =>
+    `${provider} authorization was denied. Nothing was connected; start authorization again when ready.`,
   expired:
-    "The authorization attempt expired after ten minutes. Start a new authorization.",
+    () => "The authorization attempt expired after ten minutes. Start a new authorization.",
   invalid_state:
-    "The authorization response could not be verified. Start again from this Studio tab.",
-  provider_unavailable:
-    "MyAnimeList is temporarily unavailable. Wait a few minutes, then start authorization again.",
-  rate_limited:
-    "MyAnimeList rate-limited the authorization request. Wait before starting it again.",
-  token_exchange_failed:
-    "MyAnimeList did not issue usable tokens. If the app registration changed, check its secret and exact callback; otherwise start again.",
+    () => "The authorization response could not be verified. Start again from this Studio tab.",
+  provider_unavailable: (provider) =>
+    `${provider} is temporarily unavailable. Wait a few minutes, then start authorization again.`,
+  rate_limited: (provider) =>
+    `${provider} rate-limited the authorization request. Wait before starting it again.`,
+  token_exchange_failed: (provider) =>
+    `${provider} did not issue usable tokens. If the app registration changed, check its secret and exact callback; otherwise start again.`,
   setup_required:
-    "Studio could not finish authorization because encryption or the database is not ready. Resolve the setup notice and try again.",
+    () => "Studio could not finish authorization because encryption or the database is not ready. Resolve the setup notice and try again.",
   forbidden:
-    "The authorization response was not associated with the allowlisted owner. Sign in with the owner account and start again.",
+    () => "The authorization response was not associated with the allowlisted owner. Sign in with the owner account and start again.",
 };
+
+const oauthStartPaths = {
+  myanimelist: "/api/studio/connectors/myanimelist/oauth/start",
+  spotify: "/api/studio/connectors/spotify/oauth/start",
+} as const;
 
 function connectorStatusLabel(
   connector: ConnectorHealth,
@@ -182,31 +223,36 @@ function statusGuidance(
     connector.lastErrorCode === "credential_expired" ||
     connector.lastErrorCode === "credential_invalid"
   ) {
-    return connector.provider === "myanimelist"
+    return connector.provider === "myanimelist" || connector.provider === "spotify"
       ? connector.canReuseOAuthClient
         ? `Authorize the owner account again, then refresh.${preservedSnapshot}`
         : `This legacy token cannot be renewed automatically. Enter the app client ID and secret, authorize, then refresh.${preservedSnapshot}`
       : `Replace the credential, then refresh.${preservedSnapshot}`;
   }
   if (connector.status === "authorization_required") {
-    return "Complete the open MyAnimeList authorization. If that tab was closed, start authorization again.";
+    const provider = connector.provider === "spotify" ? "Spotify" : "MyAnimeList";
+    return `Complete the open ${provider} authorization. If that tab was closed, start authorization again.`;
   }
   if (connector.status === "setup_required") {
     return connector.configured
       ? "A release gate is incomplete. Resolve the setup notice before refreshing."
-      : connector.provider === "myanimelist"
+      : connector.provider === "myanimelist" || connector.provider === "spotify"
         ? "Enter the app credentials, then authorize the owner account."
         : "Enter the owner credential, then run the first refresh.";
   }
   if (connector.status === "never_synced") {
     return environment === "local"
       ? "Connected in local D1. Run Refresh now to create the first local sanitized snapshot."
-      : "Connected. Run Refresh now to publish the first sanitized snapshot.";
+      : connector.provider === "spotify"
+        ? "Connected. Run Refresh now to create the first sanitized snapshot; public display remains controlled below."
+        : "Connected. Run Refresh now to publish the first sanitized snapshot.";
   }
   if (connector.status === "healthy") {
     return environment === "local"
       ? "The local snapshot is current. It has not been copied to production."
-      : "The public snapshot is current. Automatic refreshes are limited to once every 12 hours.";
+      : connector.provider === "spotify"
+        ? "The sanitized snapshot is current. Public display remains controlled below; automatic refreshes are limited to once every 12 hours."
+        : "The public snapshot is current. Automatic refreshes are limited to once every 12 hours.";
   }
   if (connector.status === "stale") {
     return `The snapshot is due for refresh.${preservedSnapshot}`;
@@ -234,6 +280,22 @@ function formatTimestamp(value: string | null): string {
   }).format(date);
 }
 
+function spotifyPublicCutoff(value: string | null): string | null {
+  if (!value) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp)
+    ? new Date(timestamp + 72 * 60 * 60 * 1000).toISOString()
+    : null;
+}
+
+function spotifyReauthorizationDate(value: string | null): string | null {
+  if (!value) return null;
+  const authorized = new Date(value);
+  if (Number.isNaN(authorized.valueOf())) return null;
+  authorized.setUTCMonth(authorized.getUTCMonth() + 6);
+  return authorized.toISOString();
+}
+
 async function responseJson(response: Response): Promise<ApiResult> {
   try {
     return (await response.json()) as ApiResult;
@@ -242,12 +304,20 @@ async function responseJson(response: Response): Promise<ApiResult> {
   }
 }
 
-function safeAuthorizationUrl(value: string | undefined): string | null {
+function safeAuthorizationUrl(
+  provider: "myanimelist" | "spotify",
+  value: string | undefined,
+): string | null {
   if (!value) return null;
   try {
     const url = new URL(value);
-    return url.origin === "https://myanimelist.net" &&
-      url.pathname === "/v1/oauth2/authorize"
+    const valid =
+      provider === "myanimelist"
+        ? url.origin === "https://myanimelist.net" &&
+          url.pathname === "/v1/oauth2/authorize"
+        : url.origin === "https://accounts.spotify.com" &&
+          url.pathname === "/authorize";
+    return valid
       ? url.toString()
       : null;
   } catch {
@@ -260,10 +330,15 @@ export function ConnectorControls({
   environment,
   encryptionConfigured,
   myAnimeListCallbackUrl,
+  spotifyCallbackUrl,
   steamStorageCountries,
 }: Props) {
   const meta = providerMeta[connector.provider];
   const isMyAnimeList = connector.provider === "myanimelist";
+  const isSpotify = connector.provider === "spotify";
+  const isOAuthProvider = isMyAnimeList || isSpotify;
+  const oauthProvider = isSpotify ? "spotify" : "myanimelist";
+  const oauthProviderTitle = isSpotify ? "Spotify" : "MyAnimeList";
   const [secret, setSecret] = useState("");
   const [clientId, setClientId] = useState("");
   const [steamId, setSteamId] = useState("");
@@ -280,17 +355,23 @@ export function ConnectorControls({
   const connectorBlocked =
     !encryptionConfigured ||
     (isMyAnimeList && !myAnimeListCallbackUrl) ||
+    (isSpotify && !spotifyCallbackUrl) ||
     (connector.provider === "steam" && !steamStorageCountries);
   const registeredCallback = isMyAnimeList
     ? myAnimeListCallbackUrl
-    : null;
+    : isSpotify
+      ? spotifyCallbackUrl
+      : null;
 
   useEffect(() => {
-    if (!isMyAnimeList) return;
+    if (!isOAuthProvider) return;
     const query = new URLSearchParams(window.location.search);
-    if (query.get("connector") !== "myanimelist") return;
+    if (query.get("connector") !== oauthProvider) return;
     const result = query.get("result");
-    const resultMessage = result ? callbackResultMessages[result] : null;
+    const resultMessageFactory = result ? callbackResultMessages[result] : null;
+    const resultMessage = resultMessageFactory
+      ? resultMessageFactory(oauthProviderTitle)
+      : null;
     const updateTimer = resultMessage
       ? window.setTimeout(() => {
           setMessage(resultMessage);
@@ -306,7 +387,7 @@ export function ConnectorControls({
     return () => {
       if (updateTimer !== null) window.clearTimeout(updateTimer);
     };
-  }, [connector.configured, isMyAnimeList]);
+  }, [connector.configured, isOAuthProvider, oauthProvider, oauthProviderTitle]);
 
   async function copyCallback(): Promise<void> {
     if (!registeredCallback) {
@@ -324,13 +405,13 @@ export function ConnectorControls({
     }
   }
 
-  async function authorizeMyAnimeList(reuseStored: boolean): Promise<void> {
+  async function authorizeOAuthProvider(reuseStored: boolean): Promise<void> {
     if (!registeredCallback) {
       setMessage("Set SITE_URL to the exact origin and restart Studio first.");
       return;
     }
     if (!reuseStored && (!clientId.trim() || !secret)) {
-      setMessage("Enter both the MyAnimeList client ID and client secret.");
+      setMessage(`Enter both the ${oauthProviderTitle} client ID and client secret.`);
       return;
     }
     setPending("authorize");
@@ -338,7 +419,7 @@ export function ConnectorControls({
     setAuthorizationDestination(null);
     try {
       const response = await fetch(
-        "/api/studio/connectors/myanimelist/oauth/start",
+        oauthStartPaths[oauthProvider],
         {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -353,7 +434,7 @@ export function ConnectorControls({
       if (!response.ok) {
         setMessage(
           result.error ??
-            `MyAnimeList authorization could not start (${response.status}).`,
+            `${oauthProviderTitle} authorization could not start (${response.status}).`,
         );
         return;
       }
@@ -363,7 +444,10 @@ export function ConnectorControls({
         );
         return;
       }
-      const destination = safeAuthorizationUrl(result.authorizationUrl);
+      const destination = safeAuthorizationUrl(
+        oauthProvider,
+        result.authorizationUrl,
+      );
       if (!destination) {
         setMessage(
           "Studio received an invalid authorization destination. Nothing was opened.",
@@ -373,11 +457,11 @@ export function ConnectorControls({
       setSecret("");
       setAuthorizationDestination(destination);
       setMessage(
-        "MyAnimeList authorization is ready. If it does not open automatically, use Continue to MyAnimeList below.",
+        `${oauthProviderTitle} authorization is ready. If it does not open automatically, use Continue to ${oauthProviderTitle} below.`,
       );
       window.location.assign(destination);
     } catch {
-      setMessage("MyAnimeList authorization could not start. Try again.");
+      setMessage(`${oauthProviderTitle} authorization could not start. Try again.`);
     } finally {
       setPending(null);
     }
@@ -388,14 +472,14 @@ export function ConnectorControls({
   ): Promise<void> {
     const cancellingPendingAuthorization =
       action === "disconnect" &&
-      isMyAnimeList &&
+      isOAuthProvider &&
       !connector.configured &&
       connector.status === "authorization_required";
     if (
       action === "disconnect" &&
       !window.confirm(
         cancellingPendingAuthorization
-          ? `Cancel the pending MyAnimeList authorization? Its encrypted, single-use transaction will be deleted${environment === "local" ? " from this local sandbox." : "."}`
+          ? `Cancel the pending ${oauthProviderTitle} authorization? Its encrypted, single-use transaction will be deleted${environment === "local" ? " from this local sandbox." : "."}`
           : `Disconnect ${meta.title}? Its encrypted credentials, snapshots, pending authorization, and sync history will be deleted${environment === "local" ? " from this local sandbox." : " and the stream will be unpublished."}`,
       )
     ) {
@@ -439,10 +523,12 @@ export function ConnectorControls({
         action === "save"
           ? environment === "local"
             ? "Credential encrypted in local D1. Run Refresh now to verify it in this sandbox."
-            : "Credential encrypted and saved. Run Refresh now to verify and publish it."
+            : connector.provider === "spotify"
+              ? "Credential encrypted and saved. Run Refresh now to verify it; public display remains controlled separately."
+              : "Credential encrypted and saved. Run Refresh now to verify and publish it."
           : action === "disconnect"
             ? cancellingPendingAuthorization
-              ? "Pending MyAnimeList authorization cancelled."
+              ? `Pending ${oauthProviderTitle} authorization cancelled.`
               : `${meta.title} disconnected. Its credentials, snapshots, and sync history were deleted${environment === "local" ? " from this sandbox." : "."}`
             : result.status === "already_running"
               ? "A refresh is already running."
@@ -505,7 +591,11 @@ export function ConnectorControls({
           </div>
           <div>
             <dt>
-              {environment === "local" ? "Local snapshot" : "Published snapshot"}
+              {environment === "local"
+                ? "Local snapshot"
+                : isSpotify
+                  ? "Sanitized snapshot"
+                  : "Published snapshot"}
             </dt>
             <dd>
               {connector.itemCount === null
@@ -513,6 +603,28 @@ export function ConnectorControls({
                 : `${connector.itemCount.toLocaleString()} items`}
             </dd>
           </div>
+          <div>
+            <dt>Snapshot refresh due</dt>
+            <dd>{formatTimestamp(connector.freshUntil)}</dd>
+          </div>
+          {isOAuthProvider ? (
+            <div>
+              <dt>Access token refresh</dt>
+              <dd>{formatTimestamp(connector.credentialExpiresAt)}</dd>
+            </div>
+          ) : null}
+          {isSpotify ? (
+            <>
+              <div>
+                <dt>Public cutoff</dt>
+                <dd>{formatTimestamp(spotifyPublicCutoff(connector.lastSyncedAt))}</dd>
+              </div>
+              <div>
+                <dt>Reauthorize by</dt>
+                <dd>{formatTimestamp(spotifyReauthorizationDate(connector.authorizedAt))}</dd>
+              </div>
+            </>
+          ) : null}
         </dl>
 
         <p className={styles.statusGuidance}>{statusGuidance(
@@ -522,7 +634,7 @@ export function ConnectorControls({
           steamStorageCountries,
         )}</p>
 
-        {isMyAnimeList ? (
+        {isOAuthProvider ? (
           <div className={styles.callbackBlock}>
             <span>Callback URL for this {environment === "local" ? "local client" : "production client"}</span>
             <div>
@@ -537,8 +649,11 @@ export function ConnectorControls({
               </button>
             </div>
             <p>
-              Register this exact URL in MyAnimeList. Use a separate API client
-              for local and production.
+              Register this exact URL in {oauthProviderTitle}. Use a separate
+              application for local and production.
+              {isSpotify && environment === "local"
+                ? " Spotify rejects localhost redirects, so this callback uses the explicit 127.0.0.1 loopback address."
+                : ""}
             </p>
           </div>
         ) : null}
@@ -548,16 +663,16 @@ export function ConnectorControls({
             className={styles.credentialForm}
             onSubmit={(event) => {
               event.preventDefault();
-              if (isMyAnimeList) void authorizeMyAnimeList(false);
+              if (isOAuthProvider) void authorizeOAuthProvider(false);
               else void request("save");
             }}
           >
-            {isMyAnimeList ? (
+            {isOAuthProvider ? (
               <div className={styles.fieldPair}>
-                <label className={styles.formField} htmlFor="myanimelist-client-id">
+                <label className={styles.formField} htmlFor={`${oauthProvider}-client-id`}>
                   <span>Client ID</span>
                   <input
-                    id="myanimelist-client-id"
+                    id={`${oauthProvider}-client-id`}
                     type="text"
                     value={clientId}
                     minLength={8}
@@ -565,14 +680,14 @@ export function ConnectorControls({
                     autoComplete="off"
                     spellCheck={false}
                     onChange={(event) => setClientId(event.target.value)}
-                    placeholder="From MyAnimeList API settings"
+                    placeholder={`From ${oauthProviderTitle} developer settings`}
                     required
                   />
                 </label>
-                <label className={styles.formField} htmlFor="myanimelist-client-secret">
+                <label className={styles.formField} htmlFor={`${oauthProvider}-client-secret`}>
                   <span>Client secret</span>
                   <input
-                    id="myanimelist-client-secret"
+                    id={`${oauthProvider}-client-secret`}
                     type="password"
                     value={secret}
                     minLength={8}
@@ -647,8 +762,8 @@ export function ConnectorControls({
                   ? "Opening authorization…"
                   : pending === "save"
                     ? "Saving…"
-                    : isMyAnimeList
-                      ? "Authorize with MyAnimeList"
+                    : isOAuthProvider
+                      ? `Authorize with ${oauthProviderTitle}`
                       : connector.configured
                         ? "Replace credential"
                         : "Connect"}
@@ -668,7 +783,7 @@ export function ConnectorControls({
                   Cancel
                 </button>
               ) : null}
-              {isMyAnimeList &&
+              {isOAuthProvider &&
               !connector.configured &&
               connector.status === "authorization_required" ? (
                 <button
@@ -693,12 +808,12 @@ export function ConnectorControls({
             >
               {pending === "refresh" ? "Refreshing…" : "Refresh now"}
             </button>
-            {isMyAnimeList && connector.canReuseOAuthClient ? (
+            {isOAuthProvider && connector.canReuseOAuthClient ? (
               <button
                 className={styles.quietButton}
                 type="button"
                 disabled={pending !== null || connectorBlocked}
-                onClick={() => void authorizeMyAnimeList(true)}
+                onClick={() => void authorizeOAuthProvider(true)}
               >
                 {pending === "authorize" ? "Opening…" : "Authorize again"}
               </button>
@@ -712,7 +827,7 @@ export function ConnectorControls({
                 setShowCredentialForm(true);
               }}
             >
-              {isMyAnimeList ? "Replace app credentials" : "Replace credential"}
+              {isOAuthProvider ? "Replace app credentials" : "Replace credential"}
             </button>
             <button
               className={styles.quietButton}
@@ -730,6 +845,13 @@ export function ConnectorControls({
           {meta.recovery}
         </p>
 
+        {isSpotify ? (
+          <SpotifyPresentationControls
+            configured={connector.configured}
+            environment={environment}
+          />
+        ) : null}
+
         {message ? (
           <p className={styles.formMessage} role="status">
             {message}
@@ -741,10 +863,232 @@ export function ConnectorControls({
             href={authorizationDestination}
             rel="noreferrer"
           >
-            Continue to MyAnimeList
+            Continue to {oauthProviderTitle}
           </a>
         ) : null}
       </div>
+    </section>
+  );
+}
+
+type SpotifyConfigState =
+  | { phase: "loading" }
+  | { phase: "error"; message: string }
+  | { phase: "ready"; config: SpotifyPresentationConfig };
+
+function spotifyFallbackUrl(
+  fallback: SpotifyPresentationConfig["fallbackEmbed"],
+): string {
+  return fallback
+    ? `https://open.spotify.com/${fallback.kind}/${fallback.spotifyId}`
+    : "";
+}
+
+function SpotifyPresentationControls({
+  configured,
+  environment,
+}: {
+  configured: boolean;
+  environment: Environment;
+}) {
+  const [state, setState] = useState<SpotifyConfigState>({ phase: "loading" });
+  const [publishTopTracks, setPublishTopTracks] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [fallbackEmbed, setFallbackEmbed] = useState("");
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/studio/connectors/spotify/config", { cache: "no-store" })
+      .then(async (response) => {
+        const result = await responseJson(response);
+        if (!active) return;
+        if (response.ok && result.config) {
+          setState({ phase: "ready", config: result.config });
+          setPublishTopTracks(result.config.publishTopTracks);
+          setFallbackEmbed(spotifyFallbackUrl(result.config.fallbackEmbed));
+          return;
+        }
+        setState({
+          phase: "error",
+          message:
+            result.error ??
+            "Spotify display settings could not be checked. Reload Studio and try again.",
+        });
+      })
+      .catch(() => {
+        if (active) {
+          setState({
+            phase: "error",
+            message:
+              "Spotify display settings could not be checked. Reload Studio and try again.",
+          });
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function save(): Promise<void> {
+    if (publishTopTracks && !configured) {
+      setMessage("Authorize and refresh Spotify before publishing Top Tracks.");
+      return;
+    }
+    if (publishTopTracks && !acknowledged) {
+      setMessage("Acknowledge the public-display qualification before publishing.");
+      return;
+    }
+    setPending(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/studio/connectors/spotify/config", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          publishTopTracks,
+          fallbackEmbed: fallbackEmbed.trim() || null,
+          acknowledgePublicDisplay: publishTopTracks ? acknowledged : false,
+        }),
+      });
+      const result = await responseJson(response);
+      if (!response.ok || !result.config) {
+        setMessage(
+          result.error ??
+            "Use an official open.spotify.com track, album, or playlist URL, then try again.",
+        );
+        return;
+      }
+      setState({ phase: "ready", config: result.config });
+      setPublishTopTracks(result.config.publishTopTracks);
+      setFallbackEmbed(spotifyFallbackUrl(result.config.fallbackEmbed));
+      setAcknowledged(false);
+      setMessage(
+        result.config.publishTopTracks
+          ? environment === "local"
+            ? "Top Tracks enabled in the local sandbox only. Production still requires separate authorization and review."
+            : "Top Tracks published with the affinity qualification."
+          : result.config.fallbackEmbed
+            ? "Top Tracks are private. The official Spotify fallback is available after visitor consent."
+            : "Spotify public display is off.",
+      );
+    } catch {
+      setMessage("Spotify display settings could not be saved. Try again.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const config = state.phase === "ready" ? state.config : null;
+
+  return (
+    <section className={styles.spotifyPublication} aria-labelledby="spotify-display-title">
+      <div className={styles.spotifyPublicationLead}>
+        <div>
+          <p className={styles.spotifyPublicationLabel}>Public display</p>
+          <h4 id="spotify-display-title">Choose what leaves Studio.</h4>
+        </div>
+        {config ? (
+          <dl>
+            <div>
+              <dt>Top Tracks</dt>
+              <dd>{config.publishTopTracks ? "Published" : "Private"}</dd>
+            </div>
+            <div>
+              <dt>Last review</dt>
+              <dd>{formatTimestamp(config.reviewedAt)}</dd>
+            </div>
+            <div>
+              <dt>Fallback</dt>
+              <dd>{config.fallbackEmbed ? `Official ${config.fallbackEmbed.kind}` : "None"}</dd>
+            </div>
+          </dl>
+        ) : null}
+      </div>
+
+      {state.phase === "loading" ? (
+        <p className={styles.configStatus} role="status">Checking display settings…</p>
+      ) : state.phase === "error" ? (
+        <p className={styles.configStatus} role="alert">{state.message}</p>
+      ) : (
+        <form
+          className={styles.spotifyPublicationForm}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void save();
+          }}
+        >
+          <label className={styles.publicationSwitch}>
+            <input
+              type="checkbox"
+              checked={publishTopTracks}
+              disabled={pending}
+              onChange={(event) => {
+                setPublishTopTracks(event.target.checked);
+                setAcknowledged(false);
+              }}
+            />
+            <span>
+              <strong>Publish Top Tracks publicly</strong>
+              <small>
+                Show up to twelve Spotify-calculated affinity ranks per time
+                window. This is not play-count or listening-history data.
+              </small>
+            </span>
+          </label>
+
+          {publishTopTracks ? (
+            <label className={styles.publicationAcknowledgement}>
+              <input
+                type="checkbox"
+                checked={acknowledged}
+                disabled={pending}
+                onChange={(event) => setAcknowledged(event.target.checked)}
+              />
+              <span>
+                I reviewed this public display and will describe it as Spotify
+                affinity—not plays, minutes, popularity, or a listener profile.
+              </span>
+            </label>
+          ) : null}
+
+          <label className={styles.formField} htmlFor="spotify-fallback">
+            <span>Official fallback (optional)</span>
+            <input
+              id="spotify-fallback"
+              type="text"
+              inputMode="url"
+              value={fallbackEmbed}
+              maxLength={2048}
+              disabled={pending}
+              spellCheck={false}
+              onChange={(event) => setFallbackEmbed(event.target.value)}
+              placeholder="https://open.spotify.com/playlist/…"
+            />
+          </label>
+          <p className={styles.fieldHelp}>
+            Accepts an official Spotify track, album, or playlist URL or Embed.
+            Visitors load it only after consent. Spotify controls playback
+            availability and length.
+          </p>
+
+          <div className={styles.formActions}>
+            <button type="submit" disabled={pending}>
+              {pending ? "Saving…" : "Save Spotify display"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {message ? (
+        <p className={styles.formMessage} role="status">{message}</p>
+      ) : null}
+      <p className={styles.spotifyIsolationNote}>
+        {environment === "local"
+          ? "Local authorization, snapshots, fallback, and publication choice stay on this machine. None are included in the production handoff."
+          : "This production decision is independent of local Studio and can be revoked without disconnecting the app."}
+      </p>
     </section>
   );
 }

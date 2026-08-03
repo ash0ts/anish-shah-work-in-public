@@ -223,10 +223,16 @@ test("provider normalizers reduce artwork to host-free references", async () => 
 });
 
 test("Play fetches a personal-data provider only after its stream is active", async () => {
-  const source = await readFile(
-    new URL("../components/PersonalStreams.tsx", import.meta.url),
-    "utf8",
-  );
+  const [source, spotify] = await Promise.all([
+    readFile(
+      new URL("../components/PersonalStreams.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/SpotifyStream.tsx", import.meta.url),
+      "utf8",
+    ),
+  ]);
 
   assert.match(
     source,
@@ -235,6 +241,10 @@ test("Play fetches a personal-data provider only after its stream is active", as
   assert.match(
     source,
     /active === "read"[\s\S]*?<CollectionStream provider="hardcover"/,
+  );
+  assert.match(
+    source,
+    /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/,
   );
   assert.match(
     source,
@@ -251,6 +261,10 @@ test("Play fetches a personal-data provider only after its stream is active", as
   assert.match(
     source,
     /function MovementProvider[\s\S]*?loadConnector<StravaPayload>\(\s*"strava",/,
+  );
+  assert.match(
+    spotify,
+    /function SpotifyStream[\s\S]*?loadSpotify\(controller\.signal\)/,
   );
   assert.doesNotMatch(source, /Promise\.all\([^)]*loadConnector/);
   assert.match(source, /show=\{showStrava\}/);
@@ -278,6 +292,7 @@ test("Studio documents setup, replacement, and official provider sources", async
     "https://myanimelist.net/apiconfig",
     "https://hardcover.app/account/api",
     "https://docs.hardcover.app/api/getting-started/",
+    "https://developer.spotify.com/dashboard",
     "https://partner.steamgames.com/doc/webapi_overview",
     "https://steamcommunity.com/dev/apikey",
     "https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed",
@@ -295,6 +310,7 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(controls, /Cancel pending authorization/);
   assert.match(controls, /canReuseOAuthClient/);
   assert.match(controls, /\/api\/studio\/connectors\/myanimelist\/oauth\/start/);
+  assert.match(controls, /\/api\/studio\/connectors\/spotify\/oauth\/start/);
   assert.match(
     setupSurface,
     /\/api\/connectors\/myanimelist\/oauth\/callback/,
@@ -310,7 +326,7 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(guide, /client ID.*client secret/is);
   assert.match(guide, /Refresh now.*Current/is);
   assert.match(guide, /one-time[\s\S]*transfer code/i);
-  assert.match(guide, /Authorize MyAnimeList separately/i);
+  assert.match(guide, /Authorize MyAnimeList and Spotify separately/i);
   assert.match(guide, /Reauthorization required/);
   assert.match(guide, /one year/i);
   assert.match(guide, /January\s+1/i);

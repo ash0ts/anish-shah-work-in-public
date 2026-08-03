@@ -58,14 +58,15 @@ npm run cloudflare:migrate
 npm run cloudflare:deploy
 ```
 
-After deployment, register this exact callback with the production MyAnimeList
-client:
+After deployment, register these exact callbacks with the separate production
+MyAnimeList and Spotify clients:
 
 ```text
 https://anish-shah-work-in-public.anish-shah-emails.workers.dev/api/connectors/myanimelist/oauth/callback
+https://anish-shah-work-in-public.anish-shah-emails.workers.dev/api/connectors/spotify/oauth/callback
 ```
 
-Complete production OAuth, promote or re-enter the other
+Complete both production OAuth flows, promote or re-enter the other
 credentials through the Access-protected Studio, refresh each stream, and
 smoke-test from a logged-out browser. Anonymous public pages must succeed;
 Studio and every `/api/studio/**` request must fail closed.

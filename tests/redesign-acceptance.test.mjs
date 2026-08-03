@@ -437,12 +437,18 @@ test("Three.js, WebGL, and canvas navigation are absent from public runtime code
 test("Play remains consent-gated and has a complete no-JavaScript state", async () => {
   const html = await renderHtml("/play");
   const markup = documentMarkup(html);
-  for (const provider of ["MyAnimeList", "Hardcover", "Steam", "Strava"]) {
+  for (const provider of [
+    "MyAnimeList",
+    "Hardcover",
+    "Spotify",
+    "Steam",
+    "Strava",
+  ]) {
     assert.match(markup, new RegExp(provider));
   }
-  assert.equal((markup.match(/role="tab"/g) ?? []).length, 4);
+  assert.equal((markup.match(/role="tab"/g) ?? []).length, 5);
   const noScript = markup.match(/<noscript\b[\s\S]*?<\/noscript>/i)?.[0] ?? "";
-  assert.equal((noScript.match(/<details\b/g) ?? []).length, 4);
+  assert.equal((noScript.match(/<details\b/g) ?? []).length, 5);
   const rawNoScript =
     html.match(/<noscript\b[\s\S]*?<\/noscript>/i)?.[0] ?? "";
   assert.doesNotMatch(rawNoScript, /\.undefined\b/);
@@ -461,12 +467,46 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
   );
   assert.doesNotMatch(
     markup,
-    /<iframe\b|strava-embeds\.com|www\.strava\.com\/athletes/i,
+    /<iframe\b|open\.spotify\.com\/embed|strava-embeds\.com|www\.strava\.com\/athletes/i,
   );
 
-  const source = await readFile(
-    path.join(PROJECT_ROOT, "components/PersonalStreams.tsx"),
-    "utf8",
+  const [source, spotify, playPage] = await Promise.all([
+    readFile(
+      path.join(PROJECT_ROOT, "components/PersonalStreams.tsx"),
+      "utf8",
+    ),
+    readFile(
+      path.join(PROJECT_ROOT, "components/SpotifyStream.tsx"),
+      "utf8",
+    ),
+    readFile(path.join(PROJECT_ROOT, "app/play/page.tsx"), "utf8"),
+  ]);
+  assert.match(
+    source,
+    /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/,
+  );
+  assert.match(
+    playPage,
+    /spotifyNoScript=\{[\s\S]*?<ol>[\s\S]*?open\.spotify\.com\/track/,
+    "The no-JavaScript Spotify state must receive a semantic ranked track list",
+  );
+  assert.match(spotify, /<svg[\s\S]*?className=\{styles\.groove\}/);
+  assert.match(
+    spotify,
+    /<ol className=\{styles\.rankRail\}[\s\S]*?aria-label="Spotify Top Tracks in returned order"/,
+  );
+  assert.match(
+    spotify,
+    /onKeyDown=\{\(event\) => onRankKeyDown\(event, index, "groove"\)\}/,
+  );
+  assert.match(
+    spotify,
+    /showEmbed \? \([\s\S]*?<iframe|playerTrack \? \([\s\S]*?<SpotifyPlayer/,
+    "Every Spotify iframe must remain behind explicit visitor intent",
+  );
+  assert.doesNotMatch(
+    spotify,
+    /<audio\b|AudioContext|webkitAudioContext|from\s+["']three["']|WebGL|autoplay;/i,
   );
   assert.match(
     source,

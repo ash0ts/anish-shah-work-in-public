@@ -102,6 +102,7 @@ config.vars = {
   STEAM_DATA_STORAGE_COUNTRIES: "United States",
 };
 config.observability = { enabled: true, head_sampling_rate: 0.1 };
+config.triggers = { crons: ["17 4 * * *"] };
 
 await writeFile(releaseConfigPath, `${JSON.stringify(config, null, 2)}\n`, {
   mode: 0o600,

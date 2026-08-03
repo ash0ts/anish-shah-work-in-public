@@ -6,12 +6,14 @@ import {
   type CSSProperties,
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
 } from "react";
 import styles from "./PersonalStreams.module.css";
+import { SpotifyStream } from "./SpotifyStream";
 
 type StatusCount = { label: string; count: number };
 type GalleryFilter = StatusCount & { id: string };
@@ -136,7 +138,7 @@ type ConnectorState<T> =
   | { status: "unavailable"; message: string }
   | { status: "ready"; payload: T; fetchedAt: string; stale: boolean };
 
-type StreamId = "watch" | "read" | "play" | "move";
+type StreamId = "watch" | "read" | "listen" | "play" | "move";
 type CollectionProvider = "myanimelist" | "hardcover" | "steam";
 type ConnectorProvider = CollectionProvider | "strava";
 type CollectionView = "pattern" | "gallery";
@@ -153,6 +155,13 @@ const streams = [
     label: "Read",
     provider: "Hardcover",
     fallback: "Reading states, ratings, and a public shelf.",
+  },
+  {
+    id: "listen",
+    label: "Listen",
+    provider: "Spotify",
+    fallback:
+      "Spotify-calculated Top Tracks across three time windows, shown as an ordinal ranked groove rather than play counts.",
   },
   {
     id: "play",
@@ -240,7 +249,11 @@ async function loadConnector<T>(
   }
 }
 
-export function PersonalStreams() {
+export function PersonalStreams({
+  spotifyNoScript,
+}: {
+  spotifyNoScript?: ReactNode;
+}) {
   const [active, setActive] = useState<StreamId>("watch");
   const [showStrava, setShowStrava] = useState(false);
 
@@ -274,7 +287,11 @@ export function PersonalStreams() {
               <summary>
                 {stream.label} · {stream.provider}
               </summary>
-              <p>{stream.fallback}</p>
+              {stream.id === "listen" && spotifyNoScript ? (
+                spotifyNoScript
+              ) : (
+                <p>{stream.fallback}</p>
+              )}
             </details>
           ))}
         </div>
@@ -302,19 +319,53 @@ export function PersonalStreams() {
         </div>
 
         <div
-          aria-labelledby={`stream-tab-${active}`}
+          aria-labelledby="stream-tab-watch"
           className={styles.panel}
-          id={`stream-panel-${active}`}
+          hidden={active !== "watch"}
+          id="stream-panel-watch"
           role="tabpanel"
           tabIndex={0}
         >
-          {active === "watch" ? (
-            <CollectionStream provider="myanimelist" />
-          ) : null}
-          {active === "read" ? (
-            <CollectionStream provider="hardcover" />
-          ) : null}
+          {active === "watch" ? <CollectionStream provider="myanimelist" /> : null}
+        </div>
+        <div
+          aria-labelledby="stream-tab-read"
+          className={styles.panel}
+          hidden={active !== "read"}
+          id="stream-panel-read"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          {active === "read" ? <CollectionStream provider="hardcover" /> : null}
+        </div>
+        <div
+          aria-labelledby="stream-tab-listen"
+          className={styles.panel}
+          hidden={active !== "listen"}
+          id="stream-panel-listen"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          <SpotifyStream active={active === "listen"} serverFallback={spotifyNoScript} />
+        </div>
+        <div
+          aria-labelledby="stream-tab-play"
+          className={styles.panel}
+          hidden={active !== "play"}
+          id="stream-panel-play"
+          role="tabpanel"
+          tabIndex={0}
+        >
           {active === "play" ? <CollectionStream provider="steam" /> : null}
+        </div>
+        <div
+          aria-labelledby="stream-tab-move"
+          className={styles.panel}
+          hidden={active !== "move"}
+          id="stream-panel-move"
+          role="tabpanel"
+          tabIndex={0}
+        >
           {active === "move" ? (
             <MovementProvider
               show={showStrava}

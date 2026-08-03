@@ -27,13 +27,17 @@ function edgeCache(): Cache | null {
     : ((caches as EdgeCacheStorage).default ?? null);
 }
 
-function fallbackArtwork(): Response {
+function fallbackArtwork(aspect: "poster" | "square" = "poster"): Response {
+  const height = aspect === "square" ? 240 : 320;
+  const insetHeight = height - 48;
+  const titleY = Math.round(height / 2 - 8);
+  const labelY = titleY + 26;
   const body = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 320" role="img" aria-label="Artwork unavailable">
-      <rect width="240" height="320" fill="#e8edf1"/>
-      <path d="M24 24h192v272H24z" fill="none" stroke="#17223b" stroke-width="2"/>
-      <text x="120" y="152" text-anchor="middle" fill="#17223b" font-family="system-ui,sans-serif" font-size="18" font-weight="650">ANISH SHAH</text>
-      <text x="120" y="178" text-anchor="middle" fill="#566173" font-family="monospace" font-size="11">ARTWORK UNAVAILABLE</text>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 ${height}" role="img" aria-label="Artwork unavailable">
+      <rect width="240" height="${height}" fill="#e8edf1"/>
+      <path d="M24 24h192v${insetHeight}H24z" fill="none" stroke="#17223b" stroke-width="2"/>
+      <text x="120" y="${titleY}" text-anchor="middle" fill="#17223b" font-family="system-ui,sans-serif" font-size="18" font-weight="650">ANISH SHAH</text>
+      <text x="120" y="${labelY}" text-anchor="middle" fill="#566173" font-family="monospace" font-size="11">ARTWORK UNAVAILABLE</text>
     </svg>`;
   return new Response(body, {
     status: 200,
@@ -105,23 +109,23 @@ async function fetchArtwork(
       },
     });
   } catch {
-    return fallbackArtwork();
+    return fallbackArtwork(source.aspect);
   }
-  if (!upstream.ok || upstream.status >= 300) return fallbackArtwork();
+  if (!upstream.ok || upstream.status >= 300) return fallbackArtwork(source.aspect);
 
   const mime = upstream.headers
     .get("content-type")
     ?.split(";", 1)[0]
     ?.trim()
     .toLowerCase();
-  if (!mime || !ALLOWED_MIME_TYPES.has(mime)) return fallbackArtwork();
+  if (!mime || !ALLOWED_MIME_TYPES.has(mime)) return fallbackArtwork(source.aspect);
 
   const body = await boundedImageBody(upstream);
-  if (!body || !matchesMimeSignature(mime, body)) return fallbackArtwork();
+  if (!body || !matchesMimeSignature(mime, body)) return fallbackArtwork(source.aspect);
 
   return new Response(body.buffer, {
     headers: {
-      "cache-control": "public, max-age=86400, stale-while-revalidate=604800",
+      "cache-control": `public, max-age=${source.cacheMaxAgeSeconds ?? 86_400}, stale-while-revalidate=${source.cacheMaxAgeSeconds ? 21_600 : 604_800}`,
       "content-length": String(body.byteLength),
       "content-type": mime,
       "x-content-type-options": "nosniff",
@@ -149,13 +153,15 @@ async function artworkCacheKey(
 export async function GET(request: Request, context: RouteContext) {
   const { provider: candidate, itemId } = await context.params;
   if (!isConnectorProvider(candidate)) return fallbackArtwork();
+  const fallbackAspect =
+    candidate === "spotify" || candidate === "steam" ? "square" : "poster";
 
   // Publication is checked before the edge cache so disconnecting a provider
   // immediately prevents an older cached cover from being served.
   const snapshot = await getPublicConnectorSnapshot(candidate);
-  if (snapshot.status !== "ready") return fallbackArtwork();
+  if (snapshot.status !== "ready") return fallbackArtwork(fallbackAspect);
   const source = resolveArtworkFromSnapshot(candidate, snapshot.payload, itemId);
-  if (!source) return fallbackArtwork();
+  if (!source) return fallbackArtwork(fallbackAspect);
 
   const cache = edgeCache();
   const cacheKey = await artworkCacheKey(request.url, source);
