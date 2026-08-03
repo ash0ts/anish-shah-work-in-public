@@ -49,7 +49,7 @@ export function DiscogsStream({
     initialState ?? { status: "idle" },
   );
   const [busy, setBusy] = useState(false);
-  const [view, setView] = useState<DiscogsView>("pattern");
+  const [view, setView] = useState<DiscogsView>(initialQuery.view);
   const [draftQuery, setDraftQuery] = useState(initialQuery.query);
   const [query, setQuery] = useState(initialQuery.query);
   const [format, setFormat] = useState(initialQuery.format);
@@ -63,6 +63,7 @@ export function DiscogsStream({
   const syncRoute = (next: Partial<DiscogsQueryState>) => {
     if (!routePath || typeof window === "undefined") return;
     const resolved = {
+      view,
       query,
       format,
       decade,
@@ -72,6 +73,7 @@ export function DiscogsStream({
       ...next,
     };
     const parameters = new URLSearchParams();
+    if (resolved.view === "gallery") parameters.set("view", "gallery");
     if (resolved.query) parameters.set("q", resolved.query);
     if (resolved.format && resolved.format !== "all") {
       parameters.set("format", resolved.format);
@@ -180,20 +182,36 @@ export function DiscogsStream({
         >
           <button
             aria-pressed={view === "pattern"}
-            onClick={() => setView("pattern")}
+            onClick={() => {
+              syncRoute({ view: "pattern" });
+              setView("pattern");
+            }}
             type="button"
           >
             Pattern
           </button>
           <button
             aria-pressed={view === "gallery"}
-            onClick={() => setView("gallery")}
+            onClick={() => {
+              syncRoute({ view: "gallery" });
+              setView("gallery");
+            }}
             type="button"
           >
             Gallery
           </button>
         </div>
       </header>
+
+      {routePath && view === "pattern" ? (
+        <noscript>
+          <p className={styles.noScriptViewLink}>
+            <a href={discogsViewUrl(routePath, "gallery", fixture)}>
+              Open the searchable release shelf
+            </a>
+          </p>
+        </noscript>
+      ) : null}
 
       <div
         aria-busy={busy}
@@ -469,6 +487,7 @@ function DiscogsGallery({
         method="get"
         onSubmit={onSearch}
       >
+        <input name="view" type="hidden" value="gallery" />
         {fixture ? <input name="fixture" type="hidden" value={fixture} /> : null}
         <div className={styles.gallerySearch}>
           <label htmlFor="discogs-gallery-search">Find a title or artist</label>
@@ -531,6 +550,16 @@ function DiscogsGallery({
           value={String(pageSize)}
         />
       </form>
+
+      {routePath ? (
+        <noscript>
+          <p className={styles.noScriptViewLink}>
+            <a href={discogsViewUrl(routePath, "pattern", fixture)}>
+              Return to the collection pattern
+            </a>
+          </p>
+        </noscript>
+      ) : null}
 
       <div className={styles.gallerySummary} aria-live="polite">
         <span>
@@ -663,6 +692,7 @@ function discogsPageUrl(
   fixture?: PreviewFixtureScenario,
 ) {
   const parameters = new URLSearchParams({
+    view: "gallery",
     page: String(page),
     pageSize: String(gallery.pageSize),
   });
@@ -676,6 +706,18 @@ function discogsPageUrl(
   if (gallery.sort) parameters.set("sort", gallery.sort);
   if (fixture) parameters.set("fixture", fixture);
   return `${routePath}?${parameters.toString()}`;
+}
+
+function discogsViewUrl(
+  routePath: "/play/collect",
+  view: DiscogsView,
+  fixture?: PreviewFixtureScenario,
+) {
+  const parameters = new URLSearchParams();
+  if (view === "gallery") parameters.set("view", "gallery");
+  if (fixture) parameters.set("fixture", fixture);
+  const search = parameters.toString();
+  return `${routePath}${search ? `?${search}` : ""}`;
 }
 
 function DiscogsReleaseRow({

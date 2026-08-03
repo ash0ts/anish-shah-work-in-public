@@ -13,6 +13,22 @@ const {
 const source = async (path) =>
   readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
+const relativeLuminance = (hex) => {
+  const channels = hex
+    .slice(1)
+    .match(/../g)
+    .map((value) => Number.parseInt(value, 16) / 255)
+    .map((value) =>
+      value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+    );
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+};
+
+const contrastRatio = (foreground, background) => {
+  const values = [relativeLuminance(foreground), relativeLuminance(background)];
+  return (Math.max(...values) + 0.05) / (Math.min(...values) + 0.05);
+};
+
 const roomRegistryKeys = (text, name) => {
   const match = text.match(
     new RegExp(
@@ -87,6 +103,8 @@ test("the room reducer clamps rotation and ignores stale transitions", async () 
   assert.match(reducer, /Math\.max\(-12, Math\.min\(12, rotation\.y\)\)/);
   assert.match(reducer, /action\.epoch !== state\.transitionEpoch\) return state/);
   assert.match(reducer, /transitionEpoch: state\.transitionEpoch \+ 1/);
+  assert.match(reducer, /entered: true, phase: "idle"/);
+  assert.match(reducer, /phase: action\.id \? "presenting" : "idle"/);
   assert.match(reducer, /action\.type === "reset-view"/);
   assert.match(reducer, /if \(state\.fallbackReason\) return state/);
   assert.match(reducer, /fallbackReason: state\.fallbackReason/);
@@ -208,6 +226,7 @@ test("Discogs parameters reject unknown sorts and unsafe dynamic tokens", () => 
       pageSize: "36",
     }),
     {
+      view: "pattern",
       query: "Blue Logic",
       format: "vinyl",
       decade: "1990s",
@@ -226,6 +245,7 @@ test("Discogs parameters reject unknown sorts and unsafe dynamic tokens", () => 
       pageSize: "0",
     }),
     {
+      view: "pattern",
       query: "",
       format: "",
       decade: "",
@@ -234,6 +254,9 @@ test("Discogs parameters reject unknown sorts and unsafe dynamic tokens", () => 
       pageSize: 12,
     },
   );
+
+  assert.equal(discogsQueryFrom({ view: "gallery" }).view, "gallery");
+  assert.equal(discogsQueryFrom({ view: "unsafe" }).view, "pattern");
 });
 
 test("projected gallery state is canonicalized before RSC serialization", () => {
@@ -266,6 +289,7 @@ test("projected gallery state is canonicalized before RSC serialization", () => 
       pageSize: 12,
     }),
     {
+      view: "pattern",
       query: "ambient",
       format: "vinyl",
       decade: "2000s",
@@ -416,6 +440,27 @@ test("each object screen has a distinct cancellable match-cut enhancement", asyn
   assert.match(matchCut, /import \{ animate \} from "animejs"/);
   assert.match(matchCut, /prefers-reduced-motion: reduce/);
   assert.match(matchCut, /animation\.cancel\(\)/);
-  assert.match(matchCut, /onComplete: \(\) => element\.removeAttribute\("style"\)/);
+  assert.match(matchCut, /onComplete: \(\) => \{[\s\S]*element\.removeAttribute\("style"\);[\s\S]*matchCutState = "settled"/);
   assert.doesNotMatch(matchCut, /style=\{preset\.initial\}/);
+});
+
+test("Collect defines readable ink directly against its procedural wood", async () => {
+  const css = await source(
+    "components/play/room-screens/RoomScreens.module.css",
+  );
+  const rule = css.match(/\.collectPage\s*\{([\s\S]*?)\n\}/)?.[1];
+  assert.ok(rule, "Expected a Collect theme rule");
+  const color = (name) => {
+    const value = rule.match(new RegExp(`--${name}:\\s*(#[0-9a-f]{6})`, "i"))?.[1];
+    assert.ok(value, `Expected a literal --${name} color`);
+    return value;
+  };
+  const surface = color("crate-surface");
+  for (const token of ["ink", "muted", "blue"]) {
+    assert.ok(
+      contrastRatio(color(token), surface) >= 4.5,
+      `Expected --${token} to meet 4.5:1 against the wood surface`,
+    );
+  }
+  assert.match(css, /\.crateFront\s*\{[\s\S]*var\(--crate-surface\)/);
 });

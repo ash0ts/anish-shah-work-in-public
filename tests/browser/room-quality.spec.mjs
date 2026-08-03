@@ -66,7 +66,13 @@ function runtimeChunkRequests(page) {
 
 async function instrumentDrawCalls(page) {
   await page.addInitScript(() => {
-    const metrics = { currentFrame: 0, maximumFrame: 0, total: 0 };
+    const metrics = {
+      currentFrame: 0,
+      currentTriangles: 0,
+      maximumFrame: 0,
+      maximumTriangles: 0,
+      total: 0,
+    };
     Object.defineProperty(window, "__roomDrawMetrics", {
       configurable: false,
       value: metrics,
@@ -86,6 +92,18 @@ async function instrumentDrawCalls(page) {
         Context.prototype[method] = function (...args) {
           metrics.currentFrame += 1;
           metrics.total += 1;
+          const mode = args[0];
+          const count = method.startsWith("drawArrays") ? args[2] : args[1];
+          const instances = method.endsWith("Instanced")
+            ? args[method.startsWith("drawArrays") ? 3 : 4]
+            : 1;
+          const primitiveTriangles =
+            mode === 0x0004
+              ? Math.floor(count / 3)
+              : mode === 0x0005 || mode === 0x0006
+                ? Math.max(0, count - 2)
+                : 0;
+          metrics.currentTriangles += primitiveTriangles * instances;
           return original.apply(this, args);
         };
       }
@@ -95,6 +113,7 @@ async function instrumentDrawCalls(page) {
     window.requestAnimationFrame = (callback) =>
       nativeRequestAnimationFrame((time) => {
         metrics.currentFrame = 0;
+        metrics.currentTriangles = 0;
         try {
           callback(time);
         } finally {
@@ -102,8 +121,59 @@ async function instrumentDrawCalls(page) {
             metrics.maximumFrame,
             metrics.currentFrame,
           );
+          metrics.maximumTriangles = Math.max(
+            metrics.maximumTriangles,
+            metrics.currentTriangles,
+          );
         }
       });
+  });
+}
+
+async function instrumentDragLatency(page) {
+  await page.addInitScript(() => {
+    const metrics = {
+      pendingPointerMoves: [],
+      samples: [],
+    };
+    Object.defineProperty(window, "__roomDragLatency", {
+      configurable: false,
+      value: metrics,
+    });
+    window.addEventListener(
+      "pointermove",
+      (event) => {
+        if ((event.buttons & 1) === 0) return;
+        metrics.pendingPointerMoves.push(performance.now());
+      },
+      true,
+    );
+
+    const contexts = [
+      window.WebGLRenderingContext,
+      window.WebGL2RenderingContext,
+    ].filter(Boolean);
+    const methods = [
+      "drawArrays",
+      "drawElements",
+      "drawArraysInstanced",
+      "drawElementsInstanced",
+    ];
+    for (const Context of contexts) {
+      for (const method of methods) {
+        const original = Context.prototype[method];
+        if (typeof original !== "function") continue;
+        Context.prototype[method] = function (...args) {
+          if (metrics.pendingPointerMoves.length > 0) {
+            const renderedAt = performance.now();
+            for (const startedAt of metrics.pendingPointerMoves.splice(0)) {
+              metrics.samples.push(Math.max(0, renderedAt - startedAt));
+            }
+          }
+          return original.apply(this, args);
+        };
+      }
+    }
   });
 }
 
@@ -138,13 +208,95 @@ async function overflowReport(page) {
       }));
     return {
       documentWidth: document.documentElement.scrollWidth,
+      maximumDocumentWidth:
+        window.__roomOverflowAudit?.maximumDocumentWidth ??
+        document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
-      offenders,
+      offenders: [
+        ...(window.__roomOverflowAudit?.offenders ?? []),
+        ...offenders,
+      ].filter(
+        (entry, index, entries) =>
+          entries.findIndex(
+            (candidate) =>
+              candidate.tag === entry.tag &&
+              candidate.id === entry.id &&
+              candidate.className === entry.className,
+          ) === index,
+      ),
     };
   });
 }
 
+async function installOverflowSampler(page) {
+  await page.addInitScript(() => {
+    const audit = {
+      maximumDocumentWidth: 0,
+      offenders: [],
+    };
+    Object.defineProperty(window, "__roomOverflowAudit", {
+      configurable: true,
+      value: audit,
+    });
+
+    const sample = () => {
+      const root = document.documentElement;
+      audit.maximumDocumentWidth = Math.max(
+        audit.maximumDocumentWidth,
+        root?.scrollWidth ?? 0,
+      );
+      if (root) {
+        const insideBoundedScroller = (element) => {
+          let current = element.parentElement;
+          while (current) {
+            const style = getComputedStyle(current);
+            if (
+              ["auto", "scroll"].includes(style.overflowX) &&
+              current.scrollWidth > current.clientWidth + 1
+            ) {
+              return true;
+            }
+            current = current.parentElement;
+          }
+          return false;
+        };
+        for (const element of document.body?.querySelectorAll("*") ?? []) {
+          const bounds = element.getBoundingClientRect();
+          if (
+            (bounds.left < -1 || bounds.right > window.innerWidth + 1) &&
+            !insideBoundedScroller(element)
+          ) {
+            const entry = {
+              tag: element.tagName.toLowerCase(),
+              id: element.id,
+              className: String(element.className).slice(0, 120),
+            };
+            if (
+              !audit.offenders.some(
+                (candidate) =>
+                  candidate.tag === entry.tag &&
+                  candidate.id === entry.id &&
+                  candidate.className === entry.className,
+              )
+            ) {
+              audit.offenders.push(entry);
+            }
+          }
+        }
+      }
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+}
+
 async function settlePaint(page) {
+  await page.waitForFunction(
+    () =>
+      document.querySelector("[data-match-cut-state]")?.getAttribute(
+        "data-match-cut-state",
+      ) === "settled",
+  );
   await page.evaluate(async () => {
     await document.fonts.ready;
     await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -162,7 +314,12 @@ async function findInteractiveRoomPoint(page) {
       const x = bounds.x + (bounds.width * column) / 16;
       const y = bounds.y + (bounds.height * row) / 11;
       await page.mouse.move(x, y);
-      await page.waitForTimeout(20);
+      await page.evaluate(
+        () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          ),
+      );
       const id = await stage.getAttribute("data-room-hovered-object");
       if (id) return { id, x, y };
     }
@@ -470,6 +627,8 @@ test.describe("My Room 2001 browser quality", () => {
     const metrics = await page.evaluate(() => window.__roomDrawMetrics);
     expect(metrics.total).toBeGreaterThan(0);
     expect(metrics.maximumFrame).toBeLessThanOrEqual(50);
+    expect(metrics.maximumTriangles).toBeGreaterThan(0);
+    expect(metrics.maximumTriangles).toBeLessThanOrEqual(80_000);
     const pixelRatio = await page.locator("canvas").evaluate((canvas) => ({
       x: canvas.width / canvas.clientWidth,
       y: canvas.height / canvas.clientHeight,
@@ -519,6 +678,7 @@ test.describe("My Room 2001 browser quality", () => {
   }) => {
     test.setTimeout(180_000);
     await page.setViewportSize({ width: 1440, height: 900 });
+    await instrumentDragLatency(page);
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
     await expect(page.getByText("Room ready")).toBeVisible();
@@ -534,6 +694,18 @@ test.describe("My Room 2001 browser quality", () => {
       await room.getByRole("button", { name: "Reset view" }).click();
       await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
     }
+
+    const latency = await page.evaluate(() => {
+      const samples = [...window.__roomDragLatency.samples].sort(
+        (left, right) => left - right,
+      );
+      return {
+        count: samples.length,
+        p95: samples[Math.max(0, Math.ceil(samples.length * 0.95) - 1)] ?? Infinity,
+      };
+    });
+    expect(latency.count).toBeGreaterThanOrEqual(20);
+    expect(latency.p95).toBeLessThan(20);
 
     for (let index = 0; index < 20; index += 1) {
       await page.mouse.move(point.x, point.y);
@@ -630,6 +802,15 @@ test.describe("My Room 2001 browser quality", () => {
         `[data-room-overview] [data-room-object-link="${object.id}"]`,
       );
       await expect(semanticLink).toBeFocused();
+
+      if (object.id === "watch") {
+        await page.getByRole("button", { name: "Enter the room" }).click();
+        const room = page.getByRole("dialog", { name: "Interactive room" });
+        await expect(room).toBeVisible();
+        await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
+        await room.getByRole("button", { name: "Leave room" }).click();
+        await expect(room).toHaveCount(0);
+      }
 
       await page.goBack({ waitUntil: "domcontentloaded" });
       await expect(page).toHaveURL(new RegExp(`/play/${object.id}$`));
@@ -742,9 +923,12 @@ test.describe("My Room 2001 browser quality", () => {
   for (const width of widths) {
     test(`all object routes fit a ${width}px viewport`, async ({ page }) => {
       test.setTimeout(90_000);
+      await installOverflowSampler(page);
       await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
       for (const object of objects) {
-        const route = `/play/${object.id}`;
+        const parameters = new URLSearchParams({ fixture: "long-title" });
+        if (object.id === "collect") parameters.set("view", "gallery");
+        const route = `/play/${object.id}?${parameters}`;
         const response = await page.goto(route, {
           waitUntil: "domcontentloaded",
         });
@@ -759,6 +943,7 @@ test.describe("My Room 2001 browser quality", () => {
           `${route}: ${JSON.stringify(overflow.offenders)}`,
         ).toEqual([]);
         expect(overflow.documentWidth).toBeLessThanOrEqual(width + 1);
+        expect(overflow.maximumDocumentWidth).toBeLessThanOrEqual(width + 1);
       }
     });
   }
@@ -766,7 +951,13 @@ test.describe("My Room 2001 browser quality", () => {
   for (const route of directRoutes) {
     test(`${route} has no serious or critical Axe findings`, async ({ page }) => {
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.goto(route, { waitUntil: "networkidle" });
+      const separator = route === "/play/collect" ? "&" : "?";
+      const readyRoute =
+        route === "/play/collect"
+          ? `${route}?fixture=ready&view=gallery`
+          : `${route}${separator}fixture=ready`;
+      await page.goto(readyRoute, { waitUntil: "networkidle" });
+      await settlePaint(page);
       const result = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
         .analyze();
@@ -797,6 +988,32 @@ test.describe("My Room 2001 browser quality", () => {
     );
     await next.click();
     await expect(page).toHaveURL(/fixture=maximum-density/);
+    await expect(page.getByText("13—24 of 36")).toBeVisible();
+
+    await page.goto("/play/collect?fixture=maximum-density", {
+      waitUntil: "load",
+    });
+    const openDiscogsShelf = page.getByRole("link", {
+      name: "Open the searchable release shelf",
+    });
+    await expect(openDiscogsShelf).toHaveAttribute(
+      "href",
+      "/play/collect?view=gallery&fixture=maximum-density",
+    );
+    await openDiscogsShelf.click();
+    await expect(page).toHaveURL(/view=gallery/);
+    await expect(page.locator('input[name="view"]')).toHaveValue("gallery");
+    await expect(page.locator('input[name="fixture"]')).toHaveValue(
+      "maximum-density",
+    );
+    const nextDiscogs = page.getByRole("link", { name: "Next" });
+    const nextDiscogsHref = await nextDiscogs.getAttribute("href");
+    expect(nextDiscogsHref).not.toBeNull();
+    const nextDiscogsUrl = new URL(nextDiscogsHref, "http://preview.test");
+    expect(nextDiscogsUrl.searchParams.get("view")).toBe("gallery");
+    expect(nextDiscogsUrl.searchParams.get("fixture")).toBe("maximum-density");
+    await nextDiscogs.click();
+    await expect(page).toHaveURL(/page=2/);
     await expect(page.getByText("13—24 of 36")).toBeVisible();
 
     for (const object of objects) {

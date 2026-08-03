@@ -15,4 +15,3 @@ export function playExperienceMode(): PlayExperienceMode {
 export function roomExperienceEnabled(): boolean {
   return playExperienceMode() === "my-room-2001";
 }
-

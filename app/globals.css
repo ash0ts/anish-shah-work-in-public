@@ -86,9 +86,9 @@ body {
 .preview-environment-notice {
   position: fixed;
   z-index: 999;
-  right: 0.75rem;
-  bottom: 0.75rem;
-  max-width: calc(100vw - 1.5rem);
+  top: 0.75rem;
+  left: 50%;
+  max-width: min(24rem, calc(100vw - 12rem));
   padding: 0.45rem 0.65rem;
   border: 1px solid var(--blueprint-ink);
   color: var(--trace-white);
@@ -97,7 +97,14 @@ body {
   font-size: 0.75rem;
   letter-spacing: 0.04em;
   line-height: 1.35;
+  overflow-wrap: anywhere;
   pointer-events: none;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.preview-environment-notice__compact {
+  display: none;
 }
 
 ::selection {
@@ -263,6 +270,22 @@ code {
 @media (max-width: 760px) {
   :root {
     --header-height: 58px;
+  }
+
+  .preview-environment-notice {
+    top: 0.65rem;
+    max-width: calc(100vw - 12rem);
+    padding: 0.3rem 0.4rem;
+    font-size: 0.625rem;
+    white-space: nowrap;
+  }
+
+  .preview-environment-notice__full {
+    display: none;
+  }
+
+  .preview-environment-notice__compact {
+    display: inline;
   }
 
   body {

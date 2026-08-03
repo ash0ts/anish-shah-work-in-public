@@ -24,6 +24,7 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "validate": "npm run content:attest && npm run lint && npm run db:local:migrate:clean && npm test && npm run security:audit",
     "validate:browser": "npm run build && node scripts/run-browser-quality.mjs",
+    "capture:room-review": "BROWSER_PLAY_MODE=room ROOM_CAPTURE_VISUALS=1 BROWSER_QUALITY_STATE_DIR=.wrangler/browser-quality-room-review node node_modules/@playwright/test/cli.js test tests/browser/room-review.spec.mjs",
     "validate:release": "npm run validate && npm run validate:browser && npm run cloudflare:prepare && node scripts/release-preflight.mjs",
     "release:plan": "node scripts/write-release-plan.mjs",
     "release:attest": "node scripts/write-release-attestation.mjs",

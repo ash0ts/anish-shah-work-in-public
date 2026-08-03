@@ -350,10 +350,9 @@ test("RSC presentation reads hosted tier from Cloudflare runtime bindings", asyn
       noarchive: true,
       nosnippet: true,
     });
-    assert.match(
-      renderToStaticMarkup(PreviewEnvironmentNotice()),
-      /Synthetic preview data · PR #42/,
-    );
+    const notice = renderToStaticMarkup(PreviewEnvironmentNotice());
+    assert.match(notice, /Synthetic preview data · PR #42/);
+    assert.match(notice, /Synthetic · PR #42/);
     assert.deepEqual(robotsModule.default(), {
       rules: { userAgent: "*", disallow: "/" },
     });
@@ -362,6 +361,17 @@ test("RSC presentation reads hosted tier from Cloudflare runtime bindings", asyn
   } finally {
     globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
   }
+});
+
+test("the preview marker stays in the header gap instead of covering page controls", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const rule = css.match(/\.preview-environment-notice\s*\{([\s\S]*?)\n\}/)?.[1];
+  assert.ok(rule, "Expected the preview notice rule");
+  assert.match(rule, /top:\s*0\.75rem/);
+  assert.match(rule, /left:\s*50%/);
+  assert.match(rule, /transform:\s*translateX\(-50%\)/);
+  assert.doesNotMatch(rule, /bottom:|right:/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*preview-environment-notice__compact/);
 });
 
 test("preview blocks provider frames and serves only neutral artwork", async () => {
@@ -738,4 +748,19 @@ test("staging release bootstraps and verifies its isolated D1/KV publication", a
   assert.match(script, /\/api\/studio\/publication-checkpoint/);
   assert.match(script, /kvPointerMatches !== true/);
   assert.match(script, /STAGING_SITE_ORIGIN/);
+});
+
+test("staging Studio renders an explicit non-promotable boundary", async () => {
+  const [page, promotion] = await Promise.all([
+    readFile(new URL("../app/studio/page.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/studio/PlayPromotionControls.tsx", import.meta.url),
+      "utf8",
+    ),
+  ]);
+  assert.match(page, /deploymentTier === "staging"[\s\S]*\? "staging"/);
+  assert.match(promotion, /environment: "local" \| "staging" \| "hosted"/);
+  assert.match(promotion, /Staging stays isolated\./);
+  assert.match(promotion, /cannot issue, stage, accept, or apply production transfer codes/);
+  assert.match(promotion, /environment === "staging" \? null/);
 });

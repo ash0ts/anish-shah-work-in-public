@@ -508,7 +508,13 @@
 
 /* Collect: the empty state itself is a physical crate, not a dashboard card. */
 .collectPage {
-  color: #312018;
+  --ink: #24150e;
+  --muted: #432416;
+  --blue: #2b246f;
+  --line: rgba(36, 21, 14, 0.46);
+  --paper: #fff4df;
+  --crate-surface: #d8945e;
+  color: var(--ink);
   background: #f2c083;
 }
 
@@ -554,7 +560,7 @@
   border: 0.6rem solid #6e3b22;
   background:
     repeating-linear-gradient(0deg, transparent 0 3.8rem, rgba(83, 42, 20, 0.16) 3.8rem 4rem),
-    #b76a36;
+    var(--crate-surface);
   box-shadow: 0 1.2rem 0 #5c321d;
 }
 

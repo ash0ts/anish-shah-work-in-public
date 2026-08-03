@@ -205,7 +205,13 @@ export default async function StudioPage() {
       </header>
 
       <PlayPromotionControls
-        environment={isLocalStudio ? "local" : "hosted"}
+        environment={
+          isLocalStudio
+            ? "local"
+            : deploymentTier === "staging"
+              ? "staging"
+              : "hosted"
+        }
       />
 
       <section className={styles.section} aria-labelledby="connectors-title">

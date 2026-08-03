@@ -325,6 +325,10 @@ test("procedural scene stays inside reviewed draw and material budgets", async (
     PROCEDURAL_ROOM_RENDER_METRICS.materialSlots <=
       PROCEDURAL_ROOM_RENDER_BUDGET.materialSlots,
   );
+  assert.ok(
+    PROCEDURAL_ROOM_RENDER_METRICS.visibleTriangleUpperBound <=
+      PROCEDURAL_ROOM_RENDER_BUDGET.visibleTriangles,
+  );
   assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleDrawCallUpperBound, 40);
   assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.materialSlots, 23);
   assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleTriangleUpperBound, 20_196);

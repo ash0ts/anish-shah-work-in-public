@@ -39,6 +39,10 @@ export default defineConfig({
       args: ["--enable-webgl", "--ignore-gpu-blocklist", "--use-angle=swiftshader"],
     },
     trace: "retain-on-failure",
+    video:
+      process.env.ROOM_CAPTURE_VISUALS === "1"
+        ? { mode: "on", size: { width: 1440, height: 900 } }
+        : "off",
   },
   webServer: {
     command:

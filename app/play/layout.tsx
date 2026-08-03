@@ -6,4 +6,3 @@ export default function PlayLayout({ children }: { children: ReactNode }) {
   if (!roomExperienceEnabled()) return children;
   return <RoomExperienceProvider>{children}</RoomExperienceProvider>;
 }
-

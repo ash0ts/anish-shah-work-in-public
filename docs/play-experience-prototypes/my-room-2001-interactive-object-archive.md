@@ -1,15 +1,15 @@
 # My Room, 2001 — Interactive Object Archive
 
-Status: replacement implementation RFC  
-Surface: `/play` and object-specific Play routes  
-Experience: draggable fisheye low-poly room with unique object interfaces  
-Canonical content: semantic HTML rendered by object-specific screen modules  
-Spatial layer: one explicitly activated React Three Fiber room with a bounded
-presentation drag and intentional perspective fallback  
-Interaction: direct object selection plus equivalent semantic controls  
-Motion: Anime.js 4.5 for bounded camera, object, and DOM match cuts  
-Assets: original or explicitly licensed, validated, content-hashed glTF/GLB
-object packs  
+- Status: replacement implementation RFC
+- Surface: `/play` and object-specific Play routes
+- Experience: draggable fisheye low-poly room with unique object interfaces
+- Canonical content: semantic HTML rendered by object-specific screen modules
+- Spatial layer: one explicitly activated React Three Fiber room with a bounded
+  presentation drag and intentional perspective fallback
+- Interaction: direct object selection plus equivalent semantic controls
+- Motion: Anime.js 4.5 for bounded camera, object, and DOM match cuts
+- Assets: original or explicitly licensed, validated, content-hashed glTF/GLB
+  object packs
 
 ## 1. Executive correction
 

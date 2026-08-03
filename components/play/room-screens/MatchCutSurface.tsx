@@ -96,16 +96,21 @@ export function MatchCutSurface({
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) {
       element.removeAttribute("style");
+      element.dataset.matchCutState = "settled";
       return;
     }
 
+    element.dataset.matchCutState = "animating";
     Object.assign(element.style, preset.initial);
     element.style.transformOrigin =
       objectId === "collect" ? "center bottom" : "center center";
 
     const animation = animate(element, {
       ...preset.animation,
-      onComplete: () => element.removeAttribute("style"),
+      onComplete: () => {
+        element.removeAttribute("style");
+        element.dataset.matchCutState = "settled";
+      },
     });
 
     return () => {
@@ -117,6 +122,7 @@ export function MatchCutSurface({
     <div
       className={className}
       data-match-cut-object={objectId}
+      data-match-cut-state="pending"
       data-match-cut-surface={surface}
       ref={ref}
     >

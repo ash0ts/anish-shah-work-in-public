@@ -29,7 +29,7 @@ export function roomExperienceReducer(
 ): RoomExperienceState {
   if (action.type === "enter") {
     if (state.fallbackReason) return state;
-    return { ...state, entered: true };
+    return { ...state, entered: true, phase: "idle" };
   }
   if (action.type === "focus") {
     return { ...state, focusedId: action.id };
@@ -53,7 +53,7 @@ export function roomExperienceReducer(
       ...state,
       selectedId: action.id,
       focusedId: action.id ?? state.focusedId,
-      phase: action.id ? "presenting" : state.entered ? "idle" : state.phase,
+      phase: action.id ? "presenting" : "idle",
     };
   }
   if (action.type === "return") {

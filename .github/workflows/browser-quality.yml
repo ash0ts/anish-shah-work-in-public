@@ -49,3 +49,16 @@ jobs:
         run: npx --no-install playwright install --with-deps chromium
       - name: Run browser and Lighthouse gates
         run: npm run validate:browser
+      - name: Capture room review evidence
+        run: npm run capture:room-review
+      - name: Upload browser review evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: room-browser-review-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            .playwright/room-review
+            .playwright/results-room
+            .playwright/report-room

@@ -219,6 +219,7 @@ export type CollectionQueryState = {
 };
 
 export type DiscogsQueryState = {
+  view: "pattern" | "gallery";
   query: string;
   format: string;
   decade: string;
@@ -236,6 +237,7 @@ export const DEFAULT_COLLECTION_QUERY: CollectionQueryState = {
 };
 
 export const DEFAULT_DISCOGS_QUERY: DiscogsQueryState = {
+  view: "pattern",
   query: "",
   format: "",
   decade: "",

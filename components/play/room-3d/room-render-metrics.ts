@@ -17,4 +17,5 @@ export const PROCEDURAL_ROOM_RENDER_METRICS = Object.freeze({
 export const PROCEDURAL_ROOM_RENDER_BUDGET = Object.freeze({
   visibleDrawCalls: 50,
   materialSlots: 24,
+  visibleTriangles: 80_000,
 });

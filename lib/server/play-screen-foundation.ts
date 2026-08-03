@@ -154,7 +154,7 @@ export async function getDiscogsScreenFoundation(
   ) as DiscogsPublicSnapshot;
 
   return {
-    query: discogsQueryFromGallery(payload.gallery),
+    query: discogsQueryFromGallery(payload.gallery, query.view),
     state: {
       status: "ready",
       payload,
