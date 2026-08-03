@@ -1,5 +1,9 @@
 import { access, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import {
+  PUBLIC_CLOUDFLARE_ACCOUNT_ID,
+  PUBLIC_SITE_ORIGIN,
+} from "./lib/release-config-contract.mjs";
 
 const root = process.cwd();
 const generatedConfigPath = resolve(root, "dist/server/wrangler.json");
@@ -82,6 +86,9 @@ const publicSiteUrl = exactHttpsOrigin(
   required("PUBLIC_SITE_URL"),
   "PUBLIC_SITE_URL",
 );
+if (publicSiteUrl !== PUBLIC_SITE_ORIGIN) {
+  throw new Error("PUBLIC_SITE_URL must be the repository's pinned canonical origin.");
+}
 const releaseSha = required("RELEASE_VALIDATED_SHA").toLowerCase();
 if (!/^[a-f0-9]{40}$/.test(releaseSha)) {
   throw new Error("RELEASE_VALIDATED_SHA must be an exact 40-character commit SHA.");
@@ -98,8 +105,10 @@ if (!/^[a-f0-9]{16}$/.test(publicBundle.contentVersion)) {
 const config = JSON.parse(await readFile(generatedConfigPath, "utf8"));
 config.name = "anish-shah-work-in-public";
 config.topLevelName = config.name;
-config.workers_dev = true;
+config.account_id = PUBLIC_CLOUDFLARE_ACCOUNT_ID;
+config.workers_dev = false;
 config.preview_urls = false;
+config.routes = [{ pattern: new URL(PUBLIC_SITE_ORIGIN).hostname, custom_domain: true }];
 config.d1_databases = [
   {
     binding: "DB",
@@ -151,7 +160,7 @@ config.vars = {
 };
 config.observability = {
   enabled: true,
-  head_sampling_rate: 0.1,
+  head_sampling_rate: 1,
   logs: { enabled: true, invocation_logs: false },
 };
 config.triggers = { crons: ["17 * * * *"] };

@@ -17,10 +17,12 @@ import {
   throttleOAuthCallback,
 } from "./rate-limiting";
 import {
-  observeHandlerFailure,
+  beginRequestObservation,
+  correlatedResponse,
   observeResponse,
   observeScheduledFailure,
 } from "./redacted-observability";
+import { productionOriginResponse } from "./production-origin";
 import { boundedApiWrite } from "./request-limits";
 import type {
   WorkerEnv,
@@ -71,12 +73,26 @@ const worker = {
     const sitesRuntime = isSitesRuntime(url.hostname);
     const directProduction = !development && !sitesRuntime;
     const nonce = nonceValue();
+    const observation = beginRequestObservation(
+      request.method,
+      url.pathname,
+      env.RELEASE_SHA,
+    );
     const finalize = (response: Response): Response => {
-      const secured = securedResponse(response, request, nonce, development);
-      observeResponse(request, secured);
+      const secured = correlatedResponse(
+        securedResponse(response, request, nonce, development),
+        observation,
+      );
+      observeResponse(observation, secured);
       return secured;
     };
     try {
+      const originFailure = productionOriginResponse(request, env, {
+        development,
+        sitesRuntime,
+      });
+      if (originFailure) return finalize(originFailure);
+
       const authentication = await authenticateRequest(request, env, {
         pathname: url.pathname,
         directProduction,
@@ -156,7 +172,6 @@ const worker = {
 
       return finalize(await routeApplicationRequest(appRequest, env, ctx));
     } catch {
-      observeHandlerFailure(request.method, url.pathname, "fetch");
       return finalize(
         new Response("The service is temporarily unavailable.", {
           status: 503,
@@ -178,7 +193,7 @@ const worker = {
   ): Promise<void> {
     ctx.waitUntil(
       pruneConnectorRetention(env.DB, new Date(controller.scheduledTime)).catch(
-        () => observeScheduledFailure(),
+        () => observeScheduledFailure(env.RELEASE_SHA),
       ),
     );
   },

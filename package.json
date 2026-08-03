@@ -36,6 +36,7 @@
     "cloudflare:prepare": "npm run build && npm run bundle:scan && node scripts/prepare-cloudflare-release.mjs && npm run deployable:attest:write",
     "cloudflare:migrate": "node scripts/release-command.mjs migrate",
     "cloudflare:upload": "node scripts/release-command.mjs upload",
+    "cloudflare:triggers": "node scripts/release-command.mjs triggers",
     "cloudflare:stage": "node scripts/release-command.mjs stage",
     "cloudflare:checkpoint:snippet": "node scripts/publication-bootstrap-snippet.mjs",
     "cloudflare:deploy": "node scripts/release-command.mjs deploy",

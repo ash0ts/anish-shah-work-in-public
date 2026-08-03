@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -15,6 +15,11 @@ import {
   runGuardedMigration,
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
+import {
+  assertTriggerDeploymentReceipt,
+  createTriggerDeploymentReceipt,
+  TRIGGER_RECEIPT_PATH,
+} from "./lib/release-trigger-contract.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const configPath = path.join(root, "dist/server/wrangler.public.json");
@@ -146,7 +151,26 @@ async function verifyPlan() {
   run(process.execPath, [path.join(root, "scripts/release-preflight.mjs")], {
     stdio: "inherit",
   });
-  return { head, plan };
+  return { head, plan, config, configBytes };
+}
+
+async function requireCurrentTriggerReceipt({ head, plan, config, configBytes }) {
+  let receipt;
+  try {
+    receipt = JSON.parse(
+      await readFile(path.join(root, TRIGGER_RECEIPT_PATH), "utf8"),
+    );
+  } catch {
+    throw new Error(
+      "Apply the exact non-versioned trigger configuration with npm run cloudflare:triggers before staging or deployment.",
+    );
+  }
+  return assertTriggerDeploymentReceipt(receipt, {
+    head,
+    configSha256: sha256(configBytes),
+    config,
+    notBefore: plan.preparedAt,
+  });
 }
 
 async function pendingMigrations() {
@@ -179,11 +203,13 @@ function remoteReleaseMarker() {
 }
 
 const action = process.argv[2];
-if (!new Set(["migrate", "upload", "stage", "deploy"]).has(action)) {
-  throw new Error("Use release-command.mjs migrate, upload, stage, or deploy.");
+if (!new Set(["migrate", "upload", "triggers", "stage", "deploy"]).has(action)) {
+  throw new Error(
+    "Use release-command.mjs migrate, upload, triggers, stage, or deploy.",
+  );
 }
 
-const { head, plan } = await verifyPlan();
+const { head, plan, config, configBytes } = await verifyPlan();
 const plannedMigrations = plan.d1.migrations.map((migration) => migration.name);
 
 if (action === "migrate") {
@@ -241,7 +267,31 @@ if (action === "migrate") {
     wrangler("versions", "list", "--config", configPath),
   );
   requireExactUploadedVersion(available.join("\n"), version);
-  if (action === "stage") {
+  if (action === "triggers") {
+    process.stdout.write(
+      wrangler("triggers", "deploy", "--config", configPath),
+    );
+    const receipt = createTriggerDeploymentReceipt({
+      head,
+      configSha256: sha256(configBytes),
+      config,
+      appliedAt: new Date().toISOString(),
+    });
+    await writeFile(
+      path.join(root, TRIGGER_RECEIPT_PATH),
+      `${JSON.stringify(receipt, null, 2)}\n`,
+      { mode: 0o600 },
+    );
+    console.log(
+      "Recorded the exact successful non-versioned trigger reconciliation for this release.",
+    );
+  } else if (action === "stage") {
+    await requireCurrentTriggerReceipt({
+      head,
+      plan,
+      config,
+      configBytes,
+    });
     const previous = plan.previousWorkerVersion;
     if (!previous || !available.includes(previous)) {
       throw new Error("The prior Worker version is unavailable for zero-traffic staging.");
@@ -258,6 +308,12 @@ if (action === "migrate") {
       ),
     );
   } else {
+    await requireCurrentTriggerReceipt({
+      head,
+      plan,
+      config,
+      configBytes,
+    });
     assertReleaseMarker(remoteReleaseMarker(), {
       head,
       contentVersion: plan.contentVersion,

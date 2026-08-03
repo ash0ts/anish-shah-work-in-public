@@ -7,7 +7,7 @@ const { readBoundedJsonBody } = await tsImport(
   "../lib/server/request-security.ts",
   import.meta.url,
 );
-const { authenticateRequest } = await tsImport(
+const { authenticateRequest, isSitesRuntime } = await tsImport(
   "../worker/access.ts",
   import.meta.url,
 );
@@ -15,8 +15,14 @@ const { throttleOAuthCallback, throttleOwnerWrite } = await tsImport(
   "../worker/rate-limiting.ts",
   import.meta.url,
 );
-const { observeHandlerFailure, observeResponse, observeScheduledFailure } = await tsImport(
-  "../worker/redacted-observability.ts",
+const {
+  beginRequestObservation,
+  correlatedResponse,
+  observeResponse,
+  observeScheduledFailure,
+} = await tsImport("../worker/redacted-observability.ts", import.meta.url);
+const { productionOriginResponse } = await tsImport(
+  "../worker/production-origin.ts",
   import.meta.url,
 );
 const { boundedApiWrite } = await tsImport(
@@ -180,45 +186,197 @@ test("extracted Worker throttling and response hardening keep exact boundaries",
   assert.match(secured.headers.get("content-security-policy"), /strict-dynamic/);
 });
 
-test("redacted Worker events cannot serialize OAuth query material", () => {
-  const originalWarn = console.warn;
+test("redacted Worker events correlate every dynamic response without request material", () => {
+  const originalLog = console.log;
   const messages = [];
-  console.warn = (message) => messages.push(String(message));
+  console.log = (message) => messages.push(String(message));
   try {
-    observeResponse(
-      new Request(
-        "https://portfolio.example/api/connectors/spotify/oauth/callback?code=secret&state=private",
-        { method: "GET" },
-      ),
+    const observation = beginRequestObservation(
+      "GET",
+      "/api/connectors/spotify/oauth/callback",
+      "a".repeat(40),
+    );
+    assert(observation);
+    const correlated = correlatedResponse(
       new Response(null, { status: 401 }),
+      observation,
+    );
+    assert.equal(correlated.headers.get("x-request-id"), observation.requestId);
+    observeResponse(
+      observation,
+      correlated,
     );
   } finally {
-    console.warn = originalWarn;
+    console.log = originalLog;
   }
-  assert.deepEqual(messages, [
-    '{"event":"worker_response","method":"GET","routeClass":"oauth_callback","status":401}',
+  assert.equal(messages.length, 1);
+  const event = JSON.parse(messages[0]);
+  assert.deepEqual(Object.keys(event).sort(), [
+    "duration",
+    "event",
+    "method",
+    "releaseShaPrefix",
+    "requestId",
+    "routeClass",
+    "status",
   ]);
+  assert.equal(event.event, "worker_request");
+  assert.match(event.requestId, /^[0-9a-f-]{36}$/i);
+  assert.equal(event.releaseShaPrefix, "aaaaaaaaaaaa");
+  assert.equal(event.method, "GET");
+  assert.equal(event.routeClass, "oauth_callback");
+  assert.equal(event.status, 401);
+  assert.match(event.duration, /^(?:lt_25ms|25_99ms|100_499ms|500_1999ms|gte_2000ms)$/);
+  assert.doesNotMatch(messages[0], /secret|private|code|state/i);
+
+  for (const [pathname, expectedClass] of [
+    ["/missing.json", "public_page"],
+    ["/robots.txt", "public_page"],
+    ["/sitemap.xml", "public_page"],
+    ["/_vinext/image", "asset_request"],
+    ["/_next/static/app.js", "asset_request"],
+  ]) {
+    const requestObservation = beginRequestObservation(
+      "GET",
+      pathname,
+      "a".repeat(40),
+    );
+    assert.match(requestObservation.requestId, /^[0-9a-f-]{36}$/i);
+    assert.equal(requestObservation.routeClass, expectedClass, pathname);
+    const response = correlatedResponse(
+      new Response(null, { status: pathname === "/missing.json" ? 404 : 200 }),
+      requestObservation,
+    );
+    assert.equal(
+      response.headers.get("x-request-id"),
+      requestObservation.requestId,
+      pathname,
+    );
+  }
 });
 
-test("redacted Worker failure events never serialize thrown values", () => {
+test("scheduled Worker failure events expose only a release prefix", () => {
   const originalError = console.error;
   const messages = [];
   console.error = (message) => messages.push(String(message));
   try {
-    observeHandlerFailure(
-      "GET",
-      "/api/connectors/spotify/oauth/callback",
-      "fetch",
-    );
-    observeScheduledFailure();
+    observeScheduledFailure("b".repeat(40));
   } finally {
     console.error = originalError;
   }
   assert.deepEqual(messages, [
-    '{"event":"worker_handler_failure","handler":"fetch","method":"GET","routeClass":"oauth_callback"}',
-    '{"event":"worker_handler_failure","handler":"scheduled"}',
+    '{"event":"worker_scheduled_failure","releaseShaPrefix":"bbbbbbbbbbbb"}',
   ]);
-  assert.doesNotMatch(messages.join("\n"), /secret|private|code|state/i);
+  assert.doesNotMatch(messages.join("\n"), /secret|private|token|code|state/i);
+});
+
+test("direct production accepts only the configured canonical apex", () => {
+  const environment = {
+    SITE_URL: "https://anish-shah-is.online",
+    PRODUCTION_SITE_URL: "https://anish-shah-is.online",
+  };
+  const production = { development: false, sitesRuntime: false };
+  assert.equal(
+    productionOriginResponse(
+      new Request("https://anish-shah-is.online/work"),
+      environment,
+      production,
+    ),
+    null,
+  );
+
+  for (const origin of [
+    "https://www.anish-shah-is.online/work",
+    "https://anish-shah-work-in-public.anish-shah-emails.workers.dev/work",
+    "http://anish-shah-is.online/work",
+  ]) {
+    const response = productionOriginResponse(
+      new Request(origin),
+      environment,
+      production,
+    );
+    assert.equal(response?.status, 421, origin);
+    assert.equal(response?.headers.get("cache-control"), "private, no-store");
+    assert.match(response?.headers.get("x-robots-tag") ?? "", /noindex/);
+  }
+
+  const misconfigured = productionOriginResponse(
+    new Request("https://anish-shah-is.online/work"),
+    { ...environment, SITE_URL: "https://wrong.example" },
+    production,
+  );
+  assert.equal(misconfigured?.status, 503);
+  assert.equal(misconfigured?.headers.get("retry-after"), "60");
+
+  assert.equal(
+    productionOriginResponse(
+      new Request("http://127.0.0.1:3000/work"),
+      {},
+      { development: true, sitesRuntime: false },
+    ),
+    null,
+  );
+
+  for (const loopbackOrigin of [
+    "http://localhost:3000/work",
+    "http://127.0.0.1:8788/work",
+    "http://[::1]:3000/work",
+  ]) {
+    assert.equal(
+      productionOriginResponse(new Request(loopbackOrigin), {}, {
+        development: true,
+        sitesRuntime: false,
+      }),
+      null,
+      loopbackOrigin,
+    );
+  }
+
+  const privateSitesOrigin =
+    "https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site";
+  assert.equal(isSitesRuntime(new URL(privateSitesOrigin).hostname), true);
+  assert.equal(
+    productionOriginResponse(
+      new Request(`${privateSitesOrigin}/work`),
+      {},
+      { development: false, sitesRuntime: true },
+    ),
+    null,
+  );
+
+  for (const [requestUrl, options] of [
+    [
+      "http://portfolio.test/work",
+      { development: true, sitesRuntime: false },
+    ],
+    [
+      "http://127.0.0.2:3000/work",
+      { development: true, sitesRuntime: false },
+    ],
+    [
+      "https://reference.chatgpt.site/work",
+      { development: false, sitesRuntime: true },
+    ],
+    [
+      `${privateSitesOrigin}:444/work`,
+      { development: false, sitesRuntime: true },
+    ],
+  ]) {
+    const response = productionOriginResponse(
+      new Request(requestUrl),
+      environment,
+      options,
+    );
+    assert.equal(response?.status, 421, requestUrl);
+  }
+  assert.equal(isSitesRuntime("reference.chatgpt.site"), false);
+  assert.equal(isSitesRuntime("chatgpt.site"), false);
+  assert.equal(
+    isSitesRuntime(
+      "anish-shah-work-in-public.coreweave-en-7694.chatgpt.site.example",
+    ),
+    false,
+  );
 });
 
 test("the Worker verifies Access identity and strips forgeable forwarded identity", async () => {
@@ -466,14 +624,23 @@ test("public Cloudflare release config is generated without embedding secrets", 
   assert.match(prepare, /RELEASE_SHA:\s*releaseSha/);
   assert.match(prepare, /CONTENT_VERSION:\s*publicBundle\.contentVersion/);
   assert.match(prepare, /PUBLIC_CONTENT_MODE:\s*"d1_kv_required"/);
-  assert.match(prepare, /config\.workers_dev\s*=\s*true/);
+  assert.match(prepare, /config\.account_id\s*=\s*PUBLIC_CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(prepare, /config\.workers_dev\s*=\s*false/);
   assert.match(prepare, /config\.preview_urls\s*=\s*false/);
+  assert.match(prepare, /custom_domain:\s*true/);
+  assert.match(prepare, /new URL\(PUBLIC_SITE_ORIGIN\)\.hostname/);
+  assert.match(prepare, /head_sampling_rate:\s*1/);
   assert.doesNotMatch(prepare, /CONNECTOR_ENCRYPTION_KEY\s*:/);
   assert.doesNotMatch(prepare, /RATE_LIMIT_SALT\s*:/);
   assert.match(preflight, /assertPublicReleaseConfig/);
   assert.match(configContract, /PUBLICATION_CACHE/);
   assert.match(configContract, /RATE_LIMITS/);
   assert.match(configContract, /invocation_logs !== false/);
+  assert.match(configContract, /account_id !== expected\.accountId/);
+  assert.match(configContract, /workers_dev !== false/);
+  assert.match(configContract, /pattern:\s*"anish-shah-is\.online"/);
+  assert.match(configContract, /custom_domain:\s*true/);
+  assert.match(configContract, /head_sampling_rate !== 1/);
   assert.match(configContract, /AUTH_MODE: "cloudflare_access"/);
   assert.match(configContract, /NODE_ENV: "production"/);
 });
@@ -553,6 +720,12 @@ test("publication failover and maintenance health fail closed", async () => {
   assert.match(checkpoint, /private, no-store/);
   assert.match(checkpoint, /getPublicationCheckpoint/);
   assert.match(migration, /CREATE TABLE `maintenance_state`/);
+  const maintenance = await readFile(
+    new URL("../lib/server/maintenance.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(maintenance, /canonicalOrigin\.status === "setup_required"/);
+  assert.match(maintenance, /expected:\s*PUBLIC_SITE_ORIGIN/);
 });
 
 test("custom Worker observability never records raw request identifiers", async () => {
@@ -563,10 +736,12 @@ test("custom Worker observability never records raw request identifiers", async 
       "utf8",
     ),
   ]);
-  assert.match(worker, /observeResponse\(request, secured\)/);
-  assert.match(worker, /observeHandlerFailure\(request\.method, url\.pathname, "fetch"\)/);
-  assert.match(worker, /observeScheduledFailure\(\)/);
-  assert.match(observability, /routeClass:\s*classifyRoute\(pathname\)/);
+  assert.match(worker, /beginRequestObservation\(/);
+  assert.match(worker, /correlatedResponse\(/);
+  assert.match(observability, /headers\.set\("x-request-id", observation\.requestId\)/);
+  assert.match(worker, /observeResponse\(observation, secured\)/);
+  assert.match(worker, /observeScheduledFailure\(env\.RELEASE_SHA\)/);
+  assert.match(observability, /const routeClass = classifyRoute\(pathname\)/);
   const eventFields = observability.slice(observability.indexOf("JSON.stringify"));
   assert.doesNotMatch(eventFields, /request\.url/);
   assert.doesNotMatch(observability, /\.search(?:Params)?/);
@@ -589,19 +764,27 @@ test("dependency audit treats missing or malformed audit metadata as failure", a
 });
 
 test("release evidence binds a pushed commit, migrations, and exact smoke checks", async () => {
-  const [plan, attestation, command, contract, packageJson] = await Promise.all([
-    readFile(new URL("../scripts/write-release-plan.mjs", import.meta.url), "utf8"),
-    readFile(
-      new URL("../scripts/write-release-attestation.mjs", import.meta.url),
-      "utf8",
-    ),
-    readFile(new URL("../scripts/release-command.mjs", import.meta.url), "utf8"),
-    readFile(
-      new URL("../scripts/lib/release-contract.mjs", import.meta.url),
-      "utf8",
-    ),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-  ]);
+  const [plan, attestation, command, contract, triggerContract, packageJson] =
+    await Promise.all([
+      readFile(
+        new URL("../scripts/write-release-plan.mjs", import.meta.url),
+        "utf8",
+      ),
+      readFile(
+        new URL("../scripts/write-release-attestation.mjs", import.meta.url),
+        "utf8",
+      ),
+      readFile(new URL("../scripts/release-command.mjs", import.meta.url), "utf8"),
+      readFile(
+        new URL("../scripts/lib/release-contract.mjs", import.meta.url),
+        "utf8",
+      ),
+      readFile(
+        new URL("../scripts/lib/release-trigger-contract.mjs", import.meta.url),
+        "utf8",
+      ),
+      readFile(new URL("../package.json", import.meta.url), "utf8"),
+    ]);
   assert.match(plan, /git\("rev-parse", "@\{upstream\}"\)/);
   assert.match(plan, /HEAD must be pushed to its configured upstream/);
   assert.match(plan, /scripts\/release-preflight\.mjs/);
@@ -621,6 +804,16 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
   ]) {
     assert.match(attestation, new RegExp(`"${check}"`));
   }
+  for (const check of [
+    "canonical_apex",
+    "www_redirect",
+    "workers_dev_disabled",
+    "preview_urls_disabled",
+    "request_id_header",
+    "access_destinations",
+  ]) {
+    assert.match(triggerContract, new RegExp(`"${check}"`));
+  }
   assert.match(attestation, /A migration changed after the pre-release plan/);
   assert.match(attestation, /releasePlanSha256/);
   assert.match(attestation, /readVerifiedDeployableArtifactManifest/);
@@ -629,10 +822,17 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
   assert.match(contract, /do not exactly match the release plan/);
   assert.match(command, /Migration \$\{migration\.name\} changed after release planning/);
   assert.match(command, /RELEASE_WORKER_VERSION/);
+  assert.match(command, /"triggers", "deploy", "--config", configPath/);
+  assert.match(command, /requireCurrentTriggerReceipt/);
+  assert.match(attestation, /triggerDeploymentReceiptSha256/);
+  assert.match(attestation, /domainCutover/);
+  assert.match(attestation, /permanent_path_query_preserving/);
+  assert.match(attestation, /x-request-id/);
   assert.match(command, /readVerifiedDeployableArtifactManifest/);
   assert.match(plan, /deployableArtifactManifestSha256/);
   assert.doesNotMatch(packageJson, /wrangler d1 migrations apply/);
   assert.doesNotMatch(packageJson, /"cloudflare:deploy"\s*:\s*"wrangler deploy/);
+  assert.match(packageJson, /"cloudflare:triggers"\s*:/);
   assert.match(packageJson, /deployable:attest:write/);
   assert.match(packageJson, /cloudflare:prepare[^\n]*bundle:scan/);
 });
@@ -656,6 +856,10 @@ test("production source contains no retired Sites origin", async () => {
   const combined = sources.join("\n");
   assert.doesNotMatch(combined, /chatgpt\.site/i);
   assert.match(
+    combined,
+    /https:\/\/anish-shah-is\.online/,
+  );
+  assert.doesNotMatch(
     combined,
     /https:\/\/anish-shah-work-in-public\.anish-shah-emails\.workers\.dev/,
   );

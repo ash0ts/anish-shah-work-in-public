@@ -25,7 +25,7 @@ version captured in the unchanged `dist/release-plan.json`:
   recorded prior version.
 
 ```bash
-npx wrangler rollback '<previous-version-id>' \
+npx --no-install wrangler rollback '<previous-version-id>' \
   --config dist/server/wrangler.public.json
 ```
 
@@ -35,6 +35,14 @@ An unused or stale release-checkpoint marker does not authorize a later deploy:
 the guarded release flow also binds it to the exact SHA, content version,
 current publication, and release-plan preparation time.
 
+A Worker version rollback does not restore non-versioned routes, Custom Domains,
+cron schedules, `workers_dev`, or preview-URL settings. For a code regression,
+leave the accepted apex trigger configuration in place and roll back only the
+version. If the trigger configuration itself caused the incident, prepare and
+review the intended configuration, apply it through the guarded
+`cloudflare:triggers` step, and repeat the apex, `www`, old-host, preview, Access,
+and request-ID checks. Never use a raw trigger command as an emergency shortcut.
+
 ## D1 Time Travel
 
 D1 restore is destructive operational work. Confirm the exact production
@@ -43,8 +51,8 @@ that the target bookmark belongs to the intended release. Then follow
 Cloudflare's current Time Travel confirmation flow:
 
 ```bash
-npx wrangler d1 time-travel info DB --config dist/server/wrangler.public.json
-npx wrangler d1 time-travel restore DB \
+npx --no-install wrangler d1 time-travel info DB --config dist/server/wrangler.public.json
+npx --no-install wrangler d1 time-travel restore DB \
   --bookmark='<recorded-pre-migration-bookmark>' \
   --config dist/server/wrangler.public.json
 ```

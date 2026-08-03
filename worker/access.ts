@@ -3,6 +3,7 @@ import {
   verifyCloudflareAccess,
 } from "../lib/server/cloudflare-access";
 import { privateJson } from "./security-headers";
+import { isPrivateSitesReferenceHostname } from "./production-origin";
 import type { AccessIdentity, WorkerEnv } from "./runtime-types";
 
 const INTERNAL_EMAIL_HEADER = "x-anish-authenticated-user-email";
@@ -28,7 +29,7 @@ export function isProtectedOwnerPath(pathname: string): boolean {
 }
 
 export function isSitesRuntime(hostname: string): boolean {
-  return hostname.toLocaleLowerCase().endsWith(".chatgpt.site");
+  return isPrivateSitesReferenceHostname(hostname);
 }
 
 function accessFailure(pathname: string, configured: boolean): Response {

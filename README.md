@@ -74,6 +74,8 @@ The ignored exact owner bundle remains under `content/private/`. See
 
 Public production is an owner-controlled Cloudflare Worker with D1 as the
 publication authority and a versioned Workers KV last-known-good cache.
+`https://anish-shah-is.online` is the sole public origin; the generated release
+configuration pins that Custom Domain and disables the `workers.dev` hostname.
 Cloudflare Access plus an exact application allowlist protects `/studio/**` and
 `/api/studio/**`. The private OpenAI Sites deployment is a recovery/reference
 environment, not a public rollback target.
