@@ -700,8 +700,12 @@ test("Play propagates a preview fixture through every active stream", async () =
     readFile(new URL("../components/play/MovementStream.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /activePreviewFixtureRuntime\(\)/);
-  assert.match(page, /<ClassicPlayExperience fixture=\{fixture\}/);
+  assert.match(
+    page,
+    /<ClassicPlayExperience[\s\S]*fixture=\{fixture\}[\s\S]*initialStream=\{streamIdFromValue\(query\.stream\)\}/,
+  );
   assert.match(classic, /<PersonalStreams[\s\S]*fixture=\{fixture\}/);
+  assert.match(classic, /initialStream=\{initialStream\}/);
   assert.match(streams, /CollectionStream provider="myanimelist" fixture=\{fixture\}/);
   assert.match(streams, /DiscogsStream fixture=\{fixture\}/);
   assert.match(streams, /SpotifyStream[\s\S]*fixture=\{fixture\}/);

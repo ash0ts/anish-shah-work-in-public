@@ -244,6 +244,7 @@ test("Discogs remains lazy and the six Play streams use keyboard selection", asy
 });
 
 test("Play stream deep links survive reload and reject unknown selections", async ({ page }) => {
+  test.skip(roomMode, "Classic Play owns stream query deep links.");
   const requests = [];
   await installDiscogsFixture(page, requests);
 

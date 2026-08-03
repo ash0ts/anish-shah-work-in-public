@@ -35,7 +35,8 @@ test("Collect is a sixth lazy Play stream with a complete semantic fallback", as
   assert.match(classic, /initialStream=\{initialStream\}/);
   assert.match(streams, /window\.history\.replaceState/);
   assert.match(streams, /url\.searchParams\.set\("stream", stream\)/);
-  assert.match(page, /six bounded public collections/);
+  assert.match(page, /roomExperienceEnabled\(\)/);
+  assert.match(page, /<RoomOverview fixture=\{fixture\}/);
 });
 
 test("Discogs uses a ruled shelf and an accessible pressing matrix", async () => {
