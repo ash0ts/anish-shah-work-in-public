@@ -17,6 +17,7 @@ import {
   type DiscogsPublicSnapshot,
   type DiscogsQueryState,
   type DiscogsReleaseSummary,
+  type PreviewFixtureScenario,
   DEFAULT_DISCOGS_QUERY,
   loadConnector,
 } from "./connector-model";
@@ -37,10 +38,12 @@ export function DiscogsStream({
   initialState,
   initialQuery = DEFAULT_DISCOGS_QUERY,
   routePath,
+  fixture,
 }: {
   initialState?: ConnectorState<DiscogsPublicSnapshot>;
   initialQuery?: DiscogsQueryState;
   routePath?: "/play/collect";
+  fixture?: PreviewFixtureScenario;
 } = {}) {
   const [state, setState] = useState<ConnectorState<DiscogsPublicSnapshot>>(
     initialState ?? { status: "idle" },
@@ -81,6 +84,7 @@ export function DiscogsStream({
     if (resolved.pageSize !== 12) {
       parameters.set("pageSize", String(resolved.pageSize));
     }
+    if (fixture) parameters.set("fixture", fixture);
     const search = parameters.toString();
     window.history.replaceState(
       window.history.state,
@@ -103,6 +107,7 @@ export function DiscogsStream({
     if (format) parameters.set("format", format);
     if (decade) parameters.set("decade", decade);
     if (sort) parameters.set("sort", sort);
+    if (fixture) parameters.set("fixture", fixture);
 
     queueMicrotask(() => {
       if (controller.signal.aborted) return;
@@ -124,7 +129,7 @@ export function DiscogsStream({
         });
     });
     return () => controller.abort();
-  }, [decade, format, page, pageSize, query, sort]);
+  }, [decade, fixture, format, page, pageSize, query, sort]);
 
   const payload = state.status === "ready" ? state.payload : null;
   const gallery = payload?.gallery;

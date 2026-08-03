@@ -35,11 +35,12 @@ The Playwright/Axe suite exercises real Worker pages and covers:
 - reduced motion and forced colors
 - Axe serious/critical findings on the five primary public routes
 
-When changing the Play room, run the browser gate twice: once with the default
-classic mode and once with `PLAY_EXPERIENCE_MODE=my-room-2001`. The room pass
-also checks the six direct object routes, the provider-free overview, deferred
-Three.js loading, poster fallback, and the reduced-motion/Save-Data/forced-color
-paths that must never request the 3D runtime.
+The browser command runs two isolated passes automatically: classic Play first,
+then My Room 2001 under the exact synthetic-preview boundary. The room pass also
+checks the six direct object routes, provider-free overview, deferred Three.js
+loading, poster fallback, fixture propagation, and the reduced-motion,
+Save-Data, and forced-color paths that must never request the 3D runtime. Do not
+run the command a second time with a manual `PLAY_EXPERIENCE_MODE` override.
 
 The same command runs Lighthouse directly against a second local Worker preview
 and enforces mobile performance, accessibility, SEO, and best-practice scores of

@@ -31,6 +31,13 @@ const { previewConnectorSnapshot, previewStravaSnapshot } = await import(
 const { projectConnectorSnapshotForPublic } = await import(
   "../lib/server/connectors/public-gallery.ts"
 );
+const {
+  getCollectionScreenFoundation,
+  getDiscogsScreenFoundation,
+  getMovementScreenFoundation,
+  getSpotifyScreenFoundation,
+  previewFixtureForPlayRoute,
+} = await import("../lib/server/play-screen-foundation.ts");
 
 const contentVersion = "b".repeat(16);
 const releaseSha = "a".repeat(40);
@@ -91,6 +98,7 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
   ]);
   assert.equal(config.vars.DEPLOYMENT_TIER, "staging");
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "d1_kv_required");
+  assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
   assert.equal(config.vars.PRODUCTION_SITE_URL, "https://anish-shah-is.online");
   assert.equal(config.observability.logs.invocation_logs, false);
   assert.deepEqual(config.triggers.crons, ["47 * * * *"]);
@@ -141,6 +149,7 @@ test("preview config has no durable, secret, cron, Studio, or OAuth capability",
   assert.equal(config.triggers, undefined);
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "static_preview");
   assert.equal(config.vars.DEPLOYMENT_TIER, "preview");
+  assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
   assert.equal("OWNER_EMAILS" in config.vars, false);
   assert.equal("CONNECTOR_ENCRYPTION_KEY" in config.vars, false);
   assert.doesNotThrow(() =>
@@ -207,13 +216,24 @@ test("host routing accepts only the exact origin for each declared tier", () => 
 
 test("staging callbacks alone bypass identity while preview remains fully gated", () => {
   assert.equal(requiresHostedAccessIdentity("/work", "staging"), true);
-  assert.equal(
-    requiresHostedAccessIdentity(
-      "/api/connectors/myanimelist/oauth/callback",
-      "staging",
-    ),
-    false,
-  );
+  for (const provider of ["myanimelist", "spotify", "discogs"]) {
+    assert.equal(
+      requiresHostedAccessIdentity(
+        `/api/connectors/${provider}/oauth/callback`,
+        "staging",
+      ),
+      false,
+      provider,
+    );
+    assert.equal(
+      requiresHostedAccessIdentity(
+        `/api/connectors/${provider}/oauth/callback/extra`,
+        "staging",
+      ),
+      true,
+      `${provider} near miss`,
+    );
+  }
   assert.equal(
     requiresHostedAccessIdentity("/api/connectors/spotify/oauth/callback", "preview"),
     true,
@@ -237,6 +257,51 @@ test("staging callbacks alone bypass identity while preview remains fully gated"
     ),
     null,
   );
+});
+
+test("sitemap publishes room routes only for the production-facing room mode", async () => {
+  const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+  const sitemap = (await import("../app/sitemap.ts")).default;
+  try {
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      PLAY_EXPERIENCE_MODE: "classic",
+    };
+    const classic = await sitemap();
+    assert.equal(
+      classic.filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move)$/.test(url)).length,
+      0,
+    );
+
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      PLAY_EXPERIENCE_MODE: "my-room-2001",
+    };
+    const room = await sitemap();
+    assert.deepEqual(
+      room
+        .filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move)$/.test(url))
+        .map(({ url }) => new URL(url).pathname)
+        .sort(),
+      [
+        "/play/collect",
+        "/play/listen",
+        "/play/move",
+        "/play/play",
+        "/play/read",
+        "/play/watch",
+      ],
+    );
+
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      DEPLOYMENT_TIER: "staging",
+      SITE_URL: "https://staging.anish-shah-is.online",
+      PRODUCTION_SITE_URL: "https://anish-shah-is.online",
+      PUBLIC_CONTENT_MODE: "d1_kv_required",
+      PLAY_EXPERIENCE_MODE: "my-room-2001",
+    };
+    assert.deepEqual(await sitemap(), []);
+  } finally {
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
+  }
 });
 
 test("staging and preview responses are private and unindexable", () => {
@@ -437,10 +502,14 @@ test("preview fixtures activate only under an exact preview runtime", () => {
       )?.status,
       "unavailable",
     );
-    assert.equal(
-      previewStravaSnapshot(new URLSearchParams())?.payload.previewNotice,
-      "Synthetic preview data",
+    const strava = previewStravaSnapshot(new URLSearchParams());
+    assert.equal(strava?.status, "ready");
+    assert.equal(strava?.payload.embedStatus, "available");
+    assert.match(
+      strava?.payload.embed.embedUrl,
+      /^https:\/\/www\.strava\.com\/athletes\/99999999999999999999\/latest-rides\/[a-f0-9]{40}$/,
     );
+    assert.equal("previewNotice" in strava.payload, false);
     process.env.SITE_URL = "https://anish-shah-is.online";
     assert.equal(previewConnectorSnapshot("hardcover", new URLSearchParams()), null);
   } finally {
@@ -448,6 +517,66 @@ test("preview fixtures activate only under an exact preview runtime", () => {
       if (previous[name] === undefined) delete process.env[name];
       else process.env[name] = previous[name];
     }
+  }
+});
+
+test("all six direct room foundations use projected preview data without durable state", async () => {
+  const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+  globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+    DEPLOYMENT_TIER: "preview",
+    PREVIEW_PR_NUMBER: "42",
+    SITE_URL: "https://pr-42.anish-shah-is.online",
+    PRODUCTION_SITE_URL: "https://anish-shah-is.online",
+    PUBLIC_CONTENT_MODE: "static_preview",
+  };
+  try {
+    const [watch, read, collect, play, listen, move, stale] = await Promise.all([
+      getCollectionScreenFoundation("myanimelist", {
+        fixture: "maximum-density",
+        pageSize: "36",
+      }),
+      getCollectionScreenFoundation("hardcover", {
+        fixture: "long-title",
+        q: "記憶",
+      }),
+      getDiscogsScreenFoundation({
+        fixture: "maximum-density",
+        pageSize: "36",
+      }),
+      getCollectionScreenFoundation("steam", { fixture: "ready" }),
+      getSpotifyScreenFoundation({ fixture: "ready" }),
+      getMovementScreenFoundation({ fixture: "ready" }),
+      getCollectionScreenFoundation("myanimelist", { fixture: "stale" }),
+    ]);
+
+    assert.equal(watch.state.status, "ready");
+    assert.equal(watch.state.payload.gallery.items.length, 36);
+    assert.equal(read.state.status, "ready");
+    assert.equal(
+      read.state.payload.gallery.items.some((item) =>
+        /記憶と機械/.test(item.title),
+      ),
+      true,
+    );
+    assert.equal(collect.state.status, "ready");
+    assert.equal(collect.state.payload.gallery.items.length, 36);
+    assert.equal(play.state.status, "ready");
+    assert.equal(listen.status, "ready");
+    assert.equal(listen.payload.windows.short_term.tracks.length, 12);
+    assert.equal(move.status, "ready");
+    assert.equal(move.payload.embedStatus, "available");
+    assert.equal(stale.state.status, "ready");
+    assert.equal(stale.state.stale, true);
+    assert.ok(
+      new Date(stale.state.payload.freshUntil).getTime() < Date.now(),
+    );
+    assert.equal(
+      previewFixtureForPlayRoute({ fixture: "missing-artwork" }),
+      "missing-artwork",
+    );
+    assert.equal(previewFixtureForPlayRoute({}), undefined);
+  } finally {
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
   }
 });
 
@@ -541,19 +670,24 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
 });
 
 test("Play propagates a preview fixture through every active stream", async () => {
-  const [page, streams, collection, spotify, movement] = await Promise.all([
+  const [page, classic, streams, collection, discogs, spotify, movement] = await Promise.all([
     readFile(new URL("../app/play/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/play/ClassicPlayExperience.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/PersonalStreams.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/CollectionStream.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/play/DiscogsStream.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/SpotifyStream.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/MovementStream.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /activePreviewFixtureRuntime\(\)/);
-  assert.match(page, /<PersonalStreams[\s\S]*fixture=\{fixture\}/);
+  assert.match(page, /<ClassicPlayExperience fixture=\{fixture\}/);
+  assert.match(classic, /<PersonalStreams[\s\S]*fixture=\{fixture\}/);
   assert.match(streams, /CollectionStream provider="myanimelist" fixture=\{fixture\}/);
+  assert.match(streams, /DiscogsStream fixture=\{fixture\}/);
   assert.match(streams, /SpotifyStream[\s\S]*fixture=\{fixture\}/);
   assert.match(streams, /MovementStream[\s\S]*fixture=\{fixture\}/);
   assert.match(collection, /parameters\.set\("fixture", fixture\)/);
+  assert.match(discogs, /parameters\.set\("fixture", fixture\)/);
   assert.match(spotify, /loadSpotifyFixture\(controller\.signal, fixture\)/);
   assert.match(spotify, /loadSpotify\(controller\.signal\)/);
   assert.match(movement, /new URLSearchParams\(\{ fixture \}\)/);

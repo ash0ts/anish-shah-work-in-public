@@ -180,7 +180,7 @@ export function PersonalStreams({
           role="tabpanel"
           tabIndex={0}
         >
-          {active === "collect" ? <DiscogsStream /> : null}
+          {active === "collect" ? <DiscogsStream fixture={fixture} /> : null}
         </div>
         <div
           aria-labelledby="stream-tab-play"

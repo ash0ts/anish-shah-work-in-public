@@ -20,7 +20,7 @@ test("Collect is a sixth lazy Play stream with a complete semantic fallback", as
   assert.deepEqual([...order].sort((left, right) => left - right), order);
   assert.match(
     streams,
-    /active === "collect" \? <DiscogsStream \/> : null/,
+    /active === "collect" \? <DiscogsStream fixture=\{fixture\} \/> : null/,
     "Discogs must not mount before Collect is active",
   );
   assert.match(

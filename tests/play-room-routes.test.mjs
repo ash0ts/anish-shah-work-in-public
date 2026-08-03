@@ -119,7 +119,8 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
   assert.match(provider, /pendingRoomNavigation\.current = id/);
   assert.match(provider, /activeObjectRouteOrigin\.current === "room"/);
   assert.match(provider, /if \(returnWithBrowserHistory\) router\.back\(\)/);
-  assert.match(provider, /else router\.push\("\/play"/);
+  assert.match(provider, /else \{[\s\S]*routeWithPreviewFixture\([\s\S]*"\/play"/);
+  assert.match(provider, /previewFixtureFromSearch\(window\.location\.search\)/);
   assert.match(provider, /notifyRuntimeMounted/);
   assert.match(provider, /Opened \$\{object\.label\}: \$\{object\.title\}\./);
   assert.match(provider, /Returned to the room/);

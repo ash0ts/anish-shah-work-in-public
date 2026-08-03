@@ -18,6 +18,10 @@ import {
 } from "react";
 import { isRoomObjectId, ROOM_OBJECT_BY_ID } from "./room-registry";
 import {
+  previewFixtureFromSearch,
+  routeWithPreviewFixture,
+} from "./preview-fixture-navigation";
+import {
   INITIAL_ROOM_STATE,
   roomExperienceReducer,
 } from "./room-reducer";
@@ -405,7 +409,13 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
         if (epoch !== transitionEpoch.current || navigated) return;
         navigated = true;
         dispatch({ type: "phase", phase: "navigating", epoch });
-        router.push(`/play/${id}`, { scroll: false });
+        router.push(
+          routeWithPreviewFixture(
+            `/play/${id}`,
+            previewFixtureFromSearch(window.location.search),
+          ),
+          { scroll: false },
+        );
       };
       if (reduced) {
         navigate();
@@ -482,7 +492,15 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       if (epoch !== transitionEpoch.current || navigated) return;
       navigated = true;
       if (returnWithBrowserHistory) router.back();
-      else router.push("/play", { scroll: false });
+      else {
+        router.push(
+          routeWithPreviewFixture(
+            "/play",
+            previewFixtureFromSearch(window.location.search),
+          ),
+          { scroll: false },
+        );
+      }
     };
     const screen = document.querySelector<HTMLElement>("[data-room-screen]");
     if (

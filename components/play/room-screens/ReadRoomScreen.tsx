@@ -2,6 +2,7 @@ import type {
   CollectionPayload,
   CollectionQueryState,
   ConnectorState,
+  PreviewFixtureScenario,
 } from "../connector-model";
 import { CollectionStream } from "../CollectionStream";
 import { ROOM_OBJECT_BY_ID } from "../room-platform/room-registry";
@@ -12,14 +13,16 @@ import styles from "./RoomScreens.module.css";
 export default function ReadRoomScreen({
   initialState,
   initialQuery,
+  fixture,
 }: {
   initialState: ConnectorState<CollectionPayload>;
   initialQuery: CollectionQueryState;
+  fixture?: PreviewFixtureScenario;
 }) {
   const object = ROOM_OBJECT_BY_ID.read;
   return (
     <main data-room-screen id="main" className={`${styles.page} ${styles.readPage}`} tabIndex={-1}>
-      <ScreenNavigation object={object} />
+      <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.readHeader} id="read-desk-note">
         <p>Hardcover · Personal circulation desk</p>
         <h1>{object.title}</h1>
@@ -59,6 +62,7 @@ export default function ReadRoomScreen({
               id="read-library"
             >
               <CollectionStream
+                fixture={fixture}
                 initialQuery={initialQuery}
                 initialState={initialState}
                 provider="hardcover"

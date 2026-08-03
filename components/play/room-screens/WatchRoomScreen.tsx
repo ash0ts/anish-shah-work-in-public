@@ -2,6 +2,7 @@ import type {
   CollectionPayload,
   CollectionQueryState,
   ConnectorState,
+  PreviewFixtureScenario,
 } from "../connector-model";
 import { CollectionStream } from "../CollectionStream";
 import { ROOM_OBJECT_BY_ID } from "../room-platform/room-registry";
@@ -12,14 +13,16 @@ import styles from "./RoomScreens.module.css";
 export default function WatchRoomScreen({
   initialState,
   initialQuery,
+  fixture,
 }: {
   initialState: ConnectorState<CollectionPayload>;
   initialQuery: CollectionQueryState;
+  fixture?: PreviewFixtureScenario;
 }) {
   const object = ROOM_OBJECT_BY_ID.watch;
   return (
     <main data-room-screen id="main" className={`${styles.page} ${styles.watchPage}`} tabIndex={-1}>
-      <ScreenNavigation object={object} />
+      <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.watchHeader} id="watch-program-note">
         <p>Channel 11 · MyAnimeList public signal</p>
         <h1>{object.title}</h1>
@@ -53,6 +56,7 @@ export default function WatchRoomScreen({
             id="watch-library"
           >
             <CollectionStream
+              fixture={fixture}
               initialQuery={initialQuery}
               initialState={initialState}
               provider="myanimelist"

@@ -1,10 +1,10 @@
 import type { MetadataRoute } from "next";
-import { ROOM_OBJECTS } from "@/components/play/room-platform/room-registry";
-import { canonicalMetadataOrigin } from "@/lib/deployment-environment";
-import { roomExperienceEnabled } from "@/lib/server/play-experience";
-import { getPublicContentView } from "@/lib/server/public-content";
-import { runtimeHostedDeploymentPresentation } from "@/lib/server/deployment-presentation";
-import { workArchiveRecordsFrom } from "@/lib/work-index";
+import { ROOM_OBJECTS } from "../components/play/room-platform/room-registry";
+import { canonicalMetadataOrigin } from "../lib/deployment-environment";
+import { runtimeHostedDeploymentPresentation } from "../lib/server/deployment-presentation";
+import { roomExperienceEnabled } from "../lib/server/play-experience";
+import { getPublicContentView } from "../lib/server/public-content";
+import { workArchiveRecordsFrom } from "../lib/work-index";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (runtimeHostedDeploymentPresentation().nonProductionHosted) {

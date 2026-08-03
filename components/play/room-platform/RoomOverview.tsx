@@ -1,9 +1,15 @@
 import Link from "next/link";
+import type { PreviewFixtureScenario } from "../connector-model";
+import { routeWithPreviewFixture } from "./preview-fixture-navigation";
 import { ROOM_OBJECTS } from "./room-registry";
 import { RoomEntryControl } from "./RoomEntryControl";
 import styles from "./RoomOverview.module.css";
 
-export function RoomOverview() {
+export function RoomOverview({
+  fixture,
+}: {
+  fixture?: PreviewFixtureScenario;
+}) {
   return (
     <main
       className={`site-main ${styles.page}`}
@@ -54,7 +60,7 @@ export function RoomOverview() {
               <li key={object.id}>
                 <Link
                   data-room-object-link={object.id}
-                  href={object.route}
+                  href={routeWithPreviewFixture(object.route, fixture)}
                   prefetch={false}
                 >
                   <span>{String(index + 1).padStart(2, "0")}</span>

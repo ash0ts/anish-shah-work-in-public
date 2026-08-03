@@ -10,6 +10,7 @@ import type { RoomObjectId } from "@/components/play/room-platform/room-types";
 import { roomExperienceEnabled } from "@/lib/server/play-experience";
 import {
   ROOM_PROVIDER_ADAPTERS,
+  previewFixtureForPlayRoute,
   type PlayRouteSearchParams,
 } from "@/lib/server/play-screen-foundation";
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
@@ -37,6 +38,7 @@ export const ROOM_ROUTE_FOUNDATIONS = {
     ]);
     return (
       <WatchRoomScreen
+        fixture={previewFixtureForPlayRoute(query)}
         initialQuery={foundation.query}
         initialState={foundation.state}
       />
@@ -49,6 +51,7 @@ export const ROOM_ROUTE_FOUNDATIONS = {
     ]);
     return (
       <ReadRoomScreen
+        fixture={previewFixtureForPlayRoute(query)}
         initialQuery={foundation.query}
         initialState={foundation.state}
       />
@@ -59,7 +62,12 @@ export const ROOM_ROUTE_FOUNDATIONS = {
       ROOM_SCREEN_LOADERS.listen(),
       ROOM_PROVIDER_ADAPTERS.listen(query),
     ]);
-    return <ListenRoomScreen initialState={initialState} />;
+    return (
+      <ListenRoomScreen
+        fixture={previewFixtureForPlayRoute(query)}
+        initialState={initialState}
+      />
+    );
   },
   collect: async (query) => {
     const [{ default: CollectRoomScreen }, foundation] = await Promise.all([
@@ -68,6 +76,7 @@ export const ROOM_ROUTE_FOUNDATIONS = {
     ]);
     return (
       <CollectRoomScreen
+        fixture={previewFixtureForPlayRoute(query)}
         initialQuery={foundation.query}
         initialState={foundation.state}
       />
@@ -80,6 +89,7 @@ export const ROOM_ROUTE_FOUNDATIONS = {
     ]);
     return (
       <PlayRoomScreen
+        fixture={previewFixtureForPlayRoute(query)}
         initialQuery={foundation.query}
         initialState={foundation.state}
       />
@@ -90,7 +100,12 @@ export const ROOM_ROUTE_FOUNDATIONS = {
       ROOM_SCREEN_LOADERS.move(),
       ROOM_PROVIDER_ADAPTERS.move(query),
     ]);
-    return <MoveRoomScreen initialState={initialState} />;
+    return (
+      <MoveRoomScreen
+        fixture={previewFixtureForPlayRoute(query)}
+        initialState={initialState}
+      />
+    );
   },
 } satisfies Record<RoomObjectId, RoomRouteFoundation>;
 

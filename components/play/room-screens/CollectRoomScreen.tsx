@@ -3,6 +3,7 @@ import type {
   ConnectorState,
   DiscogsPublicSnapshot,
   DiscogsQueryState,
+  PreviewFixtureScenario,
 } from "../connector-model";
 import { ROOM_OBJECT_BY_ID } from "../room-platform/room-registry";
 import { MatchCutSurface } from "./MatchCutSurface";
@@ -12,14 +13,16 @@ import styles from "./RoomScreens.module.css";
 export default function CollectRoomScreen({
   initialQuery,
   initialState,
+  fixture,
 }: {
   initialQuery: DiscogsQueryState;
   initialState: ConnectorState<DiscogsPublicSnapshot>;
+  fixture?: PreviewFixtureScenario;
 }) {
   const object = ROOM_OBJECT_BY_ID.collect;
   return (
     <main data-room-screen id="main" className={`${styles.page} ${styles.collectPage}`} tabIndex={-1}>
-      <ScreenNavigation object={object} />
+      <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.collectHeader}>
         <p>Discogs · Physical collection</p>
         <h1>{object.title}</h1>
@@ -36,6 +39,7 @@ export default function CollectRoomScreen({
         >
           <p id="collect-status-title">12″ · 10″ · 7″ · physical catalog</p>
           <DiscogsStream
+            fixture={fixture}
             initialQuery={initialQuery}
             initialState={initialState}
             routePath="/play/collect"

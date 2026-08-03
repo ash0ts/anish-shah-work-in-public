@@ -217,6 +217,17 @@ test("release preflight rejects a configuration that weakens production boundari
   );
 });
 
+test("production Play mode defaults to classic until explicitly activated", () => {
+  const { environment, expected } = validReleaseConfigFixture();
+  const withoutRoomMode = { ...environment };
+  delete withoutRoomMode.PLAY_EXPERIENCE_MODE;
+  const classic = expectedPublicReleaseConfig(withoutRoomMode, {
+    head: expected.head,
+    contentVersion: expected.contentVersion,
+  });
+  assert.equal(classic.playExperienceMode, "classic");
+});
+
 test("non-versioned trigger reconciliation is bound to the exact cutover release", () => {
   const { config } = validReleaseConfigFixture();
   const head = "a".repeat(40);

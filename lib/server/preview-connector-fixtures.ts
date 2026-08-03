@@ -3,7 +3,8 @@ import { runtimeValue } from "./runtime-env";
 import type { ConnectorProvider } from "./connectors/types";
 
 const SYNCED_AT = "2026-01-15T12:00:00.000Z";
-const FRESH_UNTIL = "2026-01-16T00:00:00.000Z";
+const FRESH_UNTIL_READY = "2099-01-16T00:00:00.000Z";
+const FRESH_UNTIL_STALE = "2026-01-16T00:00:00.000Z";
 const FIXTURE_SCENARIOS = new Set([
   "ready",
   "unavailable",
@@ -22,6 +23,10 @@ export type PreviewFixtureScenario =
   | "long-title"
   | "missing-artwork"
   | "maximum-density";
+
+function freshUntil(scenario: PreviewFixtureScenario): string {
+  return scenario === "stale" ? FRESH_UNTIL_STALE : FRESH_UNTIL_READY;
+}
 
 export function activePreviewFixtureRuntime(): boolean {
   return previewFixtureRuntime({
@@ -97,7 +102,7 @@ function collectionPayload(
       recent: library.slice(0, 8),
       library,
       syncedAt: SYNCED_AT,
-      freshUntil: FRESH_UNTIL,
+      freshUntil: freshUntil(scenario),
     };
   }
   if (provider === "hardcover") {
@@ -127,7 +132,7 @@ function collectionPayload(
       recent: library.slice(0, 8),
       library,
       syncedAt: SYNCED_AT,
-      freshUntil: FRESH_UNTIL,
+      freshUntil: freshUntil(scenario),
     };
   }
   if (provider === "discogs") {
@@ -175,7 +180,7 @@ function collectionPayload(
       }),
       library,
       syncedAt: SYNCED_AT,
-      freshUntil: FRESH_UNTIL,
+      freshUntil: freshUntil(scenario),
     };
   }
   const library = Array.from({ length: count }, (_, index) => ({
@@ -214,7 +219,7 @@ function collectionPayload(
     playtime: [{ label: "Played", count: library.filter((item) => item.played).length }],
     library,
     syncedAt: SYNCED_AT,
-    freshUntil: FRESH_UNTIL,
+    freshUntil: freshUntil(scenario),
   };
 }
 
@@ -253,7 +258,7 @@ function spotifyPayload(
       ["short_term", "medium_term", "long_term"].map((range) => [range, { tracks }]),
     ),
     syncedAt: SYNCED_AT,
-    freshUntil: FRESH_UNTIL,
+    freshUntil: freshUntil(scenario),
   };
 }
 
@@ -293,7 +298,29 @@ export function previewConnectorSnapshot(
 
 export function previewStravaSnapshot(
   searchParams: URLSearchParams,
-): Record<string, unknown> | null {
+):
+  | {
+      status: "unavailable";
+      provider: "strava";
+      code: "preview_fixture";
+      message: string;
+    }
+  | {
+      status: "ready";
+      provider: "strava";
+      payload: {
+        provider: "strava";
+        profileUrl: string;
+        embed: {
+          kind: "profile_feed";
+          embedUrl: string;
+          checkedAt: string;
+        };
+        embedStatus: "available";
+        updatedAt: string;
+      };
+    }
+  | null {
   if (!activePreviewFixtureRuntime()) return null;
   const scenario = previewFixtureScenario(searchParams);
   if (scenario === "unavailable") {
@@ -309,11 +336,15 @@ export function previewStravaSnapshot(
     provider: "strava",
     payload: {
       provider: "strava",
-      profileUrl: "https://www.strava.com/",
-      embed: null,
-      embedStatus: "unavailable",
+      profileUrl: "https://www.strava.com/athletes/99999999999999999999",
+      embed: {
+        kind: "profile_feed",
+        embedUrl:
+          "https://www.strava.com/athletes/99999999999999999999/latest-rides/0000000000000000000000000000000000000000",
+        checkedAt: SYNCED_AT,
+      },
+      embedStatus: "available",
       updatedAt: SYNCED_AT,
-      previewNotice: "Synthetic preview data",
     },
   };
 }

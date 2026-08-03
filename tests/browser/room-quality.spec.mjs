@@ -177,77 +177,6 @@ async function activeElementReport(page) {
   });
 }
 
-function spotifyFixture() {
-  const timestamp = new Date().toISOString();
-  const tracks = [
-    {
-      id: "1".repeat(22),
-      position: 1,
-      title: "A Long Walk Through the Quietest Part of the Evening",
-      artists: [{ id: "2".repeat(22), name: "Fixture Artist" }],
-      album: {
-        id: "3".repeat(22),
-        title: "Fixture Album",
-        releaseYear: 2001,
-        artwork: null,
-      },
-      durationMs: 201_000,
-      explicit: false,
-    },
-    {
-      id: "4".repeat(22),
-      position: 2,
-      title: "Second Track",
-      artists: [{ id: "5".repeat(22), name: "Another Artist" }],
-      album: {
-        id: "6".repeat(22),
-        title: "Second Album",
-        releaseYear: 2002,
-        artwork: null,
-      },
-      durationMs: 189_000,
-      explicit: true,
-    },
-  ];
-  return {
-    status: "ready",
-    fetchedAt: timestamp,
-    stale: false,
-    payload: {
-      provider: "spotify",
-      profileUrl: `https://open.spotify.com/user/${"7".repeat(22)}`,
-      coverage: "Spotify-calculated affinity; not play counts",
-      windows: {
-        short_term: { tracks },
-        medium_term: { tracks },
-        long_term: { tracks },
-      },
-      syncedAt: timestamp,
-      freshUntil: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
-    },
-  };
-}
-
-function stravaFixture() {
-  const timestamp = new Date().toISOString();
-  return {
-    status: "ready",
-    provider: "strava",
-    payload: {
-      provider: "strava",
-      profileUrl: "https://www.strava.com/athletes/37597587",
-      embed: {
-        kind: "profile_feed",
-        embedUrl:
-          "https://www.strava.com/athletes/37597587/latest-rides/0123456789abcdef0123456789abcdef01234567",
-        checkedAt: timestamp,
-      },
-      embedStatus: "available",
-      updatedAt: timestamp,
-    },
-  };
-}
-
 test.describe("My Room 2001 browser quality", () => {
   test.skip(!roomMode, "The room suite runs against its dedicated Worker mode.");
 
@@ -336,16 +265,9 @@ test.describe("My Room 2001 browser quality", () => {
 
   test("direct routes render the selected provider foundation without unrelated browser reads", async ({ page }) => {
     const requests = [];
-    await page.route("**/api/connectors/**", async (route) => {
-      requests.push(new URL(route.request().url()).pathname);
-      await route.fulfill({
-        contentType: "application/json",
-        status: 200,
-        body: JSON.stringify({
-          status: "unavailable",
-          message: "Deterministic browser fixture",
-        }),
-      });
+    page.on("request", (request) => {
+      const pathname = new URL(request.url()).pathname;
+      if (pathname.startsWith("/api/connectors/")) requests.push(pathname);
     });
 
     for (const object of objects) {
@@ -353,12 +275,32 @@ test.describe("My Room 2001 browser quality", () => {
       await page.goto(`/play/${object.id}`, { waitUntil: "networkidle" });
       await expect(page.getByRole("heading", { name: object.title })).toBeVisible();
       await expect(page.getByText(object.foundation, { exact: false })).toBeVisible();
-      expect(
-        [...new Set(requests)].every(
-          (pathname) => pathname === `/api/connectors/${object.provider}`,
-        ),
-      ).toBe(true);
+      expect(requests).toEqual([]);
     }
+  });
+
+  test("an explicit preview scenario survives semantic and room navigation", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/play?fixture=long-title", { waitUntil: "networkidle" });
+    const readLink = page.locator('[data-room-object-link="read"]');
+    await expect(readLink).toHaveAttribute(
+      "href",
+      "/play/read?fixture=long-title",
+    );
+
+    await page.getByRole("button", { name: "Enter the room" }).click();
+    const room = page.getByRole("dialog", { name: "Interactive room" });
+    await room.locator('[data-room-object-control="read"]').click();
+    await expect(page).toHaveURL(/\/play\/read\?fixture=long-title$/);
+    await page.getByRole("searchbox", { name: "Find a title" }).fill("記憶");
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page.getByText(/記憶と機械/).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Back to room" })).toHaveAttribute(
+      "href",
+      "/play?fixture=long-title",
+    );
   });
 
   test("Enter traps focus and Leave restores the invoking control", async ({ page }) => {
@@ -673,74 +615,79 @@ test.describe("My Room 2001 browser quality", () => {
   });
 
   test("Spotify remains consent-gated on the Listen object route", async ({ page }) => {
-    test.skip(
-      true,
-      "Ready connector fixtures are server-selected and run through the isolated preview/staging foundation after rebase.",
-    );
-    const embedRequests = [];
-    await page.route("**/api/connectors/spotify", async (route) => {
-      await route.fulfill({
-        contentType: "application/json",
-        status: 200,
-        body: JSON.stringify(spotifyFixture()),
-      });
-    });
-    await page.route("https://open.spotify.com/embed/**", async (route) => {
-      embedRequests.push(route.request().url());
-      await route.fulfill({
-        contentType: "text/html",
-        status: 200,
-        body: "<!doctype html><title>Spotify fixture</title>",
-      });
+    const connectorRequests = [];
+    const providerRequests = [];
+    page.on("request", (request) => {
+      const url = request.url();
+      if (url.includes("/api/connectors/spotify")) connectorRequests.push(url);
+      if (url.startsWith("https://open.spotify.com/")) providerRequests.push(url);
     });
 
-    await page.goto("/play/listen", { waitUntil: "networkidle" });
+    const response = await page.goto("/play/listen?fixture=ready", {
+      waitUntil: "networkidle",
+    });
+    expect(response?.headers()["content-security-policy"]).toContain(
+      "frame-src 'none'",
+    );
     await expect(page.getByRole("heading", { name: "Top Tracks, in returned order." })).toBeVisible();
-    expect(embedRequests).toEqual([]);
+    expect(connectorRequests).toEqual([]);
+    expect(providerRequests).toEqual([]);
     await expect(page.locator("iframe")).toHaveCount(0);
 
     const listenHere = page.getByRole("button", { name: "Listen here" }).first();
     await listenHere.click();
     await expect(page.locator("iframe")).toHaveCount(0);
-    expect(embedRequests).toEqual([]);
+    expect(providerRequests).toEqual([]);
     await page.getByRole("button", { name: "Load Spotify player" }).click();
-    await expect(page.locator('iframe[title*="Spotify"]')).toHaveCount(1);
-    expect(embedRequests).toHaveLength(1);
+    const spotifyFrame = page.locator('iframe[title*="Spotify"]');
+    await expect(spotifyFrame).toHaveCount(1);
+    await expect(spotifyFrame).toHaveAttribute(
+      "src",
+      /^https:\/\/open\.spotify\.com\/embed\/track\//,
+    );
+    await spotifyFrame.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
+    expect(providerRequests).toEqual([]);
     await page.getByRole("button", { name: "Close player" }).click();
     await expect(page.locator("iframe")).toHaveCount(0);
     await expect(listenHere).toBeFocused();
   });
 
   test("Strava remains consent-gated on the Move object route", async ({ page }) => {
-    test.skip(
-      true,
-      "Ready connector fixtures are server-selected and run through the isolated preview/staging foundation after rebase.",
-    );
-    const embedRequests = [];
-    await page.route("**/api/connectors/strava", async (route) => {
-      await route.fulfill({
-        contentType: "application/json",
-        status: 200,
-        body: JSON.stringify(stravaFixture()),
-      });
-    });
-    await page.route("https://www.strava.com/athletes/**", async (route) => {
-      embedRequests.push(route.request().url());
-      await route.fulfill({
-        contentType: "text/html",
-        status: 200,
-        body: "<!doctype html><title>Strava fixture</title>",
-      });
+    const connectorRequests = [];
+    const providerRequests = [];
+    page.on("request", (request) => {
+      const url = request.url();
+      if (url.includes("/api/connectors/strava")) connectorRequests.push(url);
+      if (
+        url.startsWith("https://www.strava.com/") ||
+        url.startsWith("https://strava-embeds.com/")
+      ) {
+        providerRequests.push(url);
+      }
     });
 
-    await page.goto("/play/move", { waitUntil: "networkidle" });
+    const response = await page.goto("/play/move?fixture=ready", {
+      waitUntil: "networkidle",
+    });
+    expect(response?.headers()["content-security-policy"]).toContain(
+      "frame-src 'none'",
+    );
     await expect(page.getByRole("button", { name: "Load public Strava feed" })).toBeVisible();
-    expect(embedRequests).toEqual([]);
+    expect(connectorRequests).toEqual([]);
+    expect(providerRequests).toEqual([]);
     await expect(page.locator("iframe")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Load public Strava feed" }).click();
-    await expect(page.locator('iframe[title*="Strava"]')).toHaveCount(1);
-    expect(embedRequests).toHaveLength(1);
+    const stravaFrame = page.locator('iframe[title*="Strava"]');
+    await expect(stravaFrame).toHaveCount(1);
+    await expect(stravaFrame).toHaveAttribute(
+      "src",
+      /^https:\/\/www\.strava\.com\/athletes\/99999999999999999999\/latest-rides\//,
+    );
+    await stravaFrame.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
+    expect(providerRequests).toEqual([]);
   });
 
   for (const width of widths) {

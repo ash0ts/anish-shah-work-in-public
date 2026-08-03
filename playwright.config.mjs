@@ -7,6 +7,10 @@ const persistedState =
   process.env.BROWSER_QUALITY_STATE_DIR ??
   `.wrangler/browser-quality-${playMode}`;
 const experienceMode = playMode === "room" ? "my-room-2001" : "classic";
+const previewRuntimeVariables =
+  playMode === "room"
+    ? " --var DEPLOYMENT_TIER:preview --var PREVIEW_PR_NUMBER:1 --var SITE_URL:https://pr-1.anish-shah-is.online --var PRODUCTION_SITE_URL:https://anish-shah-is.online --var PUBLIC_CONTENT_MODE:static_preview"
+    : "";
 
 export default defineConfig({
   testDir: "./tests/browser",
@@ -38,7 +42,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      `WRANGLER_LOG_PATH=.wrangler/browser-quality-${playMode}.log node node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --port ${port} --ip 127.0.0.1 --local --var NODE_ENV:development --var PLAY_EXPERIENCE_MODE:${experienceMode} --log-level error --persist-to ${persistedState}`,
+      `WRANGLER_LOG_PATH=.wrangler/browser-quality-${playMode}.log node node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --port ${port} --ip 127.0.0.1 --local --var NODE_ENV:development --var PLAY_EXPERIENCE_MODE:${experienceMode}${previewRuntimeVariables} --log-level error --persist-to ${persistedState}`,
     url: baseURL,
     reuseExistingServer: false,
     timeout: 30_000,

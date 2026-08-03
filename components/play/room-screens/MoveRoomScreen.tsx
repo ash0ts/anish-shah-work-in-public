@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { ConnectorState, StravaPayload } from "../connector-model";
+import type {
+  ConnectorState,
+  PreviewFixtureScenario,
+  StravaPayload,
+} from "../connector-model";
 import { MovementStream } from "../MovementStream";
 import { ROOM_OBJECT_BY_ID } from "../room-platform/room-registry";
 import { MatchCutSurface } from "./MatchCutSurface";
@@ -10,14 +14,16 @@ import styles from "./RoomScreens.module.css";
 
 export default function MoveRoomScreen({
   initialState,
+  fixture,
 }: {
   initialState: ConnectorState<StravaPayload>;
+  fixture?: PreviewFixtureScenario;
 }) {
   const [showStrava, setShowStrava] = useState(false);
   const object = ROOM_OBJECT_BY_ID.move;
   return (
     <main data-room-screen id="main" className={`${styles.page} ${styles.movePage}`} tabIndex={-1}>
-      <ScreenNavigation object={object} />
+      <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.moveHeader}>
         <p>Strava · Consent-gated public feed</p>
         <h1>{object.title}</h1>
@@ -31,6 +37,7 @@ export default function MoveRoomScreen({
             surface={object.matchCutSurface}
           >
             <MovementStream
+              fixture={fixture}
               initialState={initialState}
               onShow={() => setShowStrava(true)}
               show={showStrava}

@@ -24,7 +24,6 @@ export interface WorkerEnv {
   RELEASE_SHA?: string;
   CONTENT_VERSION?: string;
   PUBLIC_CONTENT_MODE?: string;
-  PLAY_EXPERIENCE_MODE?: string;
   SITE_URL?: string;
   PRODUCTION_SITE_URL?: string;
   DEPLOYMENT_TIER?: string;

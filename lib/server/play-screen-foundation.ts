@@ -5,6 +5,7 @@ import type {
   ConnectorState,
   DiscogsPublicSnapshot,
   DiscogsQueryState,
+  PreviewFixtureScenario,
   StravaPayload,
 } from "@/components/play/connector-model";
 import type { RoomObjectId } from "@/components/play/room-platform/room-types";
@@ -18,6 +19,12 @@ import {
 } from "./connectors";
 import { projectConnectorSnapshotForPublic } from "./connectors/public-gallery";
 import {
+  activePreviewFixtureRuntime,
+  previewConnectorSnapshot,
+  previewFixtureScenario,
+  previewStravaSnapshot,
+} from "./preview-connector-fixtures";
+import {
   collectionQueryFrom,
   collectionQueryFromGallery,
   discogsQueryFrom,
@@ -28,6 +35,27 @@ import { getStravaPublicConfig } from "./strava-config";
 
 export type { PlayRouteSearchParams } from "./play-query";
 export { collectionQueryFrom, discogsQueryFrom } from "./play-query";
+
+function firstValue(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+}
+
+function withPreviewFixture(
+  values: PlayRouteSearchParams,
+  parameters = new URLSearchParams(),
+): URLSearchParams {
+  const fixture = firstValue(values.fixture);
+  if (fixture) parameters.set("fixture", fixture);
+  return parameters;
+}
+
+export function previewFixtureForPlayRoute(
+  values: PlayRouteSearchParams,
+): PreviewFixtureScenario | undefined {
+  if (!activePreviewFixtureRuntime()) return undefined;
+  if (!firstValue(values.fixture)) return undefined;
+  return previewFixtureScenario(withPreviewFixture(values));
+}
 
 function collectionSearch(query: CollectionQueryState): URLSearchParams {
   const parameters = new URLSearchParams({
@@ -60,13 +88,18 @@ export async function getCollectionScreenFoundation(
   query: CollectionQueryState;
 }> {
   const query = collectionQueryFrom(values, provider);
-  const snapshot = await getPublicConnectorSnapshot(provider);
+  const search = withPreviewFixture(values, collectionSearch(query));
+  const preview = previewConnectorSnapshot(provider, search);
+  const snapshot = preview ?? (await getPublicConnectorSnapshot(provider));
   if (snapshot.status !== "ready") {
     return {
       query,
       state: {
         status: "unavailable",
-        message: "This personal stream has not been published yet.",
+        message:
+          "message" in snapshot
+            ? snapshot.message
+            : "This personal stream has not been published yet.",
       },
     };
   }
@@ -74,7 +107,7 @@ export async function getCollectionScreenFoundation(
   const payload = projectConnectorSnapshotForPublic(
     provider,
     snapshot.payload,
-    collectionSearch(query),
+    search,
   ) as CollectionPayload;
   const gallery = payload.gallery;
 
@@ -98,13 +131,18 @@ export async function getDiscogsScreenFoundation(
   query: DiscogsQueryState;
 }> {
   const query = discogsQueryFrom(values);
-  const snapshot = await getPublicConnectorSnapshot("discogs");
+  const search = withPreviewFixture(values, discogsSearch(query));
+  const preview = previewConnectorSnapshot("discogs", search);
+  const snapshot = preview ?? (await getPublicConnectorSnapshot("discogs"));
   if (snapshot.status !== "ready") {
     return {
       query,
       state: {
         status: "unavailable",
-        message: "This physical collection has not been published yet.",
+        message:
+          "message" in snapshot
+            ? snapshot.message
+            : "This physical collection has not been published yet.",
       },
     };
   }
@@ -112,7 +150,7 @@ export async function getDiscogsScreenFoundation(
   const payload = projectConnectorSnapshotForPublic(
     "discogs",
     snapshot.payload,
-    discogsSearch(query),
+    search,
   ) as DiscogsPublicSnapshot;
 
   return {
@@ -126,18 +164,29 @@ export async function getDiscogsScreenFoundation(
   };
 }
 
-export async function getSpotifyScreenFoundation(): Promise<SpotifyState> {
-  const snapshot = await getPublicConnectorSnapshot("spotify");
+export async function getSpotifyScreenFoundation(
+  values: PlayRouteSearchParams,
+): Promise<SpotifyState> {
+  const search = withPreviewFixture(values);
+  const preview = previewConnectorSnapshot("spotify", search);
+  const snapshot = preview ?? (await getPublicConnectorSnapshot("spotify"));
   if (snapshot.status === "ready") {
     return {
       status: "ready",
       payload: projectConnectorSnapshotForPublic(
         "spotify",
         snapshot.payload,
-        new URLSearchParams(),
+        search,
       ) as unknown as SpotifyPublicSnapshot,
       fetchedAt: snapshot.fetchedAt,
       stale: snapshot.stale,
+    };
+  }
+
+  if (preview?.status === "unavailable") {
+    return {
+      status: "unavailable",
+      message: preview.message,
     };
   }
 
@@ -157,9 +206,23 @@ export async function getSpotifyScreenFoundation(): Promise<SpotifyState> {
   };
 }
 
-export async function getMovementScreenFoundation(): Promise<
+export async function getMovementScreenFoundation(
+  values: PlayRouteSearchParams,
+): Promise<
   ConnectorState<StravaPayload>
 > {
+  const preview = previewStravaSnapshot(withPreviewFixture(values));
+  if (preview) {
+    if (preview.status === "unavailable") {
+      return { status: "unavailable", message: preview.message };
+    }
+    return {
+      status: "ready",
+      payload: preview.payload,
+      fetchedAt: preview.payload.updatedAt,
+      stale: false,
+    };
+  }
   const result = await getStravaPublicConfig();
   if (result.status !== "ready") {
     return {
@@ -186,14 +249,8 @@ type RoomProviderAdapter = (
 export const ROOM_PROVIDER_ADAPTERS = {
   watch: (values) => getCollectionScreenFoundation("myanimelist", values),
   read: (values) => getCollectionScreenFoundation("hardcover", values),
-  listen: (values) => {
-    void values;
-    return getSpotifyScreenFoundation();
-  },
+  listen: (values) => getSpotifyScreenFoundation(values),
   collect: (values) => getDiscogsScreenFoundation(values),
   play: (values) => getCollectionScreenFoundation("steam", values),
-  move: (values) => {
-    void values;
-    return getMovementScreenFoundation();
-  },
+  move: (values) => getMovementScreenFoundation(values),
 } satisfies Record<RoomObjectId, RoomProviderAdapter>;
