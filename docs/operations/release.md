@@ -50,8 +50,7 @@ git switch main
 git pull --ff-only
 git status --short
 export RELEASE_VALIDATED_SHA="$(git rev-parse HEAD)"
-corepack enable
-corepack prepare npm@11.6.2 --activate
+npm install --global npm@11.6.2 --ignore-scripts
 npm ci
 npm run db:local:migrate:clean
 ```

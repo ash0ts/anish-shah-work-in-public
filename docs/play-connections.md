@@ -47,8 +47,7 @@ Run:
 
 ```bash
 cd "/path/to/anish-site"
-corepack enable
-corepack prepare npm@11.6.2 --activate
+npm install --global npm@11.6.2 --ignore-scripts
 npm ci
 test -f .env.local || cp .env.example .env.local
 openssl rand -base64 32

@@ -3,8 +3,7 @@
 ## Authoritative local gate
 
 ```bash
-corepack enable
-corepack prepare npm@11.6.2 --activate
+npm install --global npm@11.6.2 --ignore-scripts
 npm ci
 npm run db:local:migrate
 npm run validate

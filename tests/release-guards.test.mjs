@@ -34,7 +34,7 @@ function validReleaseConfigFixture() {
       "https://anish-shah-work-in-public.anish-shah-emails.workers.dev",
     CF_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
     OWNER_EMAILS: "owner@example.com",
-    CF_ACCESS_AUD: "audience_12345",
+    CF_ACCESS_AUD: "example-access-audience",
     CLOUDFLARE_D1_DATABASE_ID: "00000000-0000-4000-8000-000000000000",
     CLOUDFLARE_D1_DATABASE_NAME: "anish-shah-work-in-public",
     CLOUDFLARE_PUBLICATION_CACHE_ID: "0".repeat(32),

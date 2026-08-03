@@ -40,8 +40,8 @@ jobs:
           cache: npm
       - name: Use pinned npm
         run: |
-          corepack enable
-          corepack prepare npm@11.6.2 --activate
+          npm install --global npm@11.6.2 --ignore-scripts
+          hash -r
           test "$(npm --version)" = "11.6.2"
       - name: Install locked dependencies
         run: npm ci --ignore-scripts

@@ -20,8 +20,7 @@ there is no Three.js archive navigation, autoplay, or scroll hijacking.
 Use Node `24.18.0` and npm `11.6.2`.
 
 ```bash
-corepack enable
-corepack prepare npm@11.6.2 --activate
+npm install --global npm@11.6.2 --ignore-scripts
 npm ci
 cp .env.example .env.local
 # Set matching OWNER_EMAILS and LOCAL_OWNER_EMAIL values, then generate the two
