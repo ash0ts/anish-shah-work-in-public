@@ -57,6 +57,8 @@ publish private fallback data.
   production endpoint over HTTPS; the browser never receives them, production
   encrypts them immediately, and an unapplied staged payload expires after 30
   minutes and is removed by hourly retention.
+- MyAnimeList, Spotify, and Discogs OAuth credentials, tokens, snapshots, and
+  publication approval are never transferred between local and production.
 - The production connector encryption key is durable state. Loss requires
   reconnecting providers; suspected compromise requires revocation and a
   planned credential reset.

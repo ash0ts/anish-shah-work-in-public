@@ -22,6 +22,8 @@ export const callbackResultMessages: Record<
     `${provider} is temporarily unavailable. Wait a few minutes, then start authorization again.`,
   rate_limited: (provider) =>
     `${provider} rate-limited the authorization request. Wait before starting it again.`,
+  reauthorization_required: (provider) =>
+    `${provider} rejected the prior authorization. Start authorization again with the owner account.`,
   token_exchange_failed: (provider) =>
     `${provider} did not issue usable tokens. If the app registration changed, check its secret and exact callback; otherwise start again.`,
   setup_required: () =>
@@ -71,6 +73,20 @@ export function connectorStatusClass(
   return styles[`status_${connector.status}`] ?? styles.status_setup_required;
 }
 
+function isOwnerOAuthProvider(connector: ConnectorHealth): boolean {
+  return (
+    connector.provider === "myanimelist" ||
+    connector.provider === "spotify" ||
+    connector.provider === "discogs"
+  );
+}
+
+function providerTitle(connector: ConnectorHealth): string {
+  if (connector.provider === "spotify") return "Spotify";
+  if (connector.provider === "discogs") return "Discogs";
+  return "MyAnimeList";
+}
+
 export function statusGuidance(
   connector: ConnectorHealth,
   environment: Environment,
@@ -100,30 +116,29 @@ export function statusGuidance(
     connector.lastErrorCode === "credential_expired" ||
     connector.lastErrorCode === "credential_invalid"
   ) {
-    return connector.provider === "myanimelist" ||
-      connector.provider === "spotify"
+    return isOwnerOAuthProvider(connector)
       ? connector.canReuseOAuthClient
         ? `Authorize the owner account again, then refresh.${preservedSnapshot}`
-        : `This legacy token cannot be renewed automatically. Enter the app client ID and secret, authorize, then refresh.${preservedSnapshot}`
+        : connector.provider === "discogs"
+          ? `Enter the consumer key and secret, authorize, then refresh.${preservedSnapshot}`
+          : `This legacy token cannot be renewed automatically. Enter the app client ID and secret, authorize, then refresh.${preservedSnapshot}`
       : `Replace the credential, then refresh.${preservedSnapshot}`;
   }
   if (connector.status === "authorization_required") {
-    const provider =
-      connector.provider === "spotify" ? "Spotify" : "MyAnimeList";
+    const provider = providerTitle(connector);
     return `Complete the open ${provider} authorization. If that tab was closed, start authorization again.`;
   }
   if (connector.status === "setup_required") {
     return connector.configured
       ? "A release gate is incomplete. Resolve the setup notice before refreshing."
-      : connector.provider === "myanimelist" ||
-          connector.provider === "spotify"
+      : isOwnerOAuthProvider(connector)
         ? "Enter the app credentials, then authorize the owner account."
         : "Enter the owner credential, then run the first refresh.";
   }
   if (connector.status === "never_synced") {
     return environment === "local"
       ? "Connected in local D1. Run Refresh now to create the first local sanitized snapshot."
-      : connector.provider === "spotify"
+      : connector.provider === "spotify" || connector.provider === "discogs"
         ? "Connected. Run Refresh now to create the first sanitized snapshot; public display remains controlled below."
         : "Connected. Run Refresh now to publish the first sanitized snapshot.";
   }
@@ -132,6 +147,8 @@ export function statusGuidance(
       ? "The local snapshot is current. It has not been copied to production."
       : connector.provider === "spotify"
         ? "The sanitized snapshot is current. Public display remains controlled below; automatic refreshes are limited to once every 12 hours."
+        : connector.provider === "discogs"
+          ? "The sanitized catalog is current. Public display remains controlled below; it becomes refreshable after four hours and unavailable after six."
         : "The public snapshot is current. Automatic refreshes are limited to once every 12 hours.";
   }
   if (connector.status === "stale") {
@@ -194,12 +211,30 @@ export function safeAuthorizationUrl(
   if (!value) return null;
   try {
     const url = new URL(value);
-    const valid =
-      provider === "myanimelist"
-        ? url.origin === "https://myanimelist.net" &&
+    const valid = (() => {
+      if (url.username || url.password || url.hash) return false;
+      if (provider === "myanimelist") {
+        return (
+          url.origin === "https://myanimelist.net" &&
           url.pathname === "/v1/oauth2/authorize"
-        : url.origin === "https://accounts.spotify.com" &&
-          url.pathname === "/authorize";
+        );
+      }
+      if (provider === "spotify") {
+        return (
+          url.origin === "https://accounts.spotify.com" &&
+          url.pathname === "/authorize"
+        );
+      }
+      return (
+        url.origin === "https://www.discogs.com" &&
+        url.pathname === "/oauth/authorize" &&
+        url.searchParams.size === 1 &&
+        url.searchParams.getAll("oauth_token").length === 1 &&
+        /^[^\s\u0000-\u001f\u007f]{1,8192}$/.test(
+          url.searchParams.get("oauth_token") ?? "",
+        )
+      );
+    })();
     return valid ? url.toString() : null;
   } catch {
     return null;

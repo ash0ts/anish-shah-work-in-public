@@ -335,7 +335,7 @@ test("provider normalizers reduce artwork to host-free references", async () => 
 });
 
 test("Play fetches a personal-data provider only after its stream is active", async () => {
-  const [source, collection, movement, spotify] = await Promise.all([
+  const [source, collection, movement, spotify, discogs] = await Promise.all([
     readFile(
       new URL("../components/PersonalStreams.tsx", import.meta.url),
       "utf8",
@@ -352,6 +352,10 @@ test("Play fetches a personal-data provider only after its stream is active", as
       new URL("../components/SpotifyStream.tsx", import.meta.url),
       "utf8",
     ),
+    readFile(
+      new URL("../components/play/DiscogsStream.tsx", import.meta.url),
+      "utf8",
+    ),
   ]);
 
   assert.match(
@@ -365,6 +369,10 @@ test("Play fetches a personal-data provider only after its stream is active", as
   assert.match(
     source,
     /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/,
+  );
+  assert.match(
+    source,
+    /active === "collect"[\s\S]*?<DiscogsStream/,
   );
   assert.match(
     source,
@@ -386,6 +394,10 @@ test("Play fetches a personal-data provider only after its stream is active", as
     spotify,
     /function SpotifyStream[\s\S]*?loadSpotify\(controller\.signal\)/,
   );
+  assert.match(
+    discogs,
+    /function DiscogsStream[\s\S]*?loadConnector<DiscogsPublicSnapshot>\([\s\S]*?"discogs"/,
+  );
   assert.doesNotMatch(source, /Promise\.all\([^)]*loadConnector/);
   assert.match(source, /show=\{showStrava\}/);
   assert.match(source, /onShow=\{\(\) => setShowStrava\(true\)\}/);
@@ -404,6 +416,7 @@ test("Studio documents setup, replacement, and official provider sources", async
         "../app/studio/connectors/MyAnimeListConnectorPanel.tsx",
         "../app/studio/connectors/HardcoverConnectorPanel.tsx",
         "../app/studio/connectors/SpotifyConnectorPanel.tsx",
+        "../app/studio/connectors/DiscogsConnectorPanel.tsx",
         "../app/studio/connectors/SteamConnectorPanel.tsx",
         "../app/studio/connectors/StravaConnectorPanel.tsx",
       ].map((path) => readFile(new URL(path, import.meta.url), "utf8")),
@@ -422,6 +435,7 @@ test("Studio documents setup, replacement, and official provider sources", async
     "https://hardcover.app/account/api",
     "https://docs.hardcover.app/api/getting-started/",
     "https://developer.spotify.com/dashboard",
+    "https://www.discogs.com/settings/developers",
     "https://partner.steamgames.com/doc/webapi_overview",
     "https://steamcommunity.com/dev/apikey",
     "https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed",
@@ -455,7 +469,10 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(guide, /client ID.*client secret/is);
   assert.match(guide, /Refresh now.*Current/is);
   assert.match(guide, /one-time[\s\S]*transfer code/i);
-  assert.match(guide, /Authorize MyAnimeList and Spotify separately/i);
+  assert.match(
+    guide,
+    /Authorize MyAnimeList, Spotify, and Discogs separately/i,
+  );
   assert.match(guide, /Reauthorization required/);
   assert.match(guide, /one year/i);
   assert.match(guide, /January\s+1/i);

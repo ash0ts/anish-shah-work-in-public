@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = publicPageMetadata({
   title: "Privacy and personal streams",
   description:
-    "Learn what Anish Shah’s personal data connectors retrieve, store, publish, retain, and delete, plus how to report an issue.",
+    "Learn what Anish Shah’s media and activity connectors retrieve, publish, retain, and delete, plus how to report an issue.",
   path: "/privacy",
 });
 
@@ -23,14 +23,14 @@ export default function PrivacyPage() {
         <p>
           These connectors retrieve Anish’s own public activity after
           owner-authorized setup. They do not collect a visitor’s Steam,
-          Spotify, MyAnimeList, Hardcover, or Strava account data.
+          Spotify, Discogs, MyAnimeList, Hardcover, or Strava account data.
         </p>
         <small>Owner-controlled · sanitized public snapshots only</small>
       </header>
 
       <article className={styles.policy}>
         <section>
-          <h2>Five deliberately different connections</h2>
+          <h2>Six deliberately different connections</h2>
           <p>
             Each provider has a narrow input, a bounded public output, and an
             explicit deletion path.
@@ -82,6 +82,21 @@ export default function PrivacyPage() {
               </dd>
             </div>
             <div>
+              <dt>Discogs · Collect</dt>
+              <dd>
+                Studio stores an encrypted consumer secret, access token, and
+                access-token secret after owner-authorized OAuth. D1 stores one
+                sanitized snapshot of the owner’s physical collection. The
+                public endpoint returns titles, artists, release years,
+                normalized physical formats, copy counts, format and decade
+                distributions, and a profile link. Copies and distinct
+                releases remain separate counts. Images, conditions, ratings,
+                notes, acquisition dates, folders, wantlists, inventory,
+                marketplace data, pricing, sales, account identifiers, and raw
+                provider responses are excluded.
+              </dd>
+            </div>
+            <div>
               <dt>Steam · Play</dt>
               <dd>
                 Studio encrypts the Web API key and SteamID64 together. D1
@@ -115,12 +130,13 @@ export default function PrivacyPage() {
           <p>
             MyAnimeList, Hardcover, Spotify, and Steam refresh no more than
             once every 12 hours unless the protected owner Studio requests a
-            refresh. D1 retains at most the latest two complete sanitized
-            snapshots for each provider. A public request receives only a
-            page-sized gallery rather than the stored collection. Transient
-            failures preserve the latest eligible last-known-good snapshot.
-            Steam’s public fallback
-            and Spotify’s API-derived display expire after 72 hours; expired
+            refresh. Discogs becomes refreshable after four hours and its
+            catalog becomes unavailable six hours after the last successful
+            synchronization. D1 retains at most the latest two complete
+            sanitized snapshots for the other API providers and one current
+            Discogs snapshot. Transient failures preserve only snapshots still
+            inside their documented public window. Steam’s public fallback and
+            Spotify’s API-derived display expire after 72 hours; expired
             Spotify metadata is deleted after 30 days.
           </p>
           <p>
@@ -158,14 +174,15 @@ export default function PrivacyPage() {
         <section>
           <h2>Visitors and provider terms</h2>
           <p>
-            Selecting Watch, Read, Listen, or Play requests only this site’s
-            sanitized first-party snapshot. Spotify album artwork is requested
-            only after Listen is active. The Spotify player has a separate
-            consent gate and is not requested until the visitor chooses to load
-            it. Selecting Move requests the stored embed configuration, but no
-            request reaches Strava until the visitor grants consent. The site
-            does not collect a visitor’s account data from any of these
-            providers.
+            Selecting Watch, Read, Listen, Collect, or Play requests only this
+            site’s sanitized first-party snapshot. The Discogs catalog is not
+            requested until Collect is active. Spotify album artwork is
+            requested only after Listen is active. The Spotify player has a
+            separate consent gate and is not requested until the visitor
+            chooses to load it. Selecting Move requests the stored embed
+            configuration, but no request reaches Strava until the visitor
+            grants consent. The site does not collect a visitor’s account data
+            from any of these providers.
           </p>
           <p>
             Spotify content is attributed to Spotify and links back to the
@@ -180,6 +197,17 @@ export default function PrivacyPage() {
             and{" "}
             <a href="https://developer.spotify.com/documentation/embeds/terms">
               Spotify Embed Terms
+            </a>
+            .
+          </p>
+          <p>
+            Discogs data is presented as a personal, noncommercial physical
+            catalog and links back to individual Discogs release pages. This
+            application uses Discogs’ API but is not affiliated with, sponsored
+            or endorsed by Discogs.
+            Review the{" "}
+            <a href="https://support.discogs.com/hc/en-us/articles/360009334593-API-Terms-of-Use">
+              Discogs API Terms of Use
             </a>
             .
           </p>

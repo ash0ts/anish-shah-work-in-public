@@ -92,6 +92,17 @@ test("responsive Spotify changes require the browser quality gate", () => {
   assert.match(result.stdout, /npm run validate:browser/);
 });
 
+test("responsive Discogs changes require connector and browser gates", () => {
+  const result = plan(
+    "components/play/DiscogsStream.tsx",
+    "lib/server/http/discogs-config.ts",
+  );
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, /npm run test:content/);
+  assert.match(result.stdout, /npm run test:backend/);
+  assert.match(result.stdout, /npm run validate:browser/);
+});
+
 test("Access and authentication changes fail classification without coverage", () => {
   const missingTest = plan("worker/access.ts");
   assert.equal(missingTest.status, 1);

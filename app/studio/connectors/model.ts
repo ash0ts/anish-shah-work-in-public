@@ -9,6 +9,7 @@ export type ConnectorControlsProps = {
   encryptionConfigured: boolean;
   myAnimeListCallbackUrl: string | null;
   spotifyCallbackUrl: string | null;
+  discogsCallbackUrl: string | null;
   steamStorageCountries: string | null;
 };
 
@@ -21,6 +22,12 @@ export type SpotifyPresentationConfig = {
     kind: "track" | "album" | "playlist";
     spotifyId: string;
   } | null;
+};
+
+export type DiscogsPresentationConfig = {
+  publishCollection: boolean;
+  reviewedAt: string | null;
+  updatedAt?: string | null;
 };
 
 export type ApiResult = {
@@ -36,7 +43,7 @@ export type ApiResult = {
   embedStatus?: "available" | "unavailable";
   status?: string;
   updatedAt?: string;
-  config?: SpotifyPresentationConfig;
+  config?: SpotifyPresentationConfig | DiscogsPresentationConfig;
 };
 
 export type ProviderMeta = {
@@ -51,13 +58,34 @@ export type ProviderMeta = {
   recovery: string;
 };
 
-export type OAuthProvider = "myanimelist" | "spotify";
+export type OAuthProvider = "myanimelist" | "spotify" | "discogs";
+
+export type OAuthCredentialShape =
+  | {
+      idLabel: "Client ID";
+      secretLabel: "Client secret";
+      requestKeys: {
+        id: "clientId";
+        secret: "clientSecret";
+      };
+      showsAccessTokenExpiry: true;
+    }
+  | {
+      idLabel: "Consumer key";
+      secretLabel: "Consumer secret";
+      requestKeys: {
+        id: "consumerKey";
+        secret: "consumerSecret";
+      };
+      showsAccessTokenExpiry: false;
+    };
 
 export type OAuthPanelConfig = {
   provider: OAuthProvider;
-  title: "MyAnimeList" | "Spotify";
+  title: "MyAnimeList" | "Spotify" | "Discogs";
   startPath: string;
   callbackUrl: string | null;
+  credentialShape?: OAuthCredentialShape;
 };
 
 export type ApiConnectorPanelProps = {
@@ -72,5 +100,8 @@ export type ApiConnectorPanelProps = {
 
 export type ProviderPanelProps = Omit<
   ConnectorControlsProps,
-  "myAnimeListCallbackUrl" | "spotifyCallbackUrl" | "steamStorageCountries"
+  | "myAnimeListCallbackUrl"
+  | "spotifyCallbackUrl"
+  | "discogsCallbackUrl"
+  | "steamStorageCountries"
 >;

@@ -2,6 +2,7 @@
 
 import { type KeyboardEvent, type ReactNode, useState } from "react";
 import { CollectionStream } from "./play/CollectionStream";
+import { DiscogsStream } from "./play/DiscogsStream";
 import { MovementStream } from "./play/MovementStream";
 import styles from "./PersonalStreams.module.css";
 import { SpotifyStream } from "./SpotifyStream";
@@ -26,6 +27,13 @@ const streams = [
     provider: "Spotify",
     fallback:
       "Spotify-calculated Top Tracks across three time windows, shown as an ordinal ranked groove rather than play counts.",
+  },
+  {
+    id: "collect",
+    label: "Collect",
+    provider: "Discogs",
+    fallback:
+      "A public physical-media catalog, with copies and distinct releases kept separate. The interactive shelf loads only after Collect is selected.",
   },
   {
     id: "play",
@@ -144,6 +152,16 @@ export function PersonalStreams({
           tabIndex={0}
         >
           <SpotifyStream active={active === "listen"} serverFallback={spotifyNoScript} />
+        </div>
+        <div
+          aria-labelledby="stream-tab-collect"
+          className={styles.panel}
+          hidden={active !== "collect"}
+          id="stream-panel-collect"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          {active === "collect" ? <DiscogsStream /> : null}
         </div>
         <div
           aria-labelledby="stream-tab-play"

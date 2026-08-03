@@ -30,6 +30,9 @@ type GallerySpec = {
 export function connectorSnapshotNeedsUpgrade(
   payload: Record<string, unknown>,
 ): boolean {
+  if (payload.provider === "discogs") {
+    return payload.snapshotVersion !== 1 || !Array.isArray(payload.library);
+  }
   if (payload.provider === "spotify") {
     return (
       payload.snapshotVersion !== 1 ||
@@ -45,6 +48,9 @@ export function projectConnectorSnapshotForPublic(
   payload: Record<string, unknown>,
   searchParams: URLSearchParams,
 ): Record<string, unknown> {
+  if (provider === "discogs") {
+    return projectDiscogsSnapshot(payload, searchParams);
+  }
   if (provider === "spotify") {
     return projectSpotifySnapshot(payload);
   }
@@ -133,6 +139,248 @@ export function projectConnectorSnapshotForPublic(
       sorts: spec.sorts,
     },
   };
+}
+
+const DISCOGS_FORMATS = [
+  "Box set",
+  "Vinyl",
+  "CD",
+  "Cassette",
+  "Other",
+] as const;
+
+function projectDiscogsSnapshot(
+  payload: Record<string, unknown>,
+  searchParams: URLSearchParams,
+): Record<string, unknown> {
+  const rawLibrary = Array.isArray(payload.library)
+    ? payload.library.filter(isDiscogsGalleryItem)
+    : [];
+  const query = safeQuery(searchParams.get("q"));
+  const normalizedQuery = query.toLocaleLowerCase();
+  const formatOptions = countedDiscogsFilters(
+    rawLibrary,
+    (item) => stringValue(item.format),
+  );
+  const decadeOptions = countedDiscogsFilters(
+    rawLibrary,
+    (item) => discogsDecade(item.releaseYear),
+  );
+  const requestedFormat = safeToken(searchParams.get("format"));
+  const requestedDecade = safeToken(searchParams.get("decade"));
+  const allowedFormats = new Set(formatOptions.map((entry) => entry.id));
+  const allowedDecades = new Set(decadeOptions.map((entry) => entry.id));
+  const format = allowedFormats.has(requestedFormat)
+    ? requestedFormat
+    : "all";
+  const decade = allowedDecades.has(requestedDecade)
+    ? requestedDecade
+    : "all";
+  const requestedSort = safeToken(searchParams.get("sort"));
+  const sort = ["title", "artist", "year"].includes(requestedSort)
+    ? requestedSort
+    : "title";
+  const pageSizeCandidate = Number.parseInt(
+    searchParams.get("pageSize") ?? "",
+    10,
+  );
+  const pageSize = PAGE_SIZES.has(pageSizeCandidate)
+    ? pageSizeCandidate
+    : DEFAULT_PAGE_SIZE;
+
+  const filtered = rawLibrary
+    .filter((item) => {
+      const title = stringValue(item.title).toLocaleLowerCase();
+      const artists = Array.isArray(item.artists)
+        ? item.artists.map(stringValue).join(" ").toLocaleLowerCase()
+        : "";
+      return (
+        (!normalizedQuery ||
+          title.includes(normalizedQuery) ||
+          artists.includes(normalizedQuery)) &&
+        (format === "all" ||
+          filterId(stringValue(item.format)) === format) &&
+        (decade === "all" ||
+          filterId(discogsDecade(item.releaseYear)) === decade)
+      );
+    })
+    .sort((left, right) => compareDiscogsItems(left, right, sort));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const page = Math.min(positiveInteger(searchParams.get("page")), totalPages);
+  const start = (page - 1) * pageSize;
+
+  return {
+    provider: "discogs",
+    snapshotVersion: 1,
+    profileUrl: payload.profileUrl,
+    coverage: payload.coverage,
+    totals: projectDiscogsTotals(payload.totals),
+    formats: projectCountSeries(payload.formats),
+    decades: projectCountSeries(payload.decades),
+    formatDecadeMatrix: projectDiscogsMatrix(payload.formatDecadeMatrix),
+    syncedAt: payload.syncedAt,
+    freshUntil: payload.freshUntil,
+    gallery: {
+      ready: true,
+      items: filtered
+        .slice(start, start + pageSize)
+        .map(projectDiscogsItem),
+      page,
+      pageSize,
+      totalItems: filtered.length,
+      libraryTotal: rawLibrary.length,
+      totalPages,
+      query,
+      format,
+      decade,
+      sort,
+      formats: [
+        { id: "all", label: "All formats", count: rawLibrary.length },
+        ...formatOptions,
+      ],
+      decades: [
+        { id: "all", label: "All decades", count: rawLibrary.length },
+        ...decadeOptions,
+      ],
+      sorts: [
+        { id: "title", label: "Title" },
+        { id: "artist", label: "Artist" },
+        { id: "year", label: "Release year" },
+      ],
+    },
+  };
+}
+
+function projectDiscogsTotals(value: unknown): Record<string, number> {
+  const totals =
+    typeof value === "object" && value !== null && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  return {
+    physicalItems: numberValue(totals.physicalItems),
+    distinctReleases: numberValue(totals.distinctReleases),
+  };
+}
+
+function projectDiscogsMatrix(
+  value: unknown,
+): Array<{ format: string; decade: string; count: number }> {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (
+      typeof entry !== "object" ||
+      entry === null ||
+      Array.isArray(entry)
+    ) {
+      return [];
+    }
+    const record = entry as Record<string, unknown>;
+    return [{
+      format: stringValue(record.format),
+      decade: stringValue(record.decade),
+      count: numberValue(record.count),
+    }];
+  });
+}
+
+function projectDiscogsItem(item: GalleryItem): GalleryItem {
+  return {
+    releaseId: stringValue(item.releaseId),
+    title: stringValue(item.title),
+    artists: Array.isArray(item.artists)
+      ? item.artists.map(stringValue).filter(Boolean)
+      : [],
+    releaseYear: nullableNumber(item.releaseYear),
+    format: stringValue(item.format),
+    copyCount: numberValue(item.copyCount),
+  };
+}
+
+function isDiscogsGalleryItem(value: unknown): value is GalleryItem {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value)
+  ) {
+    return false;
+  }
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.releaseId === "string" &&
+    typeof item.title === "string" &&
+    Array.isArray(item.artists) &&
+    typeof item.format === "string"
+  );
+}
+
+function countedDiscogsFilters(
+  library: GalleryItem[],
+  labelFor: (item: GalleryItem) => string,
+): GalleryFilter[] {
+  const counts = new Map<string, { label: string; count: number }>();
+  for (const item of library) {
+    const label = labelFor(item);
+    const id = filterId(label);
+    const current = counts.get(id);
+    counts.set(id, {
+      label,
+      count: (current?.count ?? 0) + 1,
+    });
+  }
+  return [...counts.entries()]
+    .map(([id, value]) => ({ id, ...value }))
+    .sort((left, right) => {
+      const leftIndex = DISCOGS_FORMATS.indexOf(
+        left.label as (typeof DISCOGS_FORMATS)[number],
+      );
+      const rightIndex = DISCOGS_FORMATS.indexOf(
+        right.label as (typeof DISCOGS_FORMATS)[number],
+      );
+      if (leftIndex >= 0 || rightIndex >= 0) {
+        return (leftIndex < 0 ? 99 : leftIndex) -
+          (rightIndex < 0 ? 99 : rightIndex);
+      }
+      if (left.label === "Undated") return 1;
+      if (right.label === "Undated") return -1;
+      return right.label.localeCompare(left.label);
+    });
+}
+
+function discogsDecade(value: unknown): string {
+  const year = nullableNumber(value);
+  return year === null ? "Undated" : `${Math.floor(year / 10) * 10}s`;
+}
+
+function compareDiscogsItems(
+  left: GalleryItem,
+  right: GalleryItem,
+  sort: string,
+): number {
+  if (sort === "artist") {
+    const leftArtist = Array.isArray(left.artists)
+      ? stringValue(left.artists[0])
+      : "";
+    const rightArtist = Array.isArray(right.artists)
+      ? stringValue(right.artists[0])
+      : "";
+    return leftArtist.localeCompare(rightArtist) || byTitle(left, right);
+  }
+  if (sort === "year") {
+    return (
+      descendingNullableYear(left.releaseYear, right.releaseYear) ||
+      byTitle(left, right)
+    );
+  }
+  return byTitle(left, right);
+}
+
+function descendingNullableYear(left: unknown, right: unknown): number {
+  const leftYear = nullableNumber(left);
+  const rightYear = nullableNumber(right);
+  if (leftYear === null && rightYear === null) return 0;
+  if (leftYear === null) return 1;
+  if (rightYear === null) return -1;
+  return rightYear - leftYear;
 }
 
 function projectCountSeries(value: unknown): Array<{ label: string; count: number }> {

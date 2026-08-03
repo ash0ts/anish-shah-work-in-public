@@ -16,6 +16,16 @@ import {
 } from "./helpers";
 import type { ApiConnectorPanelProps } from "./model";
 
+const defaultOAuthCredentialShape = {
+  idLabel: "Client ID",
+  secretLabel: "Client secret",
+  requestKeys: {
+    id: "clientId",
+    secret: "clientSecret",
+  },
+  showsAccessTokenExpiry: true,
+} as const;
+
 export function ApiConnectorPanel({
   connector,
   environment,
@@ -27,11 +37,15 @@ export function ApiConnectorPanel({
 }: ApiConnectorPanelProps) {
   const router = useRouter();
   const isSpotify = connector.provider === "spotify";
+  const isPublicationGated =
+    isSpotify || connector.provider === "discogs";
   const isOAuthProvider = Boolean(oauth);
   const oauthProvider = oauth?.provider ?? "myanimelist";
   const oauthProviderTitle = oauth?.title ?? "MyAnimeList";
+  const oauthCredentialShape =
+    oauth?.credentialShape ?? defaultOAuthCredentialShape;
   const [secret, setSecret] = useState("");
-  const [clientId, setClientId] = useState("");
+  const [credentialId, setCredentialId] = useState("");
   const [steamId, setSteamId] = useState("");
   const [showCredentialForm, setShowCredentialForm] = useState(
     !connector.configured,
@@ -114,9 +128,9 @@ export function ApiConnectorPanel({
       setMessage("Set SITE_URL to the exact origin and restart Studio first.");
       return;
     }
-    if (!reuseStored && (!clientId.trim() || !secret)) {
+    if (!reuseStored && (!credentialId.trim() || !secret)) {
       setMessage(
-        `Enter both the ${oauthProviderTitle} client ID and client secret.`,
+        `Enter both the ${oauthProviderTitle} ${oauthCredentialShape.idLabel.toLowerCase()} and ${oauthCredentialShape.secretLabel.toLowerCase()}.`,
       );
       return;
     }
@@ -130,7 +144,10 @@ export function ApiConnectorPanel({
         body: JSON.stringify(
           reuseStored
             ? {}
-            : { clientId: clientId.trim(), clientSecret: secret },
+            : {
+                [oauthCredentialShape.requestKeys.id]: credentialId.trim(),
+                [oauthCredentialShape.requestKeys.secret]: secret,
+              },
         ),
       });
       const result = await responseJson(response);
@@ -228,7 +245,7 @@ export function ApiConnectorPanel({
       }
       if (action === "disconnect") {
         focusAfterMutation.current = "credential";
-        setClientId("");
+        setCredentialId("");
         setAuthorizationDestination(null);
         setShowCredentialForm(true);
       }
@@ -306,7 +323,7 @@ export function ApiConnectorPanel({
             <dt>
               {environment === "local"
                 ? "Local snapshot"
-                : isSpotify
+                : isPublicationGated
                   ? "Sanitized snapshot"
                   : "Published snapshot"}
             </dt>
@@ -320,7 +337,7 @@ export function ApiConnectorPanel({
             <dt>Snapshot refresh due</dt>
             <dd>{formatTimestamp(connector.freshUntil)}</dd>
           </div>
-          {isOAuthProvider ? (
+          {isOAuthProvider && oauthCredentialShape.showsAccessTokenExpiry ? (
             <div>
               <dt>Access token refresh</dt>
               <dd>{formatTimestamp(connector.credentialExpiresAt)}</dd>
@@ -397,30 +414,30 @@ export function ApiConnectorPanel({
               <div className={styles.fieldPair}>
                 <label
                   className={styles.formField}
-                  htmlFor={`${oauthProvider}-client-id`}
+                  htmlFor={`${oauthProvider}-${oauthCredentialShape.requestKeys.id}`}
                 >
-                  <span>Client ID</span>
+                  <span>{oauthCredentialShape.idLabel}</span>
                   <input
-                    id={`${oauthProvider}-client-id`}
+                    id={`${oauthProvider}-${oauthCredentialShape.requestKeys.id}`}
                     ref={firstCredentialField}
                     type="text"
-                    value={clientId}
+                    value={credentialId}
                     minLength={8}
                     maxLength={256}
                     autoComplete="off"
                     spellCheck={false}
-                    onChange={(event) => setClientId(event.target.value)}
+                    onChange={(event) => setCredentialId(event.target.value)}
                     placeholder={`From ${oauthProviderTitle} developer settings`}
                     required
                   />
                 </label>
                 <label
                   className={styles.formField}
-                  htmlFor={`${oauthProvider}-client-secret`}
+                  htmlFor={`${oauthProvider}-${oauthCredentialShape.requestKeys.secret}`}
                 >
-                  <span>Client secret</span>
+                  <span>{oauthCredentialShape.secretLabel}</span>
                   <input
-                    id={`${oauthProvider}-client-secret`}
+                    id={`${oauthProvider}-${oauthCredentialShape.requestKeys.secret}`}
                     type="password"
                     value={secret}
                     minLength={8}
@@ -509,7 +526,7 @@ export function ApiConnectorPanel({
                   disabled={pending !== null}
                   onClick={() => {
                     setSecret("");
-                    setClientId("");
+                    setCredentialId("");
                     setSteamId("");
                     setShowCredentialForm(false);
                   }}

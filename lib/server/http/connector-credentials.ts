@@ -50,12 +50,19 @@ export async function credentialPost(
 
   if (
     authorized.provider === "myanimelist" ||
-    authorized.provider === "spotify"
+    authorized.provider === "spotify" ||
+    authorized.provider === "discogs"
   ) {
+    const providerLabel =
+      authorized.provider === "spotify"
+        ? "Spotify"
+        : authorized.provider === "discogs"
+          ? "Discogs"
+          : "MyAnimeList";
     return Response.json(
       {
         error:
-          `Connect ${authorized.provider === "spotify" ? "Spotify" : "MyAnimeList"} through its OAuth setup instead of pasting an access token.`,
+          `Connect ${providerLabel} through its OAuth setup instead of pasting an access token.`,
         code: "oauth_required",
       },
       { status: 400, headers: { "cache-control": "private, no-store" } },

@@ -81,6 +81,7 @@ Register these production OAuth callbacks before checking the staged release:
 ```text
 https://anish-shah-is.online/api/connectors/myanimelist/oauth/callback
 https://anish-shah-is.online/api/connectors/spotify/oauth/callback
+https://anish-shah-is.online/api/connectors/discogs/oauth/callback
 ```
 
 Cancel or let any pending authorization transaction expire before replacing a

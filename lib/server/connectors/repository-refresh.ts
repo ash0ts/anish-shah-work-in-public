@@ -1,4 +1,10 @@
 import { classifyDatabaseError } from "../database-errors";
+import { fetchDiscogsSnapshot } from "./discogs";
+import {
+  clearDiscogsRetry,
+  discogsRetryNotBefore,
+  recordDiscogsRetryAfter,
+} from "./discogs-retry";
 import { fetchHardcoverSnapshot } from "./hardcover";
 import { fetchMyAnimeListSnapshot } from "./myanimelist";
 import {
@@ -28,6 +34,7 @@ import {
   type ConnectorCredential,
   type ConnectorFetchResult,
   type ConnectorProvider,
+  type DiscogsOAuthCredential,
   type HardcoverCredential,
   type MyAnimeListCredential,
   type SpotifyOAuthCredential,
@@ -36,7 +43,45 @@ import {
 } from "./types";
 
 const FRESHNESS_WINDOW_MS = 12 * 60 * 60 * 1000;
+const DISCOGS_FRESHNESS_WINDOW_MS = 4 * 60 * 60 * 1000;
+const DISCOGS_AUTOMATIC_RETRY_MS = 60 * 60 * 1000;
 const RUN_LOCK_WINDOW_MS = 10 * 60 * 1000;
+
+function freshnessWindow(provider: ConnectorProvider): number {
+  return provider === "discogs"
+    ? DISCOGS_FRESHNESS_WINDOW_MS
+    : FRESHNESS_WINDOW_MS;
+}
+
+function automaticRetryWindow(provider: ConnectorProvider): number {
+  return provider === "discogs"
+    ? DISCOGS_AUTOMATIC_RETRY_MS
+    : FRESHNESS_WINDOW_MS;
+}
+
+function retainedSnapshotCount(provider: ConnectorProvider): number {
+  return provider === "discogs" ? 1 : 2;
+}
+
+async function discogsManualRefreshIsDue(
+  database: D1Database,
+): Promise<boolean> {
+  const snapshot = await database
+    .prepare(
+      `SELECT fetched_at AS fetchedAt
+       FROM connector_snapshots
+       WHERE provider = 'discogs' AND status = 'ready'
+       ORDER BY fetched_at DESC, id DESC
+       LIMIT 1`,
+    )
+    .first<{ fetchedAt: string }>();
+  if (!snapshot) return true;
+  const fetchedAt = Date.parse(snapshot.fetchedAt);
+  return (
+    !Number.isFinite(fetchedAt) ||
+    Date.now() - fetchedAt >= DISCOGS_FRESHNESS_WINDOW_MS
+  );
+}
 
 async function fetchConnectorSnapshot(
   database: D1Database,
@@ -122,6 +167,8 @@ async function fetchConnectorSnapshot(
       );
       return fetchSpotifySnapshot(current);
     }
+    case "discogs":
+      return fetchDiscogsSnapshot(credential as DiscogsOAuthCredential);
     case "steam":
       return fetchSteamSnapshot(credential as SteamCredential);
   }
@@ -132,6 +179,7 @@ function safeError(error: unknown): {
   message: string;
   httpStatus: number | null;
   retryable: boolean;
+  retryAfterSeconds: number | null;
 } {
   if (error instanceof ConnectorFetchError) {
     return {
@@ -139,6 +187,7 @@ function safeError(error: unknown): {
       message: error.message,
       httpStatus: error.httpStatus,
       retryable: error.retryable,
+      retryAfterSeconds: error.retryAfterSeconds,
     };
   }
 
@@ -149,6 +198,7 @@ function safeError(error: unknown): {
       message: "Connector persistence is not ready.",
       httpStatus: null,
       retryable: false,
+      retryAfterSeconds: null,
     };
   }
 
@@ -157,6 +207,7 @@ function safeError(error: unknown): {
     message: "The connector sync failed before a new snapshot was saved.",
     httpStatus: null,
     retryable: true,
+    retryAfterSeconds: null,
   };
 }
 
@@ -169,12 +220,54 @@ export async function refreshConnector(
   if (!database) {
     return { status: "setup_required", provider, reason: "database" };
   }
+  return refreshConnectorUsingDatabase(
+    database,
+    provider,
+    trigger,
+    requestedByEmail,
+  );
+}
+
+export async function refreshConnectorUsingDatabase(
+  database: D1Database,
+  provider: ConnectorProvider,
+  trigger: SyncTrigger,
+  requestedByEmail: string | null,
+): Promise<RefreshResult> {
   if (provider === "steam" && !steamStorageCountries()) {
     return {
       status: "setup_required",
       provider,
       reason: "storage_disclosure",
     };
+  }
+
+  if (provider === "discogs") {
+    try {
+      const notBefore = await discogsRetryNotBefore(database);
+      if (notBefore) {
+        return trigger === "stale_revalidate"
+          ? { status: "not_due", provider }
+          : {
+              status: "failed",
+              provider,
+              code: "rate_limited",
+              retryable: true,
+            };
+      }
+    } catch {
+      return { status: "setup_required", provider, reason: "database" };
+    }
+  }
+
+  if (provider === "discogs" && trigger === "manual") {
+    try {
+      if (!(await discogsManualRefreshIsDue(database))) {
+        return { status: "not_due", provider };
+      }
+    } catch {
+      return { status: "setup_required", provider, reason: "database" };
+    }
   }
 
   try {
@@ -198,7 +291,7 @@ export async function refreshConnector(
       if (
         latestAutomaticRun &&
         Date.now() - Date.parse(latestAutomaticRun.startedAt) <
-          FRESHNESS_WINDOW_MS
+          automaticRetryWindow(provider)
       ) {
         return { status: "not_due", provider };
       }
@@ -269,7 +362,7 @@ export async function refreshConnector(
     );
     const fetchedAt = new Date().toISOString();
     const freshUntil = new Date(
-      Date.parse(fetchedAt) + FRESHNESS_WINDOW_MS,
+      Date.parse(fetchedAt) + freshnessWindow(provider),
     ).toISOString();
     const snapshotId = crypto.randomUUID();
     const publicPayload = {
@@ -332,7 +425,7 @@ export async function refreshConnector(
                FROM connector_snapshots
                WHERE provider = ?
                ORDER BY fetched_at DESC, id DESC
-               LIMIT 2
+               LIMIT ${retainedSnapshotCount(provider)}
              )`,
         )
         .bind(
@@ -393,6 +486,10 @@ export async function refreshConnector(
       );
     }
 
+    if (provider === "discogs") {
+      await clearDiscogsRetry(database).catch(() => undefined);
+    }
+
     return {
       status: "complete",
       provider,
@@ -402,6 +499,17 @@ export async function refreshConnector(
   } catch (error) {
     const failure = safeError(error);
     const finishedAt = new Date().toISOString();
+    if (provider === "discogs" && failure.code === "rate_limited") {
+      try {
+        await recordDiscogsRetryAfter(
+          database,
+          failure.retryAfterSeconds ?? 3_600,
+        );
+      } catch {
+        // The failed sync remains recorded below; a D1 outage also prevents
+        // the scheduler from issuing a competing provider request.
+      }
+    }
     if (
       provider === "steam" &&
       failure.code === "visibility_unavailable" &&

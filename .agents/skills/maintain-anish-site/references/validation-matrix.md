@@ -26,7 +26,7 @@ The helper never deploys or migrates remote state.
 It scans tracked and changed text for high-confidence secret/private-source leaks;
 placeholder examples must use the documented `<value>`, `${VALUE}`, `example`,
 or clearly synthetic test forms. Owner write/auth/OAuth changes without a matching
-security regression-test path fail classification. Responsive Spotify work selects
+security regression-test path fail classification. Responsive Play-stream work selects
 the browser gate, and release work selects `validate:release` without deploying.
 
 ## Full Gate

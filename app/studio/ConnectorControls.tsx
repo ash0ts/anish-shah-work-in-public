@@ -1,5 +1,6 @@
 "use client";
 
+import { DiscogsConnectorPanel } from "./connectors/DiscogsConnectorPanel";
 import { HardcoverConnectorPanel } from "./connectors/HardcoverConnectorPanel";
 import { MyAnimeListConnectorPanel } from "./connectors/MyAnimeListConnectorPanel";
 import { SpotifyConnectorPanel } from "./connectors/SpotifyConnectorPanel";
@@ -10,6 +11,7 @@ export function ConnectorControls({
   connector,
   environment,
   encryptionConfigured,
+  discogsCallbackUrl,
   myAnimeListCallbackUrl,
   spotifyCallbackUrl,
   steamStorageCountries,
@@ -29,6 +31,10 @@ export function ConnectorControls({
     case "spotify":
       return (
         <SpotifyConnectorPanel {...shared} callbackUrl={spotifyCallbackUrl} />
+      );
+    case "discogs":
+      return (
+        <DiscogsConnectorPanel {...shared} callbackUrl={discogsCallbackUrl} />
       );
     case "steam":
       return (

@@ -3,6 +3,7 @@
 ## Provider Model
 
 - MyAnimeList and Spotify use owner-only OAuth with separate local and production applications.
+- Discogs uses owner-only OAuth 1.0a with separate local and production applications; its public physical-media catalog is review-gated, text-only, refreshable after four hours, and unavailable after six.
 - Hardcover uses an owner API token.
 - Steam uses a Web API key plus SteamID64 and requires a truthful storage-country setting.
 - Strava stores a validated public profile and optional official embed through `lib/server/strava-config.ts`; it is not part of the generic `ConnectorProvider` repository.
@@ -29,8 +30,8 @@ OAuth callbacks remain public because providers must reach them. Bind each callb
 - Production Studio requires a verified Cloudflare Access JWT and an exact match in `OWNER_EMAILS`.
 - Never set `LOCAL_OWNER_EMAIL` in hosted environments.
 - Never copy local D1 state or replace the production encryption key.
-- The one-time promotion flow may transfer reviewed Hardcover, Steam, and Strava setup over HTTPS. It never transfers snapshots, local encryption, MyAnimeList credentials/tokens, Spotify credentials/tokens, or Spotify publication approval.
-- Reauthorize MyAnimeList and Spotify separately in production against their exact production callbacks.
+- The one-time promotion flow may transfer reviewed Hardcover, Steam, and Strava setup over HTTPS. It never transfers snapshots, local encryption, MyAnimeList credentials/tokens, Spotify credentials/tokens, Discogs credentials/tokens, or OAuth-provider publication approval.
+- Reauthorize MyAnimeList, Spotify, and Discogs separately in production against their exact production callbacks.
 
 ## Publication and Deletion
 

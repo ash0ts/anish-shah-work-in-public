@@ -8,7 +8,7 @@ technical storytelling, and community programs from 2021 onward.
 - `/` — technical focus, career arc, Bodies of Work, and qualified impact
 - `/work` — 82 WorkGroups connecting 186 searchable public forms
 - `/work/[slug]` — one story with its appearances, artifacts, and evidence
-- `/play` — consent-aware MyAnimeList, Hardcover, Spotify, Steam, and Strava
+- `/play` — bounded MyAnimeList, Hardcover, Spotify, Discogs, Steam, and Strava streams
 - `/sources` — archive accounting, claim context, and public bibliography
 - `/studio` — owner-only editorial and connector controls
 

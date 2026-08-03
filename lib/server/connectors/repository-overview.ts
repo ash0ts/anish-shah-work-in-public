@@ -100,7 +100,9 @@ export async function getStudioOverview(
           finishedAt: string | null;
         }>();
       const pendingAuthorization =
-        provider === "myanimelist" || provider === "spotify"
+        provider === "myanimelist" ||
+        provider === "spotify" ||
+        provider === "discogs"
           ? await database
               .prepare(
                 `SELECT state_hash AS stateHash
@@ -154,7 +156,9 @@ export async function getStudioOverview(
         provider,
         configured,
         canReuseOAuthClient:
-          (provider === "myanimelist" || provider === "spotify") &&
+          (provider === "myanimelist" ||
+            provider === "spotify" ||
+            provider === "discogs") &&
           credential?.credentialLabel === "Owner OAuth authorization",
         status,
         lastSyncedAt: snapshot?.fetchedAt ?? null,

@@ -216,6 +216,8 @@ test("all public routes expose useful server-rendered content", async () => {
         /Outside the work\./i,
         /MyAnimeList/i,
         /Hardcover/i,
+        /Spotify/i,
+        /Discogs/i,
         /Steam/i,
         /Strava/i,
         /<noscript\b/i,

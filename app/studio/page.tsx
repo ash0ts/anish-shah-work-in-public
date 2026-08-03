@@ -4,6 +4,7 @@ import {
   authenticatedSignOutPath,
   requireChatGPTUser,
 } from "@/app/chatgpt-auth";
+import { resolveDiscogsCallbackUrl } from "@/lib/server/connectors/discogs-oauth";
 import { resolveMyAnimeListCallbackUrl } from "@/lib/server/connectors/myanimelist-oauth";
 import { resolveSpotifyCallbackUrl } from "@/lib/server/connectors/spotify-oauth";
 import { getStudioOverview } from "@/lib/server/connectors";
@@ -63,6 +64,13 @@ export default async function StudioPage() {
     : null;
   const spotifyCallbackUrl = configuredSiteUrl
     ? resolveSpotifyCallbackUrl(
+        configuredSiteUrl,
+        configuredSiteUrl,
+        runtimeValue("NODE_ENV") ?? process.env.NODE_ENV,
+      )
+    : null;
+  const discogsCallbackUrl = configuredSiteUrl
+    ? resolveDiscogsCallbackUrl(
         configuredSiteUrl,
         configuredSiteUrl,
         runtimeValue("NODE_ENV") ?? process.env.NODE_ENV,
@@ -171,7 +179,7 @@ export default async function StudioPage() {
               <span>
                 Create a one-time code in production, stage portable settings
                 here, then validate and apply them there. Authorize
-                MyAnimeList and Spotify separately.
+                MyAnimeList, Spotify, and Discogs separately.
               </span>
             </li>
           </ol>
@@ -247,6 +255,7 @@ export default async function StudioPage() {
               connector={connector}
               environment={isLocalStudio ? "local" : "hosted"}
               encryptionConfigured={overview.encryptionConfigured}
+              discogsCallbackUrl={discogsCallbackUrl}
               myAnimeListCallbackUrl={myAnimeListCallbackUrl}
               spotifyCallbackUrl={spotifyCallbackUrl}
               steamStorageCountries={overview.steamStorageCountries}

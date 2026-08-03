@@ -11,6 +11,7 @@ const CONNECTOR_PROVIDERS = [
   "myanimelist",
   "hardcover",
   "spotify",
+  "discogs",
   "steam",
   "strava",
 ] as const;

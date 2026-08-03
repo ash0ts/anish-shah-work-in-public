@@ -5,6 +5,7 @@ import {
   DEFAULT_IMAGE_SIZES,
 } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { refreshDiscogsWhenDue } from "../lib/server/connectors/discogs-scheduled";
 import { pruneConnectorRetention } from "../lib/server/connectors/repository";
 import { authenticateRequest, isSitesRuntime } from "./access";
 import { publicationAvailabilityResponse } from "./publication-fallback";
@@ -12,6 +13,7 @@ import {
   rateLimitSetupResponse,
   requiresConfiguredRateLimit,
   throttleArtwork,
+  throttleDiscogsPublicRead,
   throttleOwnerWrite,
   throttlePromotionImport,
   throttleOAuthCallback,
@@ -23,6 +25,7 @@ import {
   observeScheduledFailure,
 } from "./redacted-observability";
 import { productionOriginResponse } from "./production-origin";
+import { canonicalSecurityPathname } from "./request-path";
 import { boundedApiWrite } from "./request-limits";
 import type {
   WorkerEnv,
@@ -39,9 +42,9 @@ async function routeApplicationRequest(
   request: Request,
   env: WorkerEnv,
   ctx: WorkerExecutionContext,
+  pathname: string,
 ): Promise<Response> {
-  const url = new URL(request.url);
-  if (url.pathname !== "/_vinext/image") {
+  if (pathname !== "/_vinext/image") {
     return handler.fetch(request, env, ctx);
   }
 
@@ -69,24 +72,43 @@ const worker = {
     ctx: WorkerExecutionContext,
   ): Promise<Response> {
     const url = new URL(request.url);
+    const pathname = canonicalSecurityPathname(url.pathname);
     const development = env.NODE_ENV === "development";
     const sitesRuntime = isSitesRuntime(url.hostname);
     const directProduction = !development && !sitesRuntime;
     const nonce = nonceValue();
     const observation = beginRequestObservation(
       request.method,
-      url.pathname,
+      pathname ?? "/invalid-path",
       env.RELEASE_SHA,
     );
     const finalize = (response: Response): Response => {
       const secured = correlatedResponse(
-        securedResponse(response, request, nonce, development),
+        securedResponse(
+          response,
+          request,
+          nonce,
+          development,
+          pathname ?? "/invalid-path",
+        ),
         observation,
       );
       observeResponse(observation, secured);
       return secured;
     };
     try {
+      if (pathname === null) {
+        return finalize(
+          new Response("Bad Request", {
+            status: 400,
+            headers: {
+              "cache-control": "private, no-store",
+              "content-type": "text/plain; charset=utf-8",
+              "x-robots-tag": "noindex, nofollow, noarchive",
+            },
+          }),
+        );
+      }
       const originFailure = productionOriginResponse(request, env, {
         development,
         sitesRuntime,
@@ -94,7 +116,7 @@ const worker = {
       if (originFailure) return finalize(originFailure);
 
       const authentication = await authenticateRequest(request, env, {
-        pathname: url.pathname,
+        pathname,
         directProduction,
         sitesRuntime,
       });
@@ -105,7 +127,7 @@ const worker = {
       if (
         requiresConfiguredRateLimit(
           env,
-          url.pathname,
+          pathname,
           directProduction,
           authentication.accessMode,
         )
@@ -122,10 +144,21 @@ const worker = {
         headers: authentication.headers,
       });
 
+      const discogsReadLimited = await throttleDiscogsPublicRead(
+        env,
+        appRequest,
+        development,
+        pathname,
+      );
+      if (discogsReadLimited && (directProduction || development)) {
+        return finalize(discogsReadLimited);
+      }
+
       const unavailable = await publicationAvailabilityResponse(
         appRequest,
         env,
         directProduction,
+        pathname,
       );
       if (unavailable) return finalize(unavailable);
 
@@ -133,6 +166,7 @@ const worker = {
         env,
         appRequest,
         development,
+        pathname,
       );
       if (oauthCallbackLimited && (directProduction || development)) {
         return finalize(oauthCallbackLimited);
@@ -142,12 +176,13 @@ const worker = {
         env,
         appRequest,
         development,
+        pathname,
       );
       if (promotionLimited && (directProduction || development)) {
         return finalize(promotionLimited);
       }
 
-      const bounded = await boundedApiWrite(appRequest, url.pathname);
+      const bounded = await boundedApiWrite(appRequest, pathname);
       if (bounded instanceof Response) return finalize(bounded);
       appRequest = bounded;
 
@@ -156,6 +191,7 @@ const worker = {
         appRequest,
         authentication.identity,
         development,
+        pathname,
       );
       if (ownerLimited && (directProduction || development)) {
         return finalize(ownerLimited);
@@ -165,12 +201,15 @@ const worker = {
         env,
         appRequest,
         development,
+        pathname,
       );
       if (artworkLimited && (directProduction || development)) {
         return finalize(artworkLimited);
       }
 
-      return finalize(await routeApplicationRequest(appRequest, env, ctx));
+      return finalize(
+        await routeApplicationRequest(appRequest, env, ctx, pathname),
+      );
     } catch {
       return finalize(
         new Response("The service is temporarily unavailable.", {
@@ -192,9 +231,11 @@ const worker = {
     ctx: WorkerExecutionContext,
   ): Promise<void> {
     ctx.waitUntil(
-      pruneConnectorRetention(env.DB, new Date(controller.scheduledTime)).catch(
-        () => observeScheduledFailure(env.RELEASE_SHA),
-      ),
+      (async () => {
+        const scheduledAt = new Date(controller.scheduledTime);
+        await pruneConnectorRetention(env.DB, scheduledAt);
+        await refreshDiscogsWhenDue(env.DB, scheduledAt);
+      })().catch(() => observeScheduledFailure(env.RELEASE_SHA)),
     );
   },
 };

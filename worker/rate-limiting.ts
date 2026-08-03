@@ -5,13 +5,16 @@ import { privateJson } from "./security-headers";
 const OAUTH_CALLBACK_PROVIDERS = new Map([
   ["/api/connectors/myanimelist/oauth/callback", "myanimelist"],
   ["/api/connectors/spotify/oauth/callback", "spotify"],
+  ["/api/connectors/discogs/oauth/callback", "discogs"],
 ]);
 
 const OWNER_RATE_LIMIT = 30;
 const ARTWORK_RATE_LIMIT = 120;
+const DISCOGS_PUBLIC_READ_RATE_LIMIT = 120;
 const PROMOTION_IMPORT_RATE_LIMIT = 6;
 const OAUTH_CALLBACK_RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
+const DISCOGS_PUBLIC_READ_PATH = "/api/connectors/discogs";
 
 const requestBuckets = new Map<
   string,
@@ -122,14 +125,22 @@ export function requiresConfiguredRateLimit(
   directProduction: boolean,
   accessMode: boolean,
 ): boolean {
+  const rateLimitSalt = env.RATE_LIMIT_SALT?.trim();
+  const rateLimitSaltReady = Boolean(
+    rateLimitSalt && rateLimitSalt.length >= 32,
+  );
+  const discogsPublicReadMissingConfig =
+    pathname === DISCOGS_PUBLIC_READ_PATH &&
+    (!rateLimitSaltReady || !env.ARTWORK_RATE_LIMITER);
   return Boolean(
     directProduction &&
       accessMode &&
-      (!env.RATE_LIMIT_SALT || env.RATE_LIMIT_SALT.trim().length < 32) &&
-      (isProtectedOwnerPath(pathname) ||
-        pathname.startsWith("/api/connector-artwork/") ||
-        pathname === "/api/play-promotion/import" ||
-        OAUTH_CALLBACK_PROVIDERS.has(pathname)),
+      (discogsPublicReadMissingConfig ||
+        (!rateLimitSaltReady &&
+          (isProtectedOwnerPath(pathname) ||
+            pathname.startsWith("/api/connector-artwork/") ||
+            pathname === "/api/play-promotion/import" ||
+            OAUTH_CALLBACK_PROVIDERS.has(pathname)))),
   );
 }
 
@@ -145,9 +156,9 @@ export async function throttleOAuthCallback(
   env: WorkerEnv,
   request: Request,
   development: boolean,
+  pathname = new URL(request.url).pathname,
 ): Promise<Response | null> {
-  const url = new URL(request.url);
-  const provider = OAUTH_CALLBACK_PROVIDERS.get(url.pathname);
+  const provider = OAUTH_CALLBACK_PROVIDERS.get(pathname);
   if (request.method !== "GET" || !provider) return null;
   const key = await oneWayBucketKey(env, request, `${provider}-oauth-callback`);
   return rateLimitResponse(
@@ -165,11 +176,11 @@ export async function throttlePromotionImport(
   env: WorkerEnv,
   request: Request,
   development: boolean,
+  pathname = new URL(request.url).pathname,
 ): Promise<Response | null> {
-  const url = new URL(request.url);
   if (
     request.method !== "POST" ||
-    url.pathname !== "/api/play-promotion/import"
+    pathname !== "/api/play-promotion/import"
   ) {
     return null;
   }
@@ -190,11 +201,11 @@ export async function throttleOwnerWrite(
   request: Request,
   identity: AccessIdentity | null,
   development: boolean,
+  pathname = new URL(request.url).pathname,
 ): Promise<Response | null> {
-  const url = new URL(request.url);
   if (
     !["POST", "PUT", "PATCH", "DELETE"].includes(request.method) ||
-    !isProtectedOwnerPath(url.pathname) ||
+    !isProtectedOwnerPath(pathname) ||
     (!identity && !development)
   ) {
     return null;
@@ -220,9 +231,9 @@ export async function throttleArtwork(
   env: WorkerEnv,
   request: Request,
   development: boolean,
+  pathname = new URL(request.url).pathname,
 ): Promise<Response | null> {
-  const url = new URL(request.url);
-  if (!url.pathname.startsWith("/api/connector-artwork/")) return null;
+  if (!pathname.startsWith("/api/connector-artwork/")) return null;
   const key = await oneWayBucketKey(env, request, "artwork");
   return rateLimitResponse(
     await consumeRateLimit(
@@ -232,5 +243,29 @@ export async function throttleArtwork(
       development,
     ),
     "Artwork requests are temporarily limited.",
+  );
+}
+
+export async function throttleDiscogsPublicRead(
+  env: WorkerEnv,
+  request: Request,
+  development: boolean,
+  pathname = new URL(request.url).pathname,
+): Promise<Response | null> {
+  if (
+    request.method !== "GET" ||
+    pathname !== DISCOGS_PUBLIC_READ_PATH
+  ) {
+    return null;
+  }
+  const key = await oneWayBucketKey(env, request, "discogs-public-read");
+  return rateLimitResponse(
+    await consumeRateLimit(
+      env.ARTWORK_RATE_LIMITER,
+      key,
+      DISCOGS_PUBLIC_READ_RATE_LIMIT,
+      development,
+    ),
+    "Discogs collection requests are temporarily limited.",
   );
 }

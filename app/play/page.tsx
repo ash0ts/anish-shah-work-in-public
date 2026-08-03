@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = publicPageMetadata({
   title: "Play",
   description:
-    "Explore Anish Shah’s public anime, reading, music, gaming, and movement collections through bounded, owner-controlled snapshots.",
+    "Explore Anish Shah’s anime, reading, music, physical-media, gaming, and movement collections through bounded public snapshots.",
   path: "/play",
 });
 
@@ -43,12 +43,13 @@ export default async function PlayPage() {
     <main id="main" className={`site-main ${styles.page}`}>
       <header className={styles.intro}>
         <p className={styles.eyebrow}>
-          Play · five optional public streams · pattern / gallery / groove
+          Play · six optional public streams · pattern / gallery / groove
         </p>
         <h1>Outside the work.</h1>
         <p>
           {narrative?.body ??
-            "Watch, read, listen, play, and move—published from owner-controlled snapshots and consent-gated embeds."}
+            "Watch, read, listen, collect, play, and move—published from owner-controlled snapshots and consent-gated embeds."}{" "}
+          A physical-media catalog joins the index only when Collect is opened.
         </p>
       </header>
       <PersonalStreams
