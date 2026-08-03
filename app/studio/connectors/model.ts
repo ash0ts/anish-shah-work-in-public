@@ -40,6 +40,7 @@ export type ApiResult = {
   itemCount?: number;
   message?: string;
   profileUrl?: string;
+  retryNotBefore?: string;
   embedStatus?: "available" | "unavailable";
   status?: string;
   updatedAt?: string;

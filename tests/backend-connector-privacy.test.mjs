@@ -11,6 +11,10 @@ const {
   "../lib/server/connectors/public-payload-policy.ts",
   import.meta.url,
 );
+const { connectorRefreshResponse } = await tsImport(
+  "../lib/server/http/connector-refresh-response.ts",
+  import.meta.url,
+);
 
 const syncedAt = "2026-07-30T18:00:00.000Z";
 const freshUntil = "2026-07-31T06:00:00.000Z";
@@ -488,7 +492,7 @@ test("Studio documents setup, replacement, and official provider sources", async
 });
 
 test("Studio connector mutations preserve the page and give safe refresh guidance", async () => {
-  const [panel, helpers, refreshHandler] = await Promise.all([
+  const [panel, helpers, refreshHandler, refreshResponse] = await Promise.all([
     readFile(
       new URL("../app/studio/connectors/ApiConnectorPanel.tsx", import.meta.url),
       "utf8",
@@ -499,6 +503,10 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
     ),
     readFile(
       new URL("../lib/server/http/connector-refresh.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../lib/server/http/connector-refresh-response.ts", import.meta.url),
       "utf8",
     ),
   ]);
@@ -550,7 +558,7 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
   assert.match(refreshControl[0], /onClick=\{\(\) => void request\("refresh"\)\}/);
   assert.match(
     refreshControl[0],
-    /disabled=\{pending !== null \|\| connectorBlocked\}/,
+    /disabled=\{pending !== null \|\| connectorBlocked \|\| retryBlocked\}/,
   );
   assert.match(refreshControl[0], /Refreshing…/);
   assert.match(panel, /className=\{styles\.formMessage\} role="status"/);
@@ -572,11 +580,43 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
   );
   assert.doesNotMatch(helpers, /snapshot remains available/);
   assert.match(
-    refreshHandler,
+    refreshResponse,
     /public_payload_rejected[\s\S]*?no new snapshot passed public validation\.[\s\S]*?Do not replace the credential/,
   );
   assert.match(
-    refreshHandler,
+    refreshResponse,
     /No new snapshot was published\. Any previously accepted snapshot remains unchanged\./,
   );
+  assert.match(
+    refreshHandler,
+    /import \{ connectorRefreshResponse \} from "\.\/connector-refresh-response"/,
+  );
+  assert.match(refreshHandler, /return connectorRefreshResponse\(result\)/);
+});
+
+test("Discogs rate-limit responses expose a standard retry contract", async () => {
+  const now = Date.parse("2026-08-03T16:00:00.000Z");
+  const retryNotBefore = "2026-08-03T16:01:30.000Z";
+  const response = connectorRefreshResponse(
+    {
+      status: "failed",
+      provider: "discogs",
+      code: "rate_limited",
+      retryable: true,
+      retryNotBefore,
+    },
+    now,
+  );
+
+  assert.equal(response.status, 429);
+  assert.equal(response.headers.get("cache-control"), "private, no-store");
+  assert.equal(response.headers.get("retry-after"), "90");
+  assert.deepEqual(await response.json(), {
+    status: "failed",
+    provider: "discogs",
+    code: "rate_limited",
+    retryable: true,
+    retryNotBefore,
+    error: `The provider is rate-limiting requests. Retry after ${retryNotBefore}. No new snapshot was published; any previously accepted snapshot remains unchanged.`,
+  });
 });

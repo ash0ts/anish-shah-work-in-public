@@ -20,6 +20,7 @@ export function placeholderHealth(
     authorizedAt: null,
     lastRunStatus: null,
     lastErrorCode: null,
+    retryNotBefore: null,
     itemCount: null,
   };
 }

@@ -6,6 +6,7 @@ import {
   normalizedOwnerEmail,
   placeholderHealth,
 } from "./repository-primitives";
+import { discogsRetryNotBefore } from "./discogs-retry";
 import { pruneConnectorRetention } from "./repository-retention";
 import type {
   ConnectorHealth,
@@ -116,6 +117,10 @@ export async function getStudioOverview(
               .bind(provider, normalizedOwnerEmail(actorEmail), now)
               .first<{ stateHash: string }>()
           : null;
+      const retryNotBefore =
+        provider === "discogs"
+          ? await discogsRetryNotBefore(database, nowDate.getTime())
+          : null;
 
       const configured = Boolean(credential);
       const stale = snapshot
@@ -167,6 +172,7 @@ export async function getStudioOverview(
         authorizedAt: credential?.authorizedAt ?? null,
         lastRunStatus: run?.status ?? null,
         lastErrorCode: run?.errorCode ?? null,
+        retryNotBefore,
         itemCount:
           snapshot?.status === "ready" ? asCount(snapshot.itemCount) : null,
       });
