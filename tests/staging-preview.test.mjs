@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { register } from "node:module";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   assertPreviewConfiguration,
@@ -632,10 +637,13 @@ test("preview Discogs fixtures preserve format and decade variation", () => {
 });
 
 test("preview workflows use trusted workflow_run deployment and never pull_request_target", async () => {
-  const [deploy, cleanup, validate, metadata, prepare, cleanupScript] = await Promise.all([
+  const [deploy, cleanup, validate, browserQuality, gitleaks, codeql, metadata, prepare, cleanupScript] = await Promise.all([
     readFile(new URL("../.github/workflows/preview-deploy.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/preview-cleanup.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/browser-quality.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/gitleaks.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/codeql.yml", import.meta.url), "utf8"),
     readFile(new URL("../scripts/write-preview-metadata.mjs", import.meta.url), "utf8"),
     readFile(new URL("../scripts/prepare-hosted-environment.mjs", import.meta.url), "utf8"),
     readFile(new URL("../scripts/preview-cleanup.mjs", import.meta.url), "utf8"),
@@ -659,12 +667,37 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
   assert.match(deploy, /CLOUDFLARE_PREVIEW_API_TOKEN/);
   assert.match(deploy, /preview-production-guard\.mjs capture/);
   assert.match(deploy, /preview-production-guard\.mjs verify/);
+  assert.match(deploy, /id: production_guard_capture/);
   assert.match(
     deploy,
-    /Verify production integrity guard[\s\S]*if: always\(\)/,
+    /if: \$\{\{ always\(\) && steps\.production_guard_capture\.outcome == 'success' \}\}/,
   );
   assert.match(validate, /Upload immutable preview build/);
   assert.match(validate, /github\.event\.pull_request\.head\.sha/);
+  assert.match(
+    browserQuality,
+    /ref: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+  );
+  assert.match(
+    browserQuality,
+    /EXPECTED_SHA: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+  );
+  assert.match(
+    browserQuality,
+    /name: room-browser-review-\$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+  );
+  assert.doesNotMatch(browserQuality, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
+  for (const workflow of [gitleaks, codeql]) {
+    assert.match(
+      workflow,
+      /ref: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+    );
+    assert.match(
+      workflow,
+      /EXPECTED_SHA: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+    );
+    assert.doesNotMatch(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
+  }
   assert.match(validate, /PREVIEW_WORKFLOW_SHA/);
   assert.match(
     validate,
@@ -740,6 +773,50 @@ test("preview production guard pins the apex and production Worker", async () =>
   assert.match(source, /"deployments"[\s\S]*"status"[\s\S]*"--name"/);
   assert.match(source, /CLOUDFLARE_ACCOUNT_ID: PUBLIC_CLOUDFLARE_ACCOUNT_ID/);
   assert.match(source, /wrangler\.preview\.json/);
+});
+
+test("preview production guard preserves a redacted Wrangler failure diagnostic", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "anish-preview-guard-"));
+  const token = "test-preview-token-must-not-leak";
+  try {
+    const wranglerPath = path.join(
+      directory,
+      "node_modules/wrangler/bin/wrangler.js",
+    );
+    mkdirSync(path.dirname(wranglerPath), { recursive: true });
+    writeFileSync(
+      wranglerPath,
+      'process.stderr.write("\\u001b[31mCloudflare authentication failed for " + process.env.CLOUDFLARE_API_TOKEN + "\\u001b[0m\\n");\nprocess.exitCode = 1;\n',
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(
+          new URL("../scripts/preview-production-guard.mjs", import.meta.url),
+        ),
+        "capture",
+        path.join(directory, "guard.json"),
+      ],
+      {
+        cwd: directory,
+        encoding: "utf8",
+        env: { ...process.env, CLOUDFLARE_API_TOKEN: token },
+      },
+    );
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /Unable to read the production Worker deployment \(exit 1\)\./,
+    );
+    assert.match(
+      result.stderr,
+      /Wrangler diagnostic:\nCloudflare authentication failed for \[redacted\]/,
+    );
+    assert.doesNotMatch(result.stderr, new RegExp(token));
+    assert.doesNotMatch(result.stderr, /\u001B/);
+  } finally {
+    rmSync(directory, { force: true, recursive: true });
+  }
 });
 
 test("staging release bootstraps and verifies its isolated D1/KV publication", async () => {

@@ -70,6 +70,7 @@ jobs:
           npm run bundle:scan
           npm run preview:prepare
       - name: Capture production integrity guard
+        id: production_guard_capture
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}
         run: >-
@@ -89,7 +90,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}
         run: npx --no-install wrangler deploy --config dist/server/wrangler.preview.json
       - name: Verify production integrity guard
-        if: always()
+        if: ${{ always() && steps.production_guard_capture.outcome == 'success' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}
         run: >-

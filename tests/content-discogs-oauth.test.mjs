@@ -442,7 +442,7 @@ test("Discogs token signing percent-encodes reserved secret characters", async (
   });
 });
 
-test("Discogs callbacks are pinned to exact local and apex origins", () => {
+test("Discogs callbacks are pinned to exact local, staging, and apex origins", () => {
   assert.equal(
     resolveDiscogsCallbackUrl(
       startUrl,
@@ -458,6 +458,14 @@ test("Discogs callbacks are pinned to exact local and apex origins", () => {
       "production",
     ),
     "https://anish-shah-is.online/api/connectors/discogs/oauth/callback",
+  );
+  assert.equal(
+    resolveDiscogsCallbackUrl(
+      "https://staging.anish-shah-is.online/studio",
+      "https://staging.anish-shah-is.online",
+      "production",
+    ),
+    "https://staging.anish-shah-is.online/api/connectors/discogs/oauth/callback",
   );
   assert.equal(
     resolveDiscogsCallbackUrl(

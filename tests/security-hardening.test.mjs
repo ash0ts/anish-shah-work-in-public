@@ -873,7 +873,7 @@ test("public Cloudflare release config is generated without embedding secrets", 
   assert.match(configContract, /NODE_ENV: "production"/);
 });
 
-test("release workflows bind all evidence to the dispatched GitHub SHA", async () => {
+test("release workflows bind PR evidence to the exact source head", async () => {
   const [ci, ...releaseWorkflows] = await Promise.all(
     ["ci.yml", "gitleaks.yml", "codeql.yml"].map((name) =>
       readFile(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8"),
@@ -884,8 +884,10 @@ test("release workflows bind all evidence to the dispatched GitHub SHA", async (
   assert.match(ci, /PREVIEW_SOURCE_SHA/);
   assert.match(ci, /PREVIEW_WORKFLOW_SHA/);
   for (const workflow of releaseWorkflows) {
-    assert.match(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
+    assert.match(workflow, /github\.event\.pull_request\.head\.sha/);
     assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/);
+    assert.match(workflow, /test "\$\{#GITHUB_SHA\}" -eq 40/);
+    assert.doesNotMatch(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
   }
 });
 
