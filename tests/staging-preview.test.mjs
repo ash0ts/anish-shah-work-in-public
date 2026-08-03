@@ -641,6 +641,10 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
     readFile(new URL("../scripts/preview-cleanup.mjs", import.meta.url), "utf8"),
   ]);
   assert.match(deploy, /workflow_run:/);
+  assert.match(
+    deploy,
+    /group: preview-\$\{\{ github\.event\.workflow_run\.event \}\}-\$\{\{ github\.event\.workflow_run\.pull_requests\[0\]\.number \|\| github\.event\.workflow_run\.id \}\}/,
+  );
   assert.match(deploy, /ref: \$\{\{ github\.workflow_sha \}\}/);
   assert.match(
     deploy,
