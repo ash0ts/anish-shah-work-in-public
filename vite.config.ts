@@ -18,6 +18,10 @@ const LOCAL_SERVER_VARIABLE_NAMES = [
   "STEAM_DATA_STORAGE_COUNTRIES",
   "SITE_URL",
   "PRODUCTION_SITE_URL",
+  "DEPLOYMENT_TIER",
+  "PREVIEW_PR_NUMBER",
+  "PLAY_EXPERIENCE_MODE",
+  "PUBLIC_CONTENT_MODE",
 ] as const;
 
 export default defineConfig(async ({ command, mode }) => {

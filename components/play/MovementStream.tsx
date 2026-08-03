@@ -6,6 +6,7 @@ import {
   loadConnector,
   publishedLabel,
   type ConnectorState,
+  type PreviewFixtureScenario,
   type StravaPayload,
 } from "./connector-model";
 import { PanelHeading, StreamEmpty } from "./StreamChrome";
@@ -13,9 +14,11 @@ import { PanelHeading, StreamEmpty } from "./StreamChrome";
 export function MovementStream({
   show,
   onShow,
+  fixture,
 }: {
   show: boolean;
   onShow: () => void;
+  fixture?: PreviewFixtureScenario;
 }) {
   const [state, setState] = useState<ConnectorState<StravaPayload>>({
     status: "loading",
@@ -26,13 +29,13 @@ export function MovementStream({
     const controller = new AbortController();
     void loadConnector<StravaPayload>(
       "strava",
-      new URLSearchParams(),
+      fixture ? new URLSearchParams({ fixture }) : new URLSearchParams(),
       controller.signal,
     ).then((next) => {
       if (!controller.signal.aborted) setState(next);
     });
     return () => controller.abort();
-  }, []);
+  }, [fixture]);
 
   useEffect(() => {
     if (show && state.status === "ready" && state.payload.embed) {

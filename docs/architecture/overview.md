@@ -50,5 +50,13 @@ The private Sites deployment uses a different hosting/authentication context. It
 is useful for recovery comparison but is not capable of serving as the public
 production rollback.
 
-See [content and state](./content-and-state.md), [release](../operations/release.md),
+Access-protected PR previews have no durable bindings or provider access. They
+use the sanitized checked-in content bundle and deterministic synthetic
+connector fixtures. Stable staging uses a separate Worker, D1, KV, Access
+audience, rate limits, secrets, OAuth registrations, and version history. The
+runtime validates its deployment tier and exact origin before routing a
+request; unknown or cross-tier origins fail closed.
+
+See [content and state](./content-and-state.md),
+[staging and previews](../operations/staging-and-previews.md), [release](../operations/release.md),
 and [incidents](../operations/incidents.md).

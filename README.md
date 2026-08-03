@@ -88,6 +88,14 @@ Follow the [release runbook](./docs/operations/release.md) and
 [rollback runbook](./docs/operations/rollback.md). No command in this repository
 automatically weakens Access or copies production credentials.
 
+Feature work is reviewed first through synthetic, Access-protected
+`pr-<number>.anish-shah-is.online` previews. A selected validated SHA may then
+be deployed to the fully isolated `staging.anish-shah-is.online` Worker for
+real OAuth and connector testing. Staging has separate D1, KV, secrets,
+rate-limit namespaces, Access audience, and provider registrations; it cannot
+promote data to production. See the
+[staging and preview runbook](./docs/operations/staging-and-previews.md).
+
 ## Documentation
 
 - [Architecture and trust boundaries](./docs/architecture/overview.md)
@@ -95,6 +103,7 @@ automatically weakens Access or copies production credentials.
 - [Testing](./docs/testing.md)
 - [Play connector setup](./docs/play-connections.md)
 - [Release](./docs/operations/release.md)
+- [Staging and PR previews](./docs/operations/staging-and-previews.md)
 - [Rollback and D1 restore](./docs/operations/rollback.md)
 - [Incidents and credential recovery](./docs/operations/incidents.md)
 - [Observability](./docs/operations/observability.md)

@@ -8,4 +8,10 @@
 /lib/server/ @ash0ts
 /scripts/prepare-cloudflare-release.mjs @ash0ts
 /scripts/release-preflight.mjs @ash0ts
+/scripts/prepare-hosted-environment.mjs @ash0ts
+/scripts/staging-release.mjs @ash0ts
+/scripts/preview-cleanup.mjs @ash0ts
+/scripts/preview-production-guard.mjs @ash0ts
+/scripts/lib/hosted-config-contract.mjs @ash0ts
+/scripts/lib/preview-resource-contract.mjs @ash0ts
 /worker/ @ash0ts

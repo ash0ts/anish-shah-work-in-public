@@ -12,6 +12,10 @@ export type CloudflareAccessConfiguration = {
   teamDomain?: string;
 };
 
+export type CloudflareAccessPrincipal =
+  | { kind: "user"; email: string }
+  | { kind: "service"; commonName: string };
+
 type VerificationOptions = {
   keyResolver?: JWTVerifyGetKey;
   nowSeconds?: number;
@@ -94,11 +98,11 @@ export function cloudflareAccessConfigured(
  * edge. Verification failures intentionally collapse to null so callers fail
  * closed without exposing token or claim details.
  */
-export async function verifyCloudflareAccess(
+export async function verifyCloudflareAccessPrincipal(
   request: Request,
   configuration: CloudflareAccessConfiguration,
   options: VerificationOptions = {},
-): Promise<{ email: string } | null> {
+): Promise<CloudflareAccessPrincipal | null> {
   const token = accessToken(request);
   const origin = accessOrigin(configuration.teamDomain);
   const audiences = expectedAudiences(configuration.audience);
@@ -129,16 +133,43 @@ export async function verifyCloudflareAccess(
       typeof payload.exp !== "number" ||
       !Number.isFinite(payload.exp) ||
       payload.exp <= now ||
-      (typeof payload.iat === "number" && payload.iat > now + 30) ||
-      typeof payload.email !== "string" ||
-      payload.email.length > 320 ||
-      !/^[^\s@]+@[^\s@]+$/.test(payload.email)
+      (typeof payload.iat === "number" && payload.iat > now + 30)
     ) {
       return null;
     }
-
-    return { email: payload.email };
+    if (
+      typeof payload.email === "string" &&
+      payload.email.length <= 320 &&
+      /^[^\s@]+@[^\s@]+$/.test(payload.email)
+    ) {
+      return { kind: "user", email: payload.email };
+    }
+    // Cloudflare application tokens use `type: "app"` for both identity and
+    // service-token authentication. A service principal is distinguished by
+    // its generated common_name and intentionally empty subject claim.
+    if (
+      payload.type === "app" &&
+      payload.sub === "" &&
+      typeof payload.common_name === "string" &&
+      /^[A-Za-z0-9._:-]{1,160}$/.test(payload.common_name)
+    ) {
+      return { kind: "service", commonName: payload.common_name };
+    }
+    return null;
   } catch {
     return null;
   }
+}
+
+export async function verifyCloudflareAccess(
+  request: Request,
+  configuration: CloudflareAccessConfiguration,
+  options: VerificationOptions = {},
+): Promise<{ email: string } | null> {
+  const principal = await verifyCloudflareAccessPrincipal(
+    request,
+    configuration,
+    options,
+  );
+  return principal?.kind === "user" ? { email: principal.email } : null;
 }

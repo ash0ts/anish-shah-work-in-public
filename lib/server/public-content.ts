@@ -31,6 +31,7 @@ import {
   type ResolvedPublicContent,
 } from "./public-content-selector";
 import { readPublicationFallback } from "./publication-fallback";
+import { previewFixtureRuntime } from "../deployment-environment";
 export { PUBLICATION_FALLBACK_KEY } from "./publication-fallback";
 
 const staticPublicBundle = publicBundleJson as AnishContentBundle;
@@ -108,6 +109,16 @@ export async function getPublicContentViewFromStores(
 }
 
 export async function getPublicContentView(): Promise<ResolvedPublicContent> {
+  const runtime = {
+    DEPLOYMENT_TIER: runtimeValue("DEPLOYMENT_TIER"),
+    PREVIEW_PR_NUMBER: runtimeValue("PREVIEW_PR_NUMBER"),
+    SITE_URL: runtimeValue("SITE_URL"),
+    PRODUCTION_SITE_URL: runtimeValue("PRODUCTION_SITE_URL"),
+    PUBLIC_CONTENT_MODE: runtimeValue("PUBLIC_CONTENT_MODE"),
+  };
+  if (previewFixtureRuntime(runtime)) {
+    return resolvePublicContentFromSnapshotRow(staticPublicBundle, null);
+  }
   const failClosed =
     runtimeValue("PUBLIC_CONTENT_MODE") === "d1_kv_required" ||
     runtimeValue("AUTH_MODE") === "cloudflare_access";

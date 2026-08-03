@@ -1,4 +1,8 @@
 import { PUBLIC_SITE_ORIGIN } from "../site-constants";
+import {
+  expectedHostedOrigin,
+  hostedEnvironmentConfigured,
+} from "../deployment-environment";
 import { runtimeDatabase, runtimeValue } from "./runtime-env";
 import { RETENTION_MAINTENANCE_KEY } from "./maintenance-state";
 export {
@@ -40,7 +44,7 @@ export type StudioHealth = {
   contentVersion: string | null;
   canonicalOrigin: {
     status: "ready" | "setup_required" | "not_applicable";
-    expected: typeof PUBLIC_SITE_ORIGIN;
+    expected: string;
   };
   migration: {
     status: "ready" | "setup_required";
@@ -61,13 +65,16 @@ function canonicalOriginState(): StudioHealth["canonicalOrigin"] {
   if (runtimeValue("AUTH_MODE") !== "cloudflare_access") {
     return { status: "not_applicable", expected: PUBLIC_SITE_ORIGIN };
   }
+  const values = {
+    DEPLOYMENT_TIER: runtimeValue("DEPLOYMENT_TIER"),
+    PREVIEW_PR_NUMBER: runtimeValue("PREVIEW_PR_NUMBER"),
+    SITE_URL: runtimeValue("SITE_URL"),
+    PRODUCTION_SITE_URL: runtimeValue("PRODUCTION_SITE_URL"),
+    PUBLIC_CONTENT_MODE: runtimeValue("PUBLIC_CONTENT_MODE"),
+  };
   return {
-    status:
-      runtimeValue("SITE_URL") === PUBLIC_SITE_ORIGIN &&
-      runtimeValue("PRODUCTION_SITE_URL") === PUBLIC_SITE_ORIGIN
-        ? "ready"
-        : "setup_required",
-    expected: PUBLIC_SITE_ORIGIN,
+    status: hostedEnvironmentConfigured(values) ? "ready" : "setup_required",
+    expected: expectedHostedOrigin(values) ?? PUBLIC_SITE_ORIGIN,
   };
 }
 

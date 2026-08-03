@@ -55,6 +55,8 @@ export default async function StudioPage() {
   const isLocalStudio = user.authSource === "local-development";
   const ownerAuthorization = ownerAuthorizationForEmail(user.email);
   const configuredSiteUrl = runtimeValue("SITE_URL");
+  const deploymentTier = runtimeValue("DEPLOYMENT_TIER");
+  const releasePrefix = runtimeValue("RELEASE_SHA")?.slice(0, 12);
   const myAnimeListCallbackUrl = configuredSiteUrl
     ? resolveMyAnimeListCallbackUrl(
         configuredSiteUrl,
@@ -137,6 +139,10 @@ export default async function StudioPage() {
           <span className={styles.identity}>{user.email}</span>
           {isLocalStudio ? (
             <span className={styles.localTag}>Local sandbox</span>
+          ) : deploymentTier === "staging" ? (
+            <span className={styles.localTag}>
+              STAGING · {releasePrefix ?? "unversioned"}
+            </span>
           ) : (
             <a href={authenticatedSignOutPath(user, "/")} className={styles.utilityLink}>
               Sign out

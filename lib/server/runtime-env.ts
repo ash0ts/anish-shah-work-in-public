@@ -15,6 +15,9 @@ type RuntimeBindings = {
   RELEASE_SHA?: string;
   CONTENT_VERSION?: string;
   PUBLIC_CONTENT_MODE?: string;
+  DEPLOYMENT_TIER?: string;
+  PREVIEW_PR_NUMBER?: string;
+  PLAY_EXPERIENCE_MODE?: string;
 };
 
 function cloudflareBindings(): RuntimeBindings {

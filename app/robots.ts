@@ -1,15 +1,15 @@
 import type { MetadataRoute } from "next";
-import { PUBLIC_SITE_ORIGIN } from "@/lib/site-constants";
+import { canonicalMetadataOrigin } from "../lib/deployment-environment";
+import { runtimeHostedDeploymentPresentation } from "../lib/server/deployment-presentation";
 
 function siteUrl() {
-  return (
-    process.env.SITE_URL ||
-    process.env.PRODUCTION_SITE_URL ||
-    PUBLIC_SITE_ORIGIN
-  ).replace(/\/+$/, "");
+  return canonicalMetadataOrigin().replace(/\/+$/, "");
 }
 
 export default function robots(): MetadataRoute.Robots {
+  if (runtimeHostedDeploymentPresentation().nonProductionHosted) {
+    return { rules: { userAgent: "*", disallow: "/" } };
+  }
   return {
     rules: {
       userAgent: "*",

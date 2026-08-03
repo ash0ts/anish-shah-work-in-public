@@ -1,8 +1,15 @@
 import { getStravaPublicConfig } from "@/lib/server/strava-config";
+import { previewStravaSnapshot } from "@/lib/server/preview-connector-fixtures";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const preview = previewStravaSnapshot(new URL(request.url).searchParams);
+  if (preview) {
+    return Response.json(preview, {
+      headers: { "cache-control": "private, no-store" },
+    });
+  }
   const result = await getStravaPublicConfig();
   if (result.status === "ready") {
     return Response.json(

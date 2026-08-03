@@ -1,0 +1,133 @@
+name: Deploy PR preview
+
+on:
+  workflow_run:
+    workflows: [Validate]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.id }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.pull_requests[0].number != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: preview
+    steps:
+      - name: Check out trusted deployment tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Use Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.18.0
+          cache: npm
+      - name: Use pinned npm
+        run: |
+          npm install --global npm@11.6.2 --ignore-scripts
+          hash -r
+          test "$(npm --version)" = "11.6.2"
+      - name: Install trusted locked deployment tools
+        run: npm ci --ignore-scripts
+      - name: Revalidate the open PR and exact current head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIEW_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          EXPECTED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          endpoint="repos/${GITHUB_REPOSITORY}/pulls/${PREVIEW_PR_NUMBER}"
+          snapshot="$(gh api "$endpoint" --jq '[.state, .head.sha, .head.repo.full_name] | @tsv')"
+          test "$snapshot" = $'open\t'"${EXPECTED_HEAD_SHA}"$'\t'"${GITHUB_REPOSITORY}"
+      - name: Download the validated PR artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: preview-build-${{ github.event.workflow_run.pull_requests[0].number }}-${{ github.event.workflow_run.head_sha }}
+          path: dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scan and prepare the read-only preview
+        env:
+          CF_ACCESS_TEAM_DOMAIN: ${{ vars.CF_ACCESS_TEAM_DOMAIN }}
+          PREVIEW_CF_ACCESS_AUD: ${{ vars.PREVIEW_CF_ACCESS_AUD }}
+          PREVIEW_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          RELEASE_VALIDATED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          npm run bundle:scan
+          npm run preview:prepare
+      - name: Capture production integrity guard
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}
+        run: >-
+          node scripts/preview-production-guard.mjs capture
+          "${RUNNER_TEMP}/preview-production-guard.json"
+      - name: Recheck the PR immediately before privileged deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIEW_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          EXPECTED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          endpoint="repos/${GITHUB_REPOSITORY}/pulls/${PREVIEW_PR_NUMBER}"
+          snapshot="$(gh api "$endpoint" --jq '[.state, .head.sha, .head.repo.full_name] | @tsv')"
+          test "$snapshot" = $'open\t'"${EXPECTED_HEAD_SHA}"$'\t'"${GITHUB_REPOSITORY}"
+      - name: Deploy the ephemeral preview Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}
+        run: npx --no-install wrangler deploy --config dist/server/wrangler.preview.json
+      - name: Verify production integrity guard
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}
+        run: >-
+          node scripts/preview-production-guard.mjs verify
+          "${RUNNER_TEMP}/preview-production-guard.json"
+      - name: Smoke-test through preview Access
+        env:
+          ACCESS_CLIENT_ID: ${{ secrets.PREVIEW_ACCESS_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.PREVIEW_ACCESS_CLIENT_SECRET }}
+          PREVIEW_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: |
+          url="https://pr-${PREVIEW_PR_NUMBER}.anish-shah-is.online"
+          headers="$(mktemp)"
+          trap 'rm -f "$headers"' EXIT
+          result="$(curl --silent --show-error \
+            --connect-timeout 5 --max-time 20 --proto '=https' --tlsv1.2 \
+            -H "CF-Access-Client-Id: ${ACCESS_CLIENT_ID}" \
+            -H "CF-Access-Client-Secret: ${ACCESS_CLIENT_SECRET}" \
+            -D "$headers" -o /dev/null \
+            --write-out '%{http_code} %{url_effective}' "${url}/play")"
+          test "$result" = "200 ${url}/play"
+          grep -Eiq '^x-robots-tag:.*noindex' "$headers"
+          grep -Eiq '^cache-control: private, no-store' "$headers"
+      - name: Update the persistent PR preview comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIEW_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          marker='<!-- anish-site-preview -->'
+          url="https://pr-${PREVIEW_PR_NUMBER}.anish-shah-is.online"
+          deployed_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          body_file="$(mktemp)"
+          trap 'rm -f "$body_file"' EXIT
+          printf '%s\nPreview: %s\n\nValidated SHA: `%s`\nDeployed: `%s`\nStatus: deployed and smoke-tested. Data is synthetic.\n' \
+            "$marker" "$url" "$RELEASE_SHA" "$deployed_at" > "$body_file"
+          body="$(cat "$body_file")"
+          comment_id="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PREVIEW_PR_NUMBER}/comments" --jq ".[] | select(.body | startswith(\"${marker}\")) | .id" | head -n 1)"
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" -f body="$body" >/dev/null
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${PREVIEW_PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi

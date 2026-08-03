@@ -6,7 +6,7 @@ import { DiscogsStream } from "./play/DiscogsStream";
 import { MovementStream } from "./play/MovementStream";
 import styles from "./PersonalStreams.module.css";
 import { SpotifyStream } from "./SpotifyStream";
-import type { StreamId } from "./play/connector-model";
+import type { PreviewFixtureScenario, StreamId } from "./play/connector-model";
 
 const streams = [
   {
@@ -56,8 +56,10 @@ const streams = [
 
 export function PersonalStreams({
   spotifyNoScript,
+  fixture,
 }: {
   spotifyNoScript?: ReactNode;
+  fixture?: PreviewFixtureScenario;
 }) {
   const [active, setActive] = useState<StreamId>("watch");
   const [showStrava, setShowStrava] = useState(false);
@@ -131,7 +133,7 @@ export function PersonalStreams({
           role="tabpanel"
           tabIndex={0}
         >
-          {active === "watch" ? <CollectionStream provider="myanimelist" /> : null}
+          {active === "watch" ? <CollectionStream provider="myanimelist" fixture={fixture} /> : null}
         </div>
         <div
           aria-labelledby="stream-tab-read"
@@ -141,7 +143,7 @@ export function PersonalStreams({
           role="tabpanel"
           tabIndex={0}
         >
-          {active === "read" ? <CollectionStream provider="hardcover" /> : null}
+          {active === "read" ? <CollectionStream provider="hardcover" fixture={fixture} /> : null}
         </div>
         <div
           aria-labelledby="stream-tab-listen"
@@ -151,7 +153,7 @@ export function PersonalStreams({
           role="tabpanel"
           tabIndex={0}
         >
-          <SpotifyStream active={active === "listen"} serverFallback={spotifyNoScript} />
+          <SpotifyStream active={active === "listen"} serverFallback={spotifyNoScript} fixture={fixture} />
         </div>
         <div
           aria-labelledby="stream-tab-collect"
@@ -171,7 +173,7 @@ export function PersonalStreams({
           role="tabpanel"
           tabIndex={0}
         >
-          {active === "play" ? <CollectionStream provider="steam" /> : null}
+          {active === "play" ? <CollectionStream provider="steam" fixture={fixture} /> : null}
         </div>
         <div
           aria-labelledby="stream-tab-move"
@@ -185,6 +187,7 @@ export function PersonalStreams({
             <MovementStream
               show={showStrava}
               onShow={() => setShowStrava(true)}
+              fixture={fixture}
             />
           ) : null}
         </div>

@@ -1,6 +1,7 @@
 import { access, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
+  assertPinnedProductionResources,
   PUBLIC_CLOUDFLARE_ACCOUNT_ID,
   PUBLIC_SITE_ORIGIN,
 } from "./lib/release-config-contract.mjs";
@@ -81,6 +82,11 @@ const audiences = required("CF_ACCESS_AUD")
 if (!audiences.length || audiences.some((value) => !/^[A-Za-z0-9_-]{8,160}$/.test(value))) {
   throw new Error("CF_ACCESS_AUD must contain valid Access application audiences.");
 }
+assertPinnedProductionResources({
+  databaseId,
+  publicationCacheId: publicationKvId,
+  audiences,
+});
 
 const publicSiteUrl = exactHttpsOrigin(
   required("PUBLIC_SITE_URL"),
@@ -157,6 +163,8 @@ config.vars = {
   RELEASE_SHA: releaseSha,
   CONTENT_VERSION: publicBundle.contentVersion,
   PUBLIC_CONTENT_MODE: "d1_kv_required",
+  DEPLOYMENT_TIER: "production",
+  PLAY_EXPERIENCE_MODE: "classic",
 };
 config.observability = {
   enabled: true,

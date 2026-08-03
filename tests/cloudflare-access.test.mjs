@@ -11,6 +11,7 @@ import { tsImport } from "tsx/esm/api";
 const {
   cloudflareAccessConfigured,
   verifyCloudflareAccess,
+  verifyCloudflareAccessPrincipal,
 } = await tsImport("../lib/server/cloudflare-access.ts", import.meta.url);
 
 const AUDIENCE = "test-audience-12345678";
@@ -102,6 +103,57 @@ test("Access configuration and missing assertions fail closed", async () => {
   assert.equal(
     await verifyCloudflareAccess(
       new Request("https://portfolio.example/studio"),
+      configuration,
+      { keyResolver, nowSeconds: NOW },
+    ),
+    null,
+  );
+});
+
+test("verified service principals are available only to preview authorization", async () => {
+  const token = await issueToken({
+    email: undefined,
+    type: "app",
+    common_name: "e367826f93b8d71185e03fe518aff3b4.access",
+    sub: "",
+  });
+  assert.deepEqual(
+    await verifyCloudflareAccessPrincipal(
+      assertionRequest(token),
+      configuration,
+      { keyResolver, nowSeconds: NOW },
+    ),
+    {
+      kind: "service",
+      commonName: "e367826f93b8d71185e03fe518aff3b4.access",
+    },
+  );
+  assert.equal(await verify(token), null);
+
+  const malformed = await issueToken({
+    email: undefined,
+    type: "app",
+    common_name: "invalid service name with spaces",
+    sub: "",
+  });
+  assert.equal(
+    await verifyCloudflareAccessPrincipal(
+      assertionRequest(malformed),
+      configuration,
+      { keyResolver, nowSeconds: NOW },
+    ),
+    null,
+  );
+
+  const identityShaped = await issueToken({
+    email: undefined,
+    type: "app",
+    common_name: "e367826f93b8d71185e03fe518aff3b4.access",
+    sub: "not-empty",
+  });
+  assert.equal(
+    await verifyCloudflareAccessPrincipal(
+      assertionRequest(identityShaped),
       configuration,
       { keyResolver, nowSeconds: NOW },
     ),
