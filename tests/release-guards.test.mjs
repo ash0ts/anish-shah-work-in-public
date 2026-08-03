@@ -22,6 +22,11 @@ import {
   expectedPublicReleaseConfig,
 } from "../scripts/lib/release-config-contract.mjs";
 import {
+  assertTriggerDeploymentReceipt,
+  createTriggerDeploymentReceipt,
+  expectedNonVersionedTriggerSettings,
+} from "../scripts/lib/release-trigger-contract.mjs";
+import {
   buildDeployableArtifactManifest,
   verifyDeployableArtifactManifest,
 } from "../scripts/lib/deployable-artifact-contract.mjs";
@@ -30,8 +35,7 @@ function validReleaseConfigFixture() {
   const head = "a".repeat(40);
   const contentVersion = "b".repeat(16);
   const environment = {
-    PUBLIC_SITE_URL:
-      "https://anish-shah-work-in-public.anish-shah-emails.workers.dev",
+    PUBLIC_SITE_URL: "https://anish-shah-is.online",
     CF_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
     OWNER_EMAILS: "owner@example.com",
     CF_ACCESS_AUD: "example-access-audience",
@@ -48,8 +52,10 @@ function validReleaseConfigFixture() {
     config: {
       name: "anish-shah-work-in-public",
       topLevelName: "anish-shah-work-in-public",
-      workers_dev: true,
+      account_id: expected.accountId,
+      workers_dev: false,
       preview_urls: false,
+      routes: [{ pattern: "anish-shah-is.online", custom_domain: true }],
       d1_databases: [
         {
           binding: "DB",
@@ -86,7 +92,7 @@ function validReleaseConfigFixture() {
       },
       observability: {
         enabled: true,
-        head_sampling_rate: 0.1,
+        head_sampling_rate: 1,
         logs: { enabled: true, invocation_logs: false },
       },
       triggers: { crons: ["17 * * * *"] },
@@ -121,6 +127,30 @@ test("release preflight rejects a configuration that weakens production boundari
   assert.throws(
     () =>
       assertPublicReleaseConfig(
+        { ...config, account_id: "f".repeat(32) },
+        expected,
+      ),
+    /exact public-release boundary/,
+  );
+  assert.throws(
+    () =>
+      assertPublicReleaseConfig(
+        { ...config, workers_dev: true },
+        expected,
+      ),
+    /exact public-release boundary/,
+  );
+  assert.throws(
+    () =>
+      assertPublicReleaseConfig(
+        { ...config, routes: [] },
+        expected,
+      ),
+    /exact public-release boundary/,
+  );
+  assert.throws(
+    () =>
+      assertPublicReleaseConfig(
         { ...config, vars: { ...config.vars, AUTH_MODE: "sites" } },
         expected,
       ),
@@ -133,6 +163,67 @@ test("release preflight rejects a configuration that weakens production boundari
         expected,
       ),
     /exact public-release boundary/,
+  );
+});
+
+test("non-versioned trigger reconciliation is bound to the exact cutover release", () => {
+  const { config } = validReleaseConfigFixture();
+  const head = "a".repeat(40);
+  const configSha256 = "c".repeat(64);
+  const appliedAt = "2026-08-03T19:00:00.000Z";
+  assert.deepEqual(expectedNonVersionedTriggerSettings(config), {
+    workerName: "anish-shah-work-in-public",
+    canonicalOrigin: "https://anish-shah-is.online",
+    routes: [
+      { pattern: "anish-shah-is.online", customDomain: true },
+    ],
+    workersDev: false,
+    previewUrls: false,
+    crons: ["17 * * * *"],
+  });
+
+  const receipt = createTriggerDeploymentReceipt({
+    head,
+    configSha256,
+    config,
+    appliedAt,
+  });
+  assert.deepEqual(
+    assertTriggerDeploymentReceipt(receipt, {
+      head,
+      configSha256,
+      config,
+      notBefore: "2026-08-03T18:59:59.000Z",
+    }),
+    receipt,
+  );
+  assert.throws(
+    () =>
+      assertTriggerDeploymentReceipt(receipt, {
+        head: "d".repeat(40),
+        configSha256,
+        config,
+      }),
+    /missing, stale, or does not match/,
+  );
+  assert.throws(
+    () =>
+      assertTriggerDeploymentReceipt(receipt, {
+        head,
+        configSha256,
+        config: { ...config, preview_urls: true },
+      }),
+    /exact domain-cutover contract/,
+  );
+  assert.throws(
+    () =>
+      assertTriggerDeploymentReceipt(receipt, {
+        head,
+        configSha256,
+        config,
+        notBefore: "2026-08-03T19:00:01.000Z",
+      }),
+    /predate this release plan/,
   );
 });
 

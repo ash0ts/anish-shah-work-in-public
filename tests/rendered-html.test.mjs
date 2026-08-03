@@ -70,8 +70,11 @@ before(async () => {
   assert.fail(`Production server did not become ready.\n${serverOutput}`);
 }, { timeout: 20_000 });
 
-after(() => {
-  if (server?.exitCode === null) server.kill("SIGTERM");
+after(async () => {
+  if (server?.exitCode !== null) return;
+  const exited = new Promise((resolve) => server.once("exit", resolve));
+  server.kill("SIGTERM");
+  await exited;
 });
 
 async function render(pathname = "/") {
@@ -491,10 +494,12 @@ test("robots and sitemap publish only public editorial surfaces", async () => {
   ]);
   assert.match(robots, /Disallow: \/studio/i);
   assert.match(robots, /Disallow: \/api\//i);
+  assert.match(robots, /Sitemap: https:\/\/anish-shah-is\.online\/sitemap\.xml/i);
   assert.match(sitemap, /<loc>[^<]+\/work<\/loc>/i);
   assert.match(sitemap, /<loc>[^<]+\/work\/wandb-mcp-server<\/loc>/i);
   assert.doesNotMatch(sitemap, /<loc>[^<]+\/about<\/loc>/i);
   assert.doesNotMatch(sitemap, /\/studio|\/api\//i);
+  assert.doesNotMatch(sitemap, /workers\.dev/i);
 });
 
 test("public pages expose canonical, social, and structured metadata", async () => {
@@ -506,6 +511,7 @@ test("public pages expose canonical, social, and structured metadata", async () 
       /<link\b(?=[^>]*\brel="canonical")(?=[^>]*\bhref="([^"]+)")[^>]*>/i,
     )?.[1];
     assert(canonical, `${pathname} is missing its canonical link`);
+    assert.equal(new URL(canonical).origin, "https://anish-shah-is.online");
     assert.equal(new URL(canonical).pathname, pathname);
     const socialTitle = html.match(
       /<meta\b(?=[^>]*\bproperty="og:title")(?=[^>]*\bcontent="([^"]+)")[^>]*>/i,

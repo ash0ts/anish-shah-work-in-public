@@ -60,7 +60,7 @@ test("owner guide pins separate Spotify environments and forbids promotion", asy
   );
   assert.match(
     guide,
-    /https:\/\/anish-shah-work-in-public\.anish-shah-emails\.workers\.dev\/api\/connectors\/spotify\/oauth\/callback/,
+    /https:\/\/anish-shah-is\.online\/api\/connectors\/spotify\/oauth\/callback/,
   );
   assert.match(guide, /separate Spotify applications for local and production/i);
   assert.match(guide, /Spotify is deliberately excluded from the local-to-production transfer/i);

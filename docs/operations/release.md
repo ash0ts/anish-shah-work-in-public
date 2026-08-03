@@ -14,13 +14,38 @@ Every release has two records:
 Do not deploy, apply a remote migration, rotate a secret, or change a
 publication pointer before the pre-release plan exists.
 
+The only public production origin is `https://anish-shah-is.online`. The
+prepared Worker configuration pins the owning Cloudflare account, declares the
+apex as its sole Custom Domain, disables `workers.dev`, and rejects any other
+direct-production hostname. `www` is handled by a separate Cloudflare redirect
+rule and is not a Worker route.
+
+## Corporate-CA shell
+
+When a corporate VPN is active, make Node trust the macOS system certificate
+store before running any Wrangler command. Keep this setup in the same shell
+for the entire release:
+
+```bash
+export PATH='/Applications/ChatGPT.app/Contents/Resources/cua_node/bin:/usr/bin:/bin:/usr/sbin:/sbin'
+export NODE_USE_SYSTEM_CA=1
+export XDG_CONFIG_HOME="$HOME/.config"
+export WRANGLER_LOG_PATH="$PWD/.wrangler/wrangler.log"
+
+npx --no-install wrangler whoami
+```
+
+If authentication expired, run `npx --no-install wrangler login`, then repeat
+`whoami`. Never use `NODE_TLS_REJECT_UNAUTHORIZED=0`, disable TLS validation,
+or copy a corporate CA certificate into this repository.
+
 ## One-time infrastructure bootstrap
 
 Provision infrastructure separately from a code release. Create the production
 KV namespace once and keep the binding name exactly `PUBLICATION_CACHE`:
 
 ```bash
-npx wrangler kv namespace create PUBLICATION_CACHE
+npx --no-install wrangler kv namespace create PUBLICATION_CACHE
 ```
 
 Record its namespace ID in the private infrastructure inventory. Reuse that
@@ -31,13 +56,39 @@ Set durable secrets interactively only during initial provisioning or an
 explicitly approved rotation:
 
 ```bash
-npx wrangler secret put CONNECTOR_ENCRYPTION_KEY --config dist/server/wrangler.public.json
-npx wrangler secret put RATE_LIMIT_SALT --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put CONNECTOR_ENCRYPTION_KEY --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put RATE_LIMIT_SALT --config dist/server/wrangler.public.json
 ```
 
 Never rotate `CONNECTOR_ENCRYPTION_KEY` during an ordinary release. Bootstrap
 changes need their own recovery notes and are not covered by the release plan
 below.
+
+### One-time apex cutover
+
+Before the first apex release, configure the existing Cloudflare Access
+application with both `anish-shah-is.online/studio*` and
+`anish-shah-is.online/api/studio/*`, preserving its audience and exact-email
+Allow policy. Public pages and `/api/connectors/**` must remain outside Access.
+
+Attach `anish-shah-is.online` as the existing Worker's Custom Domain before
+zero-traffic staging. The generated release configuration declares only that
+apex route; it does not declare `www`. Configure a proxied `www` placeholder
+and a permanent Cloudflare `www`-to-apex redirect separately.
+
+Register these production OAuth callbacks before checking the staged release:
+
+```text
+https://anish-shah-is.online/api/connectors/myanimelist/oauth/callback
+https://anish-shah-is.online/api/connectors/spotify/oauth/callback
+```
+
+Cancel or let any pending authorization transaction expire before replacing a
+provider callback. Existing accepted tokens remain authoritative unless Studio
+explicitly requests reauthorization. After the apex release passes logged-out,
+owner, connector, metadata, and security-header checks, disable the legacy
+`workers.dev` hostname and remove its old Access destinations. Do not add an
+application redirect for it.
 
 ## 1. Validate the exact commit
 
@@ -64,7 +115,7 @@ Use a shell that does not contain `LOCAL_OWNER_EMAIL`:
 export CLOUDFLARE_D1_DATABASE_ID='<production D1 UUID>'
 export CLOUDFLARE_D1_DATABASE_NAME='anish-shah-work-in-public'
 export CLOUDFLARE_PUBLICATION_CACHE_ID='<production KV namespace ID>'
-export PUBLIC_SITE_URL='https://anish-shah-work-in-public.anish-shah-emails.workers.dev'
+export PUBLIC_SITE_URL='https://anish-shah-is.online'
 export OWNER_EMAILS='<exact owner email>'
 export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
 export CF_ACCESS_AUD='<Access application audience>'
@@ -85,9 +136,9 @@ Travel bookmark, the remote migration state, and the three successful GitHub
 validation, Gitleaks, and CodeQL run URLs:
 
 ```bash
-npx wrangler versions list --config dist/server/wrangler.public.json
-npx wrangler d1 time-travel info DB --config dist/server/wrangler.public.json
-npx wrangler d1 migrations list DB --remote --config dist/server/wrangler.public.json
+npx --no-install wrangler versions list --config dist/server/wrangler.public.json
+npx --no-install wrangler d1 time-travel info DB --config dist/server/wrangler.public.json
+npx --no-install wrangler d1 migrations list DB --remote --config dist/server/wrangler.public.json
 ```
 
 Copy the previous Worker version identifier and the literal pre-migration D1
@@ -98,7 +149,7 @@ a release with code.
 While signed in through Access as the owner, open:
 
 ```text
-https://anish-shah-work-in-public.anish-shah-emails.workers.dev/api/studio/publication-checkpoint
+https://anish-shah-is.online/api/studio/publication-checkpoint
 ```
 
 This protected, no-store endpoint reports the active publication's actual
@@ -213,12 +264,23 @@ SHA, attestation, configuration, migration, and release-plan checks:
 
 ```bash
 npm run cloudflare:upload
-npx wrangler versions list --config dist/server/wrangler.public.json
+npx --no-install wrangler versions list --config dist/server/wrangler.public.json
 export RELEASE_WORKER_VERSION='<new version id>'
+npm run cloudflare:triggers
 ```
 
 Do not deploy a dirty or unpushed build and do not weaken Access to make a check
 pass.
+
+`versions upload` does not apply routes, Custom Domains, cron schedules, or the
+`workers_dev` / preview-URL state. After the apex Studio and owner API
+destinations exist in Access, `cloudflare:triggers` runs Wrangler's dedicated
+`triggers deploy` command through the same clean-SHA, exact-config, migration,
+artifact, and uploaded-version guards. A successful reconciliation writes an
+ignored, permission-restricted receipt bound to the release SHA and prepared
+configuration. Both staging and promotion reject a missing, stale, or mismatched
+receipt. Do not run raw `wrangler triggers deploy` because it would bypass that
+binding.
 
 Every release keeps the prior version at 100% and stages the validated version
 at 0%:
@@ -266,7 +328,8 @@ Wrangler deployment commands, or activate static fallback content.
 
 ## 8. Run the exact smoke checklist
 
-Record each of these seven checks as pass only after observing it in production:
+Record each of these thirteen checks as pass only after observing it in
+production:
 
 1. `public_routes`: logged-out `/`, `/work`, `/play`, `/sources`, `/privacy`,
    `robots.txt`, and `sitemap.xml` are available; connector reads are sanitized
@@ -286,27 +349,42 @@ Record each of these seven checks as pass only after observing it in production:
 7. `owner_health`: owner-only `GET /api/studio/health` reports the validated
    release SHA and content version, expected latest migration, non-stale
    retention heartbeat, and sanitized connector status.
+8. `canonical_apex`: the apex is the sole content-serving production origin and
+   public HTML, metadata, sitemap, robots, and structured data use it.
+9. `www_redirect`: representative `www` paths and queries permanently redirect
+   to the equivalent apex URL without dropping either component.
+10. `workers_dev_disabled`: the former `workers.dev` hostname no longer serves
+    the application.
+11. `preview_urls_disabled`: the candidate version has no reachable Worker
+    preview URL.
+12. `request_id_header`: representative dynamic public, protected, error, and
+    host-rejection responses include a fresh `x-request-id`; custom logs remain
+    limited to the documented redacted fields.
+13. `access_destinations`: both `anish-shah-is.online/studio*` and
+    `anish-shah-is.online/api/studio/*` require Access, the owner succeeds, and
+    a non-owner remains denied.
 
 Write down the canonical ISO time at which this checklist completed and the
 deployed Worker version ID.
 
 ## 9. Write the immutable final attestation
 
-After all seven checks pass:
+After all thirteen checks pass:
 
 ```bash
 export RELEASE_WORKER_VERSION='<deployed version id>'
 export RELEASE_SMOKE_TESTED_AT='2026-08-03T18:00:00.000Z'
-export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health'
+export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health,canonical_apex,www_redirect,workers_dev_disabled,preview_urls_disabled,request_id_header,access_destinations'
 npm run release:attest
 ```
 
 `release:attest` rechecks the clean commit and `RELEASE_VALIDATED_SHA`, verifies
 that the ignored release plan still matches the content attestation and Worker
-configuration, and requires exactly the seven smoke identifiers above. It then
+configuration, verifies the guarded non-versioned-trigger receipt, and requires
+exactly the thirteen smoke identifiers above. It then
 writes a new immutable `releases/<date>-<sha>.json` containing the prior and
 current Worker versions, content hash, D1 recovery coordinates, validation URLs,
-and smoke results.
+trigger reconciliation, domain-cutover evidence, and smoke results.
 
 Review and commit the new release record. Never edit or overwrite an earlier
 record. If any check fails, do not write a successful attestation; follow the

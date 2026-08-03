@@ -79,8 +79,11 @@ before(async () => {
   assert.fail(`Production server did not become ready.\n${serverOutput}`);
 }, { timeout: 20_000 });
 
-after(() => {
-  if (server?.exitCode === null) server.kill("SIGTERM");
+after(async () => {
+  if (server?.exitCode !== null) return;
+  const exited = new Promise((resolve) => server.once("exit", resolve));
+  server.kill("SIGTERM");
+  await exited;
 });
 
 async function renderHtml(pathname) {

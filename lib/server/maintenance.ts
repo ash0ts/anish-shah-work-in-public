@@ -1,3 +1,4 @@
+import { PUBLIC_SITE_ORIGIN } from "../site-constants";
 import { runtimeDatabase, runtimeValue } from "./runtime-env";
 import { RETENTION_MAINTENANCE_KEY } from "./maintenance-state";
 export {
@@ -36,6 +37,10 @@ export type StudioHealth = {
   checkedAt: string;
   releaseSha: string | null;
   contentVersion: string | null;
+  canonicalOrigin: {
+    status: "ready" | "setup_required" | "not_applicable";
+    expected: typeof PUBLIC_SITE_ORIGIN;
+  };
   migration: {
     status: "ready" | "setup_required";
     latestApplied: string | null;
@@ -50,6 +55,20 @@ export type StudioHealth = {
     lastSuccessfulAt: string | null;
   }>;
 };
+
+function canonicalOriginState(): StudioHealth["canonicalOrigin"] {
+  if (runtimeValue("AUTH_MODE") !== "cloudflare_access") {
+    return { status: "not_applicable", expected: PUBLIC_SITE_ORIGIN };
+  }
+  return {
+    status:
+      runtimeValue("SITE_URL") === PUBLIC_SITE_ORIGIN &&
+      runtimeValue("PRODUCTION_SITE_URL") === PUBLIC_SITE_ORIGIN
+        ? "ready"
+        : "setup_required",
+    expected: PUBLIC_SITE_ORIGIN,
+  };
+}
 
 function deployedValue(name: "RELEASE_SHA" | "CONTENT_VERSION", pattern: RegExp) {
   const value = runtimeValue(name)?.toLowerCase() ?? null;
@@ -117,6 +136,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
   const checkedAt = new Date().toISOString();
   const releaseSha = deployedValue("RELEASE_SHA", /^[a-f0-9]{40}$/);
   const contentVersion = deployedValue("CONTENT_VERSION", /^[a-f0-9]{16}$/);
+  const canonicalOrigin = canonicalOriginState();
   const database = runtimeDatabase();
   if (!database) {
     return {
@@ -124,6 +144,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       checkedAt,
       releaseSha,
       contentVersion,
+      canonicalOrigin,
       migration: { status: "setup_required", latestApplied: null },
       retentionHeartbeat: { status: "never_run", lastRunAt: null },
       connectors: CONNECTOR_PROVIDERS.map((provider) => ({
@@ -187,7 +208,11 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       ),
       stravaState(strava),
     ];
-    const setupRequired = !releaseSha || !contentVersion || !safeMigrationName;
+    const setupRequired =
+      !releaseSha ||
+      !contentVersion ||
+      !safeMigrationName ||
+      canonicalOrigin.status === "setup_required";
     const degraded =
       retentionHeartbeat.status !== "current" ||
       connectors.some((connector) => connector.status === "error");
@@ -196,6 +221,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       checkedAt,
       releaseSha,
       contentVersion,
+      canonicalOrigin,
       migration: {
         status: safeMigrationName ? "ready" : "setup_required",
         latestApplied: safeMigrationName,
@@ -209,6 +235,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       checkedAt,
       releaseSha,
       contentVersion,
+      canonicalOrigin,
       migration: { status: "setup_required", latestApplied: null },
       retentionHeartbeat: { status: "error", lastRunAt: null },
       connectors: CONNECTOR_PROVIDERS.map((provider) => ({

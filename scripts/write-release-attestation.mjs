@@ -12,6 +12,12 @@ import {
   RELEASE_MARKER_QUERY,
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
+import {
+  assertTriggerDeploymentReceipt,
+  DOMAIN_ACCESS_DESTINATIONS,
+  DOMAIN_CUTOVER_SMOKE_TESTS,
+  TRIGGER_RECEIPT_PATH,
+} from "./lib/release-trigger-contract.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REQUIRED_SMOKE_TESTS = [
@@ -22,6 +28,7 @@ const REQUIRED_SMOKE_TESTS = [
   "oauth_callbacks",
   "security_headers",
   "owner_health",
+  ...DOMAIN_CUTOVER_SMOKE_TESTS,
 ];
 
 function required(name) {
@@ -151,14 +158,18 @@ const [
   contentAttestationBytes,
   releaseConfigBytes,
   deployableArtifactResult,
+  triggerReceiptBytes,
 ] = await Promise.all([
   readFile(path.join(root, "dist/release-plan.json")),
   readFile(path.join(root, "content/public/anish-content.public.v1.attestation.json")),
   readFile(path.join(root, "dist/server/wrangler.public.json")),
   readVerifiedDeployableArtifactManifest(root),
+  readFile(path.join(root, TRIGGER_RECEIPT_PATH)),
 ]);
 const plan = JSON.parse(planBytes.toString("utf8"));
 const contentAttestation = JSON.parse(contentAttestationBytes.toString("utf8"));
+const releaseConfig = JSON.parse(releaseConfigBytes.toString("utf8"));
+const triggerReceipt = JSON.parse(triggerReceiptBytes.toString("utf8"));
 if (
   plan.schemaVersion !== "1.0" ||
   plan.commitSha !== head ||
@@ -179,6 +190,12 @@ if (
 ) {
   throw new Error("The pre-release plan is missing, stale, or does not match this build.");
 }
+const verifiedTriggerReceipt = assertTriggerDeploymentReceipt(triggerReceipt, {
+  head,
+  configSha256: sha256(releaseConfigBytes),
+  config: releaseConfig,
+  notBefore: plan.preparedAt,
+});
 const repository = configuredGithubRepository();
 if (plan.repository !== repository) {
   throw new Error("The release plan does not match the configured upstream repository.");
@@ -225,7 +242,7 @@ assertReleaseMarker(finalPublication, {
 const finalDeployment = productionDeployment(currentVersion);
 
 const record = {
-  schemaVersion: "1.1",
+  schemaVersion: "1.2",
   releasedAt,
   smokeTestedAt,
   commitSha: head,
@@ -248,11 +265,22 @@ const record = {
     deploymentId: finalDeployment.deploymentId,
     trafficPercentage: finalDeployment.percentage,
   },
+  nonVersionedTriggers: verifiedTriggerReceipt,
+  domainCutover: {
+    canonicalOrigin: verifiedTriggerReceipt.settings.canonicalOrigin,
+    wwwRedirect: "permanent_path_query_preserving",
+    workersDev: "disabled",
+    previewUrls: "disabled",
+    requestIdHeader: "x-request-id",
+    accessDestinations: [...DOMAIN_ACCESS_DESTINATIONS],
+    verifiedBySmokeTests: [...DOMAIN_CUTOVER_SMOKE_TESTS],
+  },
   d1: plan.d1,
   smokeTests: REQUIRED_SMOKE_TESTS.map((id) => ({ id, status: "pass" })),
   checksums: {
     ...plan.checksums,
     releasePlanSha256: sha256(planBytes),
+    triggerDeploymentReceiptSha256: sha256(triggerReceiptBytes),
   },
 };
 

@@ -1,5 +1,6 @@
-const PUBLIC_SITE_ORIGIN =
-  "https://anish-shah-work-in-public.anish-shah-emails.workers.dev";
+export const PUBLIC_SITE_ORIGIN = "https://anish-shah-is.online";
+export const PUBLIC_CLOUDFLARE_ACCOUNT_ID =
+  "690e6286eb53a6df1bd0080633caf91f";
 
 const RATE_LIMITS = new Map([
   ["OWNER_RATE_LIMITER", { namespaceId: "88001001", limit: 30 }],
@@ -38,7 +39,7 @@ function exactHttpsOrigin(value, name) {
 export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
   const siteUrl = exactHttpsOrigin(required(env, "PUBLIC_SITE_URL"), "PUBLIC_SITE_URL");
   if (siteUrl !== PUBLIC_SITE_ORIGIN) {
-    throw new Error("PUBLIC_SITE_URL must be the repository's pinned Worker origin.");
+    throw new Error("PUBLIC_SITE_URL must be the repository's pinned canonical origin.");
   }
   const teamDomain = exactHttpsOrigin(
     required(env, "CF_ACCESS_TEAM_DOMAIN"),
@@ -92,6 +93,7 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
     databaseId,
     databaseName,
     publicationCacheId,
+    accountId: PUBLIC_CLOUDFLARE_ACCOUNT_ID,
   };
 }
 
@@ -134,8 +136,11 @@ export function assertPublicReleaseConfig(config, expected) {
   if (
     config?.name !== "anish-shah-work-in-public" ||
     config?.topLevelName !== "anish-shah-work-in-public" ||
-    config?.workers_dev !== true ||
+    config?.account_id !== expected.accountId ||
+    config?.workers_dev !== false ||
     config?.preview_urls !== false ||
+    JSON.stringify(config?.routes) !==
+      JSON.stringify([{ pattern: "anish-shah-is.online", custom_domain: true }]) ||
     config?.d1_databases?.length !== 1 ||
     database?.binding !== "DB" ||
     database?.database_id !== expected.databaseId ||
@@ -147,7 +152,7 @@ export function assertPublicReleaseConfig(config, expected) {
     !exactRateLimits ||
     !exactVars ||
     config?.observability?.enabled !== true ||
-    config?.observability?.head_sampling_rate !== 0.1 ||
+    config?.observability?.head_sampling_rate !== 1 ||
     config?.observability?.logs?.enabled !== true ||
     config?.observability?.logs?.invocation_logs !== false ||
     JSON.stringify(config?.triggers?.crons) !== JSON.stringify(["17 * * * *"])
