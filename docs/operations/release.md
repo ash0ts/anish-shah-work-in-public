@@ -1,0 +1,314 @@
+# Production release
+
+This runbook releases the owner-controlled Cloudflare Worker. The private Sites
+deployment remains a recovery/reference environment; it is not a public
+rollback target.
+
+Every release has two records:
+
+1. An ignored pre-release plan at `dist/release-plan.json`, written before any
+   release mutation.
+2. An immutable checked-in attestation under `releases/`, written only after
+   production smoke tests pass.
+
+Do not deploy, apply a remote migration, rotate a secret, or change a
+publication pointer before the pre-release plan exists.
+
+## One-time infrastructure bootstrap
+
+Provision infrastructure separately from a code release. Create the production
+KV namespace once and keep the binding name exactly `PUBLICATION_CACHE`:
+
+```bash
+npx wrangler kv namespace create PUBLICATION_CACHE
+```
+
+Record its namespace ID in the private infrastructure inventory. Reuse that
+namespace across releases; do not delete or recreate it for an ordinary
+deployment.
+
+Set durable secrets interactively only during initial provisioning or an
+explicitly approved rotation:
+
+```bash
+npx wrangler secret put CONNECTOR_ENCRYPTION_KEY --config dist/server/wrangler.public.json
+npx wrangler secret put RATE_LIMIT_SALT --config dist/server/wrangler.public.json
+```
+
+Never rotate `CONNECTOR_ENCRYPTION_KEY` during an ordinary release. Bootstrap
+changes need their own recovery notes and are not covered by the release plan
+below.
+
+## 1. Validate the exact commit
+
+Merge through a reviewed PR, then manually dispatch Validate, Gitleaks, and
+CodeQL with the same full commit SHA. All three must succeed. On the release
+machine:
+
+```bash
+git switch main
+git pull --ff-only
+git status --short
+export RELEASE_VALIDATED_SHA="$(git rev-parse HEAD)"
+corepack enable
+corepack prepare npm@11.6.2 --activate
+npm ci
+npm run db:local:migrate:clean
+```
+
+The worktree must be clean, `HEAD` must equal its upstream, and
+`RELEASE_VALIDATED_SHA` must be the exact SHA validated by CI.
+
+Use a shell that does not contain `LOCAL_OWNER_EMAIL`:
+
+```bash
+export CLOUDFLARE_D1_DATABASE_ID='<production D1 UUID>'
+export CLOUDFLARE_D1_DATABASE_NAME='anish-shah-work-in-public'
+export CLOUDFLARE_PUBLICATION_CACHE_ID='<production KV namespace ID>'
+export PUBLIC_SITE_URL='https://anish-shah-work-in-public.anish-shah-emails.workers.dev'
+export OWNER_EMAILS='<exact owner email>'
+export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
+export CF_ACCESS_AUD='<Access application audience>'
+npm run validate:release
+```
+
+`validate:release` validates source, runs browser quality, produces the final
+build and reviewed non-secret Worker configuration, reruns the bundle/privacy
+scan, and writes a deterministic ignored manifest over every regular file in
+`dist/client` and `dist/server`. Install the pinned Playwright Chromium build before running it; do
+not bypass the browser gate while claiming the corresponding accessibility or
+performance results.
+
+## 2. Capture read-only production coordinates
+
+Before changing production, collect the current Worker version, a D1 Time
+Travel bookmark, the remote migration state, and the three successful GitHub
+validation, Gitleaks, and CodeQL run URLs:
+
+```bash
+npx wrangler versions list --config dist/server/wrangler.public.json
+npx wrangler d1 time-travel info DB --config dist/server/wrangler.public.json
+npx wrangler d1 migrations list DB --remote --config dist/server/wrangler.public.json
+```
+
+Copy the previous Worker version identifier and the literal pre-migration D1
+bookmark from that output. Compare the remote migration list with the reviewed
+SQL files in `drizzle/`. Only forward-compatible additive migrations may share
+a release with code.
+
+While signed in through Access as the owner, open:
+
+```text
+https://anish-shah-work-in-public.anish-shah-emails.workers.dev/api/studio/publication-checkpoint
+```
+
+This protected, no-store endpoint reports the active publication's actual
+snapshot hash, base content version, and whether the KV current pointer exactly
+matches D1. It does not return records, identities, or provider data. Do not use
+the checked-in bundle SHA as the publication hash; those hashes cover different
+contracts. If the currently deployed version does not expose this endpoint, use
+`none`, `none`, and `0` for the three publication inputs below and explicitly
+plan the application-mediated bootstrap.
+
+## 3. Write the pre-release plan
+
+Set the release coordinates without applying a migration or deploying:
+
+```bash
+export RELEASE_PREVIOUS_WORKER_VERSION='<currently deployed version id>'
+export RELEASE_D1_BOOKMARK='<literal pre-migration Time Travel bookmark>'
+export RELEASE_VALIDATION_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+export RELEASE_GITLEAKS_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+export RELEASE_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+export RELEASE_MIGRATION_LIST='0005_steady_publication_guard.sql'
+export RELEASE_PUBLICATION_HASH='<publication checkpoint contentHash, or none>'
+export RELEASE_PUBLICATION_CONTENT_VERSION='<checkpoint contentVersion, or none>'
+export RELEASE_PUBLICATION_KV_MATCH='<1 only when checkpoint says true; otherwise 0>'
+npm run release:plan
+```
+
+`RELEASE_PREVIOUS_WORKER_VERSION` is mandatory. Every release needs an existing
+version to hold 100% of traffic while the candidate is verified at 0%. If no
+prior version is available, abort this release and establish a separate
+protected bootstrap environment first. `RELEASE_MIGRATION_LIST` is a
+comma-separated list of the reviewed, checked-in SQL migrations planned for
+this release; do not include an unapplied or unreviewed file.
+
+`release:plan` refuses a dirty worktree or a SHA mismatch. It also asks the
+authenticated GitHub CLI to verify that all three distinct Actions runs
+concluded successfully for the exact `HEAD` and expected workflow names; the
+URLs alone are not trusted. It records:
+
+- the validated commit SHA and all three GitHub Actions run URLs;
+- the public content version and exact sanitized bundle SHA-256;
+- the deployable artifact-set hash, file count, byte count, and manifest hash;
+- the prior Worker version;
+- the pre-migration D1 Time Travel bookmark and migration list; and
+- checksums for the content attestation and prepared Worker configuration.
+
+It also verifies that `HEAD` is pushed to the branch's configured upstream and
+records a SHA-256 for every named migration. For a release with no migrations,
+set `RELEASE_MIGRATION_LIST=''`; the recorded list will be empty.
+
+If the checkpoint is absent, drifted, or based on a different content version,
+explicitly select the audited, application-mediated bootstrap before creating
+the plan:
+
+```bash
+export RELEASE_PREDEPLOY_BOOTSTRAP=1
+npm run release:plan
+```
+
+The plan records `predeploy_bootstrap_required`. This authorizes only the new
+Worker's audited public-content projector while that version is staged at 0%.
+It does not authorize manual SQL, direct KV writes, a checked-in-bundle import,
+or public traffic to the candidate.
+
+Keep `dist/release-plan.json` intact through deployment and smoke testing. It is
+ignored because it is a release-machine checkpoint, not repository state. Do
+not hand-edit it.
+
+## 4. Understand the staged publication checkpoint
+
+The Worker accepts only publication snapshots produced by the application's
+audited Studio projector: stage a versioned sanitized snapshot in KV, commit
+the publication and active version in D1, then advance the KV current pointer
+after D1 succeeds. This app-mediated flow is the only permitted seed or update
+path. Never construct D1 rows or KV envelopes manually and never seed
+production directly from the checked-in static bundle.
+
+- Every plan, including one with a `compatible` publication, stages the new
+  version at 0% beside the prior version at 100%. Compatibility means only that
+  the staged browser checkpoint will not need to call Publish.
+- If the plan says `predeploy_bootstrap_required`, the staged browser checkpoint
+  invokes the new Worker's audited Studio publish route before validating D1
+  and KV. Public traffic remains on the prior version.
+- In both cases, the staged Worker must write an owner-only D1 release marker
+  that binds the candidate SHA and content version to the current verified
+  publication. Promotion is blocked until that marker exists and validates.
+
+This uses Cloudflare's documented [version override](https://developers.cloudflare.com/workers/versions-and-deployments/version-overrides/)
+ability to address a version at 0% traffic; it never constructs publication
+rows or KV envelopes outside the application. If any staged request cannot be
+verified, leave the prior version at 100% and abort before promotion.
+
+## 5. Apply reviewed migrations
+
+Recheck that `dist/release-plan.json` exists and matches the release inputs.
+Every guarded mutation first recomputes the deployable artifact manifest. Any
+changed, missing, added, or symlinked build artifact aborts the release. The
+migration command also compares Wrangler's remote pending list with the exact
+names and SHA-256 values in the plan before it can apply anything:
+
+```bash
+npm run cloudflare:migrate
+```
+
+If the remote list differs, the command stops before mutation. Do not bypass it
+with raw Wrangler migration commands.
+
+## 6. Upload and stage the validated version
+
+Use only the guarded upload and deployment commands. They repeat clean/pushed
+SHA, attestation, configuration, migration, and release-plan checks:
+
+```bash
+npm run cloudflare:upload
+npx wrangler versions list --config dist/server/wrangler.public.json
+export RELEASE_WORKER_VERSION='<new version id>'
+```
+
+Do not deploy a dirty or unpushed build and do not weaken Access to make a check
+pass.
+
+Every release keeps the prior version at 100% and stages the validated version
+at 0%:
+
+```bash
+npm run cloudflare:stage
+npm run cloudflare:checkpoint:snippet
+```
+
+Sign in to the production Studio through Access, open the browser developer
+console on that same origin, and paste the printed self-contained snippet. It
+contains version/content identifiers but no Access token, identity, credential,
+or provider data. Through `Cloudflare-Workers-Version-Overrides`, the snippet:
+
+1. verifies `/api/studio/health` reached the candidate SHA and content version;
+2. calls the audited, empty-body Publish route only when the plan recorded
+   `predeploy_bootstrap_required`;
+3. gets `/api/studio/publication-checkpoint` and requires a `ready` D1/KV
+   checkpoint for the release content version; and
+4. posts an empty body to owner-only `/api/studio/release-checkpoint`, which
+   writes the D1 release marker for this SHA, content version, and current
+   publication hash.
+
+A `compatible` plan still runs all staged checks; it skips only the Publish
+call. Inspect the snippet result and do not continue unless health, publication,
+and release checkpoint all succeed.
+
+## 7. Promote only through the guarded deploy
+
+Promote only after the staged checkpoint succeeds:
+
+```bash
+npm run cloudflare:deploy
+```
+
+The deploy guard reads the remote D1 release marker and validates it against the
+validated SHA, release content version, current D1 publication hash/version,
+and the plan's preparation time before it can send the candidate to 100%.
+Possession of a version ID or a successful upload is not sufficient.
+
+If publication or release checkpointing cannot be completed or verified, stop
+the release with the prior Worker still at 100%. Follow the
+[rollback runbook](./rollback.md). Do not bypass the guard, rerun with raw
+Wrangler deployment commands, or activate static fallback content.
+
+## 8. Run the exact smoke checklist
+
+Record each of these seven checks as pass only after observing it in production:
+
+1. `public_routes`: logged-out `/`, `/work`, `/play`, `/sources`, `/privacy`,
+   `robots.txt`, and `sitemap.xml` are available; connector reads are sanitized
+   ready/unavailable envelopes.
+2. `studio_access`: the owner reaches `/studio/**` and `/api/studio/**` through
+   Cloudflare Access.
+3. `non_owner_denial`: a logged-out visitor and an authenticated non-owner are
+   denied owner routes.
+4. `connector_galleries`: each published Play gallery renders its sanitized
+   current snapshot and consent-gated third-party content remains deferred.
+5. `oauth_callbacks`: configured callback URLs are correct and an invalid or
+   unbound callback fails closed without exposing OAuth parameters. Do not begin
+   a provider authorization merely to satisfy a release smoke test.
+6. `security_headers`: CSP, HSTS, `nosniff`, anti-framing, referrer, and
+   permissions headers are present on representative public and protected
+   responses.
+7. `owner_health`: owner-only `GET /api/studio/health` reports the validated
+   release SHA and content version, expected latest migration, non-stale
+   retention heartbeat, and sanitized connector status.
+
+Write down the canonical ISO time at which this checklist completed and the
+deployed Worker version ID.
+
+## 9. Write the immutable final attestation
+
+After all seven checks pass:
+
+```bash
+export RELEASE_WORKER_VERSION='<deployed version id>'
+export RELEASE_SMOKE_TESTED_AT='2026-08-03T18:00:00.000Z'
+export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health'
+npm run release:attest
+```
+
+`release:attest` rechecks the clean commit and `RELEASE_VALIDATED_SHA`, verifies
+that the ignored release plan still matches the content attestation and Worker
+configuration, and requires exactly the seven smoke identifiers above. It then
+writes a new immutable `releases/<date>-<sha>.json` containing the prior and
+current Worker versions, content hash, D1 recovery coordinates, validation URLs,
+and smoke results.
+
+Review and commit the new release record. Never edit or overwrite an earlier
+record. If any check fails, do not write a successful attestation; follow the
+[rollback runbook](./rollback.md).

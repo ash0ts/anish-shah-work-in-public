@@ -1308,6 +1308,41 @@ function storedSnapshot(provider, payload, { fetchedAt, freshUntil }) {
   };
 }
 
+function storedMalPayload({ id = "1", title, syncedAt, freshUntil, profileUrl = null }) {
+  const libraryItem = {
+    id,
+    title,
+    startDate: "2020-01-01",
+    releaseYear: 2020,
+    genres: ["Action"],
+    status: "Completed",
+    score: 8,
+    episodesWatched: 12,
+    updatedAt: syncedAt,
+  };
+  return {
+    provider: "myanimelist",
+    snapshotVersion: 3,
+    profileUrl,
+    coverage: "Complete anime library at sync",
+    status: [{ label: "Completed", count: 1 }],
+    genres: [{ label: "Action", count: 1 }],
+    eras: [{ label: "2020s", count: 1 }],
+    scores: [{ label: "8", count: 1 }],
+    recent: [{
+      id,
+      title,
+      status: "Completed",
+      score: 8,
+      episodesWatched: 12,
+      updatedAt: syncedAt,
+    }],
+    library: [libraryItem],
+    syncedAt,
+    freshUntil,
+  };
+}
+
 async function encryptedMyAnimeListCredential(key) {
   return encryptCredential({ accessToken: "repository-token" }, key, "myanimelist");
 }
@@ -1372,16 +1407,18 @@ function deferredBoundary(label, timeoutMs = 10_000) {
 
 test("public snapshot returns stale cached data without discarding it", async () => {
   const now = Date.now();
-  const oldPayload = {
-    provider: "myanimelist",
-    profileUrl: null,
-    recent: [{ id: "old" }],
-  };
+  const fetchedAt = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  const freshUntil = new Date(now - 12 * 60 * 60 * 1000).toISOString();
+  const oldPayload = storedMalPayload({
+    title: "Last known good",
+    syncedAt: fetchedAt,
+    freshUntil,
+  });
   const database = new FakeD1({
     snapshots: [
       storedSnapshot("myanimelist", oldPayload, {
-        fetchedAt: new Date(now - 24 * 60 * 60 * 1000).toISOString(),
-        freshUntil: new Date(now - 12 * 60 * 60 * 1000).toISOString(),
+        fetchedAt,
+        freshUntil,
       }),
     ],
   });
@@ -1400,15 +1437,15 @@ test("public snapshot returns stale cached data without discarding it", async ()
 });
 
 test("public snapshot skips a rejected row and serves the last safe snapshot", async () => {
-  const safePayload = {
-    provider: "myanimelist",
+  const safePayload = storedMalPayload({
+    title: "Last safe",
+    syncedAt: "2026-07-29T00:00:00.000Z",
+    freshUntil: "2026-07-29T12:00:00.000Z",
     profileUrl: "https://myanimelist.net/profile/anish",
-    marker: "last-safe",
-  };
+  });
   const rejectedPayload = {
-    provider: "myanimelist",
+    ...safePayload,
     profileUrl: "https://secret@myanimelist.net/profile/anish",
-    marker: "must-not-serve",
   };
   const database = new FakeD1({
     snapshots: [
@@ -1429,6 +1466,38 @@ test("public snapshot skips a rejected row and serves the last safe snapshot", a
   assert.equal(result.status, "ready");
   assert.deepEqual(result.payload, safePayload);
   assert.equal(result.fetchedAt, "2026-07-29T00:00:00.000Z");
+});
+
+test("public snapshot rejects malformed or drifted D1 timestamps", async () => {
+  const safePayload = storedMalPayload({
+    title: "Last safe timestamp",
+    syncedAt: "2026-07-29T00:00:00.000Z",
+    freshUntil: "2026-07-29T12:00:00.000Z",
+  });
+  const driftedPayload = storedMalPayload({
+    title: "Drifted timestamp",
+    syncedAt: "2026-07-30T00:00:00.000Z",
+    freshUntil: "2026-07-30T12:00:00.000Z",
+  });
+  const database = new FakeD1({
+    snapshots: [
+      storedSnapshot("myanimelist", safePayload, {
+        fetchedAt: safePayload.syncedAt,
+        freshUntil: safePayload.freshUntil,
+      }),
+      storedSnapshot("myanimelist", driftedPayload, {
+        fetchedAt: "2026-07-30T00:00:00Z",
+        freshUntil: driftedPayload.freshUntil,
+      }),
+    ],
+  });
+
+  const result = await withRuntimeBindings({ DB: database }, () =>
+    getPublicConnectorSnapshot("myanimelist"),
+  );
+  assert.equal(result.status, "ready");
+  assert.deepEqual(result.payload, safePayload);
+  assert.equal(result.fetchedAt, safePayload.syncedAt);
 });
 
 test("public snapshot rejects storage when no safe row exists", async () => {
@@ -1741,11 +1810,11 @@ test("MyAnimeList invalid refresh grant requires owner reauthorization", async (
 test("failed refresh preserves the last-known-good snapshot", async () => {
   const key = Buffer.alloc(32, 9).toString("base64");
   const credential = await encryptedMyAnimeListCredential(key);
-  const oldPayload = {
-    provider: "myanimelist",
-    profileUrl: null,
-    marker: "last-known-good",
-  };
+  const oldPayload = storedMalPayload({
+    title: "Last known good",
+    syncedAt: "2026-07-01T00:00:00.000Z",
+    freshUntil: "2026-07-01T12:00:00.000Z",
+  });
   const database = new FakeD1({
     credentials: { myanimelist: credential },
     snapshots: [
@@ -1837,11 +1906,14 @@ test("refresh rejects unsafe provider output before writing a snapshot", async (
 
 test("Steam snapshots expire publicly after 72 hours", async () => {
   const now = Date.now();
+  const fetchedAt = new Date(now - 73 * 60 * 60 * 1000).toISOString();
+  const freshUntil = new Date(now - 61 * 60 * 60 * 1000).toISOString();
   const payload = {
     provider: "steam",
+    snapshotVersion: 3,
     profileUrl:
       "https://steamcommunity.com/profiles/76561198000000000",
-    coverage: "Public Steam game details returned at sync",
+    coverage: "Complete public Steam library snapshot",
     totals: {
       publicGameCount: 1,
       playedGameCount: 1,
@@ -1849,12 +1921,29 @@ test("Steam snapshots expire publicly after 72 hours", async () => {
     },
     topPlayed: [],
     recent: [],
+    playtime: [
+      { label: "Unplayed", count: 0 },
+      { label: "Under 2h", count: 0 },
+      { label: "2–10h", count: 0 },
+      { label: "10–50h", count: 1 },
+      { label: "50h+", count: 0 },
+    ],
+    library: [{
+      appId: "10",
+      title: "Safe Game",
+      played: true,
+      recentlyPlayed: false,
+      totalHoursRounded: 10,
+      recentHoursRounded: 0,
+    }],
+    syncedAt: fetchedAt,
+    freshUntil,
   };
   const database = new FakeD1({
     snapshots: [
       storedSnapshot("steam", payload, {
-        fetchedAt: new Date(now - 73 * 60 * 60 * 1000).toISOString(),
-        freshUntil: new Date(now - 61 * 60 * 60 * 1000).toISOString(),
+        fetchedAt,
+        freshUntil,
       }),
     ],
   });

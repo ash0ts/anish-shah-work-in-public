@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 
 type RuntimeBindings = {
   DB?: D1Database;
+  PUBLICATION_CACHE?: KVNamespace;
   NODE_ENV?: string;
   OWNER_EMAILS?: string;
   CONNECTOR_ENCRYPTION_KEY?: string;
@@ -11,6 +12,9 @@ type RuntimeBindings = {
   AUTH_MODE?: string;
   CF_ACCESS_TEAM_DOMAIN?: string;
   CF_ACCESS_AUD?: string;
+  RELEASE_SHA?: string;
+  CONTENT_VERSION?: string;
+  PUBLIC_CONTENT_MODE?: string;
 };
 
 function cloudflareBindings(): RuntimeBindings {
@@ -22,7 +26,7 @@ function cloudflareBindings(): RuntimeBindings {
 }
 
 export function runtimeValue(
-  name: Exclude<keyof RuntimeBindings, "DB">,
+  name: Exclude<keyof RuntimeBindings, "DB" | "PUBLICATION_CACHE">,
 ): string | undefined {
   const cloudflareValue = cloudflareBindings()[name];
   if (typeof cloudflareValue === "string" && cloudflareValue.trim()) {
@@ -35,4 +39,8 @@ export function runtimeValue(
 
 export function runtimeDatabase(): D1Database | null {
   return cloudflareBindings().DB ?? null;
+}
+
+export function runtimePublicationKv(): KVNamespace | null {
+  return cloudflareBindings().PUBLICATION_CACHE ?? null;
 }

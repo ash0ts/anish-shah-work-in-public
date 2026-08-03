@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/.lighthouse/
+/.lighthouseci/
+/.playwright/
 
 # next.js
 /.next/

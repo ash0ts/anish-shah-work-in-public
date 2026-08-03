@@ -207,3 +207,12 @@ export const auditLog = sqliteTable(
   },
   (table) => [index("audit_log_created_idx").on(table.createdAt)],
 );
+
+/** Operational metadata only; never credentials, identities, or raw payloads. */
+export const maintenanceState = sqliteTable("maintenance_state", {
+  key: text("key").primaryKey(),
+  status: text("status").notNull(),
+  detailsJson: text("details_json").notNull().default("{}"),
+  checkedAt: text("checked_at").notNull(),
+  updatedAt: timestamp("updated_at"),
+});

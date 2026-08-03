@@ -419,12 +419,13 @@ test("Strava disconnect deletes config and provider-specific state", async () =>
 });
 
 test("Strava routes keep writes owner-only and Play keeps consent", async () => {
-  const [configRoute, legacyConfigRoute, handler, publicRoute, play] = await Promise.all([
+  const [configRoute, legacyConfigRoute, handler, publicRoute, play, movement] = await Promise.all([
     readFile(new URL("../app/api/studio/connectors/strava/config/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/connectors/strava/config/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/http/strava-config.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/connectors/strava/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../components/PersonalStreams.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/play/MovementStream.tsx", import.meta.url), "utf8"),
   ]);
   const mutationRoutes = `${configRoute}\n${legacyConfigRoute}\n${handler}`;
   assert.match(mutationRoutes, /rejectCrossOriginWrite\(request\)/);
@@ -433,8 +434,8 @@ test("Strava routes keep writes owner-only and Play keeps consent", async () => 
   assert.match(legacyConfigRoute, /status:\s*308/);
   assert.match(publicRoute, /"cache-control": "no-store"/);
   assert.match(publicRoute, /status: 200/);
-  assert.match(play, /state\.payload\.embed\.embedUrl/);
-  assert.match(play, /show && state\.payload\.embed/);
-  assert.match(play, /View the full activity feed on Strava/);
+  assert.match(movement, /state\.payload\.embed\.embedUrl/);
+  assert.match(movement, /show && state\.payload\.embed/);
+  assert.match(movement, /View the full activity feed on Strava/);
   assert.doesNotMatch(play, /NEXT_PUBLIC_STRAVA_EMBED_URL/);
 });

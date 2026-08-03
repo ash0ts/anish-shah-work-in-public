@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain Anish Site"
+  short_description: "Safely maintain and validate the portfolio"
+  default_prompt: "Use $maintain-anish-site to make the requested repository change while preserving its content, privacy, accessibility, connector, and release contracts."

@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const spotifySourceUrl = new URL(
+const spotifySourceUrls = [
   "../components/SpotifyStream.tsx",
-  import.meta.url,
-);
+  "../components/spotify/model.ts",
+  "../components/spotify/SpotifyRankedGroove.tsx",
+  "../components/spotify/SpotifyTrackPresentation.tsx",
+  "../components/spotify/SpotifyFallback.tsx",
+].map((file) => new URL(file, import.meta.url));
 const spotifyCssUrl = new URL(
   "../components/SpotifyStream.module.css",
   import.meta.url,
@@ -16,9 +19,15 @@ const streamsSourceUrl = new URL(
 );
 const playPageUrl = new URL("../app/play/page.tsx", import.meta.url);
 
+async function spotifySource() {
+  return (await Promise.all(spotifySourceUrls.map((url) => readFile(url, "utf8")))).join(
+    "\n",
+  );
+}
+
 test("Spotify stays lazy and uses only ordinal Top Tracks fields", async () => {
   const [spotify, streams] = await Promise.all([
-    readFile(spotifySourceUrl, "utf8"),
+    spotifySource(),
     readFile(streamsSourceUrl, "utf8"),
   ]);
 
@@ -40,7 +49,7 @@ test("Spotify stays lazy and uses only ordinal Top Tracks fields", async () => {
 
 test("Ranked Groove has semantic keyboard and mobile equivalents", async () => {
   const [spotify, css] = await Promise.all([
-    readFile(spotifySourceUrl, "utf8"),
+    spotifySource(),
     readFile(spotifyCssUrl, "utf8"),
   ]);
 
@@ -69,7 +78,7 @@ test("Ranked Groove has semantic keyboard and mobile equivalents", async () => {
 });
 
 test("Spotify playback is consent-gated, official, and non-reactive", async () => {
-  const spotify = await readFile(spotifySourceUrl, "utf8");
+  const spotify = await spotifySource();
 
   assert.match(
     spotify,

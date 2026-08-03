@@ -47,6 +47,8 @@ const SPOTIFY_TIME_RANGES = [
   "long_term",
 ] as const;
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
+const DECIMAL_ID = /^[1-9]\d{0,24}$/;
+const PARTIAL_DATE = /^\d{4}(?:-\d{2}(?:-\d{2})?)?$/;
 
 function hasOnlyKeys(
   value: Record<string, unknown>,
@@ -71,10 +73,303 @@ function boundedPublicString(value: unknown, maximum: number): value is string {
 }
 
 function validIsoTimestamp(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value;
+}
+
+function validNullableIsoTimestamp(value: unknown): boolean {
+  return value === null || validIsoTimestamp(value);
+}
+
+function validInteger(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+): value is number {
   return (
-    typeof value === "string" &&
-    /^\d{4}-\d{2}-\d{2}T/.test(value) &&
-    Number.isFinite(Date.parse(value))
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= minimum &&
+    value <= maximum
+  );
+}
+
+function validFiniteNumber(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= minimum &&
+    value <= maximum
+  );
+}
+
+function validStoredArtwork(value: unknown, kind: string): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const artwork = value as Record<string, unknown>;
+  const required = kind === "steam-icon" ? ["kind", "appId", "hash"] : ["kind", "assetKey"];
+  return hasOnlyKeys(artwork, required) && isStoredArtworkRef(artwork) && artwork.kind === kind;
+}
+
+function validCountSeries(value: unknown, maximumEntries: number): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length <= maximumEntries &&
+    value.every((entry) => {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+        return false;
+      }
+      const record = entry as Record<string, unknown>;
+      return (
+        hasOnlyKeys(record, ["label", "count"]) &&
+        boundedPublicString(record.label, 128) &&
+        validInteger(record.count, 0, 20_000)
+      );
+    })
+  );
+}
+
+function validMalItem(value: unknown, recent: boolean): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const item = value as Record<string, unknown>;
+  const required = recent
+    ? ["id", "title", "status", "score", "episodesWatched", "updatedAt"]
+    : [
+        "id",
+        "title",
+        "startDate",
+        "releaseYear",
+        "genres",
+        "status",
+        "score",
+        "episodesWatched",
+        "updatedAt",
+      ];
+  if (!hasOnlyKeys(item, required, recent ? [] : ["artwork"])) return false;
+  if (
+    typeof item.id !== "string" ||
+    !DECIMAL_ID.test(item.id) ||
+    !boundedPublicString(item.title, 512) ||
+    !["Watching", "Completed", "On hold", "Dropped", "Plan to watch", "Other"].includes(String(item.status)) ||
+    !(item.score === null || validInteger(item.score, 0, 10)) ||
+    !(item.episodesWatched === null || validInteger(item.episodesWatched, 0, 1_000_000)) ||
+    !validNullableIsoTimestamp(item.updatedAt)
+  ) {
+    return false;
+  }
+  if (recent) return true;
+  return (
+    (item.startDate === null ||
+      (typeof item.startDate === "string" && PARTIAL_DATE.test(item.startDate))) &&
+    (item.releaseYear === null || validInteger(item.releaseYear, 1_000, 9_999)) &&
+    Array.isArray(item.genres) &&
+    item.genres.length <= 64 &&
+    item.genres.every((genre) => boundedPublicString(genre, 128)) &&
+    new Set(item.genres).size === item.genres.length &&
+    (!Object.hasOwn(item, "artwork") || validStoredArtwork(item.artwork, "mal-cover"))
+  );
+}
+
+function validMyAnimeListPayload(payload: Record<string, unknown>): boolean {
+  if (
+    !hasOnlyKeys(payload, [
+      "provider", "snapshotVersion", "profileUrl", "coverage", "status",
+      "genres", "eras", "scores", "recent", "library", "syncedAt", "freshUntil",
+    ]) ||
+    payload.provider !== "myanimelist" ||
+    payload.snapshotVersion !== 3 ||
+    payload.coverage !== "Complete anime library at sync" ||
+    !validIsoTimestamp(payload.syncedAt) ||
+    !validIsoTimestamp(payload.freshUntil) ||
+    !validCountSeries(payload.status, 16) ||
+    !validCountSeries(payload.genres, 512) ||
+    !validCountSeries(payload.eras, 128) ||
+    !validCountSeries(payload.scores, 16) ||
+    !Array.isArray(payload.recent) ||
+    payload.recent.length > 12 ||
+    !payload.recent.every((item) => validMalItem(item, true)) ||
+    !Array.isArray(payload.library) ||
+    payload.library.length > 5_000 ||
+    !payload.library.every((item) => validMalItem(item, false))
+  ) {
+    return false;
+  }
+  const ids = payload.library.map((item) => (item as Record<string, unknown>).id);
+  const idSet = new Set(ids);
+  return (
+    idSet.size === ids.length &&
+    payload.recent.every((item) =>
+      idSet.has((item as Record<string, unknown>).id),
+    )
+  );
+}
+
+function validHardcoverItem(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const item = value as Record<string, unknown>;
+  return (
+    hasOnlyKeys(
+      item,
+      ["id", "title", "slug", "status", "rating", "updatedAt"],
+      ["artwork"],
+    ) &&
+    typeof item.id === "string" &&
+    DECIMAL_ID.test(item.id) &&
+    boundedPublicString(item.title, 512) &&
+    (item.slug === null || boundedPublicString(item.slug, 240)) &&
+    ["Want to read", "Currently reading", "Read", "Did not finish", "Other"].includes(String(item.status)) &&
+    (item.rating === null || validFiniteNumber(item.rating, 0, 5)) &&
+    validNullableIsoTimestamp(item.updatedAt) &&
+    (!Object.hasOwn(item, "artwork") || validStoredArtwork(item.artwork, "hardcover-cover"))
+  );
+}
+
+function validHardcoverPayload(payload: Record<string, unknown>): boolean {
+  if (
+    !hasOnlyKeys(payload, [
+      "provider", "snapshotVersion", "profileUrl", "coverage", "status",
+      "ratings", "recent", "library", "syncedAt", "freshUntil",
+    ]) ||
+    payload.provider !== "hardcover" ||
+    payload.snapshotVersion !== 3 ||
+    payload.coverage !== "Complete book library at sync" ||
+    !validIsoTimestamp(payload.syncedAt) ||
+    !validIsoTimestamp(payload.freshUntil) ||
+    !validCountSeries(payload.status, 16) ||
+    !validCountSeries(payload.ratings, 64) ||
+    !Array.isArray(payload.recent) ||
+    payload.recent.length > 12 ||
+    !payload.recent.every(validHardcoverItem) ||
+    !Array.isArray(payload.library) ||
+    payload.library.length > 5_000 ||
+    !payload.library.every(validHardcoverItem)
+  ) {
+    return false;
+  }
+  const ids = payload.library.map((item) => (item as Record<string, unknown>).id);
+  const idSet = new Set(ids);
+  return (
+    idSet.size === ids.length &&
+    payload.recent.every((item) =>
+      idSet.has((item as Record<string, unknown>).id),
+    )
+  );
+}
+
+function validSteamSummary(value: unknown, recent: boolean): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const item = value as Record<string, unknown>;
+  const numericKeys = recent
+    ? ["recentHoursRounded", "totalHoursRounded"]
+    : ["hoursRounded"];
+  return (
+    hasOnlyKeys(item, ["appId", "title", ...numericKeys]) &&
+    typeof item.appId === "string" &&
+    DECIMAL_ID.test(item.appId) &&
+    boundedPublicString(item.title, 512) &&
+    numericKeys.every((key) => validInteger(item[key], 0, 10_000_000))
+  );
+}
+
+function validSteamLibraryItem(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const item = value as Record<string, unknown>;
+  return (
+    hasOnlyKeys(
+      item,
+      ["appId", "title", "played", "recentlyPlayed", "totalHoursRounded", "recentHoursRounded"],
+      ["artwork"],
+    ) &&
+    typeof item.appId === "string" &&
+    DECIMAL_ID.test(item.appId) &&
+    boundedPublicString(item.title, 512) &&
+    typeof item.played === "boolean" &&
+    typeof item.recentlyPlayed === "boolean" &&
+    validInteger(item.totalHoursRounded, 0, 10_000_000) &&
+    validInteger(item.recentHoursRounded, 0, 10_000_000) &&
+    (!Object.hasOwn(item, "artwork") ||
+      (validStoredArtwork(item.artwork, "steam-icon") &&
+        (item.artwork as Record<string, unknown>).appId === item.appId))
+  );
+}
+
+function validSteamPayload(payload: Record<string, unknown>): boolean {
+  if (
+    !hasOnlyKeys(payload, [
+      "provider", "snapshotVersion", "profileUrl", "coverage", "totals",
+      "topPlayed", "recent", "playtime", "library", "syncedAt", "freshUntil",
+    ]) ||
+    payload.provider !== "steam" ||
+    payload.snapshotVersion !== 3 ||
+    payload.coverage !== "Complete public Steam library snapshot" ||
+    !validIsoTimestamp(payload.syncedAt) ||
+    !validIsoTimestamp(payload.freshUntil) ||
+    typeof payload.totals !== "object" ||
+    payload.totals === null ||
+    Array.isArray(payload.totals)
+  ) {
+    return false;
+  }
+  const totals = payload.totals as Record<string, unknown>;
+  if (
+    !hasOnlyKeys(totals, ["publicGameCount", "playedGameCount", "totalHoursRounded"]) ||
+    !validInteger(totals.publicGameCount, 0, 20_000) ||
+    !validInteger(totals.playedGameCount, 0, 20_000) ||
+    !validInteger(totals.totalHoursRounded, 0, 10_000_000) ||
+    !Array.isArray(payload.topPlayed) ||
+    payload.topPlayed.length > 8 ||
+    !payload.topPlayed.every((item) => validSteamSummary(item, false)) ||
+    !Array.isArray(payload.recent) ||
+    payload.recent.length > 8 ||
+    !payload.recent.every((item) => validSteamSummary(item, true)) ||
+    !validCountSeries(payload.playtime, 5) ||
+    !Array.isArray(payload.library) ||
+    payload.library.length > 20_000 ||
+    !payload.library.every(validSteamLibraryItem)
+  ) {
+    return false;
+  }
+  const library = payload.library as Array<Record<string, unknown>>;
+  const ids = library.map((item) => item.appId);
+  const idSet = new Set(ids);
+  const playtime = payload.playtime as Array<Record<string, unknown>>;
+  const expectedPlaytimeLabels = [
+    "Unplayed",
+    "Under 2h",
+    "2–10h",
+    "10–50h",
+    "50h+",
+  ];
+  return (
+    idSet.size === ids.length &&
+    totals.publicGameCount === library.length &&
+    totals.playedGameCount === library.filter((item) => item.played).length &&
+    playtime.length === expectedPlaytimeLabels.length &&
+    playtime.every(
+      (entry, index) => entry.label === expectedPlaytimeLabels[index],
+    ) &&
+    playtime.reduce((total, entry) => total + Number(entry.count), 0) ===
+      library.length &&
+    payload.topPlayed.every((item) =>
+      idSet.has((item as Record<string, unknown>).appId),
+    ) &&
+    payload.recent.every((item) =>
+      idSet.has((item as Record<string, unknown>).appId),
+    )
   );
 }
 
@@ -295,9 +590,17 @@ export function validateConnectorPublicPayload(
     return false;
   }
   const payload = value as Record<string, unknown>;
+  const exactSchemaValid =
+    provider === "myanimelist"
+      ? validMyAnimeListPayload(payload)
+      : provider === "hardcover"
+        ? validHardcoverPayload(payload)
+        : provider === "steam"
+          ? validSteamPayload(payload)
+          : validSpotifyPayload(payload);
   return (
     payload.provider === provider &&
-    (provider !== "spotify" || validSpotifyPayload(payload)) &&
+    exactSchemaValid &&
     Object.hasOwn(payload, "profileUrl") &&
     (payload.profileUrl === null ||
       (typeof payload.profileUrl === "string" &&

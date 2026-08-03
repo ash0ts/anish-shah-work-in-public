@@ -38,6 +38,8 @@ before(async () => {
       "--ip",
       "127.0.0.1",
       "--local",
+      "--var",
+      "NODE_ENV:development",
       "--log-level",
       "error",
       "--persist-to",
@@ -471,14 +473,20 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
   );
 
   const [source, spotify, playPage] = await Promise.all([
-    readFile(
-      path.join(PROJECT_ROOT, "components/PersonalStreams.tsx"),
-      "utf8",
-    ),
-    readFile(
-      path.join(PROJECT_ROOT, "components/SpotifyStream.tsx"),
-      "utf8",
-    ),
+    Promise.all(
+      [
+        "components/PersonalStreams.tsx",
+        "components/play/MovementStream.tsx",
+      ].map((file) => readFile(path.join(PROJECT_ROOT, file), "utf8")),
+    ).then((files) => files.join("\n")),
+    Promise.all(
+      [
+        "components/SpotifyStream.tsx",
+        "components/spotify/SpotifyRankedGroove.tsx",
+        "components/spotify/SpotifyTrackPresentation.tsx",
+        "components/spotify/SpotifyFallback.tsx",
+      ].map((file) => readFile(path.join(PROJECT_ROOT, file), "utf8")),
+    ).then((files) => files.join("\n")),
     readFile(path.join(PROJECT_ROOT, "app/play/page.tsx"), "utf8"),
   ]);
   assert.match(
@@ -510,16 +518,16 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
   );
   assert.match(
     source,
-    /active === "move"[\s\S]*?<MovementProvider/,
+    /active === "move"[\s\S]*?<MovementStream/,
   );
   assert.match(
     source,
-    /function MovementProvider[\s\S]*?if \(state\.status !== "ready"\)/,
+    /function MovementStream[\s\S]*?if \(state\.status !== "ready"\)/,
     "An unpublished Strava stream must render the compact empty row",
   );
   assert.match(
     source,
-    /function MovementProvider[\s\S]*?show && state\.payload\.embed \? \([\s\S]*?<iframe/,
+    /function MovementStream[\s\S]*?show && state\.payload\.embed \? \([\s\S]*?<iframe/,
     "The Strava iframe must remain behind explicit visitor intent",
   );
 });

@@ -501,3 +501,38 @@ export async function resolvePublicContentFromSnapshotRow(
     };
   }
 }
+
+/**
+ * Strict publication resolver for production failover. Unlike the legacy
+ * local/Sites resolver above, an invalid row is never converted into the
+ * checked-in bundle because that could undo an editorial unpublish.
+ */
+export async function resolveVerifiedPublicContentFromSnapshotRow(
+  staticBundle: AnishContentBundle,
+  row: PublishedSnapshotRow,
+): Promise<ResolvedPublicContent | null> {
+  try {
+    const parsed = parsePublishedEditorialSnapshot(JSON.parse(row.snapshotJson));
+    if (
+      !parsed ||
+      parsed.baseContentVersion !== staticBundle.contentVersion ||
+      parsed.contentHash !== row.contentHash ||
+      (await publishedRecordsHash(
+        parsed.records,
+        parsed.baseContentVersion,
+      )) !== row.contentHash
+    ) {
+      return null;
+    }
+    const merged = mergePublishedEditorialSnapshot(staticBundle, parsed);
+    return merged
+      ? {
+          bundle: merged,
+          source: "published_snapshot",
+          publishedAt: parsed.publishedAt,
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}

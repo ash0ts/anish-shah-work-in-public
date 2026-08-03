@@ -1,11 +1,13 @@
-import publicBundleJson from "@/content/public/anish-content.public.v1.json";
+import publicBundleJson from "../../content/public/anish-content.public.v1.json" with {
+  type: "json",
+};
 import type {
   AnishContentBundle,
   EvidenceSource,
   PortfolioItem,
   PublicImpactMetric,
   Relation,
-} from "@/types/content";
+} from "../../types/content";
 export {
   collectionMetricsFrom,
   entitiesOfKindFrom,
@@ -16,37 +18,104 @@ export {
   metricsForItemFrom,
   supplementalWorkEntriesFrom,
   workIndexEntriesFrom,
-} from "@/lib/content-selectors";
-import { runtimeDatabase } from "./runtime-env";
+} from "../content-selectors";
+import {
+  runtimeDatabase,
+  runtimePublicationKv,
+  runtimeValue,
+} from "./runtime-env";
 import {
   resolvePublicContentFromSnapshotRow,
+  resolveVerifiedPublicContentFromSnapshotRow,
+  type PublishedSnapshotRow,
   type ResolvedPublicContent,
 } from "./public-content-selector";
+import { readPublicationFallback } from "./publication-fallback";
+export { PUBLICATION_FALLBACK_KEY } from "./publication-fallback";
 
 const staticPublicBundle = publicBundleJson as AnishContentBundle;
 
-export async function getPublicContentView(): Promise<ResolvedPublicContent> {
-  const database = runtimeDatabase();
+export class PublicContentUnavailableError extends Error {
+  constructor() {
+    super("The current public publication could not be verified.");
+    this.name = "PublicContentUnavailableError";
+  }
+}
+
+async function resolveKvFallback(
+  fallbackStore: KVNamespace | null,
+): Promise<ResolvedPublicContent | null> {
+  if (!fallbackStore) return null;
+  try {
+    const row = await readPublicationFallback(fallbackStore);
+    return row
+      ? resolveVerifiedPublicContentFromSnapshotRow(staticPublicBundle, row)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getPublicContentViewFromStores(
+  database: D1Database | null,
+  fallbackStore: KVNamespace | null,
+  options: { failClosed: boolean },
+): Promise<ResolvedPublicContent> {
   if (!database) {
+    if (options.failClosed) {
+      const fallback = await resolveKvFallback(fallbackStore);
+      if (fallback) return fallback;
+      throw new PublicContentUnavailableError();
+    }
     return resolvePublicContentFromSnapshotRow(staticPublicBundle, null);
   }
 
+  let row: PublishedSnapshotRow | null;
   try {
-    const row = await database
+    row = await database
       .prepare(
-        `SELECT snapshot_json AS snapshotJson, content_hash AS contentHash
-         FROM publication_snapshots
-         ORDER BY created_at DESC
+        `SELECT snapshots.snapshot_json AS snapshotJson,
+                snapshots.content_hash AS contentHash
+         FROM editorial_settings AS settings
+         JOIN publication_snapshots AS snapshots
+           ON snapshots.id = json_extract(settings.value_json, '$.snapshotId')
+         WHERE settings.key = 'publication.current'
          LIMIT 1`,
       )
-      .first<{ snapshotJson: string; contentHash: string }>();
-    if (!row) {
-      return resolvePublicContentFromSnapshotRow(staticPublicBundle, null);
-    }
-    return resolvePublicContentFromSnapshotRow(staticPublicBundle, row);
+      .first<PublishedSnapshotRow>();
   } catch {
+    const fallback = await resolveKvFallback(fallbackStore);
+    if (fallback) return fallback;
+    if (options.failClosed) throw new PublicContentUnavailableError();
     return resolvePublicContentFromSnapshotRow(staticPublicBundle, null);
   }
+
+  if (!row) {
+    if (options.failClosed) throw new PublicContentUnavailableError();
+    return resolvePublicContentFromSnapshotRow(staticPublicBundle, null);
+  }
+
+  const verified = await resolveVerifiedPublicContentFromSnapshotRow(
+    staticPublicBundle,
+    row,
+  );
+  if (verified) return verified;
+
+  const fallback = await resolveKvFallback(fallbackStore);
+  if (fallback) return fallback;
+  if (options.failClosed) throw new PublicContentUnavailableError();
+  return resolvePublicContentFromSnapshotRow(staticPublicBundle, null);
+}
+
+export async function getPublicContentView(): Promise<ResolvedPublicContent> {
+  const failClosed =
+    runtimeValue("PUBLIC_CONTENT_MODE") === "d1_kv_required" ||
+    runtimeValue("AUTH_MODE") === "cloudflare_access";
+  return getPublicContentViewFromStores(
+    runtimeDatabase(),
+    runtimePublicationKv(),
+    { failClosed },
+  );
 }
 
 export function publicMetricsFrom(

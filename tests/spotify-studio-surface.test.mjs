@@ -9,13 +9,20 @@ async function source(path) {
 }
 
 test("Studio exposes a provider-specific Spotify OAuth and publication flow", async () => {
-  const controls = await source("app/studio/ConnectorControls.tsx");
+  const controls = (
+    await Promise.all([
+      source("app/studio/ConnectorControls.tsx"),
+      source("app/studio/connectors/ApiConnectorPanel.tsx"),
+      source("app/studio/connectors/helpers.ts"),
+      source("app/studio/connectors/SpotifyConnectorPanel.tsx"),
+    ])
+  ).join("\n");
   const page = await source("app/studio/page.tsx");
 
   assert.match(controls, /stream:\s*"Listen"[\s\S]*?title:\s*"Spotify"/);
   assert.match(
     controls,
-    /spotify:\s*"\/api\/studio\/connectors\/spotify\/oauth\/start"/,
+    /startPath:\s*"\/api\/studio\/connectors\/spotify\/oauth\/start"/,
   );
   assert.match(
     controls,

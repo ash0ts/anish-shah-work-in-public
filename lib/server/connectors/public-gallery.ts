@@ -48,7 +48,8 @@ export function projectConnectorSnapshotForPublic(
   if (provider === "spotify") {
     return projectSpotifySnapshot(payload);
   }
-  const { library: rawLibrary, ...summary } = payload;
+  const rawLibrary = payload.library;
+  const summary = projectCollectionSummary(provider, payload);
   if (!Array.isArray(rawLibrary)) {
     return {
       ...summary,
@@ -134,6 +135,99 @@ export function projectConnectorSnapshotForPublic(
   };
 }
 
+function projectCountSeries(value: unknown): Array<{ label: string; count: number }> {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      return [];
+    }
+    const record = entry as Record<string, unknown>;
+    return [{ label: stringValue(record.label), count: numberValue(record.count) }];
+  });
+}
+
+function projectCollectionSummary(
+  provider: Exclude<ConnectorProvider, "spotify">,
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  const common = {
+    provider,
+    snapshotVersion: 3,
+    profileUrl: payload.profileUrl,
+    coverage: payload.coverage,
+    syncedAt: payload.syncedAt,
+    freshUntil: payload.freshUntil,
+  };
+  if (provider === "myanimelist") {
+    const recent = Array.isArray(payload.recent) ? payload.recent : [];
+    return {
+      ...common,
+      status: projectCountSeries(payload.status),
+      genres: projectCountSeries(payload.genres),
+      eras: projectCountSeries(payload.eras),
+      scores: projectCountSeries(payload.scores),
+      recent: recent.flatMap((entry) => {
+        if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return [];
+        const item = entry as Record<string, unknown>;
+        return [{
+          id: stringValue(item.id),
+          title: stringValue(item.title),
+          status: stringValue(item.status),
+          score: nullableNumber(item.score),
+          episodesWatched: nullableNumber(item.episodesWatched),
+          updatedAt: nullableString(item.updatedAt),
+        }];
+      }),
+    };
+  }
+  if (provider === "hardcover") {
+    const recent = Array.isArray(payload.recent) ? payload.recent : [];
+    return {
+      ...common,
+      status: projectCountSeries(payload.status),
+      ratings: projectCountSeries(payload.ratings),
+      recent: recent.flatMap((entry) => {
+        if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return [];
+        return [projectHardcoverItem(entry as GalleryItem)];
+      }),
+    };
+  }
+  const totals =
+    typeof payload.totals === "object" && payload.totals !== null
+      ? (payload.totals as Record<string, unknown>)
+      : {};
+  const topPlayed = Array.isArray(payload.topPlayed) ? payload.topPlayed : [];
+  const recent = Array.isArray(payload.recent) ? payload.recent : [];
+  return {
+    ...common,
+    totals: {
+      publicGameCount: numberValue(totals.publicGameCount),
+      playedGameCount: numberValue(totals.playedGameCount),
+      totalHoursRounded: numberValue(totals.totalHoursRounded),
+    },
+    topPlayed: topPlayed.flatMap((entry) => {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return [];
+      const item = entry as Record<string, unknown>;
+      return [{
+        appId: stringValue(item.appId),
+        title: stringValue(item.title),
+        hoursRounded: numberValue(item.hoursRounded),
+      }];
+    }),
+    recent: recent.flatMap((entry) => {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return [];
+      const item = entry as Record<string, unknown>;
+      return [{
+        appId: stringValue(item.appId),
+        title: stringValue(item.title),
+        recentHoursRounded: numberValue(item.recentHoursRounded),
+        totalHoursRounded: numberValue(item.totalHoursRounded),
+      }];
+    }),
+    playtime: projectCountSeries(payload.playtime),
+  };
+}
+
 function projectSpotifySnapshot(
   payload: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -205,10 +299,57 @@ function projectGalleryItem(
   provider: ConnectorProvider,
   item: GalleryItem,
 ): GalleryItem {
-  const itemId = stringValue(provider === "steam" ? item.appId : item.id);
-  const { artwork: storedArtwork, ...publicItem } = item;
-  const artwork = publicArtworkForItem(provider, itemId, storedArtwork);
-  return artwork ? { ...publicItem, artwork } : publicItem;
+  if (provider === "myanimelist") return projectMyAnimeListItem(item);
+  if (provider === "hardcover") return projectHardcoverItem(item);
+  if (provider === "steam") return projectSteamItem(item);
+  return {};
+}
+
+function projectMyAnimeListItem(item: GalleryItem): GalleryItem {
+  const id = stringValue(item.id);
+  const artwork = publicArtworkForItem("myanimelist", id, item.artwork);
+  return {
+    id,
+    title: stringValue(item.title),
+    startDate: nullableString(item.startDate),
+    releaseYear: nullableNumber(item.releaseYear),
+    genres: Array.isArray(item.genres)
+      ? item.genres.map(stringValue).filter(Boolean)
+      : [],
+    status: stringValue(item.status),
+    score: nullableNumber(item.score),
+    episodesWatched: nullableNumber(item.episodesWatched),
+    updatedAt: nullableString(item.updatedAt),
+    ...(artwork ? { artwork } : {}),
+  };
+}
+
+function projectHardcoverItem(item: GalleryItem): GalleryItem {
+  const id = stringValue(item.id);
+  const artwork = publicArtworkForItem("hardcover", id, item.artwork);
+  return {
+    id,
+    title: stringValue(item.title),
+    slug: nullableString(item.slug),
+    status: stringValue(item.status),
+    rating: nullableNumber(item.rating),
+    updatedAt: nullableString(item.updatedAt),
+    ...(artwork ? { artwork } : {}),
+  };
+}
+
+function projectSteamItem(item: GalleryItem): GalleryItem {
+  const appId = stringValue(item.appId);
+  const artwork = publicArtworkForItem("steam", appId, item.artwork);
+  return {
+    appId,
+    title: stringValue(item.title),
+    played: item.played === true,
+    recentlyPlayed: item.recentlyPlayed === true,
+    totalHoursRounded: numberValue(item.totalHoursRounded),
+    recentHoursRounded: numberValue(item.recentHoursRounded),
+    ...(artwork ? { artwork } : {}),
+  };
 }
 
 function gallerySpec(
@@ -386,6 +527,14 @@ function stringValue(value: unknown): string {
 
 function numberValue(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function nullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function steamPlayed(item: GalleryItem): boolean {

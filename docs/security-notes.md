@@ -11,9 +11,12 @@
   in production.
 - API writes are stream-counted before routing. Normal mutations are limited to
   16 KiB; the one-time Play promotion import is limited to 64 KiB.
-- OAuth transaction data is removed within 24 hours of expiry, synchronization
-  history after 90 days, and audit history after 365 days. Disconnect still
-  deletes provider-specific credentials and history immediately.
+- Hourly retention removes OAuth transaction data no later than 24 hours after
+  expiry, clears expired staged promotion credentials on the next hourly pass,
+  deletes promotion transactions within 24 hours of creation, synchronization
+  history no later than 90 days, audit history no later than 365 days, and
+  Spotify metadata no later than 30 days. Disconnect still deletes
+  provider-specific credentials and history immediately.
 - `npm run security:audit` fails on any runtime advisory or any high/critical
   full-tree advisory. The remaining development-only moderate advisories are
   inherited through Drizzle Kit’s retired esbuild loader; Drizzle Kit is never

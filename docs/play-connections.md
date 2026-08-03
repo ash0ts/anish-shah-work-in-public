@@ -47,7 +47,9 @@ Run:
 
 ```bash
 cd "/path/to/anish-site"
-npm install
+corepack enable
+corepack prepare npm@11.6.2 --activate
+npm ci
 test -f .env.local || cp .env.example .env.local
 openssl rand -base64 32
 ```
@@ -335,10 +337,14 @@ data. The official iframe remains the only Strava display surface.
 | Review promotion queue | `GET /api/studio/play-promotion` | No body; production only |
 | Validate and apply promotion | `POST /api/studio/play-promotion/[id]/apply` | No body; production only |
 
-Every write requires same-origin access, Sign in with ChatGPT or the constrained
-local-development owner, and an exact email allowlist match. API credentials
+Every production write requires same-origin access, a verified Cloudflare Access
+session, and an exact email allowlist match. Local development uses only the
+constrained loopback owner. API credentials
 use AES-256-GCM encryption with provider-bound associated data. OAuth state is
 single-use, owner-bound, encrypted, and expires after ten minutes.
+Promotion codes also expire after ten minutes. A staged encrypted payload has
+a 30-minute review window, is cleared on the next hourly retention pass after
+expiry, and its transaction row is deleted within 24 hours of creation.
 
 A transient provider failure preserves the latest known-good eligible snapshot.
 Disconnect is different: it deletes that provider’s credentials, snapshots,

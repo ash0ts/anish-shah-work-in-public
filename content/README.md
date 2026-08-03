@@ -9,6 +9,18 @@ node scripts/build-content.mjs
 node scripts/build-content.mjs --check
 ```
 
+After a reviewed owner regeneration, update and verify the safe public
+attestation:
+
+```sh
+npm run content:attest:write
+npm run content:attest
+```
+
+The attestation hashes only deployable public content, schema, and public-safe
+curation. It contains no private source hash or local path. Ordinary CI verifies
+the attestation but cannot regenerate the four private inputs.
+
 The four source CSV/Markdown files live one directory above this project and are
 treated as immutable inputs. The exact owner bundle is generated under
 `content/private/` and ignored by Git. Never copy it into `public/`, application
