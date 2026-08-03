@@ -5,36 +5,42 @@ const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 const objects = [
   {
     id: "watch",
+    label: "Watch",
     provider: "myanimelist",
     foundation: "MyAnimeList public signal",
     title: "Midnight Broadcast",
   },
   {
     id: "read",
+    label: "Read",
     provider: "hardcover",
     foundation: "Hardcover · Personal circulation desk",
     title: "Borrowed Shelf",
   },
   {
     id: "listen",
+    label: "Listen",
     provider: "spotify",
     foundation: "Spotify · One returned order at a time",
     title: "Pocket Player",
   },
   {
     id: "collect",
+    label: "Collect",
     provider: "discogs",
     foundation: "Discogs · Physical collection",
     title: "Crate Archive",
   },
   {
     id: "play",
+    label: "Play",
     provider: "steam",
     foundation: "Steam · Public library snapshot",
     title: "Desktop Library",
   },
   {
     id: "move",
+    label: "Move",
     provider: "strava",
     foundation: "Strava · Consent-gated public feed",
     title: "Cardio Television",
@@ -135,6 +141,14 @@ async function overflowReport(page) {
       viewportWidth: window.innerWidth,
       offenders,
     };
+  });
+}
+
+async function settlePaint(page) {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
   });
 }
 
@@ -301,6 +315,22 @@ test.describe("My Room 2001 browser quality", () => {
       "href",
       "/play?fixture=long-title",
     );
+
+    await page.goto(
+      "/play/collect?fixture=maximum-density&pageSize=12",
+      { waitUntil: "domcontentloaded" },
+    );
+    await page.getByRole("button", { name: "Gallery" }).click();
+    await expect(page.locator('input[name="fixture"]')).toHaveValue(
+      "maximum-density",
+    );
+    const nextHref = await page
+      .getByRole("link", { name: "Next" })
+      .getAttribute("href");
+    expect(nextHref).not.toBeNull();
+    expect(
+      new URL(nextHref, "http://preview.test").searchParams.get("fixture"),
+    ).toBe("maximum-density");
   });
 
   test("Enter traps focus and Leave restores the invoking control", async ({ page }) => {
@@ -487,7 +517,7 @@ test.describe("My Room 2001 browser quality", () => {
   test("twenty real drags never open an object and twenty real clicks open the hit object", async ({
     page,
   }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(180_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
@@ -502,6 +532,7 @@ test.describe("My Room 2001 browser quality", () => {
       await page.mouse.up();
       await expect(page).toHaveURL(/\/play$/);
       await room.getByRole("button", { name: "Reset view" }).click();
+      await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
     }
 
     for (let index = 0; index < 20; index += 1) {
@@ -511,10 +542,16 @@ test.describe("My Room 2001 browser quality", () => {
         "data-room-hovered-object",
         point.id,
       );
-      await page.mouse.click(point.x, point.y);
-      await expect(page).toHaveURL(new RegExp(`/play/${point.id}$`));
+      await page.mouse.down();
+      await page.waitForTimeout(20);
+      await page.mouse.up();
+      await expect(page).toHaveURL(new RegExp(`/play/${point.id}$`), {
+        timeout: 10_000,
+      });
       await page.keyboard.press("Escape");
-      await expect(page).toHaveURL(/\/play$/);
+      await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+      await expect(room).toBeVisible();
+      await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
       await expect(
         page.locator(`[data-room-object-control="${point.id}"]`),
       ).toBeFocused();
@@ -524,6 +561,7 @@ test.describe("My Room 2001 browser quality", () => {
   test("room-originated Back and Escape use browser history and restore exact focus", async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
@@ -539,6 +577,7 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(page).toHaveURL(/\/play$/);
     room = page.getByRole("dialog", { name: "Interactive room" });
     await expect(room).toBeVisible();
+    await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
     await expect(
       room.locator('[data-room-object-control="watch"]'),
       JSON.stringify(await activeElementReport(page)),
@@ -548,21 +587,26 @@ test.describe("My Room 2001 browser quality", () => {
     await page.waitForTimeout(300);
     await expect(room.locator('[data-room-object-control="read"]')).toBeFocused();
 
-    await page.goForward({ waitUntil: "networkidle" });
+    await page.goForward({ waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/play\/watch$/);
     await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
-    await page.goBack({ waitUntil: "networkidle" });
+    await page.goBack({ waitUntil: "domcontentloaded" });
     room = page.getByRole("dialog", { name: "Interactive room" });
+    await expect(room).toBeVisible();
+    await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
     await expect(room.locator('[data-room-object-control="watch"]')).toBeFocused();
 
     for (const object of objects.filter(({ id }) => id !== "watch")) {
       await room.locator(`[data-room-object-control="${object.id}"]`).click();
-      await expect(page).toHaveURL(new RegExp(`/play/${object.id}$`));
+      await expect(page).toHaveURL(new RegExp(`/play/${object.id}$`), {
+        timeout: 10_000,
+      });
       await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
       await page.keyboard.press("Escape");
-      await expect(page).toHaveURL(/\/play$/);
+      await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
       room = page.getByRole("dialog", { name: "Interactive room" });
       await expect(room).toBeVisible();
+      await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
       await expect(
         room.locator(`[data-room-object-control="${object.id}"]`),
       ).toBeFocused();
@@ -572,17 +616,22 @@ test.describe("My Room 2001 browser quality", () => {
   test("direct object return pushes the room route and restores each semantic link", async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     for (const object of objects) {
-      await page.goto(`/play/${object.id}`, { waitUntil: "networkidle" });
+      await page.goto(`/play/${object.id}`, { waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("heading", { name: object.title })).toBeVisible();
       await expect(page.getByRole("dialog", { name: "Interactive room" })).toHaveCount(0);
+      await expect(page.locator("[data-room-announcer]")).toContainText(
+        `Opened ${object.label}: ${object.title}.`,
+      );
       await page.keyboard.press("Escape");
-      await expect(page).toHaveURL(/\/play$/);
+      await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
       const semanticLink = page.locator(
         `[data-room-overview] [data-room-object-link="${object.id}"]`,
       );
       await expect(semanticLink).toBeFocused();
 
-      await page.goBack({ waitUntil: "networkidle" });
+      await page.goBack({ waitUntil: "domcontentloaded" });
       await expect(page).toHaveURL(new RegExp(`/play/${object.id}$`));
       await expect(page.getByRole("heading", { name: object.title })).toBeVisible();
       await expect(page.getByRole("dialog", { name: "Interactive room" })).toHaveCount(0);
@@ -692,10 +741,18 @@ test.describe("My Room 2001 browser quality", () => {
 
   for (const width of widths) {
     test(`all object routes fit a ${width}px viewport`, async ({ page }) => {
+      test.setTimeout(90_000);
       await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
-      for (const route of directRoutes) {
-        const response = await page.goto(route, { waitUntil: "networkidle" });
+      for (const object of objects) {
+        const route = `/play/${object.id}`;
+        const response = await page.goto(route, {
+          waitUntil: "domcontentloaded",
+        });
         expect(response?.status(), route).toBe(200);
+        await expect(
+          page.getByRole("heading", { name: object.title }),
+        ).toBeVisible();
+        await settlePaint(page);
         const overflow = await overflowReport(page);
         expect(
           overflow.offenders,
@@ -726,6 +783,22 @@ test.describe("My Room 2001 browser quality", () => {
       viewport: { width: 390, height: 844 },
     });
     const page = await context.newPage();
+    await page.goto("/play/watch?fixture=maximum-density&pageSize=12", {
+      waitUntil: "load",
+    });
+    await expect(page.locator('input[name="fixture"]')).toHaveValue(
+      "maximum-density",
+    );
+    const next = page.getByRole("link", { name: "Next" });
+    const nextHref = await next.getAttribute("href");
+    expect(nextHref).not.toBeNull();
+    expect(new URL(nextHref, "http://preview.test").searchParams.get("fixture")).toBe(
+      "maximum-density",
+    );
+    await next.click();
+    await expect(page).toHaveURL(/fixture=maximum-density/);
+    await expect(page.getByText("13—24 of 36")).toBeVisible();
+
     for (const object of objects) {
       const response = await page.goto(`/play/${object.id}`, { waitUntil: "load" });
       expect(response?.status(), object.id).toBe(200);

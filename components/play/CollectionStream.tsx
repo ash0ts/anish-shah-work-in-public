@@ -195,6 +195,7 @@ export function CollectionStream({
           <GalleryView
             busy={busy}
             draftQuery={draftQuery}
+            fixture={fixture}
             gallery={gallery}
             onDraftQuery={setDraftQuery}
             onFilter={(value) => {

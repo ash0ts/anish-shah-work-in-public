@@ -207,6 +207,7 @@ export function DiscogsStream({
             busy={busy}
             decade={decade || gallery.decade}
             draftQuery={draftQuery}
+            fixture={fixture}
             format={format || gallery.format}
             gallery={gallery}
             onDecade={(value) => {
@@ -422,6 +423,7 @@ function DiscogsGallery({
   busy,
   decade,
   draftQuery,
+  fixture,
   format,
   pageSize,
   sort,
@@ -438,6 +440,7 @@ function DiscogsGallery({
   busy: boolean;
   decade: string;
   draftQuery: string;
+  fixture?: PreviewFixtureScenario;
   format: string;
   pageSize: PageSize;
   sort: string;
@@ -466,6 +469,7 @@ function DiscogsGallery({
         method="get"
         onSubmit={onSearch}
       >
+        {fixture ? <input name="fixture" type="hidden" value={fixture} /> : null}
         <div className={styles.gallerySearch}>
           <label htmlFor="discogs-gallery-search">Find a title or artist</label>
           <span>
@@ -559,7 +563,12 @@ function DiscogsGallery({
             href={
               gallery.page <= 1
                 ? undefined
-                : discogsPageUrl(routePath, gallery, gallery.page - 1)
+                : discogsPageUrl(
+                    routePath,
+                    gallery,
+                    gallery.page - 1,
+                    fixture,
+                  )
             }
             onClick={(event) => {
               event.preventDefault();
@@ -586,7 +595,12 @@ function DiscogsGallery({
             href={
               gallery.page >= gallery.totalPages
                 ? undefined
-                : discogsPageUrl(routePath, gallery, gallery.page + 1)
+                : discogsPageUrl(
+                    routePath,
+                    gallery,
+                    gallery.page + 1,
+                    fixture,
+                  )
             }
             onClick={(event) => {
               event.preventDefault();
@@ -646,6 +660,7 @@ function discogsPageUrl(
   routePath: "/play/collect",
   gallery: DiscogsGallery,
   page: number,
+  fixture?: PreviewFixtureScenario,
 ) {
   const parameters = new URLSearchParams({
     page: String(page),
@@ -659,6 +674,7 @@ function discogsPageUrl(
     parameters.set("decade", gallery.decade);
   }
   if (gallery.sort) parameters.set("sort", gallery.sort);
+  if (fixture) parameters.set("fixture", fixture);
   return `${routePath}?${parameters.toString()}`;
 }
 

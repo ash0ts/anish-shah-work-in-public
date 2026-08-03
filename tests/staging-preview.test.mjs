@@ -670,11 +670,21 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
 });
 
 test("Play propagates a preview fixture through every active stream", async () => {
-  const [page, classic, streams, collection, discogs, spotify, movement] = await Promise.all([
+  const [
+    page,
+    classic,
+    streams,
+    collection,
+    gallery,
+    discogs,
+    spotify,
+    movement,
+  ] = await Promise.all([
     readFile(new URL("../app/play/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/ClassicPlayExperience.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/PersonalStreams.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/CollectionStream.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/play/CollectionGallery.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/DiscogsStream.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/SpotifyStream.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/MovementStream.tsx", import.meta.url), "utf8"),
@@ -691,6 +701,10 @@ test("Play propagates a preview fixture through every active stream", async () =
   assert.match(spotify, /loadSpotifyFixture\(controller\.signal, fixture\)/);
   assert.match(spotify, /loadSpotify\(controller\.signal\)/);
   assert.match(movement, /new URLSearchParams\(\{ fixture \}\)/);
+  assert.match(gallery, /input name="fixture" type="hidden" value=\{fixture\}/);
+  assert.match(gallery, /parameters\.set\("fixture", fixture\)/);
+  assert.match(discogs, /input name="fixture" type="hidden" value=\{fixture\}/);
+  assert.match(discogs, /parameters\.set\("fixture", fixture\)/);
 });
 
 test("preview production guard pins the apex and production Worker", async () => {

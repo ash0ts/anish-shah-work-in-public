@@ -46,11 +46,10 @@ const ENTRANCE_PRESETS: Record<RoomObjectId, EntrancePreset> = {
     },
   },
   collect: {
-    initial: { opacity: 0, transform: "translateY(58px) rotate(-1.4deg)" },
+    initial: { opacity: 0, transform: "translateY(58px)" },
     animation: {
       opacity: [0, 1],
       translateY: [58, 0],
-      rotate: [-1.4, 0],
       duration: 440,
       ease: "out(4)",
     },

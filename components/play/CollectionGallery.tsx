@@ -4,6 +4,7 @@ import styles from "../PersonalStreams.module.css";
 import type {
   CollectionProvider,
   GalleryItem,
+  PreviewFixtureScenario,
   PublicGallery,
 } from "./connector-model";
 
@@ -19,6 +20,7 @@ export function GalleryView({
   onPageSize,
   onPage,
   routePath,
+  fixture,
 }: {
   provider: CollectionProvider;
   gallery: PublicGallery<GalleryItem>;
@@ -31,6 +33,7 @@ export function GalleryView({
   onPageSize: (value: 12 | 24 | 36) => void;
   onPage: (value: number) => void;
   routePath?: `/play/${string}`;
+  fixture?: PreviewFixtureScenario;
 }) {
   const start = gallery.totalItems
     ? (gallery.page - 1) * gallery.pageSize + 1
@@ -57,6 +60,7 @@ export function GalleryView({
         method="get"
         onSubmit={onSearch}
       >
+        {fixture ? <input name="fixture" type="hidden" value={fixture} /> : null}
         <label className={styles.gallerySearch}>
           <span>Find a title</span>
           <span>
@@ -136,7 +140,12 @@ export function GalleryView({
             href={
               gallery.page <= 1
                 ? undefined
-                : galleryPageUrl(routePath, gallery, gallery.page - 1)
+                : galleryPageUrl(
+                    routePath,
+                    gallery,
+                    gallery.page - 1,
+                    fixture,
+                  )
             }
             onClick={(event) => {
               event.preventDefault();
@@ -163,7 +172,12 @@ export function GalleryView({
             href={
               gallery.page >= gallery.totalPages
                 ? undefined
-                : galleryPageUrl(routePath, gallery, gallery.page + 1)
+                : galleryPageUrl(
+                    routePath,
+                    gallery,
+                    gallery.page + 1,
+                    fixture,
+                  )
             }
             onClick={(event) => {
               event.preventDefault();
@@ -223,6 +237,7 @@ function galleryPageUrl(
   routePath: `/play/${string}`,
   gallery: PublicGallery<GalleryItem>,
   page: number,
+  fixture?: PreviewFixtureScenario,
 ) {
   const parameters = new URLSearchParams({
     page: String(page),
@@ -233,6 +248,7 @@ function galleryPageUrl(
     parameters.set("filter", gallery.filter);
   }
   if (gallery.sort) parameters.set("sort", gallery.sort);
+  if (fixture) parameters.set("fixture", fixture);
   return `${routePath}?${parameters.toString()}`;
 }
 
