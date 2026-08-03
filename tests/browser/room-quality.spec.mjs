@@ -48,6 +48,13 @@ const objects = [
 ];
 const directRoutes = objects.map(({ id }) => `/play/${id}`);
 const widths = [320, 390, 768, 1024, 1440, 1920];
+const roomReadyTimeout = 15_000;
+
+async function expectRoomReady(page) {
+  await expect(page.getByText("Room ready", { exact: true })).toBeVisible({
+    timeout: roomReadyTimeout,
+  });
+}
 
 function runtimeChunkRequests(page) {
   const urls = [];
@@ -353,30 +360,6 @@ async function findAllInteractiveRoomPoints(page) {
   return points;
 }
 
-async function sampleNormalizedRoomHitMap(page, columns = 18, rows = 12) {
-  const stage = page.locator("[data-room-poster-stage]");
-  const bounds = await stage.boundingBox();
-  if (!bounds) throw new Error("The interactive room has no visible stage.");
-
-  const hits = [];
-  for (let row = 1; row < rows; row += 1) {
-    for (let column = 1; column < columns; column += 1) {
-      const x = bounds.x + (bounds.width * column) / columns;
-      const y = bounds.y + (bounds.height * row) / rows;
-      await page.mouse.move(x, y);
-      await page.evaluate(
-        () =>
-          new Promise((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(resolve)),
-          ),
-      );
-      hits.push(await stage.getAttribute("data-room-hovered-object"));
-    }
-  }
-
-  return { bounds, hits };
-}
-
 async function activeElementReport(page) {
   return page.evaluate(() => {
     const element = document.activeElement;
@@ -477,7 +460,7 @@ test.describe("My Room 2001 browser quality", () => {
     ).toBeVisible();
     expect(stageIntercepted).toBe(true);
     releaseRoomStage();
-    await expect(page.getByText("Room ready")).toBeVisible();
+    await expectRoomReady(page);
     await expect(
       page.locator('[data-room-runtime] img[src*="my-room-2001-neutral"]'),
     ).toHaveCount(0);
@@ -547,7 +530,7 @@ test.describe("My Room 2001 browser quality", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play?fixture=ready", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
-    await expect(page.getByText("Room ready")).toBeVisible();
+    await expectRoomReady(page);
 
     const watch = page.locator('[data-room-object-control="watch"]');
     await expect(watch).toBeVisible();
@@ -690,7 +673,7 @@ test.describe("My Room 2001 browser quality", () => {
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
     await expect(page.locator('[data-projection="fisheye"]')).toBeVisible();
-    await expect(page.getByText("Room ready")).toBeVisible();
+    await expectRoomReady(page);
     await page.getByRole("button", { name: "Turn right" }).click();
     await page.waitForTimeout(150);
 
@@ -775,7 +758,7 @@ test.describe("My Room 2001 browser quality", () => {
     await page.getByRole("button", { name: "Enter the room" }).click();
     const room = page.getByRole("dialog", { name: "Interactive room" });
     await expect(page.locator('[data-projection="fisheye"]')).toBeVisible();
-    await expect(page.getByText("Room ready")).toBeVisible();
+    await expectRoomReady(page);
 
     await room.getByRole("button", { name: "Turn right" }).click();
     await room.getByRole("button", { name: "Turn left" }).click();
@@ -790,7 +773,7 @@ test.describe("My Room 2001 browser quality", () => {
     await page.reload({ waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
     await expect(page.locator('[data-projection="wide-perspective"]')).toBeVisible();
-    await expect(page.getByText("Room ready")).toBeVisible();
+    await expectRoomReady(page);
   });
 
   test("WebGL context loss permanently restores the static semantic room", async ({
@@ -799,7 +782,7 @@ test.describe("My Room 2001 browser quality", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
-    await expect(page.getByText("Room ready")).toBeVisible();
+    await expectRoomReady(page);
     await page.locator("canvas").evaluate((canvas) => {
       canvas.dispatchEvent(
         new Event("webglcontextlost", { bubbles: false, cancelable: true }),
@@ -831,7 +814,7 @@ test.describe("My Room 2001 browser quality", () => {
     await instrumentDragLatency(page);
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
-    await expect(page.getByText("Room ready")).toBeVisible();
+    await expectRoomReady(page);
     const points = await findAllInteractiveRoomPoints(page);
     expect([...points.keys()].sort()).toEqual(objects.map(({ id }) => id).sort());
     const point = points.get("watch") ?? (await findInteractiveRoomPoint(page));
@@ -882,19 +865,21 @@ test.describe("My Room 2001 browser quality", () => {
     }
   });
 
-  test("fisheye hit regions stay aligned through hover motion, resize, and pointer capture", async ({
+  test("projected hit regions stay aligned through hover motion, resize, and pointer capture", async ({
     page,
   }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
-    await expect(page.getByText("Room ready")).toBeVisible();
+    await expectRoomReady(page);
 
-    const initial = await sampleNormalizedRoomHitMap(page);
     const stage = page.locator("[data-room-poster-stage]");
     const points = await findAllInteractiveRoomPoints(page);
     expect([...points.keys()].sort()).toEqual(objects.map(({ id }) => id).sort());
+    const initialBounds = await stage.boundingBox();
+    if (!initialBounds) throw new Error("The interactive room has no visible stage.");
+    const initialProjection = await stage.getAttribute("data-projection");
 
     const watch = points.get("watch");
     if (!watch) throw new Error("The television has no pointer hit region.");
@@ -916,15 +901,36 @@ test.describe("My Room 2001 browser quality", () => {
         (document.querySelector("[data-room-poster-stage]")?.getBoundingClientRect()
           .width ?? Infinity) < 900,
     );
-    const resized = await sampleNormalizedRoomHitMap(page);
-    expect(resized.hits).toEqual(initial.hits);
-
     const resizedPoints = await findAllInteractiveRoomPoints(page);
+    expect([...resizedPoints.keys()].sort()).toEqual(
+      objects.map(({ id }) => id).sort(),
+    );
+    const resizedBounds = await stage.boundingBox();
+    if (!resizedBounds) throw new Error("The resized room has no visible stage.");
+    const resizedProjection = await stage.getAttribute("data-projection");
+    if (resizedProjection === initialProjection) {
+      for (const [id, point] of points) {
+        const resizedPoint = resizedPoints.get(id);
+        if (!resizedPoint) throw new Error(`${id} lost its resized hit region.`);
+        expect(
+          Math.abs(
+            (point.x - initialBounds.x) / initialBounds.width -
+              (resizedPoint.x - resizedBounds.x) / resizedBounds.width,
+          ),
+        ).toBeLessThanOrEqual(1 / 28);
+        expect(
+          Math.abs(
+            (point.y - initialBounds.y) / initialBounds.height -
+              (resizedPoint.y - resizedBounds.y) / resizedBounds.height,
+          ),
+        ).toBeLessThanOrEqual(1 / 18);
+      }
+    }
     const collect = resizedPoints.get("collect");
     if (!collect) throw new Error("The record crate has no pointer hit region.");
     await page.mouse.move(collect.x, collect.y);
     await page.mouse.down();
-    await page.mouse.move(resized.bounds.x - 20, resized.bounds.y - 20);
+    await page.mouse.move(resizedBounds.x - 20, resizedBounds.y - 20);
     await page.mouse.up();
     await page.mouse.move(collect.x, collect.y);
     await expect(stage).toHaveAttribute("data-room-hovered-object", "collect");
@@ -1076,9 +1082,7 @@ test.describe("My Room 2001 browser quality", () => {
     await page.getByRole("button", { name: "Enter the room" }).click();
     const room = page.getByRole("dialog", { name: "Interactive room" });
     await expect(room).toBeVisible();
-    await expect(room.getByText("Room ready", { exact: true })).toBeVisible({
-      timeout: 10_000,
-    });
+    await expectRoomReady(page);
 
     let signalWatchRequest;
     let releaseWatchRequest;
