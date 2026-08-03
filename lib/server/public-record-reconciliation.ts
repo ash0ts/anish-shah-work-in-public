@@ -1,35 +1,20 @@
-// Cloudflare D1 permits at most 100 bound parameters per query. Each stale
-// record update reserves one parameter for the shared `updated_at` value.
-const STALE_RECORD_BATCH_SIZE = 99;
-
 export async function reconcileStalePublicRecords(
   database: D1Database,
   currentIds: ReadonlySet<string>,
   updatedAt: string,
 ): Promise<number> {
-  const existingRows = await database
-    .prepare(`SELECT id FROM public_records`)
-    .all<{ id: string }>();
-  const staleIds = (existingRows.results ?? [])
-    .map((row) => row.id)
-    .filter((id) => !currentIds.has(id));
+  const result = await database
+    .prepare(
+      `UPDATE public_records
+       SET publication_state = 'review_required', slug = NULL, updated_at = ?
+       WHERE NOT EXISTS (
+         SELECT 1
+         FROM json_each(?) AS current_record
+         WHERE current_record.value = public_records.id
+       )`,
+    )
+    .bind(updatedAt, JSON.stringify([...currentIds].sort()))
+    .run();
 
-  for (
-    let start = 0;
-    start < staleIds.length;
-    start += STALE_RECORD_BATCH_SIZE
-  ) {
-    const batch = staleIds.slice(start, start + STALE_RECORD_BATCH_SIZE);
-    const predicate = batch.map(() => "?").join(", ");
-    await database
-      .prepare(
-        `UPDATE public_records
-         SET publication_state = 'review_required', updated_at = ?
-         WHERE id IN (${predicate})`,
-      )
-      .bind(updatedAt, ...batch)
-      .run();
-  }
-
-  return staleIds.length;
+  return Number(result.meta.changes) || 0;
 }

@@ -24,7 +24,8 @@ const script = `(async () => {
   const readJson = async (path, init = {}) => {
     const response = await fetch(path, {credentials: "same-origin", ...init, headers: {...headers, ...(init.headers || {})}});
     const body = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(path + " failed with " + response.status);
+    const code = body && typeof body === "object" && typeof body.code === "string" && /^[a-z0-9_]{1,64}$/.test(body.code) ? " (" + body.code + ")" : "";
+    if (!response.ok) throw new Error(path + " failed with " + response.status + code);
     return body;
   };
   const health = await readJson("/api/studio/health");

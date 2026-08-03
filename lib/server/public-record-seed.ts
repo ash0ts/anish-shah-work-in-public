@@ -1,5 +1,12 @@
 import publicBundleJson from "@/content/public/anish-content.public.v1.json";
 import { validatePublicProjection } from "./editorial-policy";
+import {
+  bulkUpsertPublicRecordSeeds,
+  canonicalItemSeedSlug,
+  isCurrentPublicRecordSeedMetadata,
+  PUBLIC_RECORD_SEED_VERSION,
+  type PublicRecordSeedRecord,
+} from "./public-record-seed-bulk";
 import { reconcileStalePublicRecords } from "./public-record-reconciliation";
 import { runtimeDatabase } from "./runtime-env";
 
@@ -71,27 +78,16 @@ type PublicBundle = {
     period: unknown;
     publicationState: string;
     verificationState: string;
+    itemIds: string[];
   }>;
 };
 
-type SeedRecord = {
-  id: string;
-  recordType: string;
-  slug: string | null;
-  title: string;
-  summary: string;
-  approvedPublicWording: string;
-  caveat: string;
-  publicPayloadJson: string;
-  publicationState: string;
-  verificationState: string;
-  evidenceAccess: "public_web";
-  featured: boolean;
-  sortOrder: number;
-};
-
 const publicBundle = publicBundleJson as unknown as PublicBundle;
-const BATCH_SIZE = 40;
+const expectedSeedRecordCount =
+  publicBundle.items.length +
+  publicBundle.metrics.length +
+  publicBundle.narratives.length +
+  publicBundle.workGroups.length;
 
 function safeState(value: string): string {
   return ["public", "review_required", "private", "excluded"].includes(value)
@@ -99,7 +95,7 @@ function safeState(value: string): string {
     : "review_required";
 }
 
-function seedRecords(): SeedRecord[] {
+function seedRecords(): PublicRecordSeedRecord[] {
   const organizations = new Map(
     publicBundle.organizations.map((organization) => [
       organization.id,
@@ -108,6 +104,12 @@ function seedRecords(): SeedRecord[] {
   );
   const evidence = new Map(
     publicBundle.evidence.map((source) => [source.id, source]),
+  );
+  // A WorkGroup is the canonical public route. Nested forms keep their legacy
+  // slugs in the sanitized bundle for redirects, but do not compete for the
+  // globally unique editorial slug in D1.
+  const nestedItemIds = new Set(
+    publicBundle.workGroups.flatMap((group) => group.itemIds),
   );
 
   const defaultItemOrder = new Map(
@@ -120,46 +122,48 @@ function seedRecords(): SeedRecord[] {
       .map((item, index) => [item.id, index]),
   );
 
-  const itemRecords = publicBundle.items.map((item): SeedRecord => {
-    const publicPayload = {
-      date: item.date,
-      additionalDates: item.additionalDates,
-      year: item.year,
-      role: item.role,
-      organizations: item.organizationIds.flatMap((id) => {
-        const organization = organizations.get(id);
-        return organization ? [organization] : [];
-      }),
-      location: item.location,
-      status: item.status,
-      urls: item.urls,
-      topics: item.topics,
-      durationSeconds: item.durationSeconds,
-      publicEvidence: item.evidenceIds.flatMap((id) => {
-        const source = evidence.get(id);
-        return source ? [source] : [];
-      }),
-    };
+  const itemRecords = publicBundle.items.map(
+    (item): PublicRecordSeedRecord => {
+      const publicPayload = {
+        date: item.date,
+        additionalDates: item.additionalDates,
+        year: item.year,
+        role: item.role,
+        organizations: item.organizationIds.flatMap((id) => {
+          const organization = organizations.get(id);
+          return organization ? [organization] : [];
+        }),
+        location: item.location,
+        status: item.status,
+        urls: item.urls,
+        topics: item.topics,
+        durationSeconds: item.durationSeconds,
+        publicEvidence: item.evidenceIds.flatMap((id) => {
+          const source = evidence.get(id);
+          return source ? [source] : [];
+        }),
+      };
 
-    return {
-      id: item.id,
-      recordType: item.type,
-      slug: item.slug,
-      title: item.title,
-      summary: item.summary ?? "",
-      approvedPublicWording: "",
-      caveat: "",
-      publicPayloadJson: JSON.stringify(publicPayload),
-      publicationState: safeState(item.publicationState),
-      verificationState: item.verificationState,
-      evidenceAccess: "public_web",
-      featured: item.featured,
-      sortOrder: defaultItemOrder.get(item.id) ?? 0,
-    };
-  });
+      return {
+        id: item.id,
+        recordType: item.type,
+        slug: canonicalItemSeedSlug(item.id, item.slug, nestedItemIds),
+        title: item.title,
+        summary: item.summary ?? "",
+        approvedPublicWording: "",
+        caveat: "",
+        publicPayloadJson: JSON.stringify(publicPayload),
+        publicationState: safeState(item.publicationState),
+        verificationState: item.verificationState,
+        evidenceAccess: "public_web",
+        featured: item.featured,
+        sortOrder: defaultItemOrder.get(item.id) ?? 0,
+      };
+    },
+  );
 
   const metricRecords = publicBundle.metrics.map(
-    (metric, index): SeedRecord => {
+    (metric, index): PublicRecordSeedRecord => {
       const wording = `${metric.displayValue} ${metric.label}`.trim();
       const publicPayload = {
         subjectId: metric.subjectId,
@@ -195,7 +199,7 @@ function seedRecords(): SeedRecord[] {
   );
 
   const narrativeRecords = publicBundle.narratives.map(
-    (narrative, index): SeedRecord => ({
+    (narrative, index): PublicRecordSeedRecord => ({
       id: narrative.id,
       recordType: "narrative",
       slug: null,
@@ -213,7 +217,7 @@ function seedRecords(): SeedRecord[] {
   );
 
   const workGroupRecords = publicBundle.workGroups.map(
-    (group, index): SeedRecord => ({
+    (group, index): PublicRecordSeedRecord => ({
       id: group.id,
       recordType: "work_group",
       slug: group.slug,
@@ -260,12 +264,23 @@ export async function ensureSanitizedPublicRecords(
     .first<{ valueJson: string }>();
   if (current?.valueJson) {
     try {
-      const value = JSON.parse(current.valueJson) as { contentVersion?: string };
-      if (value.contentVersion === publicBundle.contentVersion) {
+      const value: unknown = JSON.parse(current.valueJson);
+      if (
+        isCurrentPublicRecordSeedMetadata(
+          value,
+          publicBundle.contentVersion,
+          expectedSeedRecordCount,
+        )
+      ) {
         const count = await binding
           .prepare(`SELECT COUNT(*) AS count FROM public_records`)
           .first<{ count: number }>();
-        return { status: "current", count: Number(count?.count) || 0 };
+        const actualCount = Number(count?.count) || 0;
+        if (actualCount === expectedSeedRecordCount) {
+          return { status: "current", count: actualCount };
+        }
+        // A valid marker cannot mask a deleted or partially restored row set.
+        // Fall through to the idempotent import and repair it.
       }
     } catch {
       // Invalid seed metadata is repaired by the idempotent import below.
@@ -293,47 +308,7 @@ export async function ensureSanitizedPublicRecords(
   }
 
   const importedAt = new Date().toISOString();
-  for (let start = 0; start < records.length; start += BATCH_SIZE) {
-    const statements = records
-      .slice(start, start + BATCH_SIZE)
-      .map((record) =>
-        binding
-          .prepare(
-            `INSERT INTO public_records (
-               id, record_type, slug, title, summary,
-               approved_public_wording, public_caveat, public_payload_json,
-               publication_state, verification_state, evidence_access,
-               featured, sort_order, updated_at
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-             ON CONFLICT(id) DO UPDATE SET
-               record_type = excluded.record_type,
-               slug = excluded.slug,
-               title = excluded.title,
-               summary = excluded.summary,
-               public_payload_json = excluded.public_payload_json,
-               verification_state = excluded.verification_state,
-               evidence_access = excluded.evidence_access,
-               updated_at = excluded.updated_at`,
-          )
-          .bind(
-            record.id,
-            record.recordType,
-            record.slug,
-            record.title,
-            record.summary,
-            record.approvedPublicWording,
-            record.caveat,
-            record.publicPayloadJson,
-            record.publicationState,
-            record.verificationState,
-            record.evidenceAccess,
-            record.featured ? 1 : 0,
-            record.sortOrder,
-            importedAt,
-          ),
-      );
-    await binding.batch(statements);
-  }
+  await bulkUpsertPublicRecordSeeds(binding, records, importedAt);
 
   const recordIds = new Set(records.map((record) => record.id));
   await reconcileStalePublicRecords(binding, recordIds, importedAt);
@@ -351,6 +326,7 @@ export async function ensureSanitizedPublicRecords(
       )
       .bind(
         JSON.stringify({
+          seedVersion: PUBLIC_RECORD_SEED_VERSION,
           contentVersion: publicBundle.contentVersion,
           recordCount: records.length,
         }),
