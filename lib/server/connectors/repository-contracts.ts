@@ -20,6 +20,7 @@ export type ConnectorHealth = {
   authorizedAt: string | null;
   lastRunStatus: string | null;
   lastErrorCode: string | null;
+  retryNotBefore: string | null;
   itemCount: number | null;
 };
 
@@ -101,6 +102,7 @@ export type RefreshResult =
       provider: ConnectorProvider;
       code: string;
       retryable: boolean;
+      retryNotBefore?: string;
     };
 
 export type MyAnimeListOAuthStartResult =

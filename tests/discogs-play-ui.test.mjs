@@ -99,6 +99,9 @@ test("Studio exposes Discogs OAuth1 and an explicit publication gate", async () 
     sharedPanel,
     /isOAuthProvider && oauthCredentialShape\.showsAccessTokenExpiry/,
   );
+  assert.match(sharedPanel, /Provider retry available/);
+  assert.match(sharedPanel, /connectorBlocked \|\| retryBlocked/);
+  assert.match(sharedPanel, /Retry after \$\{formatTimestamp\(retryNotBefore\)\}/);
   assert.match(controls, /case "discogs"/);
   assert.match(page, /resolveDiscogsCallbackUrl/);
   assert.match(page, /discogsCallbackUrl=\{discogsCallbackUrl\}/);

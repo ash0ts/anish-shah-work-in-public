@@ -253,6 +253,7 @@ export async function refreshConnectorUsingDatabase(
               provider,
               code: "rate_limited",
               retryable: true,
+              retryNotBefore: notBefore,
             };
       }
     } catch {
@@ -499,9 +500,10 @@ export async function refreshConnectorUsingDatabase(
   } catch (error) {
     const failure = safeError(error);
     const finishedAt = new Date().toISOString();
+    let retryNotBefore: string | undefined;
     if (provider === "discogs" && failure.code === "rate_limited") {
       try {
-        await recordDiscogsRetryAfter(
+        retryNotBefore = await recordDiscogsRetryAfter(
           database,
           failure.retryAfterSeconds ?? 3_600,
         );
@@ -748,6 +750,7 @@ export async function refreshConnectorUsingDatabase(
       provider,
       code: failure.code,
       retryable: failure.retryable,
+      ...(retryNotBefore ? { retryNotBefore } : {}),
     };
   }
 }

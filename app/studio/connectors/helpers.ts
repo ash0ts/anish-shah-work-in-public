@@ -164,7 +164,9 @@ export function statusGuidance(
     return "The provider responded, but no new snapshot passed public validation. Do not replace the credential; any previously accepted snapshot remains unchanged.";
   }
   if (connector.lastErrorCode === "rate_limited") {
-    return `The provider rate-limited the last request. Wait before refreshing again.${preservedSnapshot}`;
+    return connector.retryNotBefore
+      ? `The provider rate-limited the last request. Refresh becomes available after ${formatTimestamp(connector.retryNotBefore)}.${preservedSnapshot}`
+      : `The provider rate-limited the last request. Wait before refreshing again.${preservedSnapshot}`;
   }
   return "The last refresh failed. No new snapshot was published; any previously accepted snapshot remains unchanged.";
 }

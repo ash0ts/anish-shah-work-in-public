@@ -14,6 +14,7 @@ const [
   scheduled,
   retryState,
   refreshRepository,
+  retryUi,
 ] = await Promise.all([
   import("../lib/server/connectors/discogs.ts"),
   import("../lib/server/connectors/public-gallery.ts"),
@@ -23,6 +24,7 @@ const [
   import("../lib/server/connectors/discogs-scheduled.ts"),
   import("../lib/server/connectors/discogs-retry.ts"),
   import("../lib/server/connectors/repository-refresh.ts"),
+  import("../app/studio/connectors/retry-deadline.ts"),
 ]);
 
 const credential = {
@@ -848,6 +850,7 @@ test("Discogs Retry-After state blocks manual and scheduled provider calls", asy
       provider: "discogs",
       code: "rate_limited",
       retryable: true,
+      retryNotBefore: notBefore,
     },
   );
   assert.deepEqual(
@@ -865,6 +868,46 @@ test("Discogs Retry-After state blocks manual and scheduled provider calls", asy
   );
   await retryState.clearDiscogsRetry(database);
   assert.equal(database.maintenance, null);
+});
+
+test("Discogs retry controls reconcile server and local deadlines", () => {
+  const now = Date.parse("2026-08-03T16:00:00.000Z");
+  const serverDeadline = "2026-08-03T16:30:00.000Z";
+  const responseDeadline = "2026-08-03T17:00:00.000Z";
+
+  assert.deepEqual(
+    retryUi.retryDeadlineState(serverDeadline, responseDeadline, now),
+    {
+      retryNotBefore: responseDeadline,
+      retryTimestamp: Date.parse(responseDeadline),
+      blocked: true,
+    },
+    "a newer deadline returned by refresh must win",
+  );
+  assert.equal(
+    retryUi.retryDeadlineState(
+      "2026-08-03T18:00:00.000Z",
+      responseDeadline,
+      now,
+    ).retryNotBefore,
+    "2026-08-03T18:00:00.000Z",
+    "a newer server deadline from RSC reconciliation must win",
+  );
+  assert.equal(
+    retryUi.retryDeadlineState(serverDeadline, null, Date.parse(serverDeadline))
+      .blocked,
+    false,
+    "the control must re-enable when the deadline expires",
+  );
+  assert.deepEqual(
+    retryUi.retryDeadlineState("not-a-date", null, now),
+    {
+      retryNotBefore: null,
+      retryTimestamp: Number.NaN,
+      blocked: false,
+    },
+    "malformed deadlines must not trap the owner",
+  );
 });
 
 test("Discogs scheduled refresh skips a fresh published snapshot", async () => {
@@ -913,11 +956,12 @@ test("Discogs manual refresh respects the four-hour provider window", async () =
 });
 
 test("Discogs refresh and cron wiring enforce four-hour freshness, hourly retry, and one snapshot", async () => {
-  const [refreshSource, workerSource, credentialSource, routeSource] = await Promise.all([
+  const [refreshSource, workerSource, credentialSource, routeSource, refreshRouteSource] = await Promise.all([
     readFile(new URL("../lib/server/connectors/repository-refresh.ts", import.meta.url), "utf8"),
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/connectors/repository-credentials.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/http/discogs-config.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/http/connector-refresh-response.ts", import.meta.url), "utf8"),
   ]);
   assert.match(refreshSource, /DISCOGS_FRESHNESS_WINDOW_MS = 4 \* 60 \* 60 \* 1000/);
   assert.match(refreshSource, /DISCOGS_AUTOMATIC_RETRY_MS = 60 \* 60 \* 1000/);
@@ -927,4 +971,6 @@ test("Discogs refresh and cron wiring enforce four-hour freshness, hourly retry,
   assert.match(workerSource, /refreshDiscogsWhenDue\(db, scheduledAt\)/);
   assert.match(credentialSource, /DISCOGS_PRESENTATION_SETTING_KEY/);
   assert.match(routeSource, /rejectCrossOriginWrite\(request\)[\s\S]*authorizeOwnerApi\(\)[\s\S]*readBoundedJsonBody/);
+  assert.match(refreshSource, /retryNotBefore: notBefore/);
+  assert.match(refreshRouteSource, /"retry-after": String\(retryAfter\)/);
 });

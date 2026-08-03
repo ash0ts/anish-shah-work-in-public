@@ -15,6 +15,7 @@ import {
   statusGuidance,
 } from "./helpers";
 import type { ApiConnectorPanelProps } from "./model";
+import { retryDeadlineState } from "./retry-deadline";
 
 const defaultOAuthCredentialShape = {
   idLabel: "Client ID",
@@ -54,6 +55,10 @@ export function ApiConnectorPanel({
     "save" | "authorize" | "refresh" | "disconnect" | "copy" | null
   >(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [localRetryNotBefore, setLocalRetryNotBefore] = useState<string | null>(
+    null,
+  );
+  const [retryClock, setRetryClock] = useState(() => Date.now());
   const [authorizationDestination, setAuthorizationDestination] = useState<
     string | null
   >(null);
@@ -65,6 +70,27 @@ export function ApiConnectorPanel({
     (isOAuthProvider && !oauth?.callbackUrl) ||
     (connector.provider === "steam" && !steamStorageCountries);
   const registeredCallback = oauth?.callbackUrl ?? null;
+  const retryDeadline = retryDeadlineState(
+    connector.retryNotBefore,
+    localRetryNotBefore,
+    retryClock,
+  );
+  const { retryNotBefore, retryTimestamp } = retryDeadline;
+  const retryBlocked = connector.provider === "discogs" && retryDeadline.blocked;
+
+  useEffect(() => {
+    if (!Number.isFinite(retryTimestamp) || retryTimestamp <= Date.now()) {
+      return;
+    }
+    const timer = window.setTimeout(
+      () => {
+        setRetryClock(Date.now());
+        setLocalRetryNotBefore(null);
+      },
+      Math.min(retryTimestamp - Date.now() + 50, 2_147_483_647),
+    );
+    return () => window.clearTimeout(timer);
+  }, [retryTimestamp]);
 
   useEffect(() => {
     if (!isOAuthProvider) return;
@@ -233,12 +259,27 @@ export function ApiConnectorPanel({
       });
       const result = await responseJson(response);
       if (!response.ok) {
-        setMessage(result.error ?? `Request failed (${response.status}).`);
+        const responseRetryNotBefore =
+          connector.provider === "discogs" &&
+          typeof result.retryNotBefore === "string" &&
+          Number.isFinite(Date.parse(result.retryNotBefore))
+            ? result.retryNotBefore
+            : null;
+        if (responseRetryNotBefore) {
+          setLocalRetryNotBefore(responseRetryNotBefore);
+          setRetryClock(Date.now());
+        }
+        setMessage(
+          responseRetryNotBefore
+            ? `Discogs is rate-limiting synchronization. Refresh becomes available after ${formatTimestamp(responseRetryNotBefore)}. No snapshot was published.`
+            : result.error ?? `Request failed (${response.status}).`,
+        );
         return;
       }
 
       setSecret("");
       setSteamId("");
+      if (action === "refresh") setLocalRetryNotBefore(null);
       if (action === "save") {
         focusAfterMutation.current = "refresh";
         setShowCredentialForm(false);
@@ -337,6 +378,12 @@ export function ApiConnectorPanel({
             <dt>Snapshot refresh due</dt>
             <dd>{formatTimestamp(connector.freshUntil)}</dd>
           </div>
+          {retryBlocked ? (
+            <div>
+              <dt>Provider retry available</dt>
+              <dd>{formatTimestamp(retryNotBefore)}</dd>
+            </div>
+          ) : null}
           {isOAuthProvider && oauthCredentialShape.showsAccessTokenExpiry ? (
             <div>
               <dt>Access token refresh</dt>
@@ -367,7 +414,10 @@ export function ApiConnectorPanel({
 
         <p className={styles.statusGuidance}>
           {statusGuidance(
-            connector,
+            {
+              ...connector,
+              retryNotBefore: retryBlocked ? retryNotBefore : null,
+            },
             environment,
             encryptionConfigured,
             steamStorageCountries,
@@ -556,10 +606,14 @@ export function ApiConnectorPanel({
             <button
               ref={refreshButton}
               type="button"
-              disabled={pending !== null || connectorBlocked}
+              disabled={pending !== null || connectorBlocked || retryBlocked}
               onClick={() => void request("refresh")}
             >
-              {pending === "refresh" ? "Refreshing…" : "Refresh now"}
+              {pending === "refresh"
+                ? "Refreshing…"
+                : retryBlocked
+                  ? `Retry after ${formatTimestamp(retryNotBefore)}`
+                  : "Refresh now"}
             </button>
             {isOAuthProvider && connector.canReuseOAuthClient ? (
               <button
