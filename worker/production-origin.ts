@@ -1,7 +1,10 @@
-import { PUBLIC_SITE_ORIGIN } from "../lib/site-constants";
+import {
+  expectedHostedOrigin,
+  hostedDeploymentTier,
+  hostedEnvironmentConfigured,
+} from "../lib/deployment-environment";
 import type { WorkerEnv } from "./runtime-types";
 
-const PUBLIC_SITE_URL = new URL(PUBLIC_SITE_ORIGIN);
 export const PRIVATE_SITES_REFERENCE_ORIGIN =
   "https://anish-shah-work-in-public.coreweave-en-7694.chatgpt.site";
 const PRIVATE_SITES_REFERENCE_URL = new URL(PRIVATE_SITES_REFERENCE_ORIGIN);
@@ -67,21 +70,12 @@ export function productionOriginResponse(
     return null;
   }
 
-  if (requestUrl.origin !== PUBLIC_SITE_ORIGIN) {
-    return misdirectedResponse();
-  }
-
-  if (
-    env.SITE_URL !== PUBLIC_SITE_ORIGIN ||
-    env.PRODUCTION_SITE_URL !== PUBLIC_SITE_ORIGIN
-  ) {
+  const tier = hostedDeploymentTier(env.DEPLOYMENT_TIER);
+  const expectedOrigin = expectedHostedOrigin(env);
+  if (!tier || !expectedOrigin || !hostedEnvironmentConfigured(env)) {
     return unavailableResponse();
   }
-
-  // The origin equality check above includes protocol and port. Keep this
-  // assertion close to the canonical URL so a future constant change cannot
-  // silently widen the accepted production surface.
-  if (requestUrl.origin !== PUBLIC_SITE_URL.origin) return misdirectedResponse();
+  if (requestUrl.origin !== expectedOrigin) return misdirectedResponse();
 
   return null;
 }

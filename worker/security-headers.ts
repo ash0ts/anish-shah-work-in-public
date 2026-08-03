@@ -1,3 +1,5 @@
+import type { HostedDeploymentTier } from "../lib/deployment-environment";
+
 const INTERNAL_NONCE_HEADER = "x-anish-csp-nonce";
 
 export function isPrivatePath(pathname: string): boolean {
@@ -22,6 +24,7 @@ function isPublicHtmlRequest(request: Request, pathname: string): boolean {
 export function securityPolicy(
   nonce: string,
   development: boolean,
+  deploymentTier: HostedDeploymentTier | null = null,
 ): string {
   const scriptSources = development
     ? `'self' 'nonce-${nonce}' 'unsafe-eval'`
@@ -41,7 +44,9 @@ export function securityPolicy(
     "media-src 'self'",
     "worker-src 'self'",
     "manifest-src 'self'",
-    "frame-src https://open.spotify.com https://strava-embeds.com https://www.strava.com",
+    deploymentTier === "preview"
+      ? "frame-src 'none'"
+      : "frame-src https://open.spotify.com https://strava-embeds.com https://www.strava.com",
     ...(development ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");
 }
@@ -74,8 +79,12 @@ export function withRequestSecurityHeaders(
   headers: Headers,
   nonce: string,
   development: boolean,
+  deploymentTier: HostedDeploymentTier | null = null,
 ): void {
-  headers.set("content-security-policy", securityPolicy(nonce, development));
+  headers.set(
+    "content-security-policy",
+    securityPolicy(nonce, development, deploymentTier),
+  );
   headers.set(INTERNAL_NONCE_HEADER, nonce);
 }
 
@@ -85,11 +94,15 @@ export function securedResponse(
   nonce: string,
   development: boolean,
   pathname = new URL(request.url).pathname,
+  deploymentTier: HostedDeploymentTier | null = null,
 ): Response {
   if (response.status === 101) return response;
   const url = new URL(request.url);
   const headers = new Headers(response.headers);
-  headers.set("content-security-policy", securityPolicy(nonce, development));
+  headers.set(
+    "content-security-policy",
+    securityPolicy(nonce, development, deploymentTier),
+  );
   headers.set("x-content-type-options", "nosniff");
   headers.set("x-frame-options", "DENY");
   headers.set("referrer-policy", "strict-origin-when-cross-origin");
@@ -102,7 +115,15 @@ export function securedResponse(
   if (url.protocol === "https:") {
     headers.set("strict-transport-security", "max-age=31536000");
   }
-  if (isPrivatePath(pathname)) {
+  if (deploymentTier === "staging" || deploymentTier === "preview") {
+    headers.set(
+      "x-robots-tag",
+      "noindex, nofollow, noarchive, nosnippet, noimageindex",
+    );
+    if (!/^\/(?:_next|assets)\/.*\.[a-f0-9]{8,}\./i.test(url.pathname)) {
+      headers.set("cache-control", "private, no-store");
+    }
+  } else if (isPrivatePath(pathname)) {
     headers.set("cache-control", "private, no-store");
     headers.set("x-robots-tag", "noindex, nofollow, noarchive");
   } else if (pathname === "/play" || pathname === "/play/") {

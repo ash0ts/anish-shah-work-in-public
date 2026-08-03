@@ -4,14 +4,21 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import styles from "./SpotifyStream.module.css";
 import { SpotifyFallback, SpotifyMessage } from "./spotify/SpotifyFallback";
 import { SpotifyRankedGroove } from "./spotify/SpotifyRankedGroove";
-import { loadSpotify, type SpotifyState } from "./spotify/model";
+import {
+  loadSpotify,
+  loadSpotifyFixture,
+  type SpotifyState,
+} from "./spotify/model";
+import type { PreviewFixtureScenario } from "./play/connector-model";
 
 export function SpotifyStream({
   active = true,
   serverFallback,
+  fixture,
 }: {
   active?: boolean;
   serverFallback?: ReactNode;
+  fixture?: PreviewFixtureScenario;
 }) {
   const [state, setState] = useState<SpotifyState>({ status: "loading" });
   const requested = useRef(false);
@@ -21,7 +28,10 @@ export function SpotifyStream({
     requested.current = true;
     const controller = new AbortController();
     let completed = false;
-    void loadSpotify(controller.signal)
+    const request = fixture
+      ? loadSpotifyFixture(controller.signal, fixture)
+      : loadSpotify(controller.signal);
+    void request
       .then((next) => {
         completed = true;
         if (!controller.signal.aborted) setState(next);
@@ -33,7 +43,7 @@ export function SpotifyStream({
       controller.abort();
       if (!completed) requested.current = false;
     };
-  }, [active]);
+  }, [active, fixture]);
 
   if (state.status === "loading") {
     return serverFallback ? (

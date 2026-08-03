@@ -16,12 +16,19 @@ import {
   type CollectionProvider,
   type CollectionView,
   type ConnectorState,
+  type PreviewFixtureScenario,
 } from "./connector-model";
 import { GalleryView } from "./CollectionGallery";
 import { PatternView } from "./CollectionPattern";
 import { PanelHeading, StreamEmpty, StreamStatus } from "./StreamChrome";
 
-export function CollectionStream({ provider }: { provider: CollectionProvider }) {
+export function CollectionStream({
+  provider,
+  fixture,
+}: {
+  provider: CollectionProvider;
+  fixture?: PreviewFixtureScenario;
+}) {
   const [state, setState] = useState<ConnectorState<CollectionPayload>>({
     status: "idle",
   });
@@ -44,6 +51,7 @@ export function CollectionStream({ provider }: { provider: CollectionProvider })
     if (query) parameters.set("q", query);
     if (filter) parameters.set("filter", filter);
     if (sort) parameters.set("sort", sort);
+    if (fixture) parameters.set("fixture", fixture);
 
     queueMicrotask(() => {
       if (controller.signal.aborted) return;
@@ -64,7 +72,7 @@ export function CollectionStream({ provider }: { provider: CollectionProvider })
         });
     });
     return () => controller.abort();
-  }, [filter, page, pageSize, provider, query, sort]);
+  }, [filter, fixture, page, pageSize, provider, query, sort]);
 
   const payload = state.status === "ready" ? state.payload : null;
   const gallery = payload?.gallery;

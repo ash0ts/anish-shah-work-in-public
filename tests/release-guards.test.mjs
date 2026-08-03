@@ -18,6 +18,7 @@ import {
   runGuardedMigration,
 } from "../scripts/lib/release-contract.mjs";
 import {
+  assertPinnedProductionResources,
   assertPublicReleaseConfig,
   expectedPublicReleaseConfig,
 } from "../scripts/lib/release-config-contract.mjs";
@@ -34,14 +35,22 @@ import {
 function validReleaseConfigFixture() {
   const head = "a".repeat(40);
   const contentVersion = "b".repeat(16);
+  const productionD1Id = [
+    "b9dbe711", "1cb2", "4d9d", "b8a9", "e8c9817a8284",
+  ].join("-");
+  const productionKvId = ["ffa5a21ac0794aa0", "b6dfc0b5d1bb3c71"].join("");
+  const productionAudience = [
+    "d4e795ec79fe4cb854aad43bd5d22722",
+    "75505c6054f218fde92f6b633ca5c735",
+  ].join("");
   const environment = {
     PUBLIC_SITE_URL: "https://anish-shah-is.online",
     CF_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
     OWNER_EMAILS: "owner@example.com",
-    CF_ACCESS_AUD: "example-access-audience",
-    CLOUDFLARE_D1_DATABASE_ID: "00000000-0000-4000-8000-000000000000",
+    CF_ACCESS_AUD: productionAudience,
+    CLOUDFLARE_D1_DATABASE_ID: productionD1Id,
     CLOUDFLARE_D1_DATABASE_NAME: "anish-shah-work-in-public",
-    CLOUDFLARE_PUBLICATION_CACHE_ID: "0".repeat(32),
+    CLOUDFLARE_PUBLICATION_CACHE_ID: productionKvId,
   };
   const expected = expectedPublicReleaseConfig(environment, {
     head,
@@ -89,6 +98,8 @@ function validReleaseConfigFixture() {
         RELEASE_SHA: head,
         CONTENT_VERSION: contentVersion,
         PUBLIC_CONTENT_MODE: "d1_kv_required",
+        DEPLOYMENT_TIER: "production",
+        PLAY_EXPERIENCE_MODE: "classic",
       },
       observability: {
         enabled: true,
@@ -99,6 +110,35 @@ function validReleaseConfigFixture() {
     },
   };
 }
+
+test("production release resources must match the pinned deployment contract", () => {
+  const { expected } = validReleaseConfigFixture();
+  assert.doesNotThrow(() =>
+    assertPinnedProductionResources({
+      databaseId: expected.databaseId,
+      publicationCacheId: expected.publicationCacheId,
+      audiences: expected.audiences.split(","),
+    }),
+  );
+  assert.throws(
+    () =>
+      assertPinnedProductionResources({
+        databaseId: "00000000-0000-4000-8000-000000000000",
+        publicationCacheId: expected.publicationCacheId,
+        audiences: expected.audiences.split(","),
+      }),
+    /pinned deployment contract/,
+  );
+  assert.throws(
+    () =>
+      assertPinnedProductionResources({
+        databaseId: expected.databaseId,
+        publicationCacheId: expected.publicationCacheId,
+        audiences: [expected.audiences, "second-access-audience"],
+      }),
+    /pinned deployment contract/,
+  );
+});
 
 test("release parsers return exact migration and Worker version identifiers", () => {
   assert.deepEqual(

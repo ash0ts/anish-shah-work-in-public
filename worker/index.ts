@@ -26,6 +26,8 @@ import {
 } from "./redacted-observability";
 import { productionOriginResponse } from "./production-origin";
 import { canonicalSecurityPathname } from "./request-path";
+import { hostedDeploymentBoundaryResponse } from "./deployment-boundary";
+import { hostedDeploymentTier } from "../lib/deployment-environment";
 import { boundedApiWrite } from "./request-limits";
 import type {
   WorkerEnv,
@@ -76,6 +78,7 @@ const worker = {
     const development = env.NODE_ENV === "development";
     const sitesRuntime = isSitesRuntime(url.hostname);
     const directProduction = !development && !sitesRuntime;
+    const deploymentTier = hostedDeploymentTier(env.DEPLOYMENT_TIER);
     const nonce = nonceValue();
     const observation = beginRequestObservation(
       request.method,
@@ -90,6 +93,7 @@ const worker = {
           nonce,
           development,
           pathname ?? "/invalid-path",
+          deploymentTier,
         ),
         observation,
       );
@@ -119,10 +123,17 @@ const worker = {
         pathname,
         directProduction,
         sitesRuntime,
+        deploymentTier,
       });
       if (authentication.status === "denied") {
         return finalize(authentication.response);
       }
+
+      const boundaryFailure = hostedDeploymentBoundaryResponse(
+        request,
+        deploymentTier,
+      );
+      if (boundaryFailure) return finalize(boundaryFailure);
 
       if (
         requiresConfiguredRateLimit(
@@ -139,6 +150,7 @@ const worker = {
         authentication.headers,
         nonce,
         development,
+        deploymentTier,
       );
       let appRequest = new Request(request, {
         headers: authentication.headers,
@@ -230,11 +242,13 @@ const worker = {
     env: WorkerEnv,
     ctx: WorkerExecutionContext,
   ): Promise<void> {
+    if (!env.DB) return;
+    const db = env.DB;
     ctx.waitUntil(
       (async () => {
         const scheduledAt = new Date(controller.scheduledTime);
-        await pruneConnectorRetention(env.DB, scheduledAt);
-        await refreshDiscogsWhenDue(env.DB, scheduledAt);
+        await pruneConnectorRetention(db, scheduledAt);
+        await refreshDiscogsWhenDue(db, scheduledAt);
       })().catch(() => observeScheduledFailure(env.RELEASE_SHA)),
     );
   },

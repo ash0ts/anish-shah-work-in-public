@@ -474,8 +474,10 @@ test("scheduled Worker failure events expose only a release prefix", () => {
 
 test("direct production accepts only the configured canonical apex", () => {
   const environment = {
+    DEPLOYMENT_TIER: "production",
     SITE_URL: "https://anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
+    PUBLIC_CONTENT_MODE: "d1_kv_required",
   };
   const production = { development: false, sitesRuntime: false };
   assert.equal(
@@ -606,7 +608,7 @@ test("the Worker verifies Access identity and strips forgeable forwarded identit
   assert.match(access, /isProtectedOwnerPath/);
   assert.match(
     access,
-    /options\.directProduction[\s\S]{0,100}isProtectedOwnerPath\(options\.pathname\)[\s\S]{0,100}!accessMode/,
+    /options\.directProduction[\s\S]{0,100}identityRequired[\s\S]{0,100}!accessMode/,
   );
   assert.match(worker, /authenticateRequest/);
   assert.match(worker, /requiresConfiguredRateLimit/);
@@ -858,6 +860,7 @@ test("public Cloudflare release config is generated without embedding secrets", 
   assert.doesNotMatch(prepare, /CONNECTOR_ENCRYPTION_KEY\s*:/);
   assert.doesNotMatch(prepare, /RATE_LIMIT_SALT\s*:/);
   assert.match(preflight, /assertPublicReleaseConfig/);
+  assert.match(prepare, /assertPinnedProductionResources/);
   assert.match(configContract, /PUBLICATION_CACHE/);
   assert.match(configContract, /RATE_LIMITS/);
   assert.match(configContract, /invocation_logs !== false/);
@@ -871,12 +874,16 @@ test("public Cloudflare release config is generated without embedding secrets", 
 });
 
 test("release workflows bind all evidence to the dispatched GitHub SHA", async () => {
-  const workflows = await Promise.all(
+  const [ci, ...releaseWorkflows] = await Promise.all(
     ["ci.yml", "gitleaks.yml", "codeql.yml"].map((name) =>
       readFile(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8"),
     ),
   );
-  for (const workflow of workflows) {
+  assert.match(ci, /github\.event\.pull_request\.head\.sha/);
+  assert.match(ci, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/);
+  assert.match(ci, /PREVIEW_SOURCE_SHA/);
+  assert.match(ci, /PREVIEW_WORKFLOW_SHA/);
+  for (const workflow of releaseWorkflows) {
     assert.match(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
     assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/);
   }
@@ -955,6 +962,8 @@ test("publication failover and maintenance health fail closed", async () => {
     maintenance,
     /CONNECTOR_PROVIDERS\s*=\s*\[[\s\S]*?"discogs"[\s\S]*?\]\s*as const/,
   );
+  assert.match(maintenance, /expectedHostedOrigin/);
+  assert.match(maintenance, /hostedEnvironmentConfigured/);
 });
 
 test("custom Worker observability never records raw request identifiers", async () => {

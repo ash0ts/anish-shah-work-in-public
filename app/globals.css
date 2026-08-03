@@ -83,6 +83,23 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+.preview-environment-notice {
+  position: fixed;
+  z-index: 999;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  max-width: calc(100vw - 1.5rem);
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--blueprint-ink);
+  color: var(--trace-white);
+  background: var(--blueprint-ink);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
 ::selection {
   color: var(--paper);
   background: var(--work-blue);

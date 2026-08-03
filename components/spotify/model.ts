@@ -71,12 +71,16 @@ export const timeRanges: ReadonlyArray<{
 export const grooveCenter = 210;
 export const grooveRadius = 154;
 
-export async function loadSpotify(signal: AbortSignal): Promise<SpotifyState> {
+async function loadSpotifyUrl(
+  url: string,
+  signal: AbortSignal,
+): Promise<SpotifyState> {
   try {
-    const response = await fetch("/api/connectors/spotify", {
-      headers: { Accept: "application/json" },
-      signal,
-    });
+    const request = { headers: { Accept: "application/json" }, signal };
+    const response =
+      url === "/api/connectors/spotify"
+        ? await fetch("/api/connectors/spotify", request)
+        : await fetch(url, request);
     const body = (await response.json()) as {
       status?: string;
       message?: string;
@@ -122,6 +126,20 @@ export async function loadSpotify(signal: AbortSignal): Promise<SpotifyState> {
   }
 }
 
+export function loadSpotify(signal: AbortSignal): Promise<SpotifyState> {
+  return loadSpotifyUrl("/api/connectors/spotify", signal);
+}
+
+export function loadSpotifyFixture(
+  signal: AbortSignal,
+  fixture: PreviewFixtureScenario,
+): Promise<SpotifyState> {
+  return loadSpotifyUrl(
+    `/api/connectors/spotify?fixture=${encodeURIComponent(fixture)}`,
+    signal,
+  );
+}
+
 export function groovePoint(index: number, total: number) {
   const angle = total ? (index / total) * Math.PI * 2 : 0;
   return {
@@ -161,3 +179,4 @@ export function syncLabel(value: string) {
     year: "numeric",
   }).format(date)}`;
 }
+import type { PreviewFixtureScenario } from "../play/connector-model";

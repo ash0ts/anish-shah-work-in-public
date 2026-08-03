@@ -26,15 +26,15 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
           persist-credentials: false
       - name: Confirm exact commit
         env:
-          EXPECTED_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha }}
+          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
         run: |
-          test "$EXPECTED_SHA" = "$GITHUB_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test "${#EXPECTED_SHA}" -eq 40
+          test "${#GITHUB_SHA}" -eq 40
       - name: Use Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -53,3 +53,19 @@ jobs:
         run: npm run db:local:migrate:clean
       - name: Validate exact commit
         run: npm run validate
+      - name: Write synthetic preview metadata
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          PREVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
+          PREVIEW_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+          PREVIEW_WORKFLOW_SHA: ${{ github.sha }}
+        run: npm run preview:metadata
+      - name: Upload immutable preview build
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          # The artifact is keyed to the exact source SHA checked out and validated.
+          name: preview-build-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 3

@@ -184,6 +184,14 @@ export type StreamId =
 export type CollectionProvider = "myanimelist" | "hardcover" | "steam";
 export type ConnectorProvider = CollectionProvider | "discogs" | "strava";
 export type CollectionView = "pattern" | "gallery";
+export type PreviewFixtureScenario =
+  | "ready"
+  | "unavailable"
+  | "empty"
+  | "stale"
+  | "long-title"
+  | "missing-artwork"
+  | "maximum-density";
 
 export const providerTitles: Record<CollectionProvider, string> = {
   myanimelist: "Watch states, not a ranking.",

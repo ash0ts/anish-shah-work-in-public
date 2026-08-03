@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { PUBLIC_SITE_ORIGIN } from "./site-constants";
+import {
+  canonicalMetadataOrigin,
+} from "./deployment-environment";
 
 export function siteOrigin(): string {
-  return (
-    process.env.SITE_URL ||
-    process.env.PRODUCTION_SITE_URL ||
-    PUBLIC_SITE_ORIGIN
-  ).replace(/\/+$/, "");
+  return canonicalMetadataOrigin().replace(/\/+$/, "");
 }
 
 export function absoluteSiteUrl(path = "/"): string {

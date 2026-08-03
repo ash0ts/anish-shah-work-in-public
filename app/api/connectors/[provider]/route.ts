@@ -8,6 +8,7 @@ import {
   projectConnectorSnapshotForPublic,
 } from "@/lib/server/connectors/public-gallery";
 import { getRequestExecutionContext } from "vinext/shims/request-context";
+import { previewConnectorSnapshot } from "@/lib/server/preview-connector-fixtures";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,24 @@ export async function GET(request: Request, context: RouteContext) {
     return Response.json(
       { error: "Unknown connector." },
       { status: 404, headers: { "cache-control": "no-store" } },
+    );
+  }
+
+  const searchParams = new URL(request.url).searchParams;
+  const preview = previewConnectorSnapshot(candidate, searchParams);
+  if (preview) {
+    return Response.json(
+      preview.status === "ready"
+        ? {
+            ...preview,
+            payload: projectConnectorSnapshotForPublic(
+              candidate,
+              preview.payload,
+              searchParams,
+            ),
+          }
+        : preview,
+      { headers: { "cache-control": "private, no-store" } },
     );
   }
 
@@ -57,7 +76,6 @@ export async function GET(request: Request, context: RouteContext) {
     );
   }
 
-  const searchParams = new URL(request.url).searchParams;
   return Response.json(
     {
       ...snapshot,

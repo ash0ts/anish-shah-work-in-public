@@ -7,6 +7,10 @@ import {
 import { getPublicContentView } from "@/lib/server/public-content";
 import { publicPageMetadata } from "@/lib/seo";
 import styles from "./play.module.css";
+import {
+  activePreviewFixtureRuntime,
+  previewFixtureScenario,
+} from "@/lib/server/preview-connector-fixtures";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +21,19 @@ export const metadata: Metadata = publicPageMetadata({
   path: "/play",
 });
 
-export default async function PlayPage() {
+export default async function PlayPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const query = await searchParams;
+  const fixture = activePreviewFixtureRuntime()
+    ? previewFixtureScenario(
+        new URLSearchParams(
+          typeof query.fixture === "string" ? { fixture: query.fixture } : {},
+        ),
+      )
+    : undefined;
   const [{ bundle }, spotifySnapshot, spotifyFallback] = await Promise.all([
     getPublicContentView(),
     getPublicConnectorSnapshot("spotify"),
@@ -53,6 +69,7 @@ export default async function PlayPage() {
         </p>
       </header>
       <PersonalStreams
+        fixture={fixture}
         spotifyNoScript={
           <div className={styles.spotifyNoScript}>
             <p>

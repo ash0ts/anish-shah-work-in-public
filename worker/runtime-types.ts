@@ -1,6 +1,6 @@
 export interface WorkerEnv {
   ASSETS: Fetcher;
-  DB: D1Database;
+  DB?: D1Database;
   PUBLICATION_CACHE?: KVNamespace;
   OWNER_RATE_LIMITER?: RateLimitBinding;
   ARTWORK_RATE_LIMITER?: RateLimitBinding;
@@ -26,6 +26,9 @@ export interface WorkerEnv {
   PUBLIC_CONTENT_MODE?: string;
   SITE_URL?: string;
   PRODUCTION_SITE_URL?: string;
+  DEPLOYMENT_TIER?: string;
+  PREVIEW_PR_NUMBER?: string;
+  PLAY_EXPERIENCE_MODE?: string;
 }
 
 export interface WorkerExecutionContext {

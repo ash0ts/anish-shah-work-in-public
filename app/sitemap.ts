@@ -1,14 +1,14 @@
 import type { MetadataRoute } from "next";
-import { PUBLIC_SITE_ORIGIN } from "@/lib/site-constants";
-import { getPublicContentView } from "@/lib/server/public-content";
-import { workArchiveRecordsFrom } from "@/lib/work-index";
+import { canonicalMetadataOrigin } from "../lib/deployment-environment";
+import { getPublicContentView } from "../lib/server/public-content";
+import { runtimeHostedDeploymentPresentation } from "../lib/server/deployment-presentation";
+import { workArchiveRecordsFrom } from "../lib/work-index";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = (
-    process.env.SITE_URL ||
-    process.env.PRODUCTION_SITE_URL ||
-    PUBLIC_SITE_ORIGIN
-  ).replace(/\/+$/, "");
+  if (runtimeHostedDeploymentPresentation().nonProductionHosted) {
+    return [];
+  }
+  const baseUrl = canonicalMetadataOrigin().replace(/\/+$/, "");
   const { bundle } = await getPublicContentView();
   const lastModified = new Date(bundle.generatedAt);
   const publicRoutes: MetadataRoute.Sitemap = [

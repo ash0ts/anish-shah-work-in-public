@@ -1,10 +1,12 @@
 import {
   cloudflareAccessConfigured,
   verifyCloudflareAccess,
+  verifyCloudflareAccessPrincipal,
 } from "../lib/server/cloudflare-access";
 import { privateJson } from "./security-headers";
 import { isPrivateSitesReferenceHostname } from "./production-origin";
 import type { AccessIdentity, WorkerEnv } from "./runtime-types";
+import type { HostedDeploymentTier } from "../lib/deployment-environment";
 
 const INTERNAL_EMAIL_HEADER = "x-anish-authenticated-user-email";
 const INTERNAL_SOURCE_HEADER = "x-anish-authenticated-auth-source";
@@ -26,6 +28,21 @@ export function isProtectedOwnerPath(pathname: string): boolean {
     pathname === "/api/connectors/myanimelist/oauth/start" ||
     pathname === "/api/connectors/strava/config"
   );
+}
+
+const STAGING_PUBLIC_OAUTH_CALLBACKS = new Set([
+  "/api/connectors/myanimelist/oauth/callback",
+  "/api/connectors/spotify/oauth/callback",
+  "/api/connectors/discogs/oauth/callback",
+]);
+
+export function requiresHostedAccessIdentity(
+  pathname: string,
+  tier: HostedDeploymentTier | null,
+): boolean {
+  if (tier === "staging") return !STAGING_PUBLIC_OAUTH_CALLBACKS.has(pathname);
+  if (tier === "preview") return true;
+  return isProtectedOwnerPath(pathname);
 }
 
 export function isSitesRuntime(hostname: string): boolean {
@@ -74,6 +91,7 @@ export async function authenticateRequest(
     pathname: string;
     directProduction: boolean;
     sitesRuntime: boolean;
+    deploymentTier?: HostedDeploymentTier | null;
   },
 ): Promise<AuthenticateRequestResult> {
   const headers = new Headers(request.headers);
@@ -91,9 +109,13 @@ export async function authenticateRequest(
   }
 
   const accessMode = env.AUTH_MODE === "cloudflare_access";
+  const identityRequired = requiresHostedAccessIdentity(
+    options.pathname,
+    options.deploymentTier ?? null,
+  );
   if (
     options.directProduction &&
-    isProtectedOwnerPath(options.pathname) &&
+    identityRequired &&
     !accessMode
   ) {
     return {
@@ -104,16 +126,28 @@ export async function authenticateRequest(
   }
 
   let identity: AccessIdentity | null = null;
+  let accessAuthenticated = false;
   if (accessMode) {
-    identity = await verifyCloudflareAccess(request, {
+    const configuration = {
       audience: env.CF_ACCESS_AUD,
       teamDomain: env.CF_ACCESS_TEAM_DOMAIN,
-    });
+    };
+    if (options.deploymentTier === "preview") {
+      const principal = await verifyCloudflareAccessPrincipal(
+        request,
+        configuration,
+      );
+      accessAuthenticated = Boolean(principal);
+      identity = principal?.kind === "user" ? { email: principal.email } : null;
+    } else {
+      identity = await verifyCloudflareAccess(request, configuration);
+      accessAuthenticated = Boolean(identity);
+    }
     if (identity) {
       headers.set(INTERNAL_EMAIL_HEADER, identity.email);
       headers.set(INTERNAL_SOURCE_HEADER, "cloudflare-access");
     }
-    if (isProtectedOwnerPath(options.pathname) && !identity) {
+    if (identityRequired && !accessAuthenticated) {
       return {
         status: "denied",
         response: accessFailure(

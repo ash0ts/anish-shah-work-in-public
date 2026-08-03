@@ -1,13 +1,49 @@
+import { createHash } from "node:crypto";
+
 export const PUBLIC_SITE_ORIGIN = "https://anish-shah-is.online";
 export const PUBLIC_CLOUDFLARE_ACCOUNT_ID =
   "690e6286eb53a6df1bd0080633caf91f";
 
-const RATE_LIMITS = new Map([
+export const PRODUCTION_RESOURCE_FINGERPRINTS = Object.freeze({
+  databaseIdSha256:
+    "7cbb238b780bae20cc1b8ac679db25c7028f7e078fe5602e1317c6349f170e02",
+  publicationCacheIdSha256:
+    "f47e24ae3f20413c8550060723bfcac3494cc2b0551833e209d214a73a0f06bd",
+  accessAudienceSha256:
+    "282a7c919b63ca1540a84c8e953156af56edaf66fb059b654da6bf2ef2727d61",
+});
+
+export const PRODUCTION_RATE_LIMITS = Object.freeze([
   ["OWNER_RATE_LIMITER", { namespaceId: "88001001", limit: 30 }],
   ["ARTWORK_RATE_LIMITER", { namespaceId: "88001002", limit: 120 }],
   ["PROMOTION_RATE_LIMITER", { namespaceId: "88001003", limit: 6 }],
   ["OAUTH_CALLBACK_RATE_LIMITER", { namespaceId: "88001004", limit: 20 }],
 ]);
+const RATE_LIMITS = new Map(PRODUCTION_RATE_LIMITS);
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+export function assertPinnedProductionResources({
+  databaseId,
+  publicationCacheId,
+  audiences,
+}) {
+  if (
+    sha256(databaseId.toLowerCase()) !==
+      PRODUCTION_RESOURCE_FINGERPRINTS.databaseIdSha256 ||
+    sha256(publicationCacheId.toLowerCase()) !==
+      PRODUCTION_RESOURCE_FINGERPRINTS.publicationCacheIdSha256 ||
+    audiences.length !== 1 ||
+    sha256(audiences[0]) !==
+      PRODUCTION_RESOURCE_FINGERPRINTS.accessAudienceSha256
+  ) {
+    throw new Error(
+      "Production D1, KV, and Access resources must match the pinned deployment contract.",
+    );
+  }
+}
 
 function required(env, name) {
   const value = env[name]?.trim();
@@ -78,6 +114,11 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
   if (!/^[0-9a-f]{32}$/i.test(publicationCacheId)) {
     throw new Error("CLOUDFLARE_PUBLICATION_CACHE_ID must be a KV namespace ID.");
   }
+  assertPinnedProductionResources({
+    databaseId,
+    publicationCacheId,
+    audiences,
+  });
   const databaseName =
     env.CLOUDFLARE_D1_DATABASE_NAME?.trim() || "anish-shah-work-in-public";
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(databaseName)) {
@@ -111,6 +152,8 @@ export function assertPublicReleaseConfig(config, expected) {
     RELEASE_SHA: expected.head,
     CONTENT_VERSION: expected.contentVersion,
     PUBLIC_CONTENT_MODE: "d1_kv_required",
+    DEPLOYMENT_TIER: "production",
+    PLAY_EXPERIENCE_MODE: "classic",
   };
   const exactVars =
     JSON.stringify(Object.keys(vars).sort()) ===

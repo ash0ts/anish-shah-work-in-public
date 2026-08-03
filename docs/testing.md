@@ -40,6 +40,11 @@ and enforces mobile performance, accessibility, SEO, and best-practice scores of
 at least 0.90 plus CLS no greater than 0.1. JSON reports stay in the ignored
 `.lighthouse/` directory; CI does not upload them.
 
+Remote PR previews contain deterministic synthetic connector fixtures and are
+for visual/interaction review only. Use stable staging for real OAuth,
+connector refresh, D1 migration, and Safari acceptance. A preview URL is never
+evidence that provider integration or production data is healthy.
+
 ## Content changes
 
 Full private-source regeneration cannot run on ordinary CI. The owner must run

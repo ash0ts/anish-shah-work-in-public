@@ -3,6 +3,7 @@ import {
   PublicContentUnavailableError,
 } from "../lib/server/public-content";
 import type { WorkerEnv } from "./runtime-types";
+import { previewFixtureRuntime } from "../lib/deployment-environment";
 
 function isContentBackedPublicPath(pathname: string): boolean {
   return (
@@ -46,6 +47,7 @@ export async function publicationAvailabilityResponse(
   ) {
     return null;
   }
+  if (previewFixtureRuntime(env)) return null;
   if (env.PUBLIC_CONTENT_MODE !== "d1_kv_required") {
     return publicContentUnavailableResponse();
   }

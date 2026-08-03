@@ -773,7 +773,9 @@ test("Discogs refresh and cron wiring enforce four-hour freshness, hourly retry,
   assert.match(refreshSource, /DISCOGS_FRESHNESS_WINDOW_MS = 4 \* 60 \* 60 \* 1000/);
   assert.match(refreshSource, /DISCOGS_AUTOMATIC_RETRY_MS = 60 \* 60 \* 1000/);
   assert.match(refreshSource, /provider === "discogs" \? 1 : 2/);
-  assert.match(workerSource, /refreshDiscogsWhenDue\(env\.DB, scheduledAt\)/);
+  assert.match(workerSource, /if \(!env\.DB\) return;/);
+  assert.match(workerSource, /const db = env\.DB;/);
+  assert.match(workerSource, /refreshDiscogsWhenDue\(db, scheduledAt\)/);
   assert.match(credentialSource, /DISCOGS_PRESENTATION_SETTING_KEY/);
   assert.match(routeSource, /rejectCrossOriginWrite\(request\)[\s\S]*authorizeOwnerApi\(\)[\s\S]*readBoundedJsonBody/);
 });

@@ -8,10 +8,28 @@ import {
   projectConnectorSnapshotForPublic,
 } from "@/lib/server/connectors/public-gallery";
 import { getRequestExecutionContext } from "vinext/shims/request-context";
+import { previewConnectorSnapshot } from "@/lib/server/preview-connector-fixtures";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  const searchParams = new URL(request.url).searchParams;
+  const preview = previewConnectorSnapshot("spotify", searchParams);
+  if (preview) {
+    return Response.json(
+      preview.status === "ready"
+        ? {
+            ...preview,
+            payload: projectConnectorSnapshotForPublic(
+              "spotify",
+              preview.payload,
+              searchParams,
+            ),
+          }
+        : preview,
+      { headers: { "cache-control": "private, no-store" } },
+    );
+  }
   const snapshot = await getPublicConnectorSnapshot("spotify");
   const needsSchemaUpgrade =
     snapshot.status === "ready" &&
@@ -39,7 +57,7 @@ export async function GET(request: Request) {
         payload: projectConnectorSnapshotForPublic(
           "spotify",
           snapshot.payload,
-          new URL(request.url).searchParams,
+          searchParams,
         ),
       },
       { headers: { "cache-control": "no-store" } },
