@@ -21,6 +21,7 @@ import { CopyOwnershipSummary } from "./CopyOwnershipSummary";
 import { EditorialRecords } from "./EditorialRecords";
 import { PlayPromotionControls } from "./PlayPromotionControls";
 import { SimulationProviderApprovals } from "./SimulationProviderApprovals";
+import { TravelDeskEntry } from "./travel/TravelDeskEntry";
 import styles from "./studio.module.css";
 
 export const dynamic = "force-dynamic";
@@ -219,6 +220,8 @@ export default async function StudioPage() {
               : "hosted"
         }
       />
+
+      <TravelDeskEntry atlasMode={runtimeValue("TRAVEL_ATLAS_MODE") ?? null} />
 
       <section className={styles.section} aria-labelledby="connectors-title">
         <div className={styles.sectionIntro}>

@@ -4,6 +4,8 @@ type RuntimeBindings = {
   DB?: D1Database;
   PUBLICATION_CACHE?: KVNamespace;
   SIMULATION_RATE_LIMITER?: RateLimitBinding;
+  TRAVEL_MEDIA?: R2Bucket;
+  IMAGES?: ImagesBinding;
   NODE_ENV?: string;
   OWNER_EMAILS?: string;
   CONNECTOR_ENCRYPTION_KEY?: string;
@@ -31,6 +33,7 @@ type RuntimeBindings = {
   SIMULATION_GATEWAY_BYOK_ALIAS?: string;
   SIMULATION_LOCAL_ANTHROPIC_API_KEY?: string;
   SIMULATION_DAILY_MODEL_LIMIT?: string;
+  TRAVEL_ATLAS_MODE?: string;
 };
 
 function cloudflareBindings(): RuntimeBindings {
@@ -44,7 +47,11 @@ function cloudflareBindings(): RuntimeBindings {
 export function runtimeValue(
   name: Exclude<
     keyof RuntimeBindings,
-    "DB" | "PUBLICATION_CACHE" | "SIMULATION_RATE_LIMITER"
+    | "DB"
+    | "PUBLICATION_CACHE"
+    | "SIMULATION_RATE_LIMITER"
+    | "TRAVEL_MEDIA"
+    | "IMAGES"
   >,
 ): string | undefined {
   const cloudflareValue = cloudflareBindings()[name];
@@ -62,4 +69,12 @@ export function runtimeDatabase(): D1Database | null {
 
 export function runtimePublicationKv(): KVNamespace | null {
   return cloudflareBindings().PUBLICATION_CACHE ?? null;
+}
+
+export function runtimeTravelMedia(): R2Bucket | null {
+  return cloudflareBindings().TRAVEL_MEDIA ?? null;
+}
+
+export function runtimeImages(): ImagesBinding | null {
+  return cloudflareBindings().IMAGES ?? null;
 }
