@@ -450,7 +450,8 @@ function parseStored(value: string): StoredStravaConfig | null {
     !embed.ok ||
     embed.embedUrl !== record.embedUrl ||
     embed.kind !== record.embedKind ||
-    typeof record.checkedAt !== "string"
+    (record.embedStatus === "available" &&
+      typeof record.checkedAt !== "string")
   ) {
     return null;
   }
@@ -482,55 +483,6 @@ async function readStoredConfig(
   }
 }
 
-function healthCheckIsStale(stored: StoredStravaConfig): boolean {
-  if (!stored.embedUrl || !stored.embedKind || !stored.checkedAt) return false;
-  const checkedAt = Date.parse(stored.checkedAt);
-  return (
-    Number.isFinite(checkedAt) &&
-    Date.now() - checkedAt >= HEALTH_CHECK_WINDOW_MS
-  );
-}
-
-async function refreshStaleEmbedHealth(
-  stored: StoredStravaConfig,
-  database?: D1Database | null,
-): Promise<StoredStravaConfig> {
-  if (!healthCheckIsStale(stored) || !stored.embedUrl) return stored;
-
-  const health = await verifyStravaEmbed(stored.embedUrl);
-  const refreshed: StoredStravaConfig = {
-    ...stored,
-    embedStatus: health.status,
-    checkedAt: health.checkedAt,
-  };
-  const binding = databaseOrNull(database);
-  if (!binding) return refreshed;
-
-  try {
-    const update = await binding
-      .prepare(
-        `UPDATE editorial_settings
-         SET value_json = ?, updated_at = ?
-         WHERE key = ? AND value_json = ?`,
-      )
-      .bind(
-        JSON.stringify(refreshed),
-        health.checkedAt,
-        STRAVA_SETTING_KEY,
-        JSON.stringify(stored),
-      )
-      .run();
-    if ((update.meta.changes ?? 0) !== 1) {
-      const current = await readStoredConfig(database);
-      if (current && current !== "database_unavailable") return current;
-    }
-  } catch {
-    // A transient persistence failure must not make a known-bad widget public
-    // for the current request. The next request can retry the health check.
-  }
-  return refreshed;
-}
-
 export async function getStravaPublicConfig(
   database?: D1Database | null,
 ): Promise<StravaConfigResult> {
@@ -541,7 +493,7 @@ export async function getStravaPublicConfig(
   if (storedResult === null) {
     return { status: "unavailable", reason: "not_configured" };
   }
-  const stored = await refreshStaleEmbedHealth(storedResult, database);
+  const stored = storedResult;
   const embed =
     stored.embedStatus === "available" &&
     stored.embedUrl &&
@@ -562,6 +514,85 @@ export async function getStravaPublicConfig(
       embedStatus: embed ? "available" : "unavailable",
       updatedAt: stored.updatedAt,
     },
+  };
+}
+
+export async function verifyStoredStravaPublicConfig(
+  actorEmail: string,
+  database?: D1Database | null,
+): Promise<
+  | {
+      status: "verified";
+      provider: "strava";
+      embedStatus: "available" | "unavailable";
+      checkedAt: string;
+    }
+  | {
+      status: "not_configured";
+      provider: "strava";
+      reason: "config" | "embed";
+    }
+  | { status: "conflict"; provider: "strava" }
+  | { status: "setup_required"; provider: "strava" }
+> {
+  const stored = await readStoredConfig(database);
+  if (stored === "database_unavailable") {
+    return { status: "setup_required", provider: "strava" };
+  }
+  if (!stored) {
+    return { status: "not_configured", provider: "strava", reason: "config" };
+  }
+  if (!stored.embedUrl || !stored.embedKind) {
+    return { status: "not_configured", provider: "strava", reason: "embed" };
+  }
+
+  const binding = databaseOrNull(database);
+  if (!binding) return { status: "setup_required", provider: "strava" };
+  const health = await verifyStravaEmbed(stored.embedUrl);
+  const verified: StoredStravaConfig = {
+    ...stored,
+    embedStatus: health.status,
+    checkedAt: health.checkedAt,
+  };
+  try {
+    const update = await binding
+      .prepare(
+        `UPDATE editorial_settings
+         SET value_json = ?, updated_at = ?
+         WHERE key = ? AND value_json = ?`,
+      )
+      .bind(
+        JSON.stringify(verified),
+        health.checkedAt,
+        STRAVA_SETTING_KEY,
+        JSON.stringify(stored),
+      )
+      .run();
+    if ((update.meta.changes ?? 0) !== 1) {
+      return { status: "conflict", provider: "strava" };
+    }
+    await binding
+      .prepare(
+        `INSERT INTO audit_log (
+           id, actor_email, action, entity_type, entity_id,
+           details_json, created_at
+         ) VALUES (?, ?, 'connector.embed_verified', 'connector', 'strava', ?, ?)`,
+      )
+      .bind(
+        crypto.randomUUID(),
+        actorEmail,
+        JSON.stringify({ embedStatus: health.status }),
+        health.checkedAt,
+      )
+      .run();
+  } catch {
+    return { status: "setup_required", provider: "strava" };
+  }
+  return {
+    status: "verified",
+    provider: "strava",
+    embedStatus: health.status,
+    checkedAt: health.checkedAt,
   };
 }
 
@@ -687,6 +718,7 @@ async function writePreparedStravaConfig(
     embedUrl: stored.embedUrl,
     embedKind: stored.embedKind,
     embedStatus: stored.embedStatus,
+    checkedAt: stored.checkedAt,
     updatedAt: stored.updatedAt,
   };
 }
@@ -713,20 +745,61 @@ export async function applyStravaPortableConfig(
   | Awaited<ReturnType<typeof writePreparedStravaConfig>>
   | { status: "failed"; ok: false; code: string; message: string }
 > {
-  const prepared = await prepareStravaConfig({
-    profileUrl: input.profileUrl,
-    embed: input.embedUrl,
-  }, null, true);
-  if (!prepared.ok) return { status: "failed", ...prepared };
-  if (prepared.value.health?.status === "unavailable") {
+  if (!isStravaPortableConfig(input)) {
     return {
       status: "failed",
       ok: false,
-      code: "embed_unavailable",
-      message: "The promoted Strava widget is not anonymously frameable. The current production configuration was left unchanged.",
+      code: "invalid_config",
+      message: "The promoted Strava configuration is invalid.",
     };
   }
-  return writePreparedStravaConfig(prepared.value, actorEmail, database);
+
+  const current = await readStoredConfig(database);
+  if (current === "database_unavailable") {
+    return {
+      status: "failed",
+      ok: false,
+      code: "setup_required",
+      message: "The site database is not ready.",
+    };
+  }
+  if (
+    current &&
+    current.profileUrl === input.profileUrl &&
+    current.embedUrl === input.embedUrl &&
+    current.embedKind === input.embedKind
+  ) {
+    return {
+      status: "saved" as const,
+      provider: "strava" as const,
+      profileUrl: current.profileUrl,
+      embedUrl: current.embedUrl,
+      embedKind: current.embedKind,
+      embedStatus: current.embedStatus,
+      checkedAt: current.checkedAt,
+      updatedAt: current.updatedAt,
+    };
+  }
+
+  // Promotion imports only the reviewed portable shape. A new or changed
+  // widget remains unavailable until the owner explicitly uses Verify in
+  // Studio; importing settings must never contact Strava.
+  const updatedAt = new Date().toISOString();
+  return writePreparedStravaConfig(
+    {
+      health: null,
+      stored: {
+        profileUrl: input.profileUrl,
+        embedUrl: input.embedUrl,
+        embedKind: input.embedKind,
+        embedStatus: "unavailable",
+        checkedAt: null,
+        updatedAt,
+      },
+    },
+    actorEmail,
+    database,
+  );
 }
 
 export async function deleteStravaPublicConfig(

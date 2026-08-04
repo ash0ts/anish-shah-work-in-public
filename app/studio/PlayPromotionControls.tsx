@@ -21,7 +21,6 @@ type ApiResult = {
   outcomes?: Array<{
     provider: Provider;
     status: "applied" | "failed";
-    itemCount?: number;
     code?: string;
   }>;
   promotions?: Promotion[];
@@ -190,14 +189,12 @@ export function PlayPromotionControls({
       const outcomes = result.outcomes ?? [];
       const applied = outcomes
         .filter((outcome) => outcome.status === "applied")
-        .map((outcome) =>
-          `${providerLabels[outcome.provider]}${typeof outcome.itemCount === "number" ? ` (${outcome.itemCount.toLocaleString()} items)` : ""}`,
-        );
+        .map((outcome) => providerLabels[outcome.provider]);
       const failed = outcomes
         .filter((outcome) => outcome.status === "failed")
         .map((outcome) => providerLabels[outcome.provider]);
       setMessage(
-        `${applied.length ? `Applied: ${applied.join(", ")}.` : "No provider was applied."}${failed.length ? ` Kept existing production state for: ${failed.join(", ")}.` : ""}`,
+        `${applied.length ? `Imported: ${applied.join(", ")}. Refresh each imported collection manually; verify a changed Strava feed separately.` : "No provider was imported."}${failed.length ? ` Kept existing production state for: ${failed.join(", ")}.` : ""}`,
       );
       await loadPromotions();
     } catch {
@@ -297,14 +294,14 @@ export function PlayPromotionControls({
                       <small>
                         {promotion.status === "staged"
                           ? `Review by ${formatExpiry(promotion.expiresAt)}`
-                          : "Validation in progress"}
+                          : "Import in progress"}
                       </small>
                       <button
                         type="button"
                         disabled={pending !== null || promotion.status !== "staged"}
                         onClick={() => void applyPromotion(promotion)}
                       >
-                        {pending === promotion.id ? "Validating…" : "Validate and apply"}
+                        {pending === promotion.id ? "Importing…" : "Review and import"}
                       </button>
                     </li>
                   ))}

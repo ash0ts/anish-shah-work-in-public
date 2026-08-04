@@ -15,6 +15,7 @@ const {
   normalizeStravaProfileUrl,
   saveStravaPublicConfig,
   verifyStravaEmbed,
+  verifyStoredStravaPublicConfig,
 } = await import("../lib/server/strava-config.ts");
 
 const PROFILE_URL = "https://www.strava.com/athletes/37597587";
@@ -66,6 +67,10 @@ class FakeD1 {
         this.settings.set(key, nextValue);
         return { success: true, results: [], meta: { changes: 1 } };
       }
+    }
+    if (statement.sql.startsWith("INSERT INTO audit_log")) {
+      this.audits.push(JSON.parse(statement.values[2]));
+      return { success: true, results: [], meta: { changes: 1 } };
     }
     return { success: true, results: [], meta: { changes: 0 } };
   }
@@ -286,7 +291,7 @@ test("Strava reuses a same-widget health check for twelve hours", async () => {
   assert.equal(calls, 1);
 });
 
-test("public Strava reads recheck stale widgets and persist a profile fallback", async () => {
+test("public Strava reads use stored health without provider requests or writes", async () => {
   const database = new FakeD1();
   const staleAt = new Date(Date.now() - 13 * 60 * 60 * 1000).toISOString();
   const updatedAt = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -304,27 +309,67 @@ test("public Strava reads recheck stale widgets and persist a profile fallback",
   let calls = 0;
   await withFetch(async () => {
     calls += 1;
-    return new Response(null, {
-      status: 302,
-      headers: { location: "/login" },
-    });
+    throw new Error("public reads must not verify Strava");
   }, async () => {
     const first = await getStravaPublicConfig(database);
     assert.equal(first.status, "ready");
-    assert.equal(first.config.embedStatus, "unavailable");
-    assert.equal(first.config.embed, null);
+    assert.equal(first.config.embedStatus, "available");
+    assert.equal(first.config.embed.embedUrl, PROFILE_FEED);
     assert.equal(first.config.profileUrl, PROFILE_URL);
 
     const second = await getStravaPublicConfig(database);
     assert.equal(second.status, "ready");
-    assert.equal(second.config.embed, null);
+    assert.equal(second.config.embed.embedUrl, PROFILE_FEED);
   });
+  assert.equal(calls, 0);
+  const stored = JSON.parse(
+    database.settings.get("connector.strava.public_embed"),
+  );
+  assert.equal(stored.embedStatus, "available");
+  assert.equal(stored.checkedAt, staleAt);
+});
+
+test("owner-triggered Strava verification persists only sanitized health", async () => {
+  const database = new FakeD1();
+  const staleAt = new Date(Date.now() - 13 * 60 * 60 * 1000).toISOString();
+  const updatedAt = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  database.settings.set(
+    "connector.strava.public_embed",
+    JSON.stringify({
+      profileUrl: PROFILE_URL,
+      embedUrl: PROFILE_FEED,
+      embedKind: "profile_feed",
+      embedStatus: "available",
+      checkedAt: staleAt,
+      updatedAt,
+    }),
+  );
+  let calls = 0;
+  const result = await withFetch(async () => {
+    calls += 1;
+    return new Response(null, {
+      status: 302,
+      headers: { location: "/login" },
+    });
+  }, () =>
+    verifyStoredStravaPublicConfig("owner@example.com", database),
+  );
+
   assert.equal(calls, 1);
+  assert.equal(result.status, "verified");
+  assert.equal(result.embedStatus, "unavailable");
   const stored = JSON.parse(
     database.settings.get("connector.strava.public_embed"),
   );
   assert.equal(stored.embedStatus, "unavailable");
   assert.notEqual(stored.checkedAt, staleAt);
+  assert.deepEqual(database.audits.at(-1), {
+    embedStatus: "unavailable",
+  });
+  const publicResult = await getStravaPublicConfig(database);
+  assert.equal(publicResult.status, "ready");
+  assert.equal(publicResult.config.embed, null);
+  assert.equal(publicResult.config.profileUrl, PROFILE_URL);
 });
 
 test("A failing Strava widget keeps a useful profile fallback", async () => {
@@ -366,7 +411,7 @@ test("an older stored profile widget is recovered as an unpublished fallback", a
   assert.equal(published.config.profileUrl, PROFILE_URL);
 });
 
-test("Promotion rejects an unframeable Strava widget without replacing production", async () => {
+test("Promotion imports only the Strava shape and defers remote verification", async () => {
   const database = new FakeD1();
   await withFetch(
     async () => new Response("ok", { status: 200 }),
@@ -377,13 +422,12 @@ test("Promotion rejects an unframeable Strava widget without replacing productio
         database,
       ),
   );
-  const before = database.settings.get("connector.strava.public_embed");
+  let calls = 0;
   const result = await withFetch(
-    async () =>
-      new Response("login", {
-        status: 200,
-        headers: { "x-frame-options": "SAMEORIGIN" },
-      }),
+    async () => {
+      calls += 1;
+      throw new Error("promotion must not contact Strava");
+    },
     () =>
       applyStravaPortableConfig(
         {
@@ -395,9 +439,56 @@ test("Promotion rejects an unframeable Strava widget without replacing productio
         database,
       ),
   );
-  assert.equal(result.status, "failed");
-  assert.equal(result.code, "embed_unavailable");
-  assert.equal(database.settings.get("connector.strava.public_embed"), before);
+  assert.equal(calls, 0);
+  assert.equal(result.status, "saved");
+  assert.equal(result.embedStatus, "unavailable");
+  assert.equal(result.checkedAt, null);
+  assert.deepEqual(await getStravaPortableConfig(database), {
+    profileUrl: PROFILE_URL,
+    embedUrl: PROFILE_FEED,
+    embedKind: "profile_feed",
+  });
+  const published = await getStravaPublicConfig(database);
+  assert.equal(published.status, "ready");
+  assert.equal(published.config.embed, null);
+  assert.equal(published.config.profileUrl, PROFILE_URL);
+});
+
+test("Promotion keeps an unchanged Strava widget's accepted health", async () => {
+  const database = new FakeD1();
+  const checkedAt = new Date(Date.now() - 60_000).toISOString();
+  const updatedAt = new Date(Date.now() - 120_000).toISOString();
+  database.settings.set(
+    "connector.strava.public_embed",
+    JSON.stringify({
+      profileUrl: PROFILE_URL,
+      embedUrl: PROFILE_FEED,
+      embedKind: "profile_feed",
+      embedStatus: "available",
+      checkedAt,
+      updatedAt,
+    }),
+  );
+  let calls = 0;
+  const result = await withFetch(async () => {
+    calls += 1;
+    throw new Error("unchanged promotion must not contact Strava");
+  }, () =>
+    applyStravaPortableConfig(
+      {
+        profileUrl: PROFILE_URL,
+        embedUrl: PROFILE_FEED,
+        embedKind: "profile_feed",
+      },
+      "owner@example.com",
+      database,
+    ),
+  );
+  assert.equal(calls, 0);
+  assert.equal(result.status, "saved");
+  assert.equal(result.embedStatus, "available");
+  assert.equal(result.checkedAt, checkedAt);
+  assert.equal(result.updatedAt, updatedAt);
 });
 
 test("Strava disconnect deletes config and provider-specific state", async () => {
@@ -419,20 +510,24 @@ test("Strava disconnect deletes config and provider-specific state", async () =>
 });
 
 test("Strava routes keep writes owner-only and its room screen keeps consent", async () => {
-  const [configRoute, legacyConfigRoute, handler, publicRoute, movement] = await Promise.all([
+  const [configRoute, verifyRoute, legacyConfigRoute, handler, publicRoute, movement] = await Promise.all([
     readFile(new URL("../app/api/studio/connectors/strava/config/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/studio/connectors/strava/verify/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/connectors/strava/config/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/http/strava-config.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/connectors/strava/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../components/play/MovementStream.tsx", import.meta.url), "utf8"),
   ]);
-  const mutationRoutes = `${configRoute}\n${legacyConfigRoute}\n${handler}`;
+  const mutationRoutes = `${configRoute}\n${verifyRoute}\n${legacyConfigRoute}\n${handler}`;
   assert.match(mutationRoutes, /rejectCrossOriginWrite\(request\)/);
   assert.match(mutationRoutes, /authorizeOwnerApi\(\)/);
   assert.match(mutationRoutes, /private, no-store/);
+  assert.match(verifyRoute, /export async function POST\(request: Request\)/);
+  assert.match(handler, /stravaVerifyPost[\s\S]*authorizeWrite\(request\)/);
   assert.match(legacyConfigRoute, /status:\s*308/);
   assert.match(publicRoute, /"cache-control": "no-store"/);
   assert.match(publicRoute, /status: 200/);
+  assert.doesNotMatch(publicRoute, /verifyStravaEmbed|verifyStoredStravaPublicConfig/);
   assert.match(movement, /state\.payload\.embed\.embedUrl/);
   assert.match(movement, /show && state\.payload\.embed/);
   assert.match(movement, /View the full activity feed on Strava/);

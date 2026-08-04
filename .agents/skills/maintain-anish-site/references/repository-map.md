@@ -19,7 +19,7 @@ Paths are relative to the repository root.
 - `lib/server/travel/**`: Postcard Planet drafts, policy, public projection, versioned publication, retention, uploads, and media authorization. Public atlas and paginated trip projectors stay narrower than stored publication records.
 - `app/studio/travel/**` and `app/api/studio/travel/**`: owner-only Travel Desk and writes. Exact GPS and original filenames remain browser-local intake suggestions and never enter public state.
 - `lib/server/simulation/**`: bounded session, budget, approval, grounding, and model-gateway contracts.
-- `worker/**`: host/tier enforcement, Cloudflare Access, CSP, headers, throttling, request correlation, and scheduled maintenance.
+- `worker/**`: host/tier enforcement, Cloudflare Access, CSP, headers, throttling, request correlation, and retention/cleanup maintenance. Cron must never synchronize provider collections.
 - `drizzle/**`: ordered immutable D1 migrations.
 - `tests/**`: content, copy, backend/security, rendered, environment, and browser acceptance.
 
@@ -58,7 +58,8 @@ Runtime precedence is: sanitized canonical facts and structure, then published D
 
 - `scripts/build-content.mjs` orchestrates `scripts/content/**`; refresh the public attestation whenever generator, curation, or output changes.
 - Connector repository facades span credentials/OAuth, public projectors, snapshots, locks, audit, retention, Studio, Play, and privacy tests. Change the whole contract, not one facade.
-- Discogs uses OAuth 1.0a, bounded sequential pagination, a six-hour public cutoff, and no provider artwork.
+- Every connector collection refresh is an explicit owner Studio action. Public reads, callbacks, credential saves, and cron never call provider data APIs; a failed refresh preserves the active last-known-good snapshot.
+- Discogs uses OAuth 1.0a, bounded sequential pagination, a standard six-hour public cutoff, and no provider artwork. Older stale display is allowed only by a current owner-only recorded provider permission.
 - Travel is not a connector. It uses isolated D1/KV/R2 state, whole-trip atomic publication, publication-aware media delivery, and the `TRAVEL_ATLAS_MODE` gate. Preview uses synthetic fixtures and never receives R2.
 - Simulation keeps model prose separate from trusted fact cards, never stores free text or model prompts/responses, and must retain an authored fallback when AI is unavailable.
 - Hosted tier configuration is exact and mutually exclusive. Fixture mode is preview-only; staging and production must fail closed on missing or inconsistent bindings.

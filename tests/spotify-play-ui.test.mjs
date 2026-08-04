@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import {
+  grooveAngleForIndex,
+  grooveNavigationIntent,
+  normalizeGrooveAngle,
+  resolveGrooveTargetAngle,
+} from "../components/spotify/groove-motion.ts";
+import {
+  grooveCenter,
+  groovePoint,
+} from "../components/spotify/model.ts";
 
 const spotifySourceUrls = [
   "../components/SpotifyStream.tsx",
@@ -23,6 +33,40 @@ async function spotifySource() {
     "\n",
   );
 }
+
+function circularDistance(left, right) {
+  const distance = Math.abs(
+    normalizeGrooveAngle(left) - normalizeGrooveAngle(right),
+  );
+  return Math.min(distance, 360 - distance);
+}
+
+test("Ranked Groove geometry aligns the needle with every ordinal mark", () => {
+  for (const total of [1, 2, 3, 7, 12]) {
+    for (let index = 0; index < total; index += 1) {
+      const point = groovePoint(index, total);
+      const pointAngle = normalizeGrooveAngle(
+        (Math.atan2(point.x - grooveCenter, grooveCenter - point.y) * 180) /
+          Math.PI,
+      );
+      assert.ok(
+        circularDistance(pointAngle, grooveAngleForIndex(index, total)) < 1e-8,
+        `rank ${index + 1} of ${total} should align with its needle angle`,
+      );
+    }
+  }
+});
+
+test("Ranked Groove target math takes the shortest path and honors half-turn intent", () => {
+  assert.equal(resolveGrooveTargetAngle(350, 10, "forward"), 370);
+  assert.equal(resolveGrooveTargetAngle(10, 350, "backward"), -10);
+  assert.equal(resolveGrooveTargetAngle(0, 180, "forward"), 180);
+  assert.equal(resolveGrooveTargetAngle(0, 180, "backward"), -180);
+  assert.equal(resolveGrooveTargetAngle(330, 150, "forward"), 510);
+  assert.equal(resolveGrooveTargetAngle(330, 150, "backward"), 150);
+  assert.equal(grooveNavigationIntent(0, 6), "forward");
+  assert.equal(grooveNavigationIntent(6, 0), "backward");
+});
 
 test("Spotify stays isolated to its lazy room screen and uses only ordinal Top Tracks fields", async () => {
   const [spotify, screenRegistry, screen] = await Promise.all([
@@ -58,6 +102,10 @@ test("Ranked Groove has semantic keyboard and mobile equivalents", async () => {
     spotify,
     /<svg[\s\S]*?aria-hidden="true"[\s\S]*?className=\{styles\.groove\}/,
   );
+  assert.match(spotify, /data-spotify-groove-needle/);
+  assert.match(spotify, /transform="rotate\(0 210 210\)"/);
+  assert.match(spotify, /animate\(motionState, \{/);
+  assert.doesNotMatch(spotify, /needleElement\.style\.transform/);
   assert.match(
     spotify,
     /<ol[\s\S]*?className=\{styles\.grooveControls\}[\s\S]*?Spotify Top Tracks in returned order/,

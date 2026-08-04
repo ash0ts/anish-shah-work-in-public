@@ -19,7 +19,8 @@ anonymous visitor ──> public HTML and GET connector projections
 owner ──> Cloudflare Access ──> Worker JWT verification ──> email allowlist
                                                         └──> Studio + writes
 
-provider API ──> exact normalization/projector ──> D1 snapshot ──> public JSON
+owner Studio Refresh ──> provider API ──> exact projector ──> D1 snapshot
+anonymous visitor ──> active D1 snapshot ──> public JSON
 
 owner ──> protected Travel Desk ──> strip metadata ──> private R2 master
                                           │
@@ -63,7 +64,8 @@ content or navigation. See
   Travel publication/media authorization, Simulation state, D1 repositories,
   and write authorization.
 - `worker/` owns headers, origin/tier enforcement, rate limits, Access injection,
-  redacted observability, retention, and scheduled Discogs refresh.
+  redacted observability, retention, and cleanup. Scheduled work never
+  synchronizes provider collections.
 - `content/` owns private-safe curation, generated public data, and the copy deck.
 - `drizzle/` is forward-only schema history.
 - `scripts/` owns deterministic generation, validation, preview, staging, and release evidence.

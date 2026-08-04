@@ -35,7 +35,9 @@ the exact owner allowlist and is always `private, no-store`.
 - When simulation is enabled, confirm Gateway readiness, the planned provider
   names/digest, and the configured daily model ceiling. Investigate fallback
   rate changes without adding prompt or response logging.
-- Inspect Studio connector health and refresh configured providers.
+- Inspect Studio connector health. Refresh a configured provider only when the
+  owner deliberately intends to synchronize it; neither observation nor public
+  traffic performs that action.
 - Confirm the release commit, Worker version, content version, copy version, D1 bookmark, and
   smoke-test time are recorded under `releases/`.
 
@@ -53,7 +55,9 @@ The scheduled retention handler should run hourly at minute `17`. Investigate a
 heartbeat older than three hours before the 24-hour OAuth-transaction retention
 maximum is threatened.
 Connector synchronization history and Studio status are the primary provider
-health signals.
+health signals. The hourly cron performs retention and cleanup only; it never
+calls a provider collection API. Strava remote health checks occur only on
+Studio save or **Verify now**.
 Simulation budget counters and the coarse fallback bucket are the primary model
 health signals. Cloudflare AI Gateway prompt/response logging and response
 caching remain disabled; do not enable them during debugging. Use request IDs,
@@ -64,7 +68,8 @@ Gateway aggregate cost/latency instead.
 
 - repeated 5xx responses or public rendering failures
 - Studio unexpectedly public or owner unexpectedly denied
-- connector snapshots beyond their permitted stale window
+- connector snapshots beyond their permitted stale window, or Discogs stale
+  display without a current protected extended-display approval
 - retention heartbeat older than three hours
 - sudden artwork proxy rejection/rate-limit spikes
 - D1 migration mismatch or failed publication reconciliation

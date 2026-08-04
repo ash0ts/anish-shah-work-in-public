@@ -27,6 +27,9 @@ class PromotionStatement {
     if (this.sql.includes("FROM play_promotion_transactions")) {
       return this.database.rows.get(this.values[0]) ?? null;
     }
+    if (this.sql.includes("FROM connector_credentials")) {
+      return this.database.credentials.get(this.values[0]) ?? null;
+    }
     return null;
   }
 
@@ -39,6 +42,8 @@ class PromotionD1 {
   constructor() {
     this.failCompletionBatch = false;
     this.rows = new Map();
+    this.credentials = new Map();
+    this.snapshots = [];
   }
 
   prepare(sql) {
@@ -95,6 +100,38 @@ class PromotionD1 {
         createdAt,
       });
       changes = 1;
+    } else if (sql.startsWith("INSERT INTO connector_credentials")) {
+      const [
+        provider,
+        ciphertext,
+        iv,
+        keyVersion,
+        credentialLabel,
+        scopesJson,
+        createdAt,
+        updatedAt,
+      ] = values;
+      const current = this.credentials.get(provider);
+      this.credentials.set(provider, {
+        provider,
+        ciphertext,
+        iv,
+        keyVersion,
+        credentialLabel,
+        scopesJson,
+        expiresAt: null,
+        generation: current ? current.generation + 1 : 1,
+        createdAt: current?.createdAt ?? createdAt,
+        updatedAt,
+      });
+      changes = 1;
+    } else if (sql.startsWith("DELETE FROM connector_snapshots")) {
+      const [provider] = values;
+      const before = this.snapshots.length;
+      this.snapshots = this.snapshots.filter(
+        (snapshot) => snapshot.provider !== provider,
+      );
+      changes = before - this.snapshots.length;
     } else if (
       sql.startsWith("UPDATE play_promotion_transactions") &&
       sql.includes("attempts = attempts + 1") &&
@@ -224,6 +261,7 @@ function productionBindings(database) {
     CONNECTOR_ENCRYPTION_KEY: Buffer.from(
       crypto.getRandomValues(new Uint8Array(32)),
     ).toString("base64"),
+    STEAM_DATA_STORAGE_COUNTRIES: "United States",
     PRODUCTION_SITE_URL: "https://anish.example",
     SITE_URL: "https://anish.example",
   };
@@ -355,6 +393,101 @@ test("promotion validation accepts only canonical Strava portable configuration"
       false,
       JSON.stringify(strava),
     );
+  }
+});
+
+test("promotion imports credentials without provider reads or snapshot creation", async () => {
+  const database = new PromotionD1();
+  const bindings = productionBindings(database);
+  let providerCalls = 0;
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    providerCalls += 1;
+    throw new Error("promotion must not call a provider");
+  };
+
+  const importHardcover = async (authorization) => {
+    const issued = await withRuntime(bindings, () =>
+      issuePlayPromotion({
+        ownerEmail: "owner@example.com",
+        requestUrl: "https://anish.example/api/studio/play-promotion/start",
+      }),
+    );
+    const staged = await withRuntime(bindings, () =>
+      stagePlayPromotion({
+        transferCode: issued.code,
+        payload: {
+          schemaVersion: "1.0",
+          exportedAt: new Date().toISOString(),
+          providers: { hardcover: { authorization } },
+        },
+        requestUrl: "https://anish.example/api/play-promotion/import",
+      }),
+    );
+    assert.equal(staged.status, "staged");
+    return withRuntime(bindings, () =>
+      applyPlayPromotion({ id: staged.id, ownerEmail: "owner@example.com" }),
+    );
+  };
+
+  const importSteam = async () => {
+    const issued = await withRuntime(bindings, () =>
+      issuePlayPromotion({
+        ownerEmail: "owner@example.com",
+        requestUrl: "https://anish.example/api/studio/play-promotion/start",
+      }),
+    );
+    const staged = await withRuntime(bindings, () =>
+      stagePlayPromotion({
+        transferCode: issued.code,
+        payload: {
+          schemaVersion: "1.0",
+          exportedAt: new Date().toISOString(),
+          providers: {
+            steam: {
+              apiKey: "a".repeat(32),
+              steamId: "76561198000000000",
+            },
+          },
+        },
+        requestUrl: "https://anish.example/api/play-promotion/import",
+      }),
+    );
+    assert.equal(staged.status, "staged");
+    return withRuntime(bindings, () =>
+      applyPlayPromotion({ id: staged.id, ownerEmail: "owner@example.com" }),
+    );
+  };
+
+  try {
+    const first = await importHardcover("Bearer first-owner-token");
+    assert.deepEqual(first.outcomes, [
+      { provider: "hardcover", status: "applied" },
+    ]);
+    assert.equal(providerCalls, 0);
+    assert.equal(database.snapshots.length, 0, "import must create no snapshot");
+
+    database.snapshots.push({ provider: "hardcover", id: "accepted" });
+    const unchanged = await importHardcover("Bearer first-owner-token");
+    assert.equal(unchanged.status, "complete");
+    assert.deepEqual(database.snapshots, [
+      { provider: "hardcover", id: "accepted" },
+    ]);
+
+    const replacement = await importHardcover("Bearer second-owner-token");
+    assert.equal(replacement.status, "complete");
+    assert.equal(
+      database.snapshots.length,
+      0,
+      "replacing a credential must unpublish the prior account snapshot",
+    );
+    const steam = await importSteam();
+    assert.deepEqual(steam.outcomes, [
+      { provider: "steam", status: "applied" },
+    ]);
+    assert.equal(providerCalls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
   }
 });
 

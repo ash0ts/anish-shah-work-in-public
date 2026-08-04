@@ -47,8 +47,8 @@ export function connectorRefreshResponse(
       ? "Steam game details are not public, so every stored Steam snapshot was unpublished."
       : undefined;
   const retryAfter =
-    result.status === "failed" &&
-    result.code === "rate_limited" &&
+    (result.status === "not_due" ||
+      (result.status === "failed" && result.code === "rate_limited")) &&
     result.retryNotBefore
       ? retryAfterSeconds(result.retryNotBefore, nowMilliseconds)
       : null;

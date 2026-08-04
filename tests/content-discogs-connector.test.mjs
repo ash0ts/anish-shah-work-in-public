@@ -11,7 +11,6 @@ const [
   payloadPolicy,
   presentation,
   repository,
-  scheduled,
   retryState,
   refreshRepository,
   retryUi,
@@ -21,7 +20,6 @@ const [
   import("../lib/server/connectors/public-payload-policy.ts"),
   import("../lib/server/connectors/discogs-presentation.ts"),
   import("../lib/server/connectors/repository.ts"),
-  import("../lib/server/connectors/discogs-scheduled.ts"),
   import("../lib/server/connectors/discogs-retry.ts"),
   import("../lib/server/connectors/repository-refresh.ts"),
   import("../app/studio/connectors/retry-deadline.ts"),
@@ -668,18 +666,27 @@ class Statement {
 
 class DiscogsD1 {
   constructor() {
-    this.setting = null;
+    this.settings = new Map();
     this.snapshots = [];
     this.credential = null;
     this.maintenance = null;
     this.statements = [];
+  }
+  get setting() {
+    return this.settings.get("connector.discogs.presentation") ?? null;
+  }
+  set setting(value) {
+    if (value === null) this.settings.delete("connector.discogs.presentation");
+    else this.settings.set("connector.discogs.presentation", value);
   }
   prepare(sql) {
     return new Statement(this, sql);
   }
   async first(statement) {
     this.statements.push(statement);
-    if (statement.sql.includes("FROM editorial_settings")) return this.setting;
+    if (statement.sql.includes("FROM editorial_settings")) {
+      return this.settings.get(statement.values[0]) ?? null;
+    }
     if (statement.sql.includes("FROM connector_credentials")) {
       return this.credential;
     }
@@ -701,11 +708,11 @@ class DiscogsD1 {
   async run(statement) {
     this.statements.push(statement);
     if (statement.sql.startsWith("INSERT INTO editorial_settings")) {
-      const [, valueJson, , updatedAt] = statement.values;
-      this.setting = { valueJson, updatedAt };
+      const [key, valueJson, , updatedAt] = statement.values;
+      this.settings.set(key, { valueJson, updatedAt });
     }
     if (statement.sql.startsWith("DELETE FROM editorial_settings")) {
-      this.setting = null;
+      this.settings.delete(statement.values[0]);
     }
     if (statement.sql.startsWith("DELETE FROM connector_credentials")) {
       this.credential = null;
@@ -727,7 +734,7 @@ class DiscogsD1 {
   }
 }
 
-test("Discogs publication is opt-in, expires after six hours, and disconnect removes its config", async () => {
+test("Discogs extended-display approval keeps a validated stale catalog available", async () => {
   const database = new DiscogsD1();
   await withRuntimeBindings({ DB: database }, async () => {
     assert.deepEqual(await presentation.getDiscogsPresentationConfig(), {
@@ -737,6 +744,10 @@ test("Discogs publication is opt-in, expires after six hours, and disconnect rem
         reviewedAt: null,
         updatedAt: null,
       },
+    });
+    assert.deepEqual(await presentation.getDiscogsExtendedDisplayApproval(), {
+      status: "ready",
+      approval: null,
     });
     assert.deepEqual(
       await presentation.saveDiscogsPresentationConfig({
@@ -817,14 +828,112 @@ test("Discogs publication is opt-in, expires after six hours, and disconnect rem
       reason: "stale_expired",
     });
 
+    const approvedAt = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+      .toISOString();
+    const approval = await presentation.saveDiscogsExtendedDisplayApproval({
+      provider: "discogs",
+      reference: "owner-permission-reference-2026",
+      approvedAt,
+      expiresAt: null,
+      enabled: true,
+      actorEmail: "owner@example.com",
+    });
+    assert.equal(approval.status, "saved");
+    assert.deepEqual(
+      await presentation.getDiscogsExtendedDisplayApproval(),
+      approval.status === "saved"
+        ? { status: "ready", approval: approval.approval }
+        : null,
+    );
+
+    const stale = await repository.getPublicConnectorSnapshot("discogs");
+    assert.equal(stale.status, "ready");
+    assert.equal(stale.stale, true);
+    assert.equal(stale.fetchedAt, expiredPayload.syncedAt);
+
+    const republished = await presentation.saveDiscogsPresentationConfig({
+      publishCollection: true,
+      acknowledgeNoncommercial: true,
+      actorEmail: "owner@example.com",
+    });
+    assert.equal(republished.status, "saved");
+
+    const expiredApproval = await presentation.saveDiscogsExtendedDisplayApproval({
+      provider: "discogs",
+      reference: "owner-permission-reference-2026",
+      approvedAt,
+      expiresAt: new Date(now.getTime() - 1_000).toISOString(),
+      enabled: true,
+      actorEmail: "owner@example.com",
+    });
+    assert.equal(expiredApproval.status, "saved");
+    assert.deepEqual(await repository.getPublicConnectorSnapshot("discogs"), {
+      status: "unavailable",
+      provider: "discogs",
+      reason: "stale_expired",
+    });
+
     await repository.deleteConnectorCredential("discogs", "owner@example.com");
     assert.equal(database.setting, null);
+    assert.equal(
+      database.settings.has("connector.discogs.extended_display_approval"),
+      false,
+    );
     assert.equal(database.credential, null);
     assert.equal(database.snapshots.length, 0);
   });
 });
 
-test("Discogs Retry-After state blocks manual and scheduled provider calls", async () => {
+test("Discogs extended-display approval rejects malformed protected records", async () => {
+  const database = new DiscogsD1();
+  await withRuntimeBindings({ DB: database }, async () => {
+    const approvedAt = new Date(Date.now() - 60_000).toISOString();
+    for (const input of [
+      {
+        provider: "spotify",
+        reference: "permission-reference",
+        approvedAt,
+        expiresAt: null,
+        enabled: true,
+      },
+      {
+        provider: "discogs",
+        reference: "permission-reference\nunsafe",
+        approvedAt,
+        expiresAt: null,
+        enabled: true,
+      },
+      {
+        provider: "discogs",
+        reference: "permission-reference",
+        approvedAt: "not-a-date",
+        expiresAt: null,
+        enabled: true,
+      },
+      {
+        provider: "discogs",
+        reference: "permission-reference",
+        approvedAt,
+        expiresAt: new Date(Date.parse(approvedAt) - 1).toISOString(),
+        enabled: true,
+      },
+    ]) {
+      assert.deepEqual(
+        await presentation.saveDiscogsExtendedDisplayApproval({
+          ...input,
+          actorEmail: "owner@example.com",
+        }),
+        { status: "invalid", reason: "approval" },
+      );
+    }
+    assert.equal(
+      database.settings.has("connector.discogs.extended_display_approval"),
+      false,
+    );
+  });
+});
+
+test("Discogs Retry-After state blocks manual and retired automatic provider calls", async () => {
   const database = new DiscogsD1();
   const now = Date.now();
   const notBefore = await retryState.recordDiscogsRetryAfter(
@@ -910,32 +1019,12 @@ test("Discogs retry controls reconcile server and local deadlines", () => {
   );
 });
 
-test("Discogs scheduled refresh skips a fresh published snapshot", async () => {
-  const database = new DiscogsD1();
-  const now = new Date();
-  database.setting = {
-    valueJson: JSON.stringify({
-      schemaVersion: 1,
-      publishCollection: true,
-      reviewedAt: now.toISOString(),
-      credentialGeneration: 1,
-    }),
-    updatedAt: now.toISOString(),
-  };
-  database.credential = { provider: "discogs", generation: 1 };
-  database.snapshots = [{
-    fetchedAt: new Date(now.getTime() - 60 * 60 * 1000).toISOString(),
-  }];
-  assert.deepEqual(await scheduled.refreshDiscogsWhenDue(database, now), {
-    status: "not_due",
-  });
-});
-
 test("Discogs manual refresh respects the four-hour provider window", async () => {
   const database = new DiscogsD1();
+  const fetchedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   database.snapshots = [{
     status: "ready",
-    fetchedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    fetchedAt,
   }];
 
   assert.deepEqual(
@@ -945,7 +1034,13 @@ test("Discogs manual refresh respects the four-hour provider window", async () =
       "manual",
       "owner@example.com",
     ),
-    { status: "not_due", provider: "discogs" },
+    {
+      status: "not_due",
+      provider: "discogs",
+      retryNotBefore: new Date(
+        Date.parse(fetchedAt) + 4 * 60 * 60 * 1000,
+      ).toISOString(),
+    },
   );
   assert.equal(
     database.statements.some((statement) =>
@@ -955,22 +1050,54 @@ test("Discogs manual refresh respects the four-hour provider window", async () =
   );
 });
 
-test("Discogs refresh and cron wiring enforce four-hour freshness, hourly retry, and one snapshot", async () => {
-  const [refreshSource, workerSource, credentialSource, routeSource, refreshRouteSource] = await Promise.all([
+test("connector reads and cron cannot initiate provider collection synchronization", async () => {
+  const [
+    refreshSource,
+    workerSource,
+    credentialSource,
+    routeSource,
+    refreshRouteSource,
+    publicRouteSource,
+    spotifyRouteSource,
+    stravaRouteSource,
+    myAnimeListCallbackSource,
+    spotifyCallbackSource,
+    discogsCallbackSource,
+  ] = await Promise.all([
     readFile(new URL("../lib/server/connectors/repository-refresh.ts", import.meta.url), "utf8"),
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/connectors/repository-credentials.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/http/discogs-config.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/http/connector-refresh-response.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/connectors/[provider]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/connectors/spotify/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/connectors/strava/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/connectors/myanimelist/oauth/callback/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/connectors/spotify/oauth/callback/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/connectors/discogs/oauth/callback/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(refreshSource, /DISCOGS_FRESHNESS_WINDOW_MS = 4 \* 60 \* 60 \* 1000/);
-  assert.match(refreshSource, /DISCOGS_AUTOMATIC_RETRY_MS = 60 \* 60 \* 1000/);
+  assert.match(refreshSource, /trigger !== "manual"/);
   assert.match(refreshSource, /provider === "discogs" \? 1 : 2/);
   assert.match(workerSource, /if \(!env\.DB\) return;/);
   assert.match(workerSource, /const db = env\.DB;/);
-  assert.match(workerSource, /refreshDiscogsWhenDue\(db, scheduledAt\)/);
+  assert.doesNotMatch(workerSource, /refreshDiscogsWhenDue|refreshConnector/);
   assert.match(credentialSource, /DISCOGS_PRESENTATION_SETTING_KEY/);
   assert.match(routeSource, /rejectCrossOriginWrite\(request\)[\s\S]*authorizeOwnerApi\(\)[\s\S]*readBoundedJsonBody/);
+  assert.match(routeSource, /Object\.keys\(approval\)\.length !== approvalKeys\.size/);
+  assert.match(routeSource, /hasPresentation === hasApproval/);
+  assert.match(routeSource, /saveDiscogsExtendedDisplayApproval/);
   assert.match(refreshSource, /retryNotBefore: notBefore/);
   assert.match(refreshRouteSource, /"retry-after": String\(retryAfter\)/);
+  for (const source of [publicRouteSource, spotifyRouteSource, stravaRouteSource]) {
+    assert.doesNotMatch(source, /refreshConnector|getRequestExecutionContext|verifyStravaEmbed/);
+  }
+  for (const source of [
+    credentialSource,
+    myAnimeListCallbackSource,
+    spotifyCallbackSource,
+    discogsCallbackSource,
+  ]) {
+    assert.doesNotMatch(source, /refreshConnector\(/);
+  }
 });

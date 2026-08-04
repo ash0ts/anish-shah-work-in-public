@@ -40,7 +40,15 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Three.js/R3F may exist only under `components/play/room-3d/**` and `components/play/travel/**`, load only after their own intent/capability boundaries, and never own provider data, Travel photos, navigation semantics, or accessibility content.
 - The Simulation may use Phaser, XState, and game Canvas only under its scoped paths. Keep Action lazy, Tactical semantic, authored fallback complete, visitor text ephemeral, and every factual card server-owned.
 - Tone/Web Audio is gesture-gated under `components/experience-audio/**`; missing audio is silent and never blocks interaction.
-- Discogs uses OAuth 1.0a HMAC-SHA1 and a text-first, short-lived public catalog. Do not treat it as an OAuth 2 or artwork-gallery provider.
+- Connector collection synchronization is owner-triggered only. Public reads,
+  OAuth callbacks, credential saves, and scheduled maintenance must not fetch or
+  mutate provider collection data; Studio's explicit Refresh action owns that
+  boundary.
+- Failed connector synchronization preserves the active last-known-good
+  snapshot. Discogs uses OAuth 1.0a HMAC-SHA1 and normally retains its six-hour
+  public cutoff; older stale display requires a current, owner-only recorded
+  provider permission. Do not treat Discogs as an OAuth 2 or artwork-gallery
+  provider.
 
 ## Non-Negotiable Boundaries
 
@@ -49,7 +57,9 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Never hand-edit the immutable source files, generated public JSON, generated copy module, content attestation, or migration report. Preserve stable IDs, aliases, explicit metric subjects, and public projector validation.
 - New owner mutations live under `/api/studio/**` and require same-origin rejection, verified owner authorization, bounded body parsing, exact runtime validation, and sanitized no-store responses.
 - OAuth callbacks may be public only with exact callback origins plus encrypted, owner-bound, expiring, single-use state and replay prevention.
-- Do not assume Strava uses the generic connector repository.
+- Do not assume Strava uses the generic connector repository. Its remote embed
+  health check runs only when the owner saves or explicitly verifies the Studio
+  configuration; public reads never recheck Strava.
 - Travel is an owner-authored publication, not a connector. Keep draft D1 state, versioned D1/KV publication, private tier-isolated R2 media, approximate geography, and the `TRAVEL_ATLAS_MODE` gate separate from provider state. Authorize public media against the active snapshot before any derivative-cache lookup.
 - Travel may use R3F, first-party geography, shaders, and browser-local image analysis only inside the scoped paths declared by `AGENTS.md`; its Canvas never replaces the semantic atlas.
 - Simulation uses bounded D1 sessions, budgets, provider approvals, and a tier-isolated Cloudflare AI Gateway. Disable prompt/response logging and response caching, preserve DLP/Guardrails and spend limits, and never persist raw visitor or model text.
@@ -69,7 +79,7 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - `--plan` classifies paths and enforces guardrails without application checks.
 - `--run` executes selected checks. `--full` runs `validate` and `validate:browser`.
 - `--base <ref>` includes committed changes from that merge base through `HEAD`; use it for PR and freelancer review.
-- Owner write, Access/auth, and OAuth code require matching security/connector regression tests.
+- Owner write, Access/auth, and OAuth code require matching security/connector regression tests. Connector changes must prove public reads and cron make zero provider data-API calls, one Studio Refresh makes at most one attempt, and every failed attempt preserves the active snapshot.
 - Travel owner APIs require `tests/travel-security.test.mjs`; Travel schema, geography, or media work requires its focused checks, a clean local migration, and the browser gate.
 - Simulation APIs, persistence, campaign, Gateway, or provider-approval work requires focused Simulation security, migration, UI, privacy, and browser checks. Preserve both Action and Tactical completion plus authored outage fallback.
 - Room registry changes require seven-key parity, zero overview data reads, direct-route source isolation, desktop/Pocket input tests, and disabled-feature reachability tests.

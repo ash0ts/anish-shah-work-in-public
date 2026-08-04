@@ -30,9 +30,19 @@ export type DiscogsPresentationConfig = {
   updatedAt?: string | null;
 };
 
+export type DiscogsExtendedDisplayApproval = {
+  provider: "discogs";
+  reference: string;
+  approvedAt: string;
+  expiresAt: string | null;
+  enabled: boolean;
+  updatedAt: string;
+};
+
 export type ApiResult = {
   authorizationUrl?: string;
   callbackUrl?: string;
+  checkedAt?: string | null;
   code?: string;
   embedUrl?: string;
   error?: string;
@@ -45,6 +55,8 @@ export type ApiResult = {
   status?: string;
   updatedAt?: string;
   config?: SpotifyPresentationConfig | DiscogsPresentationConfig;
+  extendedDisplayApproval?: DiscogsExtendedDisplayApproval | null;
+  approval?: DiscogsExtendedDisplayApproval;
 };
 
 export type ProviderMeta = {

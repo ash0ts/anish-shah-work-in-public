@@ -3,11 +3,12 @@
 ## Provider Model
 
 - MyAnimeList and Spotify use owner-only OAuth 2 with separate applications per live environment.
-- Discogs uses OAuth 1.0a HMAC-SHA1, server nonces/timestamps, owner-bound request transactions, exact callbacks, and separate applications. Its text-first catalog refreshes after four hours and becomes unavailable after six.
+- Discogs uses OAuth 1.0a HMAC-SHA1, server nonces/timestamps, owner-bound request transactions, exact callbacks, and separate applications. Its text-first catalog is eligible for an owner-triggered refresh after four hours and normally becomes unavailable after six.
 - Hardcover uses an owner API token. Steam uses API key plus SteamID64 and a truthful storage-country gate.
 - Strava stores a validated public profile and optional official embed separately from the generic connector repository.
 - Every provider publishes through an exact runtime projector. No raw payload, standalone account identifier, credential, or arbitrary remote artwork URL enters public JSON.
 - Provider artwork resolves only host-free allowlisted keys from a currently published snapshot.
+- Collection synchronization is manual-only: exactly one explicit Studio Refresh may call a provider data API. Public reads, OAuth callbacks, credential saves, and cron are pure with respect to provider collections.
 
 Travel is an owner-authored publication, not a provider connector. Drafts and exact
 media authorization records live in D1, sanitized versioned snapshots use D1/KV,
@@ -22,6 +23,11 @@ Owner JSON writes reject cross-origin requests, verify Access plus exact owner a
 
 OAuth callbacks are public only because providers must reach them. Require exact environment callback, encrypted owner binding, ten-minute expiry, single use, replay protection, safe fixed redirects, proactive token refresh, and sanitized failure states. Never log URL/query data, identities, codes, verifiers, signatures, tokens, or provider payloads.
 
+OAuth completion and credential saves establish a connection but do not fetch a
+collection. Studio must present `Connected · Refresh required` until the owner
+explicitly synchronizes. Strava is checked only by Studio save or Verify; its
+public read never performs a remote health request.
+
 ## Four-Tier Isolation
 
 - Local: loopback-only owner fallback, local D1/secrets, no hosted identity assumptions.
@@ -35,7 +41,13 @@ Local promotion may transfer only reviewed, explicitly portable provider setup o
 ## Publication, Retention, and Disconnect
 
 - D1 commits validated publication state; versioned `PUBLICATION_CACHE` KV advances only after D1 succeeds. If both are unavailable/invalid in production, return a noindexed `503`, never the checked-in bundle.
-- Preserve last-known-good connector data only within provider-specific windows.
+- A failed, rate-limited, malformed, or rejected synchronization never changes
+  the active snapshot pointer. Preserve the stored last-known-good snapshot;
+  public display still observes each provider's age/privacy rules.
+- Discogs keeps the standard six-hour cutoff unless a current owner-only
+  permission record explicitly enables older stale display. That record keeps
+  provider, permission reference, approval time, optional expiry, and enabled
+  state private; public output exposes only freshness and the actual update time.
 - Disconnect deletes provider credentials/config, snapshots, pending OAuth state, sync history, and provider audit records, then unpublishes.
 - Third-party frames remain consent-gated and CSP allowlists exact.
 - Update Privacy and tests whenever retrieval, storage, retention, disclosure, or deletion changes.

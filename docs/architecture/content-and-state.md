@@ -70,9 +70,13 @@ fallback.
 Provider responses are untrusted until exact normalization and public
 projection succeed. D1 stores encrypted credentials, bounded sanitized
 snapshots, short-lived OAuth/promotion transactions, sync history, and audit
-state. Public routes expose only allowlisted response contracts. Disconnect
-deletes and unpublishes according to the connector contract; a transient
-failure preserves only the provider’s eligible last-known-good snapshot.
+state. Public routes expose only allowlisted response contracts and are pure
+reads: they never initiate synchronization. The same is true of OAuth
+callbacks, credential saves, and scheduled maintenance. Only an explicit owner
+Studio Refresh may fetch provider collection data. Disconnect deletes and
+unpublishes according to the connector contract; a failed refresh preserves
+the stored snapshot and active pointer while its provider-specific public-age
+and privacy policy still applies.
 
 See [Play connections](../play-connections.md) for provider-specific freshness,
 publication, and recovery rules.

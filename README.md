@@ -45,6 +45,9 @@ material to staging or production.
 - `content/copy/` contains reviewed, Git-owned presentation wording.
 - D1 controls published visibility, ordering, caveats, metric wording, encrypted
   connector credentials, and bounded provider snapshots.
+- Provider collections synchronize only when the owner selects Refresh in
+  Studio. Public reads and scheduled maintenance never call provider data APIs;
+  a failed refresh leaves the accepted snapshot unchanged.
 - Workers KV holds only a validated last-known-good public publication.
 - Cloudflare Access plus Worker JWT validation and the exact owner allowlist
   protect Studio and owner writes.
