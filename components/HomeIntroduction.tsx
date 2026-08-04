@@ -3,6 +3,7 @@
 import { animate } from "animejs";
 import Link from "next/link";
 import { useLayoutEffect, useRef } from "react";
+import { SITE_COPY } from "@/lib/copy";
 import styles from "./HomeIntroduction.module.css";
 
 type HomeIntroductionProps = {
@@ -11,10 +12,10 @@ type HomeIntroductionProps = {
 };
 
 const trajectory = [
-  ["2021", "Operational ML"],
-  ["2022—23", "Generative systems"],
-  ["2024—25", "Evaluation & adoption"],
-  ["Now", "Agent-native product"],
+  [SITE_COPY.home["trajectory-1-period"], SITE_COPY.home["trajectory-1-title"]],
+  [SITE_COPY.home["trajectory-2-period"], SITE_COPY.home["trajectory-2-title"]],
+  [SITE_COPY.home["trajectory-3-period"], SITE_COPY.home["trajectory-3-title"]],
+  [SITE_COPY.home["trajectory-4-period"], SITE_COPY.home["trajectory-4-title"]],
 ] as const;
 
 export function HomeIntroduction({
@@ -58,7 +59,7 @@ export function HomeIntroduction({
       ref={rootRef}
     >
       <div className={styles.identity}>
-        <p>Applied AI · New York · 2021—Now</p>
+        <p>{SITE_COPY.home["identity-eyebrow"]}</p>
         <h1 id="home-title" aria-label="Anish Shah">
           <span>Anish</span>
           <span>Shah</span>
@@ -68,12 +69,11 @@ export function HomeIntroduction({
         <p className={styles.headline}>{headline}</p>
         <p className={styles.summary}>{summary}</p>
         <p className={styles.focus}>
-          <span>Now</span>
-          How agents discover tools, use context, and leave evidence teams can
-          trust.
+          <span>{SITE_COPY.home["focus-label"]}</span>
+          {SITE_COPY.home["focus-body"]}
         </p>
         <Link className={styles.action} href="/work">
-          Explore my work <span aria-hidden="true">↗</span>
+          {SITE_COPY.home["primary-cta"]} <span aria-hidden="true">↗</span>
         </Link>
       </div>
       <ol className={styles.trajectory} aria-label="Career trajectory">

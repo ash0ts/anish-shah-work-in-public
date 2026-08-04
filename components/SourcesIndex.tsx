@@ -3,6 +3,7 @@ import { FilteredResultFocus } from "@/components/FilteredResultFocus";
 import { isKnownUnavailablePublicUrl } from "@/lib/public-url-health";
 import type { EvidenceSource } from "@/types/content";
 import styles from "./SourcesIndex.module.css";
+import { SITE_COPY } from "@/lib/copy";
 
 type LinkedContext = {
   id: string;
@@ -72,7 +73,7 @@ export function SourcesIndex({
     >
       <div className={styles.heading}>
         <div>
-          <p className={styles.eyebrow}>Public bibliography</p>
+          <p className={styles.eyebrow}>{SITE_COPY.sources["bibliography-eyebrow"]}</p>
           <h2 id="source-index-title" tabIndex={-1}>
             {entries.length} sources, open to inspect.
           </h2>
@@ -83,12 +84,12 @@ export function SourcesIndex({
           method="get"
         >
           <label>
-            <span>Search sources</span>
+            <span>{SITE_COPY.sources["bibliography-search-label"]}</span>
             <input
               defaultValue={query}
               name="q"
               type="search"
-              placeholder="Work, claim, publisher, title…"
+              placeholder={SITE_COPY.sources["bibliography-search-placeholder"]}
             />
           </label>
           <label>

@@ -518,6 +518,155 @@
   text-transform: uppercase;
 }
 
+.copyOwnershipPanel {
+  margin-top: 28px;
+  padding: clamp(20px, 3vw, 30px);
+  border: 1px solid rgba(23, 34, 59, 0.42);
+  background: color-mix(in srgb, var(--blue) 4%, var(--paper));
+}
+
+.copyOwnershipIntro {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(300px, 1.2fr);
+  gap: 24px clamp(32px, 7vw, 96px);
+}
+
+.copyOwnershipIntro h3 {
+  max-width: 520px;
+  margin: 0;
+  font-family: "Recursive", "Arial Black", sans-serif;
+  font-size: clamp(26px, 3.2vw, 42px);
+  letter-spacing: -0.045em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.copyOwnershipIntro > p {
+  margin: 22px 0 0;
+  color: rgba(23, 34, 59, 0.72);
+  line-height: 1.55;
+}
+
+.copyOwnershipStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 24px 0 0;
+  border-block: 1px solid rgba(23, 34, 59, 0.3);
+}
+
+.copyOwnershipStats > div {
+  min-width: 0;
+  padding: 15px 18px 15px 0;
+}
+
+.copyOwnershipStats > div + div {
+  padding-left: 18px;
+  border-left: 1px solid rgba(23, 34, 59, 0.3);
+}
+
+.copyOwnershipStats dt,
+.copyOwnershipMeta > span {
+  color: rgba(23, 34, 59, 0.64);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.copyOwnershipStats dd {
+  margin: 6px 0 0;
+  font-family: "Recursive", "Arial Black", sans-serif;
+  font-size: clamp(24px, 3vw, 36px);
+  font-weight: 720;
+  letter-spacing: -0.035em;
+}
+
+.copyOwnershipMeta {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px 18px;
+  margin-top: 18px;
+}
+
+.copyOwnershipMeta code,
+.copyOwnershipDetails code {
+  font: 12px/1.5 "IBM Plex Mono", ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
+.copyOwnershipDetails {
+  margin-top: 20px;
+  border-top: 1px solid rgba(23, 34, 59, 0.3);
+}
+
+.copyOwnershipDetails summary {
+  min-height: 44px;
+  padding: 13px 0;
+  font-weight: 680;
+  cursor: pointer;
+}
+
+.copyOwnershipDetails ol {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid rgba(23, 34, 59, 0.22);
+  list-style: none;
+}
+
+.copyOwnershipDetails li {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(150px, 0.35fr) minmax(300px, 1fr);
+  gap: 12px 22px;
+  padding: 15px 0;
+  border-bottom: 1px solid rgba(23, 34, 59, 0.18);
+}
+
+.copyOwnershipDetails li > div,
+.copyOwnershipDetails li strong,
+.copyOwnershipDetails li code {
+  display: block;
+  min-width: 0;
+}
+
+.copyOwnershipDetails li > span {
+  color: #08755f;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.copyOwnershipDetails li > p,
+.copyOwnershipDetails > p,
+.copyOwnershipUnavailable {
+  margin: 0;
+  color: rgba(23, 34, 59, 0.7);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.copyOwnershipLink {
+  display: inline-block;
+  margin-top: 18px;
+  color: var(--ink);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-underline-offset: 0.25em;
+  text-transform: uppercase;
+}
+
+.copyOwnershipUnavailable {
+  margin-top: 22px;
+  padding-left: 14px;
+  border-left: 3px solid var(--amber);
+}
+
 .editorialWorkspace {
   margin-top: 28px;
   border: 1px solid var(--ink);
@@ -678,6 +827,77 @@
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 12px;
   overflow-wrap: anywhere;
+}
+
+.copyDeckRecord {
+  min-width: 0;
+  margin-top: 22px;
+  padding: 20px;
+  border: 1px solid rgba(41, 93, 255, 0.38);
+  background: color-mix(in srgb, var(--blue) 4%, white);
+}
+
+.copyDeckRecord > span,
+.copyDeckFields dt {
+  color: var(--blue);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.copyDeckRecord h5 {
+  margin: 8px 0 6px;
+  font-family: "Recursive", "Arial Black", sans-serif;
+  font-size: 23px;
+  letter-spacing: -0.035em;
+}
+
+.copyDeckRecord > p {
+  margin: 0;
+  color: rgba(23, 34, 59, 0.7);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.copyDeckRecord > code {
+  display: block;
+  margin-top: 16px;
+  color: rgba(23, 34, 59, 0.6);
+  font: 12px/1.5 "IBM Plex Mono", ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
+.copyDeckFields {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 18px 0 0;
+  border-top: 1px solid rgba(23, 34, 59, 0.2);
+}
+
+.copyDeckFields > div {
+  min-width: 0;
+  padding: 13px 14px 13px 0;
+  border-bottom: 1px solid rgba(23, 34, 59, 0.2);
+}
+
+.copyDeckFields > div:nth-child(even) {
+  padding-left: 14px;
+  border-left: 1px solid rgba(23, 34, 59, 0.2);
+}
+
+.copyDeckFields dd {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.copyDeckEmpty {
+  color: rgba(23, 34, 59, 0.52);
+  font-style: italic;
 }
 
 .compactFields {
@@ -1502,6 +1722,15 @@
     grid-template-columns: 1fr 1fr;
   }
 
+  .copyOwnershipIntro,
+  .copyOwnershipDetails li {
+    grid-template-columns: 1fr;
+  }
+
+  .copyOwnershipIntro > p {
+    margin-top: 0;
+  }
+
   .recordWorkspace {
     grid-template-columns: 1fr;
   }
@@ -1558,7 +1787,18 @@
 
 @media (max-width: 520px) {
   .metricGrid,
-  .connectorFacts {
+  .connectorFacts,
+  .copyOwnershipStats {
+    grid-template-columns: 1fr;
+  }
+
+  .copyOwnershipStats > div + div {
+    padding-left: 0;
+    border-top: 1px solid rgba(23, 34, 59, 0.3);
+    border-left: 0;
+  }
+
+  .copyOwnershipMeta {
     grid-template-columns: 1fr;
   }
 
@@ -1570,6 +1810,15 @@
 
   .compactFields {
     grid-template-columns: 1fr;
+  }
+
+  .copyDeckFields {
+    grid-template-columns: 1fr;
+  }
+
+  .copyDeckFields > div:nth-child(even) {
+    padding-left: 0;
+    border-left: 0;
   }
 
   .metricCard {

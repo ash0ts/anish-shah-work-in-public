@@ -1,0 +1,291 @@
+name: Deploy trusted copy preview
+
+on:
+  workflow_run:
+    workflows: [Copy-only validation]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+jobs:
+  inspect:
+    name: reclassify with trusted code
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.pull_requests[0].number != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      eligible: ${{ steps.copy_lane.outputs.eligible }}
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+      base_sha: ${{ steps.pr.outputs.base_sha }}
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+    steps:
+      - name: Check out trusted default-branch tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Use Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - name: Verify the open PR and current head
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: |
+          endpoint="repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
+          gh api "$endpoint" > "${RUNNER_TEMP}/copy-pr.json"
+          state="$(jq -r '.state' "${RUNNER_TEMP}/copy-pr.json")"
+          head_sha="$(jq -r '.head.sha' "${RUNNER_TEMP}/copy-pr.json")"
+          base_sha="$(jq -r '.base.sha' "${RUNNER_TEMP}/copy-pr.json")"
+          head_repo="$(jq -r '.head.repo.full_name' "${RUNNER_TEMP}/copy-pr.json")"
+          test "$state" = "open"
+          test "$head_sha" = "$EXPECTED_HEAD_SHA"
+          test "$head_repo" = "$GITHUB_REPOSITORY"
+          test "${#head_sha}" -eq 40
+          test "${#base_sha}" -eq 40
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+      - name: Reclassify changed paths using trusted tooling
+        id: copy_lane
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+        run: |
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" \
+            --jq '.[] | {filename, status}' | jq -s '.' \
+            > "${RUNNER_TEMP}/copy-pr-files.json"
+          node scripts/copy-only-lane.mjs classify \
+            --changes-file "${RUNNER_TEMP}/copy-pr-files.json" \
+            --github-output "$GITHUB_OUTPUT"
+
+  mark_stale:
+    name: mark a failed copy preview stale
+    needs: inspect
+    if: >-
+      always() &&
+      needs.inspect.outputs.eligible == 'true' &&
+      github.event.workflow_run.conclusion != 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Update the persistent preview comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.inspect.outputs.head_sha }}
+        run: |
+          marker='<!-- anish-site-preview -->'
+          body="${marker}
+          Copy-only validation failed for current SHA \`${HEAD_SHA}\`. Any older preview is stale and must not be reviewed."
+          comment_id="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --jq ".[] | select(.body | startswith(\"${marker}\")) | .id" | head -n 1)"
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" -f body="$body" >/dev/null
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi
+
+  deploy:
+    name: build base code with validated copy
+    needs: inspect
+    if: >-
+      needs.inspect.outputs.eligible == 'true' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: copy-preview
+    concurrency:
+      group: preview-pr-${{ needs.inspect.outputs.pr_number }}
+      cancel-in-progress: true
+    steps:
+      - name: Check out trusted deployment tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: trusted
+          persist-credentials: false
+      - name: Check out exact base code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.inspect.outputs.base_sha }}
+          path: site
+          persist-credentials: false
+      - name: Check out pristine base for trusted comparison
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.inspect.outputs.base_sha }}
+          path: pristine
+          persist-credentials: false
+      - name: Set up the exact base repository toolchain
+        uses: ./trusted/.github/actions/setup-repository
+        with:
+          working-directory: site
+      - name: Download the unprivileged copy artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: copy-only-deck-${{ needs.inspect.outputs.pr_number }}-${{ needs.inspect.outputs.head_sha }}
+          path: .copy-preview/input
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply and revalidate plain-text copy with trusted code
+        env:
+          BASE_SHA: ${{ needs.inspect.outputs.base_sha }}
+          HEAD_SHA: ${{ needs.inspect.outputs.head_sha }}
+          PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
+        run: |
+          node trusted/scripts/copy-only-lane.mjs apply \
+            --package .copy-preview/input/package.json \
+            --base-root site \
+            --pristine-base-root pristine \
+            --base-sha "$BASE_SHA" \
+            --head-sha "$HEAD_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --pr-number "$PR_NUMBER" \
+            --report site/.copy-preview/trusted-report.json
+      - name: Validate trusted code plus copy
+        working-directory: site
+        run: npm run validate
+      - name: Write synthetic preview metadata
+        working-directory: site
+        env:
+          PREVIEW_PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
+          PREVIEW_SOURCE_SHA: ${{ needs.inspect.outputs.head_sha }}
+          PREVIEW_WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: npm run preview:metadata
+      - name: Scan and prepare the read-only synthetic preview
+        working-directory: site
+        env:
+          CF_ACCESS_TEAM_DOMAIN: ${{ vars.CF_ACCESS_TEAM_DOMAIN }}
+          PREVIEW_CF_ACCESS_AUD: ${{ vars.PREVIEW_CF_ACCESS_AUD }}
+          PREVIEW_PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
+          RELEASE_VALIDATED_SHA: ${{ needs.inspect.outputs.head_sha }}
+        run: |
+          npm run bundle:scan
+          npm run preview:prepare
+      - name: Capture production integrity guard
+        id: production_guard_capture
+        working-directory: site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}
+        run: >-
+          node scripts/preview-production-guard.mjs capture
+          "${RUNNER_TEMP}/copy-preview-production-guard.json"
+      - name: Recheck exact head and base before privileged deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ needs.inspect.outputs.head_sha }}
+          EXPECTED_BASE_SHA: ${{ needs.inspect.outputs.base_sha }}
+        run: |
+          endpoint="repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
+          snapshot="$(gh api "$endpoint" --jq '[.state, .head.sha, .base.sha, .head.repo.full_name] | @tsv')"
+          test "$snapshot" = $'open\t'"${EXPECTED_HEAD_SHA}"$'\t'"${EXPECTED_BASE_SHA}"$'\t'"${GITHUB_REPOSITORY}"
+      - name: Deploy the ephemeral copy preview
+        working-directory: site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}
+        run: npx --no-install wrangler deploy --config dist/server/wrangler.preview.json
+      - name: Verify production integrity guard
+        if: ${{ always() && steps.production_guard_capture.outcome == 'success' }}
+        working-directory: site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}
+        run: >-
+          node scripts/preview-production-guard.mjs verify
+          "${RUNNER_TEMP}/copy-preview-production-guard.json"
+      - name: Verify the exact Access-protected preview bytes
+        working-directory: site
+        env:
+          ACCESS_CLIENT_ID: ${{ secrets.PREVIEW_ACCESS_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.PREVIEW_ACCESS_CLIENT_SECRET }}
+          EXPECTED_RELEASE_SHA: ${{ needs.inspect.outputs.head_sha }}
+          PREVIEW_ORIGIN: https://pr-${{ needs.inspect.outputs.pr_number }}.anish-shah-is.online
+          PREVIEW_READINESS_TIMEOUT_MS: "90000"
+        run: node scripts/preview-readiness.mjs
+      - name: Install Chromium for copy screenshots
+        working-directory: site
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Capture affected routes
+        working-directory: site
+        env:
+          ACCESS_CLIENT_ID: ${{ secrets.PREVIEW_ACCESS_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.PREVIEW_ACCESS_CLIENT_SECRET }}
+          PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
+        run: |
+          node scripts/capture-copy-preview.mjs \
+            --report .copy-preview/trusted-report.json \
+            --origin "https://pr-${PR_NUMBER}.anish-shah-is.online" \
+            --output .copy-preview/screenshots \
+            --result .copy-preview/screenshot-report.json
+      - name: Upload copy screenshots
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: copy-preview-screenshots-${{ needs.inspect.outputs.pr_number }}-${{ needs.inspect.outputs.head_sha }}
+          path: site/.copy-preview/screenshots
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+      - name: Build the safe preview comment
+        env:
+          PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
+        run: |
+          node trusted/scripts/copy-only-lane.mjs comment \
+            --report site/.copy-preview/trusted-report.json \
+            --screenshot-report site/.copy-preview/screenshot-report.json \
+            --preview-url "https://pr-${PR_NUMBER}.anish-shah-is.online" \
+            --output site/.copy-preview/comment.md
+      - name: Update the persistent PR preview comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
+        run: |
+          marker='<!-- anish-site-preview -->'
+          body="$(cat site/.copy-preview/comment.md)"
+          comment_id="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --jq ".[] | select(.body | startswith(\"${marker}\")) | .id" | head -n 1)"
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" -f body="$body" >/dev/null
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi
+
+  mark_deploy_failed:
+    name: mark a failed trusted deployment stale
+    needs: [inspect, deploy]
+    if: >-
+      always() &&
+      needs.inspect.outputs.eligible == 'true' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      needs.deploy.result == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Mark only the still-current SHA stale
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.inspect.outputs.head_sha }}
+        run: |
+          endpoint="repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
+          current="$(gh api "$endpoint" --jq '[.state, .head.sha] | @tsv')"
+          if [ "$current" != $'open\t'"${HEAD_SHA}" ]; then
+            echo "A newer head superseded this failed deployment; no comment changed."
+            exit 0
+          fi
+          marker='<!-- anish-site-preview -->'
+          body="${marker}
+          Trusted copy-preview deployment failed for current SHA \`${HEAD_SHA}\`. Any older preview is stale and must not be reviewed."
+          comment_id="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --jq ".[] | select(.body | startswith(\"${marker}\")) | .id" | head -n 1)"
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" -f body="$body" >/dev/null
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" -f body="$body" >/dev/null
+          fi

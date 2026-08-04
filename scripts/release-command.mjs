@@ -24,6 +24,7 @@ import {
   createTriggerDeploymentReceipt,
   TRIGGER_RECEIPT_PATH,
 } from "./lib/release-trigger-contract.mjs";
+import { buildCopyDeck } from "./lib/copy-deck.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const configPath = path.join(root, "dist/server/wrangler.public.json");
@@ -112,10 +113,12 @@ async function verifyPlan() {
   const plan = JSON.parse(planBytes.toString("utf8"));
   const attestation = JSON.parse(attestationBytes.toString("utf8"));
   const config = JSON.parse(configBytes.toString("utf8"));
+  const { copyVersion } = await buildCopyDeck(root);
   if (
     plan.schemaVersion !== "1.2" ||
     plan.commitSha !== head ||
     plan.contentVersion !== attestation.contentVersion ||
+    plan.copyVersion !== copyVersion ||
     plan.checksums?.publicContentAttestationSha256 !== sha256(attestationBytes) ||
     plan.checksums?.preparedWorkerConfigSha256 !== sha256(configBytes) ||
     plan.checksums?.deployableArtifactManifestSha256 !==

@@ -5,6 +5,7 @@ import {
   type RoomObjectId,
   type RoomObjectRegistry,
 } from "./room-types";
+import { SITE_COPY } from "@/lib/copy";
 
 export const ROOM_OBJECT_BY_ID = {
   watch: {
@@ -15,9 +16,8 @@ export const ROOM_OBJECT_BY_ID = {
     roomLabel: "Television · Watch",
     provider: "myanimelist",
     object: "Graphite television",
-    title: "Midnight Broadcast",
-    description:
-      "Anime seasons, watch states, recurring genres, and the full public shelf.",
+    title: SITE_COPY.play["watch-title"],
+    description: SITE_COPY.play["watch-description"],
     approachPoseId: "watch-approach",
     meshRoot: "OBJ__watch",
     matchCutSurface: "television glass",
@@ -30,9 +30,8 @@ export const ROOM_OBJECT_BY_ID = {
     roomLabel: "Bookshelf · Read",
     provider: "hardcover",
     object: "Wooden bookshelf",
-    title: "Borrowed Shelf",
-    description:
-      "Reading states, recent books, ratings, and the complete public shelf.",
+    title: SITE_COPY.play["read-title"],
+    description: SITE_COPY.play["read-description"],
     approachPoseId: "read-approach",
     meshRoot: "OBJ__read",
     matchCutSurface: "open shelf",
@@ -45,9 +44,8 @@ export const ROOM_OBJECT_BY_ID = {
     roomLabel: "Pocket player · Listen",
     provider: "spotify",
     object: "Pocket music player",
-    title: "Pocket Player",
-    description:
-      "Spotify-calculated Top Tracks in their returned order, never inferred play counts.",
+    title: SITE_COPY.play["listen-title"],
+    description: SITE_COPY.play["listen-description"],
     approachPoseId: "listen-approach",
     meshRoot: "OBJ__listen",
     matchCutSurface: "player display",
@@ -60,9 +58,8 @@ export const ROOM_OBJECT_BY_ID = {
     roomLabel: "Record crate · Collect",
     provider: "discogs",
     object: "Record crate",
-    title: "Crate Archive",
-    description:
-      "A physical record catalog organized by format and decade.",
+    title: SITE_COPY.play["collect-title"],
+    description: SITE_COPY.play["collect-description"],
     approachPoseId: "collect-approach",
     meshRoot: "OBJ__collect",
     matchCutSurface: "record sleeve",
@@ -75,9 +72,8 @@ export const ROOM_OBJECT_BY_ID = {
     roomLabel: "Computer · Play",
     provider: "steam",
     object: "Beige computer",
-    title: "Desktop Library",
-    description:
-      "A public game library, recent sessions, and deliberately rounded playtime.",
+    title: SITE_COPY.play["play-title"],
+    description: SITE_COPY.play["play-description"],
     approachPoseId: "play-approach",
     meshRoot: "OBJ__play",
     matchCutSurface: "computer display",
@@ -90,9 +86,8 @@ export const ROOM_OBJECT_BY_ID = {
     roomLabel: "Treadmill television · Move",
     provider: "strava",
     object: "Cardio television",
-    title: "Cardio Television",
-    description:
-      "An official public movement feed, loaded only after visitor consent.",
+    title: SITE_COPY.play["move-title"],
+    description: SITE_COPY.play["move-description"],
     approachPoseId: "move-approach",
     meshRoot: "OBJ__move",
     matchCutSurface: "treadmill display",

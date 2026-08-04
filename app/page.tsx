@@ -8,17 +8,18 @@ import { getPublicContentView } from "@/lib/server/public-content";
 import { requestCspNonce } from "@/lib/server/csp";
 import {
   absoluteSiteUrl,
+  buildHomeStructuredData,
   publicPageMetadata,
   safeJsonLd,
 } from "@/lib/seo";
+import { SITE_COPY } from "@/lib/copy";
 import styles from "./home.module.css";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Applied AI, in public",
-  description:
-    "Anish Shah builds agent tooling, evaluation systems, and applied-AI learning programs at Weights & Biases.",
+  title: SITE_COPY.home["seo-title"],
+  description: SITE_COPY.home["seo-description"],
   path: "/",
   type: "profile",
 });
@@ -29,43 +30,7 @@ export default async function Home() {
   const buckets = featuredWorkBucketsFrom(bundle);
   const impactTracks = homepageImpactTracksFrom(bundle);
   const profileUrl = absoluteSiteUrl("/");
-  const personId = `${profileUrl}#anish-shah`;
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "ProfilePage",
-        "@id": `${profileUrl}#profile-page`,
-        url: profileUrl,
-        name: "Anish Shah — Applied AI, in public",
-        description: bundle.profile.summary,
-        mainEntity: { "@id": personId },
-      },
-      {
-        "@type": "Person",
-        "@id": personId,
-        name: bundle.profile.name,
-        url: profileUrl,
-        jobTitle: bundle.profile.headline,
-        description: bundle.profile.summary,
-        sameAs: bundle.profile.links.map((link) => link.href),
-        worksFor: {
-          "@type": "Organization",
-          name: "Weights & Biases",
-          url: "https://wandb.ai/",
-        },
-      },
-      {
-        "@type": "WebSite",
-        "@id": `${profileUrl}#website`,
-        url: profileUrl,
-        name: "Anish Shah",
-        description:
-          "Public work across applied AI systems, education, open source, and technical communities.",
-        publisher: { "@id": personId },
-      },
-    ],
-  };
+  const structuredData = buildHomeStructuredData(bundle, profileUrl);
 
   return (
     <main id="main" className={`site-main ${styles.home}`}>

@@ -23,6 +23,7 @@ import {
   DOMAIN_CUTOVER_SMOKE_TESTS,
   TRIGGER_RECEIPT_PATH,
 } from "./lib/release-trigger-contract.mjs";
+import { buildCopyDeck } from "./lib/copy-deck.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BASE_SMOKE_TESTS = [
@@ -170,10 +171,12 @@ const plan = JSON.parse(planBytes.toString("utf8"));
 const contentAttestation = JSON.parse(contentAttestationBytes.toString("utf8"));
 const releaseConfig = JSON.parse(releaseConfigBytes.toString("utf8"));
 const triggerReceipt = JSON.parse(triggerReceiptBytes.toString("utf8"));
+const { copyVersion } = await buildCopyDeck(root);
 if (
   plan.schemaVersion !== "1.2" ||
   plan.commitSha !== head ||
   plan.contentVersion !== contentAttestation.contentVersion ||
+  plan.copyVersion !== copyVersion ||
   !["compatible", "predeploy_bootstrap_required"].includes(
     plan.publicationCheckpoint?.status,
   ) ||
@@ -275,6 +278,7 @@ const record = {
   commitSha: head,
   contentVersion: plan.contentVersion,
   playExperienceMode: plan.playExperienceMode,
+  copyVersion: plan.copyVersion,
   publicContentSha256: plan.publicContentSha256,
   deployableArtifacts: plan.deployableArtifacts,
   releaseBuildCheckpoint: plan.releaseBuildCheckpoint,

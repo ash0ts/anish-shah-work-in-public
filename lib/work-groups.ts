@@ -3,6 +3,7 @@ import type {
   WorkBucket as WorkBucketId,
   WorkGroup,
 } from "@/types/content";
+import { SITE_COPY, workGroupCopyFor } from "@/lib/copy";
 
 type BundleWithWorkGroups = AnishContentBundle & {
   workGroups?: WorkGroup[];
@@ -20,89 +21,29 @@ export type WorkBucket = {
 export const workBuckets: WorkBucket[] = [
   {
     id: "products-open-source",
-    title: "Systems & Open Source",
-    shortTitle: "Systems",
-    statement:
-      "Agent-facing interfaces, evaluation tooling, and ML infrastructure integrations released as public software.",
+    title: SITE_COPY.work["bucket-1-title"],
+    shortTitle: SITE_COPY.work["bucket-1-short-title"],
+    statement: SITE_COPY.work["bucket-1-statement"],
   },
   {
     id: "courses-learning",
-    title: "Curricula & Workshops",
-    shortTitle: "Curricula",
-    statement:
-      "Courses and multi-session instruction spanning prompting, LLM evaluation, fine-tuning, and agent engineering.",
+    title: SITE_COPY.work["bucket-2-title"],
+    shortTitle: SITE_COPY.work["bucket-2-short-title"],
+    statement: SITE_COPY.work["bucket-2-statement"],
   },
   {
     id: "writing-research",
-    title: "Technical Writing & Implementations",
-    shortTitle: "Writing",
-    statement:
-      "Articles and public implementations covering LLM support systems, prompt engineering, and arXiv summarization.",
+    title: SITE_COPY.work["bucket-3-title"],
+    shortTitle: SITE_COPY.work["bucket-3-short-title"],
+    statement: SITE_COPY.work["bucket-3-statement"],
   },
   {
     id: "talks-programs",
-    title: "Technical Talks & Programs",
-    shortTitle: "Talks",
-    statement:
-      "Public sessions on agent architecture, model fine-tuning, and evaluation across conferences and practitioner programs.",
+    title: SITE_COPY.work["bucket-4-title"],
+    shortTitle: SITE_COPY.work["bucket-4-short-title"],
+    statement: SITE_COPY.work["bucket-4-statement"],
   },
 ];
-
-type HomepageWorkPresentation = {
-  title: string;
-  role: string;
-};
-
-const homepageWorkPresentationByGroupId = {
-  "group:products:wandb-mcp": {
-    title: "W&B MCP Server",
-    role: "Contributor · launch coauthor",
-  },
-  "group:products:evalforge": {
-    title: "EvalForge: evaluation-criteria generation & alignment",
-    role: "Creator",
-  },
-  "group:products:lightning-fabric": {
-    title: "W&B logging & checkpointing for Lightning Fabric",
-    role: "Contributor · three upstream pull requests",
-  },
-  "group:courses:ai-curriculum": {
-    title: "AI curriculum: prompting, evaluation & agents",
-    role: "Instructor · three courses",
-  },
-  "group:courses:agentic-llm-series": {
-    title: "Agentic LLM fine-tuning & evaluation",
-    role: "Speaker / co-instructor · three sessions",
-  },
-  "group:courses:startup-school": {
-    title: "Google Cloud Startup School: GenAI applications",
-    role: "Presenter · two regional broadcasts + replay",
-  },
-  "group:writing:wandbot": {
-    title: "WandBot: GPT-4 documentation support",
-    role: "Coauthor",
-  },
-  "group:writing:prompt-engineering-langchain": {
-    title: "Prompt engineering with LangChain & W&B",
-    role: "Author",
-  },
-  "group:writing:automated-pdf-summarization": {
-    title: "arXiv summarization with Claude & Weave",
-    role: "Author · cookbook implementation contributor",
-  },
-  "group:talks:architecting-agents": {
-    title: "Architecting & orchestrating AI agents",
-    role: "Speaker / instructor · four public deliveries",
-  },
-  "group:talks:llm-agent-fine-tuning": {
-    title: "LLM agent fine-tuning for task automation",
-    role: "Speaker · two public deliveries",
-  },
-  "group:talks:building-evaluating-agents": {
-    title: "Building agents with evaluation in the loop",
-    role: "Conference speaker",
-  },
-} satisfies Record<string, HomepageWorkPresentation>;
 
 const fallbackEntityIds: Record<WorkBucketId, string[]> = {
   "products-open-source": [
@@ -153,15 +94,12 @@ export function featuredWorkBucketsFrom(bundle: AnishContentBundle) {
       )
       .slice(0, 3)
       .map((group) => {
-        const presentation =
-          homepageWorkPresentationByGroupId[
-            group.id as keyof typeof homepageWorkPresentationByGroupId
-          ];
+        const presentation = workGroupCopyFor(group.id);
         return {
           ...group,
           homeTitle:
-            presentation?.title ?? (group.shortTitle || group.title),
-          homeRole: presentation?.role ?? group.roleSummary,
+            presentation?.homeTitle ?? (group.shortTitle || group.title),
+          homeRole: presentation?.homeRole ?? group.roleSummary,
         };
       }),
   }));

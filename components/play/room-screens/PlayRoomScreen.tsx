@@ -34,7 +34,7 @@ export default function PlayRoomScreen({
             <span>C:\ASH\MY_GAMES</span><i>_ □ ×</i>
           </div>
           <div className={styles.desktopWorkspace}>
-            <nav className={styles.desktopShortcuts} aria-label="Desktop Library shortcuts">
+            <nav className={styles.desktopShortcuts} aria-label={`${object.title} shortcuts`}>
               <a href="#play-system-note">
                 <span aria-hidden="true">?</span>
                 System note

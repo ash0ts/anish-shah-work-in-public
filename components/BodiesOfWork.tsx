@@ -7,6 +7,7 @@ import {
   workGroupPeriodLabel,
   type featuredWorkBucketsFrom,
 } from "@/lib/work-groups";
+import { SITE_COPY } from "@/lib/copy";
 import styles from "./BodiesOfWork.module.css";
 
 type FeaturedBuckets = ReturnType<typeof featuredWorkBucketsFrom>;
@@ -82,14 +83,13 @@ export function BodiesOfWork({ buckets }: { buckets: FeaturedBuckets }) {
     >
       <header className={styles.heading}>
         <div>
-          <p>Selected technical work</p>
+          <p>{SITE_COPY.home["selected-eyebrow"]}</p>
           <h2 id="bodies-of-work-title">
-            Systems, curricula, writing, and technical sessions.
+            {SITE_COPY.home["selected-heading"]}
           </h2>
         </div>
         <p>
-          Representative projects, organized by how the work was built,
-          taught, documented, or delivered.
+          {SITE_COPY.home["selected-summary"]}
         </p>
       </header>
 
@@ -137,7 +137,7 @@ export function BodiesOfWork({ buckets }: { buckets: FeaturedBuckets }) {
       </div>
 
       <Link className={styles.indexLink} href="/work">
-        Open the complete work index <span aria-hidden="true">↗</span>
+        {SITE_COPY.home["complete-index-cta"]} <span aria-hidden="true">↗</span>
       </Link>
     </section>
   );

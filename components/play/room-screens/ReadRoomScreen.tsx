@@ -36,7 +36,7 @@ export default function ReadRoomScreen({
         <div className={styles.shelfComposition}>
           <aside className={styles.circulationCard} aria-label="Shelf directory">
             <p>Circulation file</p>
-            <nav aria-label="Borrowed Shelf sections">
+            <nav aria-label={`${object.title} sections`}>
               <a href="#read-desk-note">Desk note</a>
               <a href="#read-library">Browse the shelf</a>
             </nav>

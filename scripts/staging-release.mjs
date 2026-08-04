@@ -29,6 +29,7 @@ import {
   stagingSmokePaths,
   waitForReadOnlyStagingReadiness,
 } from "./lib/staging-http-contract.mjs";
+import { buildCopyDeck } from "./lib/copy-deck.mjs";
 
 const root = process.cwd();
 const configPath = path.join(root, "dist/server/wrangler.staging.json");
@@ -225,6 +226,7 @@ async function writePlan() {
     name,
     sha256: sha256(await readFile(path.join(root, "drizzle", name))),
   })));
+  const { copyVersion } = await buildCopyDeck(root);
   const plan = {
     schemaVersion: "1.2",
     deploymentTier: "staging",
@@ -235,6 +237,7 @@ async function writePlan() {
     siteUrl: STAGING_SITE_ORIGIN,
     contentVersion: bundle.contentVersion,
     playExperienceMode: config.vars.PLAY_EXPERIENCE_MODE,
+    copyVersion,
     previousWorkerVersion,
     d1: { preMigrationBookmark: bookmark, migrations },
     validationRuns,
@@ -265,6 +268,7 @@ async function verifyPlan() {
       verifyReleaseBuildCheckpoint(root),
       readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
     ]);
+  const { copyVersion } = await buildCopyDeck(root);
   if (
     plan.schemaVersion !== "1.2" ||
     plan.deploymentTier !== "staging" ||
@@ -275,6 +279,7 @@ async function verifyPlan() {
     plan.contentVersion !== bundle.contentVersion ||
     plan.playExperienceMode !== config.vars?.PLAY_EXPERIENCE_MODE ||
     plan.playExperienceMode !== "my-room-2001" ||
+    plan.copyVersion !== copyVersion ||
     plan.checksums?.preparedWorkerConfigSha256 !== sha256(configBytes) ||
     plan.checksums?.deployableArtifactManifestSha256 !== sha256(artifactResult.bytes) ||
     plan.checksums?.deployableArtifactSetSha256 !== artifactResult.manifest.artifactSetSha256
