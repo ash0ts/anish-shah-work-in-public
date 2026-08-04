@@ -5,6 +5,7 @@ import path from "node:path";
 import {
   assertActiveActionsWorkflow,
   assertRequiredValidationRuns,
+  assertSimulationReleaseRecord,
   assertVerifiedActionsRun,
   exactMigrationNames,
   exactVersionIds,
@@ -12,6 +13,7 @@ import {
   requireExactUploadedVersion,
   REQUIRED_VALIDATION_RUNS,
   runGuardedMigration,
+  simulationReleaseRecord,
 } from "./lib/release-contract.mjs";
 import {
   assertStagingConfiguration,
@@ -107,13 +109,15 @@ function verifyGitState() {
 }
 
 async function configState(head) {
-  const [configBytes, bundleBytes, artifactResult] = await Promise.all([
+  const [configBytes, bundleBytes, simulationManifestBytes, artifactResult] = await Promise.all([
     readFile(configPath),
     readFile(path.join(root, "content/public/anish-content.public.v1.json")),
+    readFile(path.join(root, "content/presentation/simulation.v1.json")),
     readVerifiedDeployableArtifactManifest(root),
   ]);
   const config = JSON.parse(configBytes);
   const bundle = JSON.parse(bundleBytes);
+  const simulationManifest = JSON.parse(simulationManifestBytes);
   const stagingEnvironment = {
     ...process.env,
     RELEASE_VALIDATED_SHA: head,
@@ -126,7 +130,14 @@ async function configState(head) {
   if (config.name !== STAGING_WORKER_NAME || config.routes?.[0]?.pattern !== new URL(STAGING_SITE_ORIGIN).hostname) {
     throw new Error("The staging command refused a non-staging Worker or route.");
   }
-  return { config, configBytes, bundle, artifactResult };
+  return {
+    config,
+    configBytes,
+    bundle,
+    simulationManifest,
+    simulationManifestBytes,
+    artifactResult,
+  };
 }
 
 function verifiedRuns(head, configuredRepository) {
@@ -188,7 +199,14 @@ function verifiedRuns(head, configuredRepository) {
 
 async function writePlan() {
   const head = verifyGitState();
-  const { config, configBytes, bundle, artifactResult } = await configState(head);
+  const {
+    config,
+    configBytes,
+    bundle,
+    simulationManifest,
+    simulationManifestBytes,
+    artifactResult,
+  } = await configState(head);
   const [releaseBuildCheckpoint, releaseBuildCheckpointBytes] =
     await Promise.all([
       verifyReleaseBuildCheckpoint(root),
@@ -227,6 +245,15 @@ async function writePlan() {
     sha256: sha256(await readFile(path.join(root, "drizzle", name))),
   })));
   const { copyVersion } = await buildCopyDeck(root);
+  const simulation = simulationReleaseRecord({
+    campaignVersion: simulationManifest.campaignVersion,
+    experienceMode: config.vars?.SIMULATION_EXPERIENCE_MODE,
+    aiMode: config.vars?.SIMULATION_AI_MODE,
+    provider: config.vars?.SIMULATION_PROVIDER,
+    model: config.vars?.SIMULATION_MODEL,
+    approvedProviders: process.env.STAGING_SIMULATION_APPROVED_PROVIDERS,
+    approvalStateDigest: process.env.STAGING_SIMULATION_APPROVAL_DIGEST,
+  });
   const plan = {
     schemaVersion: "1.2",
     deploymentTier: "staging",
@@ -238,6 +265,7 @@ async function writePlan() {
     contentVersion: bundle.contentVersion,
     playExperienceMode: config.vars.PLAY_EXPERIENCE_MODE,
     copyVersion,
+    simulation,
     previousWorkerVersion,
     d1: { preMigrationBookmark: bookmark, migrations },
     validationRuns,
@@ -249,6 +277,7 @@ async function writePlan() {
     },
     checksums: {
       preparedWorkerConfigSha256: sha256(configBytes),
+      simulationCampaignManifestSha256: sha256(simulationManifestBytes),
       deployableArtifactManifestSha256: sha256(artifactResult.bytes),
       deployableArtifactSetSha256: artifactResult.manifest.artifactSetSha256,
       releaseBuildCheckpointSha256: sha256(releaseBuildCheckpointBytes),
@@ -261,7 +290,14 @@ async function writePlan() {
 
 async function verifyPlan() {
   const head = verifyGitState();
-  const { config, configBytes, bundle, artifactResult } = await configState(head);
+  const {
+    config,
+    configBytes,
+    bundle,
+    simulationManifest,
+    simulationManifestBytes,
+    artifactResult,
+  } = await configState(head);
   const [plan, releaseBuildCheckpoint, releaseBuildCheckpointBytes] =
     await Promise.all([
       readFile(planPath, "utf8").then(JSON.parse),
@@ -281,6 +317,8 @@ async function verifyPlan() {
     plan.playExperienceMode !== "my-room-2001" ||
     plan.copyVersion !== copyVersion ||
     plan.checksums?.preparedWorkerConfigSha256 !== sha256(configBytes) ||
+    plan.checksums?.simulationCampaignManifestSha256 !==
+      sha256(simulationManifestBytes) ||
     plan.checksums?.deployableArtifactManifestSha256 !== sha256(artifactResult.bytes) ||
     plan.checksums?.deployableArtifactSetSha256 !== artifactResult.manifest.artifactSetSha256
     || plan.releaseBuildCheckpoint?.sha256 !== sha256(releaseBuildCheckpointBytes)
@@ -292,6 +330,10 @@ async function verifyPlan() {
   ) {
     throw new Error("The staging release plan is stale or crossed an environment boundary.");
   }
+  assertSimulationReleaseRecord(plan.simulation, {
+    config,
+    campaignVersion: simulationManifest.campaignVersion,
+  });
   assertRequiredValidationRuns(plan.validationRuns, head, plan.repository);
   for (const migration of plan.d1?.migrations ?? []) {
     if (sha256(await readFile(path.join(root, "drizzle", migration.name))) !== migration.sha256) {
@@ -438,6 +480,25 @@ if (action === "plan") {
     if (!response.ok || body?.releaseSha !== head || body?.contentVersion !== plan.contentVersion) {
       throw new Error("Staging health does not match the planned SHA and content version.");
     }
+    const simulation = body?.simulation;
+    if (
+      !simulation ||
+      simulation.campaignVersion !== plan.simulation.campaignVersion ||
+      simulation.experienceMode !== plan.simulation.experienceMode ||
+      simulation.aiMode !== plan.simulation.aiMode ||
+      simulation.provider !== plan.simulation.provider ||
+      simulation.model !== plan.simulation.model ||
+      (plan.simulation.experienceMode === "campaign-v1" &&
+        (simulation.configured !== true ||
+          simulation.providerApprovalDigest !==
+            plan.simulation.approvalStateDigest ||
+          JSON.stringify(simulation.approvedProviders) !==
+            JSON.stringify(plan.simulation.approvedProviders)))
+    ) {
+      throw new Error(
+        "Staging simulation configuration or provider approvals do not match the plan.",
+      );
+    }
     const {
       response: publicationResponse,
       body: publication,
@@ -455,6 +516,15 @@ if (action === "plan") {
       releaseSha: body.releaseSha,
       contentVersion: body.contentVersion,
       kvPointerMatches: true,
+      simulation: {
+        campaignVersion: simulation.campaignVersion,
+        experienceMode: simulation.experienceMode,
+        aiMode: simulation.aiMode,
+        provider: simulation.provider,
+        model: simulation.model,
+        configured: simulation.configured,
+        approvedProviders: simulation.approvedProviders,
+      },
     }));
   } else if (action === "smoke") {
     await waitForCandidateReadiness(head, plan.contentVersion);
@@ -467,6 +537,19 @@ if (action === "plan") {
       }
       results.push({ pathname, status: response.status });
     }
+    const simulationResponse = await authenticatedFetch("/simulation");
+    const expectedSimulationStatus =
+      plan.simulation.experienceMode === "campaign-v1" ? 200 : 404;
+    if (
+      simulationResponse.status !== expectedSimulationStatus ||
+      !(simulationResponse.headers.get("x-robots-tag") ?? "").includes(
+        "noindex",
+      ) ||
+      simulationResponse.headers.get("cache-control") !== "private, no-store"
+    ) {
+      throw new Error("Staging smoke failed for /simulation.");
+    }
+    results.push({ pathname: "/simulation", status: simulationResponse.status });
     console.log(JSON.stringify({ status: "passed", results }));
   }
 }

@@ -30,7 +30,13 @@ export type CopyFieldDefinition = {
   professional?: boolean;
 };
 
-export type CopyPageId = "site" | "home" | "work" | "play" | "sources";
+export type CopyPageId =
+  | "site"
+  | "home"
+  | "work"
+  | "play"
+  | "sources"
+  | "simulation";
 
 export type WorkGroupCopy = {
   displayTitle: string;

@@ -33,9 +33,20 @@ reviewed infrastructure commands. Ordinary staging scripts do not create them:
 - Custom Domain `staging.anish-shah-is.online`.
 - D1 database `anish-shah-work-in-public-staging`.
 - Dedicated `PUBLICATION_CACHE` KV namespace.
-- Four staging-only Rate Limiting namespace identifiers.
-- Dedicated `CONNECTOR_ENCRYPTION_KEY` and `RATE_LIMIT_SALT` secrets.
+- Five staging-only Rate Limiting namespace identifiers, including a dedicated
+  `SIMULATION_RATE_LIMITER` namespace.
+- Dedicated `CONNECTOR_ENCRYPTION_KEY`, `RATE_LIMIT_SALT`, and
+  `SIMULATION_SESSION_HMAC_KEY` secrets.
 - A staging Access application and audience.
+- A staging-only Cloudflare AI Gateway, Gateway token, Anthropic BYOK alias,
+  daily spend cap, DLP rules, and content Guardrails.
+
+The staging Gateway must not share an ID, token, BYOK alias, budget, or provider
+key with production. Disable prompt/response logging and response caching in the
+Gateway dashboard. The Worker also sends per-request no-payload-log,
+skip-cache, one-attempt, and bounded-timeout controls; the dashboard settings
+remain the environment-wide safety net. Verify those controls before entering
+any provider approval in staging Studio.
 
 The Access application protects `staging.anish-shah-is.online/*` with the exact
 owner email. Add more-specific applications that bypass the Access login page
@@ -66,6 +77,22 @@ registrations. Hardcover, Steam, and Strava may be entered manually when their
 live staging behavior is under review. Complete authorization, refresh,
 publication acknowledgement where applicable, and recovery testing in staging;
 a successful callback alone is not connector acceptance.
+
+Set simulation secrets against only the staging configuration. Enter values
+interactively; never echo, commit, or place them in the release plan:
+
+```bash
+npx --no-install wrangler secret put SIMULATION_SESSION_HMAC_KEY --config dist/server/wrangler.staging.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_ACCOUNT_ID --config dist/server/wrangler.staging.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_ID --config dist/server/wrangler.staging.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_TOKEN --config dist/server/wrangler.staging.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_BYOK_ALIAS --config dist/server/wrangler.staging.json
+```
+
+Use the owner-only Simulation section in staging Studio to enable only
+providers whose permission record covers both `game_display` and `llm_context`.
+References and notes remain protected D1 fields; release evidence uses only
+provider names and the one-way approval-state digest.
 
 Staging Studio does not render production handoff controls, and staging routes
 cannot issue, accept, stage, or apply a production promotion code. Local and
@@ -98,6 +125,7 @@ export STAGING_OWNER_RATE_LIMIT_NAMESPACE_ID='<staging namespace>'
 export STAGING_ARTWORK_RATE_LIMIT_NAMESPACE_ID='<staging namespace>'
 export STAGING_PROMOTION_RATE_LIMIT_NAMESPACE_ID='<staging namespace>'
 export STAGING_OAUTH_CALLBACK_RATE_LIMIT_NAMESPACE_ID='<staging namespace>'
+export STAGING_SIMULATION_RATE_LIMIT_NAMESPACE_ID='<staging namespace>'
 
 export OWNER_EMAILS='<exact owner email>'
 export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
@@ -105,6 +133,17 @@ unset LOCAL_OWNER_EMAIL
 
 npm run staging:prepare
 ```
+
+For the first deployment to a staging database that does not yet have migration
+`0006_public_model_simulation.sql`, set
+`STAGING_SIMULATION_EXPERIENCE_MODE=disabled` before `staging:prepare`. Plan,
+migrate, deploy, and checkpoint that infrastructure-only version without
+approval variables. Then enter provider approvals in staging Studio, unset
+`STAGING_SIMULATION_EXPERIENCE_MODE`, rebuild the staging configuration, and
+prepare a second no-migration activation plan using the sanitized health values
+below. This two-release bootstrap avoids inventing approval evidence before its
+protected table exists. Keep the disabled variable set for every guarded command
+in the first release; changing it makes the prepared configuration fail closed.
 
 The generator hashes each supplied staging coordinate and fails if any D1, KV,
 Access audience, or Rate Limiting namespace matches the pinned production
@@ -136,12 +175,28 @@ export STAGING_GITLEAKS_URL='https://github.com/ash0ts/anish-shah-work-in-public
 export STAGING_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export STAGING_BROWSER_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 
+# Copy only these sanitized values from owner-only GET /api/studio/health.
+export STAGING_SIMULATION_APPROVED_PROVIDERS='<comma-separated simulation.approvedProviders>'
+export STAGING_SIMULATION_APPROVAL_DIGEST='<simulation.providerApprovalDigest>'
+
 npm run staging:plan
 npm run staging:migrate
 npm run staging:upload
 export STAGING_WORKER_VERSION='<uploaded staging version>'
 npm run staging:deploy
 ```
+
+Leave the two simulation approval variables unset for the disabled
+infrastructure release. They are mandatory only for the subsequent
+`campaign-v1` activation.
+
+The infrastructure staging deployment normally reports
+`0006_public_model_simulation.sql` as pending. Include it exactly in
+`STAGING_MIGRATION_LIST` only when the remote pending list does; later releases
+use an empty migration list. `staging:plan` rejects an enabled campaign without
+at least one approved provider name and a 64-character sanitized digest. It
+records the campaign version, experience mode, AI mode, provider, model,
+provider names, and digest—never approval references or credentials.
 
 For an authenticated owner checkpoint, pass a short-lived staging Access JWT
 without printing or storing it:
@@ -160,6 +215,10 @@ sanitized records, writes the staging D1 snapshot, and activates the staging KV
 pointer. It is idempotent for an already-current content version. The following
 checkpoint refuses a missing or mismatched KV pointer. The exact staging origin
 and configuration guard keep this command separate from production.
+The checkpoint also requires the live Gateway to be configured and compares
+the runtime campaign/model settings plus current approval names and digest with
+the ignored staging plan. A changed or expired approval therefore stops the
+candidate instead of silently changing model context.
 
 The staging plan records the explicit Play mode, `CONTENT_VERSION`,
 `COPY_VERSION`, configuration and deployable-artifact hashes, four validation
@@ -194,6 +253,9 @@ npm run staging:rollback
 
 Restore staging D1 separately and only when database state caused the failure.
 None of these commands invoke production release scripts.
+For a simulation-only failure, roll back the Worker or prepare a reviewed
+staging version with `SIMULATION_EXPERIENCE_MODE=disabled`; do not restore D1,
+copy production approvals, or rotate connector credentials.
 
 ## PR preview lifecycle
 
@@ -232,6 +294,11 @@ preview CI service token. Preview Workers contain no D1, KV, encryption,
 provider, cron, Studio, write, promotion, or OAuth capability. The Worker
 accepts a verified Access service principal only in preview; it never grants
 owner authorization.
+
+The preview simulation is a deterministic authored fixture. It never calls AI
+Gateway or Anthropic, creates a simulation session row, reads provider APIs, or
+uses protected approval state. Preview success is gameplay and visual evidence
+only.
 
 The trusted-main workflow compensates for that Cloudflare IAM limitation. It
 runs only after same-repository validation, rechecks that the PR is open and at

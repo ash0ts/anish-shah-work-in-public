@@ -80,6 +80,53 @@
   line-height: 1.45;
 }
 
+.simulationIngress {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid #3b526f;
+}
+
+.simulationIngress p {
+  flex: 1 1 12rem;
+  margin: 0;
+  color: #a9a1bf;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.simulationIngress a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0.68rem 0.85rem;
+  border: 1px solid #c8b8ff;
+  color: #eee4cf;
+  background: #252b45;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.simulationIngress a:hover,
+.simulationIngress a:focus-visible {
+  border-color: #ff6a2a;
+  color: #07101b;
+  background: #ff6a2a;
+}
+
+.simulationIngress a[aria-disabled="true"] {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .poster {
   display: grid;
   min-width: 0;
@@ -382,7 +429,8 @@
   }
 
   .posterField > p,
-  .entryControl button {
+  .entryControl button,
+  .simulationIngress a {
     color: ButtonText;
     background: ButtonFace;
     forced-color-adjust: auto;

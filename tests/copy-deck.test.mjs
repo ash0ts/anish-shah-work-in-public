@@ -219,6 +219,33 @@ test("editable Play flavor copy excludes guarded provider-policy literals", asyn
   );
 });
 
+test("Simulation presentation copy is deck-owned while model disclosures remain guarded", async () => {
+  const [deck, campaignManifest, simulationPage] = await Promise.all([
+    buildCopyDeck(root),
+    readFile(
+      path.join(root, "content/presentation/simulation.v1.json"),
+      "utf8",
+    ),
+    readFile(path.join(root, "app/simulation/page.tsx"), "utf8"),
+  ]);
+
+  assert.equal(deck.pages.simulation["ingress-cta"], "Reveal the simulation");
+  assert.equal(
+    deck.pages.simulation["boot-title"],
+    "Beat the model’s first answer.",
+  );
+  assert.match(simulationPage, /SITE_COPY\.simulation\["seo-title"\]/u);
+  assert.match(simulationPage, /SITE_COPY\.simulation\["noscript-summary"\]/u);
+
+  const simulationCopy = await readFile(
+    path.join(root, "content/copy/pages/simulation.md"),
+    "utf8",
+  );
+  const manifest = JSON.parse(campaignManifest);
+  assert.doesNotMatch(simulationCopy, /not Anish and can be wrong/iu);
+  assert.match(manifest.persona.disclosure, /not Anish and can be wrong/iu);
+});
+
 test("fresh-clone lifecycle generates ignored copy before application checks", async () => {
   const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
   for (const lifecycle of [

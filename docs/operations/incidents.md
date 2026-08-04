@@ -32,6 +32,30 @@ Replace the Cloudflare secret and verify protected writes, OAuth callbacks,
 promotion import, and artwork requests. Salt rotation invalidates only ephemeral
 bucket identity, not connector credentials.
 
+### Simulation Gateway, BYOK alias, or session key
+
+Contain a simulation-only incident by promoting a known disabled Worker version
+or preparing a guarded disabled release; keep Work and Play online. Revoke the
+affected Gateway token or stored Anthropic key in that environment only, then
+replace the Gateway token/alias or `SIMULATION_SESSION_HMAC_KEY` as appropriate.
+Never copy the staging credential into production or enable Gateway payload
+logging to investigate. A session-key rotation invalidates existing opaque
+simulation sessions; retention can remove their unusable HMAC rows. It does not
+require connector disconnection, provider-approval deletion, D1 restore, or a
+Play publication change.
+
+If spend or daily-call limits are exhausted without credential compromise,
+leave the authored fallback active, inspect only aggregate Gateway and owner
+health counters, and correct the limit or request pattern through a reviewed
+release. Do not replay uncertain model calls.
+
+### Simulation provider approval
+
+Disable or remove the affected provider approval through owner-only Studio.
+This removes that provider from model context without deleting its public Play
+snapshot. A changed provider list or approval digest invalidates any pending
+simulation activation plan; generate a new plan rather than editing evidence.
+
 ### Cloudflare Access
 
 Never bypass Access to recover Studio. Verify the application destination,

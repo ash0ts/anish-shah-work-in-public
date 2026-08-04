@@ -1,0 +1,309 @@
+{
+  "schemaVersion": "1.0",
+  "engine": "tone-procedural",
+  "masterGainDb": -18,
+  "externalMediaDuckDb": -42,
+  "cues": {
+    "sound-on": {
+      "description": "A short boot acknowledgement after the visitor explicitly enables sound.",
+      "events": [
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0, "durationSeconds": 0.08, "velocity": 0.35 },
+        { "voice": "chip", "note": "G5", "offsetSeconds": 0.08, "durationSeconds": 0.12, "velocity": 0.3 }
+      ]
+    },
+    "room-enter": {
+      "description": "The room signal locks into place.",
+      "events": [
+        { "voice": "bass", "note": "C2", "offsetSeconds": 0, "durationSeconds": 0.18, "velocity": 0.32 },
+        { "voice": "chip", "note": "C4", "offsetSeconds": 0.05, "durationSeconds": 0.1, "velocity": 0.22 },
+        { "voice": "chip", "note": "E4", "offsetSeconds": 0.13, "durationSeconds": 0.12, "velocity": 0.2 }
+      ]
+    },
+    "interface-confirm": {
+      "description": "A restrained object-selection confirmation.",
+      "events": [
+        { "voice": "chip", "note": "A4", "offsetSeconds": 0, "durationSeconds": 0.06, "velocity": 0.2 },
+        { "voice": "chip", "note": "E5", "offsetSeconds": 0.05, "durationSeconds": 0.08, "velocity": 0.16 }
+      ]
+    },
+    "interface-return": {
+      "description": "A reverse-channel signal when returning to the room.",
+      "events": [
+        { "voice": "chip", "note": "E5", "offsetSeconds": 0, "durationSeconds": 0.06, "velocity": 0.16 },
+        { "voice": "chip", "note": "A4", "offsetSeconds": 0.06, "durationSeconds": 0.1, "velocity": 0.18 }
+      ]
+    },
+    "simulation-reveal": {
+      "description": "The room compresses into a memory wafer and crosses the simulation threshold.",
+      "events": [
+        { "voice": "bass", "note": "C2", "offsetSeconds": 0, "durationSeconds": 0.24, "velocity": 0.4 },
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0.14, "durationSeconds": 0.08, "velocity": 0.22 },
+        { "voice": "chip", "note": "D#5", "offsetSeconds": 0.23, "durationSeconds": 0.08, "velocity": 0.2 },
+        { "voice": "chip", "note": "G5", "offsetSeconds": 0.32, "durationSeconds": 0.18, "velocity": 0.24 },
+        { "voice": "bass", "note": "C1", "offsetSeconds": 0.48, "durationSeconds": 0.3, "velocity": 0.3 }
+      ]
+    },
+    "memory-wafer": {
+      "description": "A compact data-transfer chirp available to the simulation campaign.",
+      "events": [
+        { "voice": "chip", "note": "G5", "offsetSeconds": 0, "durationSeconds": 0.05, "velocity": 0.16 },
+        { "voice": "chip", "note": "C6", "offsetSeconds": 0.05, "durationSeconds": 0.05, "velocity": 0.14 },
+        { "voice": "chip", "note": "G5", "offsetSeconds": 0.1, "durationSeconds": 0.1, "velocity": 0.12 }
+      ]
+    },
+    "watch-power": {
+      "description": "The Midnight Broadcast television powers on.",
+      "events": [
+        { "voice": "bass", "note": "C2", "offsetSeconds": 0, "durationSeconds": 0.16, "velocity": 0.22 },
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0.08, "durationSeconds": 0.08, "velocity": 0.16 }
+      ]
+    },
+    "watch-tune": {
+      "description": "The television tuner steps between archive channels.",
+      "events": [
+        { "voice": "chip", "note": "D5", "offsetSeconds": 0, "durationSeconds": 0.05, "velocity": 0.14 },
+        { "voice": "chip", "note": "E5", "offsetSeconds": 0.05, "durationSeconds": 0.05, "velocity": 0.12 }
+      ]
+    },
+    "watch-select": {
+      "description": "An anime title is selected from the broadcast guide.",
+      "events": [
+        { "voice": "chip", "note": "G5", "offsetSeconds": 0, "durationSeconds": 0.08, "velocity": 0.18 }
+      ]
+    },
+    "read-page": {
+      "description": "A restrained page-turn accent for the reading shelf.",
+      "events": [
+        { "voice": "chip", "note": "A4", "offsetSeconds": 0, "durationSeconds": 0.04, "velocity": 0.1 },
+        { "voice": "chip", "note": "B4", "offsetSeconds": 0.04, "durationSeconds": 0.05, "velocity": 0.08 }
+      ]
+    },
+    "read-select": {
+      "description": "A book is selected from the Borrowed Shelf.",
+      "events": [
+        { "voice": "chip", "note": "E5", "offsetSeconds": 0, "durationSeconds": 0.09, "velocity": 0.16 }
+      ]
+    },
+    "listen-boot": {
+      "description": "The pocket music player completes its quiet startup.",
+      "events": [
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0, "durationSeconds": 0.05, "velocity": 0.12 },
+        { "voice": "chip", "note": "E5", "offsetSeconds": 0.05, "durationSeconds": 0.05, "velocity": 0.13 },
+        { "voice": "chip", "note": "G5", "offsetSeconds": 0.1, "durationSeconds": 0.08, "velocity": 0.14 }
+      ]
+    },
+    "listen-nav": {
+      "description": "The pocket player advances one ranked-groove position.",
+      "events": [
+        { "voice": "chip", "note": "C6", "offsetSeconds": 0, "durationSeconds": 0.04, "velocity": 0.1 }
+      ]
+    },
+    "listen-open-close": {
+      "description": "The official listening panel opens or closes.",
+      "events": [
+        { "voice": "chip", "note": "G5", "offsetSeconds": 0, "durationSeconds": 0.06, "velocity": 0.12 },
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0.06, "durationSeconds": 0.08, "velocity": 0.1 }
+      ]
+    },
+    "collect-crate": {
+      "description": "The record crate slides open for browsing.",
+      "events": [
+        { "voice": "bass", "note": "D2", "offsetSeconds": 0, "durationSeconds": 0.14, "velocity": 0.2 }
+      ]
+    },
+    "collect-sleeve": {
+      "description": "A record sleeve is lifted from the crate.",
+      "events": [
+        { "voice": "chip", "note": "F4", "offsetSeconds": 0, "durationSeconds": 0.05, "velocity": 0.09 },
+        { "voice": "chip", "note": "A4", "offsetSeconds": 0.05, "durationSeconds": 0.06, "velocity": 0.1 }
+      ]
+    },
+    "collect-select": {
+      "description": "A physical release is selected from the catalog.",
+      "events": [
+        { "voice": "chip", "note": "D5", "offsetSeconds": 0, "durationSeconds": 0.08, "velocity": 0.15 }
+      ]
+    },
+    "play-computer-boot": {
+      "description": "The beige archive computer completes its boot sequence.",
+      "events": [
+        { "voice": "bass", "note": "E2", "offsetSeconds": 0, "durationSeconds": 0.18, "velocity": 0.2 },
+        { "voice": "chip", "note": "E4", "offsetSeconds": 0.1, "durationSeconds": 0.06, "velocity": 0.12 },
+        { "voice": "chip", "note": "B4", "offsetSeconds": 0.16, "durationSeconds": 0.09, "velocity": 0.14 }
+      ]
+    },
+    "play-load": {
+      "description": "The computer loads another library page.",
+      "events": [
+        { "voice": "chip", "note": "E5", "offsetSeconds": 0, "durationSeconds": 0.04, "velocity": 0.1 },
+        { "voice": "chip", "note": "F#5", "offsetSeconds": 0.05, "durationSeconds": 0.04, "velocity": 0.1 }
+      ]
+    },
+    "play-select": {
+      "description": "A game is selected from the desktop library.",
+      "events": [
+        { "voice": "chip", "note": "B4", "offsetSeconds": 0, "durationSeconds": 0.08, "velocity": 0.16 }
+      ]
+    },
+    "move-belt": {
+      "description": "The treadmill belt starts or changes state.",
+      "events": [
+        { "voice": "bass", "note": "A1", "offsetSeconds": 0, "durationSeconds": 0.16, "velocity": 0.18 }
+      ]
+    },
+    "move-tv": {
+      "description": "The cardio television activates the Strava channel.",
+      "events": [
+        { "voice": "chip", "note": "A4", "offsetSeconds": 0, "durationSeconds": 0.06, "velocity": 0.12 },
+        { "voice": "chip", "note": "D5", "offsetSeconds": 0.06, "durationSeconds": 0.08, "velocity": 0.13 }
+      ]
+    },
+    "move-status": {
+      "description": "A movement-feed status changes visibly.",
+      "events": [
+        { "voice": "chip", "note": "D5", "offsetSeconds": 0, "durationSeconds": 0.08, "velocity": 0.12 }
+      ]
+    },
+    "robot-arrival": {
+      "description": "The simulation robot arrives above the room.",
+      "events": [
+        { "voice": "bass", "note": "C2", "offsetSeconds": 0, "durationSeconds": 0.2, "velocity": 0.26 },
+        { "voice": "chip", "note": "C6", "offsetSeconds": 0.12, "durationSeconds": 0.07, "velocity": 0.14 }
+      ]
+    },
+    "robot-squash": {
+      "description": "The robot compresses the room into one plane.",
+      "events": [
+        { "voice": "bass", "note": "G1", "offsetSeconds": 0, "durationSeconds": 0.22, "velocity": 0.28 }
+      ]
+    },
+    "robot-bite": {
+      "description": "The robot takes a stylized bite from the room signal.",
+      "events": [
+        { "voice": "chip", "note": "C4", "offsetSeconds": 0, "durationSeconds": 0.05, "velocity": 0.18 },
+        { "voice": "bass", "note": "C2", "offsetSeconds": 0.04, "durationSeconds": 0.12, "velocity": 0.22 }
+      ]
+    },
+    "robot-swallow": {
+      "description": "The room signal passes into the robot archive.",
+      "events": [
+        { "voice": "chip", "note": "G4", "offsetSeconds": 0, "durationSeconds": 0.06, "velocity": 0.12 },
+        { "voice": "bass", "note": "G1", "offsetSeconds": 0.07, "durationSeconds": 0.18, "velocity": 0.2 }
+      ]
+    },
+    "robot-crt-open": {
+      "description": "The robot CRT opens onto the simulated mind.",
+      "events": [
+        { "voice": "chip", "note": "D5", "offsetSeconds": 0, "durationSeconds": 0.06, "velocity": 0.12 },
+        { "voice": "chip", "note": "A5", "offsetSeconds": 0.08, "durationSeconds": 0.12, "velocity": 0.16 }
+      ]
+    },
+    "robot-mind-dive": {
+      "description": "The visitor crosses from the room into the mind simulation.",
+      "events": [
+        { "voice": "bass", "note": "C2", "offsetSeconds": 0, "durationSeconds": 0.26, "velocity": 0.3 },
+        { "voice": "chip", "note": "G5", "offsetSeconds": 0.16, "durationSeconds": 0.1, "velocity": 0.14 },
+        { "voice": "chip", "note": "C6", "offsetSeconds": 0.28, "durationSeconds": 0.18, "velocity": 0.16 }
+      ]
+    },
+    "simulation-boot": {
+      "description": "The Meet Me simulation completes its opening boot.",
+      "events": [
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0, "durationSeconds": 0.06, "velocity": 0.12 },
+        { "voice": "chip", "note": "E5", "offsetSeconds": 0.08, "durationSeconds": 0.06, "velocity": 0.13 },
+        { "voice": "chip", "note": "A5", "offsetSeconds": 0.16, "durationSeconds": 0.12, "velocity": 0.15 }
+      ]
+    },
+    "simulation-act-1": {
+      "description": "The first simulation encounter becomes active.",
+      "events": [
+        { "voice": "bass", "note": "C2", "offsetSeconds": 0, "durationSeconds": 0.16, "velocity": 0.2 },
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0.08, "durationSeconds": 0.08, "velocity": 0.13 }
+      ]
+    },
+    "simulation-act-2": {
+      "description": "The second simulation encounter becomes active.",
+      "events": [
+        { "voice": "bass", "note": "D2", "offsetSeconds": 0, "durationSeconds": 0.16, "velocity": 0.2 },
+        { "voice": "chip", "note": "D5", "offsetSeconds": 0.08, "durationSeconds": 0.08, "velocity": 0.13 }
+      ]
+    },
+    "simulation-act-3": {
+      "description": "The third simulation encounter becomes active.",
+      "events": [
+        { "voice": "bass", "note": "E2", "offsetSeconds": 0, "durationSeconds": 0.16, "velocity": 0.2 },
+        { "voice": "chip", "note": "E5", "offsetSeconds": 0.08, "durationSeconds": 0.08, "velocity": 0.13 }
+      ]
+    },
+    "simulation-boss": {
+      "description": "The simulation's final encounter begins.",
+      "events": [
+        { "voice": "bass", "note": "C1", "offsetSeconds": 0, "durationSeconds": 0.28, "velocity": 0.34 },
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0.12, "durationSeconds": 0.08, "velocity": 0.16 }
+      ]
+    },
+    "simulation-near-miss": {
+      "description": "The visitor narrowly avoids a simulation hazard.",
+      "events": [
+        { "voice": "chip", "note": "B5", "offsetSeconds": 0, "durationSeconds": 0.05, "velocity": 0.13 },
+        { "voice": "chip", "note": "C6", "offsetSeconds": 0.05, "durationSeconds": 0.05, "velocity": 0.11 }
+      ]
+    },
+    "simulation-hit": {
+      "description": "The visitor receives visible simulation damage.",
+      "events": [
+        { "voice": "bass", "note": "C2", "offsetSeconds": 0, "durationSeconds": 0.13, "velocity": 0.28 }
+      ]
+    },
+    "simulation-evidence": {
+      "description": "A verified evidence card is revealed.",
+      "events": [
+        { "voice": "chip", "note": "E5", "offsetSeconds": 0, "durationSeconds": 0.06, "velocity": 0.11 },
+        { "voice": "chip", "note": "A5", "offsetSeconds": 0.07, "durationSeconds": 0.1, "velocity": 0.14 }
+      ]
+    },
+    "simulation-action": {
+      "description": "A trusted visitor action is confirmed.",
+      "events": [
+        { "voice": "chip", "note": "A4", "offsetSeconds": 0, "durationSeconds": 0.07, "velocity": 0.14 }
+      ]
+    },
+    "simulation-dialogue-ready": {
+      "description": "A bounded simulation dialogue response is ready.",
+      "events": [
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0, "durationSeconds": 0.04, "velocity": 0.09 },
+        { "voice": "chip", "note": "G5", "offsetSeconds": 0.05, "durationSeconds": 0.06, "velocity": 0.1 }
+      ]
+    },
+    "simulation-fallback": {
+      "description": "The simulation switches safely to authored dialogue.",
+      "events": [
+        { "voice": "chip", "note": "G4", "offsetSeconds": 0, "durationSeconds": 0.07, "velocity": 0.1 },
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0.08, "durationSeconds": 0.08, "velocity": 0.1 }
+      ]
+    },
+    "simulation-victory": {
+      "description": "The visitor clears the current encounter.",
+      "events": [
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0, "durationSeconds": 0.06, "velocity": 0.13 },
+        { "voice": "chip", "note": "E5", "offsetSeconds": 0.07, "durationSeconds": 0.06, "velocity": 0.14 },
+        { "voice": "chip", "note": "G5", "offsetSeconds": 0.14, "durationSeconds": 0.12, "velocity": 0.16 }
+      ]
+    },
+    "simulation-recalibrate": {
+      "description": "The simulation resets the current encounter safely.",
+      "events": [
+        { "voice": "chip", "note": "G5", "offsetSeconds": 0, "durationSeconds": 0.06, "velocity": 0.11 },
+        { "voice": "chip", "note": "D5", "offsetSeconds": 0.07, "durationSeconds": 0.08, "velocity": 0.1 }
+      ]
+    },
+    "simulation-ending": {
+      "description": "The completed simulation settles into its closing state.",
+      "events": [
+        { "voice": "bass", "note": "C2", "offsetSeconds": 0, "durationSeconds": 0.22, "velocity": 0.2 },
+        { "voice": "chip", "note": "G4", "offsetSeconds": 0.12, "durationSeconds": 0.08, "velocity": 0.1 },
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0.22, "durationSeconds": 0.18, "velocity": 0.13 }
+      ]
+    }
+  }
+}

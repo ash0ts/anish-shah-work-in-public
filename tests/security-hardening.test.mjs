@@ -901,6 +901,7 @@ test("public Cloudflare release config is generated without embedding secrets", 
     "ARTWORK_RATE_LIMITER",
     "PROMOTION_RATE_LIMITER",
     "OAUTH_CALLBACK_RATE_LIMITER",
+    "SIMULATION_RATE_LIMITER",
   ]) {
     assert.match(prepare, new RegExp(`name:\\s*"${binding}"`));
   }
@@ -1174,6 +1175,7 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
     "oauth_callbacks",
     "security_headers",
     "owner_health",
+    "simulation_experience",
   ]) {
     assert.match(attestation, new RegExp(`"${check}"`));
   }
@@ -1210,6 +1212,10 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
   assert.match(command, /requireCurrentTriggerReceipt/);
   assert.match(attestation, /triggerDeploymentReceiptSha256/);
   assert.match(attestation, /domainCutover/);
+  assert.match(attestation, /simulation/);
+  assert.match(plan, /RELEASE_SIMULATION_APPROVED_PROVIDERS/);
+  assert.match(plan, /RELEASE_SIMULATION_APPROVAL_DIGEST/);
+  assert.match(contract, /sanitized approval-state digest/);
   assert.match(attestation, /permanent_path_query_preserving/);
   assert.match(attestation, /x-request-id/);
   assert.match(command, /readVerifiedDeployableArtifactManifest/);

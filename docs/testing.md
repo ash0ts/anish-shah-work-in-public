@@ -103,6 +103,43 @@ and privacy contracts, backend authorization/security, the production build,
 rendered routes, bundle/privacy closure, and dependency advisories. The build is
 created once inside the command and reused by its candidate checks.
 
+Local development runs the Meet Me campaign with deterministic authored model
+fixtures. It must not need Cloudflare or Anthropic credentials:
+
+```bash
+SIMULATION_EXPERIENCE_MODE=campaign-v1 \
+SIMULATION_AI_MODE=fixture \
+npm run dev:studio
+```
+
+To smoke-test real Claude behavior locally, keep the provider key in an existing
+owner-only environment file and pass that file to the guarded launcher:
+
+```bash
+npm run dev:simulation:live -- \
+  --env-file '/absolute/path/to/permission-restricted/.env'
+```
+
+The launcher reads only `ANTHROPIC_API_KEY`, removes every variable declared by
+that shared file from the child environment, and binds the key only to the
+loopback development Worker for that process lifetime. The key is never copied
+into `.env.local`, Git, D1, the browser, or a build artifact. The direct
+transport is accepted only for an exact `http://localhost:3000` development
+origin; preview, staging, production, non-loopback origins, and
+`NODE_ENV=production` fail closed. Stop it with Control-C. A generated turn is labeled
+`Generated reaction · facts supplied by server` in the opponent panel.
+
+This direct local smoke test proves model compatibility and the authored fallback. It
+is not release evidence for Cloudflare AI Gateway, Gateway logging/DLP,
+Guardrails, BYOK, hosted rate limiting, provider approvals, or spend controls.
+Those remain staging acceptance requirements.
+
+`npm run setup:local` creates a missing ignored
+`SIMULATION_SESSION_HMAC_KEY` alongside the other local-only security values
+without printing any of them. Apply the normal local migration command before
+testing sessions. Never put a Gateway token, BYOK alias, provider key, or hosted
+approval record in a fixture or checked-in environment file.
+
 Run the manually dispatched Validate, Gitleaks, CodeQL, and Browser Quality
 workflows with the same full 40-character commit SHA before release. The
 checkout step rejects a different commit. Browser stability is a separate,
@@ -204,6 +241,31 @@ capture diagnostic state on failure.
 Run the manually dispatched ten-run Browser stability workflow after changing
 the room harness or containing flakiness. All ten independent jobs must pass on
 the same full SHA; a single successful rerun is not stability evidence.
+
+Simulation browser coverage must exercise both Action and Tactical completion,
+the semantic no-JavaScript dossier, reduced-motion/forced-colors/Save-Data
+fallbacks, and authored completion during a total model outage. Assert that:
+
+- `/simulation` is absent when the feature is disabled;
+- Tactical never downloads Phaser;
+- Action downloads Phaser only after the visitor selects it;
+- Tone.js is absent until `SOUND ON`;
+- free-text requests, prompts, and model responses never appear in stored test
+  state, logs, rendered HTML, or artifacts; and
+- a model timeout, invalid schema, DLP block, Guardrail block, exhausted budget,
+  or missing Gateway configuration resolves to authored dialogue.
+
+The focused backend and release suites are:
+
+```bash
+node --test tests/simulation-backend.test.mjs
+node --test tests/release-guards.test.mjs tests/staging-preview.test.mjs
+```
+
+Release-quality live AI testing happens only on isolated staging after its
+Gateway, spend cap, DLP/Guardrails, provider approvals, session key, D1, and
+rate limiter are configured. A successful direct local smoke test, fixture, or
+PR preview is not hosted live-model evidence.
 
 ## CI and exact-SHA release evidence
 

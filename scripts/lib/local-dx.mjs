@@ -20,6 +20,7 @@ export const CANONICAL_PRODUCTION_ORIGIN = "https://anish-shah-is.online";
 export const LOCAL_SECRET_KEYS = [
   "CONNECTOR_ENCRYPTION_KEY",
   "RATE_LIMIT_SALT",
+  "SIMULATION_SESSION_HMAC_KEY",
 ];
 
 const HOSTED_ENVIRONMENT_KEYS = [

@@ -7,6 +7,7 @@ import {
 import handler from "vinext/server/app-router-entry";
 import { refreshDiscogsWhenDue } from "../lib/server/connectors/discogs-scheduled";
 import { pruneConnectorRetention } from "../lib/server/connectors/repository";
+import { pruneSimulationRetention } from "../lib/server/simulation/repository";
 import { authenticateRequest, isSitesRuntime } from "./access";
 import { publicationAvailabilityResponse } from "./publication-fallback";
 import {
@@ -17,6 +18,7 @@ import {
   throttleOwnerWrite,
   throttlePromotionImport,
   throttleOAuthCallback,
+  throttleSimulationApi,
 } from "./rate-limiting";
 import {
   beginRequestObservation,
@@ -195,6 +197,16 @@ const worker = {
         return finalize(promotionLimited);
       }
 
+      const simulationLimited = await throttleSimulationApi(
+        env,
+        appRequest,
+        development,
+        pathname,
+      );
+      if (simulationLimited && (directProduction || development)) {
+        return finalize(simulationLimited);
+      }
+
       const bounded = await boundedApiWrite(appRequest, pathname);
       if (bounded instanceof Response) return finalize(bounded);
       appRequest = bounded;
@@ -249,6 +261,7 @@ const worker = {
       (async () => {
         const scheduledAt = new Date(controller.scheduledTime);
         await pruneConnectorRetention(db, scheduledAt);
+        await pruneSimulationRetention(db, scheduledAt);
         await refreshDiscogsWhenDue(db, scheduledAt);
       })().catch(() => observeScheduledFailure(env.RELEASE_SHA)),
     );

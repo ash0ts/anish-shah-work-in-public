@@ -3,6 +3,7 @@ import type { PreviewFixtureScenario } from "../connector-model";
 import { routeWithPreviewFixture } from "./preview-fixture-navigation";
 import { ROOM_OBJECTS } from "./room-registry";
 import { RoomEntryControl } from "./RoomEntryControl";
+import { RevealSimulationControl } from "./RevealSimulationControl";
 import styles from "./RoomOverview.module.css";
 import { SITE_COPY } from "@/lib/copy";
 
@@ -23,10 +24,18 @@ export function RoomOverview({
         <div>
           <p>{SITE_COPY.play["intro-summary"]}</p>
           <RoomEntryControl />
+          <div className={styles.simulationIngress}>
+            <p>{SITE_COPY.simulation["ingress-label"]}</p>
+            <RevealSimulationControl />
+          </div>
         </div>
       </header>
 
-      <section className={styles.poster} aria-labelledby="room-directory-title">
+      <section
+        className={styles.poster}
+        data-room-static-stage
+        aria-labelledby="room-directory-title"
+      >
         <div className={styles.posterField} aria-hidden="true">
           <picture>
             <source

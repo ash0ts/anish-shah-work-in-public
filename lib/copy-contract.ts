@@ -154,6 +154,32 @@ export const COPY_PAGE_DEFINITIONS = {
     field("sources", "source-kind-profile", "editorial", 32),
     field("sources", "source-kind-method", "editorial", 32),
   ],
+  simulation: [
+    field("simulation", "seo-title", "editorial", 70),
+    field("simulation", "seo-description", "editorial", 160),
+    field("simulation", "ingress-label", "editorial", 100),
+    field("simulation", "ingress-cta", "editorial", 48),
+    field("simulation", "transition-eyebrow", "editorial", 60),
+    field("simulation", "transition-title", "editorial", 100),
+    field("simulation", "transition-summary", "editorial", 240, {
+      allowParagraphs: true,
+    }),
+    field("simulation", "transition-cancel-cta", "editorial", 48),
+    field("simulation", "boot-eyebrow", "editorial", 80),
+    field("simulation", "boot-title", "editorial", 120),
+    field("simulation", "boot-summary", "editorial", 320, {
+      allowParagraphs: true,
+    }),
+    field("simulation", "start-cta", "editorial", 48),
+    field("simulation", "noscript-summary", "editorial", 320, {
+      allowParagraphs: true,
+    }),
+    field("simulation", "dossier-eyebrow", "editorial", 60),
+    field("simulation", "dossier-title", "editorial", 100),
+    field("simulation", "dossier-summary", "editorial", 320, {
+      allowParagraphs: true,
+    }),
+  ],
 } as const satisfies Record<CopyPageId, readonly CopyFieldDefinition[]>;
 
 export const WORK_GROUP_COPY_DEFINITIONS = [

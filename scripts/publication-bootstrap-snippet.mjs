@@ -17,6 +17,7 @@ const [plan, releaseBuildCheckpoint, releaseBuildCheckpointBytes] =
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 if (
   plan.schemaVersion !== "1.2" ||
+  !plan.simulation ||
   plan.releaseBuildCheckpoint?.sha256 !==
     sha256(releaseBuildCheckpointBytes) ||
   plan.releaseBuildCheckpoint?.artifactSetSha256 !==
@@ -52,6 +53,12 @@ const script = `(async () => {
   };
   const health = await readJson("/api/studio/health");
   if (health.releaseSha !== ${JSON.stringify(plan.commitSha)}) throw new Error("Version override did not reach the validated Worker.");
+  const simulation = health.simulation;
+  const campaignEnabled = ${JSON.stringify(plan.simulation.experienceMode === "campaign-v1")};
+  const approvalMismatch = campaignEnabled && (simulation?.providerApprovalDigest !== ${JSON.stringify(plan.simulation.approvalStateDigest)} || JSON.stringify(simulation?.approvedProviders) !== ${JSON.stringify(JSON.stringify(plan.simulation.approvedProviders))});
+  if (!simulation || simulation.campaignVersion !== ${JSON.stringify(plan.simulation.campaignVersion)} || simulation.experienceMode !== ${JSON.stringify(plan.simulation.experienceMode)} || simulation.aiMode !== ${JSON.stringify(plan.simulation.aiMode)} || simulation.provider !== ${JSON.stringify(plan.simulation.provider)} || simulation.model !== ${JSON.stringify(plan.simulation.model)} || approvalMismatch || (campaignEnabled && simulation.configured !== true)) {
+    throw new Error("The staged simulation configuration or provider-approval state does not match the release plan.");
+  }
   const bootstrapRequired = ${JSON.stringify(plan.publicationCheckpoint.status === "predeploy_bootstrap_required")};
   const published = bootstrapRequired ? await readJson("/api/studio/publish", {method: "POST"}) : null;
   const checkpoint = await readJson("/api/studio/publication-checkpoint");
@@ -62,7 +69,7 @@ const script = `(async () => {
   if (confirmed.checkpoint?.releaseSha !== ${JSON.stringify(plan.commitSha)} || confirmed.checkpoint?.contentVersion !== ${JSON.stringify(plan.contentVersion)} || confirmed.checkpoint?.contentHash !== checkpoint.contentHash) {
     throw new Error("The protected release checkpoint did not bind the staged Worker and active publication.");
   }
-  console.log({publishedRecords: published?.publication?.recordCount ?? null, releaseSha: confirmed.checkpoint.releaseSha, contentVersion: checkpoint.contentVersion, contentHash: checkpoint.contentHash, kvPointerMatches: checkpoint.kvPointerMatches});
+  console.log({publishedRecords: published?.publication?.recordCount ?? null, releaseSha: confirmed.checkpoint.releaseSha, contentVersion: checkpoint.contentVersion, contentHash: checkpoint.contentHash, kvPointerMatches: checkpoint.kvPointerMatches, simulation: {campaignVersion: simulation.campaignVersion, experienceMode: simulation.experienceMode, aiMode: simulation.aiMode, provider: simulation.provider, model: simulation.model, configured: simulation.configured, approvedProviders: simulation.approvedProviders}});
 })()`;
 
 console.log(script);

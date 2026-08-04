@@ -18,6 +18,7 @@ export const PRODUCTION_RATE_LIMITS = Object.freeze([
   ["ARTWORK_RATE_LIMITER", { namespaceId: "88001002", limit: 120 }],
   ["PROMOTION_RATE_LIMITER", { namespaceId: "88001003", limit: 6 }],
   ["OAUTH_CALLBACK_RATE_LIMITER", { namespaceId: "88001004", limit: 20 }],
+  ["SIMULATION_RATE_LIMITER", { namespaceId: "88001005", limit: 12 }],
 ]);
 const RATE_LIMITS = new Map(PRODUCTION_RATE_LIMITS);
 
@@ -138,6 +139,35 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
     throw new Error("CLOUDFLARE_D1_DATABASE_NAME is invalid.");
   }
   const playExperienceMode = requiredHostedPlayExperienceMode(env);
+  const simulationExperienceMode =
+    env.SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
+  if (
+    simulationExperienceMode !== "disabled" &&
+    simulationExperienceMode !== "campaign-v1"
+  ) {
+    throw new Error(
+      "SIMULATION_EXPERIENCE_MODE must be disabled or campaign-v1.",
+    );
+  }
+  const simulationAiMode =
+    env.SIMULATION_AI_MODE?.trim() ||
+    (simulationExperienceMode === "campaign-v1" ? "live" : "authored-only");
+  if (
+    simulationAiMode !== "live" &&
+    simulationAiMode !== "authored-only"
+  ) {
+    throw new Error(
+      "Production SIMULATION_AI_MODE must be live or authored-only.",
+    );
+  }
+  if (
+    simulationExperienceMode === "campaign-v1" &&
+    simulationAiMode !== "live"
+  ) {
+    throw new Error(
+      "An enabled production simulation must use live AI with authored fallback.",
+    );
+  }
   return {
     head,
     contentVersion,
@@ -149,6 +179,8 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
     databaseName,
     publicationCacheId,
     playExperienceMode,
+    simulationExperienceMode,
+    simulationAiMode,
     accountId: PUBLIC_CLOUDFLARE_ACCOUNT_ID,
   };
 }
@@ -169,6 +201,10 @@ export function assertPublicReleaseConfig(config, expected) {
     PUBLIC_CONTENT_MODE: "d1_kv_required",
     DEPLOYMENT_TIER: "production",
     PLAY_EXPERIENCE_MODE: expected.playExperienceMode,
+    SIMULATION_EXPERIENCE_MODE: expected.simulationExperienceMode,
+    SIMULATION_AI_MODE: expected.simulationAiMode,
+    SIMULATION_PROVIDER: "anthropic",
+    SIMULATION_MODEL: "claude-sonnet-5",
   };
   const exactVars =
     JSON.stringify(Object.keys(vars).sort()) ===

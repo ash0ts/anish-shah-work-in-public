@@ -1595,6 +1595,83 @@
   margin-top: 28px;
 }
 
+.simulationApprovalStatus {
+  margin: 0 0 1.25rem;
+  color: rgba(23, 34, 59, 0.72);
+  font: 600 0.75rem/1.5 "IBM Plex Mono", ui-monospace, monospace;
+}
+
+.simulationApprovalGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--ink);
+  border-left: 1px solid var(--ink);
+}
+
+.simulationApprovalCard {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+  padding: clamp(1rem, 2.4vw, 1.6rem);
+  border: 0;
+  border-right: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  margin: 0;
+}
+
+.simulationApprovalCard legend {
+  padding: 0 0.4rem;
+  font-family: "Recursive", "Arial Black", sans-serif;
+  font-size: 1.2rem;
+  font-weight: 720;
+  letter-spacing: -0.025em;
+}
+
+.simulationApprovalCard label {
+  display: grid;
+  min-width: 0;
+  gap: 0.45rem;
+  color: rgba(23, 34, 59, 0.72);
+  font: 650 0.72rem/1.4 "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.simulationApprovalCard textarea,
+.simulationApprovalCard input[type="date"] {
+  width: 100%;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font: 500 0.9rem/1.5 "Hanken Grotesk", sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.simulationApprovalCard .simulationApprovalToggle {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--ink);
+}
+
+.simulationApprovalToggle input {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex: 0 0 auto;
+}
+
+.simulationApprovalNote {
+  max-width: 54rem;
+  margin: 1rem 0 0;
+  color: rgba(23, 34, 59, 0.68);
+  line-height: 1.6;
+}
+
 .shell .quietButton {
   color: var(--ink);
   background: transparent;
@@ -1782,6 +1859,10 @@
   .providerLead > nav {
     justify-self: start;
     text-align: left;
+  }
+
+  .simulationApprovalGrid {
+    grid-template-columns: 1fr;
   }
 }
 

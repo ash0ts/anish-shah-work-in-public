@@ -60,11 +60,43 @@ explicitly approved rotation:
 ```bash
 npx --no-install wrangler secret put CONNECTOR_ENCRYPTION_KEY --config dist/server/wrangler.public.json
 npx --no-install wrangler secret put RATE_LIMIT_SALT --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put SIMULATION_SESSION_HMAC_KEY --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_ACCOUNT_ID --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_ID --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_TOKEN --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_BYOK_ALIAS --config dist/server/wrangler.public.json
 ```
 
 Never rotate `CONNECTOR_ENCRYPTION_KEY` during an ordinary release. Bootstrap
 changes need their own recovery notes and are not covered by the release plan
 below.
+
+Create a production-only Cloudflare AI Gateway and store the Anthropic key
+there under the configured BYOK alias. The Worker must never receive the
+Anthropic key directly. In the Gateway dashboard:
+
+- disable prompt/response logging and payload collection;
+- disable response caching;
+- configure DLP to block likely secrets and sensitive values;
+- configure content Guardrails for visitor and model text;
+- set a hard spend limit consistent with the application daily-call ceiling;
+  and
+- confirm the Gateway token is scoped only to the production Gateway.
+
+The Worker also requests no payload logging, no cache, one Gateway attempt, and
+a bounded timeout on every model call. Those request flags do not replace the
+Gateway-wide controls. Staging uses a different Gateway, token, BYOK alias,
+provider key, budget, and session key.
+
+### Two-release simulation bootstrap
+
+The first production deployment that introduces simulation persistence must
+keep `SIMULATION_EXPERIENCE_MODE=disabled` and apply the reviewed additive
+`0006_public_model_simulation.sql` migration. After that disabled release is
+healthy, enter provider approvals through owner-only Studio. Only then prepare
+a second, no-migration activation release with `campaign-v1` and live AI. This
+ordering prevents a release plan from claiming approvals before their protected
+table exists.
 
 ### One-time apex cutover
 
@@ -126,6 +158,8 @@ export PLAY_EXPERIENCE_MODE='my-room-2001'
 export OWNER_EMAILS='<exact owner email>'
 export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
 export CF_ACCESS_AUD='<Access application audience>'
+export SIMULATION_EXPERIENCE_MODE='disabled'
+export SIMULATION_AI_MODE='authored-only'
 npm run validate:release
 ```
 
@@ -141,6 +175,13 @@ My Room, 2001 is the current production mode. The hosted configuration must
 record it explicitly; a missing mode cannot fall back to Classic. The release
 plan also computes `COPY_VERSION` from the copy deck and parser contract. It is
 distinct from canonical-data `CONTENT_VERSION`.
+
+For the later activation release, use
+`SIMULATION_EXPERIENCE_MODE=campaign-v1` and `SIMULATION_AI_MODE=live` before
+building. Hosted production rejects fixture mode and rejects an enabled
+campaign that is not live. These non-secret values are embedded in the exact
+Worker configuration and cannot be changed after validation without rebuilding
+and replanning the release.
 
 ## 2. Capture read-only production coordinates
 
@@ -173,6 +214,21 @@ contracts. If the currently deployed version does not expose this endpoint, use
 `none`, `none`, and `0` for the three publication inputs below and explicitly
 plan the application-mediated bootstrap.
 
+For an enabled simulation candidate, also read owner-only
+`GET /api/studio/health` from production before planning. Copy only:
+
+```text
+simulation.approvedProviders
+simulation.providerApprovalDigest
+```
+
+The provider list contains only currently enabled, unexpired approvals with
+both `game_display` and `llm_context`. The digest is a one-way hash of the safe
+approval projection. Do not copy approval references, timestamps, contacts,
+notes, Studio responses, or provider data into a shell, plan, or issue. If the
+list is empty or the digest is unavailable, leave production disabled and fix
+the protected approval state first.
+
 ## 3. Write the pre-release plan
 
 Set the release coordinates without applying a migration or deploying:
@@ -191,6 +247,15 @@ export RELEASE_PUBLICATION_KV_MATCH='<1 only when checkpoint says true; otherwis
 npm run release:plan
 ```
 
+For the activation release only, set these before `release:plan`:
+
+```bash
+export RELEASE_SIMULATION_APPROVED_PROVIDERS='<comma-separated simulation.approvedProviders>'
+export RELEASE_SIMULATION_APPROVAL_DIGEST='<simulation.providerApprovalDigest>'
+```
+
+Leave both unset while simulation is disabled.
+
 `RELEASE_PREVIOUS_WORKER_VERSION` is mandatory. Every release needs an existing
 version to hold 100% of traffic while the candidate is verified at 0%. If no
 prior version is available, abort this release and establish a separate
@@ -200,6 +265,14 @@ this release. Leave it empty when the remote migration inventory shows no
 reviewed pending migration. Replace the empty value only with exact
 remote-pending filenames; do not include an already-applied, absent-from-Git,
 or unreviewed file.
+
+Use `0006_public_model_simulation.sql` only for the disabled infrastructure
+release and only when Wrangler reports it pending. The subsequent simulation
+activation release sets `RELEASE_MIGRATION_LIST=''`. An enabled release plan
+requires at least one allowlisted provider name and a 64-character approval
+digest. A disabled plan rejects stale approval variables. The plan records only
+campaign version, experience/AI mode, provider/model, sorted provider names, and
+the digest; it has no field for approval references or secrets.
 
 `release:plan` refuses a dirty worktree or a SHA mismatch. It also asks the
 authenticated GitHub CLI to verify that all four distinct Actions runs belong
@@ -213,6 +286,8 @@ exact `HEAD`, and concluded successfully. Browser Quality must be a
 - the deployable artifact-set hash, file count, byte count, and manifest hash;
 - the prior Worker version;
 - the pre-migration D1 Time Travel bookmark and migration list; and
+- the exact simulation campaign/model settings plus sanitized approval names
+  and one-way approval-state digest; and
 - checksums for the content attestation and prepared Worker configuration.
 
 It also verifies that `HEAD` is pushed to the branch's configured upstream and
@@ -311,10 +386,14 @@ npm run cloudflare:checkpoint:snippet
 
 Sign in to the production Studio through Access, open the browser developer
 console on that same origin, and paste the printed self-contained snippet. It
-contains version/content identifiers but no Access token, identity, credential,
-or provider data. Through `Cloudflare-Workers-Version-Overrides`, the snippet:
+contains version/content identifiers plus the sanitized approved-provider names
+and one-way digest, but no Access token, identity, credential, approval
+reference, or provider collection data. Through
+`Cloudflare-Workers-Version-Overrides`, the snippet:
 
-1. verifies `/api/studio/health` reached the candidate SHA and content version;
+1. verifies `/api/studio/health` reached the candidate SHA/content version and
+   that campaign version, experience/AI mode, provider/model, Gateway readiness,
+   approved provider names, and approval digest exactly match the plan;
 2. calls the audited, empty-body Publish route only when the plan recorded
    `predeploy_bootstrap_required`;
 3. gets `/api/studio/publication-checkpoint` and requires a `ready` D1/KV
@@ -347,7 +426,7 @@ Wrangler deployment commands, or activate static fallback content.
 
 ## 8. Run the exact smoke checklist
 
-Record each of these thirteen base checks as pass only after observing it in
+Record each of these fourteen checks as pass only after observing it in
 production:
 
 1. `public_routes`: logged-out `/`, `/work`, `/play`, `/sources`, `/privacy`,
@@ -366,32 +445,39 @@ production:
    permissions headers are present on representative public and protected
    responses.
 7. `owner_health`: owner-only `GET /api/studio/health` reports the validated
-   release SHA, content version, `COPY_VERSION`, expected latest migration,
-   non-stale retention heartbeat, and sanitized connector status.
-8. `canonical_apex`: the apex is the sole content-serving production origin and
+   release SHA, content version, `COPY_VERSION`, expected latest migration, non-stale
+   retention heartbeat, sanitized connector status, and the planned simulation
+   contract. For an enabled campaign, Gateway readiness, provider names, and
+   approval digest match the plan.
+8. `simulation_experience`: when disabled, the ingress is absent and route/APIs
+   return their documented unavailable behavior. When enabled, `/simulation`
+   and the sitemap entry are public, Action and Tactical both complete, exactly
+   two optional text moments are enforced, AI outage completes through authored
+   fallback, and no prompt/response or visitor text appears in logs or storage.
+9. `canonical_apex`: the apex is the sole content-serving production origin and
    public HTML, metadata, sitemap, robots, and structured data use it.
-9. `www_redirect`: representative `www` paths and queries permanently redirect
+10. `www_redirect`: representative `www` paths and queries permanently redirect
    to the equivalent apex URL without dropping either component.
-10. `workers_dev_disabled`: the former `workers.dev` hostname no longer serves
+11. `workers_dev_disabled`: the former `workers.dev` hostname no longer serves
     the application.
-11. `preview_urls_disabled`: the candidate version has no reachable Worker
+12. `preview_urls_disabled`: the candidate version has no reachable Worker
     preview URL.
-12. `request_id_header`: representative dynamic public, protected, error, and
+13. `request_id_header`: representative dynamic public, protected, error, and
     host-rejection responses include a fresh `x-request-id`; custom logs remain
     limited to the documented redacted fields.
-13. `access_destinations`: both `anish-shah-is.online/studio*` and
+14. `access_destinations`: both `anish-shah-is.online/studio*` and
    `anish-shah-is.online/api/studio/*` require Access, the owner succeeds, and
    a non-owner remains denied.
 
 When the recorded mode is `my-room-2001`, the attestation also requires six
 direct-route checks:
 
-14. `play_watch`: `/play/watch` renders Watch and reads only MyAnimeList.
-15. `play_read`: `/play/read` renders Read and reads only Hardcover.
-16. `play_listen`: `/play/listen` renders Listen and keeps Spotify playback consent-gated.
-17. `play_collect`: `/play/collect` renders Collect and the eligible Discogs public state.
-18. `play_play`: `/play/play` renders Play and reads only Steam.
-19. `play_move`: `/play/move` renders Move and keeps the Strava frame consent-gated.
+15. `play_watch`: `/play/watch` renders Watch and reads only MyAnimeList.
+16. `play_read`: `/play/read` renders Read and reads only Hardcover.
+17. `play_listen`: `/play/listen` renders Listen and keeps Spotify playback consent-gated.
+18. `play_collect`: `/play/collect` renders Collect and the eligible Discogs public state.
+19. `play_play`: `/play/play` renders Play and reads only Steam.
+20. `play_move`: `/play/move` renders Move and keeps the Strava frame consent-gated.
 
 Also verify that `/play` itself performs no connector read before object
 selection, the semantic directory works without WebGL, and no inactive provider
@@ -403,23 +489,24 @@ deployed Worker version ID.
 
 ## 9. Write the immutable final attestation
 
-After all checks required by the recorded Play mode pass:
+After all checks required by the recorded Play and simulation modes pass:
 
 ```bash
 export RELEASE_WORKER_VERSION='<deployed version id>'
 export RELEASE_SMOKE_TESTED_AT='2026-08-03T18:00:00.000Z'
-export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health,canonical_apex,www_redirect,workers_dev_disabled,preview_urls_disabled,request_id_header,access_destinations,play_watch,play_read,play_listen,play_collect,play_play,play_move'
+export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health,simulation_experience,canonical_apex,www_redirect,workers_dev_disabled,preview_urls_disabled,request_id_header,access_destinations,play_watch,play_read,play_listen,play_collect,play_play,play_move'
 npm run release:attest
 ```
 
 `release:attest` rechecks the clean commit and `RELEASE_VALIDATED_SHA`, verifies
 that the ignored release plan still matches the content attestation and Worker
 configuration, verifies the guarded non-versioned-trigger receipt, and requires
-exactly the smoke identifiers selected by `PLAY_EXPERIENCE_MODE`. It then
+exactly the base and direct-route smoke identifiers selected by the recorded
+Play and simulation modes. It then
 writes a new immutable `releases/<date>-<sha>.json` containing the prior and
 current Worker versions, content and copy versions, D1 recovery coordinates,
 four validation URLs, trigger reconciliation, domain-cutover evidence, and
-smoke results.
+simulation settings, sanitized approval digest, and smoke results.
 
 Review and commit the new release record. Never edit or overwrite an earlier
 record. If any check fails, do not write a successful attestation; follow the

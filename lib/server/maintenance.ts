@@ -6,6 +6,11 @@ import {
 import { runtimeDatabase, runtimeValue } from "./runtime-env";
 import { RETENTION_MAINTENANCE_KEY } from "./maintenance-state";
 import { COPY_VERSION } from "../copy";
+import {
+  getSimulationHealthSummary,
+  simulationProviderApprovalDigest,
+  type SimulationHealthSummary,
+} from "./simulation/health";
 export {
   PUBLICATION_MAINTENANCE_KEY,
   recordMaintenanceState,
@@ -61,6 +66,9 @@ export type StudioHealth = {
     status: "current" | "stale" | "error" | "unavailable";
     lastSuccessfulAt: string | null;
   }>;
+  simulation: SimulationHealthSummary & {
+    providerApprovalDigest: string | null;
+  };
 };
 
 function canonicalOriginState(): StudioHealth["canonicalOrigin"] {
@@ -149,6 +157,14 @@ export async function getStudioHealth(): Promise<StudioHealth> {
   const contentVersion = deployedValue("CONTENT_VERSION", /^[a-f0-9]{16}$/);
   const canonicalOrigin = canonicalOriginState();
   const database = runtimeDatabase();
+  const [simulationSummary, providerApprovalDigest] = await Promise.all([
+    getSimulationHealthSummary(new Date(checkedAt), database),
+    simulationProviderApprovalDigest(database),
+  ]);
+  const simulation = {
+    ...simulationSummary,
+    providerApprovalDigest,
+  };
   if (!database) {
     return {
       status: "setup_required",
@@ -164,6 +180,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
         status: "unavailable",
         lastSuccessfulAt: null,
       })),
+      simulation,
     };
   }
 
@@ -241,6 +258,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       },
       retentionHeartbeat,
       connectors,
+      simulation,
     };
   } catch {
     return {
@@ -257,6 +275,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
         status: "unavailable",
         lastSuccessfulAt: null,
       })),
+      simulation,
     };
   }
 }

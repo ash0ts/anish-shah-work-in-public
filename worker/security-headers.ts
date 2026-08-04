@@ -22,6 +22,10 @@ export function isPlayPath(pathname: string): boolean {
   return pathname === "/play" || pathname === "/play/" || pathname.startsWith("/play/");
 }
 
+export function isSimulationPath(pathname: string): boolean {
+  return pathname === "/simulation" || pathname === "/simulation/";
+}
+
 function isPublicHtmlRequest(request: Request, pathname: string): boolean {
   if (request.method !== "GET" && request.method !== "HEAD") return false;
   if (isPrivatePath(pathname) || pathname.startsWith("/_")) return false;
@@ -144,9 +148,10 @@ export function securedResponse(
   } else if (isPrivatePath(pathname)) {
     headers.set("cache-control", "private, no-store");
     headers.set("x-robots-tag", "noindex, nofollow, noarchive");
-  } else if (isPlayPath(pathname)) {
-    // Play includes publication-gated provider state in its server-rendered
-    // fallback. Never let a shared cache outlive an unpublish or disconnect.
+  } else if (isPlayPath(pathname) || isSimulationPath(pathname)) {
+    // Play and Simulation can include publication-gated provider state in
+    // their server-rendered fallbacks. Never let a shared cache outlive an
+    // unpublish, disconnect, or permission change.
     headers.set("cache-control", "private, no-store");
   } else if (isPublicHtmlRequest(request, pathname) && response.ok) {
     headers.set(

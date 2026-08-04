@@ -3,6 +3,7 @@ import { ROOM_OBJECTS } from "../components/play/room-platform/room-registry";
 import { canonicalMetadataOrigin } from "../lib/deployment-environment";
 import { runtimeHostedDeploymentPresentation } from "../lib/server/deployment-presentation";
 import { roomExperienceEnabled } from "../lib/server/play-experience";
+import { simulationExperienceEnabled } from "../lib/server/simulation/policy";
 import { getPublicContentView } from "../lib/server/public-content";
 import { workArchiveRecordsFrom } from "../lib/work-index";
 
@@ -64,5 +65,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }))
     : [];
 
-  return [...publicRoutes, ...playRoutes, ...workRoutes];
+  const simulationRoutes: MetadataRoute.Sitemap = simulationExperienceEnabled()
+    ? [
+        {
+          url: `${baseUrl}/simulation`,
+          lastModified,
+          changeFrequency: "monthly",
+          priority: 0.5,
+        },
+      ]
+    : [];
+
+  return [...publicRoutes, ...playRoutes, ...simulationRoutes, ...workRoutes];
 }
