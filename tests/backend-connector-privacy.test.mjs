@@ -480,7 +480,7 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(guide, /Reauthorization required/);
   assert.match(guide, /one year/i);
   assert.match(guide, /January\s+1/i);
-  assert.match(guide, /npm run lint && npm test/);
+  assert.match(guide, /npm run validate/);
   assert.doesNotMatch(guide, /Renewal is manual/);
   assert.match(guide, /strava-embeds\.com/);
   assert.match(guide, /www\.strava\.com\/athletes/);

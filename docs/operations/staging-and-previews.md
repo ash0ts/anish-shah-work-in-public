@@ -1,5 +1,10 @@
 # Staging and PR previews
 
+This is the canonical contract for local, PR preview, live staging, and
+production isolation. Production mutation and smoke testing belong only in the
+[production release runbook](./release.md). The private OpenAI Sites deployment
+is a reference/recovery environment outside this promotion path.
+
 The site has four deliberately isolated execution contexts:
 
 | Tier | Origin | State | Intended use |
@@ -12,6 +17,12 @@ The site has four deliberately isolated execution contexts:
 Code can move between tiers. Credentials, OAuth transactions, snapshots,
 database rows, KV envelopes, encryption keys, rate-limit salts, and publication
 approval never do.
+
+Hosted tiers must declare `DEPLOYMENT_TIER`, `SITE_URL`,
+`PRODUCTION_SITE_URL`, `PUBLIC_CONTENT_MODE`, and `PLAY_EXPERIENCE_MODE`
+explicitly. Staging and preview use `my-room-2001`. Unknown tiers, missing
+coordinates, or cross-tier hosts fail closed. Staging and preview canonicals
+point to the equivalent production path without making those tiers indexable.
 
 ## One-time staging infrastructure
 
@@ -49,6 +60,12 @@ https://staging.anish-shah-is.online/api/connectors/discogs/oauth/callback
 
 Enter all staging credentials through staging Studio. Never copy a production
 token, snapshot, database, KV value, or encryption key.
+
+MyAnimeList, Spotify, and Discogs must use staging-specific application
+registrations. Hardcover, Steam, and Strava may be entered manually when their
+live staging behavior is under review. Complete authorization, refresh,
+publication acknowledgement where applicable, and recovery testing in staging;
+a successful callback alone is not connector acceptance.
 
 Staging Studio does not render production handoff controls, and staging routes
 cannot issue, accept, stage, or apply a production promotion code. Local and
@@ -95,11 +112,20 @@ contract. Updating that production contract requires a reviewed code change.
 The generator writes only the ignored
 `dist/server/wrangler.staging.json`.
 
+`staging:prepare` runs the prebuild checks, builds exactly once, prepares the
+staging configuration, writes the release-build checkpoint, and reuses that
+same `dist` for candidate scans and Browser Quality. Subsequent staging commands
+verify the checkpoint and fail if any deployable byte changes.
+
 Record the current staging Worker version, staging D1 Time Travel bookmark,
 reviewed migration list, and four exact-SHA successful workflow URLs. The
 temporary owner-runner procedure in [Testing and release gates](../testing.md)
 is acceptable because it preserves the same active workflow identities and
-checks:
+checks. Browser Quality must be a manually dispatched run for the same full SHA
+even when the pull request was documentation-only. When the staging candidate
+lives on an owner-controlled `release/*` branch, dispatch from that branch's
+workflow definitions rather than forcing `main`; use the `WORKFLOW_REF`
+procedure in the testing guide:
 
 ```bash
 export STAGING_PREVIOUS_WORKER_VERSION='<current staging Worker version>'
@@ -135,6 +161,31 @@ pointer. It is idempotent for an already-current content version. The following
 checkpoint refuses a missing or mismatched KV pointer. The exact staging origin
 and configuration guard keep this command separate from production.
 
+The staging plan records the explicit Play mode, `CONTENT_VERSION`,
+`COPY_VERSION`, configuration and deployable-artifact hashes, four validation
+workflow identities, migration hashes, prior Worker version, and D1 bookmark.
+Checkpointing verifies the candidate SHA, both content versions, active D1
+publication, and matching KV pointer. Readiness retries only bounded, read-only
+checks; uncertain writes are never retried automatically.
+
+### Live staging acceptance
+
+Before production release, verify the exact staged SHA in Safari and an
+automated browser:
+
+- `/play` performs no connector read before selection;
+- all six direct object routes load only their associated provider;
+- real staging OAuth, refresh, publish/unpublish, stale, and recovery paths work;
+- Spotify and Strava frames remain consent-gated;
+- Discogs obeys its four-hour refresh eligibility and six-hour public cutoff;
+- My Room capability fallbacks and semantic navigation work without WebGL;
+- Studio health, publication checkpoint, noindex headers, and private/no-store
+  caching are correct; and
+- owner Access succeeds while logged-out and non-owner access fails.
+
+Staging uses an offset hourly cron at minute `47` for retention and due Discogs
+refresh. Its heartbeat and sync history belong only to staging.
+
 Rollback changes only the staging Worker version:
 
 ```bash
@@ -156,6 +207,14 @@ non-secret metadata. A `workflow_run` job from trusted `main` then:
 3. Deploys a Worker named `anish-shah-work-in-public-pr-<number>`.
 4. Smoke-tests through a preview-only Access service token.
 5. Updates a persistent PR comment.
+
+Copy-only PRs use a stricter variant: an unprivileged job packages only
+validated `content/copy/**/*.md` text, then a trusted job checks out base-branch
+code, reapplies and revalidates that text, computes `COPY_VERSION`, builds the
+synthetic preview, and captures affected-route screenshots. If any code,
+workflow, configuration, binary, symlink, or unapproved path changes, the
+trusted copy lane stops and the PR returns to the normal engineering workflow.
+See [Copywriting](../copywriting.md).
 
 Configure the GitHub `preview` environment with:
 
@@ -203,6 +262,13 @@ The same scenarios are selectable at page level with
 tier and then forwards it to whichever stream the reviewer activates. Ready
 fixtures include neutral first-party placeholder artwork, while
 `missing-artwork` deliberately omits the artwork contract.
+
+Every staging and preview response includes
+`X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex`.
+Their `robots.txt` disallows all crawling, no staging/preview sitemap is
+advertised, browser titles identify the tier, and dynamic responses are
+`private, no-store`. Access protection is required but is not treated as the
+only indexing control.
 
 ## Visual review evidence
 

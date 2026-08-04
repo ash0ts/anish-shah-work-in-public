@@ -15,7 +15,7 @@ Use that value to locate its bounded event; do not add request data to make an
 incident easier to search.
 
 The owner-only `GET /api/studio/health` endpoint reports only release SHA,
-content version, canonical-origin readiness, migration state, retention
+content version, copy version, canonical-origin readiness, migration state, retention
 heartbeat, and sanitized connector status. It is protected by Access and the
 exact owner allowlist and is always `private, no-store`.
 
@@ -24,10 +24,11 @@ exact owner allowlist and is always `private, no-store`.
 - Confirm anonymous 2xx responses for public pages, robots, sitemap, and public
   connector envelopes.
 - Confirm Studio requires Access and a non-owner is denied.
-- Confirm `/api/studio/health` matches the deployed SHA/content version and has
+- Confirm `/api/studio/health` matches the deployed SHA, `CONTENT_VERSION`, and
+  `COPY_VERSION`, and has
   a current retention heartbeat.
 - Inspect Studio connector health and refresh configured providers.
-- Confirm the release commit, Worker version, content version, D1 bookmark, and
+- Confirm the release commit, Worker version, content version, copy version, D1 bookmark, and
   smoke-test time are recorded under `releases/`.
 
 ## Logs and cron

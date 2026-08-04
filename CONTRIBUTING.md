@@ -1,43 +1,60 @@
 # Contributing
 
-This is a private, owner-operated portfolio. Changes should be small,
-reviewable, reversible, and tied to one user-visible or operational outcome.
+This is a private, owner-operated portfolio. Keep changes focused, reviewable,
+reversible, and tied to one user-visible or operational outcome.
 
-## Workflow
+## Choose the right path
 
-1. Branch from current `main` using `codex/<short-purpose>` or another clearly
-   named branch.
-2. Use Node `24.18.0`, activate npm `11.6.2` with Corepack, and use
-   `npm ci`.
-3. Keep secrets in the permission-restricted `.env.local`; never place real
-   credentials, tokens, D1 exports, OAuth codes, or private source material in
-   commits, logs, screenshots, issues, or PRs.
-4. Run `npm run validate` and apply migrations to a fresh local D1 with
-   `npm run db:local:migrate`.
-5. Open a PR and obtain owner review. Because this private repository cannot
-   currently enforce branch protection, the owner must confirm Validate,
-   Gitleaks, and CodeQL on the exact commit before merge or release.
+### Engineering change
 
-## Boundaries
+1. Branch from current `main` with a descriptive name.
+2. Follow the exact local workflow in [Testing](./docs/testing.md).
+3. Trace the authoritative source before editing; do not patch generated output.
+4. Add a regression test for a repaired invariant.
+5. Run the checks selected by the repository maintenance helper.
+6. Open a PR with motivation, trust boundary, evidence, screenshots where
+   relevant, migration impact, and rollback notes.
 
-- `content/public/anish-content.public.v1.json` is the only deployable content
-  bundle. Private source files and `content/private/` stay outside Git.
-- A content change must run the private-source regeneration check followed by
-  `npm run content:attest:write`; include both projection and attestation.
-- D1 migrations are forward-only. Use expand/backfill/contract: first make an
-  additive change compatible with both old and new Worker versions, backfill
-  separately, and remove old fields only in a later release.
-- Do not modify published IDs, route aliases, credential encryption, Access
-  verification, or publication policy as incidental refactoring.
-- Keep production and local OAuth applications, credentials, snapshots, and
-  D1 databases isolated.
+### Copy-only change
 
-## Pull-request evidence
+Edit only the declared fields in `content/copy/**/*.md` and use the copy PR
+template. Follow [Copywriting](./docs/copywriting.md). A copy-only PR is
+validated and previewed using trusted base-branch code; it cannot change
+application behavior, facts outside the allowlist, metrics, evidence, policy,
+routes, or deployment.
 
-Include the motivation, affected trust boundary, tests run, screenshots for UI
-changes, migration/rollback impact, content-attestation impact, and any manual
-production step. Use the checked-in PR template.
+If a copywriter requests layout or behavior work, describe it in the PR’s
+implementation-request section. The owner may add implementation commits,
+which intentionally moves the PR into the normal engineering lane, or open a
+linked engineering PR.
 
-Browser accessibility and performance changes require `npm run
-validate:browser`. Install the pinned Chromium build first as described in
-[testing](./docs/testing.md); attach relevant screenshots or traces to the PR.
+## Non-negotiable boundaries
+
+- Never commit credentials, OAuth material, D1/KV exports, `.env.local`,
+  `.wrangler`, private source inputs, or provider payloads.
+- `content/public/anish-content.public.v1.json` is generated deployable data,
+  not an editing surface.
+- `content/copy/` changes presentation wording only; its parser rejects markup,
+  links, scripts, private paths, and quantitative metric-shaped copy.
+- D1 migrations are forward-only. Use expand/backfill/contract and never edit
+  an applied migration.
+- Keep local, preview, staging, production, and private Sites-reference state
+  isolated.
+- Do not change IDs, route aliases, Access verification, credential encryption,
+  publication policy, or connector schemas as incidental refactoring.
+- Remote migrations, deployment, Access changes, or secret rotation require
+  explicit owner authorization and the applicable runbook.
+
+## Review and merge policy
+
+Before granting a freelancer write access, the owner must verify GitHub Pro
+branch protection on `main`: pull requests required, one owner/CODEOWNER
+approval, stale approvals dismissed, conversations resolved, required checks
+green, and direct/force pushes and branch deletion disabled. Do not describe
+those protections as active until they have been verified in GitHub.
+
+All release evidence must belong to the exact commit. Browser Quality may skip
+documentation-only PRs, but staging and production releases always require a
+manually dispatched exact-SHA Browser Quality run in addition to Validate,
+Gitleaks, and CodeQL. See [Testing](./docs/testing.md) and the
+[release runbook](./docs/operations/release.md).

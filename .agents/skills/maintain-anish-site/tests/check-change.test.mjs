@@ -59,6 +59,40 @@ function deletedPathPlan(relativePath, content = "fixture\n") {
   return result;
 }
 
+function committedBasePlan() {
+  const directory = mkdtempSync(path.join(tmpdir(), "anish-skill-base-"));
+  git(directory, "init", "--quiet");
+  git(directory, "config", "user.email", "fixture@example.com");
+  git(directory, "config", "user.name", "Fixture");
+  writeFileSync(path.join(directory, "README.md"), "# Fixture\n");
+  git(directory, "add", "README.md");
+  git(directory, "commit", "--quiet", "-m", "base");
+  const base = spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: directory,
+    encoding: "utf8",
+  }).stdout.trim();
+
+  mkdirSync(path.join(directory, "content/copy/pages"), { recursive: true });
+  writeFileSync(
+    path.join(directory, "content/copy/pages/home.md"),
+    "<!-- copy-page: home -->\n\n## hero-headline\nA useful headline\n",
+  );
+  git(directory, "add", "content/copy/pages/home.md");
+  git(directory, "commit", "--quiet", "-m", "copy");
+
+  const result = spawnSync(
+    process.execPath,
+    [helper, "--plan", "--base", base],
+    {
+      cwd: directory,
+      encoding: "utf8",
+      maxBuffer: 8 * 1024 * 1024,
+    },
+  );
+  rmSync(directory, { recursive: true, force: true });
+  return { base, result };
+}
+
 test("content source edits select canonical content and attestation checks", () => {
   const result = plan("content/curation/work-groups.v1.json");
   assert.equal(result.status, 0, output(result));
@@ -101,6 +135,62 @@ test("responsive Discogs changes require connector and browser gates", () => {
   assert.match(result.stdout, /npm run test:content/);
   assert.match(result.stdout, /npm run test:backend/);
   assert.match(result.stdout, /npm run validate:browser/);
+});
+
+test("copy-deck edits select copy validation and browser review", () => {
+  const result = plan("content/copy/pages/home.md");
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, /- copy-deck/);
+  assert.match(result.stdout, /npm run copy:check/);
+  assert.match(result.stdout, /npm run copy:test/);
+  assert.match(result.stdout, /npm run copy:diff/);
+  assert.match(result.stdout, /npm run validate:browser/);
+});
+
+test("mixed dependency and copy changes retain copy diff and browser gates", () => {
+  const result = plan("package.json", "content/copy/pages/home.md");
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, /npm run validate/);
+  assert.match(result.stdout, /npm run copy:diff/);
+  assert.match(result.stdout, /npm run validate:browser/);
+});
+
+test("mixed dependency and documentation changes retain documentation coverage", () => {
+  const result = plan("package.json", "README.md");
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, /- documentation/);
+  assert.match(result.stdout, /npm run validate/);
+});
+
+test("local DX, documentation tooling, and skill tooling are classified", () => {
+  for (const [pathName, expected] of [
+    ["scripts/setup-local.mjs", /npm run test:local-dx/],
+    ["scripts/lib/docs-check.mjs", /npm run docs:check/],
+    ["scripts/validate-repository-skills.mjs", /npm run skill:validate/],
+  ]) {
+    const result = plan(pathName);
+    assert.equal(result.status, 0, `${pathName}\n${output(result)}`);
+    assert.match(result.stdout, /- developer-experience/);
+    assert.match(result.stdout, expected);
+  }
+});
+
+test("--base classifies committed changes from the requested merge base", () => {
+  const { base, result } = committedBasePlan();
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, new RegExp(`Base: ${base}`));
+  assert.match(result.stdout, /content\/copy\/pages\/home\.md/);
+  assert.match(result.stdout, /- copy-deck/);
+  assert.match(result.stdout, /npm run copy:diff -- --base [a-f0-9]{40}/);
+});
+
+test("--base rejects Git-option injection", () => {
+  const result = spawnSync(process.execPath, [helper, "--plan", "--base", "-p"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 2);
+  assert.match(output(result), /safe Git ref/);
 });
 
 test("Access and authentication changes fail classification without coverage", () => {
@@ -222,18 +312,19 @@ test("deleting mistakenly tracked sensitive material is allowed", () => {
   assert.equal(result.status, 0, output(result));
 });
 
-test("release work selects validation without production mutation", () => {
+test("release work selects ordinary validation without production mutation", () => {
   const result = plan("releases/next-release.json");
   assert.equal(result.status, 0, output(result));
-  assert.match(result.stdout, /npm run validate:release/);
+  assert.match(result.stdout, /Checks:\n  - npm run validate\n/);
   assert.match(
     result.stdout,
-    /Release validation never deploys, migrates production, rotates credentials, or mutates Git/,
+    /Run validate:release separately only for a clean, pushed, explicitly approved production candidate/,
   );
+  assert.match(result.stdout, /maintenance helper never deploys/);
   assert.doesNotMatch(result.stdout, /cloudflare:deploy|cloudflare:migrate/);
 });
 
-test("release gate implementation changes always select full release validation", () => {
+test("release gate implementation changes select release-code validation", () => {
   for (const gate of [
     "scripts/lib/release-config-contract.mjs",
     "scripts/lib/deployable-artifact-contract.mjs",
@@ -243,7 +334,8 @@ test("release gate implementation changes always select full release validation"
   ]) {
     const result = plan(gate);
     assert.equal(result.status, 0, `${gate}\n${output(result)}`);
-    assert.match(result.stdout, /npm run validate:release/, gate);
+    assert.match(result.stdout, /Checks:\n  - npm run validate\n/, gate);
+    assert.match(result.stdout, /Run validate:release separately/, gate);
     assert.doesNotMatch(result.stdout, /cloudflare:deploy|cloudflare:migrate/, gate);
   }
 });

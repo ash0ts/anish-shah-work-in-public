@@ -1,60 +1,46 @@
 # Validation Matrix
 
-Run commands from the repository root. Start with the smallest relevant checks, then expand for cross-cutting risk.
+Run from the repository root. Classify committed PR changes and local work together:
+
+```bash
+node .agents/skills/maintain-anish-site/scripts/check-change.mjs --plan --base origin/main
+node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run --base origin/main
+```
 
 ## Path-to-Check Map
 
 | Changed area | Required checks |
 | --- | --- |
-| `content/curation`, `content/presentation`, `scripts/build-content.mjs`, content types/selectors | `npm run verify:content`, `npm run test:content`, `npm run typecheck` |
-| `app`, `components`, route CSS, SEO or metadata | `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:rendered` |
-| `lib/server/connectors`, connector APIs, Studio connector controls | `npm run typecheck`, `npm run test:content`, `npm run test:backend`, relevant rendered tests |
-| `worker`, auth, CSP, request security, public projection | `npm run typecheck`, `npm run test:backend`, `npm run build`, `npm run bundle:scan`, `npm run security:audit` |
-| release scripts/contracts, CodeQL/audit/bundle/browser gates, deployable manifest | `npm run validate:release` with documented release metadata; never deploy from the helper |
-| `drizzle` or D1 repository changes | relevant backend/content tests plus the full gate; apply locally before any authorized remote migration |
-| dependencies, build configuration, CI, or cross-domain changes | full gate |
-| maintenance helper or repository skill policy | `npm run test:maintenance-skill` plus skill-creator `quick_validate.py` |
+| `content/copy`, copy contracts/parser/runtime | `copy:check`, `copy:diff`, `copy:test`, typecheck, build, rendered and browser checks |
+| canonical curation/presentation/generator/types | content verification, attestation, content tests, typecheck; rendered/privacy checks when public |
+| public app/components/CSS/SEO | typecheck, lint, build, rendered tests; browser checks for responsive/interactive work |
+| connectors, Studio, OAuth | typecheck, content/backend/security tests, exact public projector and provider-failure coverage |
+| Worker/auth/CSP/publication/security | backend/security tests, build, bundle scan, dependency audit |
+| D1 migrations | clean local migration plus relevant backend/content tests; never edit an applied migration |
+| README/docs | `npm run docs:check` plus link/command freshness review |
+| `.agents` or skill policy | `npm run skill:validate` and `npm run test:maintenance-skill` |
+| dependency/build/CI/cross-domain | full `npm run validate` and applicable browser gate |
+| release scripts/contracts | ordinary `npm run validate`; production-candidate execution remains separate and authorization-gated |
 
-Use the bundled helper to classify changed paths:
+The helper scans tracked and changed text for credentials, private sources, internal paths, and generated-content drift. It never deploys, migrates hosted state, rotates credentials, or mutates Git.
 
-```bash
-node .agents/skills/maintain-anish-site/scripts/check-change.mjs --plan
-node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run
-```
-
-The helper never deploys or migrates remote state.
-It scans tracked and changed text for high-confidence secret/private-source leaks;
-placeholder examples must use the documented `<value>`, `${VALUE}`, `example`,
-or clearly synthetic test forms. Owner write/auth/OAuth changes without a matching
-security regression-test path fail classification. Responsive Play-stream work selects
-the browser gate, and release work selects `validate:release` without deploying.
-
-## Full Gate
-
-Run for security, migration, dependency, release, or cross-domain work:
+## Full Handoff
 
 ```bash
 npm run validate
 npm run validate:browser
 ```
 
-`validate` includes the public attestation, lint, a clean local D1 migration,
-typechecking, content/backend tests, production build, bundle scan, rendered
-tests, and the dependency gate. `validate:browser` adds Playwright, Axe, and
-direct Lighthouse checks. Use `validate:release` only with the documented
-production metadata after the exact commit is clean, pushed, and approved for
-release. It performs a final build and bundle scan, then writes and verifies the
-ignored deterministic manifest for every `dist/client` and `dist/server` file.
+`validate` covers copy/content attestations, lint, clean local D1 migrations, both repository skills, typechecking, content/backend tests, production build, bundle/privacy scans, rendered tests, and dependency policy. `validate:browser` covers Playwright, Axe, room behavior, responsive overflow, and Lighthouse.
 
-## Manual Checks by Surface
+Run `validate:release` only for a clean, pushed, approved production candidate after exact-SHA Validate, Gitleaks, CodeQL, and Browser Quality evidence exists. It must reuse and verify one immutable deployable artifact; it is not an ordinary development check.
 
-- Public UI: inspect 320, 390, 768, 1024, 1440, and 1920px; 200–400% zoom; text spacing; keyboard; focus; reduced motion; forced colors; long titles; missing imagery; and no-JavaScript content.
-- Work and Sources: verify filters/search preserve canonical links, result counts are announced, and no duplicate index or inherited outcome appears.
-- Play: activate one stream at a time; test unavailable, stale, provider failure, consent, gallery pagination, missing artwork, and focus restoration.
-- Studio: test unauthenticated, authenticated non-owner, owner, same-origin rejection, oversized/malformed body, replacement, refresh, disconnect, and audited publication.
-- OAuth: test exact callbacks, denial, expiry, replay, wrong owner, token rotation, 401 retry, invalid grant, 403, 429, and sanitized redirects.
-- Release: verify anonymous public access and fail-closed Studio/API behavior from a logged-out browser.
+## Manual Coverage
 
-## Handoff Evidence
+- Public UI/copy: affected routes at 320, 390, 768, 1024, 1440, and 1920px; long copy; 200–400% zoom; keyboard/focus; reduced motion; forced colors; metadata/JSON-LD; no JavaScript.
+- My Room: zero connector reads on `/play`, one provider per object route, intent-gated R3F, drag/click discrimination, Back/Escape/focus restoration, static capability fallbacks.
+- Studio/OAuth: logged out, non-owner, owner, origin/body guards, denial/expiry/replay/wrong owner, refresh/replacement/disconnect, sanitized errors.
+- Environments: preview fixtures only, staging isolation/noindex, production exact host/Access, private Sites unchanged.
+- Release: follow the canonical runbook's thirteen smoke checks and distinguish automated evidence from manual inspection.
 
-Report the exact commands run and their result. Distinguish automated checks from manual inspection. If owner-held source inputs, provider credentials, Cloudflare authentication, or production access are unavailable, state the unverified step instead of weakening or silently skipping it.
+If private inputs, provider credentials, browser/Cloudflare access, or exact workflow evidence are unavailable, name the unverified step. Never weaken a gate to manufacture success.

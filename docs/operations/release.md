@@ -1,6 +1,8 @@
 # Production release
 
-This runbook releases the owner-controlled Cloudflare Worker. The private Sites
+This is the sole authority for production planning, mutation, checkpointing,
+smoke testing, and attestation. It releases the owner-controlled Cloudflare
+Worker. The private Sites
 deployment remains a recovery/reference environment; it is not a public
 rollback target.
 
@@ -91,13 +93,14 @@ owner, connector, metadata, and security-header checks, disable the legacy
 `workers.dev` hostname and remove its old Access destinations. Do not add an
 application redirect for it.
 
-## 1. Validate the exact commit
+## 1. Validate the exact commit and bytes
 
 Merge through a reviewed PR, then manually dispatch Validate, Gitleaks, CodeQL,
-and Browser Quality with the same full commit SHA. All four must succeed. The
-temporary owner-runner option in [Testing and release gates](../testing.md)
-keeps these workflow identities and gates intact when hosted Actions capacity
-is unavailable. On the release machine:
+and Browser Quality with the same full commit SHA. All four workflow identities
+and successful conclusions must be valid. The temporary owner-runner option in
+[Testing and release gates](../testing.md) keeps those active workflow
+identities and gates intact when hosted Actions capacity is unavailable. On the
+release machine:
 
 ```bash
 git switch main
@@ -119,24 +122,31 @@ export CLOUDFLARE_D1_DATABASE_ID='<production D1 UUID>'
 export CLOUDFLARE_D1_DATABASE_NAME='anish-shah-work-in-public'
 export CLOUDFLARE_PUBLICATION_CACHE_ID='<production KV namespace ID>'
 export PUBLIC_SITE_URL='https://anish-shah-is.online'
+export PLAY_EXPERIENCE_MODE='my-room-2001'
 export OWNER_EMAILS='<exact owner email>'
 export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
 export CF_ACCESS_AUD='<Access application audience>'
 npm run validate:release
 ```
 
-`validate:release` validates source, runs browser quality, produces the final
-build and reviewed non-secret Worker configuration, reruns the bundle/privacy
-scan, and writes a deterministic ignored manifest over every regular file in
-`dist/client` and `dist/server`. Install the pinned Playwright Chromium build before running it; do
-not bypass the browser gate while claiming the corresponding accessibility or
-performance results.
+`validate:release` runs prebuild validation, creates the deployable build once,
+prepares the reviewed non-secret Worker configuration, writes an immutable
+release-build checkpoint, and reuses those exact bytes for candidate scans,
+rendered tests, Browser Quality, Lighthouse, and release preflight. The final
+checkpoint fails if any file is rebuilt or changed. Install the pinned
+Playwright Chromium build before running it; do not bypass the browser gate
+while claiming accessibility or performance results.
+
+My Room, 2001 is the current production mode. The hosted configuration must
+record it explicitly; a missing mode cannot fall back to Classic. The release
+plan also computes `COPY_VERSION` from the copy deck and parser contract. It is
+distinct from canonical-data `CONTENT_VERSION`.
 
 ## 2. Capture read-only production coordinates
 
 Before changing production, collect the current Worker version, a D1 Time
-Travel bookmark, the remote migration state, and the four successful GitHub
-Validate, Gitleaks, CodeQL, and Browser Quality run URLs:
+Travel bookmark, the remote migration state, and the four exact-SHA successful
+GitHub Validate, Gitleaks, CodeQL, and Browser Quality run URLs:
 
 ```bash
 npx --no-install wrangler versions list --config dist/server/wrangler.public.json
@@ -174,7 +184,7 @@ export RELEASE_VALIDATION_URL='https://github.com/ash0ts/anish-shah-work-in-publ
 export RELEASE_GITLEAKS_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export RELEASE_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export RELEASE_BROWSER_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
-export RELEASE_MIGRATION_LIST='0005_steady_publication_guard.sql'
+export RELEASE_MIGRATION_LIST=''
 export RELEASE_PUBLICATION_HASH='<publication checkpoint contentHash, or none>'
 export RELEASE_PUBLICATION_CONTENT_VERSION='<checkpoint contentVersion, or none>'
 export RELEASE_PUBLICATION_KV_MATCH='<1 only when checkpoint says true; otherwise 0>'
@@ -186,15 +196,19 @@ version to hold 100% of traffic while the candidate is verified at 0%. If no
 prior version is available, abort this release and establish a separate
 protected bootstrap environment first. `RELEASE_MIGRATION_LIST` is a
 comma-separated list of the reviewed, checked-in SQL migrations planned for
-this release; do not include an unapplied or unreviewed file.
+this release. Leave it empty when the remote migration inventory shows no
+reviewed pending migration. Replace the empty value only with exact
+remote-pending filenames; do not include an already-applied, absent-from-Git,
+or unreviewed file.
 
 `release:plan` refuses a dirty worktree or a SHA mismatch. It also asks the
-authenticated GitHub CLI to verify that all four distinct Actions runs
-concluded successfully for the exact `HEAD` and expected workflow names and
-paths; the URLs alone are not trusted. Browser Quality must be a manual
-workflow dispatch. It records:
+authenticated GitHub CLI to verify that all four distinct Actions runs belong
+to this repository, use the expected active workflow names and paths, target
+exact `HEAD`, and concluded successfully. Browser Quality must be a
+`workflow_dispatch` run. URLs alone are not trusted. The plan records:
 
-- the validated commit SHA and all four GitHub Actions run URLs;
+- the validated commit SHA and all four GitHub Actions identities and URLs;
+- explicit `PLAY_EXPERIENCE_MODE`, `CONTENT_VERSION`, and `COPY_VERSION`;
 - the public content version and exact sanitized bundle SHA-256;
 - the deployable artifact-set hash, file count, byte count, and manifest hash;
 - the prior Worker version;
@@ -333,7 +347,7 @@ Wrangler deployment commands, or activate static fallback content.
 
 ## 8. Run the exact smoke checklist
 
-Record each of these thirteen checks as pass only after observing it in
+Record each of these thirteen base checks as pass only after observing it in
 production:
 
 1. `public_routes`: logged-out `/`, `/work`, `/play`, `/sources`, `/privacy`,
@@ -352,8 +366,8 @@ production:
    permissions headers are present on representative public and protected
    responses.
 7. `owner_health`: owner-only `GET /api/studio/health` reports the validated
-   release SHA and content version, expected latest migration, non-stale
-   retention heartbeat, and sanitized connector status.
+   release SHA, content version, `COPY_VERSION`, expected latest migration,
+   non-stale retention heartbeat, and sanitized connector status.
 8. `canonical_apex`: the apex is the sole content-serving production origin and
    public HTML, metadata, sitemap, robots, and structured data use it.
 9. `www_redirect`: representative `www` paths and queries permanently redirect
@@ -366,30 +380,46 @@ production:
     host-rejection responses include a fresh `x-request-id`; custom logs remain
     limited to the documented redacted fields.
 13. `access_destinations`: both `anish-shah-is.online/studio*` and
-    `anish-shah-is.online/api/studio/*` require Access, the owner succeeds, and
-    a non-owner remains denied.
+   `anish-shah-is.online/api/studio/*` require Access, the owner succeeds, and
+   a non-owner remains denied.
+
+When the recorded mode is `my-room-2001`, the attestation also requires six
+direct-route checks:
+
+14. `play_watch`: `/play/watch` renders Watch and reads only MyAnimeList.
+15. `play_read`: `/play/read` renders Read and reads only Hardcover.
+16. `play_listen`: `/play/listen` renders Listen and keeps Spotify playback consent-gated.
+17. `play_collect`: `/play/collect` renders Collect and the eligible Discogs public state.
+18. `play_play`: `/play/play` renders Play and reads only Steam.
+19. `play_move`: `/play/move` renders Move and keeps the Strava frame consent-gated.
+
+Also verify that `/play` itself performs no connector read before object
+selection, the semantic directory works without WebGL, and no inactive provider
+or iframe is prefetched. These behaviors are part of the route checks above,
+not substitutes for them.
 
 Write down the canonical ISO time at which this checklist completed and the
 deployed Worker version ID.
 
 ## 9. Write the immutable final attestation
 
-After all thirteen checks pass:
+After all checks required by the recorded Play mode pass:
 
 ```bash
 export RELEASE_WORKER_VERSION='<deployed version id>'
 export RELEASE_SMOKE_TESTED_AT='2026-08-03T18:00:00.000Z'
-export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health,canonical_apex,www_redirect,workers_dev_disabled,preview_urls_disabled,request_id_header,access_destinations'
+export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health,canonical_apex,www_redirect,workers_dev_disabled,preview_urls_disabled,request_id_header,access_destinations,play_watch,play_read,play_listen,play_collect,play_play,play_move'
 npm run release:attest
 ```
 
 `release:attest` rechecks the clean commit and `RELEASE_VALIDATED_SHA`, verifies
 that the ignored release plan still matches the content attestation and Worker
 configuration, verifies the guarded non-versioned-trigger receipt, and requires
-exactly the thirteen smoke identifiers above. It then
+exactly the smoke identifiers selected by `PLAY_EXPERIENCE_MODE`. It then
 writes a new immutable `releases/<date>-<sha>.json` containing the prior and
-current Worker versions, content hash, D1 recovery coordinates, validation URLs,
-trigger reconciliation, domain-cutover evidence, and smoke results.
+current Worker versions, content and copy versions, D1 recovery coordinates,
+four validation URLs, trigger reconciliation, domain-cutover evidence, and
+smoke results.
 
 Review and commit the new release record. Never edit or overwrite an earlier
 record. If any check fails, do not write a successful attestation; follow the
