@@ -11,11 +11,22 @@ runs:
   using: composite
   steps:
     - name: Use repository Node.js
+      if: env.ANISH_RELEASE_RUNNER != '1'
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version-file: ${{ inputs.working-directory }}/.node-version
         cache: npm
         cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+    - name: Verify the baked disposable-runner toolchain
+      if: env.ANISH_RELEASE_RUNNER == '1'
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd "${{ inputs.working-directory }}"
+        expected_node="v$(tr -d '[:space:]' < .node-version)"
+        expected_npm="$(node -p "require('./package.json').packageManager.replace(/^npm@/, '')")"
+        test "$(node --version)" = "$expected_node"
+        test "$(npm --version)" = "$expected_npm"
     - name: Activate package-manager version
       shell: bash
       run: |
@@ -27,8 +38,10 @@ runs:
           exit 1
         fi
         npm_version="${BASH_REMATCH[1]}"
-        npm install --global "npm@${npm_version}" --ignore-scripts
-        hash -r
+        if [ "$(npm --version)" != "$npm_version" ]; then
+          npm install --global "npm@${npm_version}" --ignore-scripts
+          hash -r
+        fi
         test "$(npm --version)" = "$npm_version"
     - name: Install locked dependencies
       shell: bash

@@ -4,20 +4,61 @@ on:
   push:
     branches: [main]
   pull_request:
+    paths:
+      - "app/**"
+      - "components/**"
+      - "lib/**"
+      - "worker/**"
+      - "scripts/**"
+      - "types/**"
+      - "tests/backend-connector-privacy.test.mjs"
+      - "tests/backend-security.test.mjs"
+      - "tests/ci-topology.test.mjs"
+      - "tests/cloudflare-access.test.mjs"
+      - "tests/content-connector-artwork.test.mjs"
+      - "tests/content-connectors.test.mjs"
+      - "tests/content-discogs-connector.test.mjs"
+      - "tests/content-discogs-oauth.test.mjs"
+      - "tests/content-myanimelist-oauth.test.mjs"
+      - "tests/content-privacy.test.mjs"
+      - "tests/content-spotify-connector.test.mjs"
+      - "tests/content-spotify-oauth.test.mjs"
+      - "tests/content-steam-connector.test.mjs"
+      - "tests/content-strava-config.test.mjs"
+      - "tests/copy-only-lane.test.mjs"
+      - "tests/play-promotion.test.mjs"
+      - "tests/preview-readiness.test.mjs"
+      - "tests/release-*.test.mjs"
+      - "tests/security-hardening.test.mjs"
+      - "tests/simulation-backend.test.mjs"
+      - "tests/simulation-migrations.test.mjs"
+      - "tests/simulation-play-grounding.test.mjs"
+      - "tests/staging-preview.test.mjs"
+      - "tests/travel-backend.test.mjs"
+      - "tests/travel-migrations.test.mjs"
+      - "tests/travel-security.test.mjs"
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - "package.json"
+      - "package-lock.json"
   workflow_dispatch:
     inputs:
       commit_sha:
         description: Full 40-character commit SHA to scan
         required: true
         type: string
-      runner_label:
-        description: Run on GitHub-hosted infrastructure or the temporary owner runner
+      runner_target:
+        description: Hosted runner or disposable owner AMD64 runner
         required: true
         default: github-hosted
         type: choice
         options:
           - github-hosted
-          - anish-release
+          - owner-amd64
+      jit_label:
+        description: One-time opaque runner label; required for owner-amd64
+        required: false
+        type: string
   schedule:
     - cron: "23 7 * * 2"
 
@@ -27,28 +68,35 @@ permissions:
   pull-requests: read
   security-events: read
 
+concurrency:
+  group: codeql-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.ref) }}
+  cancel-in-progress: true
+
 jobs:
   analyze:
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.runner_target == 'owner-amd64' && format('["self-hosted","linux","x64","{0}"]', inputs.jit_label) || '["ubuntu-latest"]') }}
     timeout-minutes: 20
     steps:
       - name: Validate owner dispatch
         if: github.event_name == 'workflow_dispatch'
         env:
           REQUESTED_SHA: ${{ inputs.commit_sha }}
-          REQUESTED_RUNNER_LABEL: ${{ inputs.runner_label }}
+          RUNNER_TARGET: ${{ inputs.runner_target }}
+          JIT_LABEL: ${{ inputs.jit_label }}
         run: |
           set -euo pipefail
           test "$GITHUB_ACTOR" = "$GITHUB_REPOSITORY_OWNER"
           [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
-          case "$REQUESTED_RUNNER_LABEL" in
-            github-hosted|anish-release) ;;
+          case "$RUNNER_TARGET" in
+            github-hosted) test -z "$JIT_LABEL" ;;
+            owner-amd64) [[ "$JIT_LABEL" =~ ^anish-release-[a-f0-9]{12}$ ]] ;;
             *) exit 1 ;;
           esac
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
+          fetch-depth: 0
           persist-credentials: false
       - name: Confirm exact commit
         env:
@@ -57,6 +105,23 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "${#GITHUB_SHA}" -eq 40
+      - name: Require the dispatched SHA to belong to the trusted release ref
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" =~ ^refs/heads/(main|release/[0-9]+\.[0-9]+\.[0-9]+)$ ]]
+          branch="${GITHUB_REF#refs/heads/}"
+          trusted_ref="$(git rev-parse "refs/remotes/origin/${branch}")"
+          test "$EXPECTED_SHA" = "$trusted_ref"
+      - name: Use the pinned repository Node before CodeQL
+        if: env.ANISH_RELEASE_RUNNER != '1'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - name: Verify the CodeQL runtime
+        run: test "$(node --version)" = "v$(cat .node-version)"
       - name: Initialize CodeQL
         uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:

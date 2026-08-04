@@ -2,6 +2,9 @@ name: Copy-only validation
 
 on:
   pull_request:
+    paths:
+      - "content/copy/**"
+      - ".github/PULL_REQUEST_TEMPLATE/copy-change.md"
 
 permissions:
   contents: read

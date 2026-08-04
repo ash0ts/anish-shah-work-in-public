@@ -139,43 +139,39 @@ optional ten-run soak and is not release-plan evidence.
 
 ## Temporary owner runner
 
-Automatic pull-request jobs and `main` push jobs always use GitHub-hosted
-`ubuntu-latest` runners. Feature branches are validated by their pull request;
-Validate does not also run for every `codex/**` branch push.
+Ordinary PRs use the path-classified `PR Gate`; full exact-SHA release evidence
+is owner-dispatched. When hosted minutes are unavailable, use the checked-in
+disposable runner image documented in [`.github/runner/README.md`](../.github/runner/README.md).
 
-When hosted Actions capacity is temporarily unavailable, the repository owner
-may manually dispatch the same exact workflows with `runner_label` set to
-`anish-release`. Each workflow rejects a dispatch whose actor is not the
-repository owner or whose `commit_sha` is not exactly 40 lowercase hexadecimal
-characters. The workflow names, paths, read-only permissions, exact-SHA checks,
-and release-evidence contract remain unchanged.
+The image pins Ubuntu 24.04 by architecture-specific digest, Node 24.18.0, npm
+11.6.2, Playwright 1.62.1, and GitHub runner 2.332.0. Downloaded Node and runner
+archives are SHA-256 verified. Build native ARM64 for Validate, Gitleaks, and
+Browser Quality; use the AMD64 image only for CodeQL. This avoids repeated x64
+emulation while preserving CodeQL compatibility.
 
-The runner is a disposable repository runner, not a release machine. Download
-the current GitHub runner immediately before evidence collection and configure
-each process from a clean directory with:
+Each evidence run uses an unpredictable label matching
+`anish-release-<12 lowercase hex>` and one or two ephemeral repository runners.
+A baked job-start hook rejects non-owner dispatches, PR events, unapproved
+workflow names, foreign repositories, and refs outside `main` or an exact
+`release/<semver>` branch. The workflow also proves that the requested commit is
+the current head of that trusted ref before running repository scripts. The
+container runs non-root, mounts no host directory or Docker socket, is
+CPU/memory/PID bounded, and receives no application or hosted environment
+secrets. Its short-lived repository registration token is the only credential
+required to register and is unset before the job starts.
 
-```bash
-./config.sh --url 'https://github.com/ash0ts/anish-shah-work-in-public' \
-  --token '<short-lived registration token>' \
-  --ephemeral --disableupdate --unattended --labels anish-release
-./run.sh
-```
+If the network requires an owner corporate CA, pass it during image creation as
+`OWNER_CA_FILE` and during execution as `RUNNER_CORPORATE_CA_PATH`. The build
+secret is removed before image layers are committed. At runtime exactly one CA
+file is mounted read-only, combined with the system bundle in ephemeral `/tmp`,
+and exposed through `NODE_EXTRA_CA_CERTS`, `GIT_SSL_CAINFO`, and `SSL_CERT_FILE`.
+Never copy the CA into the image, repository, or a GitHub secret, and never
+disable TLS verification.
 
-One runner directory and process executes exactly one job, deregisters
-automatically, and is never installed as a service. Provision a pool large
-enough for the workflow DAG: Browser Quality can schedule up to twelve jobs;
-the ten-run stability workflow needs eleven one-job runners when it executes in
-parallel, or equivalent clean sequential reprovisioning. Do not put Cloudflare
-credentials, provider tokens, `.env` files, D1 state, browser profiles, SSH
-agents, signing keys, or other durable secrets in the image, process
-environment, or workspace. Preserve only sanitized `_diag` output needed for a
-failed job, then deregister any remaining runner and destroy the VM.
-
-The workflows select the complete label set `self-hosted`, `linux`, `x64`, and
-`anish-release`, do not select a GitHub environment, and do not reference
-repository or environment secrets. Actions receive only the workflow's
-short-lived, read-only `GITHUB_TOKEN`. Because `--disableupdate` is required,
-start from the current runner release so Node 24 actions are supported.
+GitHub does not bill self-hosted runner minutes. The owner still pays for the
+local machine's compute and network use, so keep concurrency at one evidence
+job or two optional soak workers and destroy every container after its single
+job.
 
 Dispatch the four release-evidence workflows from a trusted owner-controlled
 workflow branch, checking out one already-pushed commit. Use `main` for an
@@ -187,23 +183,52 @@ export VALIDATED_SHA='<full 40-character pushed commit SHA>'
 export RELEASE_LINE="$(node -p "require('./package.json').version.split('-')[0]")"
 export WORKFLOW_REF="release/$RELEASE_LINE" # use main only for an authorized final release
 
+export VALIDATE_LABEL="anish-release-$(openssl rand -hex 6)"
+export GITLEAKS_LABEL="anish-release-$(openssl rand -hex 6)"
+export CODEQL_LABEL="anish-release-$(openssl rand -hex 6)"
+
 gh workflow run ci.yml --ref "$WORKFLOW_REF" \
-  -f commit_sha="$VALIDATED_SHA" -f runner_label=anish-release
+  -f commit_sha="$VALIDATED_SHA" -f runner_target=owner-arm64 -f jit_label="$VALIDATE_LABEL"
 gh workflow run gitleaks.yml --ref "$WORKFLOW_REF" \
-  -f commit_sha="$VALIDATED_SHA" -f runner_label=anish-release
+  -f commit_sha="$VALIDATED_SHA" -f runner_target=owner-arm64 -f jit_label="$GITLEAKS_LABEL"
 gh workflow run codeql.yml --ref "$WORKFLOW_REF" \
-  -f commit_sha="$VALIDATED_SHA" -f runner_label=anish-release
+  -f commit_sha="$VALIDATED_SHA" -f runner_target=owner-amd64 -f jit_label="$CODEQL_LABEL"
+```
+
+Start one matching ephemeral container for each label after dispatch, using a
+fresh `RUNNER_INSTANCE_ID=instance-<12 lowercase hex>` and piping exactly one
+short-lived registration-token line as documented in the runner README. The
+selected SHA must equal the pushed head of `WORKFLOW_REF`; ancestors, arbitrary
+feature commits, and other SHAs are rejected.
+
+Wait for Validate to finish and record its numeric run ID. Browser Quality
+downloads and verifies that run's immutable `dist`; it never rebuilds. The full
+suite stays on Chromium except for one bounded Spotify Ranked Groove interaction
+in WebKit. That check complements rather than replaces the manual Safari staging
+acceptance in the staging runbook:
+
+```bash
+export VALIDATE_RUN_ID='<successful Validate run ID>'
+export BROWSER_LABEL="anish-release-$(openssl rand -hex 6)"
 gh workflow run browser-quality.yml --ref "$WORKFLOW_REF" \
-  -f commit_sha="$VALIDATED_SHA" -f runner_label=anish-release
+  -f commit_sha="$VALIDATED_SHA" -f validate_run_id="$VALIDATE_RUN_ID" \
+  -f runner_target=owner-arm64 -f jit_label="$BROWSER_LABEL"
 ```
 
 Run the optional stability soak only when its explicit ten-run evidence is
 required:
 
 ```bash
+export SOAK_LABEL="anish-release-$(openssl rand -hex 6)"
 gh workflow run browser-stability.yml --ref "$WORKFLOW_REF" \
-  -f commit_sha="$VALIDATED_SHA" -f runner_label=anish-release
+  -f commit_sha="$VALIDATED_SHA" -f validate_run_id="$VALIDATE_RUN_ID" \
+  -f runner_target=owner-arm64 -f jit_label="$SOAK_LABEL"
 ```
+
+For the soak only, create one fresh `SOAK_LABEL` and start exactly two ephemeral
+ARM64 containers with that same label but distinct `RUNNER_INSTANCE_ID` values.
+This lets both matrix jobs claim a runner without a Docker/GitHub runner-name
+collision and prevents fan-out beyond the intended capacity.
 
 Use the resulting Actions run URLs normally. A self-hosted run does not waive
 or replace any assertion, artifact, browser, security, or release-plan check.
@@ -247,9 +272,10 @@ build and deployment continue using the repository’s production Wrangler
 version. Browser jobs wait for semantic room readiness with a 15-second SLO and
 capture diagnostic state on failure.
 
-Run the manually dispatched ten-run Browser stability workflow after changing
-the room harness or containing flakiness. All ten independent jobs must pass on
-the same full SHA; a single successful rerun is not stability evidence.
+Run the manually dispatched Browser stability workflow only after changing the
+room/browser harness or containing flakiness. It reuses one validated build and
+runs two workers with five fresh browser processes each. All ten processes must
+pass on the same full SHA; a single successful rerun is not stability evidence.
 
 Travel coverage additionally verifies the server-rendered atlas and trip pages,
 country/admin-1 synchronization, click-versus-drag behavior, active-snapshot
@@ -286,9 +312,21 @@ PR preview is not hosted live-model evidence.
 
 ## CI and exact-SHA release evidence
 
-Normal PRs run Validate, Gitleaks, CodeQL, and path-classified Browser Quality.
-Documentation-only PRs may skip the expensive browser jobs. Copy-only PRs also
-run the restricted copy lane described in [Copywriting](./copywriting.md).
+Normal PRs run one stable `PR Gate` plus Gitleaks. The gate classifies docs,
+copy, backend/connectors, general UI, Room, Simulation, Travel, and full
+dependency/release changes. It builds at most once and runs only affected
+browser scopes. CodeQL runs for source/security/dependency/workflow paths and on
+its weekly schedule. Code previews require the owner-applied `preview` label;
+trusted copy-only previews remain automatic.
+
+Pushes to `main` intentionally run Validate, Gitleaks, and CodeQL once to keep a
+known-good merged baseline. Pushes to `release/*` do not automatically repeat
+those expensive workflows: the owner dispatches all four evidence identities
+for one exact release SHA. Copy-only PRs intentionally have a cheap parser/test
+lane in `PR Gate` and a separate trusted copy-preview lane. The latter rebuilds
+base-branch code with only validated plain-text copy applied so screenshots can
+be produced without executing contributor-authored scripts; this is a security
+boundary, not accidental duplicate validation.
 
 Every staging or production release nevertheless requires four distinct,
 successful runs for the exact 40-character SHA:

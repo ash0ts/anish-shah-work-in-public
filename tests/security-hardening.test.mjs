@@ -971,23 +971,28 @@ test("public Cloudflare release config is generated without embedding secrets", 
 });
 
 test("release workflows bind PR evidence to the exact source head", async () => {
-  const [ci, ...releaseWorkflows] = await Promise.all(
-    ["ci.yml", "gitleaks.yml", "codeql.yml"].map((name) =>
+  const [prGate, ci, gitleaks, codeql, browser] = await Promise.all(
+    ["pr-gate.yml", "ci.yml", "gitleaks.yml", "codeql.yml", "browser-quality.yml"].map((name) =>
       readFile(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8"),
     ),
   );
-  assert.match(ci, /github\.event\.pull_request\.head\.sha/);
-  assert.match(ci, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/);
-  assert.match(ci, /\[\[ "\$EXPECTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
-  assert.match(ci, /PREVIEW_SOURCE_SHA/);
-  assert.match(ci, /PREVIEW_WORKFLOW_SHA/);
-  for (const workflow of releaseWorkflows) {
-    assert.match(workflow, /github\.event\.pull_request\.head\.sha/);
+  assert.match(prGate, /PR_SOURCE_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
+  assert.match(prGate, /ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/);
+  assert.match(prGate, /--changes-file "\$\{RUNNER_TEMP\}\/pr-files\.json"/);
+  assert.match(prGate, /check-docs\.mjs --root/);
+  assert.match(prGate, /name: pr-build-\$\{\{ env\.PR_SOURCE_SHA \}\}/);
+  assert.match(gitleaks, /github\.event\.pull_request\.head\.sha/);
+  assert.match(codeql, /github\.event\.pull_request\.head\.sha/);
+  for (const workflow of [ci, gitleaks, codeql, browser]) {
     assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/);
     assert.match(workflow, /\[\[ "\$EXPECTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
     assert.match(workflow, /test "\$\{#GITHUB_SHA\}" -eq 40/);
-    assert.doesNotMatch(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
+    assert.match(workflow, /fetch-depth: 0/);
+    assert.match(workflow, /test "\$EXPECTED_SHA" = "\$trusted_ref"/);
+    assert.doesNotMatch(workflow, /git merge-base --is-ancestor "\$EXPECTED_SHA"/);
   }
+  assert.match(browser, /run-id: \$\{\{ inputs\.validate_run_id \}\}/);
+  assert.match(browser, /test "\$\(jq -r '\.head_sha' <<<"\$run"\)" = "\$EXPECTED_SHA"/);
 });
 
 test("owner-dispatched exact-SHA checks may use only the temporary release runner", async () => {
@@ -1003,17 +1008,10 @@ test("owner-dispatched exact-SHA checks may use only the temporary release runne
       readFile(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8"),
     ),
   );
-  const runnerExpression =
-    "fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '[\"self-hosted\",\"linux\",\"x64\",\"anish-release\"]' || '[\"ubuntu-latest\"]')";
-
   for (const [index, workflow] of workflows.entries()) {
-    assert.match(workflow, /runner_label:\n\s+description:/, workflowNames[index]);
+    assert.match(workflow, /runner_target:\n\s+description:/, workflowNames[index]);
+    assert.match(workflow, /jit_label:\n\s+description:/, workflowNames[index]);
     assert.match(workflow, /default: github-hosted/, workflowNames[index]);
-    assert.match(
-      workflow,
-      /options:\n\s+- github-hosted\n\s+- anish-release/,
-      workflowNames[index],
-    );
     assert.match(
       workflow,
       /test "\$GITHUB_ACTOR" = "\$GITHUB_REPOSITORY_OWNER"/,
@@ -1028,16 +1026,14 @@ test("owner-dispatched exact-SHA checks may use only the temporary release runne
       (match) => match[1],
     );
     assert.ok(runTargets.length > 0, workflowNames[index]);
-    assert.ok(
-      runTargets.every((target) => target.includes(runnerExpression)),
-      `${workflowNames[index]} must keep automatic work hosted`,
-    );
-    assert.ok(
-      runTargets.every((target) =>
-        target.includes('["self-hosted","linux","x64","anish-release"]'),
-      ),
-      `${workflowNames[index]} must require every release-runner label`,
-    );
+    const expectedArchitecture = workflowNames[index] === "codeql.yml" ? "x64" : "arm64";
+    const expectedTarget = workflowNames[index] === "codeql.yml" ? "owner-amd64" : "owner-arm64";
+    assert.match(workflow, new RegExp(`- ${expectedTarget}`), workflowNames[index]);
+    assert.ok(runTargets.some((target) => target.includes('"self-hosted"')), workflowNames[index]);
+    assert.ok(runTargets.some((target) => target.includes(`"${expectedArchitecture}"`)), workflowNames[index]);
+    assert.ok(runTargets.some((target) => target.includes("inputs.jit_label")), workflowNames[index]);
+    assert.match(workflow, /\^anish-release-\[a-f0-9\]\{12\}\$/, workflowNames[index]);
+    assert.match(workflow, /test "\$EXPECTED_SHA" = "\$trusted_ref"/, workflowNames[index]);
     assert.doesNotMatch(workflow, /^\s+environment:/m, workflowNames[index]);
     assert.doesNotMatch(workflow, /secrets:\s+inherit/, workflowNames[index]);
     const nonEphemeralSecrets = [
