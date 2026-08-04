@@ -38,6 +38,10 @@ const { pruneConnectorRetention } = await tsImport(
   "../lib/server/connectors/repository-retention.ts",
   import.meta.url,
 );
+const { bootstrapStagingRetention } = await tsImport(
+  "../lib/server/staging-maintenance.ts",
+  import.meta.url,
+);
 const { RELEASE_MARKER_HEADER, securedResponse } = await tsImport(
   "../worker/security-headers.ts",
   import.meta.url,
@@ -800,6 +804,61 @@ test("hourly retention clears expired promotion ciphertext and deletes old hando
   assert.equal(details.deletedPromotionTransactions, 6);
 });
 
+test("the owner-only staging bootstrap initializes a fresh retention heartbeat", async () => {
+  const statements = [];
+  const database = {
+    prepare(sql) {
+      const statement = {
+        sql,
+        values: [],
+        bind(...values) {
+          this.values = values;
+          return this;
+        },
+        async run() {
+          return { success: true };
+        },
+      };
+      statements.push(statement);
+      return statement;
+    },
+    async batch(batchStatements) {
+      return batchStatements.map(() => ({ meta: { changes: 0 } }));
+    },
+  };
+  const now = new Date("2026-08-04T12:00:00.000Z");
+  assert.deepEqual(
+    await bootstrapStagingRetention(database, "staging", now),
+    { ok: true, checkedAt: now.toISOString() },
+  );
+  assert(
+    statements.some((statement) =>
+      statement.sql.includes("INSERT INTO maintenance_state"),
+    ),
+  );
+  assert.deepEqual(
+    await bootstrapStagingRetention(database, "production", now),
+    { ok: false, code: "not_staging" },
+  );
+  assert.deepEqual(
+    await bootstrapStagingRetention(null, "staging", now),
+    { ok: false, code: "binding_unavailable" },
+  );
+
+  const route = await readFile(
+    new URL(
+      "../app/api/studio/maintenance/bootstrap/route.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(route, /rejectCrossOriginWrite/);
+  assert.match(route, /authorizeOwnerApi/);
+  assert.match(route, /runtimeValue\("DEPLOYMENT_TIER"\)/);
+  assert.match(route, /accepts no request fields/);
+  assert.match(route, /private, no-store/);
+});
+
 test("the public promotion import is rate-limited before its body is read", async () => {
   const [worker, rateLimit] = await Promise.all([
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
@@ -1084,6 +1143,14 @@ test("publication failover and maintenance health fail closed", async () => {
   assert.match(maintenance, /hostedEnvironmentConfigured/);
   assert.match(maintenance, /releaseVersion/);
   assert.match(maintenance, /!releaseVersion/);
+  assert.match(
+    maintenance,
+    /travel\.mode === "atlas-v1"[\s\S]*?!travel\.configured \|\| !travel\.activePublication/,
+  );
+  assert.match(
+    maintenance,
+    /travel\.mode === "atlas-v1"[\s\S]*?travel\.cleanupHeartbeat\.status !== "current"/,
+  );
 });
 
 test("custom Worker observability never records raw request identifiers", async () => {

@@ -46,6 +46,7 @@ Run `validate:release` only for a clean, pushed, approved production candidate a
 - Simulation incident: read-only Gateway logging/cache/DLP/Guardrails verification, sanitized containment evidence, authorized payload-deletion confirmation when needed, and fresh regression coverage before live mode returns.
 - Studio/OAuth: logged out, non-owner, owner, origin/body guards, denial/expiry/replay/wrong owner, refresh/replacement/disconnect, sanitized errors.
 - Environments: preview fixtures only, staging isolation/noindex, production exact host/Access, private Sites unchanged.
-- Release: follow the canonical runbook's thirteen smoke checks and distinguish automated evidence from manual inspection.
+- Release: follow the canonical runbook's registry-derived required smoke set
+  and distinguish automated evidence from manual inspection.
 
 If private inputs, provider credentials, browser/Cloudflare access, or exact workflow evidence are unavailable, name the unverified step. Never weaken a gate to manufacture success.

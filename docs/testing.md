@@ -184,7 +184,8 @@ release candidate; never use an unreviewed feature branch as `WORKFLOW_REF`:
 
 ```bash
 export VALIDATED_SHA='<full 40-character pushed commit SHA>'
-export WORKFLOW_REF='release/2.0.0' # or main
+export RELEASE_LINE="$(node -p "require('./package.json').version.split('-')[0]")"
+export WORKFLOW_REF="release/$RELEASE_LINE" # use main only for an authorized final release
 
 gh workflow run ci.yml --ref "$WORKFLOW_REF" \
   -f commit_sha="$VALIDATED_SHA" -f runner_label=anish-release
@@ -264,8 +265,10 @@ fallbacks, and authored completion during a total model outage. Assert that:
 - Tactical never downloads Phaser;
 - Action downloads Phaser only after the visitor selects it;
 - Tone.js is absent until `SOUND ON`;
-- free-text requests, prompts, and model responses never appear in stored test
-  state, logs, rendered HTML, or artifacts; and
+- raw free-text requests, prompts, and provider/model responses never appear in
+  stored state, logs, rendered HTML, or artifacts; the server may retain only
+  its schema-validated safe response projection for bounded idempotent replay;
+  and
 - a model timeout, invalid schema, DLP block, Guardrail block, exhausted budget,
   or missing Gateway configuration resolves to authored dialogue.
 

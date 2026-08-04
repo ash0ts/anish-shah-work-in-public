@@ -267,13 +267,13 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       !contentVersion ||
       !safeMigrationName ||
       canonicalOrigin.status === "setup_required" ||
-      (travel.mode === "atlas-v1" && !travel.configured);
+      (travel.mode === "atlas-v1" &&
+        (!travel.configured || !travel.activePublication));
     const degraded =
       retentionHeartbeat.status !== "current" ||
       connectors.some((connector) => connector.status === "error") ||
       (travel.mode === "atlas-v1" &&
-        (travel.cleanupHeartbeat.status === "stale" ||
-          travel.cleanupHeartbeat.status === "error"));
+        travel.cleanupHeartbeat.status !== "current");
     return {
       status: setupRequired ? "setup_required" : degraded ? "degraded" : "healthy",
       checkedAt,

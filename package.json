@@ -75,6 +75,7 @@
     "staging:plan": "node scripts/staging-release.mjs plan",
     "staging:migrate": "node scripts/staging-release.mjs migrate",
     "staging:upload": "node scripts/staging-release.mjs upload",
+    "staging:stage": "node scripts/staging-release.mjs stage",
     "staging:deploy": "node scripts/staging-release.mjs deploy",
     "staging:bootstrap": "node scripts/staging-release.mjs bootstrap",
     "staging:checkpoint": "node scripts/staging-release.mjs checkpoint",

@@ -200,6 +200,13 @@ export function expectedStagingCoordinates(environment, contentVersion, packageV
   }
   const simulationAiMode =
     simulationExperienceMode === "campaign-v1" ? "live" : "authored-only";
+  const travelAtlasMode =
+    environment.STAGING_TRAVEL_ATLAS_MODE?.trim() || "atlas-v1";
+  if (!new Set(["disabled", "atlas-v1"]).has(travelAtlasMode)) {
+    throw new Error(
+      "STAGING_TRAVEL_ATLAS_MODE must be disabled or atlas-v1.",
+    );
+  }
   const databaseId = uuid(
     required(environment, "STAGING_CLOUDFLARE_D1_DATABASE_ID"),
     "STAGING_CLOUDFLARE_D1_DATABASE_ID",
@@ -279,6 +286,7 @@ export function expectedStagingCoordinates(environment, contentVersion, packageV
     rateLimits,
     simulationExperienceMode,
     simulationAiMode,
+    travelAtlasMode,
     travelMediaBucket,
   };
 }
@@ -345,7 +353,7 @@ export function stagingConfiguration(base, expected) {
       SIMULATION_AI_MODE: expected.simulationAiMode,
       SIMULATION_PROVIDER: "anthropic",
       SIMULATION_MODEL: "claude-sonnet-5",
-      TRAVEL_ATLAS_MODE: "atlas-v1",
+      TRAVEL_ATLAS_MODE: expected.travelAtlasMode,
     },
     observability: {
       enabled: true,

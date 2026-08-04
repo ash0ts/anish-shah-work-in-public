@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -137,4 +137,65 @@ test("docs:check rejects first-run instructions that run doctor before owner set
     result.issues.some((issue) => issue.includes("before doctor")),
     true,
   );
+});
+
+test("release documentation preserves the two-phase staging and current naming contracts", async () => {
+  const [staging, release, testing, audio, audioManifest, repositoryMap] =
+    await Promise.all([
+      readFile(
+        new URL("../docs/operations/staging-and-previews.md", import.meta.url),
+        "utf8",
+      ),
+      readFile(
+        new URL("../docs/operations/release.md", import.meta.url),
+        "utf8",
+      ),
+      readFile(new URL("../docs/testing.md", import.meta.url), "utf8"),
+      readFile(new URL("../docs/audio-production.md", import.meta.url), "utf8"),
+      readFile(
+        new URL(
+          "../content/presentation/experience-audio.v1.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+      readFile(
+        new URL(
+          "../.agents/skills/maintain-anish-site/references/repository-map.md",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ]);
+
+  const stage = staging.indexOf("npm run staging:stage");
+  const checkpoint = staging.indexOf("npm run staging:checkpoint");
+  const promote = staging.indexOf("npm run staging:deploy", checkpoint);
+  const smoke = staging.indexOf("npm run staging:smoke", promote);
+  assert.equal(stage >= 0 && stage < checkpoint, true);
+  assert.equal(checkpoint < promote && promote < smoke, true);
+  assert.match(staging, /candidate at 0%/);
+  assert.match(staging, /release marker to D1/);
+  assert.match(staging, /Cloudflare error `10042`/);
+  assert.match(staging, /690e6286eb53a6df1bd0080633caf91f/);
+  assert.match(staging, /STAGING_RC_TAG/);
+  assert.match(staging, /leave the release pull request draft/);
+  assert.doesNotMatch(staging, /export RELEASE_VERSION='2\.0\.0-rc\.1'/);
+  assert.doesNotMatch(release, /export RELEASE_VERSION='2\.0\.0'/);
+  assert.match(release, /require\('\.\/package\.json'\)\.version/);
+  assert.match(release, /690e6286eb53a6df1bd0080633caf91f/);
+  assert.match(testing, /schema-validated safe response projection/);
+  assert.match(audio, /Read · Bedside Shelf/);
+  assert.doesNotMatch(audioManifest, /Borrowed Shelf/);
+  for (const pathname of [
+    "/play/watch",
+    "/play/read",
+    "/play/listen",
+    "/play/collect",
+    "/play/play",
+    "/play/move",
+    "/play/travel",
+  ]) {
+    assert.match(repositoryMap, new RegExp(pathname.replaceAll("/", "\\/")));
+  }
 });

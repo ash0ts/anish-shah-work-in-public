@@ -68,10 +68,12 @@ media, publication, and globe boundaries are documented in
   `content/copy/**/*.md`.
 - Provider setup or recovery: use [Play connections](./docs/play-connections.md).
 - Travel authoring and media: use [Postcard Planet](./docs/travel-atlas.md).
+- Audio cues and replacement assets: use [Experience audio](./docs/audio-production.md).
 - Preview and staging work: use [Staging and PR previews](./docs/operations/staging-and-previews.md).
 - Production release: use the sole [Production release runbook](./docs/operations/release.md).
 - Rollback or incident response: use [Rollback](./docs/operations/rollback.md)
   and [Incidents](./docs/operations/incidents.md).
+- Request tracing and health signals: use [Operational observability](./docs/operations/observability.md).
 
 Release candidates are cut from `release/<semver>`, versioned with immutable
 prerelease tags such as `v2.0.0-rc.1`, and deployed first to

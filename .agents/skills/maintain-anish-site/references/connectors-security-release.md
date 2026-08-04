@@ -72,7 +72,20 @@ Before an authorized release:
 
 1. Pin the exact source SHA and reuse one hashed, immutable `dist` through rendered/browser/Lighthouse/bundle tests and planning.
 2. Record the current Worker version and D1 Time Travel bookmark.
-3. Apply only reviewed additive migrations and stage the exact candidate at 0%.
-4. Verify D1/KV publication, both versions, canonical origin, My Room mode, `/play` plus all seven object routes, Travel media authorization, Simulation mode, owner health, Access, and connectors.
-5. Promote only through the guarded command and run the thirteen runbook smoke checks.
-6. Roll back Worker code separately from D1. Restore D1 only when proven causal and explicitly confirmed.
+3. Apply only reviewed additive migrations, reconcile the exact trigger
+   configuration, and stage the candidate at 0% while the prior version remains
+   at 100%.
+4. Require Cloudflare deployment status to report the exact candidate-at-0 and
+   prior-at-100 split. For a fresh staging database, invoke only the guarded
+   staging maintenance bootstrap through the version override so the general
+   retention heartbeat exists before checkpointing.
+5. Exercise the exact candidate through the Worker-version override. Verify
+   D1/KV publication, `RELEASE_VERSION`, `CONTENT_VERSION`, `COPY_VERSION`,
+   canonical origin, My Room, `/play` plus all seven object routes, Travel media
+   authorization/publication/cleanup, Simulation mode and approval digest,
+   owner health, Access, and connectors. Record the guarded checkpoint receipt.
+6. Promote only when a fresh status read matches the checkpointed deployment;
+   then require candidate-only 100% traffic before running the registry-derived
+   smoke set from the canonical runbook. Never retry an uncertain deployment
+   write automatically.
+7. Roll back Worker code separately from D1. Restore D1 only when proven causal and explicitly confirmed.

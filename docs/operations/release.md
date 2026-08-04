@@ -58,8 +58,17 @@ Postcard Planet adds one private production media bucket. Create it once and
 keep its name exactly `anish-shah-travel-media`:
 
 ```bash
+export CLOUDFLARE_ACCOUNT_ID='690e6286eb53a6df1bd0080633caf91f'
+npx --no-install wrangler whoami
+npx --no-install wrangler r2 bucket list
 npx --no-install wrangler r2 bucket create anish-shah-travel-media
 ```
+
+Require `whoami` to show that exact account. The list command must succeed
+before the create command. Cloudflare error
+`10042` means R2 is not enabled for the owning account; enable it in the
+Cloudflare dashboard and repeat the read-only check. Do not bypass the failure
+or substitute a staging bucket.
 
 The generated production configuration binds that bucket as `TRAVEL_MEDIA`,
 Cloudflare Images as `IMAGES`, and the Travel media rate limiter as
@@ -148,7 +157,7 @@ export CLOUDFLARE_D1_DATABASE_ID='<production D1 UUID>'
 export CLOUDFLARE_D1_DATABASE_NAME='anish-shah-work-in-public'
 export CLOUDFLARE_PUBLICATION_CACHE_ID='<production KV namespace ID>'
 export PUBLIC_SITE_URL='https://anish-shah-is.online'
-export RELEASE_VERSION='2.0.0'
+export RELEASE_VERSION="$(node -p "require('./package.json').version")"
 export OWNER_EMAILS='<exact owner email>'
 export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
 export CF_ACCESS_AUD='<Access application audience>'
@@ -161,7 +170,10 @@ npm run validate:release
 `RELEASE_VERSION` must be exact SemVer and must exactly equal the checked-in
 `package.json` version. Release candidates therefore use the matching package
 version such as `2.0.0-rc.1`; a missing, prefixed (`v2.0.0`), or mismatched
-value fails configuration generation before any hosted command can run.
+value fails configuration generation before any hosted command can run. Keep
+the draft release branch on its RC version. Bump both package files to `2.0.0`
+only in the separately authorized final-production change after the release PR
+is approved.
 
 `validate:release` runs prebuild validation, creates the deployable build once,
 prepares the reviewed non-secret Worker configuration, writes an immutable

@@ -47,7 +47,9 @@ Runtime precedence is: sanitized canonical facts and structure, then published D
 ## My Room Contract
 
 - `/play` performs zero connector or Travel reads and offers a semantic seven-object directory.
-- `/play/watch`, `/read`, `/listen`, `/collect`, `/play`, and `/move` load only their associated provider; `/play/travel` loads only the sanitized Travel publication.
+- `/play/watch`, `/play/read`, `/play/listen`, `/play/collect`, `/play/play`, and
+  `/play/move` load only their associated provider; `/play/travel` loads only
+  the sanitized Travel publication.
 - Canvas is decorative and `aria-hidden`; semantic controls, direct routes, browser Back, Escape, and focus restoration are authoritative.
 - Do not import Three/R3F into Worker, Studio, Home, Work, Sources, initial Play, connector modules, or Simulation.
 - Preserve poster/static fallback for narrow screens, coarse pointers, reduced motion, forced colors, Save-Data, zoom, WebGL failure, and context loss.
