@@ -4,6 +4,7 @@ import {
   assertPinnedProductionResources,
   PUBLIC_CLOUDFLARE_ACCOUNT_ID,
   PUBLIC_SITE_ORIGIN,
+  requiredHostedPlayExperienceMode,
 } from "./lib/release-config-contract.mjs";
 
 const root = process.cwd();
@@ -95,16 +96,7 @@ const publicSiteUrl = exactHttpsOrigin(
 if (publicSiteUrl !== PUBLIC_SITE_ORIGIN) {
   throw new Error("PUBLIC_SITE_URL must be the repository's pinned canonical origin.");
 }
-const playExperienceMode =
-  process.env.PLAY_EXPERIENCE_MODE?.trim() || "classic";
-if (
-  playExperienceMode !== "classic" &&
-  playExperienceMode !== "my-room-2001"
-) {
-  throw new Error(
-    "PLAY_EXPERIENCE_MODE must be classic or my-room-2001.",
-  );
-}
+const playExperienceMode = requiredHostedPlayExperienceMode(process.env);
 const releaseSha = required("RELEASE_VALIDATED_SHA").toLowerCase();
 if (!/^[a-f0-9]{40}$/.test(releaseSha)) {
   throw new Error("RELEASE_VALIDATED_SHA must be an exact 40-character commit SHA.");

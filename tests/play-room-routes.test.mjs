@@ -142,10 +142,21 @@ test("room hover and rotation actions are idempotent", () => {
 });
 
 test("room transitions are cancellable, phased, and restore semantic focus", async () => {
-  const [provider, runtime, entry, screens] = await Promise.all([
+  const [
+    provider,
+    runtime,
+    entry,
+    readiness,
+    roomQuality,
+    roomReview,
+    screens,
+  ] = await Promise.all([
     source("components/play/room-platform/RoomExperienceProvider.tsx"),
     source("components/play/room-platform/RoomRuntime.tsx"),
     source("components/play/room-platform/RoomEntryControl.tsx"),
+    source("tests/browser/helpers/room-readiness.mjs"),
+    source("tests/browser/room-quality.spec.mjs"),
+    source("tests/browser/room-review.spec.mjs"),
     Promise.all(
       [
         "WatchRoomScreen.tsx",
@@ -181,6 +192,7 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
   assert.match(provider, /Rewinding to My Room/);
   assert.match(provider, /requestAnimationFrame\(navigate\)/);
   assert.match(runtime, /const presenting = room\.objectRouteActive && !returning/);
+  assert.match(runtime, /data-room-ready=\{ready \? "true" : "false"\}/);
   assert.match(runtime, /data-returning=\{returning \|\| undefined\}/);
   assert.match(runtime, /const atLeftBound = room\.rotation\.y <= -12/);
   assert.match(runtime, /const atRightBound = room\.rotation\.y >= 12/);
@@ -192,6 +204,21 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
     4,
   );
   assert.match(entry, /if \(room\.fallbackReason\)/);
+  assert.match(readiness, /ROOM_READY_TIMEOUT_MS = 15_000/);
+  assert.match(readiness, /data-room-ready", "true"/);
+  assert.match(readiness, /roomReadinessDiagnostics/);
+  assert.match(readiness, /data-room-transition-phase/);
+  assert.match(
+    roomQuality,
+    /import \{ expectRoomReady \} from "\.\/helpers\/room-readiness\.mjs"/,
+  );
+  assert.match(roomQuality, /context: "starting the slow-return scenario"/);
+  assert.match(roomQuality, /context: "completing the slow room return"/);
+  assert.match(
+    roomReview,
+    /import \{ expectRoomReady \} from "\.\/helpers\/room-readiness\.mjs"/,
+  );
+  assert.match(roomReview, /context: "capturing room review evidence"/);
   for (const screen of screens) assert.match(screen, /data-room-screen/);
 });
 

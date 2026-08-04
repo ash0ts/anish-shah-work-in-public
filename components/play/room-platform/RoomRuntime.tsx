@@ -157,6 +157,7 @@ export function RoomRuntime() {
       aria-label="Interactive room"
       aria-modal="true"
       className={styles.runtime}
+      data-room-ready={ready ? "true" : "false"}
       data-room-runtime
       data-room-transition-phase={room.phase}
       data-presenting={presenting}

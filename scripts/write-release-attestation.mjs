@@ -10,8 +10,13 @@ import {
   githubRepositoryFromRemoteUrl,
   parseRemoteReleaseMarker,
   RELEASE_MARKER_QUERY,
+  requiredSmokeTestsForPlayMode,
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
+import {
+  RELEASE_BUILD_CHECKPOINT_PATH,
+  verifyReleaseBuildCheckpoint,
+} from "./lib/release-build-checkpoint.mjs";
 import {
   assertTriggerDeploymentReceipt,
   DOMAIN_ACCESS_DESTINATIONS,
@@ -20,7 +25,7 @@ import {
 } from "./lib/release-trigger-contract.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const REQUIRED_SMOKE_TESTS = [
+const BASE_SMOKE_TESTS = [
   "public_routes",
   "studio_access",
   "non_owner_denial",
@@ -143,27 +148,22 @@ const smokeResults = required("RELEASE_SMOKE_RESULTS")
   .split(",")
   .map((value) => value.trim())
   .filter(Boolean);
-if (
-  smokeResults.length !== REQUIRED_SMOKE_TESTS.length ||
-  REQUIRED_SMOKE_TESTS.some((name) => !smokeResults.includes(name)) ||
-  new Set(smokeResults).size !== smokeResults.length
-) {
-  throw new Error(
-    `RELEASE_SMOKE_RESULTS must contain exactly: ${REQUIRED_SMOKE_TESTS.join(",")}`,
-  );
-}
 
 const [
   planBytes,
   contentAttestationBytes,
   releaseConfigBytes,
   deployableArtifactResult,
+  releaseBuildCheckpoint,
+  releaseBuildCheckpointBytes,
   triggerReceiptBytes,
 ] = await Promise.all([
   readFile(path.join(root, "dist/release-plan.json")),
   readFile(path.join(root, "content/public/anish-content.public.v1.attestation.json")),
   readFile(path.join(root, "dist/server/wrangler.public.json")),
   readVerifiedDeployableArtifactManifest(root),
+  verifyReleaseBuildCheckpoint(root),
+  readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
   readFile(path.join(root, TRIGGER_RECEIPT_PATH)),
 ]);
 const plan = JSON.parse(planBytes.toString("utf8"));
@@ -171,7 +171,7 @@ const contentAttestation = JSON.parse(contentAttestationBytes.toString("utf8"));
 const releaseConfig = JSON.parse(releaseConfigBytes.toString("utf8"));
 const triggerReceipt = JSON.parse(triggerReceiptBytes.toString("utf8"));
 if (
-  plan.schemaVersion !== "1.0" ||
+  plan.schemaVersion !== "1.2" ||
   plan.commitSha !== head ||
   plan.contentVersion !== contentAttestation.contentVersion ||
   !["compatible", "predeploy_bootstrap_required"].includes(
@@ -186,9 +186,36 @@ if (
   plan.deployableArtifacts?.fileCount !==
     deployableArtifactResult.manifest.fileCount ||
   plan.deployableArtifacts?.totalBytes !==
-    deployableArtifactResult.manifest.totalBytes
+    deployableArtifactResult.manifest.totalBytes ||
+  plan.releaseBuildCheckpoint?.sha256 !==
+    sha256(releaseBuildCheckpointBytes) ||
+  plan.releaseBuildCheckpoint?.artifactSetSha256 !==
+    releaseBuildCheckpoint.artifactSetSha256 ||
+  plan.releaseBuildCheckpoint?.deployableManifestSha256 !==
+    releaseBuildCheckpoint.deployableManifestSha256 ||
+  plan.checksums?.releaseBuildCheckpointSha256 !==
+    sha256(releaseBuildCheckpointBytes) ||
+  releaseBuildCheckpoint.artifactSetSha256 !==
+    deployableArtifactResult.manifest.artifactSetSha256 ||
+  releaseBuildCheckpoint.deployableManifestSha256 !==
+    sha256(deployableArtifactResult.bytes) ||
+  releaseConfig.vars?.PLAY_EXPERIENCE_MODE !== plan.playExperienceMode ||
+  !["classic", "my-room-2001"].includes(plan.playExperienceMode)
 ) {
   throw new Error("The pre-release plan is missing, stale, or does not match this build.");
+}
+const REQUIRED_SMOKE_TESTS = requiredSmokeTestsForPlayMode(
+  BASE_SMOKE_TESTS,
+  plan.playExperienceMode,
+);
+if (
+  smokeResults.length !== REQUIRED_SMOKE_TESTS.length ||
+  REQUIRED_SMOKE_TESTS.some((name) => !smokeResults.includes(name)) ||
+  new Set(smokeResults).size !== smokeResults.length
+) {
+  throw new Error(
+    `RELEASE_SMOKE_RESULTS must contain exactly: ${REQUIRED_SMOKE_TESTS.join(",")}`,
+  );
 }
 const verifiedTriggerReceipt = assertTriggerDeploymentReceipt(triggerReceipt, {
   head,
@@ -242,13 +269,15 @@ assertReleaseMarker(finalPublication, {
 const finalDeployment = productionDeployment(currentVersion);
 
 const record = {
-  schemaVersion: "1.2",
+  schemaVersion: "1.4",
   releasedAt,
   smokeTestedAt,
   commitSha: head,
   contentVersion: plan.contentVersion,
+  playExperienceMode: plan.playExperienceMode,
   publicContentSha256: plan.publicContentSha256,
   deployableArtifacts: plan.deployableArtifacts,
+  releaseBuildCheckpoint: plan.releaseBuildCheckpoint,
   publicationCheckpoint: plan.publicationCheckpoint,
   releasePublication: {
     status: finalPublication.status,
@@ -264,6 +293,7 @@ const record = {
     currentVersion,
     deploymentId: finalDeployment.deploymentId,
     trafficPercentage: finalDeployment.percentage,
+    playExperienceMode: plan.playExperienceMode,
   },
   nonVersionedTriggers: verifiedTriggerReceipt,
   domainCutover: {

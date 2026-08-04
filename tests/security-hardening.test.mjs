@@ -478,6 +478,7 @@ test("direct production accepts only the configured canonical apex", () => {
     SITE_URL: "https://anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "d1_kv_required",
+    PLAY_EXPERIENCE_MODE: "my-room-2001",
   };
   const production = { development: false, sitesRuntime: false };
   assert.equal(
@@ -512,6 +513,29 @@ test("direct production accepts only the configured canonical apex", () => {
   assert.equal(misconfigured?.status, 503);
   assert.equal(misconfigured?.headers.get("retry-after"), "60");
 
+  for (const playMode of [undefined, "", "unknown"]) {
+    const playEnvironment = { ...environment };
+    if (playMode === undefined) delete playEnvironment.PLAY_EXPERIENCE_MODE;
+    else playEnvironment.PLAY_EXPERIENCE_MODE = playMode;
+    const response = productionOriginResponse(
+      new Request("https://anish-shah-is.online/play"),
+      playEnvironment,
+      production,
+    );
+    assert.equal(response?.status, 503, `hosted mode ${String(playMode)}`);
+    assert.equal(response?.headers.get("cache-control"), "private, no-store");
+    assert.match(response?.headers.get("x-robots-tag") ?? "", /noindex/);
+  }
+
+  assert.equal(
+    productionOriginResponse(
+      new Request("https://anish-shah-is.online/play"),
+      { ...environment, PLAY_EXPERIENCE_MODE: "classic" },
+      production,
+    ),
+    null,
+  );
+
   assert.equal(
     productionOriginResponse(
       new Request("http://127.0.0.1:3000/work"),
@@ -542,7 +566,7 @@ test("direct production accepts only the configured canonical apex", () => {
   assert.equal(
     productionOriginResponse(
       new Request(`${privateSitesOrigin}/work`),
-      {},
+      { PLAY_EXPERIENCE_MODE: "classic" },
       { development: false, sitesRuntime: true },
     ),
     null,
@@ -913,9 +937,13 @@ test("release promotion requires a protected current-publication marker", async 
     "RELEASE_VALIDATION_URL",
     "RELEASE_GITLEAKS_URL",
     "RELEASE_CODEQL_URL",
+    "RELEASE_BROWSER_URL",
   ]) {
     assert.match(plan, new RegExp(variable));
   }
+  assert.match(plan, /event,workflowDatabaseId/);
+  assert.match(plan, /actions\/workflows\/\$\{evidence\.workflowDatabaseId\}/);
+  assert.match(plan, /RELEASE_BROWSER_WORKFLOW_PATH/);
 });
 
 test("publication failover and maintenance health fail closed", async () => {
@@ -1004,7 +1032,7 @@ test("dependency audit treats missing or malformed audit metadata as failure", a
 });
 
 test("release evidence binds a pushed commit, migrations, and exact smoke checks", async () => {
-  const [plan, attestation, command, contract, triggerContract, packageJson] =
+  const [plan, attestation, command, checkpointSnippet, contract, triggerContract, packageJson] =
     await Promise.all([
       readFile(
         new URL("../scripts/write-release-plan.mjs", import.meta.url),
@@ -1015,6 +1043,10 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
         "utf8",
       ),
       readFile(new URL("../scripts/release-command.mjs", import.meta.url), "utf8"),
+      readFile(
+        new URL("../scripts/publication-bootstrap-snippet.mjs", import.meta.url),
+        "utf8",
+      ),
       readFile(
         new URL("../scripts/lib/release-contract.mjs", import.meta.url),
         "utf8",
@@ -1058,6 +1090,14 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
   assert.match(attestation, /releasePlanSha256/);
   assert.match(attestation, /readVerifiedDeployableArtifactManifest/);
   assert.match(attestation, /deployableArtifacts/);
+  assert.match(plan, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(plan, /releaseBuildCheckpointSha256/);
+  assert.match(command, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(command, /releaseBuildCheckpointSha256/);
+  assert.match(checkpointSnippet, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(checkpointSnippet, /releaseBuildCheckpoint\.artifactSetSha256/);
+  assert.match(attestation, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(attestation, /releaseBuildCheckpoint: plan\.releaseBuildCheckpoint/);
   assert.match(contract, /Remote pending migrations/);
   assert.match(contract, /do not exactly match the release plan/);
   assert.match(command, /Migration \$\{migration\.name\} changed after release planning/);

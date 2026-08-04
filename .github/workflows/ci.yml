@@ -35,22 +35,8 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test "${#EXPECTED_SHA}" -eq 40
           test "${#GITHUB_SHA}" -eq 40
-      - name: Use Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24.18.0
-          cache: npm
-      - name: Use pinned npm
-        run: |
-          npm install --global npm@11.6.2 --ignore-scripts
-          hash -r
-          test "$(npm --version)" = "11.6.2"
-      - name: Install locked dependencies
-        run: npm ci --ignore-scripts
-      - name: Verify deployable content attestation
-        run: npm run content:attest
-      - name: Apply all migrations to clean local D1
-        run: npm run db:local:migrate:clean
+      - name: Set up repository toolchain
+        uses: ./.github/actions/setup-repository
       - name: Validate exact commit
         run: npm run validate
       - name: Write synthetic preview metadata
@@ -67,5 +53,6 @@ jobs:
           # The artifact is keyed to the exact source SHA checked out and validated.
           name: preview-build-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
           path: dist
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 3

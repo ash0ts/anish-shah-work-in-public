@@ -8,8 +8,14 @@ import {
   assertVerifiedActionsRun,
   githubRepositoryFromRemoteUrl,
   publicationCheckpointForPlan,
+  RELEASE_BROWSER_WORKFLOW_PATH,
+  REQUIRED_VALIDATION_RUNS,
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
+import {
+  RELEASE_BUILD_CHECKPOINT_PATH,
+  verifyReleaseBuildCheckpoint,
+} from "./lib/release-build-checkpoint.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -98,11 +104,17 @@ const d1Bookmark = required("RELEASE_D1_BOOKMARK");
 if (!/^[A-Za-z0-9._~+/=-]{8,512}$/.test(d1Bookmark)) {
   throw new Error("RELEASE_D1_BOOKMARK contains unexpected characters.");
 }
-const validationRequirements = [
-  { kind: "validate", env: "RELEASE_VALIDATION_URL", name: "Validate" },
-  { kind: "gitleaks", env: "RELEASE_GITLEAKS_URL", name: "Gitleaks" },
-  { kind: "codeql", env: "RELEASE_CODEQL_URL", name: "CodeQL" },
-];
+const validationEnvironmentNames = new Map([
+  ["validate", "RELEASE_VALIDATION_URL"],
+  ["gitleaks", "RELEASE_GITLEAKS_URL"],
+  ["codeql", "RELEASE_CODEQL_URL"],
+  ["browser", "RELEASE_BROWSER_URL"],
+]);
+const validationRequirements = REQUIRED_VALIDATION_RUNS.map(({ kind, name }) => ({
+  kind,
+  name,
+  env: validationEnvironmentNames.get(kind),
+}));
 const validationRuns = validationRequirements.map(({ kind, env, name }) => {
   const url = new URL(required(env));
   if (
@@ -125,7 +137,7 @@ const validationRuns = validationRequirements.map(({ kind, env, name }) => {
       "--repo",
       `${repositoryOwner}/${repositoryName}`,
       "--json",
-      "headSha,conclusion,url,name",
+      "headSha,conclusion,url,name,event,workflowDatabaseId",
     ],
     { cwd: root, encoding: "utf8" },
   );
@@ -143,12 +155,51 @@ const validationRuns = validationRequirements.map(({ kind, env, name }) => {
     url: url.toString(),
     name,
   });
+  let workflowPath;
+  if (kind === "browser") {
+    if (!Number.isSafeInteger(evidence.workflowDatabaseId) || evidence.workflowDatabaseId < 1) {
+      throw new Error("Browser Quality evidence has no valid workflow identity.");
+    }
+    const workflowResult = spawnSync(
+      "gh",
+      [
+        "api",
+        `repos/${repositoryOwner}/${repositoryName}/actions/workflows/${evidence.workflowDatabaseId}`,
+      ],
+      { cwd: root, encoding: "utf8" },
+    );
+    if (workflowResult.error || workflowResult.status !== 0) {
+      throw new Error("Browser Quality workflow identity could not be verified.");
+    }
+    let workflow;
+    try {
+      workflow = JSON.parse(workflowResult.stdout);
+    } catch {
+      throw new Error("Browser Quality workflow identity was unreadable.");
+    }
+    if (
+      workflow.id !== evidence.workflowDatabaseId ||
+      workflow.name !== name ||
+      workflow.path !== RELEASE_BROWSER_WORKFLOW_PATH ||
+      workflow.state !== "active"
+    ) {
+      throw new Error("Browser Quality evidence does not belong to the exact active workflow file.");
+    }
+    workflowPath = workflow.path;
+  }
   return {
     kind,
     name,
     headSha: evidence.headSha,
     conclusion: evidence.conclusion,
     url: evidence.url,
+    ...(kind === "browser"
+      ? {
+          event: evidence.event,
+          workflowDatabaseId: evidence.workflowDatabaseId,
+          workflowPath,
+        }
+      : {}),
   };
 });
 assertRequiredValidationRuns(validationRuns, head, repository);
@@ -173,19 +224,39 @@ const [
   contentAttestationBytes,
   releaseConfigBytes,
   deployableArtifactResult,
+  releaseBuildCheckpoint,
+  releaseBuildCheckpointBytes,
   ...migrationBytes
 ] = await Promise.all([
   readFile(path.join(root, "content/public/anish-content.public.v1.attestation.json")),
   readFile(path.join(root, "dist/server/wrangler.public.json")),
   readVerifiedDeployableArtifactManifest(root),
+  verifyReleaseBuildCheckpoint(root),
+  readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
   ...migrationList.map((name) => readFile(path.join(root, "drizzle", name))),
 ]);
 const contentAttestation = JSON.parse(contentAttestationBytes.toString("utf8"));
+const releaseConfig = JSON.parse(releaseConfigBytes.toString("utf8"));
+const playExperienceMode = releaseConfig.vars?.PLAY_EXPERIENCE_MODE;
+if (
+  playExperienceMode !== "classic" &&
+  playExperienceMode !== "my-room-2001"
+) {
+  throw new Error("The prepared hosted Worker config has no explicit supported Play mode.");
+}
 const publicContent = contentAttestation.artifacts?.find(
   (artifact) => artifact.path === "content/public/anish-content.public.v1.json",
 );
 if (!publicContent || !/^[a-f0-9]{64}$/.test(publicContent.sha256)) {
   throw new Error("The public-content attestation does not contain a valid bundle hash.");
+}
+if (
+  releaseBuildCheckpoint.artifactSetSha256 !==
+    deployableArtifactResult.manifest.artifactSetSha256 ||
+  releaseBuildCheckpoint.deployableManifestSha256 !==
+    sha256(deployableArtifactResult.bytes)
+) {
+  throw new Error("The tested release-build checkpoint does not match this deployable artifact set.");
 }
 
 const publicationCheckpoint = publicationCheckpointForPlan({
@@ -198,17 +269,24 @@ const publicationCheckpoint = publicationCheckpointForPlan({
 });
 
 const record = {
-  schemaVersion: "1.0",
+  schemaVersion: "1.2",
   preparedAt: isoDate(new Date().toISOString(), "preparedAt"),
   commitSha: head,
   repository,
   contentVersion: contentAttestation.contentVersion,
+  playExperienceMode,
   publicContentSha256: publicContent.sha256,
   deployableArtifacts: {
     artifactSetSha256:
       deployableArtifactResult.manifest.artifactSetSha256,
     fileCount: deployableArtifactResult.manifest.fileCount,
     totalBytes: deployableArtifactResult.manifest.totalBytes,
+  },
+  releaseBuildCheckpoint: {
+    sha256: sha256(releaseBuildCheckpointBytes),
+    artifactSetSha256: releaseBuildCheckpoint.artifactSetSha256,
+    deployableManifestSha256:
+      releaseBuildCheckpoint.deployableManifestSha256,
   },
   publicationCheckpoint,
   validationRuns,
@@ -226,6 +304,7 @@ const record = {
     deployableArtifactManifestSha256: sha256(
       deployableArtifactResult.bytes,
     ),
+    releaseBuildCheckpointSha256: sha256(releaseBuildCheckpointBytes),
   },
 };
 

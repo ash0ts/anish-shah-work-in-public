@@ -15,6 +15,8 @@ import {
   parseRemoteReleaseMarker,
   publicationCheckpointForPlan,
   requireExactUploadedVersion,
+  requiredSmokeTestsForPlayMode,
+  ROOM_PLAY_SMOKE_TESTS,
   runGuardedMigration,
 } from "../scripts/lib/release-contract.mjs";
 import {
@@ -165,7 +167,7 @@ test("release preflight rejects a configuration that weakens production boundari
         { ...environment, PLAY_EXPERIENCE_MODE: "experimental" },
         { head: expected.head, contentVersion: expected.contentVersion },
       ),
-    /classic or my-room-2001/,
+    /must be explicitly set to classic or my-room-2001/,
   );
   assert.throws(
     () =>
@@ -217,15 +219,31 @@ test("release preflight rejects a configuration that weakens production boundari
   );
 });
 
-test("production Play mode defaults to classic until explicitly activated", () => {
+test("production Play mode must be explicit and supported for every hosted release", () => {
   const { environment, expected } = validReleaseConfigFixture();
-  const withoutRoomMode = { ...environment };
-  delete withoutRoomMode.PLAY_EXPERIENCE_MODE;
-  const classic = expectedPublicReleaseConfig(withoutRoomMode, {
-    head: expected.head,
-    contentVersion: expected.contentVersion,
-  });
-  assert.equal(classic.playExperienceMode, "classic");
+  const missingMode = { ...environment };
+  delete missingMode.PLAY_EXPERIENCE_MODE;
+  assert.throws(
+    () => expectedPublicReleaseConfig(missingMode, {
+      head: expected.head,
+      contentVersion: expected.contentVersion,
+    }),
+    /PLAY_EXPERIENCE_MODE is required/,
+  );
+  assert.equal(
+    expectedPublicReleaseConfig(
+      { ...environment, PLAY_EXPERIENCE_MODE: "classic" },
+      { head: expected.head, contentVersion: expected.contentVersion },
+    ).playExperienceMode,
+    "classic",
+  );
+  assert.throws(
+    () => expectedPublicReleaseConfig(
+      { ...environment, PLAY_EXPERIENCE_MODE: "experimental" },
+      { head: expected.head, contentVersion: expected.contentVersion },
+    ),
+    /must be explicitly set to classic or my-room-2001/,
+  );
 });
 
 test("non-versioned trigger reconciliation is bound to the exact cutover release", () => {
@@ -388,29 +406,37 @@ test("GitHub evidence must be successful and bind the exact SHA and URL", () => 
   );
 });
 
-test("release evidence requires three distinct exact-commit security runs", () => {
+test("release evidence requires four distinct exact-commit quality runs", () => {
   const head = "a".repeat(40);
   const runs = [
     ["validate", "Validate", "101"],
     ["gitleaks", "Gitleaks", "102"],
     ["codeql", "CodeQL", "103"],
+    ["browser", "Browser Quality", "104"],
   ].map(([kind, name, id]) => ({
     kind,
     name,
     headSha: head,
     conclusion: "success",
     url: `https://github.com/example/repo/actions/runs/${id}`,
+    ...(kind === "browser"
+      ? {
+          event: "workflow_dispatch",
+          workflowDatabaseId: 404,
+          workflowPath: ".github/workflows/browser-quality.yml",
+        }
+      : {}),
   }));
   assert.doesNotThrow(() => assertRequiredValidationRuns(runs, head));
   assert.throws(
-    () => assertRequiredValidationRuns(runs.slice(0, 2), head),
-    /Validate, Gitleaks, and CodeQL/,
+    () => assertRequiredValidationRuns(runs.slice(0, 3), head),
+    /Validate, Gitleaks, CodeQL, and Browser Quality/,
   );
   assert.throws(
     () =>
       assertRequiredValidationRuns(
         runs.map((run, index) =>
-          index === 2 ? { ...run, url: runs[0].url } : run,
+          index === 3 ? { ...run, url: runs[0].url } : run,
         ),
         head,
       ),
@@ -419,6 +445,39 @@ test("release evidence requires three distinct exact-commit security runs", () =
   assert.throws(
     () => assertRequiredValidationRuns(runs, head, "different/repository"),
     /configured upstream repository/,
+  );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "browser" ? { ...run, event: "pull_request" } : run,
+      ),
+      head,
+    ),
+    /manual workflow_dispatch/,
+  );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "browser"
+          ? { ...run, workflowPath: ".github/workflows/ci.yml" }
+          : run,
+      ),
+      head,
+    ),
+    /exact browser-quality workflow file/,
+  );
+});
+
+test("My Room releases require direct-route smoke evidence", () => {
+  const base = ["public_routes", "security_headers"];
+  assert.deepEqual(requiredSmokeTestsForPlayMode(base, "classic"), base);
+  assert.deepEqual(
+    requiredSmokeTestsForPlayMode(base, "my-room-2001"),
+    [...base, ...ROOM_PLAY_SMOKE_TESTS],
+  );
+  assert.throws(
+    () => requiredSmokeTestsForPlayMode(base, "unknown"),
+    /unsupported Play experience mode/,
   );
 });
 

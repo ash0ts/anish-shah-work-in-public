@@ -71,6 +71,7 @@ function canonicalOriginState(): StudioHealth["canonicalOrigin"] {
     SITE_URL: runtimeValue("SITE_URL"),
     PRODUCTION_SITE_URL: runtimeValue("PRODUCTION_SITE_URL"),
     PUBLIC_CONTENT_MODE: runtimeValue("PUBLIC_CONTENT_MODE"),
+    PLAY_EXPERIENCE_MODE: runtimeValue("PLAY_EXPERIENCE_MODE"),
   };
   return {
     status: hostedEnvironmentConfigured(values) ? "ready" : "setup_required",

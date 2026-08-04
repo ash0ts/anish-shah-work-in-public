@@ -2,6 +2,7 @@ import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test } from "@playwright/test";
+import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
 const capture = process.env.ROOM_CAPTURE_VISUALS === "1";
 const reviewDirectory = path.resolve(".playwright/room-review");
@@ -61,8 +62,9 @@ test.describe("My Room 2001 visual review evidence", () => {
     });
 
     await page.getByRole("button", { name: "Enter the room" }).click();
-    const room = page.getByRole("dialog", { name: "Interactive room" });
-    await expect(room.getByText("Room ready")).toBeVisible();
+    const room = await expectRoomReady(page, {
+      context: "capturing room review evidence",
+    });
 
     const captureRoom = async (name) => {
       await page.evaluate(

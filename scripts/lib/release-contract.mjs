@@ -67,6 +67,36 @@ export function assertVerifiedActionsRun(evidence, { head, url, name }) {
   }
 }
 
+export const REQUIRED_VALIDATION_RUNS = Object.freeze([
+  Object.freeze({ kind: "validate", name: "Validate" }),
+  Object.freeze({ kind: "gitleaks", name: "Gitleaks" }),
+  Object.freeze({ kind: "codeql", name: "CodeQL" }),
+  Object.freeze({ kind: "browser", name: "Browser Quality" }),
+]);
+
+export const RELEASE_BROWSER_WORKFLOW_PATH =
+  ".github/workflows/browser-quality.yml";
+
+export const ROOM_PLAY_SMOKE_TESTS = Object.freeze([
+  "play_watch",
+  "play_read",
+  "play_listen",
+  "play_collect",
+  "play_play",
+  "play_move",
+]);
+
+export function requiredSmokeTestsForPlayMode(base, playExperienceMode) {
+  if (!Array.isArray(base) || base.some((value) => typeof value !== "string")) {
+    throw new Error("The base smoke-test contract is invalid.");
+  }
+  if (playExperienceMode === "classic") return [...base];
+  if (playExperienceMode === "my-room-2001") {
+    return [...base, ...ROOM_PLAY_SMOKE_TESTS];
+  }
+  throw new Error("The release plan contains an unsupported Play experience mode.");
+}
+
 export function githubRepositoryFromRemoteUrl(value) {
   const scp = String(value).match(
     /^git@github\.com:([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?$/,
@@ -95,13 +125,13 @@ export function githubRepositoryFromRemoteUrl(value) {
 }
 
 export function assertRequiredValidationRuns(runs, head, repository) {
-  const required = new Map([
-    ["validate", "Validate"],
-    ["gitleaks", "Gitleaks"],
-    ["codeql", "CodeQL"],
-  ]);
+  const required = new Map(
+    REQUIRED_VALIDATION_RUNS.map(({ kind, name }) => [kind, name]),
+  );
   if (!Array.isArray(runs) || runs.length !== required.size) {
-    throw new Error("Release evidence must contain Validate, Gitleaks, and CodeQL runs.");
+    throw new Error(
+      "Release evidence must contain Validate, Gitleaks, CodeQL, and Browser Quality runs.",
+    );
   }
   const urls = new Set();
   for (const run of runs) {
@@ -114,6 +144,17 @@ export function assertRequiredValidationRuns(runs, head, repository) {
       url: run.url,
       name: expectedName,
     });
+    if (
+      run.kind === "browser" &&
+      (run.event !== "workflow_dispatch" ||
+        run.workflowPath !== RELEASE_BROWSER_WORKFLOW_PATH ||
+        !Number.isSafeInteger(run.workflowDatabaseId) ||
+        run.workflowDatabaseId < 1)
+    ) {
+      throw new Error(
+        "Browser release evidence must be a manual workflow_dispatch run of the exact browser-quality workflow file.",
+      );
+    }
     if (repository) {
       const url = new URL(run.url);
       const segments = url.pathname.split("/").filter(Boolean);
