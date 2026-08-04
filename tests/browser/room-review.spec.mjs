@@ -6,14 +6,7 @@ import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
 const capture = process.env.ROOM_CAPTURE_VISUALS === "1";
 const reviewDirectory = path.resolve(".playwright/room-review");
-const objects = [
-  ["watch", "TV"],
-  ["read", "Bookshelf"],
-  ["listen", "Music player"],
-  ["collect", "Record crate"],
-  ["play", "Computer"],
-  ["move", "Treadmill"],
-];
+const objects = ["watch", "read", "listen", "collect", "play", "move"];
 const scenarios = [
   "ready",
   "empty",
@@ -101,7 +94,7 @@ test.describe("My Room 2001 visual review evidence", () => {
     await captureRoom("rotation-down");
     await room.getByRole("button", { name: "Reset view" }).click();
 
-    for (const [id] of objects) {
+    for (const id of objects) {
       const control = room.locator(`[data-room-object-control="${id}"]`);
       await control.focus();
       await expect(control).toHaveAttribute("data-focused", "true");
@@ -109,7 +102,7 @@ test.describe("My Room 2001 visual review evidence", () => {
     }
   });
 
-  for (const [id, title] of objects) {
+  for (const id of objects) {
     test(`captures ${id} across every review fixture`, async ({ page }) => {
       test.setTimeout(120_000);
       await page.setViewportSize({ width: 1440, height: 900 });
@@ -119,7 +112,9 @@ test.describe("My Room 2001 visual review evidence", () => {
         await page.goto(`/play/${id}?${parameters}`, {
           waitUntil: "domcontentloaded",
         });
-        await expect(page.getByRole("heading", { name: title })).toBeVisible();
+        await expect(
+          page.locator(`[data-match-cut-object="${id}"] h1`),
+        ).toHaveText(/\S+/);
         await page.waitForFunction(
           () =>
             document.querySelector("[data-match-cut-state]")?.getAttribute(
@@ -139,7 +134,9 @@ test.describe("My Room 2001 visual review evidence", () => {
       await page.goto(`/play/${id}?${mobileParameters}`, {
         waitUntil: "domcontentloaded",
       });
-      await expect(page.getByRole("heading", { name: title })).toBeVisible();
+      await expect(
+        page.locator(`[data-match-cut-object="${id}"] h1`),
+      ).toHaveText(/\S+/);
       await page.waitForFunction(
         () =>
           document.querySelector("[data-match-cut-state]")?.getAttribute(

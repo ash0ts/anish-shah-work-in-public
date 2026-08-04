@@ -964,7 +964,7 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(page).toHaveURL(/\/play\/watch$/);
     await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
     await expect(page.locator("[data-room-announcer]")).toContainText(
-      "Opened Watch: TV.",
+      `Opened ${objects[0].label}: ${objects[0].title}.`,
     );
 
     await page.getByRole("link", { name: "Back to room" }).click();
