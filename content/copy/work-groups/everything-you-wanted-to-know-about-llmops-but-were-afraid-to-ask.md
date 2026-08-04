@@ -10,4 +10,4 @@ LLMOps in practice
 I joined an interview about the practical demands of operating LLM applications.
 
 ## role-summary
-I appeared as the interview guest.
+Interview guest

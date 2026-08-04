@@ -10,4 +10,4 @@ Dynamic plugin selection
 I wrote about using dynamic plugin selection and W&B Prompts to improve LLM-agent performance.
 
 ## role-summary
-I authored the plugin-selection article.
+Article author

@@ -10,4 +10,4 @@ MLOps with Phi-2
 I presented how to manage MLOps workflows with W&B and Microsoft Phi-2.
 
 ## role-summary
-I presented the Phi-2 MLOps session.
+Session speaker

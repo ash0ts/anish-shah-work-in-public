@@ -56,14 +56,34 @@ Do not restate the same limitation in accounting, non-claim, rule, caveat, and c
 
 ## Play
 
-Use one literal object name and one personal description per doorway:
+Use one literal object name and one personal description per doorway. The
+literal name makes the room navigable; it is not the title of the experience
+behind that object:
 
 - **TV · Watch:** Anime I return to, what I’m watching, and the full shelf.
 - **Bookshelf · Read:** Books in progress, finished, rated, and waiting.
-- **Music player · Listen:** The twelve tracks Spotify puts closest to the surface for me.
+- **Music player · Listen:** The tracks Spotify puts closest to the surface for me.
 - **Record crate · Collect:** Records on my shelf, sorted by format and decade.
 - **Computer · Games:** Games I own, games I return to, and rounded playtime.
 - **Treadmill · Move:** Recent rides and runs, when Strava’s public feed is available.
+
+Give each object route its own authored screen title while keeping the literal
+object visible in the doorway and room navigation:
+
+- **TV:** Midnight Broadcast.
+- **Bookshelf:** Bedside Shelf.
+- **Music player:** Pocket Player.
+- **Record crate:** Crate Archive.
+- **Computer:** Desktop Library.
+- **Treadmill:** Cardio Television.
+- **Globe:** Postcard Planet.
+
+Do not make an authored screen title replace the literal object name. Do not
+make the screen eyebrow carry collection freshness, consent, or policy wording;
+those exact semantics remain beside the relevant data or action.
+Keep provider names out of editable screen-eyebrow fields. The closed room
+registry appends the exact provider label at render time so attribution cannot
+drift through a copy edit.
 
 Prefer reader language:
 

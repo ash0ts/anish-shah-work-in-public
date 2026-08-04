@@ -10,4 +10,4 @@ PII detection guardrails
 I wrote a report on evaluating guardrails for PII detection.
 
 ## role-summary
-I authored the PII-guardrails report.
+Report author

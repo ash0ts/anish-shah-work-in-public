@@ -24,7 +24,7 @@ export default function ReadRoomScreen({
     <main data-room-screen id="main" className={`${styles.page} ${styles.readPage}`} tabIndex={-1}>
       <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.readHeader} id="read-desk-note">
-        <p>Hardcover · Personal circulation desk</p>
+        <p>{object.screenEyebrow}</p>
         <h1>{object.title}</h1>
         <span>{object.description}</span>
       </header>

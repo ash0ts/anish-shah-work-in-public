@@ -10,4 +10,4 @@ Scaling AI systems
 I delivered a Deep Dive session on scaling AI systems with precision.
 
 ## role-summary
-I delivered the Deep Dive session.
+Deep Dive speaker

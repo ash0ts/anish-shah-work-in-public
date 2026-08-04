@@ -11,6 +11,7 @@ export type CopyVoiceProfile =
   | "work-title"
   | "work-short-title"
   | "work-summary"
+  | "work-role-summary"
   | "role"
   | "play-object-title"
   | "play-object-description";

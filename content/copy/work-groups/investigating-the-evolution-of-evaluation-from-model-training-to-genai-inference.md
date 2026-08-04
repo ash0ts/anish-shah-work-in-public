@@ -10,4 +10,4 @@ Evaluation across the ML lifecycle
 I presented how evaluation changes from model training through GenAI inference.
 
 ## role-summary
-I delivered the in-person evaluation talk.
+Evaluation talk speaker

@@ -10,4 +10,4 @@ GenAI applications
 I led a hands-on workshop on building GenAI applications.
 
 ## role-summary
-I led the hands-on application workshop.
+Workshop instructor

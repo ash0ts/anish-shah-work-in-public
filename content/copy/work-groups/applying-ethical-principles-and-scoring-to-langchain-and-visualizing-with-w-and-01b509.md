@@ -10,4 +10,4 @@ Ethical scoring with LangChain
 I wrote about scoring LangChain outputs against ethical principles and visualizing the results with W&B Prompts.
 
 ## role-summary
-I authored the ethical-scoring article.
+Article author

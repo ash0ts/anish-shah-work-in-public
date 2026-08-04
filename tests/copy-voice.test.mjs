@@ -85,6 +85,62 @@ test("meaningless WorkGroup summaries fail while outcome-mechanism copy passes",
   assert.equal(useful.errors.length, 0);
 });
 
+test("WorkGroup role summaries reject first-person sentence openings", () => {
+  const report = auditCopyVoice([
+    entry({
+      key: "group:test.summary",
+      surface: "work-group",
+      field: "summary",
+      value: "I authored a guide to tracing model behavior with evaluation data.",
+    }),
+    entry({
+      key: "group:test.role-summary",
+      surface: "work-group",
+      field: "role-summary",
+      value: "I authored the guide.",
+    }),
+  ]);
+  assert(rules(report).includes("role-phrase"));
+  assert(rules(report, "warnings").includes("summary-role-duplication"));
+  assert.throws(() => assertCopyVoice(report), /role-phrase/u);
+});
+
+test("WorkGroup role summaries accept concise role phrases", () => {
+  const policy = copyVoicePolicyForField("work-group", "role-summary");
+  assert.equal(policy.voiceProfile, "work-role-summary");
+  assert.equal(policy.minWords, 2);
+  assert.equal(policy.maxWords, 12);
+
+  const report = auditCopyVoice([
+    entry({
+      key: "group:test.role-summary",
+      surface: "work-group",
+      field: "role-summary",
+      value: "Guide author",
+    }),
+  ]);
+  assert.equal(report.errors.length, 0);
+});
+
+test("shared concise roles are labels rather than duplicate narrative", () => {
+  const report = auditCopyVoice([
+    entry({
+      key: "group:first.role-summary",
+      surface: "work-group",
+      field: "role-summary",
+      value: "Upstream contributor across two pull requests",
+    }),
+    entry({
+      key: "group:second.role-summary",
+      surface: "work-group",
+      field: "role-summary",
+      value: "Upstream contributor across two pull requests",
+    }),
+  ]);
+  assert(!rules(report).includes("duplicate-sentence"));
+  assert.equal(report.errors.length, 0);
+});
+
 test("unsupported hype, exclamation marks, and emoji fail professional copy", () => {
   for (const [value, expectedRule] of [
     ["A groundbreaking, best-in-class evaluation system.", "unsupported-hype"],

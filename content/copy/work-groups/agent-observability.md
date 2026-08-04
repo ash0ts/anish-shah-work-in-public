@@ -10,4 +10,4 @@ Agent observability
 I spoke at an AI Innovators meetup about agent observability.
 
 ## role-summary
-I spoke about observability at the AI Innovators meetup.
+AI Innovators meetup speaker

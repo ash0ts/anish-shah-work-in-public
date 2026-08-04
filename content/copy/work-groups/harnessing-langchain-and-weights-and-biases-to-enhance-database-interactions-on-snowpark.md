@@ -10,4 +10,4 @@ LangChain on Snowpark
 I wrote a guide to combining LangChain and W&B for database interactions on Snowpark.
 
 ## role-summary
-I authored the Snowpark database article.
+Article author

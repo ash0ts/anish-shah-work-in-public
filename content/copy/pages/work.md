@@ -6,35 +6,38 @@ Work
 ## seo-description
 Browse my agent systems, courses, implementations, open-source contributions, talks, and workshops.
 
+## masthead-eyebrow
+Applied AI · 2021—now
+
 ## masthead-title
-Projects, without the duplicates.
+What I’ve built, taught, and tested.
 
 ## masthead-summary
-I group projects by what I built—not every place they appeared. Talks, recordings, translations, and code stay attached to the underlying work.
+Each project stays with the talks, recordings, translations, and code around it, so you can follow the idea instead of counting every appearance.
 
 ## search-label
 Search projects, talks, and code
 
 ## search-placeholder
-Agents, evaluation, MCP, LangChain
+MCP, evaluation, agents, LangChain
+
+## filter-submit
+Apply filters
 
 ## index-default-heading
-All projects
+Project index
 
 ## index-filtered-heading
-Matching projects
-
-## index-summary
-Open a line to browse the projects inside it.
+Filtered projects
 
 ## no-results
-No projects match those filters.
+Nothing here matches those filters.
 
 ## clear-search
-Clear filters
+Reset filters
 
 ## detail-back
-Project index
+All projects
 
 ## detail-role
 My role
@@ -46,13 +49,13 @@ When
 With
 
 ## detail-included
-What this included
+Included here
 
 ## detail-results
-Results
+Documented results
 
 ## detail-context
-Program context · not direct attribution
+Context only—not a direct result of this project.
 
 ## detail-sources
 Sources
@@ -61,7 +64,19 @@ Sources
 Talks, recordings, and code
 
 ## detail-related
-Related projects
+Related context
+
+## timeline-eyebrow
+Timeline
+
+## timeline-title
+Projects by year.
+
+## timeline-summary
+Color marks the line; a darker cell means more projects. Select a cell to filter the list.
+
+## timeline-caption
+Project counts by line and year
 
 ## bucket-1-title
 Agent systems & open source
@@ -70,7 +85,7 @@ Agent systems & open source
 Systems
 
 ## bucket-1-statement
-Interfaces, evaluation tools, and infrastructure integrations built for agents and ML teams.
+Interfaces, integrations, and evaluation tools I built or contributed to for agents and ML workflows.
 
 ## bucket-2-title
 Technical education
@@ -79,7 +94,7 @@ Technical education
 Education
 
 ## bucket-2-statement
-Courses and workshops on prompting, evaluation, fine-tuning, and agent engineering.
+Courses and workshops on prompting, evaluation, fine-tuning, and agent design.
 
 ## bucket-3-title
 Research, writing & implementations
@@ -88,7 +103,7 @@ Research, writing & implementations
 Research
 
 ## bucket-3-statement
-Articles and implementations that make agent behavior, evaluation, and model systems easier to inspect.
+Articles and working implementations that make agent behavior, evaluation, and model systems easier to inspect.
 
 ## bucket-4-title
 Talks, workshops & programs
@@ -97,4 +112,4 @@ Talks, workshops & programs
 Programs
 
 ## bucket-4-statement
-Sessions on agent architecture, model adaptation, and evaluation for researchers and practitioners.
+Talks and live sessions on agent architecture, model adaptation, and evaluation.

@@ -17,6 +17,23 @@ const METRIC_LIMIT = /\b(?:internal\s+analytics|about|approximately|rounded|supp
 const MEANINGLESS_SUMMARY = /^(?:(?:article\s+)?author|(?:webinar|workshop|conference|meetup)?\s*speaker|presenter|co-presenter|contributor|repository\s+owner|host|judge)\.?$|^(?:\d{1,2}:\d{2}\s*(?:AM|PM)?|in-person\s+at|recording\s+uploaded|scheduled\s+event|exact\s+session\s+slot|no\s+replay\b)|\b(?:registration\s+record\s+retained|editorial\s+item)\b/iu;
 const REPEATED_CORPUS_WORDS = new Set(["public", "technical", "work"]);
 const DUPLICATE_SENTENCE_FIELDS = /(?:^|[-.])(?:body|description|fallback|headline|nonclaim-\d+|statement|summary)$/u;
+const FIRST_PERSON_ROLE_OPENING = /^I\b/u;
+const ROLE_OVERLAP_STOPWORDS = new Set([
+  "about",
+  "across",
+  "after",
+  "again",
+  "along",
+  "also",
+  "from",
+  "into",
+  "over",
+  "that",
+  "their",
+  "through",
+  "using",
+  "with",
+]);
 
 const wordSegmenter = new Intl.Segmenter("en", { granularity: "word" });
 const sentenceSegmenter = new Intl.Segmenter("en", { granularity: "sentence" });
@@ -141,6 +158,20 @@ function auditEntry(entry, errors, warnings, corpusCounts) {
       ),
     );
   }
+  if (
+    surface === "work-group" &&
+    field === "role-summary" &&
+    FIRST_PERSON_ROLE_OPENING.test(value)
+  ) {
+    errors.push(
+      issue(
+        "error",
+        "role-phrase",
+        key,
+        "must be a concise role phrase rather than a first-person sentence",
+      ),
+    );
+  }
   if (HYPE.test(value)) {
     errors.push(
       issue(
@@ -251,6 +282,7 @@ function validateDuplicateSentences(entries, errors) {
   const seen = new Map();
   for (const entry of entries) {
     if (!DUPLICATE_SENTENCE_FIELDS.test(entry.field)) continue;
+    if (entry.field === "role-summary") continue;
     if (entry.field === "seo-description") continue;
     for (const sentence of copySentences(entry.value)) {
       if (countCopyWords(sentence) < 6) continue;
@@ -272,6 +304,46 @@ function validateDuplicateSentences(entries, errors) {
   }
 }
 
+function meaningfulRoleTokens(value) {
+  return new Set(
+    (value.toLocaleLowerCase("en-US").match(/[\p{L}\p{N}-]+/gu) ?? [])
+      .filter((token) => token.length >= 4)
+      .filter((token) => !ROLE_OVERLAP_STOPWORDS.has(token)),
+  );
+}
+
+function validateWorkGroupSummaryRolePairs(entries, warnings) {
+  const summaries = new Map(
+    entries
+      .filter(
+        (entry) => entry.surface === "work-group" && entry.field === "summary",
+      )
+      .map((entry) => [entry.key.slice(0, -".summary".length), entry]),
+  );
+  for (const role of entries.filter(
+    (entry) =>
+      entry.surface === "work-group" && entry.field === "role-summary",
+  )) {
+    if (!FIRST_PERSON_ROLE_OPENING.test(role.value)) continue;
+    const prefix = role.key.slice(0, -".role-summary".length);
+    const summary = summaries.get(prefix);
+    if (!summary) continue;
+    const summaryTokens = meaningfulRoleTokens(summary.value);
+    const overlap = [...meaningfulRoleTokens(role.value)].filter((token) =>
+      summaryTokens.has(token),
+    );
+    if (overlap.length < 2) continue;
+    warnings.push(
+      issue(
+        "warning",
+        "summary-role-duplication",
+        role.key,
+        `repeats the summary instead of naming the role: ${overlap.join(", ")}`,
+      ),
+    );
+  }
+}
+
 export function auditCopyVoice(entries) {
   const errors = [];
   const warnings = [];
@@ -279,6 +351,7 @@ export function auditCopyVoice(entries) {
   for (const entry of entries) auditEntry(entry, errors, warnings, corpusCounts);
   validatePlayObjectNames(entries, errors);
   validateDuplicateSentences(entries, errors);
+  validateWorkGroupSummaryRolePairs(entries, warnings);
 
   const corpusThresholds = { public: 12, technical: 10, work: 12 };
   for (const [word, maximum] of Object.entries(corpusThresholds)) {

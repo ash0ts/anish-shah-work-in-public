@@ -10,4 +10,4 @@ GPU cost with W&B
 I wrote a report on using W&B to analyze and optimize GPU cost.
 
 ## role-summary
-I authored the GPU-cost report.
+Report author

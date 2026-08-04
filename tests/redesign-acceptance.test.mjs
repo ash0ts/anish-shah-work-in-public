@@ -234,7 +234,7 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   assert.equal((calendarBody.match(/<td\b/g) ?? []).length, 24);
   assert.match(
     calendar,
-    /Projects by line and year, with exact project counts/i,
+    /Project counts by line and year/i,
   );
   assert.doesNotMatch(calendar, /public[- ]form|artifact count|formCount/i);
   assert.match(calendar, /data-density="[1-5]"/i);
@@ -251,7 +251,7 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
     markup,
     /<details\b[^>]*id="work-more-filters"[\s\S]*?<select\b[^>]*name="format"/i,
   );
-  assert.match(markup, />Line<|>Topic<|>Year<|>Medium</i);
+  assert.match(markup, />Line of work<|>Topic<|>Year<|>Format</i);
 
   const pages = await Promise.all(
     [1, 2, 3, 4].map((page) =>
@@ -343,7 +343,10 @@ test("single- and multi-form WorkGroup details avoid duplicate presentation", as
     "The single-form summary is repeated",
   );
   assert.doesNotMatch(singleHtml, /Talks, recordings, and code/i);
-  assert.match(singleHtml, /Open the |Historical source unavailable/i);
+  assert.match(
+    singleHtml,
+    /Read article|View event|Open course|Watch recording|Read report|Open reference|View credit|Read translation|Open mirror|View profile|View repository|View pull request|Historical source unavailable/i,
+  );
 
   const multiHtml = await renderHtml(`/work/${multiple.slug}`);
   const multiText = textFromMarkup(documentMarkup(multiHtml));
@@ -361,18 +364,11 @@ test("single- and multi-form WorkGroup details avoid duplicate presentation", as
     );
   }
 
-  const primaryEntity = publicBundle.entities.find(
-    (entity) => entity.id === multiple.primaryEntityId,
-  );
-  assert(primaryEntity);
   const duplicateTitleHtml = await renderHtml(`/work/${multiple.slug}`);
-  assert.equal(
-    occurrences(
-      textFromMarkup(documentMarkup(duplicateTitleHtml)).toLocaleLowerCase(),
-      "primary artifact",
-    ),
-    1,
-    "Only the identity-selected item may be labeled the primary artifact",
+  assert.doesNotMatch(
+    textFromMarkup(documentMarkup(duplicateTitleHtml)),
+    /primary artifact/i,
+    "Work details should use the material's real type rather than content-model language",
   );
 });
 

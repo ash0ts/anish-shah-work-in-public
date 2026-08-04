@@ -10,4 +10,4 @@ Azure OpenAI model customization
 I presented two sessions on customizing Azure OpenAI Service models with W&B.
 
 ## role-summary
-I presented both webinar sessions.
+Speaker across both webinar sessions

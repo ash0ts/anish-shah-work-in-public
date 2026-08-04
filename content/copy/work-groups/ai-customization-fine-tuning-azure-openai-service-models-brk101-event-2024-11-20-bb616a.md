@@ -10,4 +10,4 @@ Azure OpenAI fine-tuning
 I co-presented a BRK101 session on fine-tuning Azure OpenAI Service models.
 
 ## role-summary
-I co-presented with Ami Patel and Steve Sweetman.
+Co-presenter with Ami Patel and Steve Sweetman

@@ -10,4 +10,4 @@ Motion prediction with L5Kit and Ray
 I built and documented a distributed motion-prediction workflow using L5Kit, Ray, and W&B.
 
 ## role-summary
-I authored the article and demo repository.
+Article author and demo repository creator

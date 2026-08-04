@@ -10,7 +10,7 @@ MCP for W&B
 I helped build an MCP interface that lets agents inspect W&B experiments and traces.
 
 ## role-summary
-I contributed to the server and coauthored its launch article.
+Server contributor and launch-article coauthor
 
 ## home-title
 W&B MCP Server

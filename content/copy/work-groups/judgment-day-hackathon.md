@@ -10,4 +10,4 @@ Judgment Day
 I judged an in-person AI hackathon at the W&B office.
 
 ## role-summary
-I judged the project submissions.
+Hackathon judge

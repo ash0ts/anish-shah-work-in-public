@@ -10,4 +10,4 @@ OpenAI Cookbook pull requests
 I contributed two related changes to the OpenAI Cookbook.
 
 ## role-summary
-I contributed through two Cookbook pull requests.
+Upstream contributor across two pull requests

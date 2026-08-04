@@ -10,4 +10,4 @@ Models from training to production
 I led a workshop on training, fine-tuning, and managing models from experimentation through production.
 
 ## role-summary
-I instructed the quarter-day workshop.
+Workshop instructor

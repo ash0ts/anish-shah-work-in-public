@@ -10,4 +10,4 @@ Build and deploy LLM apps
 I organized and led instruction for a workshop on building and deploying LLM applications.
 
 ## role-summary
-I organized the program, led instruction, and created its content.
+Program organizer, instructor, and content author

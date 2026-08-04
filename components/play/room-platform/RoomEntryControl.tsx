@@ -13,8 +13,8 @@ export function RoomEntryControl() {
     return (
       <div className={styles.entryControl}>
         <span aria-live="polite">
-          The interactive room is staying still for this visit. Choose any of
-          the six objects below.
+          The room is staying still on this device. Every labeled object below
+          still opens.
         </span>
       </div>
     );
@@ -25,8 +25,8 @@ export function RoomEntryControl() {
       <div className={styles.entryControl}>
         <span aria-live="polite">
           {checking
-            ? "Checking whether this device supports the interactive room. The six links are ready now."
-            : "This device is using the still room. Choose any of the six objects below."}
+            ? "Checking whether this device can open the 3D room. Every labeled object below is ready now."
+            : "The room is staying still on this device. Every labeled object below still opens."}
         </span>
       </div>
     );
@@ -43,8 +43,8 @@ export function RoomEntryControl() {
       </button>
       <span aria-live="polite">
         {room.entered
-          ? "Interactive room requested. Use the labeled objects or room controls."
-          : "Optional on capable desktop browsers. The six links always work."}
+          ? "The 3D room is opening. The labeled objects and room controls are ready."
+          : "Optional 3D view on supported desktops. Every object also opens as a regular page."}
       </span>
     </div>
   );

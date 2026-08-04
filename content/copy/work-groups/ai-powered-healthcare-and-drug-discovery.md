@@ -10,4 +10,4 @@ Healthcare and drug discovery
 I spoke at a meetup about AI applications in healthcare and drug discovery.
 
 ## role-summary
-I presented the healthcare and drug-discovery session.
+Meetup speaker

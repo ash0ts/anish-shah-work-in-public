@@ -10,4 +10,4 @@ MARL experiments with Ray
 I presented a conference session on managing multi-agent reinforcement-learning experiments with Ray and W&B.
 
 ## role-summary
-I presented the MARL conference session.
+Conference speaker

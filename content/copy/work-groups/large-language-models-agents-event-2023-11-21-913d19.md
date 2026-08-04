@@ -10,4 +10,4 @@ LLM agents
 I presented a webinar on large-language-model agents.
 
 ## role-summary
-I presented the LLM-agent webinar.
+Webinar speaker

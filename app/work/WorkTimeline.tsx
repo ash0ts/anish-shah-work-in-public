@@ -5,6 +5,7 @@ import {
 } from "@/lib/work-archive-query";
 import { workBuckets } from "@/lib/work-groups";
 import type { WorkArchiveRecord } from "@/lib/work-index";
+import { SITE_COPY } from "@/lib/copy";
 import styles from "./WorkTimeline.module.css";
 
 const years = [2021, 2022, 2023, 2024, 2025, 2026] as const;
@@ -39,13 +40,12 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
     >
       <header className={styles.header}>
         <div>
-          <p>Work over time</p>
-          <h2 id="work-timeline-title">Four lines, six years.</h2>
+          <p>{SITE_COPY.work["timeline-eyebrow"]}</p>
+          <h2 id="work-timeline-title">
+            {SITE_COPY.work["timeline-title"]}
+          </h2>
         </div>
-        <p>
-          Each cell shows work active in that year. Color identifies the line;
-          a darker shade means more work. Choose a cell to open that slice.
-        </p>
+        <p>{SITE_COPY.work["timeline-summary"]}</p>
       </header>
 
       <div
@@ -56,7 +56,7 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
       >
         <table>
           <caption>
-          Projects by line and year, with exact project counts
+            {SITE_COPY.work["timeline-caption"]}
           </caption>
           <thead>
             <tr>
@@ -90,7 +90,6 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
                       })}#work-index`}
                     >
                       <strong>{bucket.title}</strong>
-                      <span>{bucket.shortTitle}</span>
                     </Link>
                   </th>
                   {rowCells.map(({ works, year }) => {
@@ -119,7 +118,7 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
                           >
                             <strong>{works.length}</strong>
                             <span>
-                              {works.length === 1 ? "work" : "works"}
+                              {works.length === 1 ? "project" : "projects"}
                             </span>
                           </Link>
                         ) : (

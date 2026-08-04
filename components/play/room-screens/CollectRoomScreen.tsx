@@ -24,7 +24,7 @@ export default function CollectRoomScreen({
     <main data-room-screen id="main" className={`${styles.page} ${styles.collectPage}`} tabIndex={-1}>
       <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.collectHeader}>
-        <p>Discogs · Physical collection</p>
+        <p>{object.screenEyebrow}</p>
         <h1>{object.title}</h1>
         <span>{object.description}</span>
       </header>
@@ -43,7 +43,7 @@ export default function CollectRoomScreen({
         >
           <div className={styles.crateLabel}>
             <p id="collect-status-title">Crate 01 · Physical collection</p>
-            <span>Cataloged without flattening duplicate copies</span>
+            <span>Duplicate copies stay distinct</span>
           </div>
           <div className={styles.crateWell}>
             <DiscogsStream

@@ -10,4 +10,4 @@ Multimodal LLM evaluation
 I spoke about fine-tuning and evaluating multimodal LLMs.
 
 ## role-summary
-I presented the multimodal LLM session.
+Session speaker

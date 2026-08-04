@@ -10,4 +10,4 @@ Agents with MCP and protocols
 I presented a webinar on building AI agents with MCP and adjacent protocols.
 
 ## role-summary
-I presented the MCP webinar.
+Webinar speaker

@@ -10,4 +10,4 @@ RAG evaluation
 I hosted and co-facilitated a session on evaluating retrieval-augmented generation applications.
 
 ## role-summary
-I hosted and co-facilitated the session.
+Host and co-facilitator

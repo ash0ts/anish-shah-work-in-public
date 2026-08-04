@@ -10,4 +10,4 @@ Evaluating agentic applications
 I co-led a workshop on evaluating and improving agentic AI applications.
 
 ## role-summary
-I co-instructed the workshop with Sam Stowers.
+Co-instructor with Sam Stowers

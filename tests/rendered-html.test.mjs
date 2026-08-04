@@ -193,8 +193,8 @@ test("all public routes expose useful server-rendered content", async () => {
     {
       path: "/work",
       required: [
-        /Projects, without the duplicates\./i,
-        /I group projects by what I built/i,
+        /What I(?:’|&#x27;|')ve built, taught, and tested\./i,
+        /follow the idea instead of counting every appearance/i,
         /Search projects, talks, and code/i,
         /name="bucket"/i,
         /name="topic"/i,
@@ -208,12 +208,12 @@ test("all public routes expose useful server-rendered content", async () => {
     },
     {
       path: "/work/wandb-mcp-server",
-      required: [/W&amp;B MCP Server/i, /Results tied to this work/i, /Sources/i],
+      required: [/W&amp;B MCP Server/i, /Documented results/i, /Sources/i],
     },
     {
       path: "/play",
       required: [
-        /Come in and pick something up\./i,
+        /The room behind the résumé\./i,
         />TV</i,
         />Bookshelf</i,
         />Music player</i,
@@ -372,7 +372,7 @@ test("legacy context routes land on a real nested anchor or a useful search", as
     `${relatedLocation.pathname}${relatedLocation.hash}`,
   );
   assert.match(relatedHtml, /id="item:fp-0100"/i);
-  assert.match(relatedHtml, /Programs and references/i);
+  assert.match(relatedHtml, /Related context/i);
 
   const unassociated = await fetch(
     `${BASE_URL}/work/fourthbrain-graduate-testimonial`,

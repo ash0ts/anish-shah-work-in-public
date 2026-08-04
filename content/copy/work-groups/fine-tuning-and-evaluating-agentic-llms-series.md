@@ -10,7 +10,7 @@ Agentic LLM workshops
 I co-taught a multi-session workshop on adapting and evaluating LLMs for agentic use cases.
 
 ## role-summary
-I spoke and co-instructed across the series.
+Speaker and co-instructor across the series
 
 ## home-title
 Agentic LLM fine-tuning & evaluation

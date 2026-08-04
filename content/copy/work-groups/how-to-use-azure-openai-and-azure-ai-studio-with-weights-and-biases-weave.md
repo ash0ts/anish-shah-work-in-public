@@ -10,4 +10,4 @@ Azure OpenAI with Weave
 I wrote a cookbook for using Azure OpenAI and Azure AI Studio with W&B Weave.
 
 ## role-summary
-I authored the cookbook.
+Cookbook author

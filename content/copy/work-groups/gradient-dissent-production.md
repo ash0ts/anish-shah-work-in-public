@@ -10,4 +10,4 @@ Gradient Dissent production
 I produced and transcribed a set of Gradient Dissent interviews, with Korean and Japanese translations.
 
 ## role-summary
-I contributed production and transcription.
+Producer and transcriber

@@ -10,4 +10,4 @@ Google Cloud GenAI
 I contributed an implementation to Google Cloud's Generative AI repository.
 
 ## role-summary
-I contributed through the Google Cloud pull request.
+Implementation contributor

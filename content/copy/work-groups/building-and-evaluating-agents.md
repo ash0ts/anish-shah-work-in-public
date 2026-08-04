@@ -10,7 +10,7 @@ Building and evaluating agents
 I presented how to build agent systems with evaluation integrated into development.
 
 ## role-summary
-I presented the agent-building conference session.
+Conference speaker
 
 ## home-title
 Building agents with evaluation in the loop

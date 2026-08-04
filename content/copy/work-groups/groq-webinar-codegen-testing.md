@@ -10,4 +10,4 @@ Groq codegen testing
 I built a code-generation testing demo for a Groq webinar.
 
 ## role-summary
-I created and own the demo repository.
+Demo creator and repository owner

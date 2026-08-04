@@ -10,4 +10,4 @@ Autonomous-vehicle scaling primer
 I wrote a primer on scaling autonomous-vehicle workloads with L5Kit and Ray.
 
 ## role-summary
-I authored the primer.
+Primer author

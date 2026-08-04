@@ -10,4 +10,4 @@ NVIDIA Data Flywheel
 I contributed a W&B implementation to NVIDIA's Data Flywheel Blueprint.
 
 ## role-summary
-I contributed code through the upstream pull request.
+Upstream implementation contributor

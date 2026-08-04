@@ -10,4 +10,4 @@ LLMs in business workflows
 I presented a step-by-step approach to introducing LLMs into business workflows.
 
 ## role-summary
-I presented the business-workflow session.
+Session speaker

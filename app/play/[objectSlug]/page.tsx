@@ -123,14 +123,14 @@ export async function generateMetadata({
     return publicPageMetadata({
       title: "Collection not found",
       description:
-        "This collection is not part of Anish Shah’s public room archive. Return to Play to choose one of the six available objects.",
+        "That object isn’t in My Room, 2001. Return to Play and choose one from the room.",
       path: "/play",
       noindex: true,
     });
   }
   return publicPageMetadata({
     title: `${object.label} · ${object.title}`,
-    description: `${object.description} Browse the collection and its provider attribution.`,
+    description: `${object.description} Open the ${object.object.toLowerCase()} to explore the collection.`,
     path: object.route,
     noindex: hasPublicQuery(query),
   });

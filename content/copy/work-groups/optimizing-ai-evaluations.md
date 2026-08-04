@@ -10,4 +10,4 @@ AI evaluation workflows
 I spoke at a meetup about improving AI evaluation workflows.
 
 ## role-summary
-I presented the evaluation-workflow talk.
+Meetup speaker

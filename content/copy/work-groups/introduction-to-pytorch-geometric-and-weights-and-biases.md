@@ -10,4 +10,4 @@ PyTorch Geometric with W&B
 I wrote an introduction to graph learning with PyTorch Geometric and W&B.
 
 ## role-summary
-I authored the PyTorch Geometric introduction.
+Article author

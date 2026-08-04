@@ -10,4 +10,4 @@ GPT Engineer pull requests
 I contributed two related changes to GPT Engineer.
 
 ## role-summary
-I contributed through two GPT Engineer pull requests.
+Upstream contributor across two pull requests

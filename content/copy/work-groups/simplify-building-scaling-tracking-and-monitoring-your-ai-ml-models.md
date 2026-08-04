@@ -10,4 +10,4 @@ AI/ML model operations
 I presented a webinar on building, scaling, tracking, and monitoring AI/ML models.
 
 ## role-summary
-I presented the model-operations webinar.
+Webinar speaker

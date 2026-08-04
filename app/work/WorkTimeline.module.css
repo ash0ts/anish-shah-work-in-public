@@ -136,8 +136,7 @@
   text-decoration: none;
 }
 
-.frame tbody > tr > th strong,
-.frame tbody > tr > th span {
+.frame tbody > tr > th strong {
   display: block;
   min-width: 0;
 }
@@ -151,14 +150,6 @@
   letter-spacing: -0.035em;
   line-height: 1.05;
   overflow-wrap: anywhere;
-}
-
-.frame tbody > tr > th span {
-  color: var(--ink-muted, #5c6477);
-  font-family: var(--font-mono, monospace);
-  font-size: 0.75rem;
-  letter-spacing: 0.055em;
-  text-transform: uppercase;
 }
 
 .frame tbody > tr > th a:hover,

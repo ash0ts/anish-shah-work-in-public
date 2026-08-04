@@ -10,4 +10,4 @@ Building an LLM judge
 I presented a session on building an LLM judge with W&B.
 
 ## role-summary
-I presented the LLM-judge session.
+Session speaker

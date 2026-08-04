@@ -113,7 +113,7 @@ export default async function WorkPage({
     <main id="main" className={`site-main ${styles.page}`}>
       <header className={styles.masthead}>
         <p className={styles.eyebrow}>
-          Applied AI systems · 2021—now
+          {SITE_COPY.work["masthead-eyebrow"]}
         </p>
         <div className={styles.mastheadBody}>
           <h1>{SITE_COPY.work["masthead-title"]}</h1>
@@ -150,7 +150,7 @@ export default async function WorkPage({
             <div className={styles.primaryFilters}>
               <FilterSelect
                 allLabel="All lines"
-                label="Line"
+                label="Line of work"
                 name="bucket"
                 value={query.bucket}
                 options={options.buckets}
@@ -184,19 +184,19 @@ export default async function WorkPage({
               </summary>
               <div className={styles.secondaryFilters}>
                 <FilterSelect
-                  allLabel="All media"
-                  label="Medium"
+                  allLabel="All formats"
+                  label="Format"
                   name="format"
                   value={query.format}
                   options={options.formats}
                 />
               </div>
             </details>
-            <button type="submit">Show work</button>
+            <button type="submit">{SITE_COPY.work["filter-submit"]}</button>
           </div>
 
           <Link className={styles.clear} href="/work" prefetch={false}>
-            Clear
+            {SITE_COPY.work["clear-search"]}
           </Link>
         </form>
       </section>
@@ -209,20 +209,17 @@ export default async function WorkPage({
         id="work-index"
       >
         <header className={styles.indexHeader}>
-          <div>
-            <p
-              aria-atomic="true"
-              aria-live="polite"
-              className={styles.resultCount}
-              role="status"
-            >
-              {resultLabel}
-            </p>
-            <h2 id="work-index-title" tabIndex={-1}>
-              {explorerHeading}
-            </h2>
-          </div>
-          <p>{SITE_COPY.work["index-summary"]}</p>
+          <p
+            aria-atomic="true"
+            aria-live="polite"
+            className={styles.resultCount}
+            role="status"
+          >
+            {resultLabel}
+          </p>
+          <h2 id="work-index-title" tabIndex={-1}>
+            {explorerHeading}
+          </h2>
         </header>
         <FilteredResultFocus
           active={hasScopedResults || query.page > 1}

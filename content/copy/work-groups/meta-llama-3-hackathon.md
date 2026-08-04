@@ -10,4 +10,4 @@ Llama 3 Hackathon
 I judged the Meta Llama 3 Hackathon at SHACK15.
 
 ## role-summary
-I judged the Llama 3 project submissions.
+Hackathon judge

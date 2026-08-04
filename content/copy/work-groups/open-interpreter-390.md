@@ -10,4 +10,4 @@ Open Interpreter pull request
 I contributed an integration change to Open Interpreter.
 
 ## role-summary
-I contributed through the Open Interpreter pull request.
+Integration contributor

@@ -10,4 +10,4 @@ MedSAM MLOps
 I wrote a report on applying deep learning and MLOps practices to MedSAM.
 
 ## role-summary
-I authored the MedSAM report.
+Report author

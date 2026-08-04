@@ -10,4 +10,4 @@ GenAI with Weave and NVIDIA
 I presented a GTC session on using W&B Weave and NVIDIA tooling for GenAI application development.
 
 ## role-summary
-I delivered the GTC session.
+GTC speaker

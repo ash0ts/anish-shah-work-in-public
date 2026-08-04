@@ -10,4 +10,4 @@ LangChain × W&B
 I contributed two W&B integration changes to LangChain.
 
 ## role-summary
-I contributed through two LangChain pull requests.
+Upstream contributor across two pull requests

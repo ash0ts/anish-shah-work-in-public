@@ -10,4 +10,4 @@ W&B Skills contributions
 I contributed to W&B's public skills repository.
 
 ## role-summary
-I contributed to the upstream repository.
+Upstream repository contributor

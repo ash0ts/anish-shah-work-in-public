@@ -10,4 +10,4 @@ PII evaluation safeguards
 I contributed a representative evaluation report to an open-source PII safeguards project.
 
 ## role-summary
-I contributed through the safeguards pull request.
+Report contributor

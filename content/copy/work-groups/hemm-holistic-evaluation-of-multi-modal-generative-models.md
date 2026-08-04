@@ -10,4 +10,4 @@ HEMM multimodal evaluation
 I presented a virtual workshop on holistic evaluation of multimodal generative models.
 
 ## role-summary
-I delivered the virtual workshop.
+Virtual workshop speaker

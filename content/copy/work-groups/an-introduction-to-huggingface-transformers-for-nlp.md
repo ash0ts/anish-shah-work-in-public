@@ -10,4 +10,4 @@ Transformers for NLP
 I wrote an introduction to using Hugging Face Transformers for NLP.
 
 ## role-summary
-I authored the NLP introduction.
+Article author

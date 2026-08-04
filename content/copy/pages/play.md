@@ -1,31 +1,31 @@
 <!-- copy-page: play -->
 
 ## seo-title
-Play
+Play — My Room, 2001
 
 ## seo-description
-Explore the anime, books, music, records, games, and miles I keep coming back to.
+Step into the room behind the résumé: anime, books, music, records, games, and miles, each collected in its own corner.
 
 ## intro-eyebrow
-My Room, 2001
+My Room · 2001
 
 ## intro-title
-Come in and pick something up.
+The room behind the résumé.
 
 ## intro-summary
-Anime, books, music, records, games, and miles—the things I keep coming back to. Every object also opens as a regular page.
+Late-night anime, books in stacks, a pocket music player, records in crates, games on a beige PC, and miles outside. Every object opens as a regular page.
 
 ## poster-still-label
-Room preview
+Room on pause
 
 ## poster-capable-label
-Enter to look around
+Enter in 3D
 
 ## directory-eyebrow
-Choose an object
+Room directory
 
 ## directory-title
-Pick something up.
+Pick a corner.
 
 ## view-overview
 Overview
@@ -64,46 +64,82 @@ Open on Steam
 Open on Strava
 
 ## watch-collection-title
-Anime shelf
+Tonight’s lineup
 
 ## read-collection-title
-Reading shelf
+On the shelf
 
 ## play-collection-title
-Game library
+My game library
 
 ## watch-title
 TV
 
 ## watch-description
-Anime I return to, what I’m watching, and the full shelf.
+Late-night anime, current watches, and a shelf that never quite stops growing.
+
+## watch-screen-eyebrow
+Channel 11
+
+## watch-screen-title
+Midnight Broadcast
 
 ## read-title
 Bookshelf
 
 ## read-description
-Books in progress, finished, rated, and waiting.
+Open books, finished books, and everything waiting its turn.
+
+## read-screen-eyebrow
+Shelf light on
+
+## read-screen-title
+Bedside Shelf
 
 ## listen-title
 Music player
 
 ## listen-description
-The twelve tracks Spotify puts closest to the surface for me.
+A pocket-sized window into the tracks Spotify puts closest to the surface.
+
+## listen-screen-eyebrow
+Top Tracks
+
+## listen-screen-title
+Pocket Player
 
 ## collect-title
 Record crate
 
 ## collect-description
-Records on my shelf, sorted by format and decade.
+A crate to flip through by title, format, and decade.
+
+## collect-screen-eyebrow
+Crate 01
+
+## collect-screen-title
+Crate Archive
 
 ## play-title
 Computer
 
 ## play-description
-Games I own, games I return to, and rounded playtime.
+A beige desktop crowded with games worth booting up again.
+
+## play-screen-eyebrow
+Desktop 01
+
+## play-screen-title
+Desktop Library
 
 ## move-title
 Treadmill
 
 ## move-description
-Recent rides and runs, when Strava’s public feed is available.
+A tiny cardio TV for the rides and runs outside the room.
+
+## move-screen-eyebrow
+Cardio feed
+
+## move-screen-title
+Cardio Television

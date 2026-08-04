@@ -220,11 +220,11 @@
 }
 
 .indexHeader {
-  display: grid;
+  display: flex;
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.45fr);
-  gap: clamp(1.5rem, 5vw, 5rem);
-  align-items: end;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: flex-start;
   padding-bottom: 1.25rem;
 }
 
@@ -240,16 +240,7 @@
   overflow-wrap: anywhere;
 }
 
-.indexHeader > p {
-  max-width: 34rem;
-  justify-self: end;
-  color: var(--ink-muted, #5c6477);
-  font-size: 0.75rem;
-  line-height: 1.45;
-}
-
 .resultCount {
-  margin-bottom: 0.45rem !important;
   color: var(--work-blue, #295dff);
 }
 

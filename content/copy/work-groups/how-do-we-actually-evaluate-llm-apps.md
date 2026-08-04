@@ -10,4 +10,4 @@ Practical LLM evaluation
 I presented practical approaches to evaluating LLM applications.
 
 ## role-summary
-I presented the practical evaluation session.
+Session speaker

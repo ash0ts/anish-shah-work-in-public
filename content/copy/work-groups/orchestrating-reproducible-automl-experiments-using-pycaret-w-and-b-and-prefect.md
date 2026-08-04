@@ -10,4 +10,4 @@ Reproducible AutoML
 I was listed as a speaker for a session on reproducible AutoML experiments with PyCaret, W&B, and Prefect.
 
 ## role-summary
-I appeared on the AutoML session's speaker listing.
+Listed session speaker

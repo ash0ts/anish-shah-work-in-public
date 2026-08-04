@@ -10,4 +10,4 @@ Fugue agent experiments
 I created Fugue, an open-source repository for governed experiments with AI agents.
 
 ## role-summary
-I created and own the repository.
+Creator and repository owner

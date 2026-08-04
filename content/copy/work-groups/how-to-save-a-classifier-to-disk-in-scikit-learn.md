@@ -10,4 +10,4 @@ Persisting scikit-learn models
 I wrote a practical guide to saving and reloading scikit-learn classifiers.
 
 ## role-summary
-I authored the guide; a Japanese translation is also available.
+Guide author

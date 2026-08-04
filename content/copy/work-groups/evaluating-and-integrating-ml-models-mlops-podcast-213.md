@@ -10,4 +10,4 @@ MLOps Podcast #213
 I joined Morgan McGuire on MLOps Podcast #213 to discuss evaluating and integrating ML models.
 
 ## role-summary
-I appeared as a guest with Morgan McGuire.
+Podcast guest with Morgan McGuire

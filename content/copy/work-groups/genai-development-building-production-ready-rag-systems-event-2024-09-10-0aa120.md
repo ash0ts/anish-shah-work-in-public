@@ -10,4 +10,4 @@ Production-ready RAG
 I presented a webinar on building RAG systems for production.
 
 ## role-summary
-I presented the production-RAG webinar.
+Webinar speaker

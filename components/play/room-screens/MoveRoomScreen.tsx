@@ -25,7 +25,7 @@ export default function MoveRoomScreen({
     <main data-room-screen id="main" className={`${styles.page} ${styles.movePage}`} tabIndex={-1}>
       <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.moveHeader}>
-        <p>Strava · Feed by consent</p>
+        <p>{object.screenEyebrow}</p>
         <h1>{object.title}</h1>
         <span>{object.description}</span>
       </header>

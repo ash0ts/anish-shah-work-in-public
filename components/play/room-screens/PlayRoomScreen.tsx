@@ -24,7 +24,7 @@ export default function PlayRoomScreen({
     <main data-room-screen id="main" className={`${styles.page} ${styles.playPage}`} tabIndex={-1}>
       <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.playHeader} id="play-system-note">
-        <p>Steam · Game library</p>
+        <p>{object.screenEyebrow}</p>
         <h1>{object.title}</h1>
         <span>{object.description}</span>
       </header>

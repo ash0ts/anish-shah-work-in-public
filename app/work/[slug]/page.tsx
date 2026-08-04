@@ -281,7 +281,6 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           <div className={styles.kicker} aria-label="Work classification">
             <span>{bucket}</span>
             <span>{workGroupPeriodLabel(group)}</span>
-            <span>{humanizeWorkFilter(group.verificationState)}</span>
           </div>
         </div>
         <h1>{group.title}</h1>
@@ -317,10 +316,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
               className={styles.members}
               aria-labelledby="members-title"
             >
-              <p className={styles.sectionLabel}>{SITE_COPY.work["detail-included"]}</p>
-              <h2 id="members-title">
-                {memberEntities.length} connected projects.
-              </h2>
+              <h2 id="members-title">{SITE_COPY.work["detail-included"]}</h2>
               <ol>
                 {memberEntities.map((entity) =>
                   entity ? (
@@ -344,8 +340,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
               className={styles.outcomes}
               aria-labelledby="outcomes-title"
             >
-              <p className={styles.sectionLabel}>{SITE_COPY.work["detail-results"]}</p>
-              <h2 id="outcomes-title">Results tied to this work.</h2>
+              <h2 id="outcomes-title">{SITE_COPY.work["detail-results"]}</h2>
               <MetricRows metrics={outcomes} />
             </section>
           ) : null}
@@ -355,10 +350,10 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
               className={styles.context}
               aria-labelledby="context-title"
             >
-              <p className={styles.sectionLabel}>
+              <h2 id="context-title">Wider program</h2>
+              <p className={styles.contextNote}>
                 {SITE_COPY.work["detail-context"]}
               </p>
-              <h2 id="context-title">The wider program.</h2>
               <MetricRows metrics={context} compact />
             </section>
           ) : null}
@@ -400,7 +395,6 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           aria-labelledby="appearances-title"
         >
           <header>
-            <p className={styles.sectionLabel}>Related material</p>
             <h2 id="appearances-title">{SITE_COPY.work["detail-materials"]}</h2>
           </header>
           <ol>
@@ -410,7 +404,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                   <span>{formatDate(item.date)}</span>
                   <span>{humanizeWorkFilter(item.entityRole)}</span>
                 </div>
-                <h3>{appearanceTitle(item, group, primary)}</h3>
+                <h3>{appearanceTitle(item, group)}</h3>
                 <p>{item.role}</p>
                 <PublicArtifactLink item={item} />
               </li>
@@ -425,9 +419,11 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           aria-labelledby="related-context-title"
         >
           <header>
-            <p className={styles.sectionLabel}>{SITE_COPY.work["detail-related"]}</p>
-            <h2 id="related-context-title">Programs and references</h2>
+            <h2 id="related-context-title">{SITE_COPY.work["detail-related"]}</h2>
           </header>
+          <p className={styles.appearancesNote}>
+            Shown for context; not counted as another project.
+          </p>
           <ol>
             {relatedContextItems.map((item) => (
               <li id={item.id} key={item.id}>
@@ -436,9 +432,6 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                   <span>{humanizeWorkFilter(item.type)}</span>
                 </div>
                 <h3>{item.displayTitle}</h3>
-                <p>
-                  Related context only. It is not counted as another project.
-                </p>
                 <PublicArtifactLink item={item} />
               </li>
             ))}
@@ -481,13 +474,12 @@ function MetricRows({
 function appearanceTitle(
   item: PortfolioItem,
   group: WorkGroup,
-  primary: PortfolioItem,
 ) {
   const title =
     item.displayTitle === group.title
       ? humanizeWorkFilter(item.type)
       : item.displayTitle;
-  return item.id === primary.id ? `${title} · primary artifact` : title;
+  return title;
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
@@ -557,10 +549,26 @@ function PublicArtifactLink({
       rel="noreferrer"
       target="_blank"
     >
-      {primary
-        ? `Open the ${humanizeWorkFilter(item.type).toLocaleLowerCase()}`
-        : "Open this artifact"}{" "}
+      {artifactLinkLabel(item.type)}{" "}
       <span aria-hidden="true">↗</span>
     </a>
   );
+}
+
+function artifactLinkLabel(type: PortfolioItem["type"]) {
+  const labels: Record<PortfolioItem["type"], string> = {
+    event: "View event",
+    article: "Read article",
+    course: "Open course",
+    recording: "Watch recording",
+    technical_report: "Read report",
+    external_reference: "Open reference",
+    producer_credit: "View credit",
+    translation: "Read translation",
+    mirror: "Open mirror",
+    profile: "View profile",
+    open_source_repo: "View repository",
+    open_source_pr: "View pull request",
+  };
+  return labels[type];
 }

@@ -10,4 +10,4 @@ LLM performance on Snowpark
 I demonstrated how to understand LLM performance with W&B and Snowpark Container Services.
 
 ## role-summary
-I presented the Snowpark performance demonstration.
+Technical demo presenter

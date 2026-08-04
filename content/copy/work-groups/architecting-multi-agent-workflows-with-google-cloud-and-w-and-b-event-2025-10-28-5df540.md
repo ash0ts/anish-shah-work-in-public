@@ -10,4 +10,4 @@ Multi-agent workflows
 I co-presented an architecture for multi-agent workflows using Google Cloud and W&B.
 
 ## role-summary
-I co-presented the session with Ivan Nardini.
+Co-presenter with Ivan Nardini

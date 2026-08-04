@@ -24,7 +24,7 @@ export default function WatchRoomScreen({
     <main data-room-screen id="main" className={`${styles.page} ${styles.watchPage}`} tabIndex={-1}>
       <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.watchHeader} id="watch-program-note">
-        <p>Channel 11 · MyAnimeList</p>
+        <p>{object.screenEyebrow}</p>
         <h1>{object.title}</h1>
         <span>{object.description}</span>
       </header>

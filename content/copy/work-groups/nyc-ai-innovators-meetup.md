@@ -10,4 +10,4 @@ NYC AI Innovators
 I spoke at and helped host the NYC AI Innovators meetup.
 
 ## role-summary
-I spoke and helped host the meetup.
+Speaker; helped host the meetup

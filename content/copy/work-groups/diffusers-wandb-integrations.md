@@ -10,4 +10,4 @@ Diffusers × W&B
 I contributed W&B integrations to Hugging Face Diffusers through two related changes.
 
 ## role-summary
-I contributed through two Diffusers pull requests.
+Upstream contributor across two pull requests

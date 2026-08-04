@@ -10,4 +10,4 @@ Diffusion with Hugging Face
 I co-presented a session on accelerating diffusion-model workflows with Hugging Face.
 
 ## role-summary
-I co-presented with Zach Mueller and Suraj Patil.
+Co-presenter with Zach Mueller and Suraj Patil

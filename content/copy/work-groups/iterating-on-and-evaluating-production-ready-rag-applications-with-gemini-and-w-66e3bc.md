@@ -10,4 +10,4 @@ Production RAG with Gemini
 I presented a workshop on iterating on production-ready RAG applications with Gemini and W&B Weave.
 
 ## role-summary
-I delivered the meetup workshop.
+Meetup workshop presenter

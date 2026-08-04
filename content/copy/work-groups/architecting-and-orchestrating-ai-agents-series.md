@@ -10,7 +10,7 @@ Architecting AI agents
 I developed and delivered a talk on agent architecture and orchestration across four events, including a Google-focused edition.
 
 ## role-summary
-I spoke and led workshops across the series.
+Speaker and workshop lead across the series
 
 ## home-title
 Architecting & orchestrating AI agents

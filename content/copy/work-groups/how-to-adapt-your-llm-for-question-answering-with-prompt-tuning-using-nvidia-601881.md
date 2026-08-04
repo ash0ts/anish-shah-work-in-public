@@ -10,4 +10,4 @@ Prompt-tuning with NVIDIA NeMo
 I wrote and implemented a question-answering workflow using prompt tuning, NVIDIA NeMo, and W&B.
 
 ## role-summary
-I authored the article and accompanying repository.
+Article and repository author

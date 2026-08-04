@@ -10,4 +10,4 @@ Production AI evaluation
 I led a workshop on applying evaluation and observability to production AI systems.
 
 ## role-summary
-I instructed the production-evaluation workshop.
+Workshop instructor

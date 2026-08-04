@@ -10,4 +10,4 @@ Azure ML deployment with W&B
 I wrote a guide to deploying models with Azure Machine Learning and W&B.
 
 ## role-summary
-I authored the deployment guide.
+Guide author

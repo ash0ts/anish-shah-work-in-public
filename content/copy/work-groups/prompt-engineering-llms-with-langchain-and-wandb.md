@@ -10,7 +10,7 @@ Prompt engineering with LangChain
 I wrote a practical guide to designing and tracking LLM prompts with LangChain and W&B.
 
 ## role-summary
-I authored the guide; Korean and Japanese translations extend it.
+Guide author
 
 ## home-title
 Prompt engineering with LangChain & W&B

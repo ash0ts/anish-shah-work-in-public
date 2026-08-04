@@ -10,7 +10,7 @@ EvalForge evaluation criteria
 I built an open-source implementation of EvalGen for generating and aligning evaluation criteria.
 
 ## role-summary
-I created the repository and implementation.
+Creator and implementer
 
 ## home-title
 EvalForge: evaluation-criteria generation & alignment

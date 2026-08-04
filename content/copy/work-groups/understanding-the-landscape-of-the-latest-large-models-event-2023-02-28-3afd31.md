@@ -10,4 +10,4 @@ Latest large models
 I presented a conference survey of the latest large language models.
 
 ## role-summary
-I presented the large-model conference session.
+Conference speaker

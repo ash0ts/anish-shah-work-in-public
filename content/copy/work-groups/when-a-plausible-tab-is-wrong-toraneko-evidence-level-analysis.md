@@ -10,4 +10,4 @@ Toraneko evidence analysis
 I examined why a plausible browser tab can still fail an evidence-level check.
 
 ## role-summary
-I authored the evidence-analysis report.
+Analysis author

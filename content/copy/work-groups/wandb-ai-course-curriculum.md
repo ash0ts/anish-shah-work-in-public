@@ -10,7 +10,7 @@ AI curriculum
 I taught three practical courses on prompting, LLM evaluation, and agent engineering.
 
 ## role-summary
-I instructed all three courses and contributed to their open-source materials.
+Instructor across three courses and open-source materials contributor
 
 ## home-title
 AI curriculum: prompting, evaluation & agents
