@@ -22,6 +22,7 @@ const LOCAL_SERVER_VARIABLE_NAMES = [
   "DEPLOYMENT_TIER",
   "PREVIEW_PR_NUMBER",
   "PLAY_EXPERIENCE_MODE",
+  "TRAVEL_ATLAS_MODE",
   "PUBLIC_CONTENT_MODE",
   "SIMULATION_EXPERIENCE_MODE",
   "SIMULATION_AI_MODE",
@@ -86,14 +87,25 @@ export default defineConfig(async ({ command, mode }) => {
           },
         ]
       : [],
-    r2_buckets: r2
-      ? [
-          {
-            binding: r2,
-            bucket_name: "site-creator-r2",
-          },
-        ]
-      : [],
+    r2_buckets: [
+      ...(r2
+        ? [
+            {
+              binding: r2,
+              bucket_name: "site-creator-r2",
+            },
+          ]
+        : []),
+      ...(command === "serve"
+        ? [
+            {
+              binding: "TRAVEL_MEDIA",
+              bucket_name: "anish-shah-travel-media-local",
+            },
+          ]
+        : []),
+    ],
+    ...(command === "serve" ? { images: { binding: "IMAGES" } } : {}),
   };
 
   return {

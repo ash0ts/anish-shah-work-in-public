@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 export const PUBLIC_SITE_ORIGIN = "https://anish-shah-is.online";
 export const PUBLIC_CLOUDFLARE_ACCOUNT_ID =
   "690e6286eb53a6df1bd0080633caf91f";
+export const PRODUCTION_TRAVEL_MEDIA_BUCKET = "anish-shah-travel-media";
 
 export const PRODUCTION_RESOURCE_FINGERPRINTS = Object.freeze({
   databaseIdSha256:
@@ -19,8 +20,33 @@ export const PRODUCTION_RATE_LIMITS = Object.freeze([
   ["PROMOTION_RATE_LIMITER", { namespaceId: "88001003", limit: 6 }],
   ["OAUTH_CALLBACK_RATE_LIMITER", { namespaceId: "88001004", limit: 20 }],
   ["SIMULATION_RATE_LIMITER", { namespaceId: "88001005", limit: 12 }],
+  ["TRAVEL_MEDIA_RATE_LIMITER", { namespaceId: "88001006", limit: 180 }],
 ]);
 const RATE_LIMITS = new Map(PRODUCTION_RATE_LIMITS);
+const PUBLIC_CONFIG_KEYS = Object.freeze([
+  "account_id",
+  "assets",
+  "compatibility_date",
+  "compatibility_flags",
+  "d1_databases",
+  "images",
+  "jsx_factory",
+  "jsx_fragment",
+  "kv_namespaces",
+  "main",
+  "name",
+  "no_bundle",
+  "observability",
+  "preview_urls",
+  "r2_buckets",
+  "ratelimits",
+  "routes",
+  "rules",
+  "topLevelName",
+  "triggers",
+  "vars",
+  "workers_dev",
+]);
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -168,6 +194,18 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
       "An enabled production simulation must use live AI with authored fallback.",
     );
   }
+  const travelAtlasMode = env.TRAVEL_ATLAS_MODE?.trim() || "disabled";
+  if (travelAtlasMode !== "disabled" && travelAtlasMode !== "atlas-v1") {
+    throw new Error("TRAVEL_ATLAS_MODE must be disabled or atlas-v1.");
+  }
+  if (
+    travelAtlasMode === "atlas-v1" &&
+    playExperienceMode !== "my-room-2001"
+  ) {
+    throw new Error(
+      "TRAVEL_ATLAS_MODE=atlas-v1 requires PLAY_EXPERIENCE_MODE=my-room-2001.",
+    );
+  }
   return {
     head,
     contentVersion,
@@ -181,6 +219,7 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
     playExperienceMode,
     simulationExperienceMode,
     simulationAiMode,
+    travelAtlasMode,
     accountId: PUBLIC_CLOUDFLARE_ACCOUNT_ID,
   };
 }
@@ -205,6 +244,7 @@ export function assertPublicReleaseConfig(config, expected) {
     SIMULATION_AI_MODE: expected.simulationAiMode,
     SIMULATION_PROVIDER: "anthropic",
     SIMULATION_MODEL: "claude-sonnet-5",
+    TRAVEL_ATLAS_MODE: expected.travelAtlasMode,
   };
   const exactVars =
     JSON.stringify(Object.keys(vars).sort()) ===
@@ -212,6 +252,8 @@ export function assertPublicReleaseConfig(config, expected) {
     Object.entries(expectedVars).every(([name, value]) => vars[name] === value);
   const database = config?.d1_databases?.[0];
   const publicationCache = config?.kv_namespaces?.[0];
+  const travelMedia = config?.r2_buckets?.[0];
+  const images = config?.images;
   const rateLimits = new Map(
     Array.isArray(config?.ratelimits)
       ? config.ratelimits.map((binding) => [binding?.name, binding])
@@ -227,7 +269,30 @@ export function assertPublicReleaseConfig(config, expected) {
         actual?.simple?.period === 60
       );
     });
+  const exactTopLevelKeys =
+    config &&
+    !Array.isArray(config) &&
+    JSON.stringify(Object.keys(config).sort()) ===
+      JSON.stringify([...PUBLIC_CONFIG_KEYS].sort());
+  const exactInertBuildBase =
+    config?.main === "index.js" &&
+    typeof config?.compatibility_date === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(config.compatibility_date) &&
+    JSON.stringify(config?.compatibility_flags) ===
+      JSON.stringify(["nodejs_compat"]) &&
+    config?.jsx_factory === "React.createElement" &&
+    config?.jsx_fragment === "React.Fragment" &&
+    config?.no_bundle === true &&
+    JSON.stringify(config?.rules) ===
+      JSON.stringify([{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }]) &&
+    JSON.stringify(config?.assets) === JSON.stringify({ directory: "../client" });
+  const compatibleExperienceModes =
+    expected.travelAtlasMode !== "atlas-v1" ||
+    expected.playExperienceMode === "my-room-2001";
   if (
+    !compatibleExperienceModes ||
+    !exactTopLevelKeys ||
+    !exactInertBuildBase ||
     config?.name !== "anish-shah-work-in-public" ||
     config?.topLevelName !== "anish-shah-work-in-public" ||
     config?.account_id !== expected.accountId ||
@@ -243,6 +308,11 @@ export function assertPublicReleaseConfig(config, expected) {
     config?.kv_namespaces?.length !== 1 ||
     publicationCache?.binding !== "PUBLICATION_CACHE" ||
     publicationCache?.id !== expected.publicationCacheId ||
+    config?.r2_buckets?.length !== 1 ||
+    travelMedia?.binding !== "TRAVEL_MEDIA" ||
+    travelMedia?.bucket_name !== PRODUCTION_TRAVEL_MEDIA_BUCKET ||
+    images?.binding !== "IMAGES" ||
+    Object.keys(images).length !== 1 ||
     !exactRateLimits ||
     !exactVars ||
     config?.observability?.enabled !== true ||

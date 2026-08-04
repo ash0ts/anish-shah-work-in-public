@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import {
   PUBLIC_CLOUDFLARE_ACCOUNT_ID,
   PUBLIC_SITE_ORIGIN,
+  PRODUCTION_TRAVEL_MEDIA_BUCKET,
   PRODUCTION_RATE_LIMITS,
   PRODUCTION_RESOURCE_FINGERPRINTS,
 } from "./release-config-contract.mjs";
@@ -18,6 +19,7 @@ const FORBIDDEN_GENERATED_BINDINGS = [
   "services",
   "queues",
   "r2_buckets",
+  "images",
   "kv_namespaces",
   "vectorize",
   "ai_search_namespaces",
@@ -201,6 +203,18 @@ export function expectedStagingCoordinates(environment, contentVersion) {
     required(environment, "STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID"),
     "STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID",
   );
+  const travelMediaBucket = required(
+    environment,
+    "STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET",
+  );
+  if (
+    !/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(travelMediaBucket) ||
+    travelMediaBucket === PRODUCTION_TRAVEL_MEDIA_BUCKET
+  ) {
+    throw new Error(
+      "STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET must be a valid non-production R2 bucket name.",
+    );
+  }
   const accessAudience = audiences(
     required(environment, "STAGING_CF_ACCESS_AUD"),
     "STAGING_CF_ACCESS_AUD",
@@ -231,6 +245,7 @@ export function expectedStagingCoordinates(environment, contentVersion) {
     ["PROMOTION_RATE_LIMITER", "STAGING_PROMOTION_RATE_LIMIT_NAMESPACE_ID", 6],
     ["OAUTH_CALLBACK_RATE_LIMITER", "STAGING_OAUTH_CALLBACK_RATE_LIMIT_NAMESPACE_ID", 20],
     ["SIMULATION_RATE_LIMITER", "STAGING_SIMULATION_RATE_LIMIT_NAMESPACE_ID", 12],
+    ["TRAVEL_MEDIA_RATE_LIMITER", "STAGING_TRAVEL_MEDIA_RATE_LIMIT_NAMESPACE_ID", 180],
   ].map(([name, environmentName, limit]) => {
     const namespaceId = required(environment, environmentName);
     if (!/^[0-9]{6,32}$/.test(namespaceId) || PRODUCTION_RATE_LIMIT_NAMESPACES.has(namespaceId)) {
@@ -259,6 +274,7 @@ export function expectedStagingCoordinates(environment, contentVersion) {
     rateLimits,
     simulationExperienceMode,
     simulationAiMode,
+    travelMediaBucket,
   };
 }
 
@@ -299,6 +315,8 @@ export function stagingConfiguration(base, expected) {
       migrations_dir: "../../drizzle",
     }],
     kv_namespaces: [{ binding: "PUBLICATION_CACHE", id: expected.publicationCacheId }],
+    r2_buckets: [{ binding: "TRAVEL_MEDIA", bucket_name: expected.travelMediaBucket }],
+    images: { binding: "IMAGES" },
     ratelimits: expected.rateLimits.map(({ name, namespaceId, limit }) => ({
       name,
       namespace_id: namespaceId,
@@ -322,6 +340,7 @@ export function stagingConfiguration(base, expected) {
       SIMULATION_AI_MODE: expected.simulationAiMode,
       SIMULATION_PROVIDER: "anthropic",
       SIMULATION_MODEL: "claude-sonnet-5",
+      TRAVEL_ATLAS_MODE: "atlas-v1",
     },
     observability: {
       enabled: true,
@@ -361,6 +380,7 @@ export function previewConfiguration(base, expected) {
       SIMULATION_AI_MODE: "fixture",
       SIMULATION_PROVIDER: "fixture",
       SIMULATION_MODEL: "authored-fixture-v1",
+      TRAVEL_ATLAS_MODE: "atlas-v1",
     },
     observability: {
       enabled: true,
@@ -379,7 +399,7 @@ export function assertStagingConfiguration(config, expected) {
   }
   for (const key of [
     "name", "topLevelName", "account_id", "workers_dev", "preview_urls",
-    "routes", "d1_databases", "kv_namespaces", "ratelimits", "vars",
+    "routes", "d1_databases", "kv_namespaces", "r2_buckets", "images", "ratelimits", "vars",
     "observability", "triggers",
   ]) {
     if (JSON.stringify(config[key]) !== JSON.stringify(canonical[key])) {
