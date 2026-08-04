@@ -50,7 +50,7 @@ export function connectorStatusLabel(
   if (connector.status === "setup_required") {
     return connector.configured ? "Setup required" : "Not configured";
   }
-  if (connector.status === "never_synced") return "Connected · refresh";
+  if (connector.status === "never_synced") return "Connected · Refresh required";
   if (connector.status === "healthy") return "Current";
   if (connector.status === "stale") return "Stale";
   if (connector.status === "syncing") return "Syncing";
@@ -144,12 +144,12 @@ export function statusGuidance(
   }
   if (connector.status === "healthy") {
     return environment === "local"
-      ? "The local snapshot is current. It has not been copied to production."
+      ? "The local snapshot is current. It has not been copied to production; future collection refreshes run only when you select Refresh now."
       : connector.provider === "spotify"
-        ? "The sanitized snapshot is current. Public display remains controlled below; automatic refreshes are limited to once every 12 hours."
+        ? "The sanitized snapshot is current. Public display remains controlled below; collection refreshes run only when you select Refresh now."
         : connector.provider === "discogs"
-          ? "The sanitized catalog is current. Public display remains controlled below; it becomes refreshable after four hours and unavailable after six."
-        : "The public snapshot is current. Automatic refreshes are limited to once every 12 hours.";
+          ? "The sanitized catalog is current. Public display remains controlled below; manual refresh becomes available after four hours."
+        : "The public snapshot is current. Collection refreshes run only when you select Refresh now.";
   }
   if (connector.status === "stale") {
     return `The snapshot is due for refresh.${preservedSnapshot}`;

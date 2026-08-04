@@ -536,7 +536,7 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
   assert.doesNotMatch(failedResponse[1], /router\.refresh/);
   assert.match(
     panel,
-    /\} catch \{\n      setMessage\("The request could not be completed\. Try again\."\);\n    \} finally/,
+    /action === "refresh"[\s\S]*?The refresh request could not be completed\. No new snapshot was published; any previously accepted snapshot remains unchanged\.[\s\S]*?The request could not be completed\. Try again\./,
   );
   assert.match(
     panel,
@@ -560,10 +560,23 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
     /disabled=\{pending !== null \|\| connectorBlocked \|\| retryBlocked\}/,
   );
   assert.match(refreshControl[0], /Refreshing…/);
+  assert.match(
+    panel,
+    /connector\.provider === "discogs"[\s\S]*?"Manual refresh available"[\s\S]*?: "Fresh through"/,
+  );
   assert.match(panel, /className=\{styles\.formMessage\} role="status"/);
   assert.match(
     helpers,
     /A refresh is already running\. Check this panel again in a moment/,
+  );
+  assert.match(helpers, /Connected · Refresh required/);
+  assert.match(
+    panel,
+    /connectorMutationShouldReconcile\(action, result\.status\)[\s\S]*?router\.refresh\(\)/,
+  );
+  assert.doesNotMatch(
+    panel,
+    /result\.status === "withheld"[\s\S]{0,120}router\.refresh\(\)/,
   );
   assert.match(
     helpers,
@@ -591,6 +604,34 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
     /import \{ connectorRefreshResponse \} from "\.\/connector-refresh-response"/,
   );
   assert.match(refreshHandler, /return connectorRefreshResponse\(result\)/);
+});
+
+test("Studio reconciles only accepted or already-running refresh outcomes", async () => {
+  const { connectorMutationShouldReconcile } = await import(
+    "../app/studio/connectors/mutation-policy.ts"
+  );
+
+  assert.equal(connectorMutationShouldReconcile("save", "saved"), true);
+  assert.equal(connectorMutationShouldReconcile("disconnect", "deleted"), true);
+  assert.equal(connectorMutationShouldReconcile("refresh", "complete"), true);
+  assert.equal(
+    connectorMutationShouldReconcile("refresh", "already_running"),
+    true,
+  );
+  for (const status of [
+    "not_due",
+    "rate_limited",
+    "failed",
+    "public_payload_rejected",
+    "withheld",
+    undefined,
+  ]) {
+    assert.equal(
+      connectorMutationShouldReconcile("refresh", status),
+      false,
+      `refresh status ${String(status)} must preserve the current panel state`,
+    );
+  }
 });
 
 test("Discogs rate-limit responses expose a standard retry contract", async () => {

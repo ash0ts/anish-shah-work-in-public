@@ -14,7 +14,7 @@ node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run --base or
 | `content/copy`, copy contracts/parser/voice/runtime | `copy:check`, `copy:voice`, `copy:diff`, `copy:audit`, `copy:test`, owner fact-check, typecheck, build, rendered and browser checks |
 | canonical curation/presentation/generator/types | content verification, attestation, content tests, typecheck; rendered/privacy checks when public |
 | public app/components/CSS/SEO | typecheck, lint, build, rendered tests; browser checks for responsive/interactive work |
-| connectors, Studio, OAuth | typecheck, content/backend/security tests, exact public projector and provider-failure coverage |
+| connectors, Studio, OAuth | typecheck, content/backend/security tests, exact public projector and provider-failure coverage; prove zero provider data calls from public reads/callbacks/saves/cron, one attempt per Studio refresh, and last-known-good preservation |
 | Travel atlas, Travel Desk, geography, uploads/media, or room-globe integration | `travel:geography:check`, backend and rendered tests, clean local D1 migration, Travel security coverage, and full browser gate |
 | Simulation campaign, session, Gateway, Action/Tactical, or shared audio | same-change Simulation regression coverage for server/privacy work; backend/security and rendered tests, bundle scan, exact runtime/privacy coverage, and full browser gate; verify authored fallback and gesture gating |
 | Worker/auth/CSP/publication/security | backend/security tests, build, bundle scan, dependency audit |
@@ -44,7 +44,7 @@ Run `validate:release` only for a clean, pushed, approved production candidate a
 - Travel: zero Travel reads on `/play`, semantic country/region/place parity, click-versus-drag behavior, no-JavaScript/WebGL fallbacks, planned/current publication limits, metadata stripping, active-snapshot media authorization, and immediate unpublish behavior.
 - Simulation: Action/Tactical completion parity, authored fallback, optional-text privacy, bounded sessions/budgets, output rejection, and gesture-gated audio.
 - Simulation incident: read-only Gateway logging/cache/DLP/Guardrails verification, sanitized containment evidence, authorized payload-deletion confirmation when needed, and fresh regression coverage before live mode returns.
-- Studio/OAuth: logged out, non-owner, owner, origin/body guards, denial/expiry/replay/wrong owner, refresh/replacement/disconnect, sanitized errors.
+- Studio/OAuth: logged out, non-owner, owner, origin/body guards, denial/expiry/replay/wrong owner, refresh/replacement/disconnect, sanitized errors, honest complete/already-running/not-due/rate-limited/failure states, and Strava save/Verify-only health checks.
 - Environments: preview fixtures only, staging isolation/noindex, production exact host/Access, private Sites unchanged.
 - Release: follow the canonical runbook's registry-derived required smoke set
   and distinguish automated evidence from manual inspection.

@@ -5,7 +5,6 @@ import {
   DEFAULT_IMAGE_SIZES,
 } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
-import { refreshDiscogsWhenDue } from "../lib/server/connectors/discogs-scheduled";
 import { pruneConnectorRetention } from "../lib/server/connectors/repository";
 import { pruneSimulationRetention } from "../lib/server/simulation/repository";
 import { pruneTravelRetention } from "../lib/server/travel";
@@ -298,7 +297,6 @@ const worker = {
         await pruneConnectorRetention(db, scheduledAt);
         await pruneSimulationRetention(db, scheduledAt);
         await pruneTravelRetention(db, scheduledAt);
-        await refreshDiscogsWhenDue(db, scheduledAt);
       })().catch(() => observeScheduledFailure(env.RELEASE_SHA)),
     );
   },

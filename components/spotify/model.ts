@@ -1,3 +1,6 @@
+import type { PreviewFixtureScenario } from "../play/connector-model";
+import { grooveAngleForIndex } from "./groove-motion.ts";
+
 export type SpotifyTimeRange = "short_term" | "medium_term" | "long_term";
 
 export type PublicArtwork = {
@@ -141,7 +144,7 @@ export function loadSpotifyFixture(
 }
 
 export function groovePoint(index: number, total: number) {
-  const angle = total ? (index / total) * Math.PI * 2 : 0;
+  const angle = (grooveAngleForIndex(index, total) * Math.PI) / 180;
   return {
     x: grooveCenter + Math.sin(angle) * grooveRadius,
     y: grooveCenter - Math.cos(angle) * grooveRadius,
@@ -169,5 +172,3 @@ export function spotifyEmbedUrl(
 ) {
   return `https://open.spotify.com/embed/${kind}/${encodeURIComponent(id)}`;
 }
-
-import type { PreviewFixtureScenario } from "../play/connector-model";

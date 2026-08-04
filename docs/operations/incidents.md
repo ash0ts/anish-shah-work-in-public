@@ -18,6 +18,22 @@ Revoke it at the provider, disconnect that provider in Studio, confirm its
 credentials/snapshots/history are removed, then reconnect and republish after a
 clean refresh. Database deletion alone does not revoke a provider token.
 
+### Provider outage or rate limit
+
+Do not retry through public traffic, cron, or repeated Studio clicks. Read the
+sanitized Studio result and honor any provider `Retry-After` time. A failed
+manual refresh must leave the active last-known-good snapshot unchanged; first
+confirm that pointer before investigating credentials. Reauthorize only for an
+explicit authorization failure, not for `429`, transport, `5xx`, malformed, or
+public-projector errors.
+
+For Discogs, the normal public catalog expires six hours after its last
+successful refresh. Older stale display is permitted only when the owner-only
+provider-permission record is enabled, current, and independently verified;
+never fabricate, expose, or silently extend that approval during an incident.
+Strava remote health may be checked only with Studio **Verify now** or while
+saving its configuration.
+
 ### Connector encryption key
 
 If the key is lost, existing credentials cannot be recovered; disconnect or

@@ -319,9 +319,12 @@ automated browser:
 
 - `/play` performs no connector read before selection;
 - all seven direct object routes load only their associated provider or Travel publication;
-- real staging OAuth, refresh, publish/unpublish, stale, and recovery paths work;
+- real staging OAuth, manual Refresh, publish/unpublish, stale, and recovery
+  paths work, while public reads and cron make no provider data calls;
 - Spotify and Strava frames remain consent-gated;
-- Discogs obeys its four-hour refresh eligibility and six-hour public cutoff;
+- Discogs obeys its four-hour manual-refresh eligibility and standard six-hour
+  public cutoff; if an isolated staging approval tests extended display, its
+  private record must be current and must never be copied to production;
 - My Room capability fallbacks and semantic navigation work without WebGL;
 - Pocket Room entry, swipe/tap separation, Back/Escape, and focus restoration work;
 - Simulation completes in Action and Tactical modes with live-model and authored-fallback paths, bounded sessions, budgets, and rejected unsafe output;
@@ -331,8 +334,9 @@ automated browser:
 - owner Access succeeds while authenticated; logged-out and non-owner access
   fail closed.
 
-Staging uses an offset hourly cron at minute `47` for retention and due Discogs
-refresh. Its heartbeat and sync history belong only to staging.
+Staging uses an offset hourly cron at minute `47` for retention and cleanup
+only. Connector synchronization remains owner-triggered through staging Studio;
+the heartbeat and sync history belong only to staging.
 
 Rollback changes only the staging Worker version:
 

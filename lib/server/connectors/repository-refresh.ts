@@ -44,7 +44,6 @@ import {
 
 const FRESHNESS_WINDOW_MS = 12 * 60 * 60 * 1000;
 const DISCOGS_FRESHNESS_WINDOW_MS = 4 * 60 * 60 * 1000;
-const DISCOGS_AUTOMATIC_RETRY_MS = 60 * 60 * 1000;
 const RUN_LOCK_WINDOW_MS = 10 * 60 * 1000;
 
 function freshnessWindow(provider: ConnectorProvider): number {
@@ -53,19 +52,13 @@ function freshnessWindow(provider: ConnectorProvider): number {
     : FRESHNESS_WINDOW_MS;
 }
 
-function automaticRetryWindow(provider: ConnectorProvider): number {
-  return provider === "discogs"
-    ? DISCOGS_AUTOMATIC_RETRY_MS
-    : FRESHNESS_WINDOW_MS;
-}
-
 function retainedSnapshotCount(provider: ConnectorProvider): number {
   return provider === "discogs" ? 1 : 2;
 }
 
-async function discogsManualRefreshIsDue(
+async function discogsManualRefreshNotBefore(
   database: D1Database,
-): Promise<boolean> {
+): Promise<string | null> {
   const snapshot = await database
     .prepare(
       `SELECT fetched_at AS fetchedAt
@@ -75,12 +68,13 @@ async function discogsManualRefreshIsDue(
        LIMIT 1`,
     )
     .first<{ fetchedAt: string }>();
-  if (!snapshot) return true;
+  if (!snapshot) return null;
   const fetchedAt = Date.parse(snapshot.fetchedAt);
-  return (
-    !Number.isFinite(fetchedAt) ||
-    Date.now() - fetchedAt >= DISCOGS_FRESHNESS_WINDOW_MS
-  );
+  if (!Number.isFinite(fetchedAt)) return null;
+  const nextEligibleAt = fetchedAt + DISCOGS_FRESHNESS_WINDOW_MS;
+  return Date.now() < nextEligibleAt
+    ? new Date(nextEligibleAt).toISOString()
+    : null;
 }
 
 async function fetchConnectorSnapshot(
@@ -234,6 +228,13 @@ export async function refreshConnectorUsingDatabase(
   trigger: SyncTrigger,
   requestedByEmail: string | null,
 ): Promise<RefreshResult> {
+  // Historical sync rows may contain the retired automatic trigger values,
+  // but provider collection reads are owner-triggered only. Keeping this
+  // runtime guard prevents a stale caller from issuing a provider request.
+  if (trigger !== "manual") {
+    return { status: "not_due", provider };
+  }
+
   if (provider === "steam" && !steamStorageCountries()) {
     return {
       status: "setup_required",
@@ -246,15 +247,13 @@ export async function refreshConnectorUsingDatabase(
     try {
       const notBefore = await discogsRetryNotBefore(database);
       if (notBefore) {
-        return trigger === "stale_revalidate"
-          ? { status: "not_due", provider }
-          : {
-              status: "failed",
-              provider,
-              code: "rate_limited",
-              retryable: true,
-              retryNotBefore: notBefore,
-            };
+        return {
+          status: "failed",
+          provider,
+          code: "rate_limited",
+          retryable: true,
+          retryNotBefore: notBefore,
+        };
       }
     } catch {
       return { status: "setup_required", provider, reason: "database" };
@@ -263,8 +262,9 @@ export async function refreshConnectorUsingDatabase(
 
   if (provider === "discogs" && trigger === "manual") {
     try {
-      if (!(await discogsManualRefreshIsDue(database))) {
-        return { status: "not_due", provider };
+      const retryNotBefore = await discogsManualRefreshNotBefore(database);
+      if (retryNotBefore) {
+        return { status: "not_due", provider, retryNotBefore };
       }
     } catch {
       return { status: "setup_required", provider, reason: "database" };
@@ -275,30 +275,6 @@ export async function refreshConnectorUsingDatabase(
     await pruneConnectorRetention(database);
   } catch {
     return { status: "setup_required", provider, reason: "database" };
-  }
-
-  if (trigger === "stale_revalidate") {
-    try {
-      const latestAutomaticRun = await database
-        .prepare(
-          `SELECT started_at AS startedAt
-           FROM sync_runs
-           WHERE provider = ? AND trigger = 'stale_revalidate'
-           ORDER BY started_at DESC
-           LIMIT 1`,
-        )
-        .bind(provider)
-        .first<{ startedAt: string }>();
-      if (
-        latestAutomaticRun &&
-        Date.now() - Date.parse(latestAutomaticRun.startedAt) <
-          automaticRetryWindow(provider)
-      ) {
-        return { status: "not_due", provider };
-      }
-    } catch {
-      return { status: "setup_required", provider, reason: "database" };
-    }
   }
 
   const runId = crypto.randomUUID();

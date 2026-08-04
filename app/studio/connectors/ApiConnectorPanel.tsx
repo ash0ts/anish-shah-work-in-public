@@ -15,6 +15,10 @@ import {
   statusGuidance,
 } from "./helpers";
 import type { ApiConnectorPanelProps } from "./model";
+import {
+  connectorMutationShouldReconcile,
+  type ConnectorMutationAction,
+} from "./mutation-policy";
 import { retryDeadlineState } from "./retry-deadline";
 
 const defaultOAuthCredentialShape = {
@@ -216,7 +220,7 @@ export function ApiConnectorPanel({
   }
 
   async function request(
-    action: "save" | "refresh" | "disconnect",
+    action: ConnectorMutationAction,
   ): Promise<void> {
     const cancellingPendingAuthorization =
       action === "disconnect" &&
@@ -271,15 +275,38 @@ export function ApiConnectorPanel({
         }
         setMessage(
           responseRetryNotBefore
-            ? `Discogs is rate-limiting synchronization. Refresh becomes available after ${formatTimestamp(responseRetryNotBefore)}. No snapshot was published.`
+            ? `Discogs is rate-limiting synchronization. Refresh becomes available after ${formatTimestamp(responseRetryNotBefore)}. No new snapshot was published; the last accepted snapshot remains unchanged.`
             : result.error ?? `Request failed (${response.status}).`,
+        );
+        return;
+      }
+
+      if (action === "refresh" && result.status === "not_due") {
+        const responseRetryNotBefore =
+          typeof result.retryNotBefore === "string" &&
+          Number.isFinite(Date.parse(result.retryNotBefore))
+            ? result.retryNotBefore
+            : null;
+        if (responseRetryNotBefore) {
+          setLocalRetryNotBefore(responseRetryNotBefore);
+          setRetryClock(Date.now());
+        }
+        setMessage(
+          responseRetryNotBefore
+            ? `No provider request was made. Manual refresh becomes available after ${formatTimestamp(responseRetryNotBefore)}; the last accepted snapshot remains published.`
+            : "No provider request was made because this collection is not due for a manual refresh. The last accepted snapshot remains published.",
         );
         return;
       }
 
       setSecret("");
       setSteamId("");
-      if (action === "refresh") setLocalRetryNotBefore(null);
+      if (
+        action === "refresh" &&
+        (result.status === "complete" || result.status === "withheld")
+      ) {
+        setLocalRetryNotBefore(null);
+      }
       if (action === "save") {
         focusAfterMutation.current = "refresh";
         setShowCredentialForm(false);
@@ -308,9 +335,15 @@ export function ApiConnectorPanel({
                   "Steam game details are not public, so the stream was unpublished."
                 : `${environment === "local" ? "Local sync" : "Sync"} complete${typeof result.itemCount === "number" ? ` · ${result.itemCount} items` : ""}.`,
       );
-      router.refresh();
+      if (connectorMutationShouldReconcile(action, result.status)) {
+        router.refresh();
+      }
     } catch {
-      setMessage("The request could not be completed. Try again.");
+      setMessage(
+        action === "refresh"
+          ? "The refresh request could not be completed. No new snapshot was published; any previously accepted snapshot remains unchanged."
+          : "The request could not be completed. Try again.",
+      );
     } finally {
       setPending(null);
     }
@@ -375,7 +408,11 @@ export function ApiConnectorPanel({
             </dd>
           </div>
           <div>
-            <dt>Snapshot refresh due</dt>
+            <dt>
+              {connector.provider === "discogs"
+                ? "Manual refresh available"
+                : "Fresh through"}
+            </dt>
             <dd>{formatTimestamp(connector.freshUntil)}</dd>
           </div>
           {retryBlocked ? (

@@ -1,13 +1,10 @@
 import {
   getPublicConnectorSnapshot,
   isConnectorProvider,
-  refreshConnector,
 } from "@/lib/server/connectors";
 import {
-  connectorSnapshotNeedsUpgrade,
   projectConnectorSnapshotForPublic,
 } from "@/lib/server/connectors/public-gallery";
-import { getRequestExecutionContext } from "vinext/shims/request-context";
 import { previewConnectorSnapshot } from "@/lib/server/preview-connector-fixtures";
 
 export const dynamic = "force-dynamic";
@@ -44,24 +41,6 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const snapshot = await getPublicConnectorSnapshot(candidate);
-  const needsSchemaUpgrade =
-    snapshot.status === "ready" &&
-    connectorSnapshotNeedsUpgrade(snapshot.payload);
-  const needsStaleRefresh =
-    (snapshot.status === "ready" && snapshot.stale) ||
-    (snapshot.status === "unavailable" &&
-      snapshot.reason === "stale_expired");
-  if (needsSchemaUpgrade || needsStaleRefresh) {
-    const refresh = refreshConnector(
-      candidate,
-      needsSchemaUpgrade ? "schema_upgrade" : "stale_revalidate",
-      null,
-    ).catch(() => undefined);
-    const executionContext = getRequestExecutionContext();
-    if (executionContext) executionContext.waitUntil(refresh);
-    else void refresh;
-  }
-
   if (snapshot.status === "unavailable") {
     return Response.json(
       {

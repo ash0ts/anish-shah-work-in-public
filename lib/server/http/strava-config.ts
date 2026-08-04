@@ -9,6 +9,7 @@ import {
   getStravaPortableConfig,
   getStravaPublicConfig,
   saveStravaPublicConfig,
+  verifyStoredStravaPublicConfig,
 } from "@/lib/server/strava-config";
 
 export async function stravaConfigGet(): Promise<Response> {
@@ -32,6 +33,7 @@ export async function stravaConfigGet(): Promise<Response> {
         payload: {
           ...portable,
           embedStatus: published.config.embedStatus,
+          checkedAt: published.config.embed?.checkedAt ?? null,
           updatedAt: published.config.updatedAt,
         },
       },
@@ -91,6 +93,43 @@ export async function stravaConfigDelete(request: Request): Promise<Response> {
   try {
     const result = await deleteStravaPublicConfig(authorization.user.email);
     return Response.json(result, {
+      headers: { "cache-control": "private, no-store" },
+    });
+  } catch (error) {
+    const safe = publicDatabaseError(error);
+    return Response.json(
+      { error: safe.message, code: safe.code },
+      { status: 503, headers: { "cache-control": "private, no-store" } },
+    );
+  }
+}
+
+export async function stravaVerifyPost(request: Request): Promise<Response> {
+  const authorization = await authorizeWrite(request);
+  if (!authorization.ok) return authorization.response;
+  try {
+    const result = await verifyStoredStravaPublicConfig(
+      authorization.user.email,
+    );
+    const error =
+      result.status === "not_configured"
+        ? result.reason === "embed"
+          ? "Save an official Strava embed before verifying it."
+          : "Save the Strava profile before verifying it."
+        : result.status === "conflict"
+          ? "The Strava configuration changed during verification. Try again."
+          : result.status === "setup_required"
+            ? "The site database is not ready."
+            : undefined;
+    return Response.json(error ? { ...result, error } : result, {
+      status:
+        result.status === "verified"
+          ? 200
+          : result.status === "not_configured"
+            ? 400
+            : result.status === "conflict"
+              ? 409
+              : 503,
       headers: { "cache-control": "private, no-store" },
     });
   } catch (error) {

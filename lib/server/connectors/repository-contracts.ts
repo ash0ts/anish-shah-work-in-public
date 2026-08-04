@@ -81,6 +81,7 @@ export type RefreshResult =
   | {
       status: "not_due";
       provider: ConnectorProvider;
+      retryNotBefore?: string;
     }
   | {
       status: "withheld";

@@ -41,6 +41,20 @@ async function pageOverflow(page) {
   });
 }
 
+function parseNeedleAngle(transform) {
+  const match = /^rotate\((-?\d+(?:\.\d+)?) 210 210\)$/.exec(
+    transform ?? "",
+  );
+  if (!match) throw new Error(`Unexpected Spotify needle transform: ${transform}`);
+  return Number(match[1]);
+}
+
+function circularAngleDistance(left, right) {
+  const normalized = (angle) => ((angle % 360) + 360) % 360;
+  const distance = Math.abs(normalized(left) - normalized(right));
+  return Math.min(distance, 360 - distance);
+}
+
 for (const width of widths) {
   test(`public routes fit a ${width}px viewport`, async ({ page }) => {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
@@ -261,6 +275,78 @@ test("Spotify rank navigation and consent remain keyboard-first", async ({ page 
   await page.getByRole("button", { name: "Close player" }).click();
   await expect(page.locator("iframe")).toHaveCount(0);
   await expect(listenHere).toBeFocused();
+});
+
+test("Spotify groove needle stays continuous through interrupted selections", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.goto("/play/listen", { waitUntil: "networkidle" });
+
+  const needle = page.locator("[data-spotify-groove-needle]");
+  const controls = page.locator("[data-spotify-groove-controls] button");
+  await expect(controls).toHaveCount(12);
+  await expect(needle).toHaveAttribute("transform", /^rotate\(/);
+
+  const interruptionJumps = await page.evaluate(async () => {
+    const needleElement = document.querySelector(
+      "[data-spotify-groove-needle]",
+    );
+    const buttons = [
+      ...document.querySelectorAll("[data-spotify-groove-controls] button"),
+    ];
+    if (!(needleElement instanceof SVGGElement) || buttons.length !== 12) {
+      throw new Error("The Spotify groove controls are not ready.");
+    }
+    const angle = () => {
+      const match = /^rotate\((-?\d+(?:\.\d+)?) 210 210\)$/.exec(
+        needleElement.getAttribute("transform") ?? "",
+      );
+      if (!match) throw new Error("The Spotify needle rotation is malformed.");
+      return Number(match[1]);
+    };
+    const distance = (left, right) => {
+      const normalize = (value) => ((value % 360) + 360) % 360;
+      const difference = Math.abs(normalize(left) - normalize(right));
+      return Math.min(difference, 360 - difference);
+    };
+    const sequence = [6, 1, 10, 3, 8, 0, 11, 5, 2, 9, 4];
+    const jumps = [];
+    for (const index of sequence) {
+      const before = angle();
+      buttons[index].click();
+      const after = angle();
+      jumps.push(distance(before, after));
+      await new Promise((resolve) => window.setTimeout(resolve, 12));
+    }
+    return jumps;
+  });
+
+  expect(Math.max(...interruptionJumps)).toBeLessThanOrEqual(1);
+  await expect.poll(async () => {
+    return circularAngleDistance(
+      parseNeedleAngle(await needle.getAttribute("transform")),
+      120,
+    );
+  }).toBeLessThanOrEqual(1);
+  await expect(controls.nth(4)).toHaveAttribute("aria-pressed", "true");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await controls.nth(10).click();
+  expect(
+    circularAngleDistance(
+      parseNeedleAngle(await needle.getAttribute("transform")),
+      300,
+    ),
+  ).toBeLessThanOrEqual(1);
+
+  await page.getByRole("button", { name: "Last approximately 6 months" }).click();
+  expect(
+    circularAngleDistance(
+      parseNeedleAngle(await needle.getAttribute("transform")),
+      0,
+    ),
+  ).toBeLessThanOrEqual(1);
 });
 
 test("Discogs remains lazy until the Record crate route is selected", async ({ page }) => {

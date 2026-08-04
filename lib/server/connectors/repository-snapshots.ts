@@ -1,4 +1,8 @@
-import { getDiscogsPresentationConfig } from "./discogs-presentation";
+import {
+  discogsExtendedDisplayApprovalIsActive,
+  getDiscogsExtendedDisplayApproval,
+  getDiscogsPresentationConfig,
+} from "./discogs-presentation";
 import { getSpotifyPresentationConfig } from "./spotify-presentation";
 import { parseStoredConnectorPublicPayload } from "./public-payload-policy";
 import { databaseOrNull } from "./repository-primitives";
@@ -49,6 +53,15 @@ export async function getPublicConnectorSnapshot(
     }
   }
 
+  const extendedDiscogsDisplay =
+    provider === "discogs"
+      ? await getDiscogsExtendedDisplayApproval(database).then(
+          (result) =>
+            result.status === "ready" &&
+            discogsExtendedDisplayApprovalIsActive(result.approval),
+        )
+      : false;
+
   try {
     const snapshots = await database
       .prepare(
@@ -94,7 +107,7 @@ export async function getPublicConnectorSnapshot(
       if (
         provider === "steam" ||
         provider === "spotify" ||
-        provider === "discogs"
+        (provider === "discogs" && !extendedDiscogsDisplay)
       ) {
         const fetchedTime = Date.parse(snapshot.fetchedAt);
         if (

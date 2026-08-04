@@ -143,16 +143,24 @@ export default function PrivacyPage() {
         <section>
           <h2>Storage and retention</h2>
           <p>
-            MyAnimeList, Hardcover, Spotify, and Steam refresh no more than
-            once every 12 hours unless the protected owner Studio requests a
-            refresh. Discogs becomes refreshable after four hours and its
-            catalog becomes unavailable six hours after the last successful
-            synchronization. D1 retains at most the latest two complete
+            MyAnimeList, Hardcover, Spotify, Discogs, and Steam synchronize only
+            when the protected owner selects Refresh now in Studio. Public page
+            reads and scheduled maintenance never request new collection data.
+            Strava checks its saved public widget only when the owner saves it or
+            selects Verify feed now. D1 retains at most the latest two complete
             sanitized snapshots for the other API providers and one current
-            Discogs snapshot. Transient failures preserve only snapshots still
-            inside their documented public window. Steam’s public fallback and
-            Spotify’s API-derived display expire after 72 hours; expired
-            Spotify metadata is deleted after 30 days.
+            Discogs snapshot. A failed request never replaces the last accepted
+            snapshot. Steam’s public fallback and Spotify’s API-derived display
+            still expire after 72 hours; expired Spotify metadata is deleted
+            after 30 days.
+          </p>
+          <p>
+            Discogs is normally unavailable six hours after its last successful
+            synchronization. When the owner has separately documented a
+            provider-granted exception in protected Studio settings, the last
+            accepted catalog may remain visible beyond that window and is marked
+            stale with its actual update time. The permission reference is never
+            part of the public site or connector response.
           </p>
           <p>
             Raw provider responses are processed in memory and discarded.

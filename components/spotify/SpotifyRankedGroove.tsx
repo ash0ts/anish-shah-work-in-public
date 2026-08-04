@@ -28,6 +28,13 @@ import {
   type SpotifyTrackSummary,
   type SpotifyView,
 } from "./model";
+import {
+  grooveAngleForIndex,
+  grooveNavigationIntent,
+  normalizeGrooveAngle,
+  resolveGrooveTargetAngle,
+  type GrooveNavigationIntent,
+} from "./groove-motion";
 import { updatedDateLabel } from "@/components/play/updated-date-label";
 import { SITE_COPY } from "@/lib/copy";
 
@@ -54,7 +61,8 @@ export function SpotifyRankedGroove({
   const playerRegion = useRef<HTMLElement | null>(null);
   const needle = useRef<SVGGElement | null>(null);
   const selectionRule = useRef<HTMLSpanElement | null>(null);
-  const previousAngle = useRef(0);
+  const needleAngle = useRef(0);
+  const needleIntent = useRef<GrooveNavigationIntent>("forward");
   const grooveMarks = useRef<Array<HTMLButtonElement | null>>([]);
   const railButtons = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -68,9 +76,7 @@ export function SpotifyRankedGroove({
     0,
   );
   const selectedTrack = tracks[selectedIndex] ?? null;
-  const selectedAngle = tracks.length
-    ? (selectedIndex / tracks.length) * 360
-    : 0;
+  const selectedAngle = grooveAngleForIndex(selectedIndex, tracks.length);
   const playerTrack = tracks.find((track) => track.id === playerTrackId) ?? null;
 
   useLayoutEffect(() => {
@@ -79,25 +85,41 @@ export function SpotifyRankedGroove({
     if (!needleElement) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const startAngle = previousAngle.current;
-    const normalizedStart = ((startAngle % 360) + 360) % 360;
-    const shortestDelta =
-      ((((selectedAngle - normalizedStart) % 360) + 540) % 360) - 180;
-    const targetAngle = startAngle + shortestDelta;
+    const motionState = { angle: needleAngle.current };
+    const targetAngle = resolveGrooveTargetAngle(
+      motionState.angle,
+      selectedAngle,
+      needleIntent.current,
+    );
+    const renderNeedle = (angle: number) => {
+      needleElement.setAttribute("transform", `rotate(${angle} 210 210)`);
+    };
     if (reduced) {
-      needleElement.style.transform = `rotate(${selectedAngle}deg)`;
+      const settledAngle = normalizeGrooveAngle(selectedAngle);
+      motionState.angle = settledAngle;
+      needleAngle.current = settledAngle;
+      renderNeedle(settledAngle);
       if (ruleElement) {
         ruleElement.style.opacity = "1";
         ruleElement.style.transform = "scaleX(1)";
       }
-      previousAngle.current = selectedAngle;
       return;
     }
 
-    const needleMotion = animate(needleElement, {
-      rotate: [`${startAngle}deg`, `${targetAngle}deg`],
+    const needleMotion = animate(motionState, {
+      angle: targetAngle,
       duration: 220,
       ease: "out(3)",
+      onUpdate: () => {
+        needleAngle.current = motionState.angle;
+        renderNeedle(motionState.angle);
+      },
+      onComplete: () => {
+        const settledAngle = normalizeGrooveAngle(targetAngle);
+        motionState.angle = settledAngle;
+        needleAngle.current = settledAngle;
+        renderNeedle(settledAngle);
+      },
     });
     const ruleMotion = ruleElement
       ? animate(ruleElement, {
@@ -107,12 +129,11 @@ export function SpotifyRankedGroove({
           ease: "out(3)",
         })
       : null;
-    previousAngle.current = targetAngle;
-
     return () => {
       needleMotion.cancel();
+      needleAngle.current = motionState.angle;
+      renderNeedle(motionState.angle);
       ruleMotion?.cancel();
-      needleElement.style.transform = `rotate(${targetAngle}deg)`;
       if (ruleElement) {
         ruleElement.style.opacity = "1";
         ruleElement.style.transform = "scaleX(1)";
@@ -135,7 +156,13 @@ export function SpotifyRankedGroove({
     }
   };
 
-  const selectTrack = (track: SpotifyTrackSummary) => {
+  const selectTrack = (
+    track: SpotifyTrackSummary,
+    intent?: GrooveNavigationIntent,
+  ) => {
+    const nextIndex = tracks.findIndex((entry) => entry.id === track.id);
+    needleIntent.current =
+      intent ?? grooveNavigationIntent(selectedIndex, Math.max(nextIndex, 0));
     playCue("listen-nav");
     setSelectedId(track.id);
     if (playerTrackId && playerTrackId !== track.id) closePlayer(false);
@@ -144,6 +171,7 @@ export function SpotifyRankedGroove({
   const selectRange = (next: SpotifyTimeRange) => {
     playCue("listen-nav");
     const nextTracks = (payload.windows[next]?.tracks ?? []).slice(0, 12);
+    needleIntent.current = "backward";
     setRange(next);
     setSelectedId(nextTracks[0]?.id ?? "");
     closePlayer(false);
@@ -184,7 +212,13 @@ export function SpotifyRankedGroove({
       return;
     }
     event.preventDefault();
-    selectTrack(tracks[next]);
+    const intent =
+      event.key === "ArrowLeft" || event.key === "ArrowUp"
+        ? "backward"
+        : event.key === "ArrowRight" || event.key === "ArrowDown"
+          ? "forward"
+          : grooveNavigationIntent(index, next);
+    selectTrack(tracks[next], intent);
     const targets = surface === "groove" ? grooveMarks.current : railButtons.current;
     requestAnimationFrame(() => targets[next]?.focus());
   };
@@ -257,8 +291,9 @@ export function SpotifyRankedGroove({
                   ))}
                   <g
                     className={styles.needle}
+                    data-spotify-groove-needle
                     ref={needle}
-                    style={{ transform: `rotate(${selectedAngle}deg)` }}
+                    transform="rotate(0 210 210)"
                   >
                     <line x1="210" x2="210" y1="210" y2="66" />
                     <circle cx="210" cy="210" r="8" />
@@ -266,6 +301,7 @@ export function SpotifyRankedGroove({
                 </svg>
                 <ol
                   className={styles.grooveControls}
+                  data-spotify-groove-controls
                   aria-label="Spotify Top Tracks in returned order"
                 >
                 {tracks.map((track, index) => {

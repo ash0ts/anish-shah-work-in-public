@@ -1,13 +1,10 @@
 import {
   getPublicConnectorSnapshot,
   getSpotifyPublicFallback,
-  refreshConnector,
 } from "@/lib/server/connectors";
 import {
-  connectorSnapshotNeedsUpgrade,
   projectConnectorSnapshotForPublic,
 } from "@/lib/server/connectors/public-gallery";
-import { getRequestExecutionContext } from "vinext/shims/request-context";
 import { previewConnectorSnapshot } from "@/lib/server/preview-connector-fixtures";
 
 export const dynamic = "force-dynamic";
@@ -31,25 +28,6 @@ export async function GET(request: Request) {
     );
   }
   const snapshot = await getPublicConnectorSnapshot("spotify");
-  const needsSchemaUpgrade =
-    snapshot.status === "ready" &&
-    connectorSnapshotNeedsUpgrade(snapshot.payload);
-  const needsRefresh =
-    needsSchemaUpgrade ||
-    (snapshot.status === "ready" && snapshot.stale) ||
-    (snapshot.status === "unavailable" &&
-      snapshot.reason === "stale_expired");
-  if (needsRefresh) {
-    const refresh = refreshConnector(
-      "spotify",
-      needsSchemaUpgrade ? "schema_upgrade" : "stale_revalidate",
-      null,
-    ).catch(() => undefined);
-    const executionContext = getRequestExecutionContext();
-    if (executionContext) executionContext.waitUntil(refresh);
-    else void refresh;
-  }
-
   if (snapshot.status === "ready") {
     return Response.json(
       {
