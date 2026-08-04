@@ -17,6 +17,7 @@ const required = [
   "@axe-core/playwright",
   "chrome-launcher",
   "lighthouse",
+  "wrangler-e2e",
 ];
 const missing = required.filter((dependency) => !declared[dependency]);
 if (missing.length > 0) {
@@ -56,31 +57,74 @@ function runPlaywright({ mode, port, segment = "", arguments_ = [] }) {
   );
 }
 
+const scope = process.env.BROWSER_QUALITY_SCOPE?.trim() || "all";
+const allowedScopes = new Set([
+  "all",
+  "classic",
+  "room-public",
+  "room-shard",
+  "lighthouse",
+]);
+if (!allowedScopes.has(scope)) {
+  throw new Error(
+    `BROWSER_QUALITY_SCOPE must be one of ${[...allowedScopes].join(", ")}.`,
+  );
+}
+
+const configuredShard = process.env.BROWSER_QUALITY_SHARD?.trim() ?? "";
+if (scope === "room-shard" && !/^[1-5]$/.test(configuredShard)) {
+  throw new Error("BROWSER_QUALITY_SHARD must be an integer from 1 through 5.");
+}
+if (scope !== "room-shard" && configuredShard) {
+  throw new Error(
+    "BROWSER_QUALITY_SHARD is valid only when BROWSER_QUALITY_SCOPE=room-shard.",
+  );
+}
+
 let failed = false;
-if (runPlaywright({ mode: "classic", port: 4173 }) !== 0) failed = true;
-
-if (runPlaywright({
-  mode: "room",
-  port: 4174,
-  segment: "public",
-  arguments_: ["tests/browser/public-quality.spec.mjs"],
-}) !== 0) failed = true;
-
-const roomShardCount = 5;
-for (let shard = 1; shard <= roomShardCount; shard += 1) {
-  if (runPlaywright({
-    mode: "room",
-    port: 4174 + shard,
-    segment: `quality-shard-${shard}`,
-    arguments_: [
-      "tests/browser/room-quality.spec.mjs",
-      "--fully-parallel",
-      `--shard=${shard}/${roomShardCount}`,
-    ],
-  }) !== 0) failed = true;
+if (
+  (scope === "all" || scope === "classic") &&
+  runPlaywright({ mode: "classic", port: 4173 }) !== 0
+) {
+  failed = true;
 }
 
 if (
+  (scope === "all" || scope === "room-public") &&
+  runPlaywright({
+    mode: "room",
+    port: 4174,
+    segment: "public",
+    arguments_: ["tests/browser/public-quality.spec.mjs"],
+  }) !== 0
+) {
+  failed = true;
+}
+
+const roomShardCount = 5;
+const firstRoomShard = scope === "room-shard" ? Number(configuredShard) : 1;
+const lastRoomShard = scope === "room-shard" ? firstRoomShard : roomShardCount;
+if (scope === "all" || scope === "room-shard") {
+  for (let shard = firstRoomShard; shard <= lastRoomShard; shard += 1) {
+    if (
+      runPlaywright({
+        mode: "room",
+        port: 4174 + shard,
+        segment: `quality-shard-${shard}`,
+        arguments_: [
+          "tests/browser/room-quality.spec.mjs",
+          "--fully-parallel",
+          `--shard=${shard}/${roomShardCount}`,
+        ],
+      }) !== 0
+    ) {
+      failed = true;
+    }
+  }
+}
+
+if (
+  (scope === "all" || scope === "lighthouse") &&
   run(
     process.execPath,
     ["scripts/run-lighthouse-quality.mjs"],

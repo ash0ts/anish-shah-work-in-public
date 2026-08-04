@@ -51,6 +51,19 @@ function required(env, name) {
   return value;
 }
 
+export function requiredHostedPlayExperienceMode(env) {
+  const playExperienceMode = required(env, "PLAY_EXPERIENCE_MODE");
+  if (
+    playExperienceMode !== "classic" &&
+    playExperienceMode !== "my-room-2001"
+  ) {
+    throw new Error(
+      "Hosted PLAY_EXPERIENCE_MODE must be explicitly set to classic or my-room-2001.",
+    );
+  }
+  return playExperienceMode;
+}
+
 function exactHttpsOrigin(value, name) {
   let url;
   try {
@@ -124,16 +137,7 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(databaseName)) {
     throw new Error("CLOUDFLARE_D1_DATABASE_NAME is invalid.");
   }
-  const playExperienceMode =
-    env.PLAY_EXPERIENCE_MODE?.trim() || "classic";
-  if (
-    playExperienceMode !== "classic" &&
-    playExperienceMode !== "my-room-2001"
-  ) {
-    throw new Error(
-      "PLAY_EXPERIENCE_MODE must be classic or my-room-2001.",
-    );
-  }
+  const playExperienceMode = requiredHostedPlayExperienceMode(env);
   return {
     head,
     contentVersion,

@@ -38,7 +38,7 @@ const { pruneConnectorRetention } = await tsImport(
   "../lib/server/connectors/repository-retention.ts",
   import.meta.url,
 );
-const { securedResponse } = await tsImport(
+const { RELEASE_MARKER_HEADER, securedResponse } = await tsImport(
   "../worker/security-headers.ts",
   import.meta.url,
 );
@@ -386,6 +386,39 @@ test("extracted Worker throttling and response hardening keep exact boundaries",
   assert.equal(secured.headers.get("strict-transport-security"), "max-age=31536000");
   assert.equal(secured.headers.get("cache-control"), "private, no-store");
   assert.match(secured.headers.get("content-security-policy"), /strict-dynamic/);
+
+  const previewRelease = "a".repeat(40);
+  const preview = securedResponse(
+    new Response(null, {
+      headers: { [RELEASE_MARKER_HEADER]: "untrusted-upstream-value" },
+    }),
+    new Request("https://pr-26.anish-shah-is.online/play"),
+    "B".repeat(24),
+    false,
+    "/play",
+    "preview",
+    previewRelease,
+  );
+  assert.equal(preview.headers.get(RELEASE_MARKER_HEADER), previewRelease);
+
+  for (const [tier, value] of [
+    ["preview", "A".repeat(40)],
+    ["preview", "not-a-sha"],
+    ["production", previewRelease],
+  ]) {
+    const response = securedResponse(
+      new Response(null, {
+        headers: { [RELEASE_MARKER_HEADER]: "untrusted-upstream-value" },
+      }),
+      new Request("https://anish-shah-is.online/play"),
+      "C".repeat(24),
+      false,
+      "/play",
+      tier,
+      value,
+    );
+    assert.equal(response.headers.get(RELEASE_MARKER_HEADER), null);
+  }
 });
 
 test("redacted Worker events correlate every dynamic response without request material", () => {
@@ -478,6 +511,7 @@ test("direct production accepts only the configured canonical apex", () => {
     SITE_URL: "https://anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "d1_kv_required",
+    PLAY_EXPERIENCE_MODE: "my-room-2001",
   };
   const production = { development: false, sitesRuntime: false };
   assert.equal(
@@ -512,6 +546,29 @@ test("direct production accepts only the configured canonical apex", () => {
   assert.equal(misconfigured?.status, 503);
   assert.equal(misconfigured?.headers.get("retry-after"), "60");
 
+  for (const playMode of [undefined, "", "unknown"]) {
+    const playEnvironment = { ...environment };
+    if (playMode === undefined) delete playEnvironment.PLAY_EXPERIENCE_MODE;
+    else playEnvironment.PLAY_EXPERIENCE_MODE = playMode;
+    const response = productionOriginResponse(
+      new Request("https://anish-shah-is.online/play"),
+      playEnvironment,
+      production,
+    );
+    assert.equal(response?.status, 503, `hosted mode ${String(playMode)}`);
+    assert.equal(response?.headers.get("cache-control"), "private, no-store");
+    assert.match(response?.headers.get("x-robots-tag") ?? "", /noindex/);
+  }
+
+  assert.equal(
+    productionOriginResponse(
+      new Request("https://anish-shah-is.online/play"),
+      { ...environment, PLAY_EXPERIENCE_MODE: "classic" },
+      production,
+    ),
+    null,
+  );
+
   assert.equal(
     productionOriginResponse(
       new Request("http://127.0.0.1:3000/work"),
@@ -542,7 +599,7 @@ test("direct production accepts only the configured canonical apex", () => {
   assert.equal(
     productionOriginResponse(
       new Request(`${privateSitesOrigin}/work`),
-      {},
+      { PLAY_EXPERIENCE_MODE: "classic" },
       { development: false, sitesRuntime: true },
     ),
     null,
@@ -881,14 +938,72 @@ test("release workflows bind PR evidence to the exact source head", async () => 
   );
   assert.match(ci, /github\.event\.pull_request\.head\.sha/);
   assert.match(ci, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/);
+  assert.match(ci, /\[\[ "\$EXPECTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
   assert.match(ci, /PREVIEW_SOURCE_SHA/);
   assert.match(ci, /PREVIEW_WORKFLOW_SHA/);
   for (const workflow of releaseWorkflows) {
     assert.match(workflow, /github\.event\.pull_request\.head\.sha/);
     assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/);
+    assert.match(workflow, /\[\[ "\$EXPECTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
     assert.match(workflow, /test "\$\{#GITHUB_SHA\}" -eq 40/);
     assert.doesNotMatch(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
   }
+});
+
+test("owner-dispatched exact-SHA checks may use only the temporary release runner", async () => {
+  const workflowNames = [
+    "ci.yml",
+    "gitleaks.yml",
+    "codeql.yml",
+    "browser-quality.yml",
+    "browser-stability.yml",
+  ];
+  const workflows = await Promise.all(
+    workflowNames.map((name) =>
+      readFile(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8"),
+    ),
+  );
+  const runnerExpression =
+    "github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest'";
+
+  for (const [index, workflow] of workflows.entries()) {
+    assert.match(workflow, /runner_label:\n\s+description:/, workflowNames[index]);
+    assert.match(workflow, /default: github-hosted/, workflowNames[index]);
+    assert.match(
+      workflow,
+      /options:\n\s+- github-hosted\n\s+- anish-release/,
+      workflowNames[index],
+    );
+    assert.match(
+      workflow,
+      /test "\$GITHUB_ACTOR" = "\$GITHUB_REPOSITORY_OWNER"/,
+      workflowNames[index],
+    );
+    assert.match(
+      workflow,
+      /\[\[ "\$REQUESTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/,
+      workflowNames[index],
+    );
+    const runTargets = [...workflow.matchAll(/^\s+runs-on:\s+(.+)$/gm)].map(
+      (match) => match[1],
+    );
+    assert.ok(runTargets.length > 0, workflowNames[index]);
+    assert.ok(
+      runTargets.every((target) => target.includes(runnerExpression)),
+      `${workflowNames[index]} must keep automatic work hosted`,
+    );
+    assert.doesNotMatch(workflow, /^\s+environment:/m, workflowNames[index]);
+    assert.doesNotMatch(workflow, /secrets:\s+inherit/, workflowNames[index]);
+    const nonEphemeralSecrets = [
+      ...workflow.matchAll(/\$\{\{\s*secrets\.([A-Z0-9_]+)\s*\}\}/g),
+    ]
+      .map((match) => match[1])
+      .filter((name) => name !== "GITHUB_TOKEN");
+    assert.deepEqual(nonEphemeralSecrets, [], workflowNames[index]);
+  }
+
+  assert.match(workflows[0], /push:\n\s+branches: \[main\]/);
+  assert.doesNotMatch(workflows[0], /codex\/\*\*/);
 });
 
 test("release promotion requires a protected current-publication marker", async () => {
@@ -913,8 +1028,22 @@ test("release promotion requires a protected current-publication marker", async 
     "RELEASE_VALIDATION_URL",
     "RELEASE_GITLEAKS_URL",
     "RELEASE_CODEQL_URL",
+    "RELEASE_BROWSER_URL",
   ]) {
     assert.match(plan, new RegExp(variable));
+  }
+  assert.match(plan, /event,workflowDatabaseId/);
+  assert.match(plan, /actions\/workflows\/\$\{evidence\.workflowDatabaseId\}/);
+  assert.match(plan, /assertActiveActionsWorkflow/);
+  assert.match(plan, /workflowIdentity/);
+  assert.match(contract, /workflowState: "active"/);
+  for (const workflowPath of [
+    ".github/workflows/ci.yml",
+    ".github/workflows/gitleaks.yml",
+    ".github/workflows/codeql.yml",
+    ".github/workflows/browser-quality.yml",
+  ]) {
+    assert.match(contract, new RegExp(workflowPath.replaceAll(".", "\\.")));
   }
 });
 
@@ -1004,7 +1133,7 @@ test("dependency audit treats missing or malformed audit metadata as failure", a
 });
 
 test("release evidence binds a pushed commit, migrations, and exact smoke checks", async () => {
-  const [plan, attestation, command, contract, triggerContract, packageJson] =
+  const [plan, attestation, command, checkpointSnippet, contract, triggerContract, packageJson] =
     await Promise.all([
       readFile(
         new URL("../scripts/write-release-plan.mjs", import.meta.url),
@@ -1015,6 +1144,10 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
         "utf8",
       ),
       readFile(new URL("../scripts/release-command.mjs", import.meta.url), "utf8"),
+      readFile(
+        new URL("../scripts/publication-bootstrap-snippet.mjs", import.meta.url),
+        "utf8",
+      ),
       readFile(
         new URL("../scripts/lib/release-contract.mjs", import.meta.url),
         "utf8",
@@ -1058,6 +1191,17 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
   assert.match(attestation, /releasePlanSha256/);
   assert.match(attestation, /readVerifiedDeployableArtifactManifest/);
   assert.match(attestation, /deployableArtifacts/);
+  assert.match(plan, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(plan, /releaseBuildCheckpointSha256/);
+  assert.match(command, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(command, /releaseBuildCheckpointSha256/);
+  assert.match(checkpointSnippet, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(checkpointSnippet, /releaseBuildCheckpoint\.artifactSetSha256/);
+  assert.match(attestation, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(attestation, /releaseBuildCheckpoint: plan\.releaseBuildCheckpoint/);
+  assert.match(command, /assertRequiredValidationRuns\(plan\.validationRuns/);
+  assert.match(attestation, /assertRequiredValidationRuns\(plan\.validationRuns/);
+  assert.match(attestation, /validationRuns: plan\.validationRuns/);
   assert.match(contract, /Remote pending migrations/);
   assert.match(contract, /do not exactly match the release plan/);
   assert.match(command, /Migration \$\{migration\.name\} changed after release planning/);

@@ -1,11 +1,33 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  RELEASE_BUILD_CHECKPOINT_PATH,
+  verifyReleaseBuildCheckpoint,
+} from "./lib/release-build-checkpoint.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const plan = JSON.parse(
-  await readFile(path.join(root, "dist/release-plan.json"), "utf8"),
-);
+const [plan, releaseBuildCheckpoint, releaseBuildCheckpointBytes] =
+  await Promise.all([
+    readFile(path.join(root, "dist/release-plan.json"), "utf8").then(JSON.parse),
+    verifyReleaseBuildCheckpoint(root),
+    readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
+  ]);
+const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+if (
+  plan.schemaVersion !== "1.2" ||
+  plan.releaseBuildCheckpoint?.sha256 !==
+    sha256(releaseBuildCheckpointBytes) ||
+  plan.releaseBuildCheckpoint?.artifactSetSha256 !==
+    releaseBuildCheckpoint.artifactSetSha256 ||
+  plan.releaseBuildCheckpoint?.deployableManifestSha256 !==
+    releaseBuildCheckpoint.deployableManifestSha256
+) {
+  throw new Error(
+    "The release-build checkpoint is missing, stale, or does not match the planned candidate.",
+  );
+}
 const version = process.env.RELEASE_WORKER_VERSION?.trim();
 if (!version || !/^[0-9a-f-]{36}$/i.test(version)) {
   throw new Error("RELEASE_WORKER_VERSION must be the staged Worker version ID.");

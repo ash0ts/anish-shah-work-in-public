@@ -96,7 +96,10 @@ The generator writes only the ignored
 `dist/server/wrangler.staging.json`.
 
 Record the current staging Worker version, staging D1 Time Travel bookmark,
-reviewed migration list, and three exact-SHA successful workflow URLs:
+reviewed migration list, and four exact-SHA successful workflow URLs. The
+temporary owner-runner procedure in [Testing and release gates](../testing.md)
+is acceptable because it preserves the same active workflow identities and
+checks:
 
 ```bash
 export STAGING_PREVIOUS_WORKER_VERSION='<current staging Worker version>'
@@ -105,6 +108,7 @@ export STAGING_MIGRATION_LIST=''
 export STAGING_VALIDATION_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export STAGING_GITLEAKS_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export STAGING_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+export STAGING_BROWSER_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 
 npm run staging:plan
 npm run staging:migrate

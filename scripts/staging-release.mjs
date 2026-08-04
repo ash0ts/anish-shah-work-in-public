@@ -3,12 +3,14 @@ import { spawnSync } from "node:child_process";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  assertActiveActionsWorkflow,
   assertRequiredValidationRuns,
   assertVerifiedActionsRun,
   exactMigrationNames,
   exactVersionIds,
   githubRepositoryFromRemoteUrl,
   requireExactUploadedVersion,
+  REQUIRED_VALIDATION_RUNS,
   runGuardedMigration,
 } from "./lib/release-contract.mjs";
 import {
@@ -18,6 +20,15 @@ import {
   STAGING_WORKER_NAME,
 } from "./lib/hosted-config-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
+import {
+  RELEASE_BUILD_CHECKPOINT_PATH,
+  verifyReleaseBuildCheckpoint,
+} from "./lib/release-build-checkpoint.mjs";
+import {
+  fetchWithTimeout,
+  stagingSmokePaths,
+  waitForReadOnlyStagingReadiness,
+} from "./lib/staging-http-contract.mjs";
 
 const root = process.cwd();
 const configPath = path.join(root, "dist/server/wrangler.staging.json");
@@ -118,11 +129,14 @@ async function configState(head) {
 }
 
 function verifiedRuns(head, configuredRepository) {
-  return [
-    ["validate", "STAGING_VALIDATION_URL", "Validate"],
-    ["gitleaks", "STAGING_GITLEAKS_URL", "Gitleaks"],
-    ["codeql", "STAGING_CODEQL_URL", "CodeQL"],
-  ].map(([kind, environmentName, name]) => {
+  const validationEnvironmentNames = new Map([
+    ["validate", "STAGING_VALIDATION_URL"],
+    ["gitleaks", "STAGING_GITLEAKS_URL"],
+    ["codeql", "STAGING_CODEQL_URL"],
+    ["browser", "STAGING_BROWSER_URL"],
+  ]);
+  return REQUIRED_VALIDATION_RUNS.map(({ kind, name, workflowPath }) => {
+    const environmentName = validationEnvironmentNames.get(kind);
     const url = new URL(required(environmentName));
     const segments = url.pathname.split("/").filter(Boolean);
     if (
@@ -138,17 +152,55 @@ function verifiedRuns(head, configuredRepository) {
     }
     const result = run("gh", [
       "run", "view", segments[4], "--repo", `${segments[0]}/${segments[1]}`,
-      "--json", "headSha,conclusion,url,name",
+      "--json", "headSha,conclusion,url,name,event,workflowDatabaseId",
     ]);
     const evidence = JSON.parse(result);
     assertVerifiedActionsRun(evidence, { head, url: url.toString(), name });
-    return { kind, name, ...evidence };
+    if (
+      !Number.isSafeInteger(evidence.workflowDatabaseId) ||
+      evidence.workflowDatabaseId < 1
+    ) {
+      throw new Error(`${name} evidence has no valid workflow identity.`);
+    }
+    let workflow;
+    try {
+      workflow = JSON.parse(run("gh", [
+        "api",
+        `repos/${segments[0]}/${segments[1]}/actions/workflows/${evidence.workflowDatabaseId}`,
+      ]));
+    } catch {
+      throw new Error(`${name} workflow identity could not be verified.`);
+    }
+    const workflowIdentity = assertActiveActionsWorkflow(workflow, {
+      workflowDatabaseId: evidence.workflowDatabaseId,
+      name,
+      workflowPath,
+    });
+    return {
+      kind,
+      name,
+      ...evidence,
+      ...workflowIdentity,
+    };
   });
 }
 
 async function writePlan() {
   const head = verifyGitState();
-  const { configBytes, bundle, artifactResult } = await configState(head);
+  const { config, configBytes, bundle, artifactResult } = await configState(head);
+  const [releaseBuildCheckpoint, releaseBuildCheckpointBytes] =
+    await Promise.all([
+      verifyReleaseBuildCheckpoint(root),
+      readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
+    ]);
+  if (
+    releaseBuildCheckpoint.artifactSetSha256 !==
+      artifactResult.manifest.artifactSetSha256 ||
+    releaseBuildCheckpoint.deployableManifestSha256 !==
+      sha256(artifactResult.bytes)
+  ) {
+    throw new Error("The tested release-build checkpoint does not match this staging artifact set.");
+  }
   const configuredRepository = repository();
   const validationRuns = verifiedRuns(head, configuredRepository);
   assertRequiredValidationRuns(validationRuns, head, configuredRepository);
@@ -174,7 +226,7 @@ async function writePlan() {
     sha256: sha256(await readFile(path.join(root, "drizzle", name))),
   })));
   const plan = {
-    schemaVersion: "1.0",
+    schemaVersion: "1.2",
     deploymentTier: "staging",
     preparedAt: new Date().toISOString(),
     commitSha: head,
@@ -182,13 +234,21 @@ async function writePlan() {
     workerName: STAGING_WORKER_NAME,
     siteUrl: STAGING_SITE_ORIGIN,
     contentVersion: bundle.contentVersion,
+    playExperienceMode: config.vars.PLAY_EXPERIENCE_MODE,
     previousWorkerVersion,
     d1: { preMigrationBookmark: bookmark, migrations },
     validationRuns,
+    releaseBuildCheckpoint: {
+      sha256: sha256(releaseBuildCheckpointBytes),
+      artifactSetSha256: releaseBuildCheckpoint.artifactSetSha256,
+      deployableManifestSha256:
+        releaseBuildCheckpoint.deployableManifestSha256,
+    },
     checksums: {
       preparedWorkerConfigSha256: sha256(configBytes),
       deployableArtifactManifestSha256: sha256(artifactResult.bytes),
       deployableArtifactSetSha256: artifactResult.manifest.artifactSetSha256,
+      releaseBuildCheckpointSha256: sha256(releaseBuildCheckpointBytes),
     },
   };
   await mkdir(path.dirname(planPath), { recursive: true });
@@ -198,19 +258,32 @@ async function writePlan() {
 
 async function verifyPlan() {
   const head = verifyGitState();
-  const { configBytes, bundle, artifactResult } = await configState(head);
-  const plan = JSON.parse(await readFile(planPath, "utf8"));
+  const { config, configBytes, bundle, artifactResult } = await configState(head);
+  const [plan, releaseBuildCheckpoint, releaseBuildCheckpointBytes] =
+    await Promise.all([
+      readFile(planPath, "utf8").then(JSON.parse),
+      verifyReleaseBuildCheckpoint(root),
+      readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
+    ]);
   if (
-    plan.schemaVersion !== "1.0" ||
+    plan.schemaVersion !== "1.2" ||
     plan.deploymentTier !== "staging" ||
     plan.commitSha !== head ||
     plan.repository !== repository() ||
     plan.workerName !== STAGING_WORKER_NAME ||
     plan.siteUrl !== STAGING_SITE_ORIGIN ||
     plan.contentVersion !== bundle.contentVersion ||
+    plan.playExperienceMode !== config.vars?.PLAY_EXPERIENCE_MODE ||
+    plan.playExperienceMode !== "my-room-2001" ||
     plan.checksums?.preparedWorkerConfigSha256 !== sha256(configBytes) ||
     plan.checksums?.deployableArtifactManifestSha256 !== sha256(artifactResult.bytes) ||
     plan.checksums?.deployableArtifactSetSha256 !== artifactResult.manifest.artifactSetSha256
+    || plan.releaseBuildCheckpoint?.sha256 !== sha256(releaseBuildCheckpointBytes)
+    || plan.releaseBuildCheckpoint?.artifactSetSha256 !== releaseBuildCheckpoint.artifactSetSha256
+    || plan.releaseBuildCheckpoint?.deployableManifestSha256 !== releaseBuildCheckpoint.deployableManifestSha256
+    || plan.checksums?.releaseBuildCheckpointSha256 !== sha256(releaseBuildCheckpointBytes)
+    || releaseBuildCheckpoint.artifactSetSha256 !== artifactResult.manifest.artifactSetSha256
+    || releaseBuildCheckpoint.deployableManifestSha256 !== sha256(artifactResult.bytes)
   ) {
     throw new Error("The staging release plan is stale or crossed an environment boundary.");
   }
@@ -229,18 +302,69 @@ async function pendingMigrations() {
   );
 }
 
-async function authenticatedFetch(pathname, init = {}) {
+async function authenticatedFetch(
+  pathname,
+  init = {},
+  consumeResponse = (response) => response,
+) {
   const jwt = required("STAGING_ACCESS_JWT");
   if (jwt.length > 16_384 || /\s/.test(jwt)) throw new Error("STAGING_ACCESS_JWT is malformed.");
-  return fetch(new URL(pathname, STAGING_SITE_ORIGIN), {
-    ...init,
-    redirect: "manual",
-    headers: {
-      ...init.headers,
-      cookie: `CF_Authorization=${jwt}`,
-      origin: STAGING_SITE_ORIGIN,
+  const { timeoutMs, ...requestInit } = init;
+  return fetchWithTimeout(
+    fetch,
+    new URL(pathname, STAGING_SITE_ORIGIN),
+    {
+      ...requestInit,
+      redirect: "manual",
+      headers: {
+        ...requestInit.headers,
+        cookie: `CF_Authorization=${jwt}`,
+        origin: STAGING_SITE_ORIGIN,
+      },
+    },
+    timeoutMs,
+    consumeResponse,
+  );
+}
+
+async function authenticatedJson(pathname, init = {}) {
+  return authenticatedFetch(pathname, init, async (response) => ({
+    response,
+    body: await response.json().catch(() => null),
+  }));
+}
+
+async function waitForCandidateReadiness(head, contentVersion) {
+  return waitForReadOnlyStagingReadiness({
+    check: async (timeoutMs) => {
+      const { response, body } = await authenticatedJson("/api/studio/health", {
+        method: "GET",
+        timeoutMs,
+      });
+      if (!response.ok) return false;
+      return body?.releaseSha === head && body?.contentVersion === contentVersion;
     },
   });
+}
+
+async function waitForPublicationReadiness(contentVersion) {
+  let checkpoint = null;
+  await waitForReadOnlyStagingReadiness({
+    check: async (timeoutMs) => {
+      const { response, body } = await authenticatedJson(
+        "/api/studio/publication-checkpoint",
+        { method: "GET", timeoutMs },
+      );
+      checkpoint = response.ok ? body : null;
+      return (
+        response.ok &&
+        checkpoint?.status === "ready" &&
+        checkpoint?.contentVersion === contentVersion &&
+        checkpoint?.kvPointerMatches === true
+      );
+    },
+  });
+  return checkpoint;
 }
 
 if (action === "plan") {
@@ -274,8 +398,13 @@ if (action === "plan") {
     }
     process.stdout.write(wrangler("versions", "deploy", `${requested}@100%`, "--config", configPath, "--yes"));
   } else if (action === "bootstrap") {
-    const before = await authenticatedFetch("/api/studio/publication-checkpoint");
-    const existing = await before.json().catch(() => null);
+    await waitForCandidateReadiness(head, plan.contentVersion);
+    const { response: before, body: existing } = await authenticatedJson(
+      "/api/studio/publication-checkpoint",
+    );
+    if (!before.ok) {
+      throw new Error("Staging publication state could not be read; no publish was attempted.");
+    }
     if (
       before.ok &&
       existing?.status === "ready" &&
@@ -284,21 +413,14 @@ if (action === "plan") {
     ) {
       console.log(JSON.stringify({ status: "already_ready", contentVersion: existing.contentVersion }));
     } else {
-      const published = await authenticatedFetch("/api/studio/publish", { method: "POST" });
-      const publication = await published.json().catch(() => null);
+      const { response: published, body: publication } = await authenticatedJson(
+        "/api/studio/publish",
+        { method: "POST" },
+      );
       if (!published.ok || publication?.publication?.recordCount < 1) {
         throw new Error("Staging publication bootstrap failed.");
       }
-      const confirmed = await authenticatedFetch("/api/studio/publication-checkpoint");
-      const checkpoint = await confirmed.json().catch(() => null);
-      if (
-        !confirmed.ok ||
-        checkpoint?.status !== "ready" ||
-        checkpoint?.contentVersion !== plan.contentVersion ||
-        checkpoint?.kvPointerMatches !== true
-      ) {
-        throw new Error("Staging D1/KV publication did not reconcile after bootstrap.");
-      }
+      const checkpoint = await waitForPublicationReadiness(plan.contentVersion);
       console.log(JSON.stringify({
         status: "published",
         recordCount: publication.publication.recordCount,
@@ -306,13 +428,15 @@ if (action === "plan") {
       }));
     }
   } else if (action === "checkpoint") {
-    const response = await authenticatedFetch("/api/studio/health");
-    const body = await response.json().catch(() => null);
+    await waitForCandidateReadiness(head, plan.contentVersion);
+    const { response, body } = await authenticatedJson("/api/studio/health");
     if (!response.ok || body?.releaseSha !== head || body?.contentVersion !== plan.contentVersion) {
       throw new Error("Staging health does not match the planned SHA and content version.");
     }
-    const publicationResponse = await authenticatedFetch("/api/studio/publication-checkpoint");
-    const publication = await publicationResponse.json().catch(() => null);
+    const {
+      response: publicationResponse,
+      body: publication,
+    } = await authenticatedJson("/api/studio/publication-checkpoint");
     if (
       !publicationResponse.ok ||
       publication?.status !== "ready" ||
@@ -328,8 +452,9 @@ if (action === "plan") {
       kvPointerMatches: true,
     }));
   } else if (action === "smoke") {
+    await waitForCandidateReadiness(head, plan.contentVersion);
     const results = [];
-    for (const pathname of ["/", "/work", "/play", "/sources", "/privacy", "/robots.txt"]) {
+    for (const pathname of stagingSmokePaths(plan.playExperienceMode)) {
       const response = await authenticatedFetch(pathname);
       const robots = response.headers.get("x-robots-tag") ?? "";
       if (!response.ok || !robots.includes("noindex") || response.headers.get("cache-control") !== "private, no-store") {

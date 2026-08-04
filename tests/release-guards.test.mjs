@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  assertActiveActionsWorkflow,
   assertReleaseMarker,
   assertProductionDeployment,
   assertRequiredValidationRuns,
@@ -14,7 +15,10 @@ import {
   githubRepositoryFromRemoteUrl,
   parseRemoteReleaseMarker,
   publicationCheckpointForPlan,
+  REQUIRED_VALIDATION_RUNS,
   requireExactUploadedVersion,
+  requiredSmokeTestsForPlayMode,
+  ROOM_PLAY_SMOKE_TESTS,
   runGuardedMigration,
 } from "../scripts/lib/release-contract.mjs";
 import {
@@ -165,7 +169,7 @@ test("release preflight rejects a configuration that weakens production boundari
         { ...environment, PLAY_EXPERIENCE_MODE: "experimental" },
         { head: expected.head, contentVersion: expected.contentVersion },
       ),
-    /classic or my-room-2001/,
+    /must be explicitly set to classic or my-room-2001/,
   );
   assert.throws(
     () =>
@@ -217,15 +221,31 @@ test("release preflight rejects a configuration that weakens production boundari
   );
 });
 
-test("production Play mode defaults to classic until explicitly activated", () => {
+test("production Play mode must be explicit and supported for every hosted release", () => {
   const { environment, expected } = validReleaseConfigFixture();
-  const withoutRoomMode = { ...environment };
-  delete withoutRoomMode.PLAY_EXPERIENCE_MODE;
-  const classic = expectedPublicReleaseConfig(withoutRoomMode, {
-    head: expected.head,
-    contentVersion: expected.contentVersion,
-  });
-  assert.equal(classic.playExperienceMode, "classic");
+  const missingMode = { ...environment };
+  delete missingMode.PLAY_EXPERIENCE_MODE;
+  assert.throws(
+    () => expectedPublicReleaseConfig(missingMode, {
+      head: expected.head,
+      contentVersion: expected.contentVersion,
+    }),
+    /PLAY_EXPERIENCE_MODE is required/,
+  );
+  assert.equal(
+    expectedPublicReleaseConfig(
+      { ...environment, PLAY_EXPERIENCE_MODE: "classic" },
+      { head: expected.head, contentVersion: expected.contentVersion },
+    ).playExperienceMode,
+    "classic",
+  );
+  assert.throws(
+    () => expectedPublicReleaseConfig(
+      { ...environment, PLAY_EXPERIENCE_MODE: "experimental" },
+      { head: expected.head, contentVersion: expected.contentVersion },
+    ),
+    /must be explicitly set to classic or my-room-2001/,
+  );
 });
 
 test("non-versioned trigger reconciliation is bound to the exact cutover release", () => {
@@ -388,29 +408,33 @@ test("GitHub evidence must be successful and bind the exact SHA and URL", () => 
   );
 });
 
-test("release evidence requires three distinct exact-commit security runs", () => {
+test("release evidence requires four distinct exact-commit quality runs", () => {
   const head = "a".repeat(40);
-  const runs = [
-    ["validate", "Validate", "101"],
-    ["gitleaks", "Gitleaks", "102"],
-    ["codeql", "CodeQL", "103"],
-  ].map(([kind, name, id]) => ({
+  const runs = REQUIRED_VALIDATION_RUNS.map(({
+    kind,
+    name,
+    workflowPath,
+  }, index) => ({
     kind,
     name,
     headSha: head,
     conclusion: "success",
-    url: `https://github.com/example/repo/actions/runs/${id}`,
+    url: `https://github.com/example/repo/actions/runs/${101 + index}`,
+    event: kind === "browser" ? "workflow_dispatch" : "pull_request",
+    workflowDatabaseId: 401 + index,
+    workflowPath,
+    workflowState: "active",
   }));
   assert.doesNotThrow(() => assertRequiredValidationRuns(runs, head));
   assert.throws(
-    () => assertRequiredValidationRuns(runs.slice(0, 2), head),
-    /Validate, Gitleaks, and CodeQL/,
+    () => assertRequiredValidationRuns(runs.slice(0, 3), head),
+    /Validate, Gitleaks, CodeQL, and Browser Quality/,
   );
   assert.throws(
     () =>
       assertRequiredValidationRuns(
         runs.map((run, index) =>
-          index === 2 ? { ...run, url: runs[0].url } : run,
+          index === 3 ? { ...run, url: runs[0].url } : run,
         ),
         head,
       ),
@@ -419,6 +443,100 @@ test("release evidence requires three distinct exact-commit security runs", () =
   assert.throws(
     () => assertRequiredValidationRuns(runs, head, "different/repository"),
     /configured upstream repository/,
+  );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "browser" ? { ...run, event: "pull_request" } : run,
+      ),
+      head,
+    ),
+    /manual workflow_dispatch/,
+  );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "validate"
+          ? { ...run, workflowPath: ".github/workflows/browser-quality.yml" }
+          : run,
+      ),
+      head,
+    ),
+    /exact active/,
+  );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "gitleaks"
+          ? { ...run, workflowState: "disabled_manually" }
+          : run,
+      ),
+      head,
+    ),
+    /exact active/,
+  );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "codeql"
+          ? { ...run, workflowDatabaseId: runs[0].workflowDatabaseId }
+          : run,
+      ),
+      head,
+    ),
+    /exact active/,
+  );
+});
+
+test("workflow evidence resolves to its fixed active workflow identity", () => {
+  const requirement = REQUIRED_VALIDATION_RUNS.find(
+    ({ kind }) => kind === "validate",
+  );
+  const workflow = {
+    id: 401,
+    name: requirement.name,
+    path: requirement.workflowPath,
+    state: "active",
+  };
+  assert.deepEqual(
+    assertActiveActionsWorkflow(workflow, {
+      workflowDatabaseId: 401,
+      name: requirement.name,
+      workflowPath: requirement.workflowPath,
+    }),
+    {
+      workflowDatabaseId: 401,
+      workflowPath: requirement.workflowPath,
+      workflowState: "active",
+    },
+  );
+  for (const invalid of [
+    { ...workflow, id: 402 },
+    { ...workflow, name: "Other" },
+    { ...workflow, path: ".github/workflows/other.yml" },
+    { ...workflow, state: "disabled_manually" },
+  ]) {
+    assert.throws(
+      () => assertActiveActionsWorkflow(invalid, {
+        workflowDatabaseId: 401,
+        name: requirement.name,
+        workflowPath: requirement.workflowPath,
+      }),
+      /exact active/,
+    );
+  }
+});
+
+test("My Room releases require direct-route smoke evidence", () => {
+  const base = ["public_routes", "security_headers"];
+  assert.deepEqual(requiredSmokeTestsForPlayMode(base, "classic"), base);
+  assert.deepEqual(
+    requiredSmokeTestsForPlayMode(base, "my-room-2001"),
+    [...base, ...ROOM_PLAY_SMOKE_TESTS],
+  );
+  assert.throws(
+    () => requiredSmokeTestsForPlayMode(base, "unknown"),
+    /unsupported Play experience mode/,
   );
 });
 

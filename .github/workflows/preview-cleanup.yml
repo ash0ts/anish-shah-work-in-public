@@ -12,7 +12,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: preview-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'janitor' }}
+  group: preview-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'janitor' }}
   cancel-in-progress: true
 
 jobs:
@@ -26,10 +26,8 @@ jobs:
         with:
           ref: ${{ github.workflow_sha }}
           persist-credentials: false
-      - name: Use Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24.18.0
+      - name: Set up trusted repository toolchain
+        uses: ./.github/actions/setup-repository
       - name: Delete the closed PR preview
         if: github.event_name == 'pull_request'
         env:

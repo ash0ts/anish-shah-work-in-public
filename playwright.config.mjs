@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Browser CI temporarily uses Wrangler 4.113 to avoid the later
+// ProxyController crash. Its bundled workerd supports dates through July 28;
+// this CLI-only override never changes the built or hosted Worker config.
+const e2eCompatibilityDate = "2026-07-28";
 const playMode = process.env.BROWSER_PLAY_MODE === "room" ? "room" : "classic";
 const defaultPort = playMode === "room" ? 4174 : 4173;
 const configuredPort = process.env.BROWSER_QUALITY_PORT?.trim();
@@ -59,7 +63,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      `WRANGLER_LOG_PATH=.wrangler/browser-quality-${playMode}${artifactSuffix}.log node node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --port ${port} --ip 127.0.0.1 --local --var NODE_ENV:development --var PLAY_EXPERIENCE_MODE:${experienceMode}${previewRuntimeVariables} --log-level error --persist-to ${persistedState}`,
+      `WRANGLER_LOG_PATH=.wrangler/browser-quality-${playMode}${artifactSuffix}.log node node_modules/wrangler-e2e/bin/wrangler.js dev --config dist/server/wrangler.json --compatibility-date ${e2eCompatibilityDate} --port ${port} --ip 127.0.0.1 --local --var NODE_ENV:development --var PLAY_EXPERIENCE_MODE:${experienceMode}${previewRuntimeVariables} --log-level error --persist-to ${persistedState}`,
     url: baseURL,
     reuseExistingServer: false,
     timeout: 30_000,

@@ -8,9 +8,14 @@ import * as chromeLauncher from "chrome-launcher";
 import lighthouse from "lighthouse";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// Keep this in lockstep with Playwright. This is a test-process override for
+// Wrangler 4.113's bundled workerd, not a production configuration value.
+const e2eCompatibilityDate = "2026-07-28";
 const lighthousePort = 4174;
 const baseUrl = `http://127.0.0.1:${lighthousePort}`;
 const reportDirectory = path.join(root, ".lighthouse");
+const wranglerDirectory = path.join(root, ".wrangler");
+const wranglerLogPath = path.join(wranglerDirectory, "lighthouse-quality.log");
 const audits = [
   { mode: "classic", routes: ["/", "/work", "/play", "/sources", "/privacy"] },
   { mode: "room", routes: ["/play"] },
@@ -95,17 +100,22 @@ async function launchChrome() {
   throw lastError;
 }
 
-await mkdir(reportDirectory, { recursive: true });
+await Promise.all([
+  mkdir(reportDirectory, { recursive: true }),
+  mkdir(wranglerDirectory, { recursive: true }),
+]);
 
 function launchWorker(mode) {
   const experienceMode = mode === "room" ? "my-room-2001" : "classic";
   const server = spawn(
     process.execPath,
     [
-      "node_modules/wrangler/bin/wrangler.js",
+      "node_modules/wrangler-e2e/bin/wrangler.js",
       "dev",
       "--config",
       "dist/server/wrangler.json",
+      "--compatibility-date",
+      e2eCompatibilityDate,
       "--port",
       String(lighthousePort),
       "--ip",
@@ -122,7 +132,7 @@ function launchWorker(mode) {
     ],
     {
       cwd: root,
-      env: process.env,
+      env: { ...process.env, WRANGLER_LOG_PATH: wranglerLogPath },
       stdio: ["ignore", "pipe", "pipe"],
     },
   );

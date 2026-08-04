@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
 const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 const objects = [
@@ -48,14 +49,6 @@ const objects = [
 ];
 const directRoutes = objects.map(({ id }) => `/play/${id}`);
 const widths = [320, 390, 768, 1024, 1440, 1920];
-const roomReadyTimeout = 15_000;
-
-async function expectRoomReady(page) {
-  await expect(page.getByText("Room ready", { exact: true })).toBeVisible({
-    timeout: roomReadyTimeout,
-  });
-}
-
 function runtimeChunkRequests(page) {
   const urls = [];
   page.on("request", (request) => {
@@ -459,6 +452,19 @@ test.describe("My Room 2001 browser quality", () => {
       page.locator('[data-room-runtime] img[src*="my-room-2001-neutral"]'),
     ).toBeVisible();
     expect(stageIntercepted).toBe(true);
+    const stalledReadiness = await expectRoomReady(page, {
+      context: "the intentionally stalled room stage",
+      timeout: 100,
+    }).then(
+      () => null,
+      (error) => error,
+    );
+    expect(stalledReadiness).toBeInstanceOf(Error);
+    expect(stalledReadiness.message).toContain(
+      "Interactive room readiness exceeded 100ms",
+    );
+    expect(stalledReadiness.message).toContain('"ready": "false"');
+    expect(stalledReadiness.message).toContain('"phase": "idle"');
     releaseRoomStage();
     await expectRoomReady(page);
     await expect(
@@ -494,7 +500,9 @@ test.describe("My Room 2001 browser quality", () => {
     );
 
     await page.getByRole("button", { name: "Enter the room" }).click();
-    const room = page.getByRole("dialog", { name: "Interactive room" });
+    const room = await expectRoomReady(page, {
+      context: "selecting the long-title preview object",
+    });
     await room.locator('[data-room-object-control="read"]').click();
     await expect(page).toHaveURL(/\/play\/read\?fixture=long-title$/);
     await page.getByRole("searchbox", { name: "Find a title" }).fill("記憶");
@@ -557,6 +565,7 @@ test.describe("My Room 2001 browser quality", () => {
     const leave = room.getByRole("button", { name: "Leave room" });
     const lastObject = room.locator('[data-room-object-control="move"]');
     await expect(room).toBeVisible();
+    await expectRoomReady(page, { context: "testing the room focus trap" });
     await expect(leave).toBeFocused();
     await expect(room.locator("canvas")).toHaveAttribute("aria-hidden", "true");
     await expect(room.locator("canvas")).toHaveAttribute("tabindex", "-1");
@@ -946,7 +955,9 @@ test.describe("My Room 2001 browser quality", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
-    let room = page.getByRole("dialog", { name: "Interactive room" });
+    let room = await expectRoomReady(page, {
+      context: "opening the first room object",
+    });
     await room.locator('[data-room-object-control="watch"]').click();
     await expect(page).toHaveURL(/\/play\/watch$/);
     await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
@@ -959,6 +970,7 @@ test.describe("My Room 2001 browser quality", () => {
     room = page.getByRole("dialog", { name: "Interactive room" });
     await expect(room).toBeVisible();
     await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
+    await expectRoomReady(page, { context: "using the returned room" });
     await expect(
       room.locator('[data-room-object-control="watch"]'),
       JSON.stringify(await activeElementReport(page)),
@@ -975,6 +987,7 @@ test.describe("My Room 2001 browser quality", () => {
     room = page.getByRole("dialog", { name: "Interactive room" });
     await expect(room).toBeVisible();
     await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
+    await expectRoomReady(page, { context: "using browser history in the room" });
     await expect(room.locator('[data-room-object-control="watch"]')).toBeFocused();
 
     for (const object of objects.filter(({ id }) => id !== "watch")) {
@@ -988,6 +1001,9 @@ test.describe("My Room 2001 browser quality", () => {
       room = page.getByRole("dialog", { name: "Interactive room" });
       await expect(room).toBeVisible();
       await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
+      await expectRoomReady(page, {
+        context: `returning from the ${object.id} object`,
+      });
       await expect(
         room.locator(`[data-room-object-control="${object.id}"]`),
       ).toBeFocused();
@@ -1000,7 +1016,9 @@ test.describe("My Room 2001 browser quality", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play?fixture=ready", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
-    let room = page.getByRole("dialog", { name: "Interactive room" });
+    let room = await expectRoomReady(page, {
+      context: "starting the slow-return scenario",
+    });
     await room.locator('[data-room-object-control="collect"]').click();
     await expect(page).toHaveURL(/\/play\/collect\?fixture=ready$/);
 
@@ -1025,6 +1043,7 @@ test.describe("My Room 2001 browser quality", () => {
     releaseReturn();
     await expect(page).toHaveURL(/\/play\?fixture=ready$/, { timeout: 10_000 });
     await expect(status).toHaveCount(0);
+    await expectRoomReady(page, { context: "completing the slow room return" });
     await expect(
       page.locator('[data-room-object-control="collect"]'),
     ).toBeFocused();
@@ -1050,7 +1069,9 @@ test.describe("My Room 2001 browser quality", () => {
 
       if (object.id === "watch") {
         await page.getByRole("button", { name: "Enter the room" }).click();
-        const room = page.getByRole("dialog", { name: "Interactive room" });
+        const room = await expectRoomReady(page, {
+          context: "checking the direct-route return path",
+        });
         await expect(room).toBeVisible();
         await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
         await room.getByRole("button", { name: "Leave room" }).click();
@@ -1110,6 +1131,9 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
     await page.getByRole("link", { name: "Back to room" }).click();
     await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+    await expectRoomReady(page, {
+      context: "returning after a superseded object selection",
+    });
     await expect(
       page.locator('[data-room-object-control="play"]'),
     ).toBeFocused();

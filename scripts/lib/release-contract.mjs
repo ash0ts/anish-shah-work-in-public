@@ -67,6 +67,75 @@ export function assertVerifiedActionsRun(evidence, { head, url, name }) {
   }
 }
 
+export const REQUIRED_VALIDATION_RUNS = Object.freeze([
+  Object.freeze({
+    kind: "validate",
+    name: "Validate",
+    workflowPath: ".github/workflows/ci.yml",
+  }),
+  Object.freeze({
+    kind: "gitleaks",
+    name: "Gitleaks",
+    workflowPath: ".github/workflows/gitleaks.yml",
+  }),
+  Object.freeze({
+    kind: "codeql",
+    name: "CodeQL",
+    workflowPath: ".github/workflows/codeql.yml",
+  }),
+  Object.freeze({
+    kind: "browser",
+    name: "Browser Quality",
+    workflowPath: ".github/workflows/browser-quality.yml",
+  }),
+]);
+
+export const RELEASE_BROWSER_WORKFLOW_PATH =
+  REQUIRED_VALIDATION_RUNS.find(({ kind }) => kind === "browser").workflowPath;
+
+export function assertActiveActionsWorkflow(
+  workflow,
+  { workflowDatabaseId, name, workflowPath },
+) {
+  if (
+    !Number.isSafeInteger(workflowDatabaseId) ||
+    workflowDatabaseId < 1 ||
+    workflow?.id !== workflowDatabaseId ||
+    workflow?.name !== name ||
+    workflow?.path !== workflowPath ||
+    workflow?.state !== "active"
+  ) {
+    throw new Error(
+      `${name} evidence does not belong to the exact active ${workflowPath} workflow.`,
+    );
+  }
+  return {
+    workflowDatabaseId,
+    workflowPath,
+    workflowState: "active",
+  };
+}
+
+export const ROOM_PLAY_SMOKE_TESTS = Object.freeze([
+  "play_watch",
+  "play_read",
+  "play_listen",
+  "play_collect",
+  "play_play",
+  "play_move",
+]);
+
+export function requiredSmokeTestsForPlayMode(base, playExperienceMode) {
+  if (!Array.isArray(base) || base.some((value) => typeof value !== "string")) {
+    throw new Error("The base smoke-test contract is invalid.");
+  }
+  if (playExperienceMode === "classic") return [...base];
+  if (playExperienceMode === "my-room-2001") {
+    return [...base, ...ROOM_PLAY_SMOKE_TESTS];
+  }
+  throw new Error("The release plan contains an unsupported Play experience mode.");
+}
+
 export function githubRepositoryFromRemoteUrl(value) {
   const scp = String(value).match(
     /^git@github\.com:([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?$/,
@@ -95,25 +164,42 @@ export function githubRepositoryFromRemoteUrl(value) {
 }
 
 export function assertRequiredValidationRuns(runs, head, repository) {
-  const required = new Map([
-    ["validate", "Validate"],
-    ["gitleaks", "Gitleaks"],
-    ["codeql", "CodeQL"],
-  ]);
+  const required = new Map(
+    REQUIRED_VALIDATION_RUNS.map((definition) => [definition.kind, definition]),
+  );
   if (!Array.isArray(runs) || runs.length !== required.size) {
-    throw new Error("Release evidence must contain Validate, Gitleaks, and CodeQL runs.");
+    throw new Error(
+      "Release evidence must contain Validate, Gitleaks, CodeQL, and Browser Quality runs.",
+    );
   }
   const urls = new Set();
+  const workflowIds = new Set();
   for (const run of runs) {
-    const expectedName = required.get(run?.kind);
-    if (!expectedName || urls.has(run.url)) {
+    const expected = required.get(run?.kind);
+    if (!expected || urls.has(run.url)) {
       throw new Error("Release validation runs must be distinct and correctly classified.");
     }
     assertVerifiedActionsRun(run, {
       head,
       url: run.url,
-      name: expectedName,
+      name: expected.name,
     });
+    if (
+      !Number.isSafeInteger(run.workflowDatabaseId) ||
+      run.workflowDatabaseId < 1 ||
+      workflowIds.has(run.workflowDatabaseId) ||
+      run.workflowPath !== expected.workflowPath ||
+      run.workflowState !== "active"
+    ) {
+      throw new Error(
+        `${expected.name} release evidence must identify the exact active ${expected.workflowPath} workflow.`,
+      );
+    }
+    if (run.kind === "browser" && run.event !== "workflow_dispatch") {
+      throw new Error(
+        "Browser release evidence must be a manual workflow_dispatch run of the exact browser-quality workflow file.",
+      );
+    }
     if (repository) {
       const url = new URL(run.url);
       const segments = url.pathname.split("/").filter(Boolean);
@@ -125,6 +211,7 @@ export function assertRequiredValidationRuns(runs, head, repository) {
       }
     }
     urls.add(run.url);
+    workflowIds.add(run.workflowDatabaseId);
     required.delete(run.kind);
   }
   if (required.size > 0) {

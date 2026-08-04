@@ -1,0 +1,90 @@
+name: Browser stability soak
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Full 40-character commit SHA to soak-test ten times
+        required: true
+        type: string
+      runner_label:
+        description: Run on GitHub-hosted infrastructure or the temporary owner runner
+        required: true
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - anish-release
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-stability-${{ inputs.commit_sha }}
+  cancel-in-progress: true
+
+jobs:
+  soak:
+    name: browser soak ${{ matrix.run }} of 10
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    timeout-minutes: 35
+    steps:
+      - name: Validate owner dispatch
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+          REQUESTED_RUNNER_LABEL: ${{ inputs.runner_label }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTOR" = "$GITHUB_REPOSITORY_OWNER"
+          [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          case "$REQUESTED_RUNNER_LABEL" in
+            github-hosted|anish-release) ;;
+            *) exit 1 ;;
+          esac
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit_sha }}
+          persist-credentials: false
+      - name: Confirm exact commit
+        env:
+          EXPECTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "${#GITHUB_SHA}" -eq 40
+      - name: Set up repository toolchain
+        uses: ./.github/actions/setup-repository
+      - name: Install Chromium
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Run the complete browser gate
+        run: npm run validate:browser
+      - name: Upload soak failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-soak-${{ matrix.run }}-failure-${{ inputs.commit_sha }}
+          path: |
+            .playwright/results-*
+            .playwright/report-*
+            .wrangler/browser-quality-*.log
+            .wrangler/lighthouse-quality*
+            .lighthouse
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+  stability:
+    name: ten-run browser stability
+    if: always()
+    needs: soak
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    steps:
+      - name: Require all ten independent runs
+        env:
+          SOAK_RESULT: ${{ needs.soak.result }}
+        run: test "$SOAK_RESULT" = "success"

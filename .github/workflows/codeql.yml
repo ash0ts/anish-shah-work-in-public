@@ -10,6 +10,14 @@ on:
         description: Full 40-character commit SHA to scan
         required: true
         type: string
+      runner_label:
+        description: Run on GitHub-hosted infrastructure or the temporary owner runner
+        required: true
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - anish-release
   schedule:
     - cron: "23 7 * * 2"
 
@@ -21,9 +29,22 @@ permissions:
 
 jobs:
   analyze:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
+      - name: Validate owner dispatch
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+          REQUESTED_RUNNER_LABEL: ${{ inputs.runner_label }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTOR" = "$GITHUB_REPOSITORY_OWNER"
+          [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          case "$REQUESTED_RUNNER_LABEL" in
+            github-hosted|anish-release) ;;
+            *) exit 1 ;;
+          esac
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -34,7 +55,7 @@ jobs:
           EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "${#EXPECTED_SHA}" -eq 40
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "${#GITHUB_SHA}" -eq 40
       - name: Initialize CodeQL
         uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3

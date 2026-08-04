@@ -16,6 +16,10 @@ import {
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
 import {
+  RELEASE_BUILD_CHECKPOINT_PATH,
+  verifyReleaseBuildCheckpoint,
+} from "./lib/release-build-checkpoint.mjs";
+import {
   assertTriggerDeploymentReceipt,
   createTriggerDeploymentReceipt,
   TRIGGER_RECEIPT_PATH,
@@ -95,17 +99,21 @@ async function verifyPlan() {
     attestationBytes,
     configBytes,
     deployableArtifactResult,
+    releaseBuildCheckpoint,
+    releaseBuildCheckpointBytes,
   ] = await Promise.all([
     readFile(planPath),
     readFile(path.join(root, "content/public/anish-content.public.v1.attestation.json")),
     readFile(configPath),
     readVerifiedDeployableArtifactManifest(root),
+    verifyReleaseBuildCheckpoint(root),
+    readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
   ]);
   const plan = JSON.parse(planBytes.toString("utf8"));
   const attestation = JSON.parse(attestationBytes.toString("utf8"));
   const config = JSON.parse(configBytes.toString("utf8"));
   if (
-    plan.schemaVersion !== "1.0" ||
+    plan.schemaVersion !== "1.2" ||
     plan.commitSha !== head ||
     plan.contentVersion !== attestation.contentVersion ||
     plan.checksums?.publicContentAttestationSha256 !== sha256(attestationBytes) ||
@@ -118,8 +126,22 @@ async function verifyPlan() {
       deployableArtifactResult.manifest.fileCount ||
     plan.deployableArtifacts?.totalBytes !==
       deployableArtifactResult.manifest.totalBytes ||
+    plan.releaseBuildCheckpoint?.sha256 !==
+      sha256(releaseBuildCheckpointBytes) ||
+    plan.releaseBuildCheckpoint?.artifactSetSha256 !==
+      releaseBuildCheckpoint.artifactSetSha256 ||
+    plan.releaseBuildCheckpoint?.deployableManifestSha256 !==
+      releaseBuildCheckpoint.deployableManifestSha256 ||
+    plan.checksums?.releaseBuildCheckpointSha256 !==
+      sha256(releaseBuildCheckpointBytes) ||
+    releaseBuildCheckpoint.artifactSetSha256 !==
+      deployableArtifactResult.manifest.artifactSetSha256 ||
+    releaseBuildCheckpoint.deployableManifestSha256 !==
+      sha256(deployableArtifactResult.bytes) ||
     config.vars?.RELEASE_SHA !== head ||
     config.vars?.CONTENT_VERSION !== plan.contentVersion ||
+    config.vars?.PLAY_EXPERIENCE_MODE !== plan.playExperienceMode ||
+    !["classic", "my-room-2001"].includes(plan.playExperienceMode) ||
     !["compatible", "predeploy_bootstrap_required"].includes(
       plan.publicationCheckpoint?.status,
     )

@@ -93,9 +93,11 @@ application redirect for it.
 
 ## 1. Validate the exact commit
 
-Merge through a reviewed PR, then manually dispatch Validate, Gitleaks, and
-CodeQL with the same full commit SHA. All three must succeed. On the release
-machine:
+Merge through a reviewed PR, then manually dispatch Validate, Gitleaks, CodeQL,
+and Browser Quality with the same full commit SHA. All four must succeed. The
+temporary owner-runner option in [Testing and release gates](../testing.md)
+keeps these workflow identities and gates intact when hosted Actions capacity
+is unavailable. On the release machine:
 
 ```bash
 git switch main
@@ -133,8 +135,8 @@ performance results.
 ## 2. Capture read-only production coordinates
 
 Before changing production, collect the current Worker version, a D1 Time
-Travel bookmark, the remote migration state, and the three successful GitHub
-validation, Gitleaks, and CodeQL run URLs:
+Travel bookmark, the remote migration state, and the four successful GitHub
+Validate, Gitleaks, CodeQL, and Browser Quality run URLs:
 
 ```bash
 npx --no-install wrangler versions list --config dist/server/wrangler.public.json
@@ -171,6 +173,7 @@ export RELEASE_D1_BOOKMARK='<literal pre-migration Time Travel bookmark>'
 export RELEASE_VALIDATION_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export RELEASE_GITLEAKS_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export RELEASE_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+export RELEASE_BROWSER_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export RELEASE_MIGRATION_LIST='0005_steady_publication_guard.sql'
 export RELEASE_PUBLICATION_HASH='<publication checkpoint contentHash, or none>'
 export RELEASE_PUBLICATION_CONTENT_VERSION='<checkpoint contentVersion, or none>'
@@ -186,11 +189,12 @@ comma-separated list of the reviewed, checked-in SQL migrations planned for
 this release; do not include an unapplied or unreviewed file.
 
 `release:plan` refuses a dirty worktree or a SHA mismatch. It also asks the
-authenticated GitHub CLI to verify that all three distinct Actions runs
-concluded successfully for the exact `HEAD` and expected workflow names; the
-URLs alone are not trusted. It records:
+authenticated GitHub CLI to verify that all four distinct Actions runs
+concluded successfully for the exact `HEAD` and expected workflow names and
+paths; the URLs alone are not trusted. Browser Quality must be a manual
+workflow dispatch. It records:
 
-- the validated commit SHA and all three GitHub Actions run URLs;
+- the validated commit SHA and all four GitHub Actions run URLs;
 - the public content version and exact sanitized bundle SHA-256;
 - the deployable artifact-set hash, file count, byte count, and manifest hash;
 - the prior Worker version;
