@@ -1,0 +1,179 @@
+{
+  "schemaVersion": "1.0",
+  "campaignVersion": "meet-me-4n1sh-v1",
+  "persona": {
+    "displayName": "4N1SH",
+    "accessibleName": "Anish simulation",
+    "disclosure": "4N1SH is a generated game character assembled from Anish Shah’s public work and collections. It is not Anish and can be wrong."
+  },
+  "workFactIds": [
+    "fact:work:wandb-mcp",
+    "fact:work:evalforge",
+    "fact:work:lightning-fabric",
+    "fact:work:ai-curriculum",
+    "fact:work:agentic-llm-series",
+    "fact:work:startup-school",
+    "fact:work:wandbot",
+    "fact:work:prompt-engineering",
+    "fact:work:pdf-summarization",
+    "fact:work:architecting-agents",
+    "fact:work:agent-fine-tuning",
+    "fact:work:building-evaluating-agents"
+  ],
+  "metricIds": [
+    "metric:courses:enrollments:2026-07-30",
+    "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+    "metric:events:pipeline-supported:2024-2025",
+    "metric:event:fully-connected-sf:reach:2024"
+  ],
+  "providerGrounding": {
+    "myanimelist": { "route": "/play/watch", "label": "Watch" },
+    "hardcover": { "route": "/play/read", "label": "Read" },
+    "spotify": { "route": "/play/listen", "label": "Listen" },
+    "discogs": { "route": "/play/collect", "label": "Collect" },
+    "steam": { "route": "/play/play", "label": "Play" },
+    "strava": { "route": "/play/move", "label": "Move" }
+  },
+  "facts": [
+    {
+      "id": "fact:work:wandb-mcp",
+      "subjectIds": ["group:products:wandb-mcp"],
+      "allowedStatement": "The W&B MCP Server gives agents an interface for inspecting experiments and traces.",
+      "publicEvidenceIds": ["evidence:web:cdcf0840eeee30b7", "evidence:web:39bc2aeed28f611d"],
+      "href": "/work/wandb-mcp-server"
+    },
+    {
+      "id": "fact:work:evalforge",
+      "subjectIds": ["group:products:evalforge"],
+      "allowedStatement": "EvalForge implements an approach to generating and aligning evaluation criteria.",
+      "publicEvidenceIds": ["evidence:web:9c65aa8075f32a31"],
+      "href": "/work/evalforge"
+    },
+    {
+      "id": "fact:work:lightning-fabric",
+      "subjectIds": ["group:products:lightning-fabric"],
+      "allowedStatement": "Three upstream contributions added W&B logging and checkpointing support to Lightning and Fabric.",
+      "publicEvidenceIds": ["evidence:web:ec7049f88f30d04a", "evidence:web:fdf74b9213214137"],
+      "href": "/work/pytorch-lightning-fabric-integration"
+    },
+    {
+      "id": "fact:work:ai-curriculum",
+      "subjectIds": ["group:courses:ai-curriculum"],
+      "allowedStatement": "A three-course curriculum connects prompt engineering, evaluation, and agent engineering.",
+      "publicEvidenceIds": ["evidence:web:518a37502324f188", "evidence:web:5efcebb97b2ea70e"],
+      "href": "/work/wandb-ai-course-curriculum"
+    },
+    {
+      "id": "fact:work:agentic-llm-series",
+      "subjectIds": ["group:courses:agentic-llm-series"],
+      "allowedStatement": "A public workshop series examined both adapting and evaluating LLMs for agentic use cases.",
+      "publicEvidenceIds": ["evidence:web:ea804a3d830247c6", "evidence:web:209bb03d0eac8a91"],
+      "href": "/work/fine-tuning-and-evaluating-agentic-llms-series"
+    },
+    {
+      "id": "fact:work:startup-school",
+      "subjectIds": ["group:courses:startup-school"],
+      "allowedStatement": "One Google Cloud Startup School lesson was delivered across regional broadcasts and a public replay.",
+      "publicEvidenceIds": ["evidence:web:008bf1a6cbfbe9eb", "evidence:web:8626bb9de238ac2a"],
+      "href": "/work/google-cloud-startup-school-2025"
+    },
+    {
+      "id": "fact:work:wandbot",
+      "subjectIds": ["group:writing:wandbot"],
+      "allowedStatement": "WandBot is a public technical account of a GPT-4-powered documentation assistant.",
+      "publicEvidenceIds": ["evidence:web:4b382839fdb0c013", "evidence:web:045864bfc4aa100c"],
+      "href": "/work/wandbot-gpt-4-powered-chat-support"
+    },
+    {
+      "id": "fact:work:prompt-engineering",
+      "subjectIds": ["group:writing:prompt-engineering-langchain"],
+      "allowedStatement": "A practical guide joins prompt engineering, LangChain, and experiment tracking.",
+      "publicEvidenceIds": ["evidence:web:e1dd3995be553eaf", "evidence:web:ff6afa85d458d4cf"],
+      "href": "/work/prompt-engineering-llms-with-langchain-and-wandb"
+    },
+    {
+      "id": "fact:work:pdf-summarization",
+      "subjectIds": ["group:writing:automated-pdf-summarization"],
+      "allowedStatement": "An article and cookbook implementation demonstrate arXiv summarization with Claude and Weave.",
+      "publicEvidenceIds": ["evidence:web:c850192d1627c12e", "evidence:web:a46439c4d577c82c"],
+      "href": "/work/automated-pdf-summarization-claude-weave"
+    },
+    {
+      "id": "fact:work:architecting-agents",
+      "subjectIds": ["group:talks:architecting-agents"],
+      "allowedStatement": "A talk on architecting and orchestrating AI agents evolved across four public deliveries.",
+      "publicEvidenceIds": ["evidence:web:80d13c6e6a0cf278", "evidence:web:f08dd5c02cdcac21"],
+      "href": "/work/architecting-and-orchestrating-ai-agents-series"
+    },
+    {
+      "id": "fact:work:agent-fine-tuning",
+      "subjectIds": ["group:talks:llm-agent-fine-tuning"],
+      "allowedStatement": "A public session on LLM agent fine-tuning was later delivered at NVIDIA GTC.",
+      "publicEvidenceIds": ["evidence:web:7336c39821d94d10", "evidence:web:89dccd8fbce605c9"],
+      "href": "/work/llm-agent-fine-tuning"
+    },
+    {
+      "id": "fact:work:building-evaluating-agents",
+      "subjectIds": ["group:talks:building-evaluating-agents"],
+      "allowedStatement": "Building and Evaluating Agents presents evaluation as part of the agent-development loop.",
+      "publicEvidenceIds": ["evidence:web:cadcf7213f6ee258", "evidence:web:231f90177fa59780"],
+      "href": "/work/building-and-evaluating-agents"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "act-1",
+      "title": "Escape the Labels",
+      "encounter": "Dodge reductive labels and retrieve public artifacts before the model compresses them into one story.",
+      "candidateFactIds": ["fact:work:wandb-mcp", "fact:work:ai-curriculum", "fact:work:wandbot"],
+      "allowedActionIds": ["trace-the-system", "follow-the-people", "inspect-the-artifact"],
+      "fallbackDialogueIds": ["fallback:act-1:trace", "fallback:act-1:people", "fallback:act-1:artifact"],
+      "allowsFreeText": false
+    },
+    {
+      "id": "act-2",
+      "title": "Challenge the Model",
+      "encounter": "Probe the claim, trace its evidence, preserve its qualifier, or reframe the question.",
+      "candidateFactIds": ["fact:work:evalforge", "fact:work:agentic-llm-series", "fact:work:building-evaluating-agents"],
+      "allowedActionIds": ["probe", "trace", "qualify", "reframe"],
+      "fallbackDialogueIds": ["fallback:act-2:probe", "fallback:act-2:trace", "fallback:act-2:qualify", "fallback:act-2:reframe"],
+      "allowsFreeText": true
+    },
+    {
+      "id": "act-3",
+      "title": "Build a Conversation Key",
+      "encounter": "Connect a professional signal to one public doorway outside the work.",
+      "candidateFactIds": ["fact:work:lightning-fabric", "fact:work:startup-school", "fact:work:prompt-engineering", "fact:work:pdf-summarization"],
+      "allowedActionIds": ["watch", "read", "listen", "collect", "play", "move"],
+      "fallbackDialogueIds": ["fallback:act-3:watch", "fallback:act-3:read", "fallback:act-3:listen", "fallback:act-3:collect", "fallback:act-3:play", "fallback:act-3:move"],
+      "allowsFreeText": true
+    },
+    {
+      "id": "boss",
+      "title": "The Approximation",
+      "encounter": "Stop the public model from collapsing a varied body of work into one confident label.",
+      "candidateFactIds": ["fact:work:wandb-mcp", "fact:work:evalforge", "fact:work:ai-curriculum", "fact:work:wandbot", "fact:work:architecting-agents", "fact:work:agent-fine-tuning"],
+      "allowedActionIds": ["ground-the-claim", "keep-the-qualifier", "connect-the-facets"],
+      "fallbackDialogueIds": ["fallback:boss:ground", "fallback:boss:qualify", "fallback:boss:connect"],
+      "allowsFreeText": false
+    }
+  ],
+  "fallbackDialogue": [
+    { "id": "fallback:act-1:trace", "opponentLine": "A system is not a label. Trace what it connects before naming it.", "responseMode": "probe", "revealEntityIds": ["group:products:wandb-mcp"], "visitorSignals": ["systems-thinking"] },
+    { "id": "fallback:act-1:people", "opponentLine": "Public work travels through classrooms, collaborators, and communities—not only repositories.", "responseMode": "counter", "revealEntityIds": ["group:courses:ai-curriculum"], "visitorSignals": ["teaching", "community"] },
+    { "id": "fallback:act-1:artifact", "opponentLine": "Good. Inspect the artifact before accepting the summary.", "responseMode": "acknowledge", "revealEntityIds": ["group:writing:wandbot"], "visitorSignals": ["evaluation-rigor"] },
+    { "id": "fallback:act-2:probe", "opponentLine": "The first answer is a hypothesis. Ask what would make it fail.", "responseMode": "probe", "revealEntityIds": ["group:products:evalforge"], "visitorSignals": ["evaluation-rigor"] },
+    { "id": "fallback:act-2:trace", "opponentLine": "Follow the claim back to the workshop, implementation, or recording that can support it.", "responseMode": "acknowledge", "revealEntityIds": ["group:courses:agentic-llm-series"], "visitorSignals": ["evaluation-rigor", "systems-thinking"] },
+    { "id": "fallback:act-2:qualify", "opponentLine": "A qualifier is not a weakness. It is part of the measurement.", "responseMode": "counter", "revealEntityIds": ["group:talks:building-evaluating-agents"], "visitorSignals": ["evaluation-rigor"] },
+    { "id": "fallback:act-2:reframe", "opponentLine": "Better question: which feedback loop made the work more useful?", "responseMode": "redirect", "revealEntityIds": ["group:products:evalforge"], "visitorSignals": ["playful-curiosity"] },
+    { "id": "fallback:act-3:watch", "opponentLine": "Watch is a doorway, not a personality test. Keep the connection curious and provisional.", "responseMode": "acknowledge", "revealEntityIds": ["group:writing:prompt-engineering-langchain"], "visitorSignals": ["playful-curiosity"] },
+    { "id": "fallback:act-3:read", "opponentLine": "Reading can open a question. It cannot prove a private belief.", "responseMode": "counter", "revealEntityIds": ["group:writing:automated-pdf-summarization"], "visitorSignals": ["playful-curiosity"] },
+    { "id": "fallback:act-3:listen", "opponentLine": "A listening shelf adds texture without becoming an inferred profile.", "responseMode": "acknowledge", "revealEntityIds": ["group:courses:startup-school"], "visitorSignals": ["playful-curiosity"] },
+    { "id": "fallback:act-3:collect", "opponentLine": "A physical archive rewards close inspection. So does public technical work.", "responseMode": "probe", "revealEntityIds": ["group:products:lightning-fabric"], "visitorSignals": ["open-source", "playful-curiosity"] },
+    { "id": "fallback:act-3:play", "opponentLine": "Play is another system to learn—not evidence for a neat personality label.", "responseMode": "counter", "revealEntityIds": ["group:products:lightning-fabric"], "visitorSignals": ["systems-thinking", "playful-curiosity"] },
+    { "id": "fallback:act-3:move", "opponentLine": "Movement is a public doorway here, not a dataset for guessing motives.", "responseMode": "redirect", "revealEntityIds": ["group:courses:startup-school"], "visitorSignals": ["playful-curiosity"] },
+    { "id": "fallback:boss:ground", "opponentLine": "Grounded. The approximation loses confidence when the artifact stays attached.", "responseMode": "acknowledge", "revealEntityIds": ["group:products:wandb-mcp", "group:writing:wandbot"], "visitorSignals": ["evaluation-rigor"] },
+    { "id": "fallback:boss:qualify", "opponentLine": "Qualifier retained. Precision survives the compression attempt.", "responseMode": "acknowledge", "revealEntityIds": ["group:products:evalforge", "group:courses:ai-curriculum"], "visitorSignals": ["evaluation-rigor", "teaching"] },
+    { "id": "fallback:boss:connect", "opponentLine": "No single label can hold systems, teaching, writing, and convening at once.", "responseMode": "counter", "revealEntityIds": ["group:talks:architecting-agents", "group:talks:llm-agent-fine-tuning"], "visitorSignals": ["systems-thinking", "community"] }
+  ]
+}

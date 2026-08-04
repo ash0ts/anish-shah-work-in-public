@@ -20,6 +20,7 @@ import {
 import { CopyOwnershipSummary } from "./CopyOwnershipSummary";
 import { EditorialRecords } from "./EditorialRecords";
 import { PlayPromotionControls } from "./PlayPromotionControls";
+import { SimulationProviderApprovals } from "./SimulationProviderApprovals";
 import styles from "./studio.module.css";
 
 export const dynamic = "force-dynamic";
@@ -284,6 +285,10 @@ export default async function StudioPage() {
           />
         </div>
       </section>
+
+      {overview.status !== "database_setup_required" ? (
+        <SimulationProviderApprovals />
+      ) : null}
 
       {overview.status === "database_setup_required" ? (
         <SetupNotice title="The site database is not ready.">
