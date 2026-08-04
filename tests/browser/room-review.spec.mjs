@@ -57,6 +57,7 @@ test.describe("My Room 2001 visual review evidence", () => {
     await page.getByRole("button", { name: "Enter the room" }).click();
     const room = await expectRoomReady(page, {
       context: "capturing room review evidence",
+      expectedTier: "desktop-fisheye",
     });
 
     const captureRoom = async (name) => {

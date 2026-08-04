@@ -17,7 +17,11 @@ export async function roomReadinessDiagnostics(page) {
       const roomResources = performance
         .getEntriesByType("resource")
         .map((entry) => entry.name)
-        .filter((name) => /Room(?:Runtime|Stage)|react-three|three(?:[.-]|$)/i.test(name))
+        .filter((name) =>
+          /Room(?:Runtime|Stage)|PocketRoom|react-three|three(?:[.-]|$)/i.test(
+            name,
+          ),
+        )
         .map((name) => {
           try {
             return new URL(name).pathname;
@@ -36,9 +40,11 @@ export async function roomReadinessDiagnostics(page) {
               ariaHidden: runtime.getAttribute("aria-hidden"),
               inert: runtime.hasAttribute("inert"),
               phase: runtime.getAttribute("data-room-transition-phase"),
+              pocketEntryPhase: runtime.getAttribute("data-pocket-entry-phase"),
               presenting: runtime.getAttribute("data-presenting"),
               ready: runtime.getAttribute("data-room-ready"),
               returning: runtime.getAttribute("data-returning"),
+              tier: runtime.getAttribute("data-room-presentation-tier"),
               visible: runtime.getClientRects().length > 0,
             }
           : null,
@@ -65,21 +71,39 @@ export async function roomReadinessDiagnostics(page) {
 
 export async function expectRoomReady(
   page,
-  { context = "room interaction", timeout = ROOM_READY_TIMEOUT_MS } = {},
+  {
+    context = "room interaction",
+    expectedTier,
+    timeout = ROOM_READY_TIMEOUT_MS,
+  } = {},
 ) {
   const deadline = Date.now() + timeout;
   const room = page.getByRole("dialog", { name: "Interactive room" });
 
   try {
+    if (expectedTier) {
+      await expect(
+        room,
+        `The room should use the ${expectedTier} presentation before ${context}.`,
+      ).toHaveAttribute("data-room-presentation-tier", expectedTier, {
+        timeout,
+      });
+    }
+
     await expect(
       room,
       `The interactive room should be ready before ${context}.`,
-    ).toHaveAttribute("data-room-ready", "true", { timeout });
+    ).toHaveAttribute("data-room-ready", "true", {
+      timeout: Math.max(1, deadline - Date.now()),
+    });
 
+    const tier = await room.getAttribute("data-room-presentation-tier");
     await expect(
-      room.getByText("Room ready", { exact: true }),
-      "The semantic room status should agree with the runtime readiness state.",
-    ).toBeVisible({ timeout: Math.max(1, deadline - Date.now()) });
+      room.locator("[data-room-boot-status]"),
+      "The visible boot status should agree with the runtime readiness state.",
+    ).toHaveText(tier === "pocket" ? "Ready" : "Room ready", {
+      timeout: Math.max(1, deadline - Date.now()),
+    });
   } catch (error) {
     const diagnostics = await roomReadinessDiagnostics(page);
     const cause = error instanceof Error ? error.message : String(error);

@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { expectRoomReady } from "./helpers/room-readiness.mjs";
 import { Object3D, PerspectiveCamera, Vector3 } from "three";
+import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
 const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 const objects = [
@@ -1609,16 +1610,11 @@ test.describe("My Room 2001 browser quality", () => {
       await page
         .getByRole("button", { name: "Open the pocket room" })
         .click();
-      const room = page.getByRole("dialog", { name: "Interactive room" });
-      await expect(room).toHaveAttribute(
-        "data-room-presentation-tier",
-        "pocket",
-        { timeout: roomReadyTimeout },
-      );
-      await expect(page.locator('[data-projection="pocket-perspective"]')).toBeVisible();
-      await expect(page.getByText("Ready", { exact: true })).toBeVisible({
-        timeout: roomReadyTimeout,
+      const room = await expectRoomReady(page, {
+        context: `opening the ${capability} Pocket Room`,
+        expectedTier: "pocket",
       });
+      await expect(page.locator('[data-projection="pocket-perspective"]')).toBeVisible();
       await expect(room.getByRole("button", { name: "Previous view" })).toBeVisible();
       await expect(room.getByRole("button", { name: "Next view" })).toBeVisible();
       await expect(room.locator('[data-room-object-control="watch"]')).toBeVisible();
@@ -1656,14 +1652,9 @@ test.describe("My Room 2001 browser quality", () => {
     const page = await context.newPage();
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Open the pocket room" }).click();
-    const room = page.getByRole("dialog", { name: "Interactive room" });
-    await expect(room).toHaveAttribute(
-      "data-room-presentation-tier",
-      "pocket",
-      { timeout: roomReadyTimeout },
-    );
-    await expect(page.getByText("Ready", { exact: true })).toBeVisible({
-      timeout: roomReadyTimeout,
+    const room = await expectRoomReady(page, {
+      context: "testing Pocket Room swipe rejection",
+      expectedTier: "pocket",
     });
 
     const client = await context.newCDPSession(page);
@@ -1748,14 +1739,9 @@ test.describe("My Room 2001 browser quality", () => {
       record();
     });
     await page.getByRole("button", { name: "Open the pocket room" }).click();
-    let room = page.getByRole("dialog", { name: "Interactive room" });
-    await expect(room).toHaveAttribute(
-      "data-room-presentation-tier",
-      "pocket",
-      { timeout: roomReadyTimeout },
-    );
-    await expect(page.getByText("Ready", { exact: true })).toBeVisible({
-      timeout: roomReadyTimeout,
+    let room = await expectRoomReady(page, {
+      context: "testing Pocket Room activation",
+      expectedTier: "pocket",
     });
 
     const client = await context.newCDPSession(page);
@@ -1816,17 +1802,14 @@ test.describe("My Room 2001 browser quality", () => {
     await page.setViewportSize({ width: 844, height: 500 });
     await dispatchTouch(client, "touchEnd");
     await expect(room).toHaveAttribute("data-room-presentation-tier", "static");
+    await expect(room).toHaveAttribute("data-room-ready", "false");
     await expect(page.locator("canvas")).toHaveCount(0);
     await expect(page.locator("[data-room-runtime] img")).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(room).toHaveAttribute(
-      "data-room-presentation-tier",
-      "pocket",
-      { timeout: roomReadyTimeout },
-    );
-    await expect(page.getByText("Ready", { exact: true })).toBeVisible({
-      timeout: roomReadyTimeout,
+    room = await expectRoomReady(page, {
+      context: "restoring Pocket Room after resize",
+      expectedTier: "pocket",
     });
     const bootStates = await page.evaluate(() => window.__pocketBootStates);
     expect(bootStates).toContain("Opening room");
@@ -1887,9 +1870,9 @@ test.describe("My Room 2001 browser quality", () => {
     const page = await context.newPage();
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Open the pocket room" }).click();
-    const room = page.getByRole("dialog", { name: "Interactive room" });
-    await expect(page.getByText("Ready", { exact: true })).toBeVisible({
-      timeout: roomReadyTimeout,
+    const room = await expectRoomReady(page, {
+      context: "measuring Pocket Room interaction frames",
+      expectedTier: "pocket",
     });
 
     await page.waitForTimeout(1_200);
