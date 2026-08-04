@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:ar-fp-0171 -->
 
 ## display-title
-PII safeguards contribution
+PII detection safeguards contribution
 
 ## short-title
-PII safeguards
+PII evaluation safeguards
 
 ## summary
-A public contribution to PII detection safeguards.
+I contributed a representative evaluation report to an open-source PII safeguards project.
 
 ## role-summary
-Contributor
+Report contributor

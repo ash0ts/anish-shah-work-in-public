@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-0004 -->
 
 ## display-title
-NVIDIA Data Flywheel Blueprint
+NVIDIA Data Flywheel Blueprint contribution
 
 ## short-title
-Data Flywheel Blueprint
+NVIDIA Data Flywheel
 
 ## summary
-A public NVIDIA and W&B blueprint contribution represented by its upstream implementation.
+I contributed a W&B implementation to NVIDIA's Data Flywheel Blueprint.
 
 ## role-summary
-Contributor
+Upstream implementation contributor

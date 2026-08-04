@@ -1,3 +1,5 @@
+import { SITE_COPY } from "@/lib/copy";
+
 export type StatusCount = { label: string; count: number };
 export type GalleryFilter = StatusCount & { id: string };
 export type GallerySort = { id: string; label: string };
@@ -247,15 +249,15 @@ export const DEFAULT_DISCOGS_QUERY: DiscogsQueryState = {
 };
 
 export const providerTitles: Record<CollectionProvider, string> = {
-  myanimelist: "Watch states, not a ranking.",
-  hardcover: "A shelf in motion.",
-  steam: "A public library snapshot.",
+  myanimelist: SITE_COPY.play["watch-collection-title"],
+  hardcover: SITE_COPY.play["read-collection-title"],
+  steam: SITE_COPY.play["play-collection-title"],
 };
 
 export function syncLabel(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Sync date unavailable";
-  return `Synced ${new Intl.DateTimeFormat("en-US", {
+  return `Updated ${new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -265,7 +267,7 @@ export function syncLabel(value: string) {
 export function publishedLabel(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Publish date unavailable";
-  return `Published ${new Intl.DateTimeFormat("en-US", {
+  return `Updated ${new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -295,7 +297,7 @@ export async function loadConnector<T>(
         status: "unavailable",
         message:
           body.message ??
-          "This stream has not been published from the owner studio yet.",
+          SITE_COPY.play["collection-unavailable"],
       };
     }
     return {
@@ -308,7 +310,7 @@ export async function loadConnector<T>(
     if (signal?.aborted) throw error;
     return {
       status: "unavailable",
-      message: "The last public snapshot is temporarily unavailable.",
+      message: "This collection is temporarily unavailable.",
     };
   }
 }

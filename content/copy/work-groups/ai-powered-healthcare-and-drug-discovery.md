@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0022 -->
 
 ## display-title
-AI-Powered Healthcare & Drug Discovery
+AI for healthcare and drug discovery
 
 ## short-title
-AI-Powered Healthcare & Drug Discovery
+Healthcare and drug discovery
 
 ## summary
-Meetup speaker.
+I spoke at a meetup about AI applications in healthcare and drug discovery.
 
 ## role-summary
 Meetup speaker

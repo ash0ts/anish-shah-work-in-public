@@ -323,11 +323,13 @@ const contentChanged = paths.some((value) =>
 const copyChanged = paths.some((value) =>
   matchesAny(value, [
     /^content\/copy\//,
-    /^lib\/(?:copy|copy-contract|copy-ownership)\.ts$/,
+    /^lib\/(?:copy|copy-contract|copy-ownership|copy-voice-contract)\.ts$/,
     /^lib\/server\/(?:copy-ownership|root-metadata)\.ts$/,
-    /^scripts\/(?:generate-copy-deck|copy-deck-diff|copy-only-lane|capture-copy-preview)\.mjs$/,
-    /^scripts\/lib\/(?:copy-deck|copy-only-lane)\.mjs$/,
+    /^scripts\/(?:generate-copy-deck|copy-deck-diff|copy-only-lane|copy-voice-check|capture-copy-preview)\.mjs$/,
+    /^scripts\/lib\/(?:copy-deck|copy-only-lane|copy-voice)\.mjs$/,
+    /^tests\/copy-(?:deck|only-lane|voice)\.test\.mjs$/,
     /^types\/copy\.ts$/,
+    /^\.agents\/skills\/edit-anish-site-copy\//,
   ]),
 );
 const docsChanged = paths.some((value) =>
@@ -458,16 +460,25 @@ if (contentChanged) {
 }
 if (copyChanged) {
   addCheck("npm run copy:check");
+  addCheck("npm run copy:voice");
   addCheck("npm run copy:test");
   addCheck(
     baseRef === null
       ? "npm run copy:diff"
       : `npm run copy:diff -- --base ${baseCommit}`,
   );
+  addCheck(
+    baseRef === null
+      ? "npm run copy:audit"
+      : `npm run copy:audit -- --base ${baseCommit}`,
+  );
   addCheck("npm run typecheck");
   addCheck("npm run build");
   addCheck("npm run test:rendered");
   addCheck("npm run validate:browser");
+  notes.push(
+    "Review copy:audit against the intended base and owner-check every FACT-CHECK field before merge.",
+  );
 }
 if (docsChanged) {
   addCheck("npm run docs:check");
@@ -521,6 +532,7 @@ if (dependencyChanged) {
   }
 }
 if (skillChanged) {
+  notes.push("Validate changed skills with skill-creator's quick_validate.py before handoff.");
   addCheck("npm run skill:validate");
   addCheck("npm run test:maintenance-skill");
 }

@@ -294,6 +294,11 @@
   border: 1px solid var(--hairline, rgba(23, 34, 59, 0.2));
 }
 
+.contextNote {
+  max-width: 52ch;
+  margin: -0.8rem 0 1.5rem !important;
+}
+
 .contextList > article {
   display: grid;
   grid-template-columns: minmax(6rem, 0.28fr) minmax(0, 1fr);
@@ -396,6 +401,14 @@
   padding: 0;
   border-top: 1px solid rgba(255, 255, 255, 0.24);
   list-style: none;
+}
+
+.appearancesNote {
+  max-width: 52ch;
+  margin: -0.8rem 0 1.5rem;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .appearances li {

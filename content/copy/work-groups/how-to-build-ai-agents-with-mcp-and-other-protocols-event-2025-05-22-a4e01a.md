@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0040 -->
 
 ## display-title
-How to Build AI Agents with MCP and Other Protocols
+Building AI agents with MCP and protocols
 
 ## short-title
-How to Build AI Agents with MCP and Other Protocols
+Agents with MCP and protocols
 
 ## summary
-Scheduled event May 22; replay page dated May 21; registration record retained in the canonical archive.
+I presented a webinar on building AI agents with MCP and adjacent protocols.
 
 ## role-summary
-Webinar presenter
+Webinar speaker

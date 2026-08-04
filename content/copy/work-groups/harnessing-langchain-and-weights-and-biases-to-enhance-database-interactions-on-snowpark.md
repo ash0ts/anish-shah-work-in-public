@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0057 -->
 
 ## display-title
-Harnessing Langchain and Weights & Biases to Enhance Database Interactions on Snowpark
+LangChain database interactions on Snowpark
 
 ## short-title
-LangChain and W&B for Snowpark Databases
+LangChain on Snowpark
 
 ## summary
-W&B Fully Connected editorial item
+I wrote a guide to combining LangChain and W&B for database interactions on Snowpark.
 
 ## role-summary
-Author
+Article author

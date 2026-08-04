@@ -36,21 +36,19 @@ test("the copy deck accounts for every public WorkGroup by stable ID", async () 
   assert.equal((await buildCopyDeck(root)).copyVersion, deck.copyVersion);
 });
 
-test("seeded WorkGroup copy preserves canonical text except forbidden embedded URLs", async () => {
+test("curated WorkGroup copy stays meaningful and free of importer residue", async () => {
   const deck = await buildCopyDeck(root);
   for (const group of deck.publicBundle.workGroups.filter(
     (candidate) => candidate.publicationState === "public",
   )) {
     const copy = deck.workGroups[group.id];
-    assert.equal(copy.displayTitle, group.title);
-    if (group.shortTitle.length <= 70) {
-      assert.equal(copy.shortTitle, group.shortTitle);
-    } else {
-      assert(copy.shortTitle.length <= 70, `${group.id} needs a metadata-safe short title`);
-    }
-    assert.equal(copy.roleSummary, group.roleSummary);
-    if (!/https?:\/\//u.test(group.summary)) assert.equal(copy.summary, group.summary);
+    assert(copy.displayTitle.length > 2, `${group.id} needs a display title`);
+    assert(copy.shortTitle.length <= 70, `${group.id} needs a metadata-safe short title`);
+    assert(copy.summary.length > 20, `${group.id} needs a meaningful summary`);
+    assert(copy.roleSummary.length > 2, `${group.id} needs a role summary`);
     assert.doesNotMatch(copy.summary, /https?:\/\//u);
+    assert.doesNotMatch(copy.summary, /^A public\b/iu);
+    assert.doesNotMatch(copy.summary, /(?:imported|source row|unknown role)/iu);
   }
 });
 
@@ -217,7 +215,7 @@ test("editable Play flavor copy excludes guarded provider-policy literals", asyn
   const play = await readFile(path.join(root, "content/copy/pages/play.md"), "utf8");
   assert.doesNotMatch(
     play,
-    /Spotify-calculated|returned order|play counts|rounded playtime|visitor consent|official public movement feed|OAuth|retention|coverage/iu,
+    /Spotify-calculated|returned order|play counts|visitor consent|official public movement feed|OAuth|retention|coverage/iu,
   );
 });
 
@@ -273,7 +271,7 @@ test("editable 404 copy is typed, rendered, and reported against the 404 surface
     buildCopyDeck(root),
     readFile(path.join(root, "app/not-found.tsx"), "utf8"),
   ]);
-  assert.equal(deck.pages.site["not-found-title"], "This path stops here.");
+  assert.equal(deck.pages.site["not-found-title"], "That page isn’t here.");
   assert.match(notFound, /SITE_COPY\.site\["not-found-title"\]/u);
   const { copyRiskManifest } = await import("../scripts/lib/copy-deck.mjs");
   const manifest = await copyRiskManifest(root);

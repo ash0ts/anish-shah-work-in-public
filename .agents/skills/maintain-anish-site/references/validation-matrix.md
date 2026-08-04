@@ -11,7 +11,7 @@ node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run --base or
 
 | Changed area | Required checks |
 | --- | --- |
-| `content/copy`, copy contracts/parser/runtime | `copy:check`, `copy:diff`, `copy:test`, typecheck, build, rendered and browser checks |
+| `content/copy`, copy contracts/parser/voice/runtime | `copy:check`, `copy:voice`, `copy:diff`, `copy:audit`, `copy:test`, owner fact-check, typecheck, build, rendered and browser checks |
 | canonical curation/presentation/generator/types | content verification, attestation, content tests, typecheck; rendered/privacy checks when public |
 | public app/components/CSS/SEO | typecheck, lint, build, rendered tests; browser checks for responsive/interactive work |
 | connectors, Studio, OAuth | typecheck, content/backend/security tests, exact public projector and provider-failure coverage |
@@ -37,7 +37,7 @@ Run `validate:release` only for a clean, pushed, approved production candidate a
 
 ## Manual Coverage
 
-- Public UI/copy: affected routes at 320, 390, 768, 1024, 1440, and 1920px; long copy; 200–400% zoom; keyboard/focus; reduced motion; forced colors; metadata/JSON-LD; no JavaScript.
+- Public UI/copy: affected routes at 320, 390, 768, 1024, 1440, and 1920px; long copy; owner verification for every fact-check field; claim qualification; 200–400% zoom; keyboard/focus; reduced motion; forced colors; metadata/JSON-LD; no JavaScript.
 - My Room: zero connector reads on `/play`, one provider per object route, intent-gated R3F, drag/click discrimination, Back/Escape/focus restoration, static capability fallbacks.
 - Studio/OAuth: logged out, non-owner, owner, origin/body guards, denial/expiry/replay/wrong owner, refresh/replacement/disconnect, sanitized errors.
 - Environments: preview fixtures only, staging isolation/noindex, production exact host/Access, private Sites unchanged.

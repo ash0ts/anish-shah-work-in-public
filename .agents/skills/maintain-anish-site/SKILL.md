@@ -12,8 +12,9 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 1. Read the repository-root `AGENTS.md`, inspect `git status`, and preserve unrelated work.
 2. Classify the request as diagnosis, copy, canonical content, UI, room, connector/Studio, storage, security, CI/docs, staging, or production release. A review or diagnosis does not authorize writes or deployment.
 3. Read only the applicable reference:
-   - Architecture, UI, room, or repository ownership: [repository-map.md](references/repository-map.md). Also use `frontend-design` for visual changes.
+   - Architecture, UI, room, or repository ownership: [repository-map.md](references/repository-map.md). Also use `frontend-design` for visual, interaction, or hierarchy changes.
    - Canonical facts, claims, WorkGroups, or copy ownership: [content-contract.md](references/content-contract.md).
+   - Public language: use `$edit-anish-site-copy` and its voice, surface, claims, protected-boundary, and pull-request references.
    - Connectors, OAuth, environments, security, staging, or production: [connectors-security-release.md](references/connectors-security-release.md).
    - Validation and handoff: [validation-matrix.md](references/validation-matrix.md).
 4. Trace the authoritative source before editing. Never patch a generated file, D1 snapshot, or client output when curation, the copy deck, a schema, a migration, or server policy owns it.
@@ -61,6 +62,6 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - `--run` executes selected checks. `--full` runs `validate` and `validate:browser`.
 - `--base <ref>` includes committed changes from that merge base through `HEAD`; use it for PR and freelancer review.
 - Owner write, Access/auth, and OAuth code require matching security/connector regression tests.
-- Copy changes require copy parsing, diff, rendered, metadata, and browser checks. Skill and docs changes require their dedicated validators.
+- Copy changes require copy parsing, voice/audit, owner fact-check, diff, rendered, metadata, and browser checks. Skill and docs changes require their dedicated validators.
 - Release-code edits select ordinary `npm run validate`. `npm run validate:release` is only for a clean, pushed, explicitly approved production candidate with exact-SHA workflow evidence.
 - The helper never deploys, migrates hosted state, rotates credentials, or mutates Git.

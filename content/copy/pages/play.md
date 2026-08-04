@@ -1,64 +1,145 @@
 <!-- copy-page: play -->
 
 ## seo-title
-Play
+Play — My Room, 2001
 
 ## seo-description
-Explore Anish Shah’s anime, reading, music, physical-media, gaming, and movement collections through bounded public snapshots.
+Step into the room behind the résumé: anime, books, music, records, games, and miles, each collected in its own corner.
 
 ## intro-eyebrow
-My Room, 2001 · Six public collections
+My Room · 2001
 
 ## intro-title
-Come in. Pick something up.
+The room behind the résumé.
 
 ## intro-summary
-A low-poly room for the things outside the work: anime, books, music, records, games, and movement. Every object still opens as a normal page.
+Late-night anime, books in stacks, a pocket music player, records in crates, games on a beige PC, and miles outside. Every object opens as a regular page.
 
 ## poster-still-label
-Still room
+Room on pause
 
 ## poster-capable-label
-Enter on capable desktop browsers
+Enter in 3D
 
 ## directory-eyebrow
-Object directory
+Room directory
 
 ## directory-title
-Six ways into the room.
+Pick a corner.
+
+## view-overview
+Overview
+
+## view-browse-all
+Browse all
+
+## loading-collection
+Loading the collection…
+
+## collection-unavailable
+This collection is not available yet.
+
+## return-overview
+Return to overview
+
+## status-stale
+Refresh delayed
+
+## profile-myanimelist
+Open on MyAnimeList
+
+## profile-hardcover
+Open on Hardcover
+
+## profile-spotify
+Open on Spotify
+
+## profile-discogs
+Open on Discogs
+
+## profile-steam
+Open on Steam
+
+## profile-strava
+Open on Strava
+
+## watch-collection-title
+Tonight’s lineup
+
+## read-collection-title
+On the shelf
+
+## play-collection-title
+My game library
 
 ## watch-title
-Midnight Broadcast
+TV
 
 ## watch-description
-Late-night broadcasts, unfinished seasons, and a shelf that always has one more episode.
+Late-night anime, current watches, and a shelf that never quite stops growing.
+
+## watch-screen-eyebrow
+Channel 11
+
+## watch-screen-title
+Midnight Broadcast
 
 ## read-title
-Borrowed Shelf
+Bookshelf
 
 ## read-description
-Dog-eared spines, recent finds, and the feeling of borrowing one more book.
+Open books, finished books, and everything waiting its turn.
+
+## read-screen-eyebrow
+Shelf light on
+
+## read-screen-title
+Bedside Shelf
 
 ## listen-title
-Pocket Player
+Music player
 
 ## listen-description
-A pocket-sized soundtrack with twelve places to land the needle.
+A pocket-sized window into the tracks Spotify puts closest to the surface.
+
+## listen-screen-eyebrow
+Top Tracks
+
+## listen-screen-title
+Pocket Player
 
 ## collect-title
-Crate Archive
+Record crate
 
 ## collect-description
-A crate to flip through slowly, one sleeve and one decade at a time.
+A crate to flip through by title, format, and decade.
+
+## collect-screen-eyebrow
+Crate 01
+
+## collect-screen-title
+Crate Archive
 
 ## play-title
-Desktop Library
+Computer
 
 ## play-description
 A beige desktop crowded with games worth booting up again.
 
+## play-screen-eyebrow
+Desktop 01
+
+## play-screen-title
+Desktop Library
+
 ## move-title
-Cardio Television
+Treadmill
 
 ## move-description
-A tiny cardio television for the miles and rides outside the room.
+A tiny cardio TV for the rides and runs outside the room.
+
+## move-screen-eyebrow
+Cardio feed
+
+## move-screen-title
+Cardio Television

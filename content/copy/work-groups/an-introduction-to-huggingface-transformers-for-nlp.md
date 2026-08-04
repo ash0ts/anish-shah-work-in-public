@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0052 -->
 
 ## display-title
-An Introduction To HuggingFace Transformers for NLP
+Hugging Face Transformers for NLP
 
 ## short-title
-An Introduction To HuggingFace Transformers for NLP
+Transformers for NLP
 
 ## summary
-W&B Fully Connected editorial item
+I wrote an introduction to using Hugging Face Transformers for NLP.
 
 ## role-summary
-Author
+Article author

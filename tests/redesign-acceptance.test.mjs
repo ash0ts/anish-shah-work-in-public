@@ -5,6 +5,7 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import test, { after, before } from "node:test";
 import { fileURLToPath } from "node:url";
+import { buildCopyDeck } from "../scripts/lib/copy-deck.mjs";
 
 const PROJECT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -19,6 +20,7 @@ const CLIENT_MANIFEST_PATH = path.join(
   "dist/client/.vite/manifest.json",
 );
 const publicBundle = JSON.parse(await readFile(PUBLIC_BUNDLE_PATH, "utf8"));
+const copyDeck = await buildCopyDeck(PROJECT_ROOT);
 const PORT = 50_000 + (process.pid % 5_000);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
@@ -130,7 +132,9 @@ function textFromMarkup(markup) {
 }
 
 function defaultVisibleHomeText(html) {
-  const markup = documentMarkup(html).replace(
+  const document = documentMarkup(html);
+  const main = document.match(/<main\b[\s\S]*?<\/main>/i)?.[0] ?? "";
+  const markup = main.replace(
     /<details(?![^>]*\bopen\b)[^>]*>([\s\S]*?)<\/details>/gi,
     (_details, body) => body.match(/<summary\b[\s\S]*?<\/summary>/i)?.[0] ?? "",
   );
@@ -185,30 +189,29 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   const visible = defaultVisibleHomeText(html);
   const bodiesSection =
     markup.match(
-      /<section\b[^>]*aria-labelledby="bodies-of-work-title"[\s\S]*?<\/section>/i,
+      /<section\b[^>]*aria-labelledby="lines-of-work-title"[\s\S]*?<\/section>/i,
     )?.[0] ?? "";
+  const workLines = [
+    ...bodiesSection.matchAll(/<li\b[^>]*data-work-line(?:="[^"]*")?[^>]*>/gi),
+  ];
   const workLinks = [
     ...bodiesSection.matchAll(/<a\b[^>]*href="\/work\/([^"?#]+)"/gi),
   ].map((match) => match[1]);
 
   assert(
-    wordCount(visible) <= 300,
-    `Default Home contains ${wordCount(visible)} visible words; budget is 300`,
+    wordCount(visible) <= 220,
+    `Default Home contains ${wordCount(visible)} visible words; budget is 220`,
   );
-  assert.equal((bodiesSection.match(/<details\b/g) ?? []).length, 4);
-  assert.equal(workLinks.length, 12);
-  assert.equal(new Set(workLinks).size, 12);
-  assert.match(
-    bodiesSection,
-    /<details\b[^>]*open/i,
-    "One body of work should be readable without interaction",
-  );
-  assert.equal(occurrences(visible, "Explore my work"), 1);
+  assert.equal(workLines.length, 4);
+  assert.equal(workLinks.length, 4);
+  assert.equal(new Set(workLinks).size, 4);
+  assert.doesNotMatch(bodiesSection, /<details\b|<summary\b/i);
+  assert.equal(occurrences(visible, "See the work"), 1);
   assert.equal(occurrences(visible, "7K+"), 1);
   assert.equal(occurrences(visible, "$4M+"), 1);
   assert.equal(occurrences(visible, "200K+"), 1);
-  assert.equal(occurrences(visible, "More than two-thirds"), 1);
-  assert.equal(occurrences(visible, "About half"), 1);
+  assert.equal(occurrences(visible, "More than two-thirds"), 0);
+  assert.equal(occurrences(visible, "About half"), 0);
   assert.equal(
     (markup.match(/data-impact-track="(?:deployed|taught|programs)"/g) ?? [])
       .length,
@@ -216,58 +219,57 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   );
   assert.doesNotMatch(
     visible,
-    /Teach\. Build\. Convene|representative work/i,
+    /Teach\. Build\. Convene|representative work|Current focus|Operational ML|Generative systems|Evaluation & adoption|Agent-native product/i,
   );
 });
 
-test("Work pairs a four-line time calendar with four complete body folds", async () => {
+test("Work keeps the four-line calendar primary and paginates canonical work", async () => {
   const html = await renderHtml("/work");
   const markup = documentMarkup(html);
   const calendar =
     markup.match(/<table\b[\s\S]*?<\/table>/i)?.[0] ?? "";
   const calendarBody =
     calendar.match(/<tbody\b[^>]*>([\s\S]*?)<\/tbody>/i)?.[1] ?? "";
-  const bodyDetails = [
-    ...markup.matchAll(/<details\b[^>]*data-work-body="([^"]+)"/gi),
-  ].map((match) => match[1]);
-  const workIds = [
-    ...markup.matchAll(/<li\b[^>]*data-work-id="([^"]+)"/gi),
-  ].map((match) => match[1]);
-
-  assert.deepEqual(bodyDetails, [
-    "products-open-source",
-    "courses-learning",
-    "writing-research",
-    "talks-programs",
-  ]);
-  assert.equal(workIds.length, 82);
-  assert.equal(new Set(workIds).size, 82);
-  assert.deepEqual(
-    new Set(workIds),
-    new Set(publicBundle.workGroups.map((group) => group.id)),
-  );
   assert.equal((calendarBody.match(/<tr\b/g) ?? []).length, 4);
   assert.equal((calendarBody.match(/<td\b/g) ?? []).length, 24);
   assert.match(
     calendar,
-    /Bodies of work by year, with exact work and public-form counts/i,
+    /Project counts by line and year/i,
   );
+  assert.doesNotMatch(calendar, /public[- ]form|artifact count|formCount/i);
   assert.match(calendar, /data-density="[1-5]"/i);
   assert.match(
     calendar,
     /href="\/work\?bucket=products-open-source(?:&amp;|&)year=202[1-6]#work-index"/i,
   );
   assert.equal((markup.match(/<input\b[^>]*type="search"/gi) ?? []).length, 1);
-  for (const name of [
-    "bucket",
-    "topic",
-    "year",
-    "format",
-    "organization",
-    "role",
-  ]) {
+  for (const name of ["bucket", "topic", "year", "format"]) {
     assert.match(markup, new RegExp(`<select\\b[^>]*name="${name}"`, "i"));
   }
+  assert.doesNotMatch(markup, /<select\b[^>]*name="(?:organization|role)"/i);
+  assert.match(
+    markup,
+    /<details\b[^>]*id="work-more-filters"[\s\S]*?<select\b[^>]*name="format"/i,
+  );
+  assert.match(markup, />Line of work<|>Topic<|>Year<|>Format</i);
+
+  const pages = await Promise.all(
+    [1, 2, 3, 4].map((page) =>
+      page === 1 ? Promise.resolve(html) : renderHtml(`/work?page=${page}`),
+    ),
+  );
+  const workIdsByPage = pages.map((pageHtml) => [
+    ...documentMarkup(pageHtml).matchAll(
+      /<li\b[^>]*data-work-id="([^"]+)"/gi,
+    ),
+  ].map((match) => match[1]));
+  assert.deepEqual(workIdsByPage.map((ids) => ids.length), [24, 24, 24, 10]);
+  assert.equal(new Set(workIdsByPage.flat()).size, 82);
+  assert.deepEqual(
+    new Set(workIdsByPage.flat()),
+    new Set(publicBundle.workGroups.map((group) => group.id)),
+  );
+  assert.match(markup, /href="\/work\?page=2#work-index"/i);
   assert.doesNotMatch(
     markup,
     /\bMap\b|Visual archive|Complete grouped index|aria-pressed|<canvas\b|<svg\b/i,
@@ -290,7 +292,8 @@ test("child-title search returns the parent and identifies the matching form", a
   const html = await renderHtml(
     `/work?q=${encodeURIComponent(child.displayTitle)}`,
   );
-  assert.match(html, /Matched public record:/i);
+  assert.match(html, /Matched:/i);
+  assert.doesNotMatch(html, /Matched public record:/i);
   assert.match(html, new RegExp(child.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(html, new RegExp(`/work/${group.slug}#${child.id}`));
 });
@@ -310,7 +313,8 @@ test("child slugs search and redirect to the exact form anchor", async () => {
   const searchHtml = await renderHtml(
     `/work?q=${encodeURIComponent(child.slug)}`,
   );
-  assert.match(searchHtml, /Matched public record:/i);
+  assert.match(searchHtml, /Matched:/i);
+  assert.doesNotMatch(searchHtml, /Matched public record:/i);
   assert.match(searchHtml, new RegExp(`/work/${group.slug}#${child.id}`));
 
   const response = await fetch(`${BASE_URL}/work/${child.slug}`, {
@@ -332,22 +336,27 @@ test("single- and multi-form WorkGroup details avoid duplicate presentation", as
 
   const singleHtml = await renderHtml(`/work/${single.slug}`);
   const singleText = textFromMarkup(documentMarkup(singleHtml));
+  const singleSummary = copyDeck.workGroups[single.id].summary;
   assert.equal(
-    occurrences(singleText, single.summary),
+    occurrences(singleText, singleSummary),
     1,
     "The single-form summary is repeated",
   );
-  assert.doesNotMatch(singleHtml, /Appearances and artifacts/i);
-  assert.match(singleHtml, /Open the |Historical source unavailable/i);
+  assert.doesNotMatch(singleHtml, /Talks, recordings, and code/i);
+  assert.match(
+    singleHtml,
+    /Read article|View event|Open course|Watch recording|Read report|Open reference|View credit|Read translation|Open mirror|View profile|View repository|View pull request|Historical source unavailable/i,
+  );
 
   const multiHtml = await renderHtml(`/work/${multiple.slug}`);
   const multiText = textFromMarkup(documentMarkup(multiHtml));
+  const multiSummary = copyDeck.workGroups[multiple.id].summary;
   assert.equal(
-    occurrences(multiText, multiple.summary),
+    occurrences(multiText, multiSummary),
     1,
     "The multi-form summary is repeated",
   );
-  assert.match(multiHtml, /Appearances and artifacts/i);
+  assert.match(multiHtml, /Talks, recordings, and code/i);
   for (const itemId of multiple.itemIds) {
     assert.match(
       multiHtml,
@@ -355,18 +364,11 @@ test("single- and multi-form WorkGroup details avoid duplicate presentation", as
     );
   }
 
-  const primaryEntity = publicBundle.entities.find(
-    (entity) => entity.id === multiple.primaryEntityId,
-  );
-  assert(primaryEntity);
   const duplicateTitleHtml = await renderHtml(`/work/${multiple.slug}`);
-  assert.equal(
-    occurrences(
-      textFromMarkup(documentMarkup(duplicateTitleHtml)).toLocaleLowerCase(),
-      "primary form",
-    ),
-    1,
-    "Only the identity-selected primary item may be labeled primary",
+  assert.doesNotMatch(
+    textFromMarkup(documentMarkup(duplicateTitleHtml)),
+    /primary artifact/i,
+    "Work details should use the material's real type rather than content-model language",
   );
 });
 
@@ -555,20 +557,12 @@ test("Home absorbs the useful profile arc and About redirects permanently", asyn
   const homeText = textFromMarkup(documentMarkup(await renderHtml("/")));
   assert.match(
     homeText,
-    /how agents discover tools, use context, and leave evidence teams can trust/i,
+    /I build the systems that make AI agents useful after the demo/i,
   );
-  for (const stage of [
-    "Operational ML",
-    "Generative systems",
-    "Evaluation & adoption",
-    "Agent-native product",
-  ]) {
-    assert.equal(
-      occurrences(homeText, stage),
-      1,
-      `${stage} should appear once in the compact Home trajectory`,
-    );
-  }
+  assert.doesNotMatch(
+    homeText,
+    /Current focus|Operational ML|Generative systems|Evaluation & adoption|Agent-native product/i,
+  );
 
   const response = await fetch(`${BASE_URL}/about`, { redirect: "manual" });
   assert.equal(response.status, 308);

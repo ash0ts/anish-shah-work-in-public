@@ -1,16 +1,16 @@
 <!-- copy-record: group:products:evalforge -->
 
 ## display-title
-EvalForge
+EvalForge: aligned evaluation criteria
 
 ## short-title
-EvalForge
+EvalForge evaluation criteria
 
 ## summary
-An implementation of the EvalGen approach to generating and aligning evaluation criteria.
+I built an open-source implementation of EvalGen for generating and aligning evaluation criteria.
 
 ## role-summary
-Creator
+Creator and implementer
 
 ## home-title
 EvalForge: evaluation-criteria generation & alignment

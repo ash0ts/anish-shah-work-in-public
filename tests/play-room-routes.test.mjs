@@ -440,17 +440,35 @@ test("six authored screens preserve provider and consent boundaries", async () =
     ),
   );
   const combined = screens.join("\n");
-  for (const [id, title] of [
-    ["watch", "Midnight Broadcast"],
-    ["read", "Borrowed Shelf"],
-    ["listen", "Pocket Player"],
-    ["collect", "Crate Archive"],
-    ["play", "Desktop Library"],
-    ["move", "Cardio Television"],
+  for (const [id, objectTitle, screenEyebrow, providerLabel, screenTitle] of [
+    ["watch", "TV", "Channel 11", "MyAnimeList", "Midnight Broadcast"],
+    ["read", "Bookshelf", "Shelf light on", "Hardcover", "Bedside Shelf"],
+    ["listen", "Music player", "Top Tracks", "Spotify", "Pocket Player"],
+    ["collect", "Record crate", "Crate 01", "Discogs", "Crate Archive"],
+    ["play", "Computer", "Desktop 01", "Steam", "Desktop Library"],
+    ["move", "Treadmill", "Cardio feed", "Strava", "Cardio Television"],
   ]) {
-    assert.match(registry, new RegExp(`SITE_COPY\\.play\\["${id}-title"\\]`));
-    assert.match(copy, new RegExp(`## ${id}-title\\n${title}`));
+    assert.match(
+      registry,
+      new RegExp(
+        `${id}: \\{[\\s\\S]*?providerLabel: "${providerLabel}"[\\s\\S]*?object: SITE_COPY\\.play\\["${id}-title"\\][\\s\\S]*?screenEyebrow: [^\\n]*SITE_COPY\\.play\\["${id}-screen-eyebrow"\\][^\\n]*${providerLabel}[\\s\\S]*?title: SITE_COPY\\.play\\["${id}-screen-title"\\]`,
+      ),
+    );
+    assert.match(copy, new RegExp(`## ${id}-title\\n${objectTitle}`));
+    assert.match(
+      copy,
+      new RegExp(`## ${id}-screen-eyebrow\\n${screenEyebrow}`),
+    );
+    assert.match(copy, new RegExp(`## ${id}-screen-title\\n${screenTitle}`));
+    assert.notEqual(screenTitle, objectTitle);
   }
+  assert.equal(
+    screens.reduce(
+      (count, screen) => count + (screen.match(/<p>\{object\.screenEyebrow\}<\/p>/g)?.length ?? 0),
+      0,
+    ),
+    6,
+  );
   assert.match(combined, /provider="myanimelist"/);
   assert.match(combined, /provider="hardcover"/);
   assert.match(combined, /provider="steam"/);

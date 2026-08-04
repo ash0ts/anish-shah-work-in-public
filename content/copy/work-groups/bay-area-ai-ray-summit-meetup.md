@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0008 -->
 
 ## display-title
-Bay Area AI + Ray Summit Meetup
+Bay Area AI and Ray Summit meetup
 
 ## short-title
-Bay Area AI + Ray Summit Meetup
+Bay Area AI and Ray Summit
 
 ## summary
-No replay found
+I was listed as a speaker at the Bay Area AI and Ray Summit meetup.
 
 ## role-summary
-Listed speaker
+Listed meetup speaker

@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0160 -->
 
 ## display-title
-Groq code-generation testing demo
+Testing code generation with Groq
 
 ## short-title
-Groq code-generation demo
+Groq codegen testing
 
 ## summary
-A public code-generation testing demo created for a Groq webinar.
+I built a code-generation testing demo for a Groq webinar.
 
 ## role-summary
-Repository owner
+Demo creator and repository owner

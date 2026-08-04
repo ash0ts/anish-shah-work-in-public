@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0007 -->
 
 ## display-title
-Tend and Tune Your MARL Experiments with Ray and W&B
+Tracking MARL experiments with Ray and W&B
 
 ## short-title
-Tend and Tune Your MARL Experiments with Ray and W&B
+MARL experiments with Ray
 
 ## summary
-Conference speaker.
+I presented a conference session on managing multi-agent reinforcement-learning experiments with Ray and W&B.
 
 ## role-summary
 Conference speaker

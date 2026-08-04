@@ -1,13 +1,13 @@
 <!-- copy-record: group:talks:model-customization -->
 
 ## display-title
-Mastering Model Customization
+Fine-tuning Azure OpenAI models with W&B
 
 ## short-title
-Model Customization
+Azure OpenAI model customization
 
 ## summary
-Two public sessions on fine-tuning Azure OpenAI Service models with W&B.
+I presented two sessions on customizing Azure OpenAI Service models with W&B.
 
 ## role-summary
-Webinar presenter
+Speaker across both webinar sessions

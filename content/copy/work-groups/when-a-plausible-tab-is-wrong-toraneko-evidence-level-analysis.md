@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0099 -->
 
 ## display-title
-When a Plausible Tab Is Wrong: Toraneko Evidence-Level Analysis
+When a plausible tab is wrong
 
 ## short-title
-When a Plausible Tab Is Wrong: Toraneko Evidence-Level Analysis
+Toraneko evidence analysis
 
 ## summary
-Latest indexed copy of eight duplicate reports
+I examined why a plausible browser tab can still fail an evidence-level check.
 
 ## role-summary
-Author / report owner
+Analysis author

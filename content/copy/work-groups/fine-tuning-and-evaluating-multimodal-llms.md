@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0020 -->
 
 ## display-title
-Fine-Tuning and Evaluating Multimodal LLMs
+Fine-tuning and evaluating multimodal LLMs
 
 ## short-title
-Fine-Tuning and Evaluating Multimodal LLMs
+Multimodal LLM evaluation
 
 ## summary
-Original W&B event page was removed; no retrospective or replay found
+I spoke about fine-tuning and evaluating multimodal LLMs.
 
 ## role-summary
-Meetup speaker
+Session speaker

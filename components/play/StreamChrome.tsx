@@ -1,5 +1,6 @@
 import styles from "../PersonalStreams.module.css";
 import { syncLabel, type ConnectorState } from "./connector-model";
+import { SITE_COPY } from "@/lib/copy";
 
 export function PanelHeading({
   title,
@@ -22,7 +23,7 @@ export function StreamEmpty<T>({ state }: { state: ConnectorState<T> }) {
       <span aria-hidden="true">{loading ? "···" : "○"}</span>
       <p>
         {loading
-          ? "Loading the last public snapshot…"
+          ? SITE_COPY.play["loading-collection"]
           : state.status === "unavailable"
             ? state.message
             : "This stream has not been published yet."}
@@ -35,18 +36,20 @@ export function StreamStatus({
   stale,
   syncedAt,
   profileUrl,
+  profileLabel,
 }: {
   stale: boolean;
   syncedAt: string;
   profileUrl: string | null;
+  profileLabel: string;
 }) {
   return (
     <div className={styles.status}>
-      <span>{stale ? "Last-known-good snapshot" : "Current public snapshot"}</span>
+      {stale ? <span>{SITE_COPY.play["status-stale"]}</span> : null}
       <span>{syncLabel(syncedAt)}</span>
       {profileUrl ? (
         <a href={profileUrl} rel="noreferrer" target="_blank">
-          Open profile
+          {profileLabel}
         </a>
       ) : null}
     </div>

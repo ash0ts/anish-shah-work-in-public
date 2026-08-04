@@ -215,19 +215,19 @@ test("Discogs remains lazy and the six Play streams use keyboard selection", asy
   const tabs = page.getByRole("tab");
   await expect(tabs).toHaveCount(6);
   await expect(tabs).toHaveText([
-    /Watch\s*MyAnimeList/,
-    /Read\s*Hardcover/,
-    /Listen\s*Spotify/,
-    /Collect\s*Discogs/,
-    /Play\s*Steam/,
-    /Move\s*Strava/,
+    /TV\s*Watch\s*·\s*MyAnimeList/,
+    /Bookshelf\s*Read\s*·\s*Hardcover/,
+    /Music player\s*Listen\s*·\s*Spotify/,
+    /Record crate\s*Collect\s*·\s*Discogs/,
+    /Computer\s*Games\s*·\s*Steam/,
+    /Treadmill\s*Move\s*·\s*Strava/,
   ]);
   expect(requests).toHaveLength(0);
 
-  const watch = page.getByRole("tab", { name: /Watch.*MyAnimeList/i });
-  const read = page.getByRole("tab", { name: /Read.*Hardcover/i });
-  const listen = page.getByRole("tab", { name: /Listen.*Spotify/i });
-  const collect = page.getByRole("tab", { name: /Collect.*Discogs/i });
+  const watch = page.getByRole("tab", { name: /TV.*Watch.*MyAnimeList/i });
+  const read = page.getByRole("tab", { name: /Bookshelf.*Read.*Hardcover/i });
+  const listen = page.getByRole("tab", { name: /Music player.*Listen.*Spotify/i });
+  const collect = page.getByRole("tab", { name: /Record crate.*Collect.*Discogs/i });
   await watch.focus();
   await watch.press("ArrowRight");
   await expect(read).toBeFocused();
@@ -273,7 +273,7 @@ test("Play stream deep links survive reload and reject unknown selections", asyn
   );
 });
 
-test("Discogs Pattern and Gallery support filters and pagination", async ({ page }) => {
+test("Discogs Overview and Browse all support filters and pagination", async ({ page }) => {
   test.skip(roomMode, "Classic Play exercises the shared Discogs presentation with browser fixtures.");
   const requests = [];
   await installDiscogsFixture(page, requests);
@@ -299,7 +299,7 @@ test("Discogs Pattern and Gallery support filters and pagination", async ({ page
     JSON.stringify(axe.violations, null, 2),
   ).toEqual([]);
 
-  await page.getByRole("button", { name: "Gallery" }).click();
+  await page.getByRole("button", { name: "Browse all" }).click();
   await expect(page.getByText("1—12 of 26 releases")).toBeVisible();
   await expect(page.locator("ol li").filter({ has: page.locator('a[href*="discogs.com/release/"]') })).toHaveCount(12);
 
@@ -334,7 +334,7 @@ test("Discogs Pattern and Gallery support filters and pagination", async ({ page
   ).toEqual([]);
 });
 
-test("Discogs Pattern and Gallery fit 320–1920px viewports", async ({ page }) => {
+test("Discogs Overview and Browse all fit 320–1920px viewports", async ({ page }) => {
   test.skip(roomMode, "Room routes receive server-selected connector state; their layout matrix is covered separately.");
   await installDiscogsFixture(page);
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
@@ -346,17 +346,17 @@ test("Discogs Pattern and Gallery fit 320–1920px viewports", async ({ page }) 
     ).toBeVisible();
 
     let overflow = await pageOverflow(page);
-    expect(overflow, `Pattern @ ${width}px: ${JSON.stringify(overflow.offenders)}`).toMatchObject({
+    expect(overflow, `Overview @ ${width}px: ${JSON.stringify(overflow.offenders)}`).toMatchObject({
       documentWidth: expect.any(Number),
       viewportWidth: width,
       offenders: [],
     });
     expect(overflow.documentWidth).toBeLessThanOrEqual(width + 1);
 
-    await page.getByRole("button", { name: "Gallery" }).click();
+    await page.getByRole("button", { name: "Browse all" }).click();
     await expect(page.getByText("1—12 of 26 releases")).toBeVisible();
     overflow = await pageOverflow(page);
-    expect(overflow, `Gallery @ ${width}px: ${JSON.stringify(overflow.offenders)}`).toMatchObject({
+    expect(overflow, `Browse all @ ${width}px: ${JSON.stringify(overflow.offenders)}`).toMatchObject({
       documentWidth: expect.any(Number),
       viewportWidth: width,
       offenders: [],

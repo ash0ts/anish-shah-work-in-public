@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0093 -->
 
 ## display-title
-Scaling out Autonomous Vehicle Use Cases: The Primer
+Scaling autonomous-vehicle workloads
 
 ## short-title
-Scaling out Autonomous Vehicle Use Cases: The Primer
+Autonomous-vehicle scaling primer
 
 ## summary
-Supporting L5Kit/Ray material
+I wrote a primer on scaling autonomous-vehicle workloads with L5Kit and Ray.
 
 ## role-summary
-Author
+Primer author

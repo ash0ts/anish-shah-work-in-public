@@ -24,9 +24,9 @@ export default function PlayRoomScreen({
     <main data-room-screen id="main" className={`${styles.page} ${styles.playPage}`} tabIndex={-1}>
       <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.playHeader} id="play-system-note">
-        <p>Steam · Public library snapshot</p>
+        <p>{object.screenEyebrow}</p>
         <h1>{object.title}</h1>
-        <span>Games, recent sessions, and rounded time—organized like files on the family computer.</span>
+        <span>{object.description}</span>
       </header>
       <section className={styles.computer} aria-label="Steam collection">
         <div className={styles.computerBezel}>
@@ -67,7 +67,7 @@ export default function PlayRoomScreen({
           <div className={styles.computerTaskbar} aria-hidden="true">
             <b>START</b>
             <span>MY_GAMES.EXE</span>
-            <i>PUBLIC SNAPSHOT</i>
+            <i>GAME LIBRARY</i>
           </div>
           <div className={styles.computerBadge} aria-hidden="true">POWER ●</div>
         </div>

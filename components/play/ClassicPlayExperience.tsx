@@ -7,7 +7,7 @@ import {
   getPublicConnectorSnapshot,
   getSpotifyPublicFallback,
 } from "@/lib/server/connectors";
-import { getPublicContentView } from "@/lib/server/public-content";
+import { SITE_COPY } from "@/lib/copy";
 import styles from "@/app/play/play.module.css";
 
 export async function ClassicPlayExperience({
@@ -17,14 +17,10 @@ export async function ClassicPlayExperience({
   fixture?: PreviewFixtureScenario;
   initialStream?: StreamId;
 } = {}) {
-  const [{ bundle }, spotifySnapshot, spotifyFallback] = await Promise.all([
-    getPublicContentView(),
+  const [spotifySnapshot, spotifyFallback] = await Promise.all([
     getPublicConnectorSnapshot("spotify"),
     getSpotifyPublicFallback(),
   ]);
-  const narrative = bundle.narratives.find(
-    (entry) => entry.id === "narrative:play:personal-streams",
-  );
   const spotifyTracks =
     spotifySnapshot.status === "ready"
       ? noScriptSpotifyTracks(spotifySnapshot.payload)
@@ -41,14 +37,9 @@ export async function ClassicPlayExperience({
   return (
     <main id="main" className={`site-main ${styles.page}`}>
       <header className={styles.intro}>
-        <p className={styles.eyebrow}>
-          Play · six optional public streams · pattern / gallery / groove
-        </p>
-        <h1>Outside the work.</h1>
-        <p>
-          {narrative?.body ??
-            "Watch, read, listen, collect, play, and move—published from owner-controlled snapshots and consent-gated embeds."}
-        </p>
+        <p className={styles.eyebrow}>{SITE_COPY.play["intro-eyebrow"]}</p>
+        <h1>{SITE_COPY.play["intro-title"]}</h1>
+        <p>{SITE_COPY.play["intro-summary"]}</p>
       </header>
       <PersonalStreams
         fixture={fixture}
@@ -76,7 +67,7 @@ export async function ClassicPlayExperience({
                 ))}
               </ol>
             ) : (
-              <p>No public Top Tracks snapshot is available.</p>
+              <p>No Top Tracks are available right now.</p>
             )}
             {spotifyFallbackUrl ? (
               <p>
@@ -88,7 +79,7 @@ export async function ClassicPlayExperience({
             {spotifyProfileUrl ? (
               <p>
                 <a href={spotifyProfileUrl} rel="noreferrer" target="_blank">
-                  Open Spotify profile
+                  {SITE_COPY.play["profile-spotify"]}
                 </a>
               </p>
             ) : null}

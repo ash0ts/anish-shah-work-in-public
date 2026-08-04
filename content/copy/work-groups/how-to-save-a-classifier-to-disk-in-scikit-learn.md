@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0058 -->
 
 ## display-title
-How to Save a Classifier to Disk in Scikit-learn
+Persisting scikit-learn classifiers
 
 ## short-title
-How to Save a Classifier to Disk in Scikit-learn
+Persisting scikit-learn models
 
 ## summary
-W&B Fully Connected editorial item
+I wrote a practical guide to saving and reloading scikit-learn classifiers.
 
 ## role-summary
-Author
+Guide author

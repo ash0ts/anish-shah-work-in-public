@@ -1,97 +1,76 @@
 <!-- copy-page: sources -->
 
 ## seo-title
-Sources and methodology
+What the numbers mean
 
 ## seo-description
-Inspect the counting rules, attribution boundaries, claim periods, caveats, and public bibliography behind Anish Shah’s work archive.
+See how I count projects, qualify the claims, and connect each number to its source.
 
 ## intro-eyebrow
-The public record
+Evidence and methods
 
 ## intro-title
-Sources, counts, and claims.
+What the numbers mean.
 
 ## intro-fallback
-Public counts come from the public inventory. Internally derived outcomes are rounded, dated, and qualified.
-
-## accounting-eyebrow
-Archive accounting
-
-## accounting-title
-Two inputs, two different outputs.
-
-## accounting-summary
-Footprint records describe the archive. Impact records support the claim ledger. They are reconciled separately.
-
-## archive-title
-Public archive
-
-## impact-title
-Impact ledger
-
-## nonclaims-eyebrow
-Attribution boundary
-
-## nonclaims-title
-What this site does not claim.
-
-## nonclaim-1
-Pipeline supported is not booked revenue or ARR.
-
-## nonclaim-2
-Program reach and organization outcomes are not personal causality.
-
-## nonclaim-3
-Course enrollments are not unique learners or completion counts.
-
-## nonclaim-4
-Same-day account creation is an association, not a conversion rate.
-
-## nonclaim-5
-MCP tool calls describe usage, not users, organizations, or revenue.
+I keep the source, date, attribution, and limit beside every claim.
 
 ## rules-eyebrow
-Reading rules
+How I count
 
 ## rules-title
-Four rules stay visible.
+Three rules stay beside the record.
 
 ## rule-1-title
-Count one underlying work once
-
-## rule-1-count-label
-public forms remain discoverable.
+I count one underlying project once
 
 ## rule-1-body
-Recordings, translations, mirrors, profiles, excerpts, and evidence pages do not inflate unique-work totals.
-
-## rule-2-title
-Keep forms attached to their source
-
-## rule-2-body
-A talk, regional appearance, replay, repository, and translation can describe the same body of work without becoming five unrelated accomplishments.
+Recordings, translations, mirrors, profiles, excerpts, and source pages do not inflate the total.
 
 ## rule-3-title
-Separate contribution from causality
+I separate contribution from causality
 
 ## rule-3-body
-Individual roles, program reach, supported pipeline, and organization-wide outcomes are named separately.
+My role, program reach, supported pipeline, and organization outcomes remain separate.
 
 ## rule-4-title
-Keep the qualifier beside the number
+I keep the limit beside the number
 
 ## rule-4-body
-Every internally derived measure keeps its time window, source class, attribution, rounding, and caveat in the same record.
+Every internally derived measure keeps its period, source, attribution, rounding, and caveat in the same row.
 
 ## claims-eyebrow
-Claim ledger
+Claims
 
 ## bibliography-eyebrow
-Public bibliography
+Sources
 
 ## bibliography-search-label
 Search sources
 
 ## bibliography-search-placeholder
-Work, claim, publisher, title…
+Project, claim, publisher, or title
+
+## source-type-label
+Source type
+
+## source-connected-label
+Connected to
+
+## source-link-label
+View source
+
+## source-kind-web
+Web page
+
+## source-kind-video
+Video
+
+## source-kind-code
+Code
+
+## source-kind-profile
+Profile
+
+## source-kind-method
+Method note

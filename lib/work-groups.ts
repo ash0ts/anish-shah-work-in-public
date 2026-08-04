@@ -68,6 +68,13 @@ const fallbackEntityIds: Record<WorkBucketId, string[]> = {
   ],
 };
 
+const homepageGroupIds: Record<WorkBucketId, string> = {
+  "products-open-source": "group:products:wandb-mcp",
+  "courses-learning": "group:courses:ai-curriculum",
+  "writing-research": "group:writing:wandbot",
+  "talks-programs": "group:talks:architecting-agents",
+};
+
 export function publicWorkGroupsFrom(
   bundle: AnishContentBundle,
 ): PublicWorkGroup[] {
@@ -85,14 +92,17 @@ export function featuredWorkBucketsFrom(bundle: AnishContentBundle) {
     ...bucket,
     groups: groups
       .filter((group) => group.bucket === bucket.id)
-      .filter((group) => group.featuredOrder !== null)
-      .sort(
-        (left, right) =>
+      .sort((left, right) => {
+        const preferred = homepageGroupIds[bucket.id];
+        if (left.id === preferred) return -1;
+        if (right.id === preferred) return 1;
+        return (
           (left.featuredOrder ?? Number.MAX_SAFE_INTEGER) -
             (right.featuredOrder ?? Number.MAX_SAFE_INTEGER) ||
-          left.title.localeCompare(right.title),
-      )
-      .slice(0, 3)
+          left.title.localeCompare(right.title)
+        );
+      })
+      .slice(0, 1)
       .map((group) => {
         const presentation = workGroupCopyFor(group.id);
         return {

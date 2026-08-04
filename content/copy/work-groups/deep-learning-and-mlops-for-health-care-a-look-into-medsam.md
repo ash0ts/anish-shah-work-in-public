@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0095 -->
 
 ## display-title
-Deep Learning and MLOps for Health Care: A Look into MedSAM
+Deep learning and MLOps for MedSAM
 
 ## short-title
-Deep Learning and MLOps for Health Care: A Look into MedSAM
+MedSAM MLOps
 
 ## summary
-Author.
+I wrote a report on applying deep learning and MLOps practices to MedSAM.
 
 ## role-summary
-Author
+Report author

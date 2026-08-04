@@ -1,0 +1,278 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+import {
+  PLAY_OBJECT_LANGUAGE,
+  copyVoicePolicyForField,
+} from "../lib/copy-voice-contract.ts";
+import { COPY_PAGE_DEFINITIONS } from "../lib/copy-contract.ts";
+import { parseCopyDocument } from "../scripts/lib/copy-deck.mjs";
+import {
+  assertCopyVoice,
+  auditCopyVoice,
+  countCopyWords,
+} from "../scripts/lib/copy-voice.mjs";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function entry({
+  key = "home.profile-summary",
+  surface = "home",
+  field = "profile-summary",
+  value,
+}) {
+  return {
+    key,
+    surface,
+    field,
+    value,
+    definition: copyVoicePolicyForField(surface, field),
+  };
+}
+
+function rules(report, severity = "errors") {
+  return report[severity].map((problem) => problem.rule);
+}
+
+test("voice profiles apply deterministic field budgets", () => {
+  assert.equal(copyVoicePolicyForField("home", "primary-cta").maxWords, 6);
+  assert.equal(copyVoicePolicyForField("work-group", "summary").minWords, 6);
+  assert.equal(copyVoicePolicyForField("play", "watch-title").voiceProfile, "play-object-title");
+  assert.equal(countCopyWords("Evaluation, observability, and tool interfaces."), 5);
+
+  const report = auditCopyVoice([
+    entry({
+      key: "home.primary-cta",
+      field: "primary-cta",
+      value: "See all of the complete work archive now",
+    }),
+  ]);
+  assert(rules(report).includes("field-budget"));
+  assert.throws(() => assertCopyVoice(report), /field-budget/u);
+});
+
+test("meaningless WorkGroup summaries fail while outcome-mechanism copy passes", () => {
+  for (const value of [
+    "Author.",
+    "2:00 PM workshop",
+    "In-person at the W&B office",
+    "W&B Fully Connected editorial item",
+  ]) {
+    const report = auditCopyVoice([
+      entry({
+        key: "group:test.summary",
+        surface: "work-group",
+        field: "summary",
+        value,
+      }),
+    ]);
+    assert(
+      rules(report).some((rule) => rule === "meaningless-summary" || rule === "field-budget"),
+      value,
+    );
+  }
+
+  const useful = auditCopyVoice([
+    entry({
+      key: "group:test.summary",
+      surface: "work-group",
+      field: "summary",
+      value: "I connected evaluation traces to the agent workflow so failures stayed inspectable.",
+    }),
+  ]);
+  assert.equal(useful.errors.length, 0);
+});
+
+test("WorkGroup role summaries reject first-person sentence openings", () => {
+  const report = auditCopyVoice([
+    entry({
+      key: "group:test.summary",
+      surface: "work-group",
+      field: "summary",
+      value: "I authored a guide to tracing model behavior with evaluation data.",
+    }),
+    entry({
+      key: "group:test.role-summary",
+      surface: "work-group",
+      field: "role-summary",
+      value: "I authored the guide.",
+    }),
+  ]);
+  assert(rules(report).includes("role-phrase"));
+  assert(rules(report, "warnings").includes("summary-role-duplication"));
+  assert.throws(() => assertCopyVoice(report), /role-phrase/u);
+});
+
+test("WorkGroup role summaries accept concise role phrases", () => {
+  const policy = copyVoicePolicyForField("work-group", "role-summary");
+  assert.equal(policy.voiceProfile, "work-role-summary");
+  assert.equal(policy.minWords, 2);
+  assert.equal(policy.maxWords, 12);
+
+  const report = auditCopyVoice([
+    entry({
+      key: "group:test.role-summary",
+      surface: "work-group",
+      field: "role-summary",
+      value: "Guide author",
+    }),
+  ]);
+  assert.equal(report.errors.length, 0);
+});
+
+test("shared concise roles are labels rather than duplicate narrative", () => {
+  const report = auditCopyVoice([
+    entry({
+      key: "group:first.role-summary",
+      surface: "work-group",
+      field: "role-summary",
+      value: "Upstream contributor across two pull requests",
+    }),
+    entry({
+      key: "group:second.role-summary",
+      surface: "work-group",
+      field: "role-summary",
+      value: "Upstream contributor across two pull requests",
+    }),
+  ]);
+  assert(!rules(report).includes("duplicate-sentence"));
+  assert.equal(report.errors.length, 0);
+});
+
+test("unsupported hype, exclamation marks, and emoji fail professional copy", () => {
+  for (const [value, expectedRule] of [
+    ["A groundbreaking, best-in-class evaluation system.", "unsupported-hype"],
+    ["See the work!", "professional-tone"],
+    ["Evaluation systems 🚀", "professional-tone"],
+  ]) {
+    const report = auditCopyVoice([entry({ value })]);
+    assert(rules(report).includes(expectedRule), value);
+  }
+});
+
+test("numeric and currency claims require an adjacent period and limitation", () => {
+  for (const value of ["$4M+ pipeline", "200K+ tool calls", "67% returning users"]) {
+    const report = auditCopyVoice([entry({ value })]);
+    assert(rules(report).includes("unqualified-number"), value);
+  }
+
+  const qualified = auditCopyVoice([
+    entry({
+      value: "$4M+ supported event pipeline across tracked 2024–2025 programs; not revenue.",
+    }),
+  ]);
+  assert(!rules(qualified).includes("unqualified-number"));
+
+  const benign = auditCopyVoice([
+    entry({ value: "I began this line of work in 2021 with GPT-4 and Phi-2." }),
+  ]);
+  assert(!rules(benign).includes("unqualified-number"));
+});
+
+test("metric guards distinguish compact magnitudes from product model names", () => {
+  const definition = COPY_PAGE_DEFINITIONS.home.find(
+    (candidate) => candidate.key === "primary-cta",
+  );
+  assert.doesNotThrow(() =>
+    parseCopyDocument({
+      file: "fixture.md",
+      source: "<!-- copy-page: fixture -->\n\n## primary-cta\nPhi-2 MLOps session\n",
+      expectedMarker: "<!-- copy-page: fixture -->",
+      definitions: [definition],
+    }),
+  );
+  assert.throws(
+    () =>
+      parseCopyDocument({
+        file: "fixture.md",
+        source: "<!-- copy-page: fixture -->\n\n## primary-cta\n2M+ users\n",
+        expectedMarker: "<!-- copy-page: fixture -->",
+        definitions: [definition],
+      }),
+    /quantitative metric wording/u,
+  );
+});
+
+test("duplicate narrative sentences fail across public surfaces", () => {
+  const repeated = "I keep the evidence beside the claim so its limits remain visible.";
+  const report = auditCopyVoice([
+    entry({ key: "home.profile-summary", value: repeated }),
+    entry({
+      key: "sources.intro-fallback",
+      surface: "sources",
+      field: "intro-fallback",
+      value: repeated,
+    }),
+  ]);
+  assert(rules(report).includes("duplicate-sentence"));
+
+  const metadataRepeat = auditCopyVoice([
+    entry({ key: "home.profile-summary", value: repeated }),
+    entry({
+      key: "home.seo-description",
+      field: "seo-description",
+      value: repeated,
+    }),
+  ]);
+  assert(!rules(metadataRepeat).includes("duplicate-sentence"));
+});
+
+test("Play titles use the literal object names associated with each category", () => {
+  const valid = Object.entries(PLAY_OBJECT_LANGUAGE).map(([object, requirement]) =>
+    entry({
+      key: `play.${object}-title`,
+      surface: "play",
+      field: `${object}-title`,
+      value: requirement.objectName,
+    }),
+  );
+  assert.equal(auditCopyVoice(valid).errors.length, 0);
+
+  const invalid = valid.map((candidate) =>
+    candidate.key === "play.watch-title"
+      ? { ...candidate, value: "Midnight Signal" }
+      : candidate,
+  );
+  const report = auditCopyVoice(invalid);
+  assert(rules(report).includes("play-object-name"));
+  assert.match(
+    report.errors.find((problem) => problem.rule === "play-object-name").message,
+    /Watch.*TV/u,
+  );
+});
+
+test("generic openings, filler, repetition, and long sentences warn without failing", () => {
+  const report = auditCopyVoice([
+    entry({
+      value: "A public ecosystem can leverage robust systems, robust interfaces, and robust workflows while this intentionally long sentence keeps adding abstract framing without naming the result, mechanism, evidence, or practical reason that a reader should care about it.",
+    }),
+  ]);
+  const warningRules = rules(report, "warnings");
+  assert(warningRules.includes("generic-opening"));
+  assert(warningRules.includes("filler-language"));
+  assert(warningRules.includes("local-repetition"));
+  assert(warningRules.includes("long-sentence"));
+  assert.equal(report.errors.length, 0);
+  assert.doesNotThrow(() => assertCopyVoice(report));
+});
+
+test("package scripts enforce voice validation without an external style service", async () => {
+  const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
+  assert.equal(packageJson.scripts["copy:voice"], "node scripts/copy-voice-check.mjs");
+  assert.match(packageJson.scripts["copy:audit"], /copy-voice-check\.mjs --audit/u);
+  assert.match(packageJson.scripts["copy:check"], /copy-voice-check\.mjs/u);
+  assert.match(packageJson.scripts["copy:test"], /tests\/copy-voice\.test\.mjs/u);
+  assert.doesNotMatch(
+    `${packageJson.scripts["copy:voice"]} ${packageJson.scripts["copy:audit"]}`,
+    /https?:|openai|anthropic|fetch|curl/iu,
+  );
+
+  const deckImplementation = await readFile(
+    path.join(root, "scripts/lib/copy-deck.mjs"),
+    "utf8",
+  );
+  assert.match(deckImplementation, /lib\/copy-voice-contract\.ts/u);
+  assert.match(deckImplementation, /scripts\/lib\/copy-voice\.mjs/u);
+});

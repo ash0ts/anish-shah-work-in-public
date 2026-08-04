@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0005 -->
 
 ## display-title
-Understanding LLM Performance With W&B and Snowpark Container Services
+Understanding LLM performance with W&B and Snowpark
 
 ## short-title
-Understanding LLM Performance With W&B and Snowpark Container Services
+LLM performance on Snowpark
 
 ## summary
-Exact live slot not recovered; secondary URL is a mirror/edit
+I demonstrated how to understand LLM performance with W&B and Snowpark Container Services.
 
 ## role-summary
-Demo presenter
+Technical demo presenter

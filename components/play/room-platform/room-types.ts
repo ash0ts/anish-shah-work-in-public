@@ -34,7 +34,9 @@ export type RoomObjectDefinition<Id extends RoomObjectId = RoomObjectId> = {
   label: string;
   roomLabel: string;
   provider: RoomProviderById[Id];
+  providerLabel: string;
   object: string;
+  screenEyebrow: string;
   title: string;
   description: string;
   approachPoseId: `${Id}-approach`;

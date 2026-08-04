@@ -1,16 +1,16 @@
 <!-- copy-record: group:courses:ai-curriculum -->
 
 ## display-title
-W&B AI course curriculum
+W&B AI curriculum: prompting, evaluation, and agents
 
 ## short-title
-AI course curriculum
+AI curriculum
 
 ## summary
-Three practical courses spanning prompting, evaluation, and agent engineering.
+I taught three practical courses on prompting, LLM evaluation, and agent engineering.
 
 ## role-summary
-Instructor across three courses
+Instructor across three courses and open-source materials contributor
 
 ## home-title
 AI curriculum: prompting, evaluation & agents

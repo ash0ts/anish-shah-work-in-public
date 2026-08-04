@@ -142,9 +142,24 @@ test("copy-deck edits select copy validation and browser review", () => {
   assert.equal(result.status, 0, output(result));
   assert.match(result.stdout, /- copy-deck/);
   assert.match(result.stdout, /npm run copy:check/);
+  assert.match(result.stdout, /npm run copy:voice/);
   assert.match(result.stdout, /npm run copy:test/);
   assert.match(result.stdout, /npm run copy:diff/);
+  assert.match(result.stdout, /npm run copy:audit/);
+  assert.match(result.stdout, /owner-check every FACT-CHECK field/);
   assert.match(result.stdout, /npm run validate:browser/);
+});
+
+test("voice contracts and the copy skill select voice, audit, fact-check, and skill gates", () => {
+  const result = plan(
+    "lib/copy-voice-contract.ts",
+    ".agents/skills/edit-anish-site-copy/SKILL.md",
+  );
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, /npm run copy:voice/);
+  assert.match(result.stdout, /npm run copy:audit/);
+  assert.match(result.stdout, /npm run skill:validate/);
+  assert.match(result.stdout, /owner-check every FACT-CHECK field/);
 });
 
 test("mixed dependency and copy changes retain copy diff and browser gates", () => {
@@ -182,6 +197,7 @@ test("--base classifies committed changes from the requested merge base", () => 
   assert.match(result.stdout, /content\/copy\/pages\/home\.md/);
   assert.match(result.stdout, /- copy-deck/);
   assert.match(result.stdout, /npm run copy:diff -- --base [a-f0-9]{40}/);
+  assert.match(result.stdout, /npm run copy:audit -- --base [a-f0-9]{40}/);
 });
 
 test("--base rejects Git-option injection", () => {

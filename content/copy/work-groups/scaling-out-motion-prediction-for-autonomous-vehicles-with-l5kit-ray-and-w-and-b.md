@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0050 -->
 
 ## display-title
-Scaling Out Motion Prediction for Autonomous Vehicles with L5Kit, Ray, and W&B
+Scaling autonomous-vehicle motion prediction
 
 ## short-title
-Scaling Motion Prediction with L5Kit, Ray, and W&B
+Motion prediction with L5Kit and Ray
 
 ## summary
-W&B Fully Connected editorial item
+I built and documented a distributed motion-prediction workflow using L5Kit, Ray, and W&B.
 
 ## role-summary
-Author
+Article author and demo repository creator

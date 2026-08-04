@@ -1,16 +1,16 @@
 <!-- copy-record: group:writing:prompt-engineering-langchain -->
 
 ## display-title
-Prompt Engineering LLMs with LangChain and W&B
+Prompt engineering with LangChain and W&B
 
 ## short-title
-Prompt Engineering with LangChain
+Prompt engineering with LangChain
 
 ## summary
-A practical guide to prompt engineering with LangChain and W&B.
+I wrote a practical guide to designing and tracking LLM prompts with LangChain and W&B.
 
 ## role-summary
-Author
+Guide author
 
 ## home-title
 Prompt engineering with LangChain & W&B

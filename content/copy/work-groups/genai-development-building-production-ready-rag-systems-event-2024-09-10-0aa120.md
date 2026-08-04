@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0019 -->
 
 ## display-title
-GenAI Development: Building Production-Ready RAG Systems
+Building RAG systems for production
 
 ## short-title
-GenAI Development: Building Production-Ready RAG Systems
+Production-ready RAG
 
 ## summary
-Webinar presenter.
+I presented a webinar on building RAG systems for production.
 
 ## role-summary
-Webinar presenter
+Webinar speaker

@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0026 -->
 
 ## display-title
-Building an LLM Judge with Weights & Biases
+Building an LLM judge with W&B
 
 ## short-title
-Building an LLM Judge with Weights & Biases
+Building an LLM judge
 
 ## summary
-Presenter.
+I presented a session on building an LLM judge with W&B.
 
 ## role-summary
-Presenter
+Session speaker

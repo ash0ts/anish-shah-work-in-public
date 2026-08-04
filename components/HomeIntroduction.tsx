@@ -11,13 +11,6 @@ type HomeIntroductionProps = {
   summary: string;
 };
 
-const trajectory = [
-  [SITE_COPY.home["trajectory-1-period"], SITE_COPY.home["trajectory-1-title"]],
-  [SITE_COPY.home["trajectory-2-period"], SITE_COPY.home["trajectory-2-title"]],
-  [SITE_COPY.home["trajectory-3-period"], SITE_COPY.home["trajectory-3-title"]],
-  [SITE_COPY.home["trajectory-4-period"], SITE_COPY.home["trajectory-4-title"]],
-] as const;
-
 export function HomeIntroduction({
   headline,
   summary,
@@ -68,22 +61,10 @@ export function HomeIntroduction({
       <div className={styles.copy} data-intro-copy>
         <p className={styles.headline}>{headline}</p>
         <p className={styles.summary}>{summary}</p>
-        <p className={styles.focus}>
-          <span>{SITE_COPY.home["focus-label"]}</span>
-          {SITE_COPY.home["focus-body"]}
-        </p>
         <Link className={styles.action} href="/work">
           {SITE_COPY.home["primary-cta"]} <span aria-hidden="true">↗</span>
         </Link>
       </div>
-      <ol className={styles.trajectory} aria-label="Career trajectory">
-        {trajectory.map(([period, title]) => (
-          <li key={period}>
-            <span>{period}</span>
-            <strong>{title}</strong>
-          </li>
-        ))}
-      </ol>
     </section>
   );
 }

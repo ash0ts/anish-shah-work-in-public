@@ -1,13 +1,13 @@
 <!-- copy-record: group:products:openai-cookbook -->
 
 ## display-title
-OpenAI Cookbook contributions
+Two contributions to the OpenAI Cookbook
 
 ## short-title
-OpenAI Cookbook
+OpenAI Cookbook pull requests
 
 ## summary
-A related pair of public contributions to the OpenAI Cookbook.
+I contributed two related changes to the OpenAI Cookbook.
 
 ## role-summary
-Contributor
+Upstream contributor across two pull requests

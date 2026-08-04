@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0060 -->
 
 ## display-title
-How to Adapt your LLM for Question Answering with Prompt-Tuning using NVIDIA NeMo and Weights & Biases
+Prompt-tuning LLMs for question answering
 
 ## short-title
-Prompt-Tuning Q&A with NVIDIA NeMo and W&B
+Prompt-tuning with NVIDIA NeMo
 
 ## summary
-W&B Fully Connected editorial item
+I wrote and implemented a question-answering workflow using prompt tuning, NVIDIA NeMo, and W&B.
 
 ## role-summary
-Author
+Article and repository author

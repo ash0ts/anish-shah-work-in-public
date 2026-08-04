@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0025 -->
 
 ## display-title
-How Do We Actually Evaluate LLM Apps?
+Evaluating LLM applications in practice
 
 ## short-title
-How Do We Actually Evaluate LLM Apps?
+Practical LLM evaluation
 
 ## summary
-Presenter.
+I presented practical approaches to evaluating LLM applications.
 
 ## role-summary
-Presenter
+Session speaker

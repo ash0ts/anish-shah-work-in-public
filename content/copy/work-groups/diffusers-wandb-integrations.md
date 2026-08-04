@@ -1,13 +1,13 @@
 <!-- copy-record: group:products:diffusers-wandb -->
 
 ## display-title
-Diffusers W&B integrations
+W&B integrations for Diffusers
 
 ## short-title
-Diffusers integrations
+Diffusers × W&B
 
 ## summary
-A related pair of public contributions integrating W&B with Diffusers.
+I contributed W&B integrations to Hugging Face Diffusers through two related changes.
 
 ## role-summary
-Contributor
+Upstream contributor across two pull requests

@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0028 -->
 
 ## display-title
-HEMM: Holistic Evaluation of Multi-modal Generative Models
+HEMM: holistic multimodal model evaluation
 
 ## short-title
-HEMM: Holistic Evaluation of Multi-modal Generative Models
+HEMM multimodal evaluation
 
 ## summary
-Exact session slot not recovered; historical MLOps World video-index URL now returns 404
+I presented a virtual workshop on holistic evaluation of multimodal generative models.
 
 ## role-summary
 Virtual workshop speaker

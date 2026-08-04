@@ -126,10 +126,6 @@ export default async function SourcesPage({
         return metric ? [metric] : [];
       }),
     }));
-  const publicWorkGroupCount = bundle.workGroups.filter(
-    (group) => group.publicationState === "public",
-  ).length;
-
   return (
     <main id="main" className={`site-main ${styles.page}`}>
       <header className={styles.intro}>
@@ -142,118 +138,13 @@ export default async function SourcesPage({
       </header>
 
       <section
-        className={styles.accounting}
-        aria-labelledby="accounting-title"
-      >
-        <header>
-          <p className={styles.eyebrow}>{SITE_COPY.sources["accounting-eyebrow"]}</p>
-          <h2 id="accounting-title">{SITE_COPY.sources["accounting-title"]}</h2>
-          <p>{SITE_COPY.sources["accounting-summary"]}</p>
-        </header>
-        <div className={styles.accountingFlows}>
-          <section aria-labelledby="archive-flow-title">
-            <h3 id="archive-flow-title">{SITE_COPY.sources["archive-title"]}</h3>
-            <ol>
-              <li>
-                <strong>{bundle.sourceSummary.footprintRows}</strong>
-                <span>footprint observations</span>
-              </li>
-              <li>
-                <strong>{publicWorkGroupCount}</strong>
-                <span>bodies of work</span>
-              </li>
-              <li>
-                <strong>{bundle.sourceSummary.publicItems}</strong>
-                <span>public forms</span>
-              </li>
-              <li>
-                <strong>{bundle.evidence.length}</strong>
-                <span>evidence records</span>
-              </li>
-            </ol>
-          </section>
-          <section aria-labelledby="impact-flow-title">
-            <h3 id="impact-flow-title">{SITE_COPY.sources["impact-title"]}</h3>
-            <ol>
-              <li>
-                <strong>{bundle.sourceSummary.impactRows}</strong>
-                <span>impact observations reviewed</span>
-              </li>
-              <li>
-                <strong>{metrics.length}</strong>
-                <span>rounded public measures</span>
-              </li>
-            </ol>
-          </section>
-        </div>
-      </section>
-
-      <section
-        className={styles.nonClaims}
-        aria-labelledby="non-claims-title"
-      >
-        <header>
-          <p className={styles.eyebrow}>{SITE_COPY.sources["nonclaims-eyebrow"]}</p>
-          <h2 id="non-claims-title">{SITE_COPY.sources["nonclaims-title"]}</h2>
-        </header>
-        <ul>
-          {[1, 2, 3, 4, 5].map((index) => (
-            <li key={index}>{SITE_COPY.sources[`nonclaim-${index}` as keyof typeof SITE_COPY.sources]}</li>
-          ))}
-        </ul>
-      </section>
-
-      <section className={styles.rules} id="public-footprint" aria-labelledby="rules-title">
-        <header>
-          <p className={styles.eyebrow}>{SITE_COPY.sources["rules-eyebrow"]}</p>
-          <h2 id="rules-title">{SITE_COPY.sources["rules-title"]}</h2>
-        </header>
-        <ol>
-          <li>
-            <span>01</span>
-            <div>
-              <h3>{SITE_COPY.sources["rule-1-title"]}</h3>
-              <p>
-                <strong>
-                  {bundle.sourceSummary.publicItems}{" "}
-                  {SITE_COPY.sources["rule-1-count-label"]}
-                </strong>{" "}
-                {SITE_COPY.sources["rule-1-body"]}
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>02</span>
-            <div>
-              <h3>{SITE_COPY.sources["rule-2-title"]}</h3>
-              <p>{SITE_COPY.sources["rule-2-body"]}</p>
-            </div>
-          </li>
-          <li>
-            <span>03</span>
-            <div>
-              <h3>{SITE_COPY.sources["rule-3-title"]}</h3>
-              <p>{SITE_COPY.sources["rule-3-body"]}</p>
-            </div>
-          </li>
-          <li>
-            <span>04</span>
-            <div>
-              <h3>{SITE_COPY.sources["rule-4-title"]}</h3>
-              <p>{SITE_COPY.sources["rule-4-body"]}</p>
-            </div>
-          </li>
-        </ol>
-      </section>
-
-      <section
         className={styles.claims}
         id="internal-analytics"
         aria-labelledby="claims-title"
       >
         <header>
           <p className={styles.eyebrow}>{SITE_COPY.sources["claims-eyebrow"]}</p>
-          <h2 id="claims-title">{metrics.length} measures in four contexts.</h2>
+          <h2 id="claims-title">{metrics.length} claims, each with its limit.</h2>
         </header>
         <div className={styles.themeGroups}>
           {groupedMetrics.map((theme) => (
@@ -293,7 +184,7 @@ export default async function SourcesPage({
                         </div>
                       </dl>
                       <div className={styles.metricEvidence}>
-                        <span>Public evidence</span>
+                        <span>Sources</span>
                         {metric.publicEvidenceIds.flatMap((evidenceId) => {
                           const source = evidenceById.get(evidenceId);
                           if (!source) return [];
@@ -319,6 +210,33 @@ export default async function SourcesPage({
             </section>
           ))}
         </div>
+      </section>
+
+      <section className={styles.rules} id="public-footprint" aria-labelledby="rules-title">
+        <header>
+          <p className={styles.eyebrow}>{SITE_COPY.sources["rules-eyebrow"]}</p>
+          <h2 id="rules-title">{SITE_COPY.sources["rules-title"]}</h2>
+          <p>
+            {bundle.sourceSummary.footprintRows} source observations resolve to{" "}
+            {bundle.workGroups.length} projects and series. Related records stay
+            searchable without inflating that count.
+          </p>
+        </header>
+        <ol>
+          {[
+            ["01", "rule-1-title", "rule-1-body"],
+            ["02", "rule-3-title", "rule-3-body"],
+            ["03", "rule-4-title", "rule-4-body"],
+          ].map(([number, titleKey, bodyKey]) => (
+            <li key={number}>
+              <span>{number}</span>
+              <div>
+                <h3>{SITE_COPY.sources[titleKey as keyof typeof SITE_COPY.sources]}</h3>
+                <p>{SITE_COPY.sources[bodyKey as keyof typeof SITE_COPY.sources]}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
       </section>
 
       <SourcesIndex

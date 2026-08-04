@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0056 -->
 
 ## display-title
-Applying Ethical Principles & Scoring to Langchain & Visualizing with W&B Prompts
+Ethical scoring for LangChain applications
 
 ## short-title
-Ethical Scoring with LangChain and W&B Prompts
+Ethical scoring with LangChain
 
 ## summary
-W&B Fully Connected editorial item
+I wrote about scoring LangChain outputs against ethical principles and visualizing the results with W&B Prompts.
 
 ## role-summary
-Author
+Article author

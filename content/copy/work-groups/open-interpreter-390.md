@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:ar-fp-0178 -->
 
 ## display-title
-Open Interpreter integration
+Open Interpreter integration contribution
 
 ## short-title
-Open Interpreter
+Open Interpreter pull request
 
 ## summary
-A public integration contribution to Open Interpreter.
+I contributed an integration change to Open Interpreter.
 
 ## role-summary
-Contributor
+Integration contributor

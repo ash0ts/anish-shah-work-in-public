@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0023 -->
 
 ## display-title
-Train, Fine-Tune, and Manage Models from Experimentation to Production
+From model training to production
 
 ## short-title
-Train, Fine-Tune, and Manage Models from Experimentation to Production
+Models from training to production
 
 ## summary
-1:00–2:45 PM; separate public appearance from the W&B + Google meetup
+I led a workshop on training, fine-tuning, and managing models from experimentation through production.
 
 ## role-summary
-Quarter-day workshop instructor
+Workshop instructor

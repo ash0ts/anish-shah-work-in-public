@@ -1,39 +1,81 @@
 ---
 name: edit-anish-site-copy
-description: Edit or review plain-text public presentation copy for the Anish Shah site through its Git-owned Markdown copy deck. Use for homepage, Work, Play, Sources, navigation, footer, SEO, room flavor, 404, profile, methodology, or WorkGroup wording, and for preparing a copy-only pull request or implementation request. Keeps facts, metrics, evidence, privacy, provider policy, routes, behavior, generated files, secrets, and deployment code protected.
+description: Edit, review, simplify, or propose public-facing wording for the Anish Shah site through its Git-owned copy deck. Use for page headlines, summaries, calls to action, WorkGroup presentation copy, Play object language, metadata, empty states, evidence presentation, or copywriter PRs. Enforces the first-person technical voice, editorial versus fact-check risk classes, protected claims and source records, provider and privacy boundaries, and the engineering-request workflow for changes that cannot be made in copy alone.
 ---
 
 # Edit Anish Site Copy
 
-Improve public wording without changing facts, structure, behavior, security, or deployment.
+Improve the site's language without changing its facts, structure, behavior, or trust boundaries.
 
 ## Workflow
 
-1. Read [copy-fields.md](references/copy-fields.md) and choose the existing field(s) that own the requested surface.
-2. Edit only text beneath existing `## field-name` headings in `content/copy/pages/*.md` or `content/copy/work-groups/*.md`.
-3. Never rename, add, remove, reorder, or duplicate headings. Never change `copy-page` or `copy-record` comments.
-4. Keep copy plain text. Do not add Markdown formatting, links, HTML, JSX, code, variables, templates, imports, or instructions to the application.
-5. Separate direct editorial wording from factual wording that needs owner verification. If the request touches a protected field or layout/behavior, put it in the PR implementation-request section instead of changing code or data.
-6. Run or ask the owner/CI to run:
+1. Read the repository-root `AGENTS.md`, inspect `git status`, and use `$maintain-anish-site` alongside this skill.
+2. Trace the visible text to `content/copy/**`. Treat [copy-fields.md](references/copy-fields.md), the typed field registry, and `content/copy/README.md` as authoritative. Do not patch generated copy, canonical content, JSX, or D1 to bypass the deck.
+3. Classify every requested change:
+   - `editorial`: edit directly within an existing copy field.
+   - `fact_check`: edit only when the proposed wording is supported by the sanitized content; flag it for owner verification.
+   - protected or structural: do not implement through the deck. Put the proposal in the pull request's **Implementation or visual requests** section.
+   Classify what the proposed words say, not only the field that contains them. A factual clause makes the affected field `fact_check`; a protected clause remains protected even inside an otherwise editorial field.
+4. Read the applicable reference before drafting:
+   - Voice, positioning, terminology, or general editing: [voice-and-positioning.md](references/voice-and-positioning.md).
+   - Home, Work, Sources, Play, metadata, error, or empty-state copy: [surface-patterns.md](references/surface-patterns.md).
+   - Numbers, factual claims, sources, privacy, consent, provider states, or policy wording: [claims-and-evidence.md](references/claims-and-evidence.md).
+   - Protected facts, system behavior, and prohibited edits: [protected-boundaries.md](references/protected-boundaries.md).
+   - Branch, pull-request, preview, and owner-review workflow: [pull-request-workflow.md](references/pull-request-workflow.md).
+5. Edit only the plain text beneath existing `## field-name` headings. Preserve each `copy-page` or `copy-record` marker and every field heading. Do not add Markdown links, HTML, JSX, code fences, templates, variables, URLs, or executable content.
+6. Keep one sentence or element responsible for one job. Remove repeated framing before adding new prose. CTA wording is editorial only when its destination and behavior stay unchanged. When language changes hierarchy or layout, also use `frontend-design` and route the request through engineering; loading that skill does not authorize copywriters to edit JSX, CSS, routes, or behavior.
+7. Validate from the repository root:
 
-   ```bash
+   ```sh
    npm run copy:check
-   npm run copy:diff -- --base origin/main
+   npm run copy:voice
+   npm run copy:diff -- --base <ref>
+   npm run copy:audit -- --base <ref>
    npm run copy:test
    ```
 
-7. Follow [pull-request-workflow.md](references/pull-request-workflow.md), inspect the synthetic preview at all affected routes, and resolve factual review before merge.
+   If a command is not present on the current branch, report that integration dependency rather than substituting an unreviewed tool.
+8. Review every affected route at narrow and desktop widths. Check wrapping, visible and accessible label agreement, metadata alignment, and repeated information.
+9. Follow the copy-only pull-request and synthetic-preview workflow, then report changed copy keys, routes, risk classes, fact-check items, validation results, and any implementation request that remains.
 
-## Copy Quality
+## Ownership Boundaries
 
-- Lead with the idea a technical reader should retain, then supply only necessary context.
-- Prefer specific, evidence-compatible language over superlatives, jargon, or vague impact claims.
-- Preserve distinctions such as enrollments versus learners, attendance versus registration, pipeline supported versus revenue, and public artifact versus unique work.
-- Keep titles, CTAs, labels, and metadata within their existing field limits. Do not compress a factual qualification out of meaning.
-- Read the result at 320px and with a screen reader mindset: visible labels must still make sense without surrounding visual effects.
+### Edit directly
 
-## Stop and Request Engineering
+- Page framing, section introductions, calls to action, nonbehavioral labels, search placeholders, no-results text, and 404 wording.
+- Play object names and flavor text when literal categories remain clear.
+- SEO and social descriptions when they remain consistent with visible copy and structured data.
 
-Do not edit application code, JSON, IDs, links, routes, data, generated output, workflows, Studio, connectors, security, migrations, or deployment files. Use [protected-boundaries.md](references/protected-boundaries.md) whenever a request might affect facts or system behavior.
+### Edit with owner fact-check
 
-For layout, hierarchy, interaction, additional fields, destinations, accessibility behavior, or new content structures, describe the intended outcome and affected surface in the copy PR's implementation-request section. The owner can add reviewed engineering commits or open a linked engineering PR; that change leaves the copy-only trusted lane.
+- Profile positioning and current-focus language.
+- WorkGroup display titles, short titles, summaries, role summaries, and featured presentation text.
+- Wording that mentions dates, organizations, roles, scope, attribution, product behavior, or technical capability.
+- An explicitly registered citation display label that preserves the immutable source title in accessible detail.
+
+For WorkGroup factual copy, resolve the `copy-record` stable ID against the sanitized public bundle. Record the canonical subject and evidence IDs that support the clause. If it cannot be resolved there, do not add it.
+
+### Never change through copy
+
+- Metric values, labels, qualifiers, periods, scope, attribution, source labels, or evidence associations.
+- IDs, slugs, aliases, routes, links, ordering, visibility, relationships, group membership, or featured state.
+- Source titles, publishers, URLs, event dates, bibliography records, generated bundles, schemas, attestations, or private inputs.
+- Privacy, retention, deletion, consent, provider attribution, OAuth, security, legal, synchronization, error-state semantics, or public-payload contracts.
+- Purely programmatic accessible names, button behavior, or other interaction contracts.
+
+Do not weaken a protected statement to make prose smoother. Propose the desired outcome and explain why in the pull request instead.
+A short citation label is a separate registered presentation field; it never replaces the immutable title. Verify that the rendered citation still exposes the exact title in accessible detail.
+
+## Engineering-Request Workflow
+
+When copy implies a new layout, interaction, route, field, fact, policy, or behavior:
+
+1. Keep the copy-only change limited to allowed deck files.
+2. Describe the request in **Implementation or visual requests**, including the affected route, user outcome, proposed language, and acceptance criteria.
+3. Let the owner add implementation commits to the same PR, which converts it to the normal full-code workflow, or open a linked engineering PR.
+4. Stop treating the change as copy-only as soon as code, configuration, workflows, migrations, generated output, or protected content changes.
+
+Never deploy, migrate, publish, rotate credentials, or mutate production from this skill.
+The engineering-request workflow is not an approval path for changing protected facts. Layout may change only while the complete canonical value, period, scope, attribution, qualifier, and source remain adjacent.
+
+For each fact-check field, report its copy key, stable subject ID, proposed factual clause, supporting sanitized fact or evidence ID, and owner-review status.

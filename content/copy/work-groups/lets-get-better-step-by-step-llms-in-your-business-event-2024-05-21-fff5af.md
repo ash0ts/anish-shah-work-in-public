@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0015 -->
 
 ## display-title
-Let's Get Better Step By Step — LLMs in Your Business
+Introducing LLMs into business workflows
 
 ## short-title
-Let's Get Better Step By Step — LLMs in Your Business
+LLMs in business workflows
 
 ## summary
-Presenter.
+I presented a step-by-step approach to introducing LLMs into business workflows.
 
 ## role-summary
-Presenter
+Session speaker

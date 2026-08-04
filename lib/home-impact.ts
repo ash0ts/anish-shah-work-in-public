@@ -3,6 +3,7 @@ import type {
   MetricTheme,
   PublicImpactMetric,
 } from "@/types/content";
+import { SITE_COPY } from "@/lib/copy";
 
 export type HomepageImpactDatum = {
   metric: PublicImpactMetric;
@@ -19,113 +20,71 @@ export type HomepageImpactTrack = {
   metrics: HomepageImpactDatum[];
 };
 
-type TrackSpec = Omit<HomepageImpactTrack, "metrics"> & {
-  metricKeys: Array<{
-    key: string;
-    shortLabel: string;
-  }>;
-};
-
-const trackSpecs: TrackSpec[] = [
+const trackSpecs = [
   {
     id: "deployed",
     theme: "product",
-    label: "Use → return",
-    statement: "Beyond first-run curiosity.",
-    periodLabel: "Mar—Jul 2026",
-    qualifier: "Internal analytics; measures are independent.",
-    metricKeys: [
-      {
-        key: "mcp_users_and_organizations",
-        shortLabel: "users · 1K+ organizations",
-      },
-      {
-        key: "mcp_tool_calls",
-        shortLabel: "MCP tool calls",
-      },
-      {
-        key: "returning_user_share",
-        shortLabel: "weekly active users returned",
-      },
-    ],
+    metricId: "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+    label: SITE_COPY.home["proof-1-label"],
+    statement: SITE_COPY.home["proof-1-statement"],
+    shortLabel: "MCP tool calls",
   },
   {
     id: "taught",
     theme: "learning",
-    label: "Learning + action",
-    statement: "Learning coincided with action.",
-    periodLabel: "2024—26",
-    qualifier:
-      "Internal analytics; enrollments/signups are not unique learners; association is not conversion.",
-    metricKeys: [
-      {
-        key: "course_enrollments",
-        shortLabel: "enrollments · 3 courses",
-      },
-      {
-        key: "same_day_account_creation_share",
-        shortLabel: "same-day account association",
-      },
-      {
-        key: "launch_signups",
-        shortLabel: "Evals signups · ~36 hours",
-      },
-    ],
+    metricId: "metric:courses:enrollments:2026-07-30",
+    label: SITE_COPY.home["proof-2-label"],
+    statement: SITE_COPY.home["proof-2-statement"],
+    shortLabel: "course enrollments",
   },
   {
     id: "programs",
     theme: "programs",
-    label: "Programs + pipeline",
-    statement: "Downstream, not just attendance.",
-    periodLabel: "2024—25",
-    qualifier:
-      "Internal analytics; supported pipeline is not revenue, ARR, or personal causality.",
-    metricKeys: [
-      {
-        key: "pipeline_supported_2024_2025",
-        shortLabel: "supported event pipeline",
-      },
-    ],
+    metricId: "metric:events:pipeline-supported:2024-2025",
+    label: SITE_COPY.home["proof-3-label"],
+    statement: SITE_COPY.home["proof-3-statement"],
+    shortLabel: "supported event pipeline",
   },
-];
+] as const;
+
+export const homepageImpactMetricIds = trackSpecs.map((spec) => spec.metricId);
 
 export function homepageImpactTracksFrom(
   bundle: AnishContentBundle,
 ): HomepageImpactTrack[] {
-  const publicMetrics = bundle.metrics.filter(
-    (metric): metric is PublicImpactMetric =>
-      "displayValue" in metric && metric.publicationState === "public",
-  );
-  const metricByKey = new Map(
-    publicMetrics.map((metric) => [metric.key, metric]),
+  const publicMetrics = new Map(
+    bundle.metrics
+      .filter(
+        (metric): metric is PublicImpactMetric =>
+          "displayValue" in metric && metric.publicationState === "public",
+      )
+      .map((metric) => [metric.id, metric]),
   );
   const allowedMetricIdsByTheme = new Map(
-    bundle.metricGroups.map((group) => [
-      group.theme,
-      new Set(group.metricIds),
-    ]),
+    bundle.metricGroups.map((group) => [group.theme, new Set(group.metricIds)]),
   );
 
-  return trackSpecs.flatMap((spec) => {
-    const allowedIds = allowedMetricIdsByTheme.get(spec.theme);
-    const metrics = spec.metricKeys.flatMap(({ key, shortLabel }) => {
-      const metric = metricByKey.get(key);
-      return metric && allowedIds?.has(metric.id)
-        ? [{ metric, shortLabel }]
-        : [];
-    });
-    if (!metrics.length) return [];
-
-    return [
-      {
-        id: spec.id,
-        theme: spec.theme,
-        label: spec.label,
-        statement: spec.statement,
-        periodLabel: spec.periodLabel,
-        qualifier: spec.qualifier,
-        metrics,
-      },
-    ];
+  return trackSpecs.map((spec) => {
+    const metric = publicMetrics.get(spec.metricId);
+    if (!metric || !allowedMetricIdsByTheme.get(spec.theme)?.has(metric.id)) {
+      throw new Error(
+        `Required homepage metric ${spec.metricId} is missing, unpublished, or assigned to the wrong theme.`,
+      );
+    }
+    const qualifier = metric.qualifier?.trim();
+    if (!qualifier) {
+      throw new Error(
+        `Homepage metric ${metric.id} must be public and include its limit.`,
+      );
+    }
+    return {
+      id: spec.id,
+      theme: spec.theme,
+      label: spec.label,
+      statement: spec.statement,
+      periodLabel: metric.period.label,
+      qualifier,
+      metrics: [{ metric, shortLabel: spec.shortLabel }],
+    };
   });
 }

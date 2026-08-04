@@ -215,7 +215,7 @@ export function RoomRuntime() {
             </Suspense>
             {!ready ? (
               <RoomPosterFallback
-                detail="The semantic object directory is already available."
+                detail="The object links are ready below."
                 title="Setting out the room…"
               />
             ) : null}

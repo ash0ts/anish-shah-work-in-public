@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0042 -->
 
 ## display-title
-Optimizing and Evaluating Agentic AI Applications
+Optimizing and evaluating agentic applications
 
 ## short-title
-Optimizing and Evaluating Agentic AI Applications
+Evaluating agentic applications
 
 ## summary
-2:00 PM workshop
+I co-led a workshop on evaluating and improving agentic AI applications.
 
 ## role-summary
-Workshop co-instructor with Sam Stowers
+Co-instructor with Sam Stowers

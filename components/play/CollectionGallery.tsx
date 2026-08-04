@@ -7,6 +7,7 @@ import type {
   PreviewFixtureScenario,
   PublicGallery,
 } from "./connector-model";
+import { SITE_COPY } from "@/lib/copy";
 
 export function GalleryView({
   provider,
@@ -111,7 +112,7 @@ export function GalleryView({
         <span>
           {start}—{end} of {gallery.totalItems.toLocaleString()}
         </span>
-        <span>{busy ? "Updating view…" : "Public snapshot"}</span>
+        <span>{busy ? "Updating view…" : SITE_COPY.play["view-browse-all"]}</span>
       </div>
 
       {gallery.items.length ? (
