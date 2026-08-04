@@ -89,11 +89,15 @@ test("campaign invalidates stale async work and hands focus between scenes", asy
 });
 
 test("no-JavaScript renders the dossier without dead campaign controls", async () => {
-  const page = await source("app/simulation/page.tsx");
-  const campaign = await source("components/simulation/SimulationCampaign.tsx");
+  const [page, campaign, copy] = await Promise.all([
+    source("app/simulation/page.tsx"),
+    source("components/simulation/SimulationCampaign.tsx"),
+    source("content/copy/pages/simulation.md"),
+  ]);
   assert.match(campaign, /data-simulation-interactive/);
   assert.match(page, /\[data-simulation-interactive\] \{ display: none !important; \}/);
-  assert.match(page, /complete inspectable source deck remains available below/);
+  assert.match(page, /SITE_COPY\.simulation\["noscript-summary"\]/);
+  assert.match(copy, /complete inspectable source deck remains available below/u);
 });
 
 test("both gameplay modes use authored pacing and easier recalibration", async () => {

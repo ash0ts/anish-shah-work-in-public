@@ -35,6 +35,7 @@ import type {
   VisitorSignal,
 } from "./types";
 import styles from "@/app/simulation/simulation.module.css";
+import { SITE_COPY } from "@/lib/copy";
 
 const LazyActionArena = lazy(() => import("./ActionArena"));
 
@@ -374,15 +375,13 @@ function BootScreen({
       </div>
 
       <div className={styles.bootCopy}>
-        <p>Meet Me mode · Campaign {dossier.campaignVersion}</p>
-        <h1 id="simulation-boot-title" tabIndex={-1}>
-          You are not here to beat <span>4N1SH.</span>
-        </h1>
         <p>
-          You are here to beat its first, overconfident answer. Retrieve the
-          public record, keep its qualifiers intact, and leave with a better
-          question for the real person.
+          {SITE_COPY.simulation["boot-eyebrow"]} · Campaign {dossier.campaignVersion}
         </p>
+        <h1 id="simulation-boot-title" tabIndex={-1}>
+          {SITE_COPY.simulation["boot-title"]}
+        </h1>
+        <p>{SITE_COPY.simulation["boot-summary"]}</p>
       </div>
 
       <form
@@ -456,7 +455,7 @@ function BootScreen({
         </fieldset>
 
         <button className={styles.bootButton} type="submit">
-          Boot the public model
+          {SITE_COPY.simulation["start-cta"]}
           <span aria-hidden="true">↳</span>
         </button>
         <p>

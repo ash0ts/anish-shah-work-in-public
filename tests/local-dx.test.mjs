@@ -22,6 +22,7 @@ function environmentTemplate(overrides = {}) {
     LOCAL_OWNER_EMAIL: "owner@test.local",
     CONNECTOR_ENCRYPTION_KEY: "",
     RATE_LIMIT_SALT: "",
+    SIMULATION_SESSION_HMAC_KEY: "",
     STEAM_DATA_STORAGE_COUNTRIES: "United States",
     SITE_URL: "http://localhost:3000",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
@@ -35,6 +36,7 @@ function environmentTemplate(overrides = {}) {
 async function writeDoctorFixture(root, options = {}) {
   const secretA = Buffer.alloc(32, 17).toString("base64");
   const secretB = Buffer.alloc(32, 29).toString("base64");
+  const secretC = Buffer.alloc(32, 37).toString("base64");
   await writeFile(
     path.join(root, "package.json"),
     JSON.stringify({
@@ -59,6 +61,7 @@ async function writeDoctorFixture(root, options = {}) {
     environmentTemplate({
       CONNECTOR_ENCRYPTION_KEY: secretA,
       RATE_LIMIT_SALT: secretB,
+      SIMULATION_SESSION_HMAC_KEY: secretC,
       ...(options.environment ?? {}),
     }),
     { mode: options.mode ?? 0o600 },
@@ -71,7 +74,7 @@ async function writeDoctorFixture(root, options = {}) {
   if (options.browser !== false) {
     await mkdir(path.join(home, "Applications/Safari.app"), { recursive: true });
   }
-  return { home, secretA, secretB };
+  return { home, secretA, secretB, secretC };
 }
 
 test("setup:local creates an owner-only file and fills only missing secrets", async () => {
@@ -92,9 +95,14 @@ test("setup:local creates an owner-only file and fills only missing secrets", as
   assert.deepEqual(result.generated, [
     "CONNECTOR_ENCRYPTION_KEY",
     "RATE_LIMIT_SALT",
+    "SIMULATION_SESSION_HMAC_KEY",
   ]);
   assert.equal(parsed.values.get("CONNECTOR_ENCRYPTION_KEY"), Buffer.alloc(32, 9).toString("base64"));
   assert.equal(parsed.values.get("RATE_LIMIT_SALT"), Buffer.alloc(32, 9).toString("base64"));
+  assert.equal(
+    parsed.values.get("SIMULATION_SESSION_HMAC_KEY"),
+    Buffer.alloc(32, 9).toString("base64"),
+  );
   assert.equal(metadata.mode & 0o777, 0o600);
 });
 
@@ -102,9 +110,11 @@ test("setup:local preserves configured values and repairs permissions without ge
   const root = await temporaryRoot();
   const first = Buffer.alloc(32, 3).toString("base64");
   const second = Buffer.alloc(32, 4).toString("base64");
+  const third = Buffer.alloc(32, 5).toString("base64");
   const source = environmentTemplate({
     CONNECTOR_ENCRYPTION_KEY: first,
     RATE_LIMIT_SALT: second,
+    SIMULATION_SESSION_HMAC_KEY: third,
   });
   await writeFile(path.join(root, ".env.example"), environmentTemplate());
   await writeFile(path.join(root, ".env.local"), source, { mode: 0o644 });
@@ -125,10 +135,14 @@ test("setup:local preserves configured values and repairs permissions without ge
 test("setup:local fills one missing secret without replacing the configured peer", async () => {
   const root = await temporaryRoot();
   const existing = Buffer.alloc(32, 41).toString("base64");
+  const existingSimulation = Buffer.alloc(32, 42).toString("base64");
   await writeFile(path.join(root, ".env.example"), environmentTemplate());
   await writeFile(
     path.join(root, ".env.local"),
-    environmentTemplate({ CONNECTOR_ENCRYPTION_KEY: existing }),
+    environmentTemplate({
+      CONNECTOR_ENCRYPTION_KEY: existing,
+      SIMULATION_SESSION_HMAC_KEY: existingSimulation,
+    }),
     { mode: 0o600 },
   );
   let calls = 0;
@@ -147,6 +161,10 @@ test("setup:local fills one missing secret without replacing the configured peer
   assert.deepEqual(result.generated, ["RATE_LIMIT_SALT"]);
   assert.equal(calls, 1);
   assert.equal(parsed.values.get("CONNECTOR_ENCRYPTION_KEY"), existing);
+  assert.equal(
+    parsed.values.get("SIMULATION_SESSION_HMAC_KEY"),
+    existingSimulation,
+  );
   assert.equal(
     parsed.values.get("RATE_LIMIT_SALT"),
     Buffer.alloc(32, 52).toString("base64"),
@@ -263,6 +281,7 @@ test("doctor reports a ready local environment without exposing values", async (
   assert.equal(report.checks.every((entry) => entry.status === "pass"), true);
   assert.equal(serialized.includes(fixture.secretA), false);
   assert.equal(serialized.includes(fixture.secretB), false);
+  assert.equal(serialized.includes(fixture.secretC), false);
   assert.equal(serialized.includes("owner@test.local"), false);
 });
 

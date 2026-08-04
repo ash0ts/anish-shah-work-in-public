@@ -50,6 +50,11 @@ const objects = [
 ];
 const directRoutes = objects.map(({ id }) => `/play/${id}`);
 const widths = [320, 390, 768, 1024, 1440, 1920];
+
+async function expectPlayOverview(page, options = {}) {
+  await expect(page).toHaveURL((url) => url.pathname === "/play", options);
+}
+
 function runtimeChunkRequests(page) {
   const urls = [];
   page.on("request", (request) => {
@@ -1033,7 +1038,7 @@ test.describe("My Room 2001 browser quality", () => {
       await page.mouse.down();
       await page.mouse.move(point.x + 12, point.y + (index % 2 ? 2 : -2));
       await page.mouse.up();
-      await expect(page).toHaveURL(/\/play$/);
+      await expectPlayOverview(page);
       await room.getByRole("button", { name: "Reset view" }).click();
       await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
     }
@@ -1064,7 +1069,7 @@ test.describe("My Room 2001 browser quality", () => {
         timeout: 10_000,
       });
       await page.keyboard.press("Escape");
-      await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+      await expectPlayOverview(page, { timeout: 10_000 });
       await expect(room).toBeVisible();
       await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
       await expect(
@@ -1098,7 +1103,7 @@ test.describe("My Room 2001 browser quality", () => {
     await page.mouse.up();
     await expect(page).toHaveURL(/\/play\/watch$/, { timeout: 10_000 });
     await page.keyboard.press("Escape");
-    await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+    await expectPlayOverview(page, { timeout: 10_000 });
     await expect(
       page.getByRole("dialog", { name: "Interactive room" }),
     ).toHaveAttribute("data-room-transition-phase", "idle");
@@ -1165,7 +1170,7 @@ test.describe("My Room 2001 browser quality", () => {
     );
 
     await page.getByRole("link", { name: "Back to room" }).click();
-    await expect(page).toHaveURL(/\/play$/);
+    await expectPlayOverview(page);
     room = page.getByRole("dialog", { name: "Interactive room" });
     await expect(room).toBeVisible();
     await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
@@ -1196,7 +1201,7 @@ test.describe("My Room 2001 browser quality", () => {
       });
       await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
       await page.keyboard.press("Escape");
-      await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+      await expectPlayOverview(page, { timeout: 10_000 });
       room = page.getByRole("dialog", { name: "Interactive room" });
       await expect(room).toBeVisible();
       await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
@@ -1260,7 +1265,7 @@ test.describe("My Room 2001 browser quality", () => {
         `Opened ${object.label}: ${object.title}.`,
       );
       await page.keyboard.press("Escape");
-      await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+      await expectPlayOverview(page, { timeout: 10_000 });
       const semanticLink = page.locator(
         `[data-room-overview] [data-room-object-link="${object.id}"]`,
       );
@@ -1329,7 +1334,7 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(page.getByRole("heading", { name: "Desktop Library" })).toBeVisible();
     await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
     await page.getByRole("link", { name: "Back to room" }).click();
-    await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+    await expectPlayOverview(page, { timeout: 10_000 });
     await expectRoomReady(page, {
       context: "returning after a superseded object selection",
     });
@@ -1689,7 +1694,7 @@ test.describe("My Room 2001 browser quality", () => {
           target,
           index % 2 === 0 ? 48 : -48,
         );
-        await expect(page).toHaveURL(/\/play$/);
+        await expectPlayOverview(page);
       }
     }
 
@@ -1760,7 +1765,7 @@ test.describe("My Room 2001 browser quality", () => {
           timeout: 10_000,
         });
         await page.keyboard.press("Escape");
-        await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+        await expectPlayOverview(page, { timeout: 10_000 });
         room = page.getByRole("dialog", { name: "Interactive room" });
         await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
         await expect(
@@ -1786,12 +1791,12 @@ test.describe("My Room 2001 browser quality", () => {
       timeout: 10_000,
     });
     await page.keyboard.press("Escape");
-    await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+    await expectPlayOverview(page, { timeout: 10_000 });
     room = page.getByRole("dialog", { name: "Interactive room" });
 
     await dispatchTouch(client, "touchStart", [directPoint]);
     await dispatchTouch(client, "touchCancel");
-    await expect(page).toHaveURL(/\/play$/);
+    await expectPlayOverview(page);
 
     await dispatchTouch(client, "touchStart", [directPoint]);
     await dispatchTouch(client, "touchMove", [
@@ -1799,7 +1804,7 @@ test.describe("My Room 2001 browser quality", () => {
       { id: 2, x: directPoint.x + 18, y: directPoint.y + 4 },
     ]);
     await dispatchTouch(client, "touchEnd");
-    await expect(page).toHaveURL(/\/play$/);
+    await expectPlayOverview(page);
 
     await selectPocketView(room, 2);
     await dispatchTouch(client, "touchStart", [directPoint]);

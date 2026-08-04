@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { SimulationDossier as SimulationDossierModel } from "./types";
+import { SITE_COPY } from "@/lib/copy";
 import styles from "@/app/simulation/simulation.module.css";
 
 const bucketLabels: Record<string, string> = {
@@ -27,11 +28,10 @@ export function SimulationDossier({
   return (
     <section className={styles.dossier} aria-labelledby="dossier-title">
       <header className={styles.dossierHeader}>
-        <p>Inspectable foundation</p>
-        <h2 id="dossier-title">The public model’s source deck.</h2>
+        <p>{SITE_COPY.simulation["dossier-eyebrow"]}</p>
+        <h2 id="dossier-title">{SITE_COPY.simulation["dossier-title"]}</h2>
         <p className={styles.dossierSummary}>
-          The game changes how these records meet you, not what they say. Every
-          professional claim below links back to its canonical body of work.
+          {SITE_COPY.simulation["dossier-summary"]}
         </p>
         <p
           aria-label={`${dossier.persona.accessibleName} disclosure`}

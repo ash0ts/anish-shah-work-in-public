@@ -16,6 +16,7 @@ export const COPY_PAGE_FILES = {
   work: "content/copy/pages/work.md",
   play: "content/copy/pages/play.md",
   sources: "content/copy/pages/sources.md",
+  simulation: "content/copy/pages/simulation.md",
 };
 
 const CONTROL_CHARACTERS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u;

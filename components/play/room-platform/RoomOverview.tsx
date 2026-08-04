@@ -25,7 +25,7 @@ export function RoomOverview({
           <p>{SITE_COPY.play["intro-summary"]}</p>
           <RoomEntryControl />
           <div className={styles.simulationIngress}>
-            <p>There is another signal behind the room.</p>
+            <p>{SITE_COPY.simulation["ingress-label"]}</p>
             <RevealSimulationControl />
           </div>
         </div>

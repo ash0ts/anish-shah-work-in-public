@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { MouseEvent } from "react";
+import { SITE_COPY } from "@/lib/copy";
 import { useRoomExperience } from "./RoomExperienceProvider";
 
 export function RevealSimulationControl({
@@ -37,7 +38,7 @@ export function RevealSimulationControl({
       onClick={reveal}
       prefetch={false}
     >
-      REVEAL THE SIMULATION
+      {SITE_COPY.simulation["ingress-cta"]}
     </Link>
   );
 }

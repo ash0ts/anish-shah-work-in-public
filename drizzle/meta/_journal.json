@@ -43,6 +43,13 @@
       "when": 1785730020919,
       "tag": "0005_steady_publication_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1785862291147,
+      "tag": "0006_public_model_simulation",
+      "breakpoints": true
     }
   ]
 }

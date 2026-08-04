@@ -3,6 +3,7 @@
 import { animate } from "animejs";
 import { usePathname, useRouter } from "next/navigation";
 import { useExperienceAudio } from "@/components/experience-audio/ExperienceAudioProvider";
+import { SITE_COPY } from "@/lib/copy";
 import {
   Component,
   createContext,
@@ -222,14 +223,11 @@ function SimulationRevealSignal({
         </div>
       </div>
       <div className={styles.simulationCopy}>
-        <p>Memory transfer · channel 02</p>
-        <h2>The room is becoming a thought.</h2>
-        <span role="status">
-          Compressing the archive into a memory wafer and entering the Anish
-          simulation.
-        </span>
+        <p>{SITE_COPY.simulation["transition-eyebrow"]}</p>
+        <h2>{SITE_COPY.simulation["transition-title"]}</h2>
+        <span role="status">{SITE_COPY.simulation["transition-summary"]}</span>
         <button onClick={onCancel} ref={cancelRef} type="button">
-          Cancel dive
+          {SITE_COPY.simulation["transition-cancel-cta"]}
         </button>
       </div>
     </section>
@@ -718,7 +716,10 @@ export function RoomExperienceProvider({
     cancelTransition();
     setSimulationTransitioning(false);
     announce("Simulation reveal cancelled. The room is ready.");
-    focusAfterPaint("[data-reveal-simulation]");
+    focusAfterPaint([
+      "[data-room-runtime] [data-reveal-simulation]",
+      "[data-room-overview] [data-reveal-simulation]",
+    ]);
   }, [
     announce,
     cancelTransition,

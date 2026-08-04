@@ -18,6 +18,7 @@ export const PRODUCTION_RATE_LIMITS = Object.freeze([
   ["ARTWORK_RATE_LIMITER", { namespaceId: "88001002", limit: 120 }],
   ["PROMOTION_RATE_LIMITER", { namespaceId: "88001003", limit: 6 }],
   ["OAUTH_CALLBACK_RATE_LIMITER", { namespaceId: "88001004", limit: 20 }],
+  ["SIMULATION_RATE_LIMITER", { namespaceId: "88001005", limit: 12 }],
 ]);
 const RATE_LIMITS = new Map(PRODUCTION_RATE_LIMITS);
 
