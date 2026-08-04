@@ -938,14 +938,72 @@ test("release workflows bind PR evidence to the exact source head", async () => 
   );
   assert.match(ci, /github\.event\.pull_request\.head\.sha/);
   assert.match(ci, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/);
+  assert.match(ci, /\[\[ "\$EXPECTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
   assert.match(ci, /PREVIEW_SOURCE_SHA/);
   assert.match(ci, /PREVIEW_WORKFLOW_SHA/);
   for (const workflow of releaseWorkflows) {
     assert.match(workflow, /github\.event\.pull_request\.head\.sha/);
     assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/);
+    assert.match(workflow, /\[\[ "\$EXPECTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
     assert.match(workflow, /test "\$\{#GITHUB_SHA\}" -eq 40/);
     assert.doesNotMatch(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
   }
+});
+
+test("owner-dispatched exact-SHA checks may use only the temporary release runner", async () => {
+  const workflowNames = [
+    "ci.yml",
+    "gitleaks.yml",
+    "codeql.yml",
+    "browser-quality.yml",
+    "browser-stability.yml",
+  ];
+  const workflows = await Promise.all(
+    workflowNames.map((name) =>
+      readFile(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8"),
+    ),
+  );
+  const runnerExpression =
+    "github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest'";
+
+  for (const [index, workflow] of workflows.entries()) {
+    assert.match(workflow, /runner_label:\n\s+description:/, workflowNames[index]);
+    assert.match(workflow, /default: github-hosted/, workflowNames[index]);
+    assert.match(
+      workflow,
+      /options:\n\s+- github-hosted\n\s+- anish-release/,
+      workflowNames[index],
+    );
+    assert.match(
+      workflow,
+      /test "\$GITHUB_ACTOR" = "\$GITHUB_REPOSITORY_OWNER"/,
+      workflowNames[index],
+    );
+    assert.match(
+      workflow,
+      /\[\[ "\$REQUESTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/,
+      workflowNames[index],
+    );
+    const runTargets = [...workflow.matchAll(/^\s+runs-on:\s+(.+)$/gm)].map(
+      (match) => match[1],
+    );
+    assert.ok(runTargets.length > 0, workflowNames[index]);
+    assert.ok(
+      runTargets.every((target) => target.includes(runnerExpression)),
+      `${workflowNames[index]} must keep automatic work hosted`,
+    );
+    assert.doesNotMatch(workflow, /^\s+environment:/m, workflowNames[index]);
+    assert.doesNotMatch(workflow, /secrets:\s+inherit/, workflowNames[index]);
+    const nonEphemeralSecrets = [
+      ...workflow.matchAll(/\$\{\{\s*secrets\.([A-Z0-9_]+)\s*\}\}/g),
+    ]
+      .map((match) => match[1])
+      .filter((name) => name !== "GITHUB_TOKEN");
+    assert.deepEqual(nonEphemeralSecrets, [], workflowNames[index]);
+  }
+
+  assert.match(workflows[0], /push:\n\s+branches: \[main\]/);
+  assert.doesNotMatch(workflows[0], /codex\/\*\*/);
 });
 
 test("release promotion requires a protected current-publication marker", async () => {
