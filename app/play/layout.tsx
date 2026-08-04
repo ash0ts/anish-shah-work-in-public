@@ -1,8 +1,15 @@
 import type { ReactNode } from "react";
 import { RoomExperienceProvider } from "@/components/play/room-platform/RoomExperienceProvider";
 import { roomExperienceEnabled } from "@/lib/server/play-experience";
+import { simulationExperienceEnabled } from "@/lib/server/simulation/policy";
 
 export default function PlayLayout({ children }: { children: ReactNode }) {
   if (!roomExperienceEnabled()) return children;
-  return <RoomExperienceProvider>{children}</RoomExperienceProvider>;
+  return (
+    <RoomExperienceProvider
+      simulationEnabled={simulationExperienceEnabled()}
+    >
+      {children}
+    </RoomExperienceProvider>
+  );
 }

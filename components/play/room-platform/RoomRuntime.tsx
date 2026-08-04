@@ -15,6 +15,7 @@ import { useRoomCapability } from "../room-3d/Room3DGate";
 import type { RoomCapabilityResult } from "../room-3d/room-capability";
 import { adjacentPocketRoomRotation } from "../room-3d/room-math";
 import { ROOM_OBJECTS } from "./room-registry";
+import { RevealSimulationControl } from "./RevealSimulationControl";
 import { useRoomExperience } from "./RoomExperienceProvider";
 import styles from "./RoomRuntime.module.css";
 
@@ -125,7 +126,7 @@ export function RoomRuntime() {
   const ready = stageReady && (!pocket || pocketEntryPhase === "ready");
   const returning = room.phase === "returning";
   const presenting = room.objectRouteActive && !returning;
-  const blocked = presenting || returning;
+  const blocked = presenting || returning || room.simulationTransitioning;
   const markReady = useCallback(() => {
     if (capability.eligible) setReadyCapability(capability);
   }, [capability]);
@@ -252,13 +253,16 @@ export function RoomRuntime() {
           {pocket ? "Pocket Room, 2001" : "My Room, 2001"}
           <small data-room-boot-status>{bootStatus}</small>
         </span>
-        <button
-          data-room-runtime-entry-focus
-          onClick={room.exitRoom}
-          type="button"
-        >
-          Leave room
-        </button>
+        <div className={styles.runtimeActions}>
+          <button
+            data-room-runtime-entry-focus
+            onClick={room.exitRoom}
+            type="button"
+          >
+            Leave room
+          </button>
+          <RevealSimulationControl className={styles.simulationButton} />
+        </div>
       </div>
 
       <div className={styles.stageSlot} data-room-stage-shell>

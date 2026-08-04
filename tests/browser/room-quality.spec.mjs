@@ -780,6 +780,11 @@ test.describe("My Room 2001 browser quality", () => {
       "Interactive room opened.",
     );
     await leave.press("Tab");
+    const revealSimulation = room.getByRole("link", {
+      name: "REVEAL THE SIMULATION",
+    });
+    await expect(revealSimulation).toBeFocused();
+    await revealSimulation.press("Tab");
     const firstViewControl = room.getByRole("button", { name: "Turn left" });
     await expect(firstViewControl).toBeFocused();
     await page.waitForTimeout(300);
