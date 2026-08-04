@@ -713,13 +713,70 @@
 .galleryTools {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(15rem, 1.6fr) repeat(3, minmax(8rem, 0.65fr));
+  grid-template-columns: minmax(15rem, 1.6fr) minmax(24rem, 1.95fr);
   border-left: 1px solid var(--line, #d5dbe4);
   border-bottom: 1px solid var(--ink, #17223b);
 }
 
 .galleryTools.discogsTools {
-  grid-template-columns: minmax(15rem, 1.7fr) repeat(4, minmax(7rem, 0.6fr));
+  grid-template-columns: minmax(15rem, 1.45fr) minmax(30rem, 2.25fr);
+}
+
+.galleryFilters {
+  min-width: 0;
+}
+
+.galleryFilters > summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.75rem;
+  color: var(--ink, #17223b);
+  cursor: pointer;
+  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.055em;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.galleryFilters > summary::-webkit-details-marker {
+  display: none;
+}
+
+.galleryFilters > summary::after {
+  content: "+";
+}
+
+.galleryFilters[open] > summary::after {
+  content: "−";
+}
+
+.galleryFilters:not([open]) > .galleryFilterFields {
+  display: none;
+}
+
+.galleryFilterFields {
+  display: grid;
+  min-width: 0;
+  height: 100%;
+  grid-template-columns: repeat(3, minmax(8rem, 1fr));
+}
+
+.discogsTools .galleryFilterFields {
+  grid-template-columns: repeat(4, minmax(7rem, 1fr));
+}
+
+@media (min-width: 761px) {
+  .galleryFilters > summary {
+    display: none;
+  }
+
+  .galleryFilters:not([open]) > .galleryFilterFields {
+    display: grid;
+  }
 }
 
 .gallerySearch,
@@ -1079,6 +1136,15 @@
   font-size: 0.75rem;
 }
 
+.movementStream {
+  display: grid;
+  min-width: 0;
+}
+
+.movementIntro {
+  min-width: 0;
+}
+
 .attribution {
   margin: 1.5rem 0 0;
   line-height: 1.5;
@@ -1230,16 +1296,17 @@
     justify-self: start;
   }
 
-  .galleryTools {
-    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(7rem, 0.5fr));
-  }
-
+  .galleryTools,
   .galleryTools.discogsTools {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
-  .discogsTools .gallerySearch {
-    grid-column: span 2;
+  .galleryFilterFields {
+    grid-template-columns: repeat(3, minmax(7rem, 1fr));
+  }
+
+  .discogsTools .galleryFilterFields {
+    grid-template-columns: repeat(4, minmax(7rem, 1fr));
   }
 
   .atlas {
@@ -1271,12 +1338,51 @@
 
   .pattern,
   .galleryTools,
+  .galleryTools.discogsTools,
   .discogsPattern {
     grid-template-columns: 1fr;
   }
 
-  .galleryTools.discogsTools {
+  .galleryFilters {
+    display: block;
+    min-width: 0;
+    border-right: 1px solid var(--line, #d5dbe4);
+  }
+
+  .galleryFilters > summary {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.7rem 0.75rem;
+    color: var(--ink, #17223b);
+    cursor: pointer;
+    font-family: var(--font-mono, "IBM Plex Mono", monospace);
+    font-size: 0.75rem;
+    font-weight: 650;
+    letter-spacing: 0.055em;
+    list-style: none;
+    text-transform: uppercase;
+  }
+
+  .galleryFilters > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .galleryFilters > summary::after {
+    content: "+";
+  }
+
+  .galleryFilters[open] > summary::after {
+    content: "−";
+  }
+
+  .galleryFilterFields,
+  .discogsTools .galleryFilterFields {
+    display: grid;
     grid-template-columns: 1fr;
+    height: auto;
+    border-top: 1px solid var(--line, #d5dbe4);
   }
 
   .discogsTotals {
@@ -1291,10 +1397,6 @@
 
   .discogsMatrixHeading {
     grid-template-columns: 1fr;
-  }
-
-  .discogsTools .gallerySearch {
-    grid-column: auto;
   }
 
   .discogsShelf a,
@@ -1347,6 +1449,19 @@
 
   .collectionHeader {
     padding-inline: 0;
+  }
+
+  .panelHeading h2,
+  .panelHeading p,
+  .status span,
+  .status a,
+  .consent span,
+  .stravaFallback span {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: normal;
   }
 
   .viewSwitch {
@@ -1418,6 +1533,59 @@
   .galleryPagination span {
     grid-column: 1 / -1;
     grid-row: 1;
+  }
+
+  .status {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .consent,
+  .stravaFallback {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .consent button,
+  .stravaFallback a {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .movementStream {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+
+  .movementStream > .consent,
+  .movementStream > .stravaFallback,
+  .movementStream > .embed {
+    order: 1;
+  }
+
+  .movementIntro {
+    order: 2;
+    margin-top: 1.25rem;
+  }
+
+  .movementStream > .status {
+    order: 3;
+  }
+}
+
+@media (max-width: 430px) {
+  .discogsCrate .discogsShelf {
+    grid-template-columns: 1fr;
+  }
+
+  .discogsCrate .discogsShelf a,
+  .discogsCrate .discogsShelf li > div {
+    min-height: 10.5rem;
+    aspect-ratio: auto;
   }
 }
 

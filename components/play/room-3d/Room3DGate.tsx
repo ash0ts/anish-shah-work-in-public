@@ -20,6 +20,7 @@ export type Room3DGateProps = {
 
 const checkingResult: RoomCapabilityResult = {
   eligible: false,
+  tier: "static",
   reasons: ["checking"],
 };
 
@@ -36,7 +37,7 @@ export function useRoomCapability() {
 
     const update = () => {
       const next = detectRoomCapability();
-      const signature = `${next.eligible}:${next.reasons.join(",")}`;
+      const signature = `${next.eligible}:${next.tier}:${next.reasons.join(",")}`;
       if (signature === lastSignature.current) return;
       lastSignature.current = signature;
       setResult(next);

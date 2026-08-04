@@ -14,7 +14,10 @@ import { ROOM_BASIC_MATERIALS } from "./room-materials";
 import { resolveRoomRayHit } from "./room-hit-resolution";
 import {
   crossedRoomDragThreshold,
+  POCKET_ROOM_DRAG_THRESHOLD_PX,
   rotationFromPointerDelta,
+  rotationFromPocketPointerDelta,
+  snapPocketRoomRotation,
   type RoomRotation,
 } from "./room-math";
 import {
@@ -46,9 +49,11 @@ type RoomInteractionControllerProps = {
   hitTargets: MutableRefObject<Map<RoomObjectId, Mesh>>;
   occluders: MutableRefObject<Set<Mesh>>;
   onHoverChange: (id: RoomObjectId | null) => void;
+  onInteractionActiveChange?: (active: boolean) => void;
   onRotationCommit: (rotation: RoomRotation) => void;
   onRotationPreview: (rotation: RoomRotation) => void;
   onSelect: (id: RoomObjectId) => void;
+  presentation?: "desktop" | "pocket";
   rotation: RoomRotation;
 };
 
@@ -75,11 +80,14 @@ export function RoomInteractionController({
   hitTargets,
   occluders,
   onHoverChange,
+  onInteractionActiveChange,
   onRotationCommit,
   onRotationPreview,
   onSelect,
+  presentation = "desktop",
   rotation,
 }: RoomInteractionControllerProps) {
+  const allowTouch = presentation === "pocket";
   const pathname = usePathname();
   const intent = useRef<PointerIntent>({ kind: "idle" });
   const previousPathname = useRef(pathname);
@@ -121,9 +129,15 @@ export function RoomInteractionController({
         onRotationPreview(current.viewAtStart);
       }
       intent.current = { kind: "idle" };
+      onInteractionActiveChange?.(false);
       onHoverChange(null);
     },
-    [cancelHoverFrame, onHoverChange, onRotationPreview],
+    [
+      cancelHoverFrame,
+      onHoverChange,
+      onInteractionActiveChange,
+      onRotationPreview,
+    ],
   );
 
   useEffect(() => {
@@ -163,8 +177,9 @@ export function RoomInteractionController({
         current.captureTarget.releasePointerCapture(current.pointerId);
       }
       intent.current = { kind: "idle" };
+      onInteractionActiveChange?.(false);
     },
-    [cancelHoverFrame],
+    [cancelHoverFrame, onInteractionActiveChange],
   );
 
   const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
@@ -177,7 +192,7 @@ export function RoomInteractionController({
 
     if (
       disabled ||
-      !isRoomInteractivePointer(event.nativeEvent.pointerType) ||
+      !isRoomInteractivePointer(event.nativeEvent.pointerType, allowTouch) ||
       !event.nativeEvent.isPrimary ||
       event.nativeEvent.button !== 0
     ) {
@@ -220,7 +235,7 @@ export function RoomInteractionController({
 
     if (
       current.pointerId !== event.pointerId ||
-      !isRoomInteractivePointer(event.nativeEvent.pointerType)
+      !isRoomInteractivePointer(event.nativeEvent.pointerType, allowTouch)
     ) {
       cancelGesture(true);
       return;
@@ -231,7 +246,11 @@ export function RoomInteractionController({
 
     if (
       current.kind === "pending" &&
-      crossedRoomDragThreshold(current.origin, point)
+      crossedRoomDragThreshold(
+        current.origin,
+        point,
+        allowTouch ? POCKET_ROOM_DRAG_THRESHOLD_PX : undefined,
+      )
     ) {
       intent.current = {
         kind: "dragging",
@@ -241,17 +260,23 @@ export function RoomInteractionController({
         latestView: current.viewAtStart,
         captureTarget: current.captureTarget,
       };
+      onInteractionActiveChange?.(true);
       onHoverChange(null);
     }
 
     const updated = intent.current;
     if (updated.kind !== "dragging") return;
 
-    const nextView = rotationFromPointerDelta(
-      updated.viewAtStart,
-      point[0] - updated.origin[0],
-      point[1] - updated.origin[1],
-    );
+    const nextView = allowTouch
+      ? rotationFromPocketPointerDelta(
+          updated.viewAtStart,
+          point[0] - updated.origin[0],
+        )
+      : rotationFromPointerDelta(
+          updated.viewAtStart,
+          point[0] - updated.origin[0],
+          point[1] - updated.origin[1],
+        );
     intent.current = { ...updated, latestView: nextView };
     onRotationPreview(nextView);
   };
@@ -261,7 +286,7 @@ export function RoomInteractionController({
     if (current.kind === "idle") return;
     if (
       current.pointerId !== event.pointerId ||
-      !isRoomInteractivePointer(event.nativeEvent.pointerType)
+      !isRoomInteractivePointer(event.nativeEvent.pointerType, allowTouch)
     ) {
       cancelGesture(true);
       return;
@@ -280,13 +305,19 @@ export function RoomInteractionController({
         onSelect(current.downObject);
       }
     } else {
-      onRotationCommit(current.latestView);
+      onRotationCommit(
+        allowTouch
+          ? snapPocketRoomRotation(current.latestView)
+          : current.latestView,
+      );
     }
 
     intent.current = { kind: "idle" };
+    onInteractionActiveChange?.(false);
     if (
       resumeHoverFromRelease &&
-      isRoomInteractivePointer(event.nativeEvent.pointerType)
+      isRoomInteractivePointer(event.nativeEvent.pointerType, allowTouch) &&
+      event.nativeEvent.pointerType !== "touch"
     ) {
       queueHover(event.ray);
     } else {

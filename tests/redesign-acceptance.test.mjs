@@ -230,6 +230,27 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
     markup.match(/<table\b[\s\S]*?<\/table>/i)?.[0] ?? "";
   const calendarBody =
     calendar.match(/<tbody\b[^>]*>([\s\S]*?)<\/tbody>/i)?.[1] ?? "";
+  const bodyDetails = [
+    ...markup.matchAll(/<details\b[^>]*data-work-body="([^"]+)"/gi),
+  ].map((match) => match[1]);
+  const workIds = [
+    ...markup.matchAll(/<li\b[^>]*data-work-id="([^"]+)"/gi),
+  ].map((match) => match[1]);
+
+  assert.deepEqual(bodyDetails, [
+    "products-open-source",
+    "courses-learning",
+    "writing-research",
+    "talks-programs",
+  ]);
+  assert.equal(workIds.length, 24);
+  assert.equal(new Set(workIds).size, 24);
+  const canonicalWorkIds = new Set(
+    publicBundle.workGroups.map((group) => group.id),
+  );
+  assert(workIds.every((id) => canonicalWorkIds.has(id)));
+  assert.match(markup, /Showing 1—24 of 82 projects/i);
+  assert.match(markup, /href="\/work\?page=2#work-index"[^>]*>\s*Next\s*</i);
   assert.equal((calendarBody.match(/<tr\b/g) ?? []).length, 4);
   assert.equal((calendarBody.match(/<td\b/g) ?? []).length, 24);
   assert.match(
@@ -272,7 +293,13 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   assert.match(markup, /href="\/work\?page=2#work-index"/i);
   assert.doesNotMatch(
     markup,
-    /\bMap\b|Visual archive|Complete grouped index|aria-pressed|<canvas\b|<svg\b/i,
+    /\bMap\b|Visual archive|Complete grouped index|<canvas\b|<svg\b/i,
+  );
+  assert.equal(
+    (markup.match(/<button\b[^>]*aria-pressed="(?:true|false)"[^>]*data-work-year=/gi) ?? [])
+      .length,
+    6,
+    "The six calendar-year controls should expose their selected state",
   );
   assert.doesNotMatch(markup, /name="practice"/i);
   assert.doesNotMatch(markup, /name="view"/i);
@@ -608,6 +635,10 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
     {
       file: "components/play/room-platform/RoomExperienceProvider.module.css",
       selector: ".announcer",
+    },
+    {
+      file: "components/play/room-platform/RoomExperienceProvider.module.css",
+      selector: ".runtimeLoading picture",
     },
     {
       file: "components/play/room-platform/RoomOverview.module.css",

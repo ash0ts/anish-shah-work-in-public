@@ -33,18 +33,24 @@ export function RoomEntryControl() {
   }
 
   return (
-    <div className={styles.entryControl}>
+    <div className={styles.entryControl} data-room-entry-tier={capability.tier}>
       <button
         data-room-enter-control
         onClick={room.enterRoom}
         type="button"
       >
-        Enter the room
+        {capability.tier === "pocket"
+          ? "Open the pocket room"
+          : "Enter the room"}
       </button>
       <span aria-live="polite">
         {room.entered
-          ? "The 3D room is opening. The labeled objects and room controls are ready."
-          : "Optional 3D view on supported desktops. Every object also opens as a regular page."}
+          ? capability.tier === "pocket"
+            ? "The Pocket Room is opening. The labeled objects and room controls are ready."
+            : "The 3D room is opening. The labeled objects and room controls are ready."
+          : capability.tier === "pocket"
+            ? "Optional touch-sized 3D room. Every object also opens as a regular page."
+            : "Optional 3D view on supported desktops. Every object also opens as a regular page."}
       </span>
     </div>
   );

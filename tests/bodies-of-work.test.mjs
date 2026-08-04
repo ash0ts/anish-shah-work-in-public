@@ -184,10 +184,12 @@ test("Work pairs its four-body SSR index with a semantic body-by-year color cale
   assert.match(workPageSource, /workBuckets\.map/);
   assert.match(workPageSource, /data-work-body=\{bucket\.id\}/);
   assert.match(workPageSource, /<WorkTimeline/);
-  assert.doesNotMatch(workPageSource, /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot/i);
-  assert.match(workPageSource, /const perPage = 24/);
-  assert.match(workPageSource, /filtered\.slice\(pageStart, pageStart \+ perPage\)/);
-  assert.match(workPageSource, /aria-label="Work pages"/);
+  assert.doesNotMatch(
+    workPageSource,
+    /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot/i,
+  );
+  assert.match(workPageSource, /paginateWorkArchiveRecords\(filtered, query\.page\)/);
+  assert.match(workPageSource, /aria-label="Work result pages"/);
   assert.doesNotMatch(
     workPageSource,
     /from\s+["'](?:three|@react-three\/)|import\(["'](?:three|@react-three\/)/,

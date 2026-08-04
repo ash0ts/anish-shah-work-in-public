@@ -118,7 +118,7 @@ function LazyRoomFallback({ onLeave }: { onLeave: () => void }) {
         />
       </picture>
       <div>
-        <p role="status">Opening the room…</p>
+        <p role="status">Opening room</p>
         <button onClick={onLeave} ref={leaveRef} type="button">
           Leave room
         </button>
@@ -577,7 +577,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       cancelTransition();
       dispatch({ type: "fallback", reason });
       announce(
-        "The interactive room is unavailable. The six collection links remain available.",
+        "The interactive room is unavailable. The object links remain available.",
       );
       const target = lastInvoker.current ?? state.focusedId ?? "watch";
       focusAfterPaint(

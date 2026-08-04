@@ -32,6 +32,7 @@ import type {
   PortfolioItem,
   WorkGroup,
 } from "@/types/content";
+import { WorkDetailDisclosureBehavior } from "./WorkDetailDisclosureBehavior";
 import styles from "./case.module.css";
 
 export const dynamic = "force-dynamic";
@@ -266,6 +267,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
+      <WorkDetailDisclosureBehavior />
       <script
         nonce={nonce}
         suppressHydrationWarning
@@ -292,14 +294,14 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
         </div>
       </header>
 
-      <section className={styles.facts} aria-label="Work facts">
+      <dl className={styles.facts} aria-label="Work facts">
         <Fact label={SITE_COPY.work["detail-role"]} value={group.roleSummary} />
         <Fact label={SITE_COPY.work["detail-period"]} value={formatGroupPeriod(group)} />
         <Fact
           label={SITE_COPY.work["detail-organization"]}
           value={organizations.join(" / ") || "Independent"}
         />
-      </section>
+      </dl>
 
       <div className={styles.content}>
         <article className={styles.story}>
@@ -309,6 +311,17 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                 <span key={topic}>{humanizeWorkFilter(topic)}</span>
               ))}
             </div>
+          ) : null}
+
+          {outcomes.length ? (
+            <section
+              className={styles.outcomes}
+              aria-labelledby="outcomes-title"
+            >
+              <p className={styles.sectionLabel}>Direct outcomes</p>
+              <h2 id="outcomes-title">{SITE_COPY.work["detail-results"]}</h2>
+              <MetricRows metrics={outcomes} />
+            </section>
           ) : null}
 
           {memberEntities.length > 1 ? (
@@ -335,16 +348,6 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
             </section>
           ) : null}
 
-          {outcomes.length ? (
-            <section
-              className={styles.outcomes}
-              aria-labelledby="outcomes-title"
-            >
-              <h2 id="outcomes-title">{SITE_COPY.work["detail-results"]}</h2>
-              <MetricRows metrics={outcomes} />
-            </section>
-          ) : null}
-
           {context.length ? (
             <section
               className={styles.context}
@@ -360,31 +363,43 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
         </article>
 
         {evidence.length ? (
-          <aside className={styles.evidence}>
-            <p className={styles.sectionLabel}>{SITE_COPY.work["detail-sources"]}</p>
-            <ol>
-              {evidence.map((source) => (
-                <li key={source.id}>
-                  {source.url && !isKnownUnavailablePublicUrl(source.url) ? (
-                    <a href={source.url} rel="noreferrer" target="_blank">
+          <aside aria-labelledby="evidence-title" className={styles.evidence}>
+            <details
+              className={styles.supportingDisclosure}
+              data-supporting-disclosure
+              open
+            >
+              <summary>
+                <span className={styles.sectionLabel}>Sources</span>
+                <strong aria-level={2} id="evidence-title" role="heading">
+                  {SITE_COPY.work["detail-sources"]}
+                </strong>
+                <i aria-hidden="true">{evidence.length}</i>
+              </summary>
+              <ol>
+                {evidence.map((source) => (
+                  <li key={source.id}>
+                    {source.url && !isKnownUnavailablePublicUrl(source.url) ? (
+                      <a href={source.url} rel="noreferrer" target="_blank">
+                        <span>
+                          {source.publisher ?? humanizeWorkFilter(source.kind)}
+                        </span>
+                        <strong>{source.title}</strong>
+                        <i aria-hidden="true">↗</i>
+                      </a>
+                    ) : (
                       <span>
-                        {source.publisher ?? humanizeWorkFilter(source.kind)}
+                        <small>
+                          {source.publisher ?? humanizeWorkFilter(source.kind)}
+                        </small>
+                        <strong>{source.title}</strong>
+                        {source.url ? <i>Historical host unavailable</i> : null}
                       </span>
-                      <strong>{source.title}</strong>
-                      <i aria-hidden="true">↗</i>
-                    </a>
-                  ) : (
-                    <span>
-                      <small>
-                        {source.publisher ?? humanizeWorkFilter(source.kind)}
-                      </small>
-                      <strong>{source.title}</strong>
-                      {source.url ? <i>Historical host unavailable</i> : null}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ol>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </details>
           </aside>
         ) : null}
       </div>
@@ -394,22 +409,32 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           className={styles.appearances}
           aria-labelledby="appearances-title"
         >
-          <header>
-            <h2 id="appearances-title">{SITE_COPY.work["detail-materials"]}</h2>
-          </header>
-          <ol>
-            {items.map((item) => (
-              <li id={item.id} key={item.id}>
-                <div className={styles.formMeta}>
-                  <span>{formatDate(item.date)}</span>
-                  <span>{humanizeWorkFilter(item.entityRole)}</span>
-                </div>
-                <h3>{appearanceTitle(item, group)}</h3>
-                <p>{item.role}</p>
-                <PublicArtifactLink item={item} />
-              </li>
-            ))}
-          </ol>
+          <details
+            className={styles.supportingDisclosure}
+            data-supporting-disclosure
+            open
+          >
+            <summary>
+              <span className={styles.sectionLabel}>Nested public forms</span>
+              <strong aria-level={2} id="appearances-title" role="heading">
+                {SITE_COPY.work["detail-materials"]}
+              </strong>
+              <i aria-hidden="true">{items.length}</i>
+            </summary>
+            <ol>
+              {items.map((item) => (
+                <li id={item.id} key={item.id}>
+                  <div className={styles.formMeta}>
+                    <span>{formatDate(item.date)}</span>
+                    <span>{humanizeWorkFilter(item.entityRole)}</span>
+                  </div>
+                  <h3>{appearanceTitle(item, group, primary)}</h3>
+                  <p>{item.role}</p>
+                  <PublicArtifactLink item={item} />
+                </li>
+              ))}
+            </ol>
+          </details>
         </section>
       ) : null}
 
@@ -418,24 +443,35 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           className={styles.appearances}
           aria-labelledby="related-context-title"
         >
-          <header>
-            <h2 id="related-context-title">{SITE_COPY.work["detail-related"]}</h2>
-          </header>
-          <p className={styles.appearancesNote}>
-            Shown for context; not counted as another project.
-          </p>
-          <ol>
-            {relatedContextItems.map((item) => (
-              <li id={item.id} key={item.id}>
-                <div className={styles.formMeta}>
-                  <span>{formatDate(item.date)}</span>
-                  <span>{humanizeWorkFilter(item.type)}</span>
-                </div>
-                <h3>{item.displayTitle}</h3>
-                <PublicArtifactLink item={item} />
-              </li>
-            ))}
-          </ol>
+          <details
+            className={styles.supportingDisclosure}
+            data-supporting-disclosure
+            open
+          >
+            <summary>
+              <span className={styles.sectionLabel}>Related public context</span>
+              <strong aria-level={2} id="related-context-title" role="heading">
+                {SITE_COPY.work["detail-related"]}
+              </strong>
+              <i aria-hidden="true">{relatedContextItems.length}</i>
+            </summary>
+            <ol>
+              {relatedContextItems.map((item) => (
+                <li id={item.id} key={item.id}>
+                  <div className={styles.formMeta}>
+                    <span>{formatDate(item.date)}</span>
+                    <span>{humanizeWorkFilter(item.type)}</span>
+                  </div>
+                  <h3>{item.displayTitle}</h3>
+                  <p>
+                    Related context only. It is not counted as another form of
+                    this work.
+                  </p>
+                  <PublicArtifactLink item={item} />
+                </li>
+              ))}
+            </ol>
+          </details>
         </section>
       ) : null}
     </main>
@@ -474,19 +510,20 @@ function MetricRows({
 function appearanceTitle(
   item: PortfolioItem,
   group: WorkGroup,
+  primary: PortfolioItem,
 ) {
   const title =
     item.displayTitle === group.title
       ? humanizeWorkFilter(item.type)
       : item.displayTitle;
-  return title;
+  return item.id === primary.id ? `${title} · primary form` : title;
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <span>{label}</span>
-      <strong>{value}</strong>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
     </div>
   );
 }

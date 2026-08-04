@@ -6,6 +6,7 @@ import {
   filterWorkArchiveRecords,
   legacyMapRedirectPath,
   matchingChildForQuery,
+  paginateWorkArchiveRecords,
   parseWorkArchiveQuery,
   workArchiveHref,
   type WorkSearchParams,
@@ -19,6 +20,8 @@ import { workBuckets } from "@/lib/work-groups";
 import { workArchiveRecordsFrom, type WorkArchiveRecord } from "@/lib/work-index";
 import { getPublicContentView } from "@/lib/server/public-content";
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
+import { WorkBodyBehavior } from "./WorkBodyBehavior";
+import { WorkMobileFilters } from "./WorkMobileFilters";
 import { WorkTimeline } from "./WorkTimeline";
 import { SITE_COPY } from "@/lib/copy";
 import styles from "./work.module.css";
@@ -65,13 +68,9 @@ export default async function WorkPage({
       collator.compare(left.title, right.title),
   );
   const filtered = filterWorkArchiveRecords(allWorks, query);
-  const perPage = 24;
-  const pageCount = Math.max(Math.ceil(filtered.length / perPage), 1);
-  const selectedPage = Math.min(query.page, pageCount);
-  const pageStart = (selectedPage - 1) * perPage;
-  const visibleWorks = filtered.slice(pageStart, pageStart + perPage);
+  const page = paginateWorkArchiveRecords(filtered, query.page);
   const firstVisibleBucketId = workBuckets.find((bucket) =>
-    visibleWorks.some((work) => work.bucket === bucket.id),
+    page.items.some((work) => work.bucket === bucket.id),
   )?.id;
   const timelineRecords = filterWorkArchiveRecords(allWorks, {
     ...query,
@@ -100,9 +99,11 @@ export default async function WorkPage({
   const hasScopedResults = Boolean(
     query.query || activeFilterCount || query.practice,
   );
-  const resultLabel = `${filtered.length} ${
-    filtered.length === 1 ? "project" : "projects"
-  }`;
+  const resultLabel = filtered.length
+    ? `Showing ${page.rangeStart}—${page.rangeEnd} of ${filtered.length} ${
+        filtered.length === 1 ? "project" : "projects"
+      }`
+    : "No projects found";
   const explorerHeading = query.query
     ? `Results for “${query.query}”`
     : activeFilterCount
@@ -122,31 +123,32 @@ export default async function WorkPage({
       </header>
 
       <section className={styles.tools} aria-labelledby="work-search-title">
-        <form
-          action="/work#work-index"
-          method="get"
-          className={styles.filterForm}
-        >
-          {query.practice ? (
-            <input name="practice" type="hidden" value={query.practice} />
-          ) : null}
-          {query.organization ? (
-            <input name="organization" type="hidden" value={query.organization} />
-          ) : null}
-          {query.role ? (
-            <input name="role" type="hidden" value={query.role} />
-          ) : null}
-          <label className={styles.search}>
-            <span id="work-search-title">{SITE_COPY.work["search-label"]}</span>
-            <input
-              defaultValue={query.query}
-              name="q"
-              placeholder={SITE_COPY.work["search-placeholder"]}
-              type="search"
-            />
-          </label>
+        <div className={styles.filterToolbar}>
+          <form
+            action="/work#work-index"
+            method="get"
+            className={styles.filterForm}
+            id="work-search-form"
+          >
+            {query.practice ? (
+              <input name="practice" type="hidden" value={query.practice} />
+            ) : null}
+            {query.organization ? (
+              <input name="organization" type="hidden" value={query.organization} />
+            ) : null}
+            {query.role ? (
+              <input name="role" type="hidden" value={query.role} />
+            ) : null}
+            <label className={styles.search}>
+              <span id="work-search-title">{SITE_COPY.work["search-label"]}</span>
+              <input
+                defaultValue={query.query}
+                name="q"
+                placeholder={SITE_COPY.work["search-placeholder"]}
+                type="search"
+              />
+            </label>
 
-          <div className={styles.filterBody}>
             <div className={styles.primaryFilters}>
               <FilterSelect
                 allLabel="All lines"
@@ -156,18 +158,18 @@ export default async function WorkPage({
                 options={options.buckets}
               />
               <FilterSelect
-                allLabel="All topics"
-                label="Topic"
-                name="topic"
-                value={query.topic}
-                options={options.topics}
-              />
-              <FilterSelect
                 allLabel="All years"
                 label="Year"
                 name="year"
                 value={query.year}
                 options={options.years}
+              />
+              <FilterSelect
+                allLabel="All topics"
+                label="Topic"
+                name="topic"
+                value={query.topic}
+                options={options.topics}
               />
             </div>
 
@@ -192,13 +194,22 @@ export default async function WorkPage({
                 />
               </div>
             </details>
-            <button type="submit">{SITE_COPY.work["filter-submit"]}</button>
-          </div>
 
-          <Link className={styles.clear} href="/work" prefetch={false}>
-            {SITE_COPY.work["clear-search"]}
-          </Link>
-        </form>
+            <div className={styles.filterActions}>
+              <button type="submit">{SITE_COPY.work["filter-submit"]}</button>
+              <Link className={styles.clear} href="/work" prefetch={false}>
+                {SITE_COPY.work["clear-search"]}
+              </Link>
+            </div>
+          </form>
+          <WorkMobileFilters
+            activeFilterCount={secondaryFilterCount}
+            fallbackFiltersId="work-more-filters"
+            formId="work-search-form"
+            options={options}
+            query={query}
+          />
+        </div>
       </section>
 
       <WorkTimeline query={query} records={timelineRecords} />
@@ -228,13 +239,16 @@ export default async function WorkPage({
 
         <div className={styles.bodyIndex}>
           {workBuckets.map((bucket) => {
-            const works = visibleWorks.filter(
+            const works = page.items.filter(
               (work) => work.bucket === bucket.id,
             );
             if (!works.length) return null;
             return (
               <details
                 className={styles.body}
+                data-default-open={
+                  hasScopedResults ? "true" : "false"
+                }
                 data-work-body={bucket.id}
                 key={bucket.id}
                 open={
@@ -263,33 +277,7 @@ export default async function WorkPage({
           })}
         </div>
 
-        {pageCount > 1 ? (
-          <nav className={styles.pagination} aria-label="Work pages">
-            {selectedPage > 1 ? (
-              <Link
-                href={`${workArchiveHref(query, { page: selectedPage - 1 })}#work-index`}
-                prefetch={false}
-              >
-                ← Previous
-              </Link>
-            ) : (
-              <span />
-            )}
-            <span>
-              Page {selectedPage} of {pageCount}
-            </span>
-            {selectedPage < pageCount ? (
-              <Link
-                href={`${workArchiveHref(query, { page: selectedPage + 1 })}#work-index`}
-                prefetch={false}
-              >
-                Next →
-              </Link>
-            ) : (
-              <span />
-            )}
-          </nav>
-        ) : null}
+        <WorkBodyBehavior />
 
         {!filtered.length ? (
           <div className={styles.empty}>
@@ -299,9 +287,79 @@ export default async function WorkPage({
             </Link>
           </div>
         ) : null}
+
+        {page.totalPages > 1 ? (
+          <WorkPagination page={page.currentPage} query={query} totalPages={page.totalPages} />
+        ) : null}
       </section>
     </main>
   );
+}
+
+function WorkPagination({
+  page,
+  query,
+  totalPages,
+}: {
+  page: number;
+  query: ReturnType<typeof parseWorkArchiveQuery>;
+  totalPages: number;
+}) {
+  const pages = paginationWindow(page, totalPages);
+  return (
+    <nav aria-label="Work result pages" className={styles.pagination}>
+      {page > 1 ? (
+        <Link
+          href={`${workArchiveHref(query, { page: page - 1 })}#work-index`}
+          prefetch={false}
+          rel="prev"
+        >
+          Previous
+        </Link>
+      ) : (
+        <span aria-disabled="true">Previous</span>
+      )}
+      <ol>
+        {pages.map((pageNumber) => (
+          <li key={pageNumber}>
+            {pageNumber === page ? (
+              <span aria-current="page">{pageNumber}</span>
+            ) : (
+              <Link
+                aria-label={`Page ${pageNumber}`}
+                href={`${workArchiveHref(query, { page: pageNumber })}#work-index`}
+                prefetch={false}
+              >
+                {pageNumber}
+              </Link>
+            )}
+          </li>
+        ))}
+      </ol>
+      {page < totalPages ? (
+        <Link
+          href={`${workArchiveHref(query, { page: page + 1 })}#work-index`}
+          prefetch={false}
+          rel="next"
+        >
+          Next
+        </Link>
+      ) : (
+        <span aria-disabled="true">Next</span>
+      )}
+    </nav>
+  );
+}
+
+function paginationWindow(currentPage: number, totalPages: number) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+  const start = Math.min(
+    Math.max(1, currentPage - 2),
+    Math.max(1, totalPages - 4),
+  );
+  return Array.from({ length: 5 }, (_, index) => start + index);
 }
 
 function WorkRow({

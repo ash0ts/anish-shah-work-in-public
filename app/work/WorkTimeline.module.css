@@ -39,6 +39,10 @@
   line-height: 1.5;
 }
 
+.yearControls {
+  display: none;
+}
+
 .frame {
   max-width: 100%;
   overflow-x: auto;
@@ -252,19 +256,177 @@
 }
 
 @media (max-width: 760px) {
+  .section {
+    padding-top: 1rem;
+    padding-bottom: 1.2rem;
+  }
+
   .header {
     grid-template-columns: 1fr;
-    gap: 0.8rem;
+    gap: 0.35rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .header > div > p {
+    margin-bottom: 0.25rem;
+  }
+
+  .header h2 {
+    font-size: clamp(1.5rem, 7.5vw, 2rem);
+  }
+
+  .header > p {
+    display: none;
+  }
+
+  .yearControls[data-ready="true"] {
+    position: relative;
+    display: grid;
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+    gap: 0.4rem;
+    align-items: stretch;
+    margin-bottom: 0.75rem;
+  }
+
+  .yearControls > button,
+  .yearRail > button {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.35rem;
+    border: 1px solid var(--blueprint-ink, #17223b);
+    color: var(--blueprint-ink, #17223b);
+    background: transparent;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.75rem;
+    font-weight: 650;
+  }
+
+  .yearControls > button:disabled {
+    color: var(--hairline-strong, rgba(23, 34, 59, 0.35));
+    border-color: var(--hairline, rgba(23, 34, 59, 0.2));
+  }
+
+  .yearRail {
+    display: flex;
+    min-width: 0;
+    gap: 0.35rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .yearRail::before,
+  .yearRail::after {
+    content: "";
+    flex: 0 0 calc(50% - 1.375rem);
+  }
+
+  .yearRail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .yearRail > button[aria-pressed="true"] {
+    color: var(--paper, #fff);
+    border-color: var(--work-blue, #295dff);
+    background: var(--work-blue, #295dff);
+  }
+
+  .yearRail > .yearEmpty {
+    color: var(--ink-muted, #5c6477);
+  }
+
+  .yearStatus {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .frame {
     margin-inline: calc(-1 * var(--gutter, 2rem));
-    padding-inline: var(--gutter, 2rem);
-    scroll-padding-inline: var(--gutter, 2rem);
+    scroll-padding-inline-start: 7.25rem;
+    scroll-snap-type: inline mandatory;
+    scrollbar-width: thin;
+  }
+
+  .frame table {
+    width: calc(600vw - 36.25rem);
+    min-width: calc(600vw - 36.25rem);
+  }
+
+  .frame thead th:first-child,
+  .frame tbody > tr > th {
+    width: 7.25rem;
+  }
+
+  .frame thead th:not(:first-child),
+  .frame td {
+    width: calc(100vw - 7.25rem);
+    scroll-margin-inline-start: 7.25rem;
+    scroll-snap-align: start;
+  }
+
+  .frame thead th {
+    min-height: 2.5rem;
+    padding: 0.7rem 0.75rem;
+  }
+
+  .frame tbody > tr > th a,
+  .frame td > a,
+  .empty {
+    min-height: 5.25rem;
+  }
+
+  .frame tbody > tr > th a {
+    padding: 0.65rem;
+  }
+
+  .frame tbody > tr > th strong {
+    font-size: 0.94rem;
+  }
+
+  .frame td > a {
+    position: relative;
+    padding: 0.7rem 0.85rem;
+  }
+
+  .frame td > a > strong {
+    font-size: clamp(2rem, 11vw, 2.9rem);
+  }
+
+  .frame td > a > small {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .mobileHint {
     display: block;
+  }
+}
+
+@media (max-width: 360px) {
+  .frame {
+    scroll-padding-inline-start: 6.75rem;
+  }
+
+  .frame table {
+    width: calc(600vw - 33.75rem);
+    min-width: calc(600vw - 33.75rem);
+  }
+
+  .frame thead th:first-child,
+  .frame tbody > tr > th {
+    width: 6.75rem;
+  }
+
+  .frame thead th:not(:first-child),
+  .frame td {
+    width: calc(100vw - 6.75rem);
+    scroll-margin-inline-start: 6.75rem;
   }
 }
 
