@@ -182,6 +182,8 @@
 }
 
 .travelPage {
+  --screen-nav-bg: #08111f;
+  --screen-nav-selection: #83e6ca;
   color: #f3f5f7;
   background: #08111f;
 }

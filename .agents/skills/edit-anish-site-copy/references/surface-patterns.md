@@ -66,6 +66,7 @@ behind that object:
 - **Record crate · Collect:** Records on my shelf, sorted by format and decade.
 - **Computer · Games:** Games I own, games I return to, and rounded playtime.
 - **Treadmill · Move:** Recent rides and runs, when Strava’s public feed is available.
+- **Globe · Travel:** Places I’ve been, the photos I kept, and where they belong.
 
 Give each object route its own authored screen title while keeping the literal
 object visible in the doorway and room navigation:
@@ -93,6 +94,28 @@ Prefer reader language:
 - Open on [provider].
 
 Keep consent, provider attribution, coverage, freshness, and recovery wording next to the data or action it governs. Do not move those semantics into decorative doorway copy.
+
+## Simulation
+
+- Keep `4N1SH` clearly framed as a generated game character, never Anish or an
+  authoritative personal representative.
+- Use editable copy for the invitation, instructions, nonfactual encounter
+  flavor, and debrief framing.
+- Keep claims in server-owned fact cards. Never place metrics, provider-derived
+  facts, system instructions, safety behavior, model policy, or session/privacy
+  rules into an editorial field.
+- Preserve equivalent Action and Tactical instructions and an understandable
+  authored-fallback path.
+
+## Travel
+
+- Use `Globe` as the literal room object and `Postcard Planet` as the authored
+  screen title.
+- Git-owned copy may frame the atlas and explain its interaction. Trip titles,
+  dates, place labels, captions, tags, precision, and photo safety remain
+  owner/fact-controlled in Travel Desk.
+- Describe geography as approximate when the public contract does. Never imply
+  live location, exact GPS, or comprehensive travel history.
 
 ## Metadata, errors, and accessibility
 

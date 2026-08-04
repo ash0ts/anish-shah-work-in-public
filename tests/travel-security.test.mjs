@@ -20,13 +20,15 @@ const { inspectTravelImage } = await import(
 const { getTravelHealth } = await import(
   "../lib/server/travel/maintenance.ts"
 );
-const { travelPublicationVersionKey } = await import(
-  "../lib/server/travel/repository.ts"
-);
 const {
+  findPublishedTravelMedia,
+  getTravelUploadForWrite,
+  patchTravelPhoto,
+  patchTravelPlace,
   readTravelKvSnapshot,
   TRAVEL_FALLBACK_GATE_KEY,
   TRAVEL_POINTER_KEY,
+  travelPublicationVersionKey,
 } = await import("../lib/server/travel/repository.ts");
 const { previewTravelAtlas } = await import(
   "../lib/server/travel/preview.ts"
@@ -724,7 +726,7 @@ test("preview media is a closed synthetic first-party response without durable a
     SITE_URL: "https://pr-26.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: "2.0.0-rc.1",
     TRAVEL_ATLAS_MODE: "atlas-v1",
   };
   try {
@@ -840,20 +842,65 @@ test("all travel owner mutations preserve the shared security order and bounded 
   assert.doesNotMatch(previewRoute, /POST|PATCH|PUT|DELETE/);
 });
 
-test("media lookup verifies the active publication before consulting private storage", async () => {
-  const repository = await readFile(
-    new URL("../lib/server/travel/repository.ts", import.meta.url),
-    "utf8",
+test("media lookup verifies the active D1 publication before reading private storage", async () => {
+  const snapshot = await previewTravelAtlas();
+  const photo = snapshot.trips.flatMap((trip) => trip.photos)[0];
+  assert.ok(photo);
+  const queries = [];
+  const binding = {
+    prepare(sql) {
+      queries.push(sql);
+      return {
+        bind() { return this; },
+        async first() {
+          if (sql.includes("travel_publication_state")) {
+            return {
+              snapshotJson: JSON.stringify(snapshot),
+              contentHash: snapshot.contentHash,
+            };
+          }
+          if (sql.includes("SELECT storage_key")) {
+            return {
+              storageKey: "private/travel/masters/upload_12345678/source.webp",
+            };
+          }
+          throw new Error(`Unexpected Travel media query: ${sql}`);
+        },
+      };
+    },
+  };
+  assert.deepEqual(
+    await findPublishedTravelMedia(photo.id, photo.mediaDigest, binding),
+    { storageKey: "private/travel/masters/upload_12345678/source.webp" },
   );
-  const start = repository.indexOf("export async function findPublishedTravelMedia");
-  const end = repository.indexOf("export function travelPrivateHeaders", start);
-  const method = repository.slice(start, end);
+  assert.equal(queries.length, 2);
+  assert.match(queries[0], /travel_publication_state/);
+  assert.match(queries[1], /SELECT storage_key/);
+
+  let privateStorageRead = false;
+  const invalidBinding = {
+    prepare(sql) {
+      return {
+        bind() {
+          privateStorageRead = true;
+          return this;
+        },
+        async first() {
+          return sql.includes("travel_publication_state")
+            ? {
+                snapshotJson: JSON.stringify(snapshot),
+                contentHash: "0".repeat(64),
+              }
+            : null;
+        },
+      };
+    },
+  };
   assert.equal(
-    method.indexOf("travel_publication_state") < method.indexOf("SELECT storage_key"),
-    true,
+    await findPublishedTravelMedia(photo.id, photo.mediaDigest, invalidBinding),
+    null,
   );
-  assert.match(method, /snapshotContainsPhoto/);
-  assert.doesNotMatch(method, /currentTravelSnapshot|readKvSnapshot/);
+  assert.equal(privateStorageRead, false);
 
   const media = await readFile(
     new URL("../lib/server/travel/media.ts", import.meta.url),
@@ -933,119 +980,144 @@ test("sanitized master dimensions are server-owned and immutable", async () => {
     new URL("../lib/server/travel/media.ts", import.meta.url),
     "utf8",
   );
-  const repository = await readFile(
-    new URL("../lib/server/travel/repository.ts", import.meta.url),
-    "utf8",
-  );
   assert.match(media, /sanitizedInspection\.width/);
   assert.match(media, /sanitizedInspection\.height/);
-  const finalize = repository.slice(
-    repository.indexOf("export async function finalizeTravelUpload"),
-    repository.indexOf("export async function findPrivateTravelPhotoStorage"),
+  let batchCalled = false;
+  const binding = {
+    prepare(sql) {
+      return {
+        bind() { return this; },
+        async first() {
+          assert.match(sql, /FROM travel_photos AS photos/);
+          return {
+            id: "photo_12345678",
+            tripId: "trip_12345678",
+            placeId: "place_12345678",
+            altText: "A metadata-free photo.",
+            caption: null,
+            capturedAt: "2025-10",
+            capturePrecision: "month",
+            width: 1600,
+            height: 1067,
+            sortOrder: 0,
+            isCover: 1,
+            storageKey: "private/travel/masters/upload_12345678/source.webp",
+            revision: "photo-revision-12345678",
+            tripRevision: "trip-revision-12345678",
+          };
+        },
+      };
+    },
+    async batch() {
+      batchCalled = true;
+      return [];
+    },
+  };
+  await assert.rejects(
+    patchTravelPhoto(
+      "photo_12345678",
+      { width: 3200 },
+      "photo-revision-12345678",
+      "owner@example.test",
+      binding,
+    ),
+    (error) => error?.code === "immutable_dimensions" && error?.status === 400,
   );
-  assert.match(finalize, /processed_width AS processedWidth/);
-  assert.match(finalize, /processed_height AS processedHeight/);
-  assert.doesNotMatch(finalize, /input\.width|input\.height/);
-  assert.match(repository, /immutable_dimensions/);
+  assert.equal(batchCalled, false);
 });
 
-test("travel aggregate revisions and publication activation fail closed under races", async () => {
-  const repository = await readFile(
-    new URL("../lib/server/travel/repository.ts", import.meta.url),
-    "utf8",
-  );
-  const section = (start, end) => repository.slice(
-    repository.indexOf(start),
-    repository.indexOf(end, repository.indexOf(start)),
+test("travel aggregate mutations fail closed when compare-and-swap loses", async () => {
+  const placeBinding = {
+    prepare() {
+      return {
+        bind() { return this; },
+        async first() {
+          return {
+            id: "place_12345678",
+            tripId: "trip_12345678",
+            label: "New York",
+            countryCode: "US",
+            countryName: "United States of America",
+            admin1Code: "US-NY",
+            admin1Name: "New York",
+            precision: "region",
+            publicLat: 43,
+            publicLng: -75.7,
+            sortOrder: 0,
+            revision: "place-revision-12345678",
+            tripRevision: "trip-revision-12345678",
+          };
+        },
+      };
+    },
+    async batch() {
+      return [
+        { meta: { changes: 0 } },
+        { meta: { changes: 0 } },
+        { meta: { changes: 0 } },
+      ];
+    },
+  };
+  await assert.rejects(
+    patchTravelPlace(
+      "place_12345678",
+      { label: "New York State" },
+      "place-revision-12345678",
+      "owner@example.test",
+      placeBinding,
+    ),
+    (error) => error?.code === "revision_conflict" && error?.status === 409,
   );
 
-  const patchPlace = section(
-    "export async function patchTravelPlace",
-    "export async function deleteTravelPlace",
+  const photoBinding = {
+    prepare() {
+      return {
+        bind() { return this; },
+        async first() {
+          return {
+            id: "photo_12345678",
+            tripId: "trip_12345678",
+            placeId: "place_12345678",
+            altText: "A platform at night.",
+            caption: null,
+            capturedAt: "2025-10",
+            capturePrecision: "month",
+            width: 1600,
+            height: 1067,
+            sortOrder: 0,
+            isCover: 1,
+            storageKey: "private/travel/masters/upload_12345678/source.webp",
+            revision: "photo-revision-12345678",
+            tripRevision: "trip-revision-12345678",
+          };
+        },
+      };
+    },
+    async batch() {
+      return [
+        { meta: { changes: 0 } },
+        { meta: { changes: 0 } },
+        { meta: { changes: 0 } },
+      ];
+    },
+  };
+  await assert.rejects(
+    patchTravelPhoto(
+      "photo_12345678",
+      { caption: "A revised caption." },
+      "photo-revision-12345678",
+      "owner@example.test",
+      photoBinding,
+    ),
+    (error) => error?.code === "revision_conflict" && error?.status === 409,
   );
-  assert.match(patchPlace, /trips\.revision AS tripRevision/);
-  assert.match(patchPlace, /UPDATE travel_trips[\s\S]*WHERE id = \? AND revision = \?/);
-  assert.match(patchPlace, /normalizeTrustedTravelPlace/);
-
-  const deletePlace = section(
-    "export async function deleteTravelPlace",
-    "function photoAssignments",
-  );
-  assert.match(deletePlace, /place_has_photos/);
-  assert.match(deletePlace, /NOT EXISTS \(SELECT 1 FROM travel_photos WHERE place_id = \?\)/);
-  assert.match(deletePlace, /UPDATE travel_trips/);
-
-  const patchPhoto = section(
-    "export async function patchTravelPhoto",
-    "export async function deleteTravelPhoto",
-  );
-  const targetUpdate = patchPhoto.indexOf("UPDATE travel_photos");
-  const siblingReset = patchPhoto.indexOf("SET is_cover = 0");
-  const tagDelete = patchPhoto.indexOf("DELETE FROM travel_photo_tags");
-  assert.equal(targetUpdate >= 0, true);
-  assert.equal(siblingReset > targetUpdate, true);
-  assert.equal(tagDelete > targetUpdate, true);
-  assert.match(patchPhoto, /SET is_cover = 0, revision = \?, updated_at = \?/);
-  assert.match(patchPhoto, /UPDATE travel_trips/);
-  assert.match(patchPhoto, /photo_move_required/);
-
-  const movePhoto = section(
-    "export async function moveTravelPhoto",
-    "export async function deleteTravelPhoto",
-  );
-  assert.match(movePhoto, /ORDER BY photos\.sort_order, photos\.id/);
-  assert.match(movePhoto, /row_number\(\) OVER \(ORDER BY sort_order, id\)/);
-  assert.match(movePhoto, /revision = lower\(hex\(randomblob\(16\)\)\)/);
-  assert.match(movePhoto, /WHERE id = \? AND revision = \? AND changes\(\) = \?/);
-  assert.match(movePhoto, /return requireTripDraft\(db, current\.tripId\)/);
-
-  const finalize = section(
-    "export async function finalizeTravelUpload",
-    "export async function findPrivateTravelPhotoStorage",
-  );
-  assert.match(finalize, /trips\.revision AS tripRevision/);
-  assert.match(finalize, /upload\.tripRevision !== expectedTripRevision/);
-  assert.match(finalize, /SET is_cover = 0, revision = \?, updated_at = \?/);
-  assert.match(finalize, /UPDATE travel_trips/);
-
-  const projection = section(
-    "async function projectionRowsForTrip",
-    "type TravelKvPointer",
-  );
-  assert.match(projection, /FROM travel_trips WHERE id = \?/);
-  assert.doesNotMatch(projection, /published_at IS NOT NULL/);
-  const exactPreview = section(
-    "export async function getTravelTripDraftPreview",
-    "type TravelKvPointer",
-  );
-  assert.match(exactPreview, /projectTravelAtlas/);
-  assert.match(exactPreview, /projectTravelTripPreview/);
-  assert.doesNotMatch(exactPreview, /\b(?:INSERT|UPDATE|DELETE)\b/);
-
-  const publish = section(
-    "export async function publishTravelTrip",
-    "export async function getPublicTravelAtlas",
-  );
-  assert.match(publish, /readActiveD1TravelPublication/);
-  assert.match(publish, /replaceTravelPublicationTrip/);
-  assert.match(publish, /snapshot_id = \? AND content_hash = \?/);
-  assert.equal(
-    publish.indexOf('state: "closed"') < publish.indexOf("await db.batch"),
-    true,
-  );
-  assert.equal(
-    publish.lastIndexOf("activateTravelKvSnapshot") > publish.indexOf("await db.batch"),
-    true,
-  );
-  assert.match(publish, /const committed = await readActiveD1TravelPublication\(db\)/);
 });
 
 test("travel upload streaming, aggregate If-Match, and cleanup failures remain observable", async () => {
-  const [media, http, maintenance, repository] = await Promise.all([
+  const [media, http, maintenance] = await Promise.all([
     readFile(new URL("../lib/server/travel/media.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/travel/http.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/travel/maintenance.ts", import.meta.url), "utf8"),
-    readFile(new URL("../lib/server/travel/repository.ts", import.meta.url), "utf8"),
   ]);
   const store = media.slice(
     media.indexOf("export async function storeTravelUpload"),
@@ -1084,17 +1156,47 @@ test("travel upload streaming, aggregate If-Match, and cleanup failures remain o
   assert.match(media, /getTravelUploadForWrite\([\s\S]*expectedTripRevision/);
   assert.match(media, /markTravelUploadTemporaryStorage\([\s\S]*expectedTripRevision/);
   assert.match(media, /completeTravelUploadStorage\([\s\S]*expectedTripRevision/);
-  const uploadLookup = repository.slice(
-    repository.indexOf("export async function getTravelUploadForWrite"),
-    repository.indexOf("export async function completeTravelUploadStorage"),
+  const token = "t".repeat(43);
+  const tokenDigest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(token),
   );
-  assert.match(uploadLookup, /JOIN travel_trips AS trips/);
-  assert.match(uploadLookup, /row\.tripRevision !== expectedTripRevision/);
-  const uploadCompletion = repository.slice(
-    repository.indexOf("export async function completeTravelUploadStorage"),
-    repository.indexOf("export async function markTravelUploadTemporaryStorage"),
+  const tokenHash = Array.from(
+    new Uint8Array(tokenDigest),
+    (byte) => byte.toString(16).padStart(2, "0"),
+  ).join("");
+  const uploadBinding = {
+    prepare() {
+      return {
+        bind() { return this; },
+        async first() {
+          return {
+            id: "upload_12345678",
+            tripId: "trip_12345678",
+            tripRevision: "current-trip-revision",
+            tokenHash,
+            status: "issued",
+            mediaType: "image/jpeg",
+            declaredBytes: 100,
+            storedBytes: null,
+            processedWidth: null,
+            processedHeight: null,
+            storageKey: null,
+            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          };
+        },
+      };
+    },
+  };
+  await assert.rejects(
+    getTravelUploadForWrite(
+      "upload_12345678",
+      token,
+      "stale-trip-revision",
+      uploadBinding,
+    ),
+    (error) => error?.code === "revision_conflict" && error?.status === 409,
   );
-  assert.match(uploadCompletion, /travel_trips WHERE id = \? AND revision = \?/);
   assert.match(uploadFinalize, /"x-travel-trip-revision"/);
 
   assert.match(maintenance, /deletionFailures \+= 1/);

@@ -37,7 +37,7 @@ npm run doctor
 environment presence and permissions without printing values, owner/loopback
 consistency, local D1 and migration inventory, the actual pinned Playwright
 Chromium executable, Safari/Chromium availability for manual review, ports 3000
-and 3001, and the default My Room mode. Fix every `FAIL`; review `WARN` output
+and 3001, and the authoritative My Room runtime. Fix every `FAIL`; review `WARN` output
 before treating a machine as release-capable.
 
 ## Development servers
@@ -51,17 +51,9 @@ This applies local migrations and starts My Room, 2001 at
 development. Stop a conflicting process rather than silently changing the
 OAuth callback port.
 
-Classic Play is retained for one cleanup window and must be requested
-explicitly:
-
-```bash
-npm run dev:classic
-npm run dev:studio:classic
-```
-
-Do not rely on Classic behavior for new work. Production, staging, and PR
-previews declare `PLAY_EXPERIENCE_MODE` explicitly; missing hosted mode
-configuration fails closed.
+My Room and its seven semantic object routes are the only Play runtime. Legacy
+`?stream=` links receive permanent redirects to the matching object route;
+there is no Classic development or hosted lane.
 
 ## Fast checks by change type
 
@@ -158,16 +150,32 @@ repository owner or whose `commit_sha` is not exactly 40 lowercase hexadecimal
 characters. The workflow names, paths, read-only permissions, exact-SHA checks,
 and release-evidence contract remain unchanged.
 
-The runner is a temporary repository runner, not a release machine. Register a
-clean runner with the custom label `anish-release`, using a dedicated OS account
-and working directory. Do not put Cloudflare credentials, provider tokens,
-local `.env` files, D1 state, browser profiles, SSH agents, signing keys, or
-other durable secrets in its service environment or working directory. Keep it
-online until all jobs in a dispatched workflow finish—Browser Quality and the
-stability soak contain multiple jobs—then stop and remove its registration.
-The workflows do not select a GitHub environment or reference repository or
-environment secrets; actions receive only the workflow's short-lived,
-read-only `GITHUB_TOKEN`.
+The runner is a disposable repository runner, not a release machine. Download
+the current GitHub runner immediately before evidence collection and configure
+each process from a clean directory with:
+
+```bash
+./config.sh --url 'https://github.com/ash0ts/anish-shah-work-in-public' \
+  --token '<short-lived registration token>' \
+  --ephemeral --disableupdate --unattended --labels anish-release
+./run.sh
+```
+
+One runner directory and process executes exactly one job, deregisters
+automatically, and is never installed as a service. Provision a pool large
+enough for the workflow DAG: Browser Quality can schedule up to twelve jobs;
+the ten-run stability workflow needs eleven one-job runners when it executes in
+parallel, or equivalent clean sequential reprovisioning. Do not put Cloudflare
+credentials, provider tokens, `.env` files, D1 state, browser profiles, SSH
+agents, signing keys, or other durable secrets in the image, process
+environment, or workspace. Preserve only sanitized `_diag` output needed for a
+failed job, then deregister any remaining runner and destroy the VM.
+
+The workflows select the complete label set `self-hosted`, `linux`, `x64`, and
+`anish-release`, do not select a GitHub environment, and do not reference
+repository or environment secrets. Actions receive only the workflow's
+short-lived, read-only `GITHUB_TOKEN`. Because `--disableupdate` is required,
+start from the current runner release so Node 24 actions are supported.
 
 Dispatch the four release-evidence workflows from a trusted owner-controlled
 workflow branch, checking out one already-pushed commit. Use `main` for an

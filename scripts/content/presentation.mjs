@@ -150,13 +150,6 @@ export function buildPublicNarratives() {
       publicationState: "public",
     },
     {
-      id: "narrative:play:personal-streams",
-      title: "Outside the work",
-      body: "Bounded, owner-controlled snapshots make anime, books, music, and games explorable. Movement stays inside an official Strava embed loaded only after visitor intent.",
-      placement: "play",
-      publicationState: "public",
-    },
-    {
       id: "narrative:sources:method",
       title: "How to read the numbers",
       body: "Public counts come from the public inventory. Internal outcomes are deliberately rounded, dated, qualified, and separated from revenue or individual-causality claims.",

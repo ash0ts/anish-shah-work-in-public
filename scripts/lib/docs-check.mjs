@@ -16,7 +16,6 @@ export const REQUIRED_DOCUMENTS = [
   "docs/operations/observability.md",
   "docs/play-connections.md",
   "docs/copywriting.md",
-  "docs/play-experience-prototypes/my-room-2001-interactive-object-archive.md",
 ];
 
 export const PRODUCTION_SMOKE_CHECKS = [
@@ -27,12 +26,20 @@ export const PRODUCTION_SMOKE_CHECKS = [
   "oauth_callbacks",
   "security_headers",
   "owner_health",
+  "simulation_experience",
   "canonical_apex",
   "www_redirect",
   "workers_dev_disabled",
   "preview_urls_disabled",
   "request_id_header",
   "access_destinations",
+  "play_watch",
+  "play_read",
+  "play_listen",
+  "play_collect",
+  "play_play",
+  "play_move",
+  "play_travel",
 ];
 
 async function fileExists(candidate) {
@@ -149,8 +156,16 @@ function semanticIssues(documents) {
   const room = documents.get("docs/architecture/my-room-2001.md") ?? "";
   requireTerms(
     "docs/architecture/my-room-2001.md",
-    ["/play/watch", "/play/read", "/play/listen", "/play/collect", "/play/play", "/play/move"],
-    "all six semantic object routes",
+    [
+      "/play/watch",
+      "/play/read",
+      "/play/listen",
+      "/play/collect",
+      "/play/play",
+      "/play/move",
+      "/play/travel",
+    ],
+    "all seven semantic object routes",
   );
   if (!/connector/i.test(room) || !/(capability|progressive enhancement)/i.test(room)) {
     issues.push(
@@ -170,7 +185,6 @@ function semanticIssues(documents) {
       ...PRODUCTION_SMOKE_CHECKS,
       "RELEASE_BROWSER_URL",
       "COPY_VERSION",
-      "PLAY_EXPERIENCE_MODE",
     ],
     "the exact release evidence and production smoke contract",
   );
@@ -214,13 +228,6 @@ function semanticIssues(documents) {
     issues.push(
       "docs/copywriting.md must explain protected fields and the implementation-request workflow.",
     );
-  }
-
-  const rfc = documents.get(
-    "docs/play-experience-prototypes/my-room-2001-interactive-object-archive.md",
-  );
-  if (rfc && !/historical/i.test(rfc.split(/\r?\n/).slice(0, 30).join("\n"))) {
-    issues.push("The My Room RFC must be labeled as historical context near its top.");
   }
 
   if (

@@ -144,29 +144,36 @@ test("official Spotify players duck and restore the shared experience bus", asyn
 
 test("simulation cues follow deterministic campaign and arena transitions", async () => {
   const [campaign, arena] = await Promise.all([
-    source("components/simulation/SimulationCampaign.tsx"),
+    import(
+      "../components/simulation/campaign/campaign-audio.ts"
+    ),
     source("components/simulation/ActionArena.tsx"),
   ]);
-  for (const cue of [
-    "simulation-boot",
-    "simulation-act-1",
-    "simulation-act-2",
-    "simulation-act-3",
-    "simulation-boss",
-    "simulation-near-miss",
-    "simulation-hit",
-    "simulation-evidence",
-    "simulation-action",
-    "simulation-dialogue-ready",
-    "simulation-fallback",
-    "simulation-victory",
-    "simulation-recalibrate",
-    "simulation-ending",
-  ]) {
-    assert.match(campaign, new RegExp(`"${cue}"`), cue);
-  }
-  assert.match(campaign, /stateName === "act1Wave"/);
-  assert.doesNotMatch(campaign, /stateName\.startsWith\("act1"\)/);
+  assert.deepEqual(
+    ["boot", "act1Wave", "act2Wave", "act3Wave", "bossWave", "ending"].map(
+      campaign.campaignAudioCueForState,
+    ),
+    [
+      "simulation-boot",
+      "simulation-act-1",
+      "simulation-act-2",
+      "simulation-act-3",
+      "simulation-boss",
+      "simulation-ending",
+    ],
+  );
+  assert.equal(campaign.campaignAudioCueForState("act1Debrief"), null);
+  assert.deepEqual(
+    ["near-miss", "hit", "evidence", "recalibrate"].map(
+      campaign.arenaFeedbackAudioCue,
+    ),
+    [
+      "simulation-near-miss",
+      "simulation-hit",
+      "simulation-evidence",
+      "simulation-recalibrate",
+    ],
+  );
   assert.match(arena, /feedbackRef\.current\?\.\("near-miss"\)/);
   assert.match(arena, /this\.time\.now - this\.lastNearMissAt >= 700/);
 });

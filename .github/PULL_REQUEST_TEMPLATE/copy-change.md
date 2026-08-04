@@ -27,6 +27,14 @@
 
 Owner verification notes:
 
+For each changed fact-check field:
+
+- Copy key:
+- Stable subject ID:
+- Supporting sanitized fact or evidence ID:
+- Proposed factual clause:
+- Owner-review status:
+
 ## SEO and social presentation
 
 <!-- Note title/description changes, search intent, and affected social previews. Write “None” if unchanged. -->

@@ -228,6 +228,90 @@ test("every Travel source class selects the complete Travel validation gate", ()
     }
   }
 });
+
+test("Travel media mutations require behavior-level security coverage", () => {
+  for (const travelPath of [
+    "lib/server/travel/media.ts",
+    "lib/server/travel/repository/photos.ts",
+    "lib/server/travel/repository/uploads-media.ts",
+    "lib/server/travel/repository/publication.ts",
+  ]) {
+    const uncovered = plan(travelPath);
+    assert.equal(uncovered.status, 1, travelPath);
+    assert.match(
+      output(uncovered),
+      /Travel upload, media, photo, or publication code changed without a Travel backend\/security regression test/,
+      travelPath,
+    );
+  }
+
+  const covered = plan(
+    "lib/server/travel/media.ts",
+    "tests/travel-security.test.mjs",
+  );
+  assert.equal(covered.status, 0, output(covered));
+  assert.match(covered.stdout, /- travel/);
+  assert.match(covered.stdout, /npm run test:backend/);
+  assert.match(covered.stdout, /npm run validate:browser/);
+});
+
+test("Simulation server and test changes select privacy, rendered, bundle, and browser gates", () => {
+  const uncovered = plan("lib/server/simulation/provider.ts");
+  assert.equal(uncovered.status, 1);
+  assert.match(
+    output(uncovered),
+    /Simulation API, session, Gateway, or privacy code changed without a Simulation backend\/security regression test/,
+  );
+
+  const covered = plan(
+    "lib/server/simulation/provider.ts",
+    "tests/simulation-backend.test.mjs",
+  );
+  assert.equal(covered.status, 0, output(covered));
+  assert.match(covered.stdout, /- simulation/);
+  for (const command of [
+    "npm run test:backend",
+    "npm run test:rendered",
+    "npm run bundle:scan",
+    "npm run validate:browser",
+  ]) {
+    assert.match(
+      covered.stdout,
+      new RegExp(command.replaceAll(" ", "\\s+")),
+      command,
+    );
+  }
+  assert.match(covered.stdout, /Gateway prompt\/response logging and caching are disabled/);
+
+  const regressionOnly = plan("tests/simulation-backend.test.mjs");
+  assert.equal(regressionOnly.status, 0, output(regressionOnly));
+  assert.match(regressionOnly.stdout, /- simulation/);
+  assert.match(regressionOnly.stdout, /npm run test:backend/);
+});
+
+test("closed room registry changes require parity coverage", () => {
+  const uncovered = plan(
+    "components/play/room-platform/room-object-contract.ts",
+  );
+  assert.equal(uncovered.status, 1);
+  assert.match(output(uncovered), /registry-parity regression test/);
+
+  const covered = plan(
+    "components/play/room-platform/room-object-contract.ts",
+    "tests/play-room-routes.test.mjs",
+  );
+  assert.equal(covered.status, 0, output(covered));
+  assert.match(covered.stdout, /npm run test:rendered/);
+  assert.match(covered.stdout, /npm run validate:browser/);
+});
+
+test("ordinary documentation changes remain documentation-only", () => {
+  const result = plan("docs/testing.md");
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, /- documentation/);
+  assert.match(result.stdout, /Checks:\n  - npm run docs:check\n/);
+  assert.doesNotMatch(result.stdout, /npm run build|npm run test:backend/);
+});
 test("Access and authentication changes fail classification without coverage", () => {
   const missingTest = plan("worker/access.ts");
   assert.equal(missingTest.status, 1);
@@ -314,6 +398,12 @@ test("edited generated content must match the claimed attestation hash", () => {
 
 test("applied migrations are immutable", () => {
   const result = plan("drizzle/0004_shallow_spitfire.sql");
+  assert.equal(result.status, 1);
+  assert.match(output(result), /applied migrations are immutable/);
+});
+
+test("applied Drizzle snapshots are immutable with their SQL migration", () => {
+  const result = plan("drizzle/meta/0007_snapshot.json");
   assert.equal(result.status, 1);
   assert.match(output(result), /applied migrations are immutable/);
 });

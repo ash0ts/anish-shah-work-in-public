@@ -4,10 +4,10 @@ import {
   assertPinnedProductionResources,
   PUBLIC_CLOUDFLARE_ACCOUNT_ID,
   PUBLIC_SITE_ORIGIN,
-  requiredHostedPlayExperienceMode,
   PRODUCTION_TRAVEL_MEDIA_BUCKET,
 } from "./lib/release-config-contract.mjs";
 import { safeGeneratedWorkerBase } from "./lib/hosted-config-contract.mjs";
+import { matchingReleaseVersion, readPackageReleaseVersion } from "./lib/release-version.mjs";
 
 const root = process.cwd();
 const generatedConfigPath = resolve(root, "dist/server/wrangler.json");
@@ -98,7 +98,6 @@ const publicSiteUrl = exactHttpsOrigin(
 if (publicSiteUrl !== PUBLIC_SITE_ORIGIN) {
   throw new Error("PUBLIC_SITE_URL must be the repository's pinned canonical origin.");
 }
-const playExperienceMode = requiredHostedPlayExperienceMode(process.env);
 const simulationExperienceMode =
   process.env.SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
 if (
@@ -128,6 +127,11 @@ const releaseSha = required("RELEASE_VALIDATED_SHA").toLowerCase();
 if (!/^[a-f0-9]{40}$/.test(releaseSha)) {
   throw new Error("RELEASE_VALIDATED_SHA must be an exact 40-character commit SHA.");
 }
+const packageVersion = await readPackageReleaseVersion(root);
+const releaseVersion = matchingReleaseVersion(
+  required("RELEASE_VERSION"),
+  packageVersion,
+);
 const publicBundle = JSON.parse(
   await readFile(
     resolve(root, "content/public/anish-content.public.v1.json"),
@@ -209,10 +213,10 @@ config.vars = {
   SITE_URL: publicSiteUrl,
   STEAM_DATA_STORAGE_COUNTRIES: "United States",
   RELEASE_SHA: releaseSha,
+  RELEASE_VERSION: releaseVersion,
   CONTENT_VERSION: publicBundle.contentVersion,
   PUBLIC_CONTENT_MODE: "d1_kv_required",
   DEPLOYMENT_TIER: "production",
-  PLAY_EXPERIENCE_MODE: playExperienceMode,
   SIMULATION_EXPERIENCE_MODE: simulationExperienceMode,
   SIMULATION_AI_MODE: simulationAiMode,
   SIMULATION_PROVIDER: "anthropic",

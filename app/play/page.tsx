@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
+import { permanentRedirect } from "next/navigation";
 
-import { ClassicPlayExperience } from "@/components/play/ClassicPlayExperience";
-import { streamIdFromValue } from "@/components/play/connector-model";
 import { RoomOverview } from "@/components/play/room-platform/RoomOverview";
-import {
-  roomExperienceEnabled,
-  travelAtlasEnabled,
-} from "@/lib/server/play-experience";
+import { roomObjectContract } from "@/components/play/room-platform/room-object-contract";
+import { travelAtlasEnabled } from "@/lib/server/travel";
 import {
   activePreviewFixtureRuntime,
   previewFixtureScenario,
@@ -40,6 +37,16 @@ export default async function PlayPage({
   searchParams: Promise<PlaySearchParams>;
 }) {
   const query = await searchParams;
+  const legacyStream = Array.isArray(query.stream)
+    ? query.stream[0]
+    : query.stream;
+  const legacyObject = roomObjectContract(legacyStream);
+  if (
+    legacyObject?.contentSource.kind === "connector" &&
+    legacyStream === legacyObject.id
+  ) {
+    permanentRedirect(legacyObject.route);
+  }
   const fixtureParameter =
     typeof query.fixture === "string" ? query.fixture : undefined;
   const fixture = activePreviewFixtureRuntime() && fixtureParameter
@@ -48,19 +55,10 @@ export default async function PlayPage({
       )
     : undefined;
 
-  if (roomExperienceEnabled()) {
-    return (
-      <RoomOverview
-        fixture={fixture}
-        travelEnabled={travelAtlasEnabled()}
-      />
-    );
-  }
-
   return (
-    <ClassicPlayExperience
+    <RoomOverview
       fixture={fixture}
-      initialStream={streamIdFromValue(query.stream)}
+      travelEnabled={travelAtlasEnabled()}
     />
   );
 }

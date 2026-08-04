@@ -18,6 +18,7 @@ import type {
   TravelTripSummary,
 } from "@/types/travel";
 import { useExperienceAudio } from "@/components/experience-audio/ExperienceAudioProvider";
+import { SITE_COPY } from "@/lib/copy";
 import type { TravelPreviewScenario } from "@/lib/server/travel/preview";
 import {
   loadTravelAdmin1Manifest,
@@ -464,7 +465,7 @@ export function PostcardPlanet({
                   aria-controls="travel-country-results"
                   id="travel-country-search"
                   onChange={(event) => setQuery(event.currentTarget.value)}
-                  placeholder="Search the public atlas"
+                  placeholder={SITE_COPY.play["travel-search-placeholder"]}
                   ref={countrySearchRef}
                   type="search"
                   value={query}
@@ -490,7 +491,7 @@ export function PostcardPlanet({
                   </ol>
                 ) : (
                   <p className={styles.noSearchResults} id="travel-country-results">
-                    No countries match that search.
+                    {SITE_COPY.play["travel-no-results"]}
                   </p>
                 )}
               </div>

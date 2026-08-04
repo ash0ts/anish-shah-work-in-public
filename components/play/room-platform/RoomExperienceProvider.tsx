@@ -18,7 +18,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { isRoomObjectId, ROOM_OBJECT_BY_ID } from "./room-registry";
+import {
+  isRoomObjectId,
+  ROOM_OBJECT_BY_ID,
+  ROOM_OBJECTS,
+} from "./room-registry";
 import {
   previewFixtureFromSearch,
   routeWithPreviewFixture,
@@ -319,10 +323,8 @@ export function RoomExperienceProvider({
   const enabledObjectIds = useMemo<readonly RoomObjectId[]>(
     () =>
       travelEnabled
-        ? Object.keys(ROOM_OBJECT_BY_ID) as RoomObjectId[]
-        : (Object.keys(ROOM_OBJECT_BY_ID) as RoomObjectId[]).filter(
-            (id) => id !== "travel",
-          ),
+        ? ROOM_OBJECTS.map(({ id }) => id)
+        : ROOM_OBJECTS.filter(({ id }) => id !== "travel").map(({ id }) => id),
     [travelEnabled],
   );
 

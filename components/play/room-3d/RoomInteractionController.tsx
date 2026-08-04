@@ -10,6 +10,7 @@ import {
 
 import type { RoomObjectId } from "../room-platform/room-types";
 import { isRoomObjectId } from "../room-platform/room-registry";
+import { detectRoomCapability } from "./room-capability";
 import { ROOM_BASIC_MATERIALS } from "./room-materials";
 import { resolveRoomRayHit } from "./room-hit-resolution";
 import {
@@ -32,6 +33,7 @@ type PointerIntent =
       pointerId: number;
       downObject: RoomObjectId | null;
       origin: readonly [number, number];
+      viewportAtStart: readonly [number, number, number];
       viewAtStart: RoomRotation;
       captureTarget: Element | null;
     }
@@ -39,6 +41,7 @@ type PointerIntent =
       kind: "dragging";
       pointerId: number;
       origin: readonly [number, number];
+      viewportAtStart: readonly [number, number, number];
       viewAtStart: RoomRotation;
       latestView: RoomRotation;
       captureTarget: Element | null;
@@ -75,6 +78,33 @@ function pointerCaptureTarget(event: ThreeEvent<PointerEvent>) {
   return target instanceof Element ? target : null;
 }
 
+function roomViewportSnapshot(): readonly [number, number, number] {
+  return [
+    window.innerWidth,
+    window.innerHeight,
+    window.visualViewport?.scale ?? 1,
+  ];
+}
+
+function roomViewportMatches(
+  snapshot: readonly [number, number, number],
+): boolean {
+  // A pointer-up can arrive before React commits the capability change caused
+  // by a resize. Compare the live viewport as well as listening for resize so
+  // that a gesture can never activate an object across two room projections.
+  const current = roomViewportSnapshot();
+  return current.every((value, index) => value === snapshot[index]);
+}
+
+function roomPresentationStillEligible(presentation: "desktop" | "pocket") {
+  const capability = detectRoomCapability();
+  if (!capability.eligible) return false;
+  return presentation === "pocket"
+    ? capability.tier === "pocket"
+    : capability.tier === "desktop-fisheye" ||
+        capability.tier === "desktop-perspective";
+}
+
 export function RoomInteractionController({
   disabled,
   hitTargets,
@@ -92,12 +122,25 @@ export function RoomInteractionController({
   const intent = useRef<PointerIntent>({ kind: "idle" });
   const previousPathname = useRef(pathname);
   const hoverFrame = useRef<number | null>(null);
+  const selectionFrame = useRef<number | null>(null);
+  const selectionTimer = useRef<number | null>(null);
   const hoverRay = useRef(new Ray());
 
   const cancelHoverFrame = useCallback(() => {
     if (hoverFrame.current === null) return;
     cancelAnimationFrame(hoverFrame.current);
     hoverFrame.current = null;
+  }, []);
+
+  const cancelPendingSelection = useCallback(() => {
+    if (selectionFrame.current !== null) {
+      cancelAnimationFrame(selectionFrame.current);
+      selectionFrame.current = null;
+    }
+    if (selectionTimer.current !== null) {
+      window.clearTimeout(selectionTimer.current);
+      selectionTimer.current = null;
+    }
   }, []);
 
   const queueHover = useCallback(
@@ -119,6 +162,7 @@ export function RoomInteractionController({
     (restoreView: boolean) => {
       const current = intent.current;
       cancelHoverFrame();
+      cancelPendingSelection();
       if (
         current.kind !== "idle" &&
         current.captureTarget?.hasPointerCapture(current.pointerId)
@@ -134,6 +178,7 @@ export function RoomInteractionController({
     },
     [
       cancelHoverFrame,
+      cancelPendingSelection,
       onHoverChange,
       onInteractionActiveChange,
       onRotationPreview,
@@ -169,6 +214,7 @@ export function RoomInteractionController({
   useEffect(
     () => () => {
       cancelHoverFrame();
+      cancelPendingSelection();
       const current = intent.current;
       if (
         current.kind !== "idle" &&
@@ -179,10 +225,11 @@ export function RoomInteractionController({
       intent.current = { kind: "idle" };
       onInteractionActiveChange?.(false);
     },
-    [cancelHoverFrame, onInteractionActiveChange],
+    [cancelHoverFrame, cancelPendingSelection, onInteractionActiveChange],
   );
 
   const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
+    cancelPendingSelection();
     const activePointerId =
       intent.current.kind === "idle" ? null : intent.current.pointerId;
     if (isCompetingRoomPointer(activePointerId, event.pointerId)) {
@@ -215,6 +262,7 @@ export function RoomInteractionController({
       pointerId: event.pointerId,
       downObject: resolveObjectFromRay(event.ray, hitTargets, occluders),
       origin,
+      viewportAtStart: roomViewportSnapshot(),
       viewAtStart: rotation,
       captureTarget,
     };
@@ -235,7 +283,8 @@ export function RoomInteractionController({
 
     if (
       current.pointerId !== event.pointerId ||
-      !isRoomInteractivePointer(event.nativeEvent.pointerType, allowTouch)
+      !isRoomInteractivePointer(event.nativeEvent.pointerType, allowTouch) ||
+      !roomViewportMatches(current.viewportAtStart)
     ) {
       cancelGesture(true);
       return;
@@ -256,6 +305,7 @@ export function RoomInteractionController({
         kind: "dragging",
         pointerId: current.pointerId,
         origin: current.origin,
+        viewportAtStart: current.viewportAtStart,
         viewAtStart: current.viewAtStart,
         latestView: current.viewAtStart,
         captureTarget: current.captureTarget,
@@ -286,7 +336,8 @@ export function RoomInteractionController({
     if (current.kind === "idle") return;
     if (
       current.pointerId !== event.pointerId ||
-      !isRoomInteractivePointer(event.nativeEvent.pointerType, allowTouch)
+      !isRoomInteractivePointer(event.nativeEvent.pointerType, allowTouch) ||
+      !roomViewportMatches(current.viewportAtStart)
     ) {
       cancelGesture(true);
       return;
@@ -299,10 +350,13 @@ export function RoomInteractionController({
     }
 
     const resumeHoverFromRelease = current.kind === "pending";
+    let selectedObject: RoomObjectId | null = null;
+    let selectionViewport: readonly [number, number, number] | null = null;
     if (current.kind === "pending") {
       const upObject = resolveObjectFromRay(event.ray, hitTargets, occluders);
       if (current.downObject && current.downObject === upObject) {
-        onSelect(current.downObject);
+        selectedObject = current.downObject;
+        selectionViewport = current.viewportAtStart;
       }
     } else {
       onRotationCommit(
@@ -322,6 +376,34 @@ export function RoomInteractionController({
       queueHover(event.ray);
     } else {
       onHoverChange(null);
+    }
+
+    if (selectedObject && selectionViewport) {
+      // Resizing a touch viewport can synthesize a pointer-up immediately
+      // before the browser dispatches its resize event. Defer activation so
+      // environment cancellation wins, then re-check the live projection
+      // before navigating.
+      const activate = () => {
+        selectionFrame.current = null;
+        selectionTimer.current = null;
+        if (
+          document.visibilityState !== "visible" ||
+          !roomViewportMatches(selectionViewport) ||
+          !roomPresentationStillEligible(presentation)
+        ) {
+          return;
+        }
+        onSelect(selectedObject);
+      };
+      if (allowTouch) {
+        // A short confirmation window lets mobile browsers finish synthetic
+        // pointer cancellation caused by resize/orientation changes before a
+        // tap can navigate. It remains well below the room acknowledgement
+        // animation and is imperceptible during ordinary selection.
+        selectionTimer.current = window.setTimeout(activate, 64);
+      } else {
+        selectionFrame.current = requestAnimationFrame(activate);
+      }
     }
   };
 

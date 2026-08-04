@@ -16,11 +16,11 @@ type RuntimeBindings = {
   CF_ACCESS_TEAM_DOMAIN?: string;
   CF_ACCESS_AUD?: string;
   RELEASE_SHA?: string;
+  RELEASE_VERSION?: string;
   CONTENT_VERSION?: string;
   PUBLIC_CONTENT_MODE?: string;
   DEPLOYMENT_TIER?: string;
   PREVIEW_PR_NUMBER?: string;
-  PLAY_EXPERIENCE_MODE?: string;
   SIMULATION_EXPERIENCE_MODE?: string;
   SIMULATION_AI_MODE?: string;
   SIMULATION_AI_TRANSPORT?: string;

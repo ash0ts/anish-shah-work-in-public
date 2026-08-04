@@ -1,11 +1,11 @@
 # Anish Shah — Work in Public
 
-An owner-operated portfolio of applied AI products, education, open source,
-technical storytelling, and community programs from 2021 onward.
+An owner-operated portfolio of applied AI systems, technical education, open
+source, research implementations, and public programs from 2021 onward.
 
 ## Public experience
 
-- `/` — professional thesis, selected Bodies of Work, trajectory, and qualified impact
+- `/` — professional thesis, selected lines of work, and qualified impact
 - `/work` — the complete, searchable WorkGroup archive
 - `/work/[slug]` — one body of work with its public forms and evidence
 - `/play` — My Room, 2001: a semantic seven-object collection and travel directory
@@ -72,6 +72,15 @@ media, publication, and globe boundaries are documented in
 - Production release: use the sole [Production release runbook](./docs/operations/release.md).
 - Rollback or incident response: use [Rollback](./docs/operations/rollback.md)
   and [Incidents](./docs/operations/incidents.md).
+
+Release candidates are cut from `release/<semver>`, versioned with immutable
+prerelease tags such as `v2.0.0-rc.1`, and deployed first to
+`https://staging.anish-shah-is.online`. Staging is Access-protected, isolated
+from production state, and globally noindexed. The draft release PR remains
+open until the exact candidate passes the four exact-SHA workflows, migration
+upgrade tests, staging checkpoint, browser matrix, and owner acceptance. See
+the staging and release runbooks for the guarded commands; ordinary development
+commands never deploy.
 
 For a local real-model smoke test that never copies the provider key into the
 repository, use `npm run dev:simulation:live -- --env-file <owner-only-file>`.

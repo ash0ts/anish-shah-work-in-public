@@ -42,6 +42,8 @@ before(async () => {
       "--local",
       "--var",
       "NODE_ENV:development",
+      "--var",
+      "TRAVEL_ATLAS_MODE:atlas-v1",
       "--log-level",
       "error",
       "--persist-to",
@@ -487,50 +489,34 @@ test("Three.js stays inside deferred Play room and Travel boundaries", async () 
   }
 });
 
-test("Play remains consent-gated and has a complete no-JavaScript state", async () => {
+test("Play is a provider-free semantic room before an object route is opened", async () => {
   const html = await renderHtml("/play");
   const markup = documentMarkup(html);
-  for (const provider of [
-    "MyAnimeList",
-    "Hardcover",
-    "Spotify",
-    "Discogs",
-    "Steam",
-    "Strava",
+  for (const object of [
+    "watch",
+    "read",
+    "listen",
+    "collect",
+    "play",
+    "move",
+    "travel",
   ]) {
-    assert.match(markup, new RegExp(provider));
+    assert.match(markup, new RegExp(`data-room-object-link="${object}"`));
   }
-  assert.equal((markup.match(/role="tab"/g) ?? []).length, 6);
-  const noScript = markup.match(/<noscript\b[\s\S]*?<\/noscript>/i)?.[0] ?? "";
-  assert.equal((noScript.match(/<details\b/g) ?? []).length, 6);
-  const rawNoScript =
-    html.match(/<noscript\b[\s\S]*?<\/noscript>/i)?.[0] ?? "";
-  assert.doesNotMatch(rawNoScript, /\.undefined\b/);
-  const enhancedClass = rawNoScript.match(
-    /<style>\.([^{}]+)\{display:none!important\}<\/style>/i,
-  )?.[1];
-  assert(enhancedClass, "The no-JavaScript state must hide enhanced controls");
-  const escapedEnhancedClass = enhancedClass.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    "\\$&",
-  );
-  assert.match(
-    html,
-    new RegExp(`class="[^"]*${escapedEnhancedClass}[^"]*"`),
-    "The no-JavaScript selector must target the enhanced tab interface",
-  );
   assert.doesNotMatch(
     markup,
-    /<iframe\b|open\.spotify\.com\/embed|strava-embeds\.com|www\.strava\.com\/athletes/i,
+    /<iframe\b|api\/connectors|open\.spotify\.com\/embed|strava-embeds\.com/i,
   );
 
-  const [source, spotify, playPage] = await Promise.all([
-    Promise.all(
-      [
-        "components/PersonalStreams.tsx",
-        "components/play/MovementStream.tsx",
-      ].map((file) => readFile(path.join(PROJECT_ROOT, file), "utf8")),
-    ).then((files) => files.join("\n")),
+  const [overview, screens, spotify, movement] = await Promise.all([
+    readFile(
+      path.join(PROJECT_ROOT, "components/play/room-platform/RoomOverview.tsx"),
+      "utf8",
+    ),
+    readFile(
+      path.join(PROJECT_ROOT, "components/play/room-platform/room-screen-registry.ts"),
+      "utf8",
+    ),
     Promise.all(
       [
         "components/SpotifyStream.tsx",
@@ -540,24 +526,13 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
       ].map((file) => readFile(path.join(PROJECT_ROOT, file), "utf8")),
     ).then((files) => files.join("\n")),
     readFile(
-      path.join(PROJECT_ROOT, "components/play/ClassicPlayExperience.tsx"),
+      path.join(PROJECT_ROOT, "components/play/MovementStream.tsx"),
       "utf8",
     ),
   ]);
-  assert.match(
-    source,
-    /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/,
-  );
-  assert.match(
-    source,
-    /active === "collect"[\s\S]*?<DiscogsStream/,
-    "Discogs must mount only after Collect is selected",
-  );
-  assert.match(
-    playPage,
-    /spotifyNoScript=\{[\s\S]*?<ol>[\s\S]*?open\.spotify\.com\/track/,
-    "The no-JavaScript Spotify state must receive a semantic ranked track list",
-  );
+  assert.doesNotMatch(overview, /getPublicConnector|fetch\(/);
+  assert.match(screens, /listen: \(\) => import\("\.\.\/room-screens\/ListenRoomScreen"\)/);
+  assert.match(screens, /collect: \(\) => import\("\.\.\/room-screens\/CollectRoomScreen"\)/);
   assert.match(spotify, /<svg[\s\S]*?className=\{styles\.groove\}/);
   assert.match(
     spotify,
@@ -577,16 +552,12 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
     /<audio\b|AudioContext|webkitAudioContext|from\s+["']three["']|WebGL|autoplay;/i,
   );
   assert.match(
-    source,
-    /active === "move"[\s\S]*?<MovementStream/,
-  );
-  assert.match(
-    source,
+    movement,
     /function MovementStream[\s\S]*?if \(state\.status !== "ready"\)/,
     "An unpublished Strava stream must render the compact empty row",
   );
   assert.match(
-    source,
+    movement,
     /function MovementStream[\s\S]*?show && state\.payload\.embed \? \([\s\S]*?<iframe/,
     "The Strava iframe must remain behind explicit visitor intent",
   );
@@ -645,7 +616,7 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
       selector: ".frame caption",
     },
     {
-      file: "components/PersonalStreams.module.css",
+      file: "components/play/StreamPresentation.module.css",
       selector: ".visuallyHidden",
     },
     {

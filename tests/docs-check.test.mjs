@@ -30,7 +30,7 @@ async function writeDocumentationFixture(root) {
   );
   content.set(
     "docs/architecture/my-room-2001.md",
-    "# Room\nCapability-gated progressive enhancement with connector isolation.\n/play/watch /play/read /play/listen /play/collect /play/play /play/move\n",
+    "# Room\nCapability-gated progressive enhancement with connector isolation.\n/play/watch /play/read /play/listen /play/collect /play/play /play/move /play/travel\n",
   );
   content.set(
     "docs/operations/staging-and-previews.md",
@@ -38,7 +38,7 @@ async function writeDocumentationFixture(root) {
   );
   content.set(
     "docs/operations/release.md",
-    `# Release\n${PRODUCTION_SMOKE_CHECKS.join(" ")}\nRELEASE_BROWSER_URL COPY_VERSION PLAY_EXPERIENCE_MODE\n`,
+    `# Release\n${PRODUCTION_SMOKE_CHECKS.join(" ")}\nRELEASE_BROWSER_URL COPY_VERSION\n`,
   );
   content.set(
     "docs/play-connections.md",
@@ -48,11 +48,6 @@ async function writeDocumentationFixture(root) {
     "docs/copywriting.md",
     "# Copywriting\nEdit content/copy using $edit-anish-site-copy. Review the protected fields, synthetic preview, and implementation request.\n",
   );
-  content.set(
-    "docs/play-experience-prototypes/my-room-2001-interactive-object-archive.md",
-    "# Historical RFC\nHistorical design context only.\n",
-  );
-
   for (const [relativePath, source] of content) {
     const absolutePath = path.join(root, relativePath);
     await mkdir(path.dirname(absolutePath), { recursive: true });

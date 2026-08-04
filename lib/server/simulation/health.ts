@@ -1,5 +1,6 @@
 import { runtimeDatabase } from "../runtime-env";
 import { listSimulationProviderApprovals } from "./approvals";
+import { readSimulationUsageHealth } from "./repository";
 import { simulationManifest } from "./policy";
 import { simulationRuntimeConfiguration } from "./runtime";
 
@@ -16,9 +17,6 @@ export type SimulationHealthSummary = {
   fallbackRate: "none" | "low" | "elevated" | "high" | "unavailable";
   approvedProviders: string[];
 };
-
-type BudgetRow = { modelCalls: number; authoredFallbacks: number };
-type MaintenanceRow = { checkedAt: string };
 
 function coarseFallbackRate(
   modelCalls: number,
@@ -43,33 +41,16 @@ export async function getSimulationHealthSummary(
   let approvedProviders: string[] = [];
   if (database) {
     try {
-      const [budget, maintenance, approvals] = await Promise.all([
-        database
-          .prepare(
-            `SELECT model_calls AS modelCalls,
-                    authored_fallbacks AS authoredFallbacks
-             FROM simulation_daily_budget
-             WHERE budget_date = ?
-             LIMIT 1`,
-          )
-          .bind(now.toISOString().slice(0, 10))
-          .first<BudgetRow>(),
-        database
-          .prepare(
-            `SELECT checked_at AS checkedAt
-             FROM maintenance_state
-             WHERE key = 'simulation_generation' AND status = 'healthy'
-             LIMIT 1`,
-          )
-          .first<MaintenanceRow>(),
+      const [usage, approvals] = await Promise.all([
+        readSimulationUsageHealth(database, now),
         listSimulationProviderApprovals(database),
       ]);
-      dailyModelCalls = Number(budget?.modelCalls ?? 0);
+      dailyModelCalls = usage.modelCalls;
       fallbackRate = coarseFallbackRate(
         dailyModelCalls,
-        Number(budget?.authoredFallbacks ?? 0),
+        usage.authoredFallbacks,
       );
-      lastSuccessfulGenerationAt = maintenance?.checkedAt ?? null;
+      lastSuccessfulGenerationAt = usage.lastSuccessfulGenerationAt;
       approvedProviders = approvals
         .filter(
           (approval) =>

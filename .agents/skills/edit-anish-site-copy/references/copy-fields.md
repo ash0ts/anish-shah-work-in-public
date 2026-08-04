@@ -5,7 +5,8 @@
 - `content/copy/pages/site.md`: navigation, footer, global labels, and shared metadata wording.
 - `content/copy/pages/home.md`: homepage framing, current focus, calls to action, and homepage metadata.
 - `content/copy/pages/work.md`: Work archive introduction, search wording, and metadata.
-- `content/copy/pages/play.md`: room overview, six object descriptions, and Play metadata.
+- `content/copy/pages/play.md`: room overview, seven object descriptions, Travel doorway/atlas framing, and Play metadata.
+- `content/copy/pages/simulation.md`: Simulation introduction, CTA, nonfactual encounter flavor, instructions, and metadata.
 - `content/copy/pages/sources.md`: Sources framing and approved methodology prose.
 - `content/copy/work-groups/<slug>.md`: one stable WorkGroup's display title, short title, summary, and role summary.
 
@@ -45,3 +46,5 @@ Keep these exact:
 ```
 
 The marker binds a human-readable file to a stable sanitized record. Changing it is a structural/data change and the parser rejects it.
+
+Literal Play object names are also structural. The copy deck exposes their fields so generation stays centralized, but validation pins them to TV, Bookshelf, Music player, Record crate, Computer, Treadmill, and Globe. Edit the adjacent descriptions and screen framing instead.

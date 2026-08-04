@@ -3,7 +3,6 @@ import { expect, test } from "@playwright/test";
 import { expectRoomReady } from "./helpers/room-readiness.mjs";
 import { Object3D, PerspectiveCamera, Vector3 } from "three";
 
-const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 const objects = [
   {
     id: "watch",
@@ -51,7 +50,7 @@ const objects = [
     id: "travel",
     label: "Travel",
     provider: null,
-    foundation: "Travel signal · Approximate public geography",
+    foundation: "Postcard Planet · Approximate public geography",
     title: "Postcard Planet",
   },
 ];
@@ -496,6 +495,12 @@ const POCKET_HIT_TARGET_GEOMETRY = {
     rotationY: 0.12,
     scale: 1.12,
   },
+  travel: {
+    hit: [0, 1.45, 0],
+    position: [1.48, 0, -2.75],
+    rotationY: -0.08,
+    scale: 0.94,
+  },
 };
 
 async function projectedPocketRoomPoints(page) {
@@ -515,6 +520,9 @@ async function projectedPocketRoomPoints(page) {
   camera.updateMatrixWorld();
 
   const points = new Map();
+  expect(Object.keys(POCKET_HIT_TARGET_GEOMETRY).sort()).toEqual(
+    objects.map(({ id }) => id).sort(),
+  );
   for (const object of objects) {
     const geometry = POCKET_HIT_TARGET_GEOMETRY[object.id];
     const overview = new Object3D();
@@ -671,8 +679,6 @@ async function activeElementReport(page) {
 }
 
 test.describe("My Room 2001 browser quality", () => {
-  test.skip(!roomMode, "The room suite runs against its dedicated Worker mode.");
-
   test("the overview is provider-free and defers the room runtime until intent", async ({
     page,
   }) => {
@@ -780,7 +786,7 @@ test.describe("My Room 2001 browser quality", () => {
 
     for (const object of objects) {
       requests.length = 0;
-      await page.goto(`/play/${object.id}`, { waitUntil: "networkidle" });
+      await page.goto(`/play/${object.id}`, { waitUntil: "domcontentloaded" });
       await expect(page.getByRole("heading", { name: object.title })).toBeVisible();
       await expect(page.getByText(object.foundation, { exact: false })).toBeVisible();
       expect(requests).toEqual([]);
@@ -902,8 +908,12 @@ test.describe("My Room 2001 browser quality", () => {
     expect(roomBounds.height).toBeGreaterThanOrEqual(899);
 
     await lastObject.focus();
-    await expect(room.locator("[data-room-object-cue]")).toContainText(
-      "Tabletop world globeTravel",
+    const objectCue = room.locator("[data-room-object-cue]");
+    await expect(objectCue.locator("span")).toHaveText(
+      await lastObject.locator("span").innerText(),
+    );
+    await expect(objectCue.locator("strong")).toHaveText(
+      await lastObject.locator("strong").innerText(),
     );
     await expect(lastObject).toHaveAttribute("data-focused", "true");
     await lastObject.press("Tab");

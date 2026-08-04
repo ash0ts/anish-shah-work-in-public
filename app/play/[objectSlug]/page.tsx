@@ -1,23 +1,19 @@
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import {
   ROOM_OBJECTS,
   roomObject,
 } from "@/components/play/room-platform/room-registry";
 import { ROOM_SCREEN_LOADERS } from "@/components/play/room-platform/room-screen-registry";
-import type { RoomObjectId } from "@/components/play/room-platform/room-types";
-import {
-  roomExperienceEnabled,
-  travelAtlasEnabled,
-} from "@/lib/server/play-experience";
+import type { RoomConnectorObjectId } from "@/components/play/room-platform/room-types";
+import { travelAtlasEnabled } from "@/lib/server/travel";
 import {
   ROOM_PROVIDER_ADAPTERS,
   previewFixtureForPlayRoute,
   type PlayRouteSearchParams,
 } from "@/lib/server/play-screen-foundation";
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
-import { getPublicTravelAtlas } from "@/lib/server/travel";
 
 export const dynamic = "force-dynamic";
 
@@ -111,18 +107,12 @@ export const ROOM_ROUTE_FOUNDATIONS = {
       />
     );
   },
-  travel: async () => {
-    if (!travelAtlasEnabled()) notFound();
-    const [{ default: TravelRoomScreen }, initialState] = await Promise.all([
-      ROOM_SCREEN_LOADERS.travel(),
-      getPublicTravelAtlas(),
-    ]);
-    return <TravelRoomScreen initialState={initialState} />;
-  },
-} satisfies Record<RoomObjectId, RoomRouteFoundation>;
+} satisfies Record<RoomConnectorObjectId, RoomRouteFoundation>;
 
 export function generateStaticParams() {
-  return ROOM_OBJECTS.map((object) => ({ objectSlug: object.slug }));
+  return ROOM_OBJECTS.filter(
+    (object) => object.contentSource.kind === "connector",
+  ).map((object) => ({ objectSlug: object.slug }));
 }
 
 export async function generateMetadata({
@@ -163,9 +153,9 @@ export default async function PlayObjectPage({
   const [{ objectSlug }, query] = await Promise.all([params, searchParams]);
   const object = roomObject(objectSlug);
   if (!object) notFound();
-  if (!roomExperienceEnabled()) redirect("/play");
-  if (object.contentSource.kind === "travel-log" && !travelAtlasEnabled()) {
-    notFound();
-  }
+  // Travel owns a concrete route because its atlas has distinct query,
+  // preview-fixture, and metadata contracts. The dynamic route is only the
+  // closed connector dispatch surface.
+  if (object.id === "travel") notFound();
   return ROOM_ROUTE_FOUNDATIONS[object.id](query);
 }

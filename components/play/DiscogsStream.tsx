@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import styles from "../PersonalStreams.module.css";
+import styles from "./StreamPresentation.module.css";
 import { GalleryFilterDisclosure } from "./CollectionGallery";
 import {
   type ConnectorState,
@@ -522,7 +522,7 @@ function DiscogsGallery({
               maxLength={80}
               name="q"
               onChange={(event) => onDraftQuery(event.target.value)}
-              placeholder="Search the record shelf"
+              placeholder={SITE_COPY.play["collect-search-placeholder"]}
               type="search"
               value={draftQuery}
             />
@@ -607,8 +607,8 @@ function DiscogsGallery({
         </ol>
       ) : (
         <div className={styles.noResults} data-stream-item>
-          <strong>No releases match this view.</strong>
-          <p>Change the title, artist, format, or decade to widen the shelf.</p>
+          <strong>{SITE_COPY.play["collect-no-results-title"]}</strong>
+          <p>{SITE_COPY.play["collect-no-results-body"]}</p>
         </div>
       )}
 

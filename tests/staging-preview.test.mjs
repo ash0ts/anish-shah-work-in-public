@@ -55,6 +55,9 @@ const {
 
 const contentVersion = "b".repeat(16);
 const releaseSha = "a".repeat(40);
+const releaseVersion = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 const productionD1Id = [
   "b9dbe711", "1cb2", "4d9d", "b8a9", "e8c9817a8284",
 ].join("-");
@@ -89,6 +92,7 @@ function stagingEnvironment() {
   return {
     STAGING_VALIDATED_SHA: releaseSha,
     RELEASE_VALIDATED_SHA: releaseSha,
+    RELEASE_VERSION: releaseVersion,
     STAGING_CLOUDFLARE_D1_DATABASE_ID: "11111111-1111-4111-8111-111111111111",
     STAGING_CLOUDFLARE_D1_DATABASE_NAME: "anish-shah-work-in-public-staging",
     STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID: "1".repeat(32),
@@ -106,7 +110,7 @@ function stagingEnvironment() {
 }
 
 test("staging config uses only isolated resources and exact noindex-ready boundaries", () => {
-  const expected = expectedStagingCoordinates(stagingEnvironment(), contentVersion);
+  const expected = expectedStagingCoordinates(stagingEnvironment(), contentVersion, releaseVersion);
   const config = stagingConfiguration(generatedBase(), expected);
   assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
   assert.equal(config.name, "anish-shah-work-in-public-staging");
@@ -115,7 +119,7 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
   ]);
   assert.equal(config.vars.DEPLOYMENT_TIER, "staging");
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "d1_kv_required");
-  assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
+  assert.equal(config.vars.RELEASE_VERSION, releaseVersion);
   assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "campaign-v1");
   assert.equal(config.vars.SIMULATION_AI_MODE, "live");
   assert.equal(config.vars.SIMULATION_MODEL, "claude-sonnet-5");
@@ -133,35 +137,35 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_CLOUDFLARE_D1_DATABASE_ID: productionD1Id,
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /must differ/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID: productionKvId,
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /must differ/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET: "anish-shah-travel-media",
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /non-production R2 bucket/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_CF_ACCESS_AUD: productionAccessAudience,
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /must differ/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_OWNER_RATE_LIMIT_NAMESPACE_ID: "88001001",
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /non-production/,
   );
 });
@@ -171,7 +175,7 @@ test("staging can apply simulation persistence with the campaign disabled first"
     ...stagingEnvironment(),
     STAGING_SIMULATION_EXPERIENCE_MODE: "disabled",
   };
-  const expected = expectedStagingCoordinates(environment, contentVersion);
+  const expected = expectedStagingCoordinates(environment, contentVersion, releaseVersion);
   const config = stagingConfiguration(generatedBase(), expected);
   assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
   assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "disabled");
@@ -184,13 +188,14 @@ test("staging can apply simulation persistence with the campaign disabled first"
           STAGING_SIMULATION_EXPERIENCE_MODE: "fixture",
         },
         contentVersion,
+        releaseVersion,
       ),
     /disabled or campaign-v1/,
   );
 });
 
-test("staging room smoke includes every direct object route", () => {
-  const paths = stagingSmokePaths("my-room-2001");
+test("staging smoke derives every enabled direct object route", () => {
+  const paths = stagingSmokePaths();
   assert.deepEqual(
     paths.filter((pathname) => pathname.startsWith("/play/")),
     [
@@ -203,10 +208,12 @@ test("staging room smoke includes every direct object route", () => {
     ],
   );
   assert.deepEqual(
-    stagingSmokePaths("classic").filter((pathname) => pathname.startsWith("/play/")),
-    [],
+    stagingSmokePaths({ travelEnabled: true }).filter((pathname) =>
+      pathname.startsWith("/play/"),
+    ),
+    [...paths.filter((pathname) => pathname.startsWith("/play/")), "/play/travel"],
   );
-  assert.throws(() => stagingSmokePaths("unknown"), /unsupported Play experience mode/);
+  assert.throws(() => stagingSmokePaths({ travelEnabled: "yes" }), /switch/);
 });
 
 test("staging fetches have a hard timeout and readiness retries only reads", async () => {
@@ -266,10 +273,11 @@ test("staging fetches have a hard timeout and readiness retries only reads", asy
 test("preview config has no durable, secret, cron, Studio, or OAuth capability", () => {
   const expected = expectedPreviewCoordinates({
     RELEASE_VALIDATED_SHA: releaseSha,
+    RELEASE_VERSION: releaseVersion,
     PREVIEW_PR_NUMBER: "42",
     PREVIEW_CF_ACCESS_AUD: "preview-access-audience",
     CF_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
-  }, contentVersion);
+  }, contentVersion, releaseVersion);
   const config = previewConfiguration(generatedBase(), expected);
   assert.doesNotThrow(() => assertPreviewConfiguration(config, expected));
   assert.equal(config.name, "anish-shah-work-in-public-pr-42");
@@ -280,8 +288,8 @@ test("preview config has no durable, secret, cron, Studio, or OAuth capability",
   assert.deepEqual(config.ratelimits, []);
   assert.equal(config.triggers, undefined);
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "static_preview");
+  assert.equal(config.vars.RELEASE_VERSION, releaseVersion);
   assert.equal(config.vars.DEPLOYMENT_TIER, "preview");
-  assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
   assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "campaign-v1");
   assert.equal(config.vars.SIMULATION_AI_MODE, "fixture");
   assert.equal(config.vars.SIMULATION_PROVIDER, "fixture");
@@ -309,6 +317,38 @@ test("preview config has no durable, secret, cron, Studio, or OAuth capability",
   }
 });
 
+test("preview middleware serves bounded fixtures without hosted rate-limit secrets", async () => {
+  const workerSource = await readFile(
+    new URL("../worker/index.ts", import.meta.url),
+    "utf8",
+  );
+  const previewBoundary = workerSource.indexOf(
+    "const boundaryFailure = hostedDeploymentBoundaryResponse",
+  );
+  const rateLimitBoundary = workerSource.indexOf(
+    'const enforceRequestRateLimits = deploymentTier !== "preview"',
+  );
+  const setupGuard = workerSource.indexOf(
+    "enforceRequestRateLimits &&\n        requiresConfiguredRateLimit",
+  );
+  const applicationRoute = workerSource.indexOf(
+    "await routeApplicationRequest(appRequest, env, ctx, pathname)",
+  );
+
+  assert.ok(previewBoundary >= 0);
+  assert.ok(rateLimitBoundary > previewBoundary);
+  assert.ok(setupGuard > rateLimitBoundary);
+  assert.ok(applicationRoute > setupGuard);
+  assert.match(
+    workerSource,
+    /const discogsReadLimited = enforceRequestRateLimits[\s\S]*?throttleDiscogsPublicRead/,
+  );
+  assert.match(
+    workerSource,
+    /const travelMediaLimited = enforceRequestRateLimits[\s\S]*?throttleTravelMedia/,
+  );
+});
+
 test("host routing accepts only the exact origin for each declared tier", () => {
   const options = { development: false, sitesRuntime: false };
   const production = {
@@ -316,14 +356,14 @@ test("host routing accepts only the exact origin for each declared tier", () => 
     SITE_URL: "https://anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "d1_kv_required",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   };
   const staging = {
     DEPLOYMENT_TIER: "staging",
     SITE_URL: "https://staging.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "d1_kv_required",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   };
   const preview = {
     DEPLOYMENT_TIER: "preview",
@@ -331,7 +371,7 @@ test("host routing accepts only the exact origin for each declared tier", () => 
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   };
   assert.equal(productionOriginResponse(
     new Request("https://anish-shah-is.online/work"), production, options,
@@ -352,21 +392,18 @@ test("host routing accepts only the exact origin for each declared tier", () => 
     new Request("https://staging.anish-shah-is.online/work"),
     { ...staging, PUBLIC_CONTENT_MODE: "static_preview" }, options,
   )?.status, 503);
-  for (const playMode of [undefined, "unknown"]) {
-    const invalid = { ...preview, PLAY_EXPERIENCE_MODE: playMode };
-    assert.equal(
-      productionOriginResponse(
-        new Request("https://pr-42.anish-shah-is.online/play"),
-        invalid,
-        options,
-      )?.status,
-      503,
-    );
-  }
+  assert.equal(productionOriginResponse(
+    new Request("https://anish-shah-is.online/work"),
+    { ...production, RELEASE_VERSION: undefined }, options,
+  )?.status, 503);
+  assert.equal(productionOriginResponse(
+    new Request("https://anish-shah-is.online/work"),
+    { ...production, RELEASE_VERSION: "v2.0.0" }, options,
+  )?.status, 503);
   assert.equal(
     productionOriginResponse(
       new Request("https://pr-42.anish-shah-is.online/play"),
-      { ...preview, PLAY_EXPERIENCE_MODE: "classic" },
+      preview,
       options,
     ),
     null,
@@ -418,21 +455,28 @@ test("staging callbacks alone bypass identity while preview remains fully gated"
   );
 });
 
-test("sitemap publishes room routes only for the production-facing room mode", async () => {
+test("sitemap always publishes enabled room routes and never exposes disabled Travel", async () => {
   const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
   const sitemap = (await import("../app/sitemap.ts")).default;
   try {
-    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
-      PLAY_EXPERIENCE_MODE: "classic",
-    };
-    const classic = await sitemap();
-    assert.equal(
-      classic.filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move|travel)$/.test(url)).length,
-      0,
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {};
+    const withoutTravel = await sitemap();
+    assert.deepEqual(
+      withoutTravel
+        .filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move|travel)$/.test(url))
+        .map(({ url }) => new URL(url).pathname)
+        .sort(),
+      [
+        "/play/collect",
+        "/play/listen",
+        "/play/move",
+        "/play/play",
+        "/play/read",
+        "/play/watch",
+      ],
     );
 
     globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
-      PLAY_EXPERIENCE_MODE: "my-room-2001",
       TRAVEL_ATLAS_MODE: "atlas-v1",
     };
     const room = await sitemap();
@@ -457,7 +501,7 @@ test("sitemap publishes room routes only for the production-facing room mode", a
       SITE_URL: "https://staging.anish-shah-is.online",
       PRODUCTION_SITE_URL: "https://anish-shah-is.online",
       PUBLIC_CONTENT_MODE: "d1_kv_required",
-      PLAY_EXPERIENCE_MODE: "my-room-2001",
+      RELEASE_VERSION: releaseVersion,
       TRAVEL_ATLAS_MODE: "atlas-v1",
     };
     assert.deepEqual(await sitemap(), []);
@@ -474,7 +518,6 @@ test("production sitemap publishes only ready active Travel trip URLs", async ()
     DEPLOYMENT_TIER: "production",
     SITE_URL: "https://anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
     TRAVEL_ATLAS_MODE: "atlas-v1",
   };
   const databaseFor = (activeSnapshot) => ({
@@ -542,12 +585,14 @@ test("production sitemap publishes only ready active Travel trip URLs", async ()
         DEPLOYMENT_TIER: "staging",
         SITE_URL: "https://staging.anish-shah-is.online",
         PUBLIC_CONTENT_MODE: "d1_kv_required",
+        RELEASE_VERSION: releaseVersion,
       },
       {
         DEPLOYMENT_TIER: "preview",
         PREVIEW_PR_NUMBER: "42",
         SITE_URL: "https://pr-42.anish-shah-is.online",
         PUBLIC_CONTENT_MODE: "static_preview",
+        RELEASE_VERSION: releaseVersion,
       },
     ]) {
       globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
@@ -589,7 +634,7 @@ test("RSC presentation reads hosted tier from Cloudflare runtime bindings", asyn
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   };
   try {
     const [{ runtimeRootMetadata }, { PreviewEnvironmentNotice }, robotsModule, sitemapModule] =
@@ -667,7 +712,7 @@ test("preview Travel media is read-only and closed to the exact synthetic fixtur
     SITE_URL: origin,
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
     TRAVEL_ATLAS_MODE: "atlas-v1",
   };
   try {
@@ -812,7 +857,7 @@ test("preview fixtures activate only under an exact preview runtime", () => {
     "SITE_URL",
     "PRODUCTION_SITE_URL",
     "PUBLIC_CONTENT_MODE",
-    "PLAY_EXPERIENCE_MODE",
+    "RELEASE_VERSION",
   ];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   Object.assign(process.env, {
@@ -821,7 +866,7 @@ test("preview fixtures activate only under an exact preview runtime", () => {
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   });
   try {
     const ready = previewConnectorSnapshot(
@@ -874,7 +919,7 @@ test("preview fixtures activate only under an exact preview runtime", () => {
   }
 });
 
-test("all six direct room foundations use projected preview data without durable state", async () => {
+test("all six connector-backed room foundations use projected preview data without durable state", async () => {
   const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
   globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
     DEPLOYMENT_TIER: "preview",
@@ -882,7 +927,7 @@ test("all six direct room foundations use projected preview data without durable
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   };
   try {
     const [watch, read, collect, play, listen, move, stale] = await Promise.all([
@@ -942,7 +987,7 @@ test("preview Discogs fixtures preserve format and decade variation", () => {
     "SITE_URL",
     "PRODUCTION_SITE_URL",
     "PUBLIC_CONTENT_MODE",
-    "PLAY_EXPERIENCE_MODE",
+    "RELEASE_VERSION",
   ];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   Object.assign(process.env, {
@@ -951,7 +996,7 @@ test("preview Discogs fixtures preserve format and decade variation", () => {
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   });
   try {
     const snapshot = previewConnectorSnapshot(
@@ -1057,6 +1102,8 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
   );
   assert.match(metadata, /process\.env\.PREVIEW_SOURCE_SHA/);
   assert.match(metadata, /sourceSha: releaseSha/);
+  assert.match(metadata, /schemaVersion: "1\.2"/);
+  assert.match(metadata, /releaseVersion/);
   assert.match(metadata, /workflowSha/);
   assert.match(prepare, /bundle\.sourceSha !== bundle\.releaseSha/);
   assert.match(cleanup, /preview-cleanup\.mjs cleanup --apply/);
@@ -1150,6 +1197,11 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.match(lighthouse, /node_modules\/wrangler-e2e\/bin\/wrangler\.js/);
   assert.match(lighthouse, /const e2eCompatibilityDate = "2026-07-28"/);
   assert.match(lighthouse, /"--compatibility-date",\n\s+e2eCompatibilityDate/);
+  assert.doesNotMatch(
+    lighthouse,
+    /DEPLOYMENT_TIER:preview|PUBLIC_CONTENT_MODE:static_preview/,
+    "Lighthouse must evaluate production-like indexability, not the intentionally noindexed preview tier.",
+  );
   const hostedConfiguration = await readFile(
     new URL("../scripts/lib/hosted-config-contract.mjs", import.meta.url),
     "utf8",
@@ -1237,7 +1289,6 @@ test("browser quality isolates workerd lifecycles without weakening review evide
         encoding: "utf8",
         env: {
           ...process.env,
-          BROWSER_PLAY_MODE: "room",
           BROWSER_QUALITY_PORT: "4190",
           BROWSER_QUALITY_SEGMENT: "partition-check",
           BROWSER_QUALITY_STATE_DIR: ".wrangler/browser-quality-partition-check",
@@ -1331,11 +1382,11 @@ test("browser docs-only classification sees both sides of a source-to-docs renam
   }
 });
 
-test("Play propagates a preview fixture through every active stream", async () => {
+test("Play propagates a preview fixture through every connector-backed room route", async () => {
   const [
     page,
-    classic,
-    streams,
+    direct,
+    foundation,
     collection,
     gallery,
     discogs,
@@ -1343,8 +1394,8 @@ test("Play propagates a preview fixture through every active stream", async () =
     movement,
   ] = await Promise.all([
     readFile(new URL("../app/play/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../components/play/ClassicPlayExperience.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../components/PersonalStreams.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/play/[objectSlug]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/play-screen-foundation.ts", import.meta.url), "utf8"),
     readFile(new URL("../components/play/CollectionStream.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/CollectionGallery.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/DiscogsStream.tsx", import.meta.url), "utf8"),
@@ -1352,16 +1403,9 @@ test("Play propagates a preview fixture through every active stream", async () =
     readFile(new URL("../components/play/MovementStream.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /activePreviewFixtureRuntime\(\)/);
-  assert.match(
-    page,
-    /<ClassicPlayExperience[\s\S]*fixture=\{fixture\}[\s\S]*initialStream=\{streamIdFromValue\(query\.stream\)\}/,
-  );
-  assert.match(classic, /<PersonalStreams[\s\S]*fixture=\{fixture\}/);
-  assert.match(classic, /initialStream=\{initialStream\}/);
-  assert.match(streams, /CollectionStream provider="myanimelist" fixture=\{fixture\}/);
-  assert.match(streams, /DiscogsStream fixture=\{fixture\}/);
-  assert.match(streams, /SpotifyStream[\s\S]*fixture=\{fixture\}/);
-  assert.match(streams, /MovementStream[\s\S]*fixture=\{fixture\}/);
+  assert.match(page, /<RoomOverview[\s\S]*fixture=\{fixture\}/);
+  assert.match(direct, /previewFixtureForPlayRoute\(query\)/);
+  assert.match(foundation, /previewFixtureForPlayRoute/);
   assert.match(collection, /parameters\.set\("fixture", fixture\)/);
   assert.match(discogs, /parameters\.set\("fixture", fixture\)/);
   assert.match(spotify, /loadSpotifyFixture\(controller\.signal, fixture\)/);
@@ -1455,7 +1499,7 @@ test("staging release bootstraps and verifies its isolated D1/KV publication", a
   assert.match(script, /verifyReleaseBuildCheckpoint\(root\)/);
   assert.match(script, /releaseBuildCheckpointSha256/);
   assert.match(script, /waitForCandidateReadiness/);
-  assert.match(script, /stagingSmokePaths\(plan\.playExperienceMode\)/);
+  assert.match(script, /stagingSmokePaths\(\{[\s\S]*travelEnabled:/);
 });
 
 test("staging Studio renders an explicit non-promotable boundary", async () => {

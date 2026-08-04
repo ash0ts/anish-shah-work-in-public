@@ -338,10 +338,26 @@ test("provider normalizers reduce artwork to host-free references", async () => 
   }
 });
 
-test("Play fetches a personal-data provider only after its stream is active", async () => {
-  const [source, collection, movement, spotify, discogs] = await Promise.all([
+test("direct Play routes isolate personal-data providers behind literal adapters", async () => {
+  const [page, direct, travel, screens, foundation, collection, movement, spotify, discogs] = await Promise.all([
     readFile(
-      new URL("../components/PersonalStreams.tsx", import.meta.url),
+      new URL("../app/play/page.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/play/[objectSlug]/page.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/play/travel/page.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/play/room-platform/room-screen-registry.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../lib/server/play-screen-foundation.ts", import.meta.url),
       "utf8",
     ),
     readFile(
@@ -362,30 +378,16 @@ test("Play fetches a personal-data provider only after its stream is active", as
     ),
   ]);
 
-  assert.match(
-    source,
-    /active === "watch"[\s\S]*?<CollectionStream provider="myanimelist"/,
-  );
-  assert.match(
-    source,
-    /active === "read"[\s\S]*?<CollectionStream provider="hardcover"/,
-  );
-  assert.match(
-    source,
-    /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/,
-  );
-  assert.match(
-    source,
-    /active === "collect"[\s\S]*?<DiscogsStream/,
-  );
-  assert.match(
-    source,
-    /active === "play"[\s\S]*?<CollectionStream provider="steam"/,
-  );
-  assert.match(
-    source,
-    /active === "move"[\s\S]*?<MovementStream/,
-  );
+  assert.doesNotMatch(page, /getPublicConnectorSnapshot|getStravaPublicConfig|fetch\(/);
+  for (const id of ["watch", "read", "listen", "collect", "play", "move", "travel"]) {
+    assert.match(screens, new RegExp(`${id}: \\(\\) => import\\(`));
+  }
+  for (const id of ["watch", "read", "listen", "collect", "play", "move"]) {
+    assert.match(direct, new RegExp(`${id}: async`));
+    assert.match(foundation, new RegExp(`^  ${id}:`, "m"));
+  }
+  assert.doesNotMatch(direct, /travel: async/);
+  assert.match(travel, /ROOM_SCREEN_LOADERS\.travel\(\)/);
   assert.match(
     collection,
     /function CollectionStream[\s\S]*?loadConnector<CollectionPayload>\(\s*provider,/,
@@ -402,10 +404,7 @@ test("Play fetches a personal-data provider only after its stream is active", as
     discogs,
     /function DiscogsStream[\s\S]*?loadConnector<DiscogsPublicSnapshot>\([\s\S]*?"discogs"/,
   );
-  assert.doesNotMatch(source, /Promise\.all\([^)]*loadConnector/);
-  assert.match(source, /show=\{showStrava\}/);
-  assert.match(source, /onShow=\{\(\) => setShowStrava\(true\)\}/);
-  assert.doesNotMatch(source, /NEXT_PUBLIC_STRAVA_EMBED_URL/);
+  assert.doesNotMatch(page, /NEXT_PUBLIC_STRAVA_EMBED_URL/);
   assert.match(movement, /src=\{state\.payload\.embed\.embedUrl\}/);
 });
 

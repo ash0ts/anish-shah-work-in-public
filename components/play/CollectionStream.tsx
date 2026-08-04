@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import styles from "../PersonalStreams.module.css";
+import styles from "./StreamPresentation.module.css";
 import {
   loadConnector,
   providerTitles,

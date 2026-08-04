@@ -65,6 +65,7 @@ test("copy-only classification accepts only modified declared Markdown files", (
   assert.deepEqual(
     classifyCopyChanges([
       { status: "modified", filename: "content/copy/pages/home.md" },
+      { status: "modified", filename: "content/copy/pages/simulation.md" },
       {
         status: "M",
         path: "content/copy/work-groups/wandb-mcp-server.md",
@@ -75,6 +76,7 @@ test("copy-only classification accepts only modified declared Markdown files", (
       reason: "copy_only",
       paths: [
         "content/copy/pages/home.md",
+        "content/copy/pages/simulation.md",
         "content/copy/work-groups/wandb-mcp-server.md",
       ],
     },

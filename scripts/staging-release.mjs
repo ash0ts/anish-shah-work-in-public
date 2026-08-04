@@ -32,6 +32,10 @@ import {
   waitForReadOnlyStagingReadiness,
 } from "./lib/staging-http-contract.mjs";
 import { buildCopyDeck } from "./lib/copy-deck.mjs";
+import {
+  assertReleaseBranch,
+  readPackageReleaseVersion,
+} from "./lib/release-version.mjs";
 
 const root = process.cwd();
 const configPath = path.join(root, "dist/server/wrangler.staging.json");
@@ -90,6 +94,7 @@ function repository() {
 
 function verifyGitState() {
   const head = git("rev-parse", "HEAD");
+  const branch = git("branch", "--show-current");
   if (git("status", "--porcelain=v1", "--untracked-files=all")) {
     throw new Error("Staging commands require a clean worktree.");
   }
@@ -105,15 +110,16 @@ function verifyGitState() {
   if (process.env.LOCAL_OWNER_EMAIL?.trim()) {
     throw new Error("LOCAL_OWNER_EMAIL must not be present in a staging shell.");
   }
-  return head;
+  return { branch, head };
 }
 
 async function configState(head) {
-  const [configBytes, bundleBytes, simulationManifestBytes, artifactResult] = await Promise.all([
+  const [configBytes, bundleBytes, simulationManifestBytes, artifactResult, releaseVersion] = await Promise.all([
     readFile(configPath),
     readFile(path.join(root, "content/public/anish-content.public.v1.json")),
     readFile(path.join(root, "content/presentation/simulation.v1.json")),
     readVerifiedDeployableArtifactManifest(root),
+    readPackageReleaseVersion(root),
   ]);
   const config = JSON.parse(configBytes);
   const bundle = JSON.parse(bundleBytes);
@@ -125,6 +131,7 @@ async function configState(head) {
   const expected = expectedStagingCoordinates(
     stagingEnvironment,
     bundle.contentVersion,
+    releaseVersion,
   );
   assertStagingConfiguration(config, expected);
   if (config.name !== STAGING_WORKER_NAME || config.routes?.[0]?.pattern !== new URL(STAGING_SITE_ORIGIN).hostname) {
@@ -137,6 +144,7 @@ async function configState(head) {
     simulationManifest,
     simulationManifestBytes,
     artifactResult,
+    releaseVersion,
   };
 }
 
@@ -198,7 +206,7 @@ function verifiedRuns(head, configuredRepository) {
 }
 
 async function writePlan() {
-  const head = verifyGitState();
+  const { branch, head } = verifyGitState();
   const {
     config,
     configBytes,
@@ -206,7 +214,9 @@ async function writePlan() {
     simulationManifest,
     simulationManifestBytes,
     artifactResult,
+    releaseVersion,
   } = await configState(head);
+  assertReleaseBranch(branch, releaseVersion);
   const [releaseBuildCheckpoint, releaseBuildCheckpointBytes] =
     await Promise.all([
       verifyReleaseBuildCheckpoint(root),
@@ -255,15 +265,16 @@ async function writePlan() {
     approvalStateDigest: process.env.STAGING_SIMULATION_APPROVAL_DIGEST,
   });
   const plan = {
-    schemaVersion: "1.2",
+    schemaVersion: "1.3",
     deploymentTier: "staging",
     preparedAt: new Date().toISOString(),
     commitSha: head,
     repository: configuredRepository,
     workerName: STAGING_WORKER_NAME,
     siteUrl: STAGING_SITE_ORIGIN,
+    releaseVersion,
     contentVersion: bundle.contentVersion,
-    playExperienceMode: config.vars.PLAY_EXPERIENCE_MODE,
+    travelAtlasMode: config.vars.TRAVEL_ATLAS_MODE,
     copyVersion,
     simulation,
     previousWorkerVersion,
@@ -289,7 +300,7 @@ async function writePlan() {
 }
 
 async function verifyPlan() {
-  const head = verifyGitState();
+  const { branch, head } = verifyGitState();
   const {
     config,
     configBytes,
@@ -297,7 +308,9 @@ async function verifyPlan() {
     simulationManifest,
     simulationManifestBytes,
     artifactResult,
+    releaseVersion,
   } = await configState(head);
+  assertReleaseBranch(branch, releaseVersion);
   const [plan, releaseBuildCheckpoint, releaseBuildCheckpointBytes] =
     await Promise.all([
       readFile(planPath, "utf8").then(JSON.parse),
@@ -306,15 +319,17 @@ async function verifyPlan() {
     ]);
   const { copyVersion } = await buildCopyDeck(root);
   if (
-    plan.schemaVersion !== "1.2" ||
+    plan.schemaVersion !== "1.3" ||
     plan.deploymentTier !== "staging" ||
     plan.commitSha !== head ||
     plan.repository !== repository() ||
     plan.workerName !== STAGING_WORKER_NAME ||
     plan.siteUrl !== STAGING_SITE_ORIGIN ||
+    plan.releaseVersion !== releaseVersion ||
+    config.vars?.RELEASE_VERSION !== releaseVersion ||
     plan.contentVersion !== bundle.contentVersion ||
-    plan.playExperienceMode !== config.vars?.PLAY_EXPERIENCE_MODE ||
-    plan.playExperienceMode !== "my-room-2001" ||
+    plan.travelAtlasMode !== config.vars?.TRAVEL_ATLAS_MODE ||
+    plan.travelAtlasMode !== "atlas-v1" ||
     plan.copyVersion !== copyVersion ||
     plan.checksums?.preparedWorkerConfigSha256 !== sha256(configBytes) ||
     plan.checksums?.simulationCampaignManifestSha256 !==
@@ -381,7 +396,7 @@ async function authenticatedJson(pathname, init = {}) {
   }));
 }
 
-async function waitForCandidateReadiness(head, contentVersion) {
+async function waitForCandidateReadiness(head, contentVersion, releaseVersion) {
   return waitForReadOnlyStagingReadiness({
     check: async (timeoutMs) => {
       const { response, body } = await authenticatedJson("/api/studio/health", {
@@ -389,7 +404,9 @@ async function waitForCandidateReadiness(head, contentVersion) {
         timeoutMs,
       });
       if (!response.ok) return false;
-      return body?.releaseSha === head && body?.contentVersion === contentVersion;
+      return body?.releaseSha === head &&
+        body?.releaseVersion === releaseVersion &&
+        body?.contentVersion === contentVersion;
     },
   });
 }
@@ -445,7 +462,7 @@ if (action === "plan") {
     }
     process.stdout.write(wrangler("versions", "deploy", `${requested}@100%`, "--config", configPath, "--yes"));
   } else if (action === "bootstrap") {
-    await waitForCandidateReadiness(head, plan.contentVersion);
+    await waitForCandidateReadiness(head, plan.contentVersion, plan.releaseVersion);
     const { response: before, body: existing } = await authenticatedJson(
       "/api/studio/publication-checkpoint",
     );
@@ -475,10 +492,10 @@ if (action === "plan") {
       }));
     }
   } else if (action === "checkpoint") {
-    await waitForCandidateReadiness(head, plan.contentVersion);
+    await waitForCandidateReadiness(head, plan.contentVersion, plan.releaseVersion);
     const { response, body } = await authenticatedJson("/api/studio/health");
-    if (!response.ok || body?.releaseSha !== head || body?.contentVersion !== plan.contentVersion) {
-      throw new Error("Staging health does not match the planned SHA and content version.");
+    if (!response.ok || body?.releaseSha !== head || body?.releaseVersion !== plan.releaseVersion || body?.contentVersion !== plan.contentVersion) {
+      throw new Error("Staging health does not match the planned version, SHA, and content version.");
     }
     const simulation = body?.simulation;
     if (
@@ -514,6 +531,7 @@ if (action === "plan") {
     console.log(JSON.stringify({
       status: "ready",
       releaseSha: body.releaseSha,
+      releaseVersion: body.releaseVersion,
       contentVersion: body.contentVersion,
       kvPointerMatches: true,
       simulation: {
@@ -527,9 +545,11 @@ if (action === "plan") {
       },
     }));
   } else if (action === "smoke") {
-    await waitForCandidateReadiness(head, plan.contentVersion);
+    await waitForCandidateReadiness(head, plan.contentVersion, plan.releaseVersion);
     const results = [];
-    for (const pathname of stagingSmokePaths(plan.playExperienceMode)) {
+    for (const pathname of stagingSmokePaths({
+      travelEnabled: plan.travelAtlasMode === "atlas-v1",
+    })) {
       const response = await authenticatedFetch(pathname);
       const robots = response.headers.get("x-robots-tag") ?? "";
       if (!response.ok || !robots.includes("noindex") || response.headers.get("cache-control") !== "private, no-store") {

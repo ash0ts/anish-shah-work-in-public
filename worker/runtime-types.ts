@@ -25,13 +25,13 @@ export interface WorkerEnv {
   NODE_ENV?: string;
   RATE_LIMIT_SALT?: string;
   RELEASE_SHA?: string;
+  RELEASE_VERSION?: string;
   CONTENT_VERSION?: string;
   PUBLIC_CONTENT_MODE?: string;
   SITE_URL?: string;
   PRODUCTION_SITE_URL?: string;
   DEPLOYMENT_TIER?: string;
   PREVIEW_PR_NUMBER?: string;
-  PLAY_EXPERIENCE_MODE?: string;
   SIMULATION_EXPERIENCE_MODE?: string;
   SIMULATION_AI_MODE?: string;
   SIMULATION_AI_TRANSPORT?: string;

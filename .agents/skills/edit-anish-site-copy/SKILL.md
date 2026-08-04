@@ -43,7 +43,8 @@ Improve the site's language without changing its facts, structure, behavior, or 
 ### Edit directly
 
 - Page framing, section introductions, calls to action, nonbehavioral labels, search placeholders, no-results text, and 404 wording.
-- Play object names and flavor text when literal categories remain clear.
+- Play object flavor text, including the Globe/Travel doorway. Literal object names and categories are fixed by the seven-object registry.
+- Simulation introduction, CTA, nonfactual encounter flavor, and accessibility-friendly instructions through declared `content/copy/pages/simulation.md` fields.
 - SEO and social descriptions when they remain consistent with visible copy and structured data.
 
 ### Edit with owner fact-check
@@ -51,7 +52,7 @@ Improve the site's language without changing its facts, structure, behavior, or 
 - Profile positioning and current-focus language.
 - WorkGroup display titles, short titles, summaries, role summaries, and featured presentation text.
 - Wording that mentions dates, organizations, roles, scope, attribution, product behavior, or technical capability.
-- An explicitly registered citation display label that preserves the immutable source title in accessible detail.
+- An explicitly registered citation display label that preserves the immutable source title in accessible detail. No citation-label field is currently registered; request one through engineering before proposing this edit.
 
 For WorkGroup factual copy, resolve the `copy-record` stable ID against the sanitized public bundle. Record the canonical subject and evidence IDs that support the clause. If it cannot be resolved there, do not add it.
 
@@ -61,10 +62,12 @@ For WorkGroup factual copy, resolve the `copy-record` stable ID against the sani
 - IDs, slugs, aliases, routes, links, ordering, visibility, relationships, group membership, or featured state.
 - Source titles, publishers, URLs, event dates, bibliography records, generated bundles, schemas, attestations, or private inputs.
 - Privacy, retention, deletion, consent, provider attribution, OAuth, security, legal, synchronization, error-state semantics, or public-payload contracts.
+- Travel trip titles, dates, place labels, captions, tags, geography precision, photo safety wording, and media policy. Those remain owner-authored/fact-controlled in Travel Desk.
+- Simulation disclosure, factual cards, metrics, model/provider policy, system prompts, safety behavior, budgets, session rules, fallback behavior, and provider approvals.
 - Purely programmatic accessible names, button behavior, or other interaction contracts.
 
 Do not weaken a protected statement to make prose smoother. Propose the desired outcome and explain why in the pull request instead.
-A short citation label is a separate registered presentation field; it never replaces the immutable title. Verify that the rendered citation still exposes the exact title in accessible detail.
+A short citation label would require a separate registered presentation field; none exists today. It may never replace the immutable title, and its future implementation must keep that exact title in accessible detail.
 
 ## Engineering-Request Workflow
 

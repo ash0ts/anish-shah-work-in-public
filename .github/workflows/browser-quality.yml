@@ -30,7 +30,7 @@ env:
 jobs:
   classify:
     name: classify browser impact
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
     outputs:
       run_browser: ${{ steps.changes.outputs.run_browser }}
     steps:
@@ -96,7 +96,7 @@ jobs:
     name: build browser candidate
     if: needs.classify.outputs.run_browser == 'true'
     needs: classify
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 25
     steps:
       - name: Check out exact source
@@ -109,7 +109,7 @@ jobs:
       - name: Build browser candidate once
         run: npm run build
       - name: Upload immutable browser build
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
           path: dist
@@ -121,7 +121,7 @@ jobs:
     name: verify browser artifact round trip
     if: needs.classify.outputs.run_browser == 'true'
     needs: [classify, build]
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 10
     steps:
       - name: Check out exact source
@@ -132,7 +132,7 @@ jobs:
       - name: Set up repository toolchain
         uses: ./.github/actions/setup-repository
       - name: Download immutable browser build
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
           path: dist
@@ -148,8 +148,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scope: [classic, room-public]
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+        scope: [room-public]
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 20
     steps:
       - name: Check out exact source
@@ -162,7 +162,7 @@ jobs:
       - name: Install Chromium
         run: npx --no-install playwright install --with-deps chromium
       - name: Download immutable browser build
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
           path: dist
@@ -172,7 +172,7 @@ jobs:
         run: npm run validate:browser:segment
       - name: Upload browser failure evidence
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: browser-quality-${{ matrix.scope }}-failure-${{ env.BROWSER_SOURCE_SHA }}
           path: |
@@ -191,7 +191,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4, 5]
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 20
     steps:
       - name: Check out exact source
@@ -204,7 +204,7 @@ jobs:
       - name: Install Chromium
         run: npx --no-install playwright install --with-deps chromium
       - name: Download immutable browser build
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
           path: dist
@@ -215,7 +215,7 @@ jobs:
         run: npm run validate:browser:segment
       - name: Upload room-shard failure evidence
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: room-quality-shard-${{ matrix.shard }}-failure-${{ env.BROWSER_SOURCE_SHA }}
           path: |
@@ -230,7 +230,7 @@ jobs:
     name: Lighthouse budgets
     if: needs.classify.outputs.run_browser == 'true'
     needs: [classify, artifact_round_trip]
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 20
     steps:
       - name: Check out exact source
@@ -243,7 +243,7 @@ jobs:
       - name: Install Chromium
         run: npx --no-install playwright install --with-deps chromium
       - name: Download immutable browser build
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
           path: dist
@@ -253,7 +253,7 @@ jobs:
         run: npm run validate:browser:segment
       - name: Upload Lighthouse failure evidence
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: lighthouse-failure-${{ env.BROWSER_SOURCE_SHA }}
           path: |
@@ -267,7 +267,7 @@ jobs:
     name: room review
     if: needs.classify.outputs.run_browser == 'true'
     needs: [classify, artifact_round_trip]
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 15
     steps:
       - name: Check out exact source
@@ -280,7 +280,7 @@ jobs:
       - name: Install Chromium
         run: npx --no-install playwright install --with-deps chromium
       - name: Download immutable browser build
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
           path: dist
@@ -288,7 +288,7 @@ jobs:
         run: npm run capture:room-review
       - name: Upload browser review evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: room-browser-review-${{ env.BROWSER_SOURCE_SHA }}
           path: |
@@ -311,7 +311,7 @@ jobs:
       - room_quality
       - lighthouse
       - room_review
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
     steps:
       - name: Require every applicable browser gate
         env:

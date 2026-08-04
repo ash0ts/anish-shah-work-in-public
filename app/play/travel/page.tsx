@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import TravelRoomScreen from "@/components/play/room-screens/TravelRoomScreen";
+import { ROOM_SCREEN_LOADERS } from "@/components/play/room-platform/room-screen-registry";
 import { SITE_COPY } from "@/lib/copy";
 import {
   getPublicTravelAtlas,
@@ -42,13 +42,17 @@ export default async function TravelPage({
   const previewFixture = travelPreviewRuntime() && query.fixture !== undefined
     ? parseTravelPreviewScenario(query.fixture)
     : undefined;
-  return (
-    <TravelRoomScreen
-      initialState={await getPublicTravelAtlas(
+  const [{ default: TravelRoomScreen }, initialState] = await Promise.all([
+    ROOM_SCREEN_LOADERS.travel(),
+    getPublicTravelAtlas(
         undefined,
         undefined,
         previewFixture,
-      )}
+      ),
+  ]);
+  return (
+    <TravelRoomScreen
+      initialState={initialState}
       previewFixture={previewFixture}
     />
   );

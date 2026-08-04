@@ -6,7 +6,18 @@ import {
   runtimeTravelMedia,
   runtimeValue,
 } from "../runtime-env";
-import { travelAtlasEnabled as authoritativeTravelAtlasEnabled } from "../play-experience";
+
+export type TravelAtlasMode = "disabled" | "atlas-v1";
+
+export function parseTravelAtlasMode(
+  value: string | null | undefined,
+): TravelAtlasMode {
+  return value === "atlas-v1" ? "atlas-v1" : "disabled";
+}
+
+export function travelAtlasMode(): TravelAtlasMode {
+  return parseTravelAtlasMode(runtimeValue("TRAVEL_ATLAS_MODE"));
+}
 
 export type TravelR2Object = {
   body: ReadableStream<Uint8Array> | null;
@@ -63,7 +74,7 @@ export function travelImagesBinding(): TravelImagesBinding | null {
 }
 
 export function travelAtlasEnabled(): boolean {
-  return authoritativeTravelAtlasEnabled();
+  return travelAtlasMode() === "atlas-v1";
 }
 
 export function travelPreviewRuntime(): boolean {
@@ -73,6 +84,6 @@ export function travelPreviewRuntime(): boolean {
     SITE_URL: runtimeValue("SITE_URL"),
     PRODUCTION_SITE_URL: runtimeValue("PRODUCTION_SITE_URL"),
     PUBLIC_CONTENT_MODE: runtimeValue("PUBLIC_CONTENT_MODE"),
-    PLAY_EXPERIENCE_MODE: runtimeValue("PLAY_EXPERIENCE_MODE"),
+    RELEASE_VERSION: runtimeValue("RELEASE_VERSION"),
   });
 }

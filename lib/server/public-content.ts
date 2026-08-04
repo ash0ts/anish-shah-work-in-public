@@ -121,7 +121,7 @@ export async function getPublicContentView(): Promise<ResolvedPublicContent> {
     SITE_URL: runtimeValue("SITE_URL"),
     PRODUCTION_SITE_URL: runtimeValue("PRODUCTION_SITE_URL"),
     PUBLIC_CONTENT_MODE: runtimeValue("PUBLIC_CONTENT_MODE"),
-    PLAY_EXPERIENCE_MODE: runtimeValue("PLAY_EXPERIENCE_MODE"),
+    RELEASE_VERSION: runtimeValue("RELEASE_VERSION"),
   };
   if (previewFixtureRuntime(runtime)) {
     return await resolvePublicContentFromSnapshotRow(

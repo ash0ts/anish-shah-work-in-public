@@ -35,7 +35,7 @@ export function activePreviewFixtureRuntime(): boolean {
     SITE_URL: runtimeValue("SITE_URL"),
     PRODUCTION_SITE_URL: runtimeValue("PRODUCTION_SITE_URL"),
     PUBLIC_CONTENT_MODE: runtimeValue("PUBLIC_CONTENT_MODE"),
-    PLAY_EXPERIENCE_MODE: runtimeValue("PLAY_EXPERIENCE_MODE"),
+    RELEASE_VERSION: runtimeValue("RELEASE_VERSION"),
   });
 }
 

@@ -32,7 +32,7 @@ Immutable evidence includes source title, publisher, URL, evidence type, date, a
 - Never “improve” a source title in the canonical record.
 - Use source kinds consistently: Web page, Video, Code, Profile, Method note.
 - Use `View source` or a provider-specific equivalent for actions.
-- A sparse short citation label is allowed only when a registered fact-check field stores it and the exact source title remains available in accessible detail.
+- A sparse short citation label would be allowed only through a registered fact-check field while the exact source title remains available in accessible detail. No citation-label field is registered in the current copy deck, so request it through engineering rather than editing a source title.
 - Never expose internal evidence, local paths, private names, provider payloads, or owner-only notes.
 
 ## Privacy, security, and providers

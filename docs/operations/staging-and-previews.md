@@ -19,8 +19,8 @@ database rows, KV envelopes, R2 objects, encryption keys, rate-limit salts, and 
 approval never do.
 
 Hosted tiers must declare `DEPLOYMENT_TIER`, `SITE_URL`,
-`PRODUCTION_SITE_URL`, `PUBLIC_CONTENT_MODE`, and `PLAY_EXPERIENCE_MODE`
-explicitly. Staging and preview use `my-room-2001`. Unknown tiers, missing
+`PRODUCTION_SITE_URL`, `PUBLIC_CONTENT_MODE`, and `RELEASE_VERSION`
+explicitly. My Room is the sole Play runtime. Unknown tiers, missing
 coordinates, or cross-tier hosts fail closed. Staging and preview canonicals
 point to the equivalent production path without making those tiers indexable.
 
@@ -119,6 +119,7 @@ different comparison target:
 
 ```bash
 export STAGING_VALIDATED_SHA="$(git rev-parse HEAD)"
+export RELEASE_VERSION='2.0.0-rc.1'
 export STAGING_CLOUDFLARE_D1_DATABASE_ID='<staging D1 UUID>'
 export STAGING_CLOUDFLARE_D1_DATABASE_NAME='anish-shah-work-in-public-staging'
 export STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID='<staging KV ID>'
@@ -137,6 +138,11 @@ unset LOCAL_OWNER_EMAIL
 
 npm run staging:prepare
 ```
+
+`RELEASE_VERSION` is exact SemVer and must equal `package.json`. The generated
+staging config, ignored staging plan, owner health response, and checkpoint all
+bind to that same value. PR previews derive it from `package.json` and record it
+in their trusted metadata rather than accepting an arbitrary workflow value.
 
 For the first deployment to a staging database that does not yet have migration
 `0006_public_model_simulation.sql`, set
@@ -228,8 +234,8 @@ the runtime campaign/model settings plus current approval names and digest with
 the ignored staging plan. A changed or expired approval therefore stops the
 candidate instead of silently changing model context.
 
-The staging plan records the explicit Play mode, `CONTENT_VERSION`,
-`COPY_VERSION`, configuration and deployable-artifact hashes, four validation
+The staging plan records `RELEASE_VERSION`, `CONTENT_VERSION`, `COPY_VERSION`,
+configuration and deployable-artifact hashes, four validation
 workflow identities, migration hashes, prior Worker version, and D1 bookmark.
 Checkpointing verifies the candidate SHA, both content versions, active D1
 publication, and matching KV pointer. Readiness retries only bounded, read-only
@@ -241,11 +247,14 @@ Before production release, verify the exact staged SHA in Safari and an
 automated browser:
 
 - `/play` performs no connector read before selection;
-- all six direct object routes load only their associated provider;
+- all seven direct object routes load only their associated provider or Travel publication;
 - real staging OAuth, refresh, publish/unpublish, stale, and recovery paths work;
 - Spotify and Strava frames remain consent-gated;
 - Discogs obeys its four-hour refresh eligibility and six-hour public cutoff;
 - My Room capability fallbacks and semantic navigation work without WebGL;
+- Pocket Room entry, swipe/tap separation, Back/Escape, and focus restoration work;
+- Simulation completes in Action and Tactical modes with live-model and authored-fallback paths, bounded sessions, budgets, and rejected unsafe output;
+- Postcard Planet supports semantic and 3D country/region/pin selection, metadata-free upload, atomic publish/unpublish, media authorization, and cleanup;
 - Studio health, publication checkpoint, noindex headers, and private/no-store
   caching are correct; and
 - owner Access succeeds while logged-out and non-owner access fails.
@@ -332,9 +341,9 @@ All staging and preview responses are noindexed and private/no-store, except
 content-hashed first-party assets. Preview connector scenarios are synthetic;
 use `?fixture=unavailable`, `empty`, `stale`, `long-title`,
 `missing-artwork`, or `maximum-density` on connector reads during QA.
-The same scenarios are selectable at page level with
-`/play?fixture=<scenario>`; Play passes the scenario only in the exact preview
-tier and then forwards it to whichever stream the reviewer activates. Ready
+Use `/play/<object>?fixture=<scenario>` in the exact preview tier. The `/play`
+overview remains provider-free and never forwards a fixture to inactive
+objects. Ready
 fixtures include neutral first-party placeholder artwork, while
 `missing-artwork` deliberately omits the artwork contract.
 

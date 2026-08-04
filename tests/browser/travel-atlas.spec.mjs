@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 const widths = [320, 390, 768, 1024, 1440, 1920];
 
 async function afterTwoFrames(page) {
@@ -329,8 +328,6 @@ function travelRequests(page) {
 }
 
 test.describe("Postcard Planet", () => {
-  test.skip(!roomMode, "Travel is exercised in the My Room browser matrix.");
-
   test("the room advertises seven objects without reading Travel data", async ({
     page,
   }) => {

@@ -1,3 +1,5 @@
+import { ROOM_OBJECT_CONTRACT } from "../../components/play/room-platform/room-object-contract.ts";
+
 export const STAGING_REQUEST_TIMEOUT_MS = 10_000;
 export const STAGING_READINESS_TIMEOUT_MS = 30_000;
 
@@ -10,21 +12,25 @@ const BASE_STAGING_SMOKE_PATHS = Object.freeze([
   "/robots.txt",
 ]);
 
-const ROOM_STAGING_SMOKE_PATHS = Object.freeze([
-  "/play/watch",
-  "/play/read",
-  "/play/listen",
-  "/play/collect",
-  "/play/play",
-  "/play/move",
-]);
+const ROOM_STAGING_SMOKE_PATHS = Object.freeze(
+  ROOM_OBJECT_CONTRACT.filter(({ id }) => id !== "travel").map(
+    ({ route }) => route,
+  ),
+);
 
-export function stagingSmokePaths(playExperienceMode) {
-  if (playExperienceMode === "classic") return [...BASE_STAGING_SMOKE_PATHS];
-  if (playExperienceMode === "my-room-2001") {
-    return [...BASE_STAGING_SMOKE_PATHS, ...ROOM_STAGING_SMOKE_PATHS];
+const TRAVEL_STAGING_SMOKE_PATH = ROOM_OBJECT_CONTRACT.find(
+  ({ id }) => id === "travel",
+).route;
+
+export function stagingSmokePaths({ travelEnabled = false } = {}) {
+  if (typeof travelEnabled !== "boolean") {
+    throw new Error("The staging Travel smoke switch is invalid.");
   }
-  throw new Error("The staging plan contains an unsupported Play experience mode.");
+  return [
+    ...BASE_STAGING_SMOKE_PATHS,
+    ...ROOM_STAGING_SMOKE_PATHS,
+    ...(travelEnabled ? [TRAVEL_STAGING_SMOKE_PATH] : []),
+  ];
 }
 
 export async function fetchWithTimeout(

@@ -11,7 +11,7 @@ import {
   githubRepositoryFromRemoteUrl,
   parseRemoteReleaseMarker,
   RELEASE_MARKER_QUERY,
-  requiredSmokeTestsForPlayMode,
+  requiredPlaySmokeTests,
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
 import {
@@ -25,6 +25,7 @@ import {
   TRIGGER_RECEIPT_PATH,
 } from "./lib/release-trigger-contract.mjs";
 import { buildCopyDeck } from "./lib/copy-deck.mjs";
+import { readPackageReleaseVersion } from "./lib/release-version.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BASE_SMOKE_TESTS = [
@@ -177,11 +178,14 @@ const releaseConfig = JSON.parse(releaseConfigBytes.toString("utf8"));
 const simulationManifest = JSON.parse(simulationManifestBytes.toString("utf8"));
 const triggerReceipt = JSON.parse(triggerReceiptBytes.toString("utf8"));
 const { copyVersion } = await buildCopyDeck(root);
+const releaseVersion = await readPackageReleaseVersion(root);
 if (
-  plan.schemaVersion !== "1.2" ||
+  plan.schemaVersion !== "1.3" ||
   plan.commitSha !== head ||
   plan.contentVersion !== contentAttestation.contentVersion ||
   plan.copyVersion !== copyVersion ||
+  plan.releaseVersion !== releaseVersion ||
+  releaseConfig.vars?.RELEASE_VERSION !== releaseVersion ||
   !["compatible", "predeploy_bootstrap_required"].includes(
     plan.publicationCheckpoint?.status,
   ) ||
@@ -209,8 +213,8 @@ if (
     deployableArtifactResult.manifest.artifactSetSha256 ||
   releaseBuildCheckpoint.deployableManifestSha256 !==
     sha256(deployableArtifactResult.bytes) ||
-  releaseConfig.vars?.PLAY_EXPERIENCE_MODE !== plan.playExperienceMode ||
-  !["classic", "my-room-2001"].includes(plan.playExperienceMode)
+  releaseConfig.vars?.TRAVEL_ATLAS_MODE !== plan.travelAtlasMode ||
+  !["disabled", "atlas-v1"].includes(plan.travelAtlasMode)
 ) {
   throw new Error("The pre-release plan is missing, stale, or does not match this build.");
 }
@@ -218,10 +222,9 @@ const simulation = assertSimulationReleaseRecord(plan.simulation, {
   config: releaseConfig,
   campaignVersion: simulationManifest.campaignVersion,
 });
-const REQUIRED_SMOKE_TESTS = requiredSmokeTestsForPlayMode(
-  BASE_SMOKE_TESTS,
-  plan.playExperienceMode,
-);
+const REQUIRED_SMOKE_TESTS = requiredPlaySmokeTests(BASE_SMOKE_TESTS, {
+  travelEnabled: plan.travelAtlasMode === "atlas-v1",
+});
 if (
   smokeResults.length !== REQUIRED_SMOKE_TESTS.length ||
   REQUIRED_SMOKE_TESTS.some((name) => !smokeResults.includes(name)) ||
@@ -277,18 +280,20 @@ if (plan.previousWorkerVersion === currentVersion) {
 const finalPublication = remoteReleaseMarker();
 assertReleaseMarker(finalPublication, {
   head,
+  releaseVersion,
   contentVersion: plan.contentVersion,
   preparedAt: plan.preparedAt,
 });
 const finalDeployment = productionDeployment(currentVersion);
 
 const record = {
-  schemaVersion: "1.4",
+  schemaVersion: "1.5",
   releasedAt,
   smokeTestedAt,
   commitSha: head,
+  releaseVersion,
   contentVersion: plan.contentVersion,
-  playExperienceMode: plan.playExperienceMode,
+  travelAtlasMode: plan.travelAtlasMode,
   copyVersion: plan.copyVersion,
   publicContentSha256: plan.publicContentSha256,
   deployableArtifacts: plan.deployableArtifacts,
@@ -298,6 +303,7 @@ const record = {
   releasePublication: {
     status: finalPublication.status,
     releaseSha: finalPublication.details.releaseSha,
+    releaseVersion: finalPublication.details.releaseVersion,
     contentVersion: finalPublication.details.contentVersion,
     contentHash: finalPublication.details.contentHash,
     verifiedAt: finalPublication.checkedAt,
@@ -309,7 +315,7 @@ const record = {
     currentVersion,
     deploymentId: finalDeployment.deploymentId,
     trafficPercentage: finalDeployment.percentage,
-    playExperienceMode: plan.playExperienceMode,
+    travelAtlasMode: plan.travelAtlasMode,
   },
   nonVersionedTriggers: verifiedTriggerReceipt,
   domainCutover: {

@@ -1,62 +1,4 @@
-.streams {
-  min-width: 0;
-  border-top: 1px solid var(--line, #d5dbe4);
-}
-
-.enhanced {
-  min-width: 0;
-}
-
-.tabs {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  border-bottom: 1px solid var(--line, #d5dbe4);
-}
-
-.tabs button {
-  display: grid;
-  min-width: 0;
-  gap: 0.3rem;
-  padding: 1rem 1.2rem;
-  min-height: 2.75rem;
-  border: 0;
-  border-right: 1px solid var(--line, #d5dbe4);
-  background: transparent;
-  color: var(--muted, #5f6878);
-  text-align: left;
-  cursor: pointer;
-}
-
-.tabs button:last-child {
-  border-right: 0;
-}
-
-.tabs button span {
-  color: inherit;
-  font-family: var(--font-display, "Recursive", sans-serif);
-  font-size: clamp(1rem, 1.6vw, 1.35rem);
-  font-variation-settings: "CASL" 0.2, "wght" 650;
-  letter-spacing: -0.025em;
-}
-
-.tabs button small {
-  overflow-wrap: anywhere;
-  font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.75rem;
-}
-
-.tabs .activeTab {
-  box-shadow: inset 0 -3px var(--blue, #295dff);
-  color: var(--ink, #17223b);
-}
-
-.tabs button:hover {
-  color: var(--ink, #17223b);
-}
-
-.tabs button:focus-visible,
-.panel:focus-visible,
+/* Shared collection presentation styles for the semantic room screens. */
 .viewSwitch button:focus-visible,
 .galleryTools input:focus-visible,
 .galleryTools select:focus-visible,
@@ -73,12 +15,6 @@
   border-radius: 1px;
   outline: 2px solid var(--blue, #295dff);
   outline-offset: 3px;
-}
-
-.panel {
-  min-width: 0;
-  padding: clamp(1.5rem, 3vw, 3rem);
-  outline: none;
 }
 
 .collectionHeader {
@@ -1252,41 +1188,7 @@
   border: 0;
 }
 
-.noScript {
-  display: grid;
-  gap: 0;
-}
-
-.noScript details {
-  border-bottom: 1px solid var(--line, #d5dbe4);
-}
-
-.noScript summary {
-  padding: 1rem 0;
-  font-weight: 620;
-  cursor: pointer;
-}
-
-.noScript p {
-  margin: 0;
-  padding: 0 0 1rem;
-  color: var(--muted, #5f6878);
-}
-
 @media (max-width: 1100px) {
-  .tabs {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .tabs button:nth-child(3),
-  .tabs button:nth-child(6) {
-    border-right: 0;
-  }
-
-  .tabs button:nth-child(-n + 3) {
-    border-bottom: 1px solid var(--line, #d5dbe4);
-  }
-
   .collectionHeader,
   .panelHeading {
     grid-template-columns: 1fr;
@@ -1319,23 +1221,6 @@
 }
 
 @media (max-width: 760px) {
-  .tabs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .tabs button {
-    border-right: 1px solid var(--line, #d5dbe4);
-    border-bottom: 0;
-  }
-
-  .tabs button:nth-child(even) {
-    border-right: 0;
-  }
-
-  .tabs button:nth-child(-n + 4) {
-    border-bottom: 1px solid var(--line, #d5dbe4);
-  }
-
   .pattern,
   .galleryTools,
   .galleryTools.discogsTools,
@@ -1439,14 +1324,6 @@
 }
 
 @media (max-width: 460px) {
-  .panel {
-    padding-inline: 0;
-  }
-
-  .tabs button {
-    padding-inline: 0.75rem;
-  }
-
   .collectionHeader {
     padding-inline: 0;
   }
@@ -1601,8 +1478,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .atlas a,
-  .viewSwitch button,
-  .tabs button {
+  .viewSwitch button {
     transition: none;
   }
 
@@ -1613,7 +1489,6 @@
 }
 
 @media (forced-colors: active) {
-  .tabs button[aria-selected="true"],
   .viewSwitch button[aria-pressed="true"] {
     outline: 3px solid Highlight;
     outline-offset: -4px;

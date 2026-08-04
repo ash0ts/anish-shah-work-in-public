@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,6 +8,9 @@ import * as chromeLauncher from "chrome-launcher";
 import lighthouse from "lighthouse";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const releaseVersion = JSON.parse(
+  await readFile(path.join(root, "package.json"), "utf8"),
+).version;
 // Keep this in lockstep with Playwright. This is a test-process override for
 // Wrangler 4.113's bundled workerd, not a production configuration value.
 const e2eCompatibilityDate = "2026-07-28";
@@ -17,8 +20,7 @@ const reportDirectory = path.join(root, ".lighthouse");
 const wranglerDirectory = path.join(root, ".wrangler");
 const wranglerLogPath = path.join(wranglerDirectory, "lighthouse-quality.log");
 const audits = [
-  { mode: "classic", routes: ["/", "/work", "/play", "/sources", "/privacy"] },
-  { mode: "room", routes: ["/play"] },
+  { mode: "room", routes: ["/", "/work", "/play", "/sources", "/privacy"] },
 ];
 const categories = ["performance", "accessibility", "best-practices", "seo"];
 const minimumScore = 0.9;
@@ -105,8 +107,10 @@ await Promise.all([
   mkdir(wranglerDirectory, { recursive: true }),
 ]);
 
-function launchWorker(mode) {
-  const experienceMode = mode === "room" ? "my-room-2001" : "classic";
+function launchWorker() {
+  // Run on loopback without a hosted deployment tier. Preview and staging are
+  // intentionally noindexed, so auditing either tier would measure that
+  // security boundary instead of the production SEO contract.
   const server = spawn(
     process.execPath,
     [
@@ -124,7 +128,7 @@ function launchWorker(mode) {
       "--var",
       "NODE_ENV:development",
       "--var",
-      `PLAY_EXPERIENCE_MODE:${experienceMode}`,
+      `RELEASE_VERSION:${releaseVersion}`,
       "--log-level",
       "error",
       "--persist-to",
@@ -147,8 +151,8 @@ function launchWorker(mode) {
   return { server, output: () => output };
 }
 
-async function runRouteAudit(route, mode) {
-  const { server, output } = launchWorker(mode);
+async function runRouteAudit(route) {
+  const { server, output } = launchWorker();
   try {
     await waitForServer(server);
     await assertRouteAvailable(route, server, output);
@@ -190,7 +194,7 @@ for (const { mode, routes } of audits) {
   let lastError;
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
-      result = await runRouteAudit(route, mode);
+      result = await runRouteAudit(route);
       if (!result?.lhr.runtimeError) break;
       lastError = new Error(
         `${result.lhr.runtimeError.code} — ${result.lhr.runtimeError.message}`,

@@ -23,7 +23,7 @@ changes scoring, or replaces a visible status.
   shorten a visual transition without enabling or disabling sound.
 
 The checked-in source of truth is
-`content/presentation/experience-audio.v1.json`. It contains 43 deliberately
+`content/presentation/experience-audio.v1.json`. It contains 46 deliberately
 quiet procedural placeholder cues. The strict validator requires the complete
 slot set so a later composition pass can replace sounds without renaming the
 gameplay contract.

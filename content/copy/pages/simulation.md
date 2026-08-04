@@ -47,3 +47,111 @@ Inspect the public model’s source deck.
 
 ## dossier-summary
 The game changes how these records meet you, not what they say. Every professional claim links back to its canonical work.
+
+## action-trace-the-system-label
+Trace the system
+
+## action-trace-the-system-hint
+Follow the interface to the artifacts and feedback loops it connects.
+
+## action-follow-the-people-label
+Follow the people
+
+## action-follow-the-people-hint
+Look for teaching, collaborators, and public communities.
+
+## action-inspect-the-artifact-label
+Inspect the artifact
+
+## action-inspect-the-artifact-hint
+Start with what a public recording, repository, or article can support.
+
+## action-probe-label
+Probe
+
+## action-probe-hint
+Ask what evidence could prove this first answer wrong.
+
+## action-trace-label
+Trace
+
+## action-trace-hint
+Follow the claim to its public source.
+
+## action-qualify-label
+Qualify
+
+## action-qualify-hint
+Keep scope, period, and attribution attached.
+
+## action-reframe-label
+Reframe
+
+## action-reframe-hint
+Replace the confident label with a better question.
+
+## action-watch-label
+Watch
+
+## action-watch-hint
+Open the anime broadcast doorway.
+
+## action-read-label
+Read
+
+## action-read-hint
+Open the borrowed shelf doorway.
+
+## action-listen-label
+Listen
+
+## action-listen-hint
+Open the pocket-player doorway.
+
+## action-collect-label
+Collect
+
+## action-collect-hint
+Open the record-crate doorway.
+
+## action-play-label
+Play
+
+## action-play-hint
+Open the desktop-library doorway.
+
+## action-move-label
+Move
+
+## action-move-hint
+Open the cardio-television doorway.
+
+## action-ground-the-claim-label
+Ground the claim
+
+## action-ground-the-claim-hint
+Keep the artifact attached to the conclusion.
+
+## action-keep-the-qualifier-label
+Keep the qualifier
+
+## action-keep-the-qualifier-hint
+Precision survives when its boundaries remain visible.
+
+## action-connect-the-facets-label
+Connect the facets
+
+## action-connect-the-facets-hint
+Refuse the single label. Preserve the plural body of work.
+
+## curiosity-systems
+How do the interfaces, evaluations, and feedback loops connect?
+
+## curiosity-research
+Which claims survive contact with inspectable evidence?
+
+## curiosity-teaching
+How does technical work travel through explanation and practice?
+
+## curiosity-surprise
+Which public artifact most resists the obvious first label?

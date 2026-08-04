@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   analyze:
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 20
     steps:
       - name: Validate owner dispatch
@@ -58,14 +58,14 @@ jobs:
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "${#GITHUB_SHA}" -eq 40
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
           config-file: ./.github/codeql-config.yml
           languages: javascript-typescript
           queries: security-extended
       - name: Analyze
         id: analyze
-        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
           output: ${{ runner.temp }}/codeql-results
           upload: never

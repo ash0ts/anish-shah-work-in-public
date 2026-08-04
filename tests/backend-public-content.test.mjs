@@ -248,7 +248,7 @@ test("published selector applies only visibility, order, feature, wording, and c
     (entry) => entry.subjectId.startsWith("collection:"),
   );
   const narrative = staticBundle.narratives.find(
-    (entry) => entry.id === "narrative:play:personal-streams",
+    (entry) => entry.id === "narrative:home:thesis",
   );
   assert(first && second && metric && narrative);
 
@@ -265,7 +265,7 @@ test("published selector applies only visibility, order, feature, wording, and c
       caveat: "Reviewed metric caveat.",
     }),
     narrativeRecord(narrative, {
-      approvedPublicWording: "Updated personal-stream copy.",
+      approvedPublicWording: "Updated thesis copy.",
     }),
   ]);
   const merged = mergePublishedEditorialSnapshot(staticBundle, snapshot);
@@ -286,7 +286,7 @@ test("published selector applies only visibility, order, feature, wording, and c
   assert.equal(merged.metrics[0].label, "revised metric label");
   assert.equal(merged.metrics[0].qualifier, "Reviewed metric caveat.");
   assert.equal(merged.narratives.length, 1);
-  assert.equal(merged.narratives[0].body, "Updated personal-stream copy.");
+  assert.equal(merged.narratives[0].body, "Updated thesis copy.");
   const survivingEvidenceIds = new Set([
     ...merged.items.flatMap((item) => item.evidenceIds),
     ...merged.metrics.flatMap((entry) => entry.publicEvidenceIds),
@@ -719,16 +719,13 @@ test("checked-in static content is available only when failClosed is false", asy
 
 test("public runtime reads publication snapshots, never editable drafts", async () => {
   const root = new URL("../", import.meta.url);
-  const [runtime, home, work, detail, play, classicPlay, sources] = await Promise.all([
+  const [runtime, home, work, detail, play, directPlay, sources] = await Promise.all([
     readFile(new URL("lib/server/public-content.ts", root), "utf8"),
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/work/page.tsx", root), "utf8"),
     readFile(new URL("app/work/[slug]/page.tsx", root), "utf8"),
     readFile(new URL("app/play/page.tsx", root), "utf8"),
-    readFile(
-      new URL("components/play/ClassicPlayExperience.tsx", root),
-      "utf8",
-    ),
+    readFile(new URL("app/play/[objectSlug]/page.tsx", root), "utf8"),
     readFile(new URL("app/sources/page.tsx", root), "utf8"),
   ]);
 
@@ -746,13 +743,12 @@ test("public runtime reads publication snapshots, never editable drafts", async 
   for (const route of [home, work, detail, sources]) {
     assert.match(route, /getPublicContentView/);
   }
-  assert.match(classicPlay, /SITE_COPY\.play/);
-  assert.doesNotMatch(classicPlay, /narrative:play:personal-streams/);
   for (const route of [home, work, detail, play, sources]) {
     assert.match(route, /dynamic = "force-dynamic"/);
   }
-  assert.match(play, /<ClassicPlayExperience/);
   assert.match(play, /<RoomOverview/);
+  assert.match(play, /permanentRedirect\(legacyObject\.route\)/);
+  assert.match(directPlay, /ROOM_ROUTE_FOUNDATIONS\[object\.id\]\(query\)/);
   assert.equal(
     [...detail.matchAll(/\bresolveGroup\(/g)].length >= 3,
     true,

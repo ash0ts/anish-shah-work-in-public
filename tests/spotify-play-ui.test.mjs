@@ -13,12 +13,8 @@ const spotifyCssUrl = new URL(
   "../components/SpotifyStream.module.css",
   import.meta.url,
 );
-const streamsSourceUrl = new URL(
-  "../components/PersonalStreams.tsx",
-  import.meta.url,
-);
 const playPageUrl = new URL(
-  "../components/play/ClassicPlayExperience.tsx",
+  "../components/play/room-screens/ListenRoomScreen.tsx",
   import.meta.url,
 );
 
@@ -28,16 +24,18 @@ async function spotifySource() {
   );
 }
 
-test("Spotify stays lazy and uses only ordinal Top Tracks fields", async () => {
-  const [spotify, streams] = await Promise.all([
+test("Spotify stays isolated to its lazy room screen and uses only ordinal Top Tracks fields", async () => {
+  const [spotify, screenRegistry, screen] = await Promise.all([
     spotifySource(),
-    readFile(streamsSourceUrl, "utf8"),
+    readFile(new URL("../components/play/room-platform/room-screen-registry.ts", import.meta.url), "utf8"),
+    readFile(playPageUrl, "utf8"),
   ]);
 
   assert.match(
-    streams,
-    /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/,
+    screenRegistry,
+    /listen: \(\) => import\("\.\.\/room-screens\/ListenRoomScreen"\)/,
   );
+  assert.match(screen, /<SpotifyStream fixture=\{fixture\} initialState=\{initialState\}/);
   assert.match(spotify, /fetch\("\/api\/connectors\/spotify"/);
   for (const range of ["short_term", "medium_term", "long_term"]) {
     assert.match(spotify, new RegExp(`id: "${range}"`));
@@ -103,18 +101,14 @@ test("Spotify playback is consent-gated, official, and non-reactive", async () =
 });
 
 test("Play supplies a server-rendered Spotify no-JavaScript list", async () => {
-  const page = await readFile(playPageUrl, "utf8");
-
-  assert.match(page, /getPublicConnectorSnapshot\("spotify"\)/);
-  assert.match(page, /getSpotifyPublicFallback\(\)/);
-  assert.match(page, /spotifyNoScript=\{/);
-  assert.match(page, /<ol>[\s\S]*?open\.spotify\.com\/track/);
-  assert.match(page, /shortTerm\.tracks\.slice\(0, 12\)/);
-  assert.match(page, /SITE_COPY\.play\["profile-spotify"\]/);
-  assert.match(page, /SITE_COPY\.play\["intro-title"\]/);
-  assert.doesNotMatch(page, /six optional public streams/i);
-
-  const streams = await readFile(streamsSourceUrl, "utf8");
-  assert.match(streams, /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/);
-  assert.match(streams, /hidden=\{active !== "listen"\}/);
+  const [screen, direct, foundation] = await Promise.all([
+    readFile(playPageUrl, "utf8"),
+    readFile(new URL("../app/play/[objectSlug]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/play-screen-foundation.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(direct, /ROOM_PROVIDER_ADAPTERS\.listen\(query\)/);
+  assert.match(foundation, /getSpotifyScreenFoundation/);
+  assert.match(foundation, /getPublicConnectorSnapshot\("spotify"\)/);
+  assert.match(foundation, /getSpotifyPublicFallback\(\)/);
+  assert.match(screen, /<SpotifyStream fixture=\{fixture\} initialState=\{initialState\}/);
 });

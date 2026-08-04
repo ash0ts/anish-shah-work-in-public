@@ -27,9 +27,49 @@ const {
   previewTravelAtlas,
   TRAVEL_PREVIEW_SCENARIOS,
 } = await import("../lib/server/travel/preview.ts");
-const { getPublicTravelAtlas, getPublicTravelTrip } = await import(
+const travelRepository = await import(
   "../lib/server/travel/repository.ts"
 );
+const { getPublicTravelAtlas, getPublicTravelTrip } = travelRepository;
+
+test("the Travel repository facade preserves the route-facing operation contract", () => {
+  const expectedOperations = [
+    "completeTravelMediaDeletion",
+    "createTravelPlace",
+    "createTravelTrip",
+    "createTravelUpload",
+    "currentTravelSnapshot",
+    "deleteTravelPhoto",
+    "deleteTravelPlace",
+    "deleteTravelTrip",
+    "failTravelUpload",
+    "finalizeTravelUpload",
+    "findPrivateTravelPhotoStorage",
+    "findPublishedTravelMedia",
+    "getPublicTravelAtlas",
+    "getPublicTravelTrip",
+    "getTravelTripDraft",
+    "getTravelTripDraftPreview",
+    "getTravelUploadForWrite",
+    "listTravelTripDrafts",
+    "markTravelUploadTemporaryStorage",
+    "moveTravelPhoto",
+    "patchTravelPhoto",
+    "patchTravelPlace",
+    "patchTravelTrip",
+    "publishTravelTrip",
+    "readTravelKvSnapshot",
+    "travelPrivateHeaders",
+    "travelPublicationVersionKey",
+  ];
+  for (const operation of expectedOperations) {
+    assert.equal(
+      typeof travelRepository[operation],
+      "function",
+      `${operation} must remain exported through the stable facade`,
+    );
+  }
+});
 
 const validTrip = {
   title: "Tokyo after midnight",
@@ -668,7 +708,7 @@ test("travel fixture selection is ignored outside the exact preview boundary", a
       SITE_URL: "https://anish-shah-is.online",
       PRODUCTION_SITE_URL: "https://anish-shah-is.online",
       PUBLIC_CONTENT_MODE: "d1_kv_required",
-      PLAY_EXPERIENCE_MODE: "my-room-2001",
+      RELEASE_VERSION: "2.0.0-rc.1",
       TRAVEL_ATLAS_MODE: "atlas-v1",
     };
     const production = await getPublicTravelAtlas(null, null, "completed");
@@ -682,7 +722,7 @@ test("travel fixture selection is ignored outside the exact preview boundary", a
       SITE_URL: "https://staging.anish-shah-is.online",
       PRODUCTION_SITE_URL: "https://anish-shah-is.online",
       PUBLIC_CONTENT_MODE: "d1_kv_required",
-      PLAY_EXPERIENCE_MODE: "my-room-2001",
+      RELEASE_VERSION: "2.0.0-rc.1",
       TRAVEL_ATLAS_MODE: "atlas-v1",
     };
     const staging = await getPublicTravelAtlas(null, null, "planned");
@@ -699,7 +739,7 @@ test("exact preview runtime returns deterministic synthetic travel data without 
     SITE_URL: "https://pr-26.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: "2.0.0-rc.1",
     TRAVEL_ATLAS_MODE: "atlas-v1",
   };
   try {

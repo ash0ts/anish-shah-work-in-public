@@ -1,6 +1,6 @@
 ---
 name: maintain-anish-site
-description: Maintain, debug, extend, validate, stage, or release the Anish Shah Work in Public site. Use for application code, My Room 2001, canonical content, the copy deck, Play connectors, Studio, OAuth, D1 or KV, Cloudflare environments, accessibility, SEO, privacy, security, CI, documentation, and production verification. Enforces public/private data boundaries, environment isolation, exact-SHA release evidence, and risk-based validation.
+description: Maintain, debug, extend, validate, stage, or release the Anish Shah Work in Public site. Use for application code, My Room and Pocket Room, Postcard Planet Travel, the 4N1SH Simulation, canonical content, the copy deck, Play connectors, Studio, OAuth, D1, KV, R2, Cloudflare Images or AI Gateway, accessibility, SEO, privacy, security, CI, documentation, and production verification. Enforces public/private data boundaries, environment isolation, exact-SHA release evidence, and risk-based validation.
 ---
 
 # Maintain Anish Site
@@ -35,8 +35,11 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Canonical facts and structure come from immutable source inputs, reviewed curation, and the generated sanitized public bundle.
 - Git-owned presentation prose comes from `content/copy/**`. For copy-only work, use `$edit-anish-site-copy`; never move metrics, evidence, privacy, provider policy, routes, or behavior into that deck.
 - Published D1 state owns allowlisted visibility, ordering, caveats, and metric wording. `PUBLICATION_CACHE` KV is the validated last-known-good production fallback.
-- My Room 2001 is the authoritative Play experience. Its six semantic routes and HTML foundations own navigation and content; the R3F room is an optional enhancement.
-- Three.js/R3F may exist only under `components/play/room-3d/**`, load only after intent and capability checks, and never own provider data or accessibility semantics.
+- My Room 2001 is the authoritative Play experience. Its dependency-free closed seven-object contract, semantic routes, and HTML foundations own navigation and content; desktop and Pocket R3F rooms are optional enhancements. There is no Classic mode.
+- Derive routes, controls, focus targets, and smoke paths from the structural object contract. Keep screen imports, provider adapters, scene objects, and other executable maps literal, closed, and parity-tested.
+- Three.js/R3F may exist only under `components/play/room-3d/**` and `components/play/travel/**`, load only after their own intent/capability boundaries, and never own provider data, Travel photos, navigation semantics, or accessibility content.
+- The Simulation may use Phaser, XState, and game Canvas only under its scoped paths. Keep Action lazy, Tactical semantic, authored fallback complete, visitor text ephemeral, and every factual card server-owned.
+- Tone/Web Audio is gesture-gated under `components/experience-audio/**`; missing audio is silent and never blocks interaction.
 - Discogs uses OAuth 1.0a HMAC-SHA1 and a text-first, short-lived public catalog. Do not treat it as an OAuth 2 or artwork-gallery provider.
 
 ## Non-Negotiable Boundaries
@@ -49,6 +52,7 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Do not assume Strava uses the generic connector repository.
 - Travel is an owner-authored publication, not a connector. Keep draft D1 state, versioned D1/KV publication, private tier-isolated R2 media, approximate geography, and the `TRAVEL_ATLAS_MODE` gate separate from provider state. Authorize public media against the active snapshot before any derivative-cache lookup.
 - Travel may use R3F, first-party geography, shaders, and browser-local image analysis only inside the scoped paths declared by `AGENTS.md`; its Canvas never replaces the semantic atlas.
+- Simulation uses bounded D1 sessions, budgets, provider approvals, and a tier-isolated Cloudflare AI Gateway. Disable prompt/response logging and response caching, preserve DLP/Guardrails and spend limits, and never persist raw visitor or model text.
 - Never rewrite an applied D1 migration. Only the audited one-time flow may transfer reviewed Hardcover, Steam, and Strava setup from local to production; never move OAuth material, snapshots, D1 rows, KV envelopes, or encryption keys between environments.
 - Do not deploy, migrate hosted D1, rotate keys, change Access, or mutate provider registrations unless the user explicitly requests that exact action.
 
@@ -56,8 +60,8 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 
 - Local: loopback, isolated local D1, local secrets, ordinary development.
 - PR preview: Access-protected, synthetic static fixtures, no D1/KV/R2/provider calls/Studio/OAuth/secrets.
-- Staging: Access-protected, isolated Worker/D1/KV/R2/secrets/provider registrations; never a production-data clone.
-- Production: `https://anish-shah-is.online`, Access-protected owner surfaces, production D1/KV/R2, and exact-SHA guarded release.
+- Staging: Access-protected, isolated Worker/D1/KV/R2/Images/Gateway/secrets/provider registrations; never a production-data clone and always globally noindexed.
+- Production: `https://anish-shah-is.online`, Access-protected owner surfaces, production D1/KV/R2/Images/Gateway, and exact-SHA guarded release.
 - Private Sites deployment: reference/recovery only, never production rollback or public proxy.
 
 ## Helper Safety Contract
@@ -67,6 +71,8 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - `--base <ref>` includes committed changes from that merge base through `HEAD`; use it for PR and freelancer review.
 - Owner write, Access/auth, and OAuth code require matching security/connector regression tests.
 - Travel owner APIs require `tests/travel-security.test.mjs`; Travel schema, geography, or media work requires its focused checks, a clean local migration, and the browser gate.
+- Simulation APIs, persistence, campaign, Gateway, or provider-approval work requires focused Simulation security, migration, UI, privacy, and browser checks. Preserve both Action and Tactical completion plus authored outage fallback.
+- Room registry changes require seven-key parity, zero overview data reads, direct-route source isolation, desktop/Pocket input tests, and disabled-feature reachability tests.
 - Copy changes require copy parsing, voice/audit, owner fact-check, diff, rendered, metadata, and browser checks. Skill and docs changes require their dedicated validators.
-- Release-code edits select ordinary `npm run validate`. `npm run validate:release` is only for a clean, pushed, explicitly approved production candidate with exact-SHA workflow evidence.
+- Release-code edits select ordinary `npm run validate`. A clean pushed `release/<semver>` candidate may use the guarded staging workflow with all four exact-SHA workflow URLs. `npm run validate:release` and production mutation remain separately authorized.
 - The helper never deploys, migrates hosted state, rotates credentials, or mutates Git.

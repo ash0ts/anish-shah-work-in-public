@@ -353,7 +353,7 @@ test("public metrics have explicit scope and never imply collection inheritance"
   );
 });
 
-test("known public URL correction and personal-stream narrative are present", () => {
+test("known public URL correction is present and superseded Play narrative is absent", () => {
   const serialized = JSON.stringify(publicBundle);
   assert(
     !serialized.includes(
@@ -368,15 +368,7 @@ test("known public URL correction and personal-stream narrative are present", ()
   assert(!publicBundle.collections.some((collection) => collection.id === "collection:impact-film-v1"));
   assert.deepEqual(
     publicBundle.narratives.filter((narrative) => narrative.placement === "play"),
-    [
-      {
-        id: "narrative:play:personal-streams",
-        title: "Outside the work",
-        body: "Bounded, owner-controlled snapshots make anime, books, music, and games explorable. Movement stays inside an official Strava embed loaded only after visitor intent.",
-        placement: "play",
-        publicationState: "public",
-      },
-    ],
+    [],
   );
 });
 

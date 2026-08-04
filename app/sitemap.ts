@@ -3,12 +3,11 @@ import { ROOM_OBJECTS } from "../components/play/room-platform/room-registry";
 import { canonicalMetadataOrigin } from "../lib/deployment-environment";
 import { runtimeHostedDeploymentPresentation } from "../lib/server/deployment-presentation";
 import {
-  roomExperienceEnabled,
+  getPublicTravelAtlas,
   travelAtlasEnabled,
-} from "../lib/server/play-experience";
+} from "../lib/server/travel";
 import { simulationExperienceEnabled } from "../lib/server/simulation/policy";
 import { getPublicContentView } from "../lib/server/public-content";
-import { getPublicTravelAtlas } from "../lib/server/travel";
 import { workArchiveRecordsFrom } from "../lib/work-index";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -61,16 +60,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const travelEnabled = travelAtlasEnabled();
-  const playRoutes: MetadataRoute.Sitemap = roomExperienceEnabled()
-    ? ROOM_OBJECTS.filter(
-        ({ id }) => id !== "travel" || travelEnabled,
-      ).map((object) => ({
-        url: `${baseUrl}${object.route}`,
-        lastModified,
-        changeFrequency: "weekly" as const,
-        priority: 0.4,
-      }))
-    : [];
+  const playRoutes: MetadataRoute.Sitemap = ROOM_OBJECTS.filter(
+    ({ id }) => id !== "travel" || travelEnabled,
+  ).map((object) => ({
+    url: `${baseUrl}${object.route}`,
+    lastModified,
+    changeFrequency: "weekly" as const,
+    priority: 0.4,
+  }));
 
   const simulationRoutes: MetadataRoute.Sitemap = simulationExperienceEnabled()
     ? [
