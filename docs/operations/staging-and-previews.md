@@ -95,8 +95,22 @@ live staging behavior is under review. Complete authorization, refresh,
 publication acknowledgement where applicable, and recovery testing in staging;
 a successful callback alone is not connector acceptance.
 
-Set simulation secrets against only the staging configuration. Enter values
-interactively; never echo, commit, or place them in the release plan:
+Before the first guarded staging release, list the Worker secret names and
+confirm that `CONNECTOR_ENCRYPTION_KEY` and `RATE_LIMIT_SALT` already exist.
+They are required by connector storage and protected request throttling even
+when Simulation and Travel are disabled. Add a missing value interactively;
+never echo it, copy it from production, or rotate an existing encryption key
+as part of an ordinary release:
+
+```bash
+npx --no-install wrangler secret list --config dist/server/wrangler.staging.json
+npx --no-install wrangler secret put CONNECTOR_ENCRYPTION_KEY --config dist/server/wrangler.staging.json
+npx --no-install wrangler secret put RATE_LIMIT_SALT --config dist/server/wrangler.staging.json
+```
+
+Set Simulation secrets against only the staging configuration before the
+later `campaign-v1` activation. Enter values interactively; never echo, commit,
+or place them in the release plan:
 
 ```bash
 npx --no-install wrangler secret put SIMULATION_SESSION_HMAC_KEY --config dist/server/wrangler.staging.json
@@ -283,10 +297,13 @@ activates the staging KV pointer. Both operations are idempotent for an
 already-current release. The following checkpoint refuses a stale general
 retention heartbeat or a missing/mismatched KV pointer. The exact staging
 origin and configuration guard keep these commands separate from production.
-The checkpoint also requires the live Gateway to be configured and compares
-the runtime campaign/model settings plus current approval names and digest with
-the ignored staging plan. A changed or expired approval therefore stops the
-candidate instead of silently changing model context.
+For a `campaign-v1` checkpoint, the live Gateway must be configured and the
+runtime campaign/model settings plus current approval names and digest must
+match the ignored staging plan. A changed or expired approval therefore stops
+the candidate instead of silently changing model context. The initial disabled
+infrastructure release does not require Gateway credentials or approvals.
+Unless a reviewed staging override is added later, the application daily model
+ceiling remains the runtime default of 500 calls.
 
 The staging plan records `RELEASE_VERSION`, `CONTENT_VERSION`, `COPY_VERSION`,
 configuration and deployable-artifact hashes, four validation

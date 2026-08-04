@@ -73,7 +73,7 @@ or substitute a staging bucket.
 The generated production configuration binds that bucket as `TRAVEL_MEDIA`,
 Cloudflare Images as `IMAGES`, and the Travel media rate limiter as
 `TRAVEL_MEDIA_RATE_LIMITER` with the reviewed production namespace
-`88001005`. Treat the bucket and namespace as durable production coordinates.
+`88001006`. Treat the bucket and namespace as durable production coordinates.
 They must never equal their staging counterparts, and PR preview receives none
 of these bindings. Cloudflare Images must be enabled for the owning account
 before accepting an upload; the Worker fails closed when either media binding
