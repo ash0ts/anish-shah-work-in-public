@@ -247,7 +247,17 @@ export function validateRepositorySkills(root = defaultRoot) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
-  const errors = validateRepositorySkills();
+  const arguments_ = process.argv.slice(2);
+  if (
+    arguments_.length !== 0 &&
+    (arguments_.length !== 2 || arguments_[0] !== "--root" || !arguments_[1])
+  ) {
+    throw new Error(
+      "Use validate-repository-skills.mjs with no arguments or --root <directory>.",
+    );
+  }
+  const root = arguments_.length === 2 ? path.resolve(arguments_[1]) : defaultRoot;
+  const errors = validateRepositorySkills(root);
   if (errors.length > 0) {
     console.error("Repository skill validation failed:");
     for (const error of errors) console.error(`  - ${error}`);

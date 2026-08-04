@@ -4,19 +4,28 @@ on:
   workflow_dispatch:
     inputs:
       commit_sha:
-        description: Full 40-character commit SHA to soak-test ten times
+        description: Full 40-character SHA to soak-test
         required: true
         type: string
-      runner_label:
-        description: Run on GitHub-hosted infrastructure or the temporary owner runner
+      validate_run_id:
+        description: Successful Validate run containing this SHA's immutable build
+        required: true
+        type: string
+      runner_target:
+        description: Hosted runners or two disposable owner ARM64 runners
         required: true
         default: github-hosted
         type: choice
         options:
           - github-hosted
-          - anish-release
+          - owner-arm64
+      jit_label:
+        description: One-time opaque label shared by exactly two ephemeral runners
+        required: false
+        type: string
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -25,30 +34,51 @@ concurrency:
 
 jobs:
   soak:
-    name: browser soak ${{ matrix.run }} of 10
+    name: browser soak worker ${{ matrix.worker }}
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
-        run: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
-    timeout-minutes: 35
+        worker: [1, 2]
+    runs-on: ${{ fromJSON(inputs.runner_target == 'owner-arm64' && format('["self-hosted","linux","arm64","{0}"]', inputs.jit_label) || '["ubuntu-latest"]') }}
+    timeout-minutes: 70
     steps:
-      - name: Validate owner dispatch
+      - name: Validate owner exact-SHA dispatch
         env:
           REQUESTED_SHA: ${{ inputs.commit_sha }}
-          REQUESTED_RUNNER_LABEL: ${{ inputs.runner_label }}
+          VALIDATE_RUN_ID: ${{ inputs.validate_run_id }}
+          RUNNER_TARGET: ${{ inputs.runner_target }}
+          JIT_LABEL: ${{ inputs.jit_label }}
         run: |
           set -euo pipefail
           test "$GITHUB_ACTOR" = "$GITHUB_REPOSITORY_OWNER"
           [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
-          case "$REQUESTED_RUNNER_LABEL" in
-            github-hosted|anish-release) ;;
+          [[ "$VALIDATE_RUN_ID" =~ ^[1-9][0-9]{0,19}$ ]]
+          case "$RUNNER_TARGET" in
+            github-hosted) test -z "$JIT_LABEL" ;;
+            owner-arm64) [[ "$JIT_LABEL" =~ ^anish-release-[a-f0-9]{12}$ ]] ;;
+            *) exit 1 ;;
+          esac
+      - name: Verify the producing Validate workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_SHA: ${{ inputs.commit_sha }}
+          VALIDATE_RUN_ID: ${{ inputs.validate_run_id }}
+        run: |
+          set -euo pipefail
+          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${VALIDATE_RUN_ID}")"
+          test "$(jq -r '.path' <<<"$run")" = ".github/workflows/ci.yml"
+          test "$(jq -r '.head_sha' <<<"$run")" = "$EXPECTED_SHA"
+          test "$(jq -r '.conclusion' <<<"$run")" = success
+          case "$(jq -r '.event' <<<"$run")" in
+            workflow_dispatch|push) ;;
             *) exit 1 ;;
           esac
       - name: Check out exact source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.commit_sha }}
+          fetch-depth: 0
           persist-credentials: false
       - name: Confirm exact commit
         env:
@@ -57,34 +87,45 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "${#GITHUB_SHA}" -eq 40
+      - name: Require the candidate SHA to belong to the trusted release ref
+        env:
+          EXPECTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" =~ ^refs/heads/(main|release/[0-9]+\.[0-9]+\.[0-9]+)$ ]]
+          branch="${GITHUB_REF#refs/heads/}"
+          trusted_ref="$(git rev-parse "refs/remotes/origin/${branch}")"
+          test "$EXPECTED_SHA" = "$trusted_ref"
       - name: Set up repository toolchain
         uses: ./.github/actions/setup-repository
-      - name: Install Chromium
+      - name: Download the existing validated build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: validated-dist-${{ inputs.commit_sha }}
+          path: dist
+          run-id: ${{ inputs.validate_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify immutable browser candidate
+        run: |
+          test -s dist/client/.vite/manifest.json
+          npm run deployable:attest
+      - name: Install Chromium on GitHub-hosted runners
+        if: inputs.runner_target == 'github-hosted'
         run: npx --no-install playwright install --with-deps chromium
-      - name: Run the complete browser gate
-        run: npm run validate:browser
+      - name: Run five fresh browser processes
+        env:
+          BROWSER_SOAK_WORKER: ${{ matrix.worker }}
+          BROWSER_SOAK_LOOPS: "5"
+        run: node scripts/ci/run-browser-soak.mjs
       - name: Upload soak failure evidence
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: browser-soak-${{ matrix.run }}-failure-${{ inputs.commit_sha }}
+          name: browser-soak-${{ matrix.worker }}-failure-${{ inputs.commit_sha }}
           path: |
             .playwright/results-*
             .playwright/report-*
             .wrangler/browser-quality-*.log
-            .wrangler/lighthouse-quality*
-            .lighthouse
           include-hidden-files: true
           if-no-files-found: error
-          retention-days: 14
-
-  stability:
-    name: ten-run browser stability
-    if: always()
-    needs: soak
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
-    steps:
-      - name: Require all ten independent runs
-        env:
-          SOAK_RESULT: ${{ needs.soak.result }}
-        run: test "$SOAK_RESULT" = "success"
+          retention-days: 7

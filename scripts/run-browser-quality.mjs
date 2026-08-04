@@ -60,6 +60,7 @@ const scope = process.env.BROWSER_QUALITY_SCOPE?.trim() || "all";
 const allowedScopes = new Set([
   "all",
   "room-public",
+  "room-pr",
   "room-shard",
   "simulation",
   "travel",
@@ -135,9 +136,11 @@ if (scope === "all" || scope === "simulation") {
 }
 
 const roomShardCount = 5;
+const prRoomShardCount = 2;
+const activeRoomShardCount = scope === "room-pr" ? prRoomShardCount : roomShardCount;
 const firstRoomShard = scope === "room-shard" ? Number(configuredShard) : 1;
-const lastRoomShard = scope === "room-shard" ? firstRoomShard : roomShardCount;
-if (scope === "all" || scope === "room-shard") {
+const lastRoomShard = scope === "room-shard" ? firstRoomShard : activeRoomShardCount;
+if (scope === "all" || scope === "room-shard" || scope === "room-pr") {
   for (let shard = firstRoomShard; shard <= lastRoomShard; shard += 1) {
     if (
       runPlaywright({
@@ -146,7 +149,7 @@ if (scope === "all" || scope === "room-shard") {
         arguments_: [
           "tests/browser/room-quality.spec.mjs",
           "--fully-parallel",
-          `--shard=${shard}/${roomShardCount}`,
+          `--shard=${shard}/${activeRoomShardCount}`,
         ],
       }) !== 0
     ) {

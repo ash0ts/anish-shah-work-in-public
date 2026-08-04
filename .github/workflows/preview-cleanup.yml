@@ -2,9 +2,9 @@ name: Clean PR previews
 
 on:
   pull_request:
-    types: [closed]
+    types: [closed, unlabeled]
   schedule:
-    - cron: "41 6 * * *"
+    - cron: "41 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -17,6 +17,10 @@ concurrency:
 
 jobs:
   cleanup:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action == 'closed' ||
+      (github.event.action == 'unlabeled' && github.event.label.name == 'preview')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: preview
@@ -26,9 +30,9 @@ jobs:
         with:
           ref: ${{ github.workflow_sha }}
           persist-credentials: false
-      - name: Set up trusted repository toolchain
-        uses: ./.github/actions/setup-repository
-      - name: Delete the closed PR preview
+      - name: Verify the dependency-free cleanup runtime
+        run: test "$(node --version | cut -d. -f1)" -ge 20
+      - name: Delete the closed or explicitly unlabeled PR preview
         if: github.event_name == 'pull_request'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}

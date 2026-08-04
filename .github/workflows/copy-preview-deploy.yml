@@ -10,6 +10,10 @@ permissions:
   contents: read
   pull-requests: write
 
+concurrency:
+  group: copy-preview-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.id }}
+  cancel-in-progress: true
+
 jobs:
   inspect:
     name: reclassify with trusted code
@@ -171,7 +175,14 @@ jobs:
             --report site/.copy-preview/trusted-report.json
       - name: Validate trusted code plus copy
         working-directory: site
-        run: npm run validate
+        run: |
+          npm run docs:check
+          npm run copy:check
+          npm run copy:test
+          npm run typecheck
+          npm run build
+          npm run bundle:scan
+          npm run test:rendered
       - name: Write synthetic preview metadata
         working-directory: site
         env:

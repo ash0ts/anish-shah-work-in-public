@@ -1509,10 +1509,11 @@ test("preview Discogs fixtures preserve format and decade variation", () => {
   }
 });
 
-test("preview workflows use trusted workflow_run deployment and never pull_request_target", async () => {
-  const [deploy, cleanup, validate, browserQuality, gitleaks, codeql, metadata, prepare, cleanupScript, readiness] = await Promise.all([
+test("preview workflows deploy only requested immutable PR Gate builds from trusted code", async () => {
+  const [deploy, cleanup, prGate, validate, browserQuality, gitleaks, codeql, metadata, prepare, cleanupScript, readiness] = await Promise.all([
     readFile(new URL("../.github/workflows/preview-deploy.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/preview-cleanup.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/pr-gate.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/browser-quality.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/gitleaks.yml", import.meta.url), "utf8"),
@@ -1523,6 +1524,7 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
     readFile(new URL("../scripts/preview-readiness.mjs", import.meta.url), "utf8"),
   ]);
   assert.match(deploy, /workflow_run:/);
+  assert.match(deploy, /workflows: \[PR Gate\]/);
   assert.match(
     deploy,
     /group: preview-\$\{\{ github\.event\.workflow_run\.event == 'pull_request' && format\('pr-\{0\}', github\.event\.workflow_run\.pull_requests\[0\]\.number\) \|\| format\('run-\{0\}', github\.event\.workflow_run\.id\) \}\}/,
@@ -1554,12 +1556,13 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
     deploy,
     /if: \$\{\{ always\(\) && steps\.production_guard_capture\.outcome == 'success' \}\}/,
   );
-  assert.match(validate, /Upload immutable preview build/);
-  assert.match(validate, /include-hidden-files: true/);
-  assert.match(validate, /github\.event\.pull_request\.head\.sha/);
+  assert.match(prGate, /name: Upload the one immutable PR build/);
+  assert.match(prGate, /include-hidden-files: true/);
+  assert.match(prGate, /github\.event\.pull_request\.head\.sha/);
+  assert.match(prGate, /contains\(github\.event\.pull_request\.labels\.\*\.name, 'preview'\)/);
   assert.match(
     browserQuality,
-    /BROWSER_SOURCE_SHA: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+    /BROWSER_SOURCE_SHA: \$\{\{ inputs\.commit_sha \}\}/,
   );
   assert.match(
     browserQuality,
@@ -1569,7 +1572,9 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
     browserQuality,
     /name: room-browser-review-\$\{\{ env\.BROWSER_SOURCE_SHA \}\}/,
   );
-  assert.doesNotMatch(browserQuality, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
+  assert.match(browserQuality, /Download the exact Validate build/);
+  assert.match(browserQuality, /run-id: \$\{\{ inputs\.validate_run_id \}\}/);
+  assert.doesNotMatch(browserQuality, /npm run build/);
   for (const workflow of [gitleaks, codeql]) {
     assert.match(
       workflow,
@@ -1581,10 +1586,10 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
     );
     assert.doesNotMatch(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
   }
-  assert.match(validate, /PREVIEW_WORKFLOW_SHA/);
+  assert.match(prGate, /PREVIEW_WORKFLOW_SHA/);
   assert.match(
-    validate,
-    /preview-build-\$\{\{ github\.event\.pull_request\.number \}\}-\$\{\{ github\.event\.pull_request\.head\.sha \}\}/,
+    prGate,
+    /pr-build-\$\{\{ env\.PR_SOURCE_SHA \}\}/,
   );
   assert.match(metadata, /process\.env\.PREVIEW_SOURCE_SHA/);
   assert.match(metadata, /sourceSha: releaseSha/);
@@ -1595,27 +1600,31 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
   assert.match(cleanup, /preview-cleanup\.mjs cleanup --apply/);
   assert.match(cleanup, /group: preview-\$\{\{ github\.event_name == 'pull_request' && format\('pr-\{0\}', github\.event\.pull_request\.number\) \|\| 'janitor' \}\}/);
   assert.match(cleanup, /github\.workflow_sha/);
+  assert.match(cleanup, /cron: "41 6 \* \* 1"/);
+  assert.match(cleanup, /node scripts\/preview-cleanup\.mjs janitor --apply/);
+  assert.doesNotMatch(cleanup, /setup-repository|npm ci/);
   assert.match(deploy, /Mark the current preview SHA as failed/);
   assert.match(deploy, /Mark the current preview SHA as not deployable/);
   assert.match(deploy, /validation failed for this SHA/);
   assert.match(deploy, /A newer head or closed PR superseded this validation result/);
   assert.match(deploy, /A newer head or closed PR superseded this deployment failure/);
   assert.match(deploy, /The URL may still serve an older build/);
-  for (const workflow of [deploy, cleanup, validate, browserQuality]) {
+  for (const workflow of [deploy, prGate, validate, browserQuality]) {
     assert.match(workflow, /uses: \.\/\.github\/actions\/setup-repository/);
   }
   assert.match(cleanupScript, /hostname: coordinates\.hostname/);
   assert.match(cleanupScript, /service: coordinates\.workerName/);
   assert.match(cleanupScript, /domains\.length > 1/);
-  assert.doesNotMatch(`${deploy}\n${cleanup}\n${validate}`, /pull_request_target/);
+  assert.doesNotMatch(`${deploy}\n${cleanup}\n${prGate}\n${validate}`, /pull_request_target/);
 });
 
-test("CI shares the repository toolchain and preserves hidden build evidence", async () => {
-  const [action, validate, browser, preview, dependabot] = await Promise.all([
+test("CI shares the repository toolchain and reuses hidden immutable build evidence", async () => {
+  const [action, prGate, validate, browser, preview, dependabot] = await Promise.all([
     readFile(
       new URL("../.github/actions/setup-repository/action.yml", import.meta.url),
       "utf8",
     ),
+    readFile(new URL("../.github/workflows/pr-gate.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8"),
     readFile(
       new URL("../.github/workflows/browser-quality.yml", import.meta.url),
@@ -1635,19 +1644,26 @@ test("CI shares the repository toolchain and preserves hidden build evidence", a
   assert.match(action, /default: "\."/);
   assert.match(action, /require\('\.\/package\.json'\)\.packageManager/);
   assert.match(action, /npm ci --ignore-scripts --prefix/);
-  for (const workflow of [validate, browser, preview]) {
+  for (const workflow of [prGate, validate, browser, preview]) {
     assert.match(workflow, /uses: \.\/\.github\/actions\/setup-repository/);
   }
   assert.doesNotMatch(validate, /name: Verify deployable content attestation/);
   assert.doesNotMatch(validate, /name: Apply all migrations to clean local D1/);
   assert.match(
     validate,
-    /name: Upload immutable preview build[\s\S]*include-hidden-files: true[\s\S]*if-no-files-found: error/,
+    /name: Upload exact validated build for release evidence[\s\S]*include-hidden-files: true[\s\S]*if-no-files-found: error/,
+  );
+  assert.match(
+    prGate,
+    /name: Upload the one immutable PR build[\s\S]*include-hidden-files: true[\s\S]*if-no-files-found: error/,
   );
   assert.match(
     preview,
     /name: Download the validated PR artifact[\s\S]*name: Scan and prepare the read-only preview[\s\S]*npm run bundle:scan/,
   );
+  assert.match(browser, /name: Download the exact Validate build/);
+  assert.match(browser, /npm run deployable:attest/);
+  assert.doesNotMatch(browser, /npm run build/);
   assert.match(dependabot, /dependency-name: typescript[\s\S]*version-update:semver-major/);
   assert.match(dependabot, /dependency-name: "@types\/node"[\s\S]*version-update:semver-major/);
 });
@@ -1668,7 +1684,7 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.match(runner, /"tests\/browser\/room-quality\.spec\.mjs"/);
   assert.match(runner, /"tests\/browser\/travel-atlas\.spec\.mjs"/);
   assert.match(runner, /"--fully-parallel"/);
-  assert.match(runner, /`--shard=\$\{shard\}\/\$\{roomShardCount\}`/);
+  assert.match(runner, /`--shard=\$\{shard\}\/\$\{activeRoomShardCount\}`/);
   assert.match(runner, /BROWSER_QUALITY_PORT: String\(port\)/);
   assert.match(runner, /BROWSER_QUALITY_SEGMENT: segment/);
   assert.match(runner, /BROWSER_QUALITY_SCOPE/);
@@ -1719,50 +1735,27 @@ test("browser quality isolates workerd lifecycles without weakening review evide
     /prepare-hosted-environment\.mjs staging/,
   );
   assert.match(workflow, /^name: Browser Quality$/m);
-  assert.match(workflow, /^  classify:/m);
-  assert.match(
-    workflow,
-    /if \[ "\$GITHUB_EVENT_NAME" = "workflow_dispatch" \]; then\n\s+echo "run_browser=true"/,
-  );
-  assert.match(
-    workflow,
-    /git diff --name-only --no-renames --no-ext-diff --no-textconv -z "\$BASE_SHA" "\$BROWSER_SOURCE_SHA" --/,
-  );
-  assert.doesNotMatch(workflow, /--diff-filter/);
-  assert.doesNotMatch(
-    workflow,
-    /docs\/\*\|releases\/\*\|\.agents\/\*/,
-  );
-  assert.match(workflow, /Browser quality is not required for documentation-only changes/);
-  assert.match(workflow, /name: Upload immutable browser build/);
-  assert.match(workflow, /include-hidden-files: true/);
-  assert.match(workflow, /if-no-files-found: error/);
-  assert.match(workflow, /^  artifact_round_trip:/m);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /pull_request:/);
+  assert.match(workflow, /name: Download the exact Validate build/);
+  assert.match(workflow, /run-id: \$\{\{ inputs\.validate_run_id \}\}/);
   assert.match(workflow, /test -s dist\/client\/\.vite\/manifest\.json/);
   assert.match(workflow, /npm run bundle:scan/);
-  assert.match(workflow, /^  room_quality:/m);
-  assert.match(workflow, /shard: \[1, 2, 3, 4, 5\]/);
-  assert.match(workflow, /BROWSER_QUALITY_SCOPE: room-shard/);
-  assert.match(workflow, /BROWSER_QUALITY_SHARD: \$\{\{ matrix\.shard \}\}/);
-  assert.match(workflow, /^  room_review:/m);
-  assert.match(workflow, /name: room review/);
-  assert.match(workflow, /^  browser:\n    name: browser\n    if: always\(\)/m);
-  assert.match(workflow, /CLASSIFY_RESULT: \$\{\{ needs\.classify\.result \}\}/);
-  assert.match(workflow, /test "\$CLASSIFY_RESULT" = "success"/);
-  assert.match(workflow, /case "\$RUN_BROWSER" in/);
-  assert.match(workflow, /Browser path classification did not produce true or false/);
-  assert.match(workflow, /ARTIFACT_RESULT: \$\{\{ needs\.artifact_round_trip\.result \}\}/);
-  assert.match(workflow, /PLAYWRIGHT_RESULT: \$\{\{ needs\.browser_playwright\.result \}\}/);
-  assert.match(workflow, /ROOM_QUALITY_RESULT: \$\{\{ needs\.room_quality\.result \}\}/);
-  assert.match(workflow, /LIGHTHOUSE_RESULT: \$\{\{ needs\.lighthouse\.result \}\}/);
-  assert.match(workflow, /ROOM_REVIEW_RESULT: \$\{\{ needs\.room_review\.result \}\}/);
+  assert.match(workflow, /npm run validate:browser:existing/);
+  assert.match(workflow, /name: Capture room review evidence/);
+  assert.doesNotMatch(workflow, /npm run build/);
   assert.match(workflow, /name: Upload browser failure evidence\n        if: failure\(\)/);
   assert.match(workflow, /name: Capture room review evidence\n        run: npm run capture:room-review/);
   assert.match(workflow, /\.playwright\/results-room-review/);
   assert.match(workflow, /\.playwright\/report-room-review/);
-  assert.match(stability, /run: \[1, 2, 3, 4, 5, 6, 7, 8, 9, 10\]/);
-  assert.match(stability, /run: npm run validate:browser/);
-  assert.match(stability, /name: ten-run browser stability/);
+  assert.match(stability, /worker: \[1, 2\]/);
+  assert.match(stability, /max-parallel: 2/);
+  assert.match(stability, /BROWSER_SOAK_LOOPS: "5"/);
+  assert.match(stability, /run: node scripts\/ci\/run-browser-soak\.mjs/);
+  assert.match(stability, /name: browser soak worker \$\{\{ matrix\.worker \}\}/);
+  assert.match(stability, /name: Download the existing validated build/);
+  assert.doesNotMatch(stability, /npm run build/);
+  assert.doesNotMatch(stability, /runs-on: ubuntu-latest/);
   assert.match(packageJson.scripts["capture:room-review"], /BROWSER_QUALITY_PORT=4180/);
   assert.match(packageJson.scripts["capture:room-review"], /BROWSER_QUALITY_SEGMENT=review/);
 

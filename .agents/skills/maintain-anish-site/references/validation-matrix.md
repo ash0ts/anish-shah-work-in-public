@@ -26,6 +26,33 @@ node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run --base or
 
 The helper scans tracked and changed text for credentials, private sources, internal paths, and generated-content drift. It never deploys, migrates hosted state, rotates credentials, or mutates Git.
 
+## CI Cost Boundaries
+
+`PR Gate` classifies each pull request and runs only its bounded lane. Backend-only
+connector changes do not build or start browsers unless the owner adds the
+`preview` label. General UI, Room, Simulation, and Travel lanes build once and
+download those exact bytes for their affected browser scope. Dependencies,
+workflows, releases, and genuinely cross-domain changes use full validation.
+
+Copy-only PR Gate covers parsing, copy tests, and typechecking. Its separate
+trusted copy-preview workflow is required evidence for affected-route rendering
+and focused screenshots: it checks out base-branch code and applies only the
+validated plain-text deck. Do not replace that boundary with PR-authored scripts.
+
+Code previews are owner-opt-in with the `preview` label; trusted copy previews
+remain automatic. Gitleaks runs on every PR. CodeQL runs for relevant source,
+security, dependency, workflow, and narrowly relevant security-test paths,
+weekly, and for every release candidate. Pushes to `main` establish the merged
+Validate/Gitleaks/CodeQL baseline; release branches use owner-dispatched exact-
+SHA evidence instead of automatic full runs. Complete Browser Quality,
+Lighthouse, and the two-worker/five-loop stability soak are manual exact-SHA
+evidence, not ordinary PR work.
+
+Disposable release runners use one-time labels and trusted `main` or
+`release/<semver>` refs. They must require the exact current ref head, carry no
+hosted secrets, reuse the Validate artifact, and be destroyed after one bounded
+job. The optional corporate CA is never baked into an image or repository.
+
 ## Full Handoff
 
 ```bash

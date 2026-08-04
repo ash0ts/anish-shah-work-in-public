@@ -1,53 +1,78 @@
 name: Browser Quality
 
 on:
-  pull_request:
   workflow_dispatch:
     inputs:
       commit_sha:
-        description: Full 40-character commit SHA to test
+        description: Full 40-character release-candidate SHA
         required: true
         type: string
-      runner_label:
-        description: Run on GitHub-hosted infrastructure or the temporary owner runner
+      validate_run_id:
+        description: Successful Validate workflow run that produced this SHA's build
+        required: true
+        type: string
+      runner_target:
+        description: Hosted runner or disposable owner ARM64 runner
         required: true
         default: github-hosted
         type: choice
         options:
           - github-hosted
-          - anish-release
+          - owner-arm64
+      jit_label:
+        description: One-time opaque runner label; required for owner-arm64
+        required: false
+        type: string
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
-  group: browser-quality-${{ github.ref }}
+  group: browser-quality-${{ inputs.commit_sha }}
   cancel-in-progress: true
 
 env:
-  BROWSER_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
+  BROWSER_SOURCE_SHA: ${{ inputs.commit_sha }}
 
 jobs:
-  classify:
-    name: classify browser impact
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
-    outputs:
-      run_browser: ${{ steps.changes.outputs.run_browser }}
+  browser:
+    name: browser
+    runs-on: ${{ fromJSON(inputs.runner_target == 'owner-arm64' && format('["self-hosted","linux","arm64","{0}"]', inputs.jit_label) || '["ubuntu-latest"]') }}
+    timeout-minutes: 55
     steps:
-      - name: Validate owner dispatch
-        if: github.event_name == 'workflow_dispatch'
+      - name: Validate owner exact-SHA dispatch
         env:
           REQUESTED_SHA: ${{ inputs.commit_sha }}
-          REQUESTED_RUNNER_LABEL: ${{ inputs.runner_label }}
+          VALIDATE_RUN_ID: ${{ inputs.validate_run_id }}
+          RUNNER_TARGET: ${{ inputs.runner_target }}
+          JIT_LABEL: ${{ inputs.jit_label }}
         run: |
           set -euo pipefail
           test "$GITHUB_ACTOR" = "$GITHUB_REPOSITORY_OWNER"
           [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
-          case "$REQUESTED_RUNNER_LABEL" in
-            github-hosted|anish-release) ;;
+          [[ "$VALIDATE_RUN_ID" =~ ^[1-9][0-9]{0,19}$ ]]
+          case "$RUNNER_TARGET" in
+            github-hosted) test -z "$JIT_LABEL" ;;
+            owner-arm64) [[ "$JIT_LABEL" =~ ^anish-release-[a-f0-9]{12}$ ]] ;;
             *) exit 1 ;;
           esac
-      - name: Check out source history
+      - name: Verify the producing Validate workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_SHA: ${{ inputs.commit_sha }}
+          VALIDATE_RUN_ID: ${{ inputs.validate_run_id }}
+        run: |
+          set -euo pipefail
+          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${VALIDATE_RUN_ID}")"
+          test "$(jq -r '.path' <<<"$run")" = ".github/workflows/ci.yml"
+          test "$(jq -r '.head_sha' <<<"$run")" = "$EXPECTED_SHA"
+          test "$(jq -r '.conclusion' <<<"$run")" = success
+          case "$(jq -r '.event' <<<"$run")" in
+            workflow_dispatch|push) ;;
+            *) exit 1 ;;
+          esac
+      - name: Check out exact source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.BROWSER_SOURCE_SHA }}
@@ -60,233 +85,50 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "${#GITHUB_SHA}" -eq 40
-      - name: Classify changed paths
-        id: changes
+      - name: Require the candidate SHA to belong to the trusted release ref
         env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          EXPECTED_SHA: ${{ env.BROWSER_SOURCE_SHA }}
         run: |
           set -euo pipefail
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            echo "run_browser=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          test "${#BASE_SHA}" -eq 40
-          run_browser=false
-          # Disable rename detection so both the deleted source path and added
-          # documentation path are classified. A source -> docs rename must
-          # not silently enter the documentation-only lane.
-          while IFS= read -r -d '' changed; do
-            case "$changed" in
-              docs/*|releases/*|README.md|CONTRIBUTING.md|SECURITY.md|AGENTS.md|.github/pull_request_template.md)
-                ;;
-              *)
-                if [[ "$changed" == .agents/* ]] &&
-                  [[ "$changed" == *.md || "$changed" == *.yml || "$changed" == *.yaml ]]; then
-                  :
-                else
-                  run_browser=true
-                  break
-                fi
-                ;;
-            esac
-          done < <(git diff --name-only --no-renames --no-ext-diff --no-textconv -z "$BASE_SHA" "$BROWSER_SOURCE_SHA" --)
-          echo "run_browser=$run_browser" >> "$GITHUB_OUTPUT"
-
-  build:
-    name: build browser candidate
-    if: needs.classify.outputs.run_browser == 'true'
-    needs: classify
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
-    timeout-minutes: 25
-    steps:
-      - name: Check out exact source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.BROWSER_SOURCE_SHA }}
-          persist-credentials: false
+          [[ "$GITHUB_REF" =~ ^refs/heads/(main|release/[0-9]+\.[0-9]+\.[0-9]+)$ ]]
+          branch="${GITHUB_REF#refs/heads/}"
+          trusted_ref="$(git rev-parse "refs/remotes/origin/${branch}")"
+          test "$EXPECTED_SHA" = "$trusted_ref"
       - name: Set up repository toolchain
         uses: ./.github/actions/setup-repository
-      - name: Build browser candidate once
-        run: npm run build
-      - name: Upload immutable browser build
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
-          path: dist
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 3
-
-  artifact_round_trip:
-    name: verify browser artifact round trip
-    if: needs.classify.outputs.run_browser == 'true'
-    needs: [classify, build]
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
-    timeout-minutes: 10
-    steps:
-      - name: Check out exact source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.BROWSER_SOURCE_SHA }}
-          persist-credentials: false
-      - name: Set up repository toolchain
-        uses: ./.github/actions/setup-repository
-      - name: Download immutable browser build
+      - name: Download the exact Validate build
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
+          name: validated-dist-${{ env.BROWSER_SOURCE_SHA }}
           path: dist
-      - name: Verify hidden Vite manifest and bundle closure
+          run-id: ${{ inputs.validate_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify immutable build bytes and hidden evidence
         run: |
           test -s dist/client/.vite/manifest.json
+          npm run deployable:attest
           npm run bundle:scan
-
-  browser_playwright:
-    name: browser ${{ matrix.scope }}
-    if: needs.classify.outputs.run_browser == 'true'
-    needs: [classify, artifact_round_trip]
-    strategy:
-      fail-fast: false
-      matrix:
-        scope: [room-public]
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
-    timeout-minutes: 20
-    steps:
-      - name: Check out exact source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.BROWSER_SOURCE_SHA }}
-          persist-credentials: false
-      - name: Set up repository toolchain
-        uses: ./.github/actions/setup-repository
-      - name: Install Chromium
-        run: npx --no-install playwright install --with-deps chromium
-      - name: Download immutable browser build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
-          path: dist
-      - name: Run browser segment
+      - name: Install Chromium on GitHub-hosted runners
+        if: inputs.runner_target == 'github-hosted'
+        run: npx --no-install playwright install --with-deps chromium webkit
+      - name: Verify baked Chromium and WebKit on the disposable runner
+        if: inputs.runner_target == 'owner-arm64'
+        run: npx --no-install playwright install --dry-run chromium webkit
+      - name: Run complete browser, accessibility, and Lighthouse coverage
+        run: npm run validate:browser:existing
+      - name: Exercise Spotify Ranked Groove in WebKit
         env:
-          BROWSER_QUALITY_SCOPE: ${{ matrix.scope }}
-        run: npm run validate:browser:segment
-      - name: Upload browser failure evidence
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: browser-quality-${{ matrix.scope }}-failure-${{ env.BROWSER_SOURCE_SHA }}
-          path: |
-            .playwright/results-*
-            .playwright/report-*
-            .wrangler/browser-quality-*.log
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
-
-  room_quality:
-    name: room quality shard ${{ matrix.shard }} of 5
-    if: needs.classify.outputs.run_browser == 'true'
-    needs: [classify, artifact_round_trip]
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5]
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
-    timeout-minutes: 20
-    steps:
-      - name: Check out exact source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.BROWSER_SOURCE_SHA }}
-          persist-credentials: false
-      - name: Set up repository toolchain
-        uses: ./.github/actions/setup-repository
-      - name: Install Chromium
-        run: npx --no-install playwright install --with-deps chromium
-      - name: Download immutable browser build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
-          path: dist
-      - name: Run one room-quality shard
-        env:
-          BROWSER_QUALITY_SCOPE: room-shard
-          BROWSER_QUALITY_SHARD: ${{ matrix.shard }}
-        run: npm run validate:browser:segment
-      - name: Upload room-shard failure evidence
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: room-quality-shard-${{ matrix.shard }}-failure-${{ env.BROWSER_SOURCE_SHA }}
-          path: |
-            .playwright/results-*
-            .playwright/report-*
-            .wrangler/browser-quality-*.log
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
-
-  lighthouse:
-    name: Lighthouse budgets
-    if: needs.classify.outputs.run_browser == 'true'
-    needs: [classify, artifact_round_trip]
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
-    timeout-minutes: 20
-    steps:
-      - name: Check out exact source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.BROWSER_SOURCE_SHA }}
-          persist-credentials: false
-      - name: Set up repository toolchain
-        uses: ./.github/actions/setup-repository
-      - name: Install Chromium
-        run: npx --no-install playwright install --with-deps chromium
-      - name: Download immutable browser build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
-          path: dist
-      - name: Run Lighthouse segment
-        env:
-          BROWSER_QUALITY_SCOPE: lighthouse
-        run: npm run validate:browser:segment
-      - name: Upload Lighthouse failure evidence
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: lighthouse-failure-${{ env.BROWSER_SOURCE_SHA }}
-          path: |
-            .lighthouse
-            .wrangler/lighthouse-quality*
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
-
-  room_review:
-    name: room review
-    if: needs.classify.outputs.run_browser == 'true'
-    needs: [classify, artifact_round_trip]
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
-    timeout-minutes: 15
-    steps:
-      - name: Check out exact source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.BROWSER_SOURCE_SHA }}
-          persist-credentials: false
-      - name: Set up repository toolchain
-        uses: ./.github/actions/setup-repository
-      - name: Install Chromium
-        run: npx --no-install playwright install --with-deps chromium
-      - name: Download immutable browser build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: browser-build-${{ env.BROWSER_SOURCE_SHA }}
-          path: dist
+          BROWSER_QUALITY_PORT: "4191"
+          BROWSER_QUALITY_SEGMENT: spotify-webkit
+        run: >-
+          npx --no-install playwright test
+          tests/browser/public-quality.spec.mjs
+          --config playwright.spotify-webkit.config.mjs
+          --grep "Spotify rank navigation and consent remain keyboard-first"
+          --workers=1
       - name: Capture room review evidence
         run: npm run capture:room-review
-      - name: Upload browser review evidence
+      - name: Upload room review evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -299,48 +141,17 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
-
-  browser:
-    name: browser
-    if: always()
-    needs:
-      - classify
-      - build
-      - artifact_round_trip
-      - browser_playwright
-      - room_quality
-      - lighthouse
-      - room_review
-    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
-    steps:
-      - name: Require every applicable browser gate
-        env:
-          RUN_BROWSER: ${{ needs.classify.outputs.run_browser }}
-          CLASSIFY_RESULT: ${{ needs.classify.result }}
-          BUILD_RESULT: ${{ needs.build.result }}
-          ARTIFACT_RESULT: ${{ needs.artifact_round_trip.result }}
-          PLAYWRIGHT_RESULT: ${{ needs.browser_playwright.result }}
-          ROOM_QUALITY_RESULT: ${{ needs.room_quality.result }}
-          LIGHTHOUSE_RESULT: ${{ needs.lighthouse.result }}
-          ROOM_REVIEW_RESULT: ${{ needs.room_review.result }}
-        run: |
-          set -euo pipefail
-          test "$CLASSIFY_RESULT" = "success"
-          case "$RUN_BROWSER" in
-            false)
-              echo "Browser quality is not required for documentation-only changes."
-              exit 0
-              ;;
-            true)
-              ;;
-            *)
-              echo "Browser path classification did not produce true or false." >&2
-              exit 1
-              ;;
-          esac
-          test "$BUILD_RESULT" = "success"
-          test "$ARTIFACT_RESULT" = "success"
-          test "$PLAYWRIGHT_RESULT" = "success"
-          test "$ROOM_QUALITY_RESULT" = "success"
-          test "$LIGHTHOUSE_RESULT" = "success"
-          test "$ROOM_REVIEW_RESULT" = "success"
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-quality-failure-${{ env.BROWSER_SOURCE_SHA }}
+          path: |
+            .playwright/results-*
+            .playwright/report-*
+            .wrangler/browser-quality-*.log
+            .wrangler/lighthouse-quality*
+            .lighthouse
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
