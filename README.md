@@ -10,6 +10,7 @@ technical storytelling, and community programs from 2021 onward.
 - `/work/[slug]` — one body of work with its public forms and evidence
 - `/play` — My Room, 2001: a semantic six-object collection directory
 - `/play/watch`, `/play/read`, `/play/listen`, `/play/collect`, `/play/play`, `/play/move` — one provider per direct route
+- `/simulation` — a feature-gated public-model campaign with Action and semantic Tactical modes
 - `/sources` — archive accounting, claims, methodology, and bibliography
 - `/privacy` — privacy, connector, retention, and contact information
 - `/studio` — owner-only editorial and connector operations
@@ -51,7 +52,9 @@ material to staging or production.
 
 See [Architecture](./docs/architecture/overview.md),
 [Content and state](./docs/architecture/content-and-state.md), and
-[My Room, 2001](./docs/architecture/my-room-2001.md).
+[My Room, 2001](./docs/architecture/my-room-2001.md). The optional campaign's
+session, AI Gateway, privacy, and authored-fallback boundaries are documented in
+[Meet Me simulation](./docs/architecture/meet-me-simulation.md).
 
 ## Common work
 

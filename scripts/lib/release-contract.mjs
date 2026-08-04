@@ -4,6 +4,117 @@ export function exactMigrationNames(output) {
   ];
 }
 
+const SIMULATION_APPROVAL_PROVIDERS = Object.freeze([
+  "discogs",
+  "hardcover",
+  "myanimelist",
+  "spotify",
+  "steam",
+  "strava",
+]);
+
+function exactSimulationProviderNames(value) {
+  const names = Array.isArray(value)
+    ? value
+    : String(value ?? "")
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+  if (
+    new Set(names).size !== names.length ||
+    names.some((name) => !SIMULATION_APPROVAL_PROVIDERS.includes(name))
+  ) {
+    throw new Error(
+      "Simulation approval evidence contains an unknown or repeated provider.",
+    );
+  }
+  return [...names].sort();
+}
+
+/**
+ * Build the sanitized simulation portion of a release record. The caller may
+ * pass approval names and a one-way digest, but this contract intentionally
+ * has no field for approval references, contacts, notes, or credentials.
+ */
+export function simulationReleaseRecord({
+  campaignVersion,
+  experienceMode,
+  aiMode,
+  provider,
+  model,
+  approvedProviders,
+  approvalStateDigest,
+}) {
+  if (!/^[A-Za-z0-9._-]{1,64}$/.test(String(campaignVersion ?? ""))) {
+    throw new Error("The simulation campaign version is invalid.");
+  }
+  if (!new Set(["disabled", "campaign-v1"]).has(experienceMode)) {
+    throw new Error("The simulation experience mode is invalid.");
+  }
+  if (!new Set(["live", "authored-only"]).has(aiMode)) {
+    throw new Error("The hosted simulation AI mode is invalid.");
+  }
+  if (provider !== "anthropic" || model !== "claude-sonnet-5") {
+    throw new Error("The simulation provider and model do not match the release contract.");
+  }
+  const providers = exactSimulationProviderNames(approvedProviders);
+  const digest = String(approvalStateDigest ?? "").toLowerCase();
+  if (experienceMode === "campaign-v1") {
+    if (aiMode !== "live") {
+      throw new Error("An enabled hosted simulation must use live AI.");
+    }
+    if (providers.length === 0 || !/^[a-f0-9]{64}$/.test(digest)) {
+      throw new Error(
+        "An enabled simulation release requires approved provider names and a sanitized approval-state digest.",
+      );
+    }
+  } else if (
+    aiMode !== "authored-only" ||
+    providers.length > 0 ||
+    digest.length > 0
+  ) {
+    throw new Error(
+      "A disabled simulation release cannot carry live AI or provider-approval evidence.",
+    );
+  }
+  return {
+    campaignVersion,
+    experienceMode,
+    aiMode,
+    provider,
+    model,
+    approvedProviders: providers,
+    approvalStateDigest: experienceMode === "campaign-v1" ? digest : null,
+  };
+}
+
+export function assertSimulationReleaseRecord(
+  record,
+  { config, campaignVersion },
+) {
+  if (!record || typeof record !== "object" || Array.isArray(record)) {
+    throw new Error("The release plan has no simulation evidence.");
+  }
+  const expected = simulationReleaseRecord({
+    campaignVersion,
+    experienceMode: config?.vars?.SIMULATION_EXPERIENCE_MODE,
+    aiMode: config?.vars?.SIMULATION_AI_MODE,
+    provider: config?.vars?.SIMULATION_PROVIDER,
+    model: config?.vars?.SIMULATION_MODEL,
+    approvedProviders: record.approvedProviders,
+    approvalStateDigest: record.approvalStateDigest,
+  });
+  if (
+    Object.keys(record).length !== Object.keys(expected).length ||
+    JSON.stringify(record) !== JSON.stringify(expected)
+  ) {
+    throw new Error(
+      "The simulation release evidence is malformed or does not match the prepared Worker configuration.",
+    );
+  }
+  return expected;
+}
+
 export const RELEASE_MARKER_QUERY = `SELECT maintenance.status AS status,
                                             maintenance.details_json AS detailsJson,
                                             maintenance.checked_at AS checkedAt,

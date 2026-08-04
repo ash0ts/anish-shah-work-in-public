@@ -20,6 +20,8 @@ import {
   requiredSmokeTestsForPlayMode,
   ROOM_PLAY_SMOKE_TESTS,
   runGuardedMigration,
+  simulationReleaseRecord,
+  assertSimulationReleaseRecord,
 } from "../scripts/lib/release-contract.mjs";
 import {
   assertPinnedProductionResources,
@@ -56,6 +58,8 @@ function validReleaseConfigFixture() {
     CLOUDFLARE_D1_DATABASE_NAME: "anish-shah-work-in-public",
     CLOUDFLARE_PUBLICATION_CACHE_ID: productionKvId,
     PLAY_EXPERIENCE_MODE: "my-room-2001",
+    SIMULATION_EXPERIENCE_MODE: "disabled",
+    SIMULATION_AI_MODE: "authored-only",
   };
   const expected = expectedPublicReleaseConfig(environment, {
     head,
@@ -87,6 +91,7 @@ function validReleaseConfigFixture() {
         ["ARTWORK_RATE_LIMITER", "88001002", 120],
         ["PROMOTION_RATE_LIMITER", "88001003", 6],
         ["OAUTH_CALLBACK_RATE_LIMITER", "88001004", 20],
+        ["SIMULATION_RATE_LIMITER", "88001005", 12],
       ].map(([name, namespace_id, limit]) => ({
         name,
         namespace_id,
@@ -106,6 +111,10 @@ function validReleaseConfigFixture() {
         PUBLIC_CONTENT_MODE: "d1_kv_required",
         DEPLOYMENT_TIER: "production",
         PLAY_EXPERIENCE_MODE: expected.playExperienceMode,
+        SIMULATION_EXPERIENCE_MODE: expected.simulationExperienceMode,
+        SIMULATION_AI_MODE: expected.simulationAiMode,
+        SIMULATION_PROVIDER: "anthropic",
+        SIMULATION_MODEL: "claude-sonnet-5",
       },
       observability: {
         enabled: true,
@@ -163,6 +172,8 @@ test("release preflight rejects a configuration that weakens production boundari
   const { config, environment, expected } = validReleaseConfigFixture();
   assert.doesNotThrow(() => assertPublicReleaseConfig(config, expected));
   assert.equal(expected.playExperienceMode, "my-room-2001");
+  assert.equal(expected.simulationExperienceMode, "disabled");
+  assert.equal(expected.simulationAiMode, "authored-only");
   assert.throws(
     () =>
       expectedPublicReleaseConfig(
@@ -170,6 +181,26 @@ test("release preflight rejects a configuration that weakens production boundari
         { head: expected.head, contentVersion: expected.contentVersion },
       ),
     /must be explicitly set to classic or my-room-2001/,
+  );
+  assert.throws(
+    () =>
+      expectedPublicReleaseConfig(
+        { ...environment, SIMULATION_EXPERIENCE_MODE: "experimental" },
+        { head: expected.head, contentVersion: expected.contentVersion },
+      ),
+    /disabled or campaign-v1/,
+  );
+  assert.throws(
+    () =>
+      expectedPublicReleaseConfig(
+        {
+          ...environment,
+          SIMULATION_EXPERIENCE_MODE: "campaign-v1",
+          SIMULATION_AI_MODE: "authored-only",
+        },
+        { head: expected.head, contentVersion: expected.contentVersion },
+      ),
+    /enabled production simulation must use live AI/,
   );
   assert.throws(
     () =>
@@ -245,6 +276,98 @@ test("production Play mode must be explicit and supported for every hosted relea
       { head: expected.head, contentVersion: expected.contentVersion },
     ),
     /must be explicitly set to classic or my-room-2001/,
+  );
+});
+
+test("simulation release evidence is sanitized and bound to the hosted model", () => {
+  const enabledConfig = {
+    vars: {
+      SIMULATION_EXPERIENCE_MODE: "campaign-v1",
+      SIMULATION_AI_MODE: "live",
+      SIMULATION_PROVIDER: "anthropic",
+      SIMULATION_MODEL: "claude-sonnet-5",
+    },
+  };
+  const record = simulationReleaseRecord({
+    campaignVersion: "meet-me-4n1sh-v1",
+    experienceMode: "campaign-v1",
+    aiMode: "live",
+    provider: "anthropic",
+    model: "claude-sonnet-5",
+    approvedProviders: "spotify,discogs",
+    approvalStateDigest: "A".repeat(64),
+  });
+  assert.deepEqual(record, {
+    campaignVersion: "meet-me-4n1sh-v1",
+    experienceMode: "campaign-v1",
+    aiMode: "live",
+    provider: "anthropic",
+    model: "claude-sonnet-5",
+    approvedProviders: ["discogs", "spotify"],
+    approvalStateDigest: "a".repeat(64),
+  });
+  assert.deepEqual(
+    assertSimulationReleaseRecord(record, {
+      config: enabledConfig,
+      campaignVersion: "meet-me-4n1sh-v1",
+    }),
+    record,
+  );
+  assert.throws(
+    () =>
+      simulationReleaseRecord({
+        ...record,
+        approvedProviders: [],
+      }),
+    /requires approved provider names/,
+  );
+  assert.throws(
+    () =>
+      simulationReleaseRecord({
+        ...record,
+        approvedProviders: ["spotify", "private-provider"],
+      }),
+    /unknown or repeated provider/,
+  );
+  assert.throws(
+    () =>
+      assertSimulationReleaseRecord(
+        { ...record, approvalReference: "owner-only approval note" },
+        {
+          config: enabledConfig,
+          campaignVersion: "meet-me-4n1sh-v1",
+        },
+      ),
+    /malformed/,
+  );
+});
+
+test("disabled simulation releases reject stale approval or live-AI evidence", () => {
+  const record = simulationReleaseRecord({
+    campaignVersion: "meet-me-4n1sh-v1",
+    experienceMode: "disabled",
+    aiMode: "authored-only",
+    provider: "anthropic",
+    model: "claude-sonnet-5",
+  });
+  assert.deepEqual(record.approvedProviders, []);
+  assert.equal(record.approvalStateDigest, null);
+  assert.throws(
+    () =>
+      simulationReleaseRecord({
+        ...record,
+        aiMode: "live",
+      }),
+    /cannot carry live AI/,
+  );
+  assert.throws(
+    () =>
+      simulationReleaseRecord({
+        ...record,
+        approvedProviders: ["spotify"],
+        approvalStateDigest: "b".repeat(64),
+      }),
+    /cannot carry live AI or provider-approval evidence/,
   );
 });
 

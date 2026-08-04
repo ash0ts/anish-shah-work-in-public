@@ -97,6 +97,27 @@ if (publicSiteUrl !== PUBLIC_SITE_ORIGIN) {
   throw new Error("PUBLIC_SITE_URL must be the repository's pinned canonical origin.");
 }
 const playExperienceMode = requiredHostedPlayExperienceMode(process.env);
+const simulationExperienceMode =
+  process.env.SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
+if (
+  simulationExperienceMode !== "disabled" &&
+  simulationExperienceMode !== "campaign-v1"
+) {
+  throw new Error(
+    "SIMULATION_EXPERIENCE_MODE must be disabled or campaign-v1.",
+  );
+}
+const simulationAiMode =
+  process.env.SIMULATION_AI_MODE?.trim() ||
+  (simulationExperienceMode === "campaign-v1" ? "live" : "authored-only");
+if (
+  !["live", "authored-only"].includes(simulationAiMode) ||
+  (simulationExperienceMode === "campaign-v1" && simulationAiMode !== "live")
+) {
+  throw new Error(
+    "Production simulation must be disabled/authored-only or campaign-v1/live.",
+  );
+}
 const releaseSha = required("RELEASE_VALIDATED_SHA").toLowerCase();
 if (!/^[a-f0-9]{40}$/.test(releaseSha)) {
   throw new Error("RELEASE_VALIDATED_SHA must be an exact 40-character commit SHA.");
@@ -152,6 +173,11 @@ config.ratelimits = [
     namespace_id: "88001004",
     simple: { limit: 20, period: 60 },
   },
+  {
+    name: "SIMULATION_RATE_LIMITER",
+    namespace_id: "88001005",
+    simple: { limit: 12, period: 60 },
+  },
 ];
 config.vars = {
   AUTH_MODE: "cloudflare_access",
@@ -167,6 +193,10 @@ config.vars = {
   PUBLIC_CONTENT_MODE: "d1_kv_required",
   DEPLOYMENT_TIER: "production",
   PLAY_EXPERIENCE_MODE: playExperienceMode,
+  SIMULATION_EXPERIENCE_MODE: simulationExperienceMode,
+  SIMULATION_AI_MODE: simulationAiMode,
+  SIMULATION_PROVIDER: "anthropic",
+  SIMULATION_MODEL: "claude-sonnet-5",
 };
 config.observability = {
   enabled: true,

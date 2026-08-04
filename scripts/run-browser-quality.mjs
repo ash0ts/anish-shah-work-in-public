@@ -63,6 +63,7 @@ const allowedScopes = new Set([
   "classic",
   "room-public",
   "room-shard",
+  "simulation",
   "lighthouse",
 ]);
 if (!allowedScopes.has(scope)) {
@@ -99,6 +100,37 @@ if (
   }) !== 0
 ) {
   failed = true;
+}
+
+if (scope === "all" || scope === "simulation") {
+  if (
+    runPlaywright({
+      mode: "room",
+      port: 4180,
+      segment: "simulation-core",
+      arguments_: [
+        "tests/browser/simulation-quality.spec.mjs",
+        "--grep-invert",
+        "without JavaScript|room reveal",
+      ],
+    }) !== 0
+  ) {
+    failed = true;
+  }
+  if (
+    runPlaywright({
+      mode: "room",
+      port: 4186,
+      segment: "simulation-fallbacks",
+      arguments_: [
+        "tests/browser/simulation-quality.spec.mjs",
+        "--grep",
+        "without JavaScript|room reveal",
+      ],
+    }) !== 0
+  ) {
+    failed = true;
+  }
 }
 
 const roomShardCount = 5;

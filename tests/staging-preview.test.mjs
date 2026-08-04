@@ -93,6 +93,7 @@ function stagingEnvironment() {
     STAGING_ARTWORK_RATE_LIMIT_NAMESPACE_ID: "99001002",
     STAGING_PROMOTION_RATE_LIMIT_NAMESPACE_ID: "99001003",
     STAGING_OAUTH_CALLBACK_RATE_LIMIT_NAMESPACE_ID: "99001004",
+    STAGING_SIMULATION_RATE_LIMIT_NAMESPACE_ID: "99001005",
     OWNER_EMAILS: "owner@example.com",
     CF_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
   };
@@ -109,6 +110,9 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
   assert.equal(config.vars.DEPLOYMENT_TIER, "staging");
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "d1_kv_required");
   assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
+  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "campaign-v1");
+  assert.equal(config.vars.SIMULATION_AI_MODE, "live");
+  assert.equal(config.vars.SIMULATION_MODEL, "claude-sonnet-5");
   assert.equal(config.compatibility_date, "2026-07-30");
   assert.equal(config.vars.PRODUCTION_SITE_URL, "https://anish-shah-is.online");
   assert.equal(config.observability.logs.invocation_logs, false);
@@ -141,6 +145,29 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
       STAGING_OWNER_RATE_LIMIT_NAMESPACE_ID: "88001001",
     }, contentVersion),
     /non-production/,
+  );
+});
+
+test("staging can apply simulation persistence with the campaign disabled first", () => {
+  const environment = {
+    ...stagingEnvironment(),
+    STAGING_SIMULATION_EXPERIENCE_MODE: "disabled",
+  };
+  const expected = expectedStagingCoordinates(environment, contentVersion);
+  const config = stagingConfiguration(generatedBase(), expected);
+  assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
+  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "disabled");
+  assert.equal(config.vars.SIMULATION_AI_MODE, "authored-only");
+  assert.throws(
+    () =>
+      expectedStagingCoordinates(
+        {
+          ...stagingEnvironment(),
+          STAGING_SIMULATION_EXPERIENCE_MODE: "fixture",
+        },
+        contentVersion,
+      ),
+    /disabled or campaign-v1/,
   );
 });
 
@@ -235,6 +262,9 @@ test("preview config has no durable, secret, cron, Studio, or OAuth capability",
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "static_preview");
   assert.equal(config.vars.DEPLOYMENT_TIER, "preview");
   assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
+  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "campaign-v1");
+  assert.equal(config.vars.SIMULATION_AI_MODE, "fixture");
+  assert.equal(config.vars.SIMULATION_PROVIDER, "fixture");
   assert.equal(config.compatibility_date, "2026-07-30");
   assert.equal("OWNER_EMAILS" in config.vars, false);
   assert.equal("CONNECTOR_ENCRYPTION_KEY" in config.vars, false);

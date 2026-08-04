@@ -184,6 +184,15 @@ function releaseMetadata(environment, contentVersion) {
 
 export function expectedStagingCoordinates(environment, contentVersion) {
   const metadata = releaseMetadata(environment, contentVersion);
+  const simulationExperienceMode =
+    environment.STAGING_SIMULATION_EXPERIENCE_MODE?.trim() || "campaign-v1";
+  if (!new Set(["disabled", "campaign-v1"]).has(simulationExperienceMode)) {
+    throw new Error(
+      "STAGING_SIMULATION_EXPERIENCE_MODE must be disabled or campaign-v1.",
+    );
+  }
+  const simulationAiMode =
+    simulationExperienceMode === "campaign-v1" ? "live" : "authored-only";
   const databaseId = uuid(
     required(environment, "STAGING_CLOUDFLARE_D1_DATABASE_ID"),
     "STAGING_CLOUDFLARE_D1_DATABASE_ID",
@@ -221,6 +230,7 @@ export function expectedStagingCoordinates(environment, contentVersion) {
     ["ARTWORK_RATE_LIMITER", "STAGING_ARTWORK_RATE_LIMIT_NAMESPACE_ID", 120],
     ["PROMOTION_RATE_LIMITER", "STAGING_PROMOTION_RATE_LIMIT_NAMESPACE_ID", 6],
     ["OAUTH_CALLBACK_RATE_LIMITER", "STAGING_OAUTH_CALLBACK_RATE_LIMIT_NAMESPACE_ID", 20],
+    ["SIMULATION_RATE_LIMITER", "STAGING_SIMULATION_RATE_LIMIT_NAMESPACE_ID", 12],
   ].map(([name, environmentName, limit]) => {
     const namespaceId = required(environment, environmentName);
     if (!/^[0-9]{6,32}$/.test(namespaceId) || PRODUCTION_RATE_LIMIT_NAMESPACES.has(namespaceId)) {
@@ -247,6 +257,8 @@ export function expectedStagingCoordinates(environment, contentVersion) {
     teamDomain: accessTeamDomain(required(environment, "CF_ACCESS_TEAM_DOMAIN")),
     ownerEmails: emails(required(environment, "OWNER_EMAILS")),
     rateLimits,
+    simulationExperienceMode,
+    simulationAiMode,
   };
 }
 
@@ -306,6 +318,10 @@ export function stagingConfiguration(base, expected) {
       PUBLIC_CONTENT_MODE: "d1_kv_required",
       DEPLOYMENT_TIER: "staging",
       PLAY_EXPERIENCE_MODE: "my-room-2001",
+      SIMULATION_EXPERIENCE_MODE: expected.simulationExperienceMode,
+      SIMULATION_AI_MODE: expected.simulationAiMode,
+      SIMULATION_PROVIDER: "anthropic",
+      SIMULATION_MODEL: "claude-sonnet-5",
     },
     observability: {
       enabled: true,
@@ -341,6 +357,10 @@ export function previewConfiguration(base, expected) {
       DEPLOYMENT_TIER: "preview",
       PREVIEW_PR_NUMBER: expected.prNumber,
       PLAY_EXPERIENCE_MODE: "my-room-2001",
+      SIMULATION_EXPERIENCE_MODE: "campaign-v1",
+      SIMULATION_AI_MODE: "fixture",
+      SIMULATION_PROVIDER: "fixture",
+      SIMULATION_MODEL: "authored-fixture-v1",
     },
     observability: {
       enabled: true,

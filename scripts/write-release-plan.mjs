@@ -10,6 +10,7 @@ import {
   githubRepositoryFromRemoteUrl,
   publicationCheckpointForPlan,
   REQUIRED_VALIDATION_RUNS,
+  simulationReleaseRecord,
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
 import {
@@ -225,6 +226,7 @@ if (
 const [
   contentAttestationBytes,
   releaseConfigBytes,
+  simulationManifestBytes,
   deployableArtifactResult,
   releaseBuildCheckpoint,
   releaseBuildCheckpointBytes,
@@ -232,6 +234,7 @@ const [
 ] = await Promise.all([
   readFile(path.join(root, "content/public/anish-content.public.v1.attestation.json")),
   readFile(path.join(root, "dist/server/wrangler.public.json")),
+  readFile(path.join(root, "content/presentation/simulation.v1.json")),
   readVerifiedDeployableArtifactManifest(root),
   verifyReleaseBuildCheckpoint(root),
   readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
@@ -239,6 +242,7 @@ const [
 ]);
 const contentAttestation = JSON.parse(contentAttestationBytes.toString("utf8"));
 const releaseConfig = JSON.parse(releaseConfigBytes.toString("utf8"));
+const simulationManifest = JSON.parse(simulationManifestBytes.toString("utf8"));
 const playExperienceMode = releaseConfig.vars?.PLAY_EXPERIENCE_MODE;
 if (
   playExperienceMode !== "classic" &&
@@ -270,6 +274,15 @@ const publicationCheckpoint = publicationCheckpointForPlan({
   previousVersion,
 });
 const { copyVersion } = await buildCopyDeck(root);
+const simulation = simulationReleaseRecord({
+  campaignVersion: simulationManifest.campaignVersion,
+  experienceMode: releaseConfig.vars?.SIMULATION_EXPERIENCE_MODE,
+  aiMode: releaseConfig.vars?.SIMULATION_AI_MODE,
+  provider: releaseConfig.vars?.SIMULATION_PROVIDER,
+  model: releaseConfig.vars?.SIMULATION_MODEL,
+  approvedProviders: process.env.RELEASE_SIMULATION_APPROVED_PROVIDERS,
+  approvalStateDigest: process.env.RELEASE_SIMULATION_APPROVAL_DIGEST,
+});
 
 const record = {
   schemaVersion: "1.2",
@@ -293,6 +306,7 @@ const record = {
       releaseBuildCheckpoint.deployableManifestSha256,
   },
   publicationCheckpoint,
+  simulation,
   validationRuns,
   previousWorkerVersion: previousVersion,
   d1: {
@@ -305,6 +319,7 @@ const record = {
   checksums: {
     publicContentAttestationSha256: sha256(contentAttestationBytes),
     preparedWorkerConfigSha256: sha256(releaseConfigBytes),
+    simulationCampaignManifestSha256: sha256(simulationManifestBytes),
     deployableArtifactManifestSha256: sha256(
       deployableArtifactResult.bytes,
     ),

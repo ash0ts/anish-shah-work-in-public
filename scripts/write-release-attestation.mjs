@@ -7,6 +7,7 @@ import {
   assertReleaseMarker,
   assertRequiredValidationRuns,
   assertProductionDeployment,
+  assertSimulationReleaseRecord,
   githubRepositoryFromRemoteUrl,
   parseRemoteReleaseMarker,
   RELEASE_MARKER_QUERY,
@@ -34,6 +35,7 @@ const BASE_SMOKE_TESTS = [
   "oauth_callbacks",
   "security_headers",
   "owner_health",
+  "simulation_experience",
   ...DOMAIN_CUTOVER_SMOKE_TESTS,
 ];
 
@@ -154,6 +156,7 @@ const [
   planBytes,
   contentAttestationBytes,
   releaseConfigBytes,
+  simulationManifestBytes,
   deployableArtifactResult,
   releaseBuildCheckpoint,
   releaseBuildCheckpointBytes,
@@ -162,6 +165,7 @@ const [
   readFile(path.join(root, "dist/release-plan.json")),
   readFile(path.join(root, "content/public/anish-content.public.v1.attestation.json")),
   readFile(path.join(root, "dist/server/wrangler.public.json")),
+  readFile(path.join(root, "content/presentation/simulation.v1.json")),
   readVerifiedDeployableArtifactManifest(root),
   verifyReleaseBuildCheckpoint(root),
   readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
@@ -170,6 +174,7 @@ const [
 const plan = JSON.parse(planBytes.toString("utf8"));
 const contentAttestation = JSON.parse(contentAttestationBytes.toString("utf8"));
 const releaseConfig = JSON.parse(releaseConfigBytes.toString("utf8"));
+const simulationManifest = JSON.parse(simulationManifestBytes.toString("utf8"));
 const triggerReceipt = JSON.parse(triggerReceiptBytes.toString("utf8"));
 const { copyVersion } = await buildCopyDeck(root);
 if (
@@ -182,6 +187,8 @@ if (
   ) ||
   plan.checksums?.publicContentAttestationSha256 !== sha256(contentAttestationBytes) ||
   plan.checksums?.preparedWorkerConfigSha256 !== sha256(releaseConfigBytes) ||
+  plan.checksums?.simulationCampaignManifestSha256 !==
+    sha256(simulationManifestBytes) ||
   plan.checksums?.deployableArtifactManifestSha256 !==
     sha256(deployableArtifactResult.bytes) ||
   plan.deployableArtifacts?.artifactSetSha256 !==
@@ -207,6 +214,10 @@ if (
 ) {
   throw new Error("The pre-release plan is missing, stale, or does not match this build.");
 }
+const simulation = assertSimulationReleaseRecord(plan.simulation, {
+  config: releaseConfig,
+  campaignVersion: simulationManifest.campaignVersion,
+});
 const REQUIRED_SMOKE_TESTS = requiredSmokeTestsForPlayMode(
   BASE_SMOKE_TESTS,
   plan.playExperienceMode,
@@ -283,6 +294,7 @@ const record = {
   deployableArtifacts: plan.deployableArtifacts,
   releaseBuildCheckpoint: plan.releaseBuildCheckpoint,
   publicationCheckpoint: plan.publicationCheckpoint,
+  simulation,
   releasePublication: {
     status: finalPublication.status,
     releaseSha: finalPublication.details.releaseSha,

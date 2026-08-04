@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   assertRequiredValidationRuns,
   assertReleaseMarker,
+  assertSimulationReleaseRecord,
   exactMigrationNames,
   exactVersionIds,
   githubRepositoryFromRemoteUrl,
@@ -99,6 +100,7 @@ async function verifyPlan() {
     planBytes,
     attestationBytes,
     configBytes,
+    simulationManifestBytes,
     deployableArtifactResult,
     releaseBuildCheckpoint,
     releaseBuildCheckpointBytes,
@@ -106,6 +108,7 @@ async function verifyPlan() {
     readFile(planPath),
     readFile(path.join(root, "content/public/anish-content.public.v1.attestation.json")),
     readFile(configPath),
+    readFile(path.join(root, "content/presentation/simulation.v1.json")),
     readVerifiedDeployableArtifactManifest(root),
     verifyReleaseBuildCheckpoint(root),
     readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
@@ -113,6 +116,7 @@ async function verifyPlan() {
   const plan = JSON.parse(planBytes.toString("utf8"));
   const attestation = JSON.parse(attestationBytes.toString("utf8"));
   const config = JSON.parse(configBytes.toString("utf8"));
+  const simulationManifest = JSON.parse(simulationManifestBytes.toString("utf8"));
   const { copyVersion } = await buildCopyDeck(root);
   if (
     plan.schemaVersion !== "1.2" ||
@@ -121,6 +125,8 @@ async function verifyPlan() {
     plan.copyVersion !== copyVersion ||
     plan.checksums?.publicContentAttestationSha256 !== sha256(attestationBytes) ||
     plan.checksums?.preparedWorkerConfigSha256 !== sha256(configBytes) ||
+    plan.checksums?.simulationCampaignManifestSha256 !==
+      sha256(simulationManifestBytes) ||
     plan.checksums?.deployableArtifactManifestSha256 !==
       sha256(deployableArtifactResult.bytes) ||
     plan.deployableArtifacts?.artifactSetSha256 !==
@@ -151,6 +157,10 @@ async function verifyPlan() {
   ) {
     throw new Error("The ignored release plan is stale or does not match this build.");
   }
+  assertSimulationReleaseRecord(plan.simulation, {
+    config,
+    campaignVersion: simulationManifest.campaignVersion,
+  });
   const repository = configuredGithubRepository();
   if (plan.repository !== repository) {
     throw new Error("The release plan does not match the configured upstream repository.");
