@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  assertActiveActionsWorkflow,
   assertReleaseMarker,
   assertProductionDeployment,
   assertRequiredValidationRuns,
@@ -14,6 +15,7 @@ import {
   githubRepositoryFromRemoteUrl,
   parseRemoteReleaseMarker,
   publicationCheckpointForPlan,
+  REQUIRED_VALIDATION_RUNS,
   requireExactUploadedVersion,
   requiredSmokeTestsForPlayMode,
   ROOM_PLAY_SMOKE_TESTS,
@@ -408,24 +410,20 @@ test("GitHub evidence must be successful and bind the exact SHA and URL", () => 
 
 test("release evidence requires four distinct exact-commit quality runs", () => {
   const head = "a".repeat(40);
-  const runs = [
-    ["validate", "Validate", "101"],
-    ["gitleaks", "Gitleaks", "102"],
-    ["codeql", "CodeQL", "103"],
-    ["browser", "Browser Quality", "104"],
-  ].map(([kind, name, id]) => ({
+  const runs = REQUIRED_VALIDATION_RUNS.map(({
+    kind,
+    name,
+    workflowPath,
+  }, index) => ({
     kind,
     name,
     headSha: head,
     conclusion: "success",
-    url: `https://github.com/example/repo/actions/runs/${id}`,
-    ...(kind === "browser"
-      ? {
-          event: "workflow_dispatch",
-          workflowDatabaseId: 404,
-          workflowPath: ".github/workflows/browser-quality.yml",
-        }
-      : {}),
+    url: `https://github.com/example/repo/actions/runs/${101 + index}`,
+    event: kind === "browser" ? "workflow_dispatch" : "pull_request",
+    workflowDatabaseId: 401 + index,
+    workflowPath,
+    workflowState: "active",
   }));
   assert.doesNotThrow(() => assertRequiredValidationRuns(runs, head));
   assert.throws(
@@ -458,14 +456,75 @@ test("release evidence requires four distinct exact-commit quality runs", () => 
   assert.throws(
     () => assertRequiredValidationRuns(
       runs.map((run) =>
-        run.kind === "browser"
-          ? { ...run, workflowPath: ".github/workflows/ci.yml" }
+        run.kind === "validate"
+          ? { ...run, workflowPath: ".github/workflows/browser-quality.yml" }
           : run,
       ),
       head,
     ),
-    /exact browser-quality workflow file/,
+    /exact active/,
   );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "gitleaks"
+          ? { ...run, workflowState: "disabled_manually" }
+          : run,
+      ),
+      head,
+    ),
+    /exact active/,
+  );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "codeql"
+          ? { ...run, workflowDatabaseId: runs[0].workflowDatabaseId }
+          : run,
+      ),
+      head,
+    ),
+    /exact active/,
+  );
+});
+
+test("workflow evidence resolves to its fixed active workflow identity", () => {
+  const requirement = REQUIRED_VALIDATION_RUNS.find(
+    ({ kind }) => kind === "validate",
+  );
+  const workflow = {
+    id: 401,
+    name: requirement.name,
+    path: requirement.workflowPath,
+    state: "active",
+  };
+  assert.deepEqual(
+    assertActiveActionsWorkflow(workflow, {
+      workflowDatabaseId: 401,
+      name: requirement.name,
+      workflowPath: requirement.workflowPath,
+    }),
+    {
+      workflowDatabaseId: 401,
+      workflowPath: requirement.workflowPath,
+      workflowState: "active",
+    },
+  );
+  for (const invalid of [
+    { ...workflow, id: 402 },
+    { ...workflow, name: "Other" },
+    { ...workflow, path: ".github/workflows/other.yml" },
+    { ...workflow, state: "disabled_manually" },
+  ]) {
+    assert.throws(
+      () => assertActiveActionsWorkflow(invalid, {
+        workflowDatabaseId: 401,
+        name: requirement.name,
+        workflowPath: requirement.workflowPath,
+      }),
+      /exact active/,
+    );
+  }
 });
 
 test("My Room releases require direct-route smoke evidence", () => {

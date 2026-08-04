@@ -50,7 +50,10 @@ jobs:
           fi
           test "${#BASE_SHA}" -eq 40
           run_browser=false
-          while IFS= read -r changed; do
+          # Disable rename detection so both the deleted source path and added
+          # documentation path are classified. A source -> docs rename must
+          # not silently enter the documentation-only lane.
+          while IFS= read -r -d '' changed; do
             case "$changed" in
               docs/*|releases/*|README.md|CONTRIBUTING.md|SECURITY.md|AGENTS.md|.github/pull_request_template.md)
                 ;;
@@ -64,7 +67,7 @@ jobs:
                 fi
                 ;;
             esac
-          done < <(git diff --name-only "$BASE_SHA" "$BROWSER_SOURCE_SHA")
+          done < <(git diff --name-only --no-renames --no-ext-diff --no-textconv -z "$BASE_SHA" "$BROWSER_SOURCE_SHA" --)
           echo "run_browser=$run_browser" >> "$GITHUB_OUTPUT"
 
   build:

@@ -3,13 +3,13 @@ import { spawnSync } from "node:child_process";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  assertActiveActionsWorkflow,
   assertRequiredValidationRuns,
   assertVerifiedActionsRun,
   exactMigrationNames,
   exactVersionIds,
   githubRepositoryFromRemoteUrl,
   requireExactUploadedVersion,
-  RELEASE_BROWSER_WORKFLOW_PATH,
   REQUIRED_VALIDATION_RUNS,
   runGuardedMigration,
 } from "./lib/release-contract.mjs";
@@ -135,7 +135,7 @@ function verifiedRuns(head, configuredRepository) {
     ["codeql", "STAGING_CODEQL_URL"],
     ["browser", "STAGING_BROWSER_URL"],
   ]);
-  return REQUIRED_VALIDATION_RUNS.map(({ kind, name }) => {
+  return REQUIRED_VALIDATION_RUNS.map(({ kind, name, workflowPath }) => {
     const environmentName = validationEnvironmentNames.get(kind);
     const url = new URL(required(environmentName));
     const segments = url.pathname.split("/").filter(Boolean);
@@ -156,35 +156,31 @@ function verifiedRuns(head, configuredRepository) {
     ]);
     const evidence = JSON.parse(result);
     assertVerifiedActionsRun(evidence, { head, url: url.toString(), name });
-    let workflowPath;
-    if (kind === "browser") {
-      if (!Number.isSafeInteger(evidence.workflowDatabaseId) || evidence.workflowDatabaseId < 1) {
-        throw new Error("Browser Quality evidence has no valid workflow identity.");
-      }
-      let workflow;
-      try {
-        workflow = JSON.parse(run("gh", [
-          "api",
-          `repos/${segments[0]}/${segments[1]}/actions/workflows/${evidence.workflowDatabaseId}`,
-        ]));
-      } catch {
-        throw new Error("Browser Quality workflow identity could not be verified.");
-      }
-      if (
-        workflow.id !== evidence.workflowDatabaseId ||
-        workflow.name !== name ||
-        workflow.path !== RELEASE_BROWSER_WORKFLOW_PATH ||
-        workflow.state !== "active"
-      ) {
-        throw new Error("Browser Quality evidence does not belong to the exact active workflow file.");
-      }
-      workflowPath = workflow.path;
+    if (
+      !Number.isSafeInteger(evidence.workflowDatabaseId) ||
+      evidence.workflowDatabaseId < 1
+    ) {
+      throw new Error(`${name} evidence has no valid workflow identity.`);
     }
+    let workflow;
+    try {
+      workflow = JSON.parse(run("gh", [
+        "api",
+        `repos/${segments[0]}/${segments[1]}/actions/workflows/${evidence.workflowDatabaseId}`,
+      ]));
+    } catch {
+      throw new Error(`${name} workflow identity could not be verified.`);
+    }
+    const workflowIdentity = assertActiveActionsWorkflow(workflow, {
+      workflowDatabaseId: evidence.workflowDatabaseId,
+      name,
+      workflowPath,
+    });
     return {
       kind,
       name,
       ...evidence,
-      ...(kind === "browser" ? { workflowPath } : {}),
+      ...workflowIdentity,
     };
   });
 }

@@ -778,6 +778,9 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
   assert.match(readiness, /const deadline = startedAt \+ boundedTimeout/);
   assert.match(readiness, /redirect: "manual"/);
   assert.match(readiness, /AbortSignal\.timeout\(requestTimeout\)/);
+  assert.match(readiness, /x-anish-release-sha/);
+  assert.match(readiness, /response\.headers\.get\(releaseMarkerHeader\) === expectedMarker/);
+  assert.match(deploy, /EXPECTED_RELEASE_SHA: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/);
   assert.match(deploy, /printf '%s\\nPreview: %s\\n\\nValidated SHA:/);
   assert.match(deploy, /CLOUDFLARE_PREVIEW_API_TOKEN/);
   assert.match(deploy, /preview-production-guard\.mjs capture/);
@@ -945,7 +948,10 @@ test("browser quality isolates workerd lifecycles without weakening review evide
     workflow,
     /if \[ "\$GITHUB_EVENT_NAME" = "workflow_dispatch" \]; then\n\s+echo "run_browser=true"/,
   );
-  assert.match(workflow, /git diff --name-only "\$BASE_SHA" "\$BROWSER_SOURCE_SHA"/);
+  assert.match(
+    workflow,
+    /git diff --name-only --no-renames --no-ext-diff --no-textconv -z "\$BASE_SHA" "\$BROWSER_SOURCE_SHA" --/,
+  );
   assert.doesNotMatch(workflow, /--diff-filter/);
   assert.doesNotMatch(
     workflow,
@@ -1022,6 +1028,69 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.equal(partitioned.length, complete.length);
   assert.equal(new Set(partitioned).size, partitioned.length);
   assert.deepEqual([...partitioned].sort(), [...complete].sort());
+});
+
+test("browser docs-only classification sees both sides of a source-to-docs rename", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "anish-browser-rename-"));
+  const runGit = (...arguments_) => {
+    const result = spawnSync("git", arguments_, {
+      cwd: directory,
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    return result.stdout.trim();
+  };
+
+  try {
+    runGit("init", "--quiet");
+    runGit("config", "user.name", "Synthetic CI");
+    runGit("config", "user.email", "ci@example.invalid");
+    mkdirSync(path.join(directory, "components"));
+    writeFileSync(
+      path.join(directory, "components", "interactive.tsx"),
+      "export const interactive = true;\n",
+    );
+    runGit("add", "components/interactive.tsx");
+    runGit("commit", "--quiet", "-m", "add source fixture");
+    const baseSha = runGit("rev-parse", "HEAD");
+
+    mkdirSync(path.join(directory, "docs"));
+    runGit("mv", "components/interactive.tsx", "docs/interactive.md");
+    runGit("commit", "--quiet", "-m", "move source fixture to docs");
+    const headSha = runGit("rev-parse", "HEAD");
+
+    const diff = spawnSync(
+      "git",
+      [
+        "diff",
+        "--name-only",
+        "--no-renames",
+        "--no-ext-diff",
+        "--no-textconv",
+        "-z",
+        baseSha,
+        headSha,
+        "--",
+      ],
+      { cwd: directory },
+    );
+    assert.equal(diff.status, 0, diff.stderr?.toString("utf8"));
+    const changedPaths = diff.stdout
+      .toString("utf8")
+      .split("\0")
+      .filter(Boolean);
+    assert.deepEqual(changedPaths, [
+      "components/interactive.tsx",
+      "docs/interactive.md",
+    ]);
+    assert.equal(
+      changedPaths.every((changedPath) => changedPath.startsWith("docs/")),
+      false,
+      "the deleted source path must keep Browser Quality enabled",
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("Play propagates a preview fixture through every active stream", async () => {
@@ -1143,7 +1212,8 @@ test("staging release bootstraps and verifies its isolated D1/KV publication", a
   assert.match(script, /STAGING_SITE_ORIGIN/);
   assert.match(script, /STAGING_BROWSER_URL/);
   assert.match(script, /event,workflowDatabaseId/);
-  assert.match(script, /RELEASE_BROWSER_WORKFLOW_PATH/);
+  assert.match(script, /assertActiveActionsWorkflow/);
+  assert.match(script, /workflowIdentity/);
   assert.match(script, /verifyReleaseBuildCheckpoint\(root\)/);
   assert.match(script, /releaseBuildCheckpointSha256/);
   assert.match(script, /waitForCandidateReadiness/);

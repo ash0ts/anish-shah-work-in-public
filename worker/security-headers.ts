@@ -1,6 +1,11 @@
 import type { HostedDeploymentTier } from "../lib/deployment-environment";
 
 const INTERNAL_NONCE_HEADER = "x-anish-csp-nonce";
+export const RELEASE_MARKER_HEADER = "x-anish-release-sha";
+
+function sanitizedReleaseSha(value: string | undefined): string | null {
+  return value && /^[a-f0-9]{40}$/.test(value) ? value : null;
+}
 
 export function isPrivatePath(pathname: string): boolean {
   return (
@@ -99,6 +104,7 @@ export function securedResponse(
   development: boolean,
   pathname = new URL(request.url).pathname,
   deploymentTier: HostedDeploymentTier | null = null,
+  releaseSha?: string,
 ): Response {
   if (response.status === 101) return response;
   const url = new URL(request.url);
@@ -116,6 +122,14 @@ export function securedResponse(
   );
   headers.set("cross-origin-opener-policy", "same-origin");
   headers.set("cross-origin-resource-policy", "same-origin");
+  // A preview readiness probe must be able to distinguish the requested
+  // immutable build from an older Worker still serving the same hostname.
+  // Never preserve an application-supplied marker or reflect malformed env.
+  headers.delete(RELEASE_MARKER_HEADER);
+  const servedReleaseSha = sanitizedReleaseSha(releaseSha);
+  if (deploymentTier === "preview" && servedReleaseSha) {
+    headers.set(RELEASE_MARKER_HEADER, servedReleaseSha);
+  }
   if (url.protocol === "https:") {
     headers.set("strict-transport-security", "max-age=31536000");
   }

@@ -4,11 +4,11 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  assertActiveActionsWorkflow,
   assertRequiredValidationRuns,
   assertVerifiedActionsRun,
   githubRepositoryFromRemoteUrl,
   publicationCheckpointForPlan,
-  RELEASE_BROWSER_WORKFLOW_PATH,
   REQUIRED_VALIDATION_RUNS,
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
@@ -110,12 +110,22 @@ const validationEnvironmentNames = new Map([
   ["codeql", "RELEASE_CODEQL_URL"],
   ["browser", "RELEASE_BROWSER_URL"],
 ]);
-const validationRequirements = REQUIRED_VALIDATION_RUNS.map(({ kind, name }) => ({
+const validationRequirements = REQUIRED_VALIDATION_RUNS.map(({
   kind,
   name,
+  workflowPath,
+}) => ({
+  kind,
+  name,
+  workflowPath,
   env: validationEnvironmentNames.get(kind),
 }));
-const validationRuns = validationRequirements.map(({ kind, env, name }) => {
+const validationRuns = validationRequirements.map(({
+  kind,
+  env,
+  name,
+  workflowPath,
+}) => {
   const url = new URL(required(env));
   if (
     url.protocol !== "https:" ||
@@ -155,51 +165,42 @@ const validationRuns = validationRequirements.map(({ kind, env, name }) => {
     url: url.toString(),
     name,
   });
-  let workflowPath;
-  if (kind === "browser") {
-    if (!Number.isSafeInteger(evidence.workflowDatabaseId) || evidence.workflowDatabaseId < 1) {
-      throw new Error("Browser Quality evidence has no valid workflow identity.");
-    }
-    const workflowResult = spawnSync(
-      "gh",
-      [
-        "api",
-        `repos/${repositoryOwner}/${repositoryName}/actions/workflows/${evidence.workflowDatabaseId}`,
-      ],
-      { cwd: root, encoding: "utf8" },
-    );
-    if (workflowResult.error || workflowResult.status !== 0) {
-      throw new Error("Browser Quality workflow identity could not be verified.");
-    }
-    let workflow;
-    try {
-      workflow = JSON.parse(workflowResult.stdout);
-    } catch {
-      throw new Error("Browser Quality workflow identity was unreadable.");
-    }
-    if (
-      workflow.id !== evidence.workflowDatabaseId ||
-      workflow.name !== name ||
-      workflow.path !== RELEASE_BROWSER_WORKFLOW_PATH ||
-      workflow.state !== "active"
-    ) {
-      throw new Error("Browser Quality evidence does not belong to the exact active workflow file.");
-    }
-    workflowPath = workflow.path;
+  if (
+    !Number.isSafeInteger(evidence.workflowDatabaseId) ||
+    evidence.workflowDatabaseId < 1
+  ) {
+    throw new Error(`${name} evidence has no valid workflow identity.`);
   }
+  const workflowResult = spawnSync(
+    "gh",
+    [
+      "api",
+      `repos/${repositoryOwner}/${repositoryName}/actions/workflows/${evidence.workflowDatabaseId}`,
+    ],
+    { cwd: root, encoding: "utf8" },
+  );
+  if (workflowResult.error || workflowResult.status !== 0) {
+    throw new Error(`${name} workflow identity could not be verified.`);
+  }
+  let workflow;
+  try {
+    workflow = JSON.parse(workflowResult.stdout);
+  } catch {
+    throw new Error(`${name} workflow identity was unreadable.`);
+  }
+  const workflowIdentity = assertActiveActionsWorkflow(workflow, {
+    workflowDatabaseId: evidence.workflowDatabaseId,
+    name,
+    workflowPath,
+  });
   return {
     kind,
     name,
     headSha: evidence.headSha,
     conclusion: evidence.conclusion,
     url: evidence.url,
-    ...(kind === "browser"
-      ? {
-          event: evidence.event,
-          workflowDatabaseId: evidence.workflowDatabaseId,
-          workflowPath,
-        }
-      : {}),
+    event: evidence.event,
+    ...workflowIdentity,
   };
 });
 assertRequiredValidationRuns(validationRuns, head, repository);

@@ -1,6 +1,8 @@
 import { pathToFileURL } from "node:url";
 
 const previewHostname = /^pr-[1-9]\d*\.anish-shah-is\.online$/;
+const releaseShaPattern = /^[a-f0-9]{40}$/;
+const releaseMarkerHeader = "x-anish-release-sha";
 
 function validatedOrigin(value) {
   const origin = new URL(value);
@@ -27,8 +29,16 @@ function positiveInteger(value, fallback, name) {
   return parsed;
 }
 
+function validatedReleaseSha(value) {
+  if (!releaseShaPattern.test(value ?? "")) {
+    throw new Error("EXPECTED_RELEASE_SHA must be a lowercase 40-character commit SHA.");
+  }
+  return value;
+}
+
 export async function waitForPreviewReadiness({
   origin,
+  expectedReleaseSha,
   accessClientId,
   accessClientSecret,
   timeoutMs = 90_000,
@@ -38,6 +48,7 @@ export async function waitForPreviewReadiness({
   wait = (duration) => new Promise((resolve) => setTimeout(resolve, duration)),
 }) {
   const base = validatedOrigin(origin);
+  const expectedMarker = validatedReleaseSha(expectedReleaseSha);
   if (!accessClientId || !accessClientSecret) {
     throw new Error("Preview Access service credentials are required.");
   }
@@ -72,7 +83,8 @@ export async function waitForPreviewReadiness({
       if (
         response.status === 200 &&
         /(?:^|[,;\s])noindex(?:$|[,;\s])/i.test(robots) &&
-        response.headers.get("cache-control") === "private, no-store"
+        response.headers.get("cache-control") === "private, no-store" &&
+        response.headers.get(releaseMarkerHeader) === expectedMarker
       ) {
         return { attempts, elapsedMs: now() - startedAt };
       }
@@ -92,6 +104,7 @@ export async function waitForPreviewReadiness({
 async function main() {
   const result = await waitForPreviewReadiness({
     origin: process.env.PREVIEW_ORIGIN ?? "",
+    expectedReleaseSha: process.env.EXPECTED_RELEASE_SHA ?? "",
     accessClientId: process.env.ACCESS_CLIENT_ID ?? "",
     accessClientSecret: process.env.ACCESS_CLIENT_SECRET ?? "",
     timeoutMs: positiveInteger(

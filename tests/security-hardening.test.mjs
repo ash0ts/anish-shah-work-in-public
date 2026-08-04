@@ -38,7 +38,7 @@ const { pruneConnectorRetention } = await tsImport(
   "../lib/server/connectors/repository-retention.ts",
   import.meta.url,
 );
-const { securedResponse } = await tsImport(
+const { RELEASE_MARKER_HEADER, securedResponse } = await tsImport(
   "../worker/security-headers.ts",
   import.meta.url,
 );
@@ -386,6 +386,39 @@ test("extracted Worker throttling and response hardening keep exact boundaries",
   assert.equal(secured.headers.get("strict-transport-security"), "max-age=31536000");
   assert.equal(secured.headers.get("cache-control"), "private, no-store");
   assert.match(secured.headers.get("content-security-policy"), /strict-dynamic/);
+
+  const previewRelease = "a".repeat(40);
+  const preview = securedResponse(
+    new Response(null, {
+      headers: { [RELEASE_MARKER_HEADER]: "untrusted-upstream-value" },
+    }),
+    new Request("https://pr-26.anish-shah-is.online/play"),
+    "B".repeat(24),
+    false,
+    "/play",
+    "preview",
+    previewRelease,
+  );
+  assert.equal(preview.headers.get(RELEASE_MARKER_HEADER), previewRelease);
+
+  for (const [tier, value] of [
+    ["preview", "A".repeat(40)],
+    ["preview", "not-a-sha"],
+    ["production", previewRelease],
+  ]) {
+    const response = securedResponse(
+      new Response(null, {
+        headers: { [RELEASE_MARKER_HEADER]: "untrusted-upstream-value" },
+      }),
+      new Request("https://anish-shah-is.online/play"),
+      "C".repeat(24),
+      false,
+      "/play",
+      tier,
+      value,
+    );
+    assert.equal(response.headers.get(RELEASE_MARKER_HEADER), null);
+  }
 });
 
 test("redacted Worker events correlate every dynamic response without request material", () => {
@@ -943,7 +976,17 @@ test("release promotion requires a protected current-publication marker", async 
   }
   assert.match(plan, /event,workflowDatabaseId/);
   assert.match(plan, /actions\/workflows\/\$\{evidence\.workflowDatabaseId\}/);
-  assert.match(plan, /RELEASE_BROWSER_WORKFLOW_PATH/);
+  assert.match(plan, /assertActiveActionsWorkflow/);
+  assert.match(plan, /workflowIdentity/);
+  assert.match(contract, /workflowState: "active"/);
+  for (const workflowPath of [
+    ".github/workflows/ci.yml",
+    ".github/workflows/gitleaks.yml",
+    ".github/workflows/codeql.yml",
+    ".github/workflows/browser-quality.yml",
+  ]) {
+    assert.match(contract, new RegExp(workflowPath.replaceAll(".", "\\.")));
+  }
 });
 
 test("publication failover and maintenance health fail closed", async () => {
@@ -1098,6 +1141,9 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
   assert.match(checkpointSnippet, /releaseBuildCheckpoint\.artifactSetSha256/);
   assert.match(attestation, /verifyReleaseBuildCheckpoint\(root\)/);
   assert.match(attestation, /releaseBuildCheckpoint: plan\.releaseBuildCheckpoint/);
+  assert.match(command, /assertRequiredValidationRuns\(plan\.validationRuns/);
+  assert.match(attestation, /assertRequiredValidationRuns\(plan\.validationRuns/);
+  assert.match(attestation, /validationRuns: plan\.validationRuns/);
   assert.match(contract, /Remote pending migrations/);
   assert.match(contract, /do not exactly match the release plan/);
   assert.match(command, /Migration \$\{migration\.name\} changed after release planning/);

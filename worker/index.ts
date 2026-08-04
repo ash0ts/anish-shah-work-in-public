@@ -94,6 +94,7 @@ const worker = {
           development,
           pathname ?? "/invalid-path",
           deploymentTier,
+          env.RELEASE_SHA,
         ),
         observation,
       );

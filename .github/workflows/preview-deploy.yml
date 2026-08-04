@@ -126,6 +126,7 @@ jobs:
         env:
           ACCESS_CLIENT_ID: ${{ secrets.PREVIEW_ACCESS_CLIENT_ID }}
           ACCESS_CLIENT_SECRET: ${{ secrets.PREVIEW_ACCESS_CLIENT_SECRET }}
+          EXPECTED_RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
           PREVIEW_ORIGIN: https://pr-${{ github.event.workflow_run.pull_requests[0].number }}.anish-shah-is.online
           PREVIEW_READINESS_TIMEOUT_MS: "90000"
         run: node scripts/preview-readiness.mjs

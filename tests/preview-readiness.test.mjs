@@ -6,6 +6,7 @@ import { waitForPreviewReadiness } from "../scripts/preview-readiness.mjs";
 const readyHeaders = {
   "cache-control": "private, no-store",
   "x-robots-tag": "noindex, nofollow, noarchive",
+  "x-anish-release-sha": "a".repeat(40),
 };
 
 test("preview readiness succeeds only after the complete safe response contract", async () => {
@@ -18,6 +19,7 @@ test("preview readiness succeeds only after the complete safe response contract"
   const seen = [];
   const result = await waitForPreviewReadiness({
     origin: "https://pr-26.anish-shah-is.online",
+    expectedReleaseSha: "a".repeat(40),
     accessClientId: "synthetic-client-id",
     accessClientSecret: "test-client-secret",
     timeoutMs: 10_000,
@@ -48,6 +50,7 @@ test("preview readiness uses an absolute deadline", async () => {
   await assert.rejects(
     waitForPreviewReadiness({
       origin: "https://pr-26.anish-shah-is.online",
+      expectedReleaseSha: "a".repeat(40),
       accessClientId: "synthetic-client-id",
       accessClientSecret: "test-client-secret",
       timeoutMs: 5_000,
@@ -72,6 +75,7 @@ test("preview readiness rejects non-preview origins and missing credentials", as
   await assert.rejects(
     waitForPreviewReadiness({
       origin: "https://anish-shah-is.online",
+      expectedReleaseSha: "a".repeat(40),
       accessClientId: "id",
       accessClientSecret: "secret",
     }),
@@ -80,9 +84,44 @@ test("preview readiness rejects non-preview origins and missing credentials", as
   await assert.rejects(
     waitForPreviewReadiness({
       origin: "https://pr-26.anish-shah-is.online",
+      expectedReleaseSha: "a".repeat(40),
       accessClientId: "",
       accessClientSecret: "",
     }),
     /credentials are required/,
+  );
+});
+
+test("preview readiness rejects a stale or malformed served release marker", async () => {
+  const ready = (releaseSha) =>
+    new Response(null, {
+      status: 200,
+      headers: { ...readyHeaders, "x-anish-release-sha": releaseSha },
+    });
+
+  let time = 0;
+  const responses = [ready("b".repeat(40)), ready("a".repeat(40))];
+  const result = await waitForPreviewReadiness({
+    origin: "https://pr-26.anish-shah-is.online",
+    expectedReleaseSha: "a".repeat(40),
+    accessClientId: "synthetic-client-id",
+    accessClientSecret: "test-client-secret",
+    timeoutMs: 10_000,
+    now: () => time,
+    wait: async (duration) => {
+      time += duration;
+    },
+    fetcher: async () => responses.shift(),
+  });
+  assert.equal(result.attempts, 2);
+
+  await assert.rejects(
+    waitForPreviewReadiness({
+      origin: "https://pr-26.anish-shah-is.online",
+      expectedReleaseSha: "A".repeat(40),
+      accessClientId: "synthetic-client-id",
+      accessClientSecret: "test-client-secret",
+    }),
+    /lowercase 40-character commit SHA/,
   );
 });
