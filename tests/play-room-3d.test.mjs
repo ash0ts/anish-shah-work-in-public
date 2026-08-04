@@ -325,7 +325,8 @@ test("Postcard Planet is demand-driven, pixel-bordered, and semantically navigab
   );
   assert.equal((stage.match(/if \(consumeSelectionSuppression\(\)\)/g) ?? []).length, 1);
   assert.match(stage, /pressedPlaceId\.current === place\.id/);
-  assert.match(stage, /hoveredPlaceId\.current === place\.id/);
+  assert.doesNotMatch(stage, /hoveredPlaceId\.current === place\.id/);
+  assert.match(stage, /pointer-up ray intersects[\s\S]*?recorded pointer-down identity/);
   assert.match(stage, /if \(shouldSelect\) onSelectPlace\(place\.id\)/);
   assert.match(stage, /boundaryLayers\(admin1, atlas, selectedRegionCode\)/);
   assert.match(stage, /"selected", SELECTED_REGION/);

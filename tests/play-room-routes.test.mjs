@@ -470,18 +470,18 @@ test("seven authored screens preserve provider, travel, and consent boundaries",
     ),
   );
   const combined = screens.join("\n");
-  for (const [id, objectTitle, screenEyebrow, providerLabel, screenTitle] of [
-    ["watch", "TV", "Channel 11", "MyAnimeList", "Midnight Broadcast"],
-    ["read", "Bookshelf", "Shelf light on", "Hardcover", "Bedside Shelf"],
-    ["listen", "Music player", "Top Tracks", "Spotify", "Pocket Player"],
-    ["collect", "Record crate", "Crate 01", "Discogs", "Crate Archive"],
-    ["play", "Computer", "Desktop 01", "Steam", "Desktop Library"],
-    ["move", "Treadmill", "Cardio feed", "Strava", "Cardio Television"],
+  for (const [id, objectTitle, screenEyebrow, providerId, providerLabel, screenTitle] of [
+    ["watch", "TV", "Channel 11", "myanimelist", "MyAnimeList", "Midnight Broadcast"],
+    ["read", "Bookshelf", "Shelf light on", "hardcover", "Hardcover", "Bedside Shelf"],
+    ["listen", "Music player", "Top Tracks", "spotify", "Spotify", "Pocket Player"],
+    ["collect", "Record crate", "Crate 01", "discogs", "Discogs", "Crate Archive"],
+    ["play", "Computer", "Desktop 01", "steam", "Steam", "Desktop Library"],
+    ["move", "Treadmill", "Cardio feed", "strava", "Strava", "Cardio Television"],
   ]) {
     assert.match(
       registry,
       new RegExp(
-        `${id}: \\{[\\s\\S]*?providerLabel: "${providerLabel}"[\\s\\S]*?object: SITE_COPY\\.play\\["${id}-title"\\][\\s\\S]*?screenEyebrow: [^\\n]*SITE_COPY\\.play\\["${id}-screen-eyebrow"\\][^\\n]*${providerLabel}[\\s\\S]*?title: SITE_COPY\\.play\\["${id}-screen-title"\\]`,
+        `${id}: \\{[\\s\\S]*?contentSource: \\{ kind: "connector", provider: "${providerId}" \\}[\\s\\S]*?object: SITE_COPY\\.play\\["${id}-title"\\][\\s\\S]*?screenEyebrow: [^\\n]*SITE_COPY\\.play\\["${id}-screen-eyebrow"\\][^\\n]*${providerLabel}[\\s\\S]*?title: SITE_COPY\\.play\\["${id}-screen-title"\\]`,
       ),
     );
     assert.match(copy, new RegExp(`## ${id}-title\\n${objectTitle}`));
@@ -497,8 +497,10 @@ test("seven authored screens preserve provider, travel, and consent boundaries",
       (count, screen) => count + (screen.match(/<p>\{object\.screenEyebrow\}<\/p>/g)?.length ?? 0),
       0,
     ),
-    6,
+    7,
   );
+  assert.match(copy, /## travel-title\nGlobe/);
+  assert.match(copy, /## travel-screen-title\nPostcard Planet/);
   assert.match(
     registry,
     /travel: \{[\s\S]*?contentSource: \{ kind: "travel-log" \}[\s\S]*?approachPoseId: "travel-approach"[\s\S]*?meshRoot: "OBJ__travel"/,

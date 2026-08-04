@@ -143,3 +143,24 @@ Cardio feed
 
 ## move-screen-title
 Cardio Television
+
+## travel-title
+Globe
+
+## travel-description
+Places I’ve been, the photos I kept, and where they belong.
+
+## travel-screen-eyebrow
+Postcard Planet
+
+## travel-screen-title
+Postcard Planet
+
+## travel-screen-summary
+Turn the globe, open a country, and follow photographs back to the trips that made them.
+
+## travel-seo-title
+Travel — Postcard Planet
+
+## travel-seo-description
+Explore Anish Shah’s trips, approximate places, and photographs through a public, interactive world atlas.

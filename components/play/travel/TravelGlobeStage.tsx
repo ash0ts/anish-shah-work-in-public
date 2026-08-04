@@ -647,11 +647,15 @@ function Planet({
               }}
               onPointerUp={() => {
                 const current = pointer.current;
+                // This handler only runs when the pointer-up ray intersects
+                // this exact Instance. Pair that fresh intersection with the
+                // recorded pointer-down identity instead of relying on the
+                // asynchronous hover attribute, which can lag by a frame at
+                // compact viewport scales.
                 const shouldSelect =
                   current !== null &&
                   !current.dragged &&
-                  pressedPlaceId.current === place.id &&
-                  hoveredPlaceId.current === place.id;
+                  pressedPlaceId.current === place.id;
                 pressedPlaceId.current = null;
                 if (shouldSelect) onSelectPlace(place.id);
               }}

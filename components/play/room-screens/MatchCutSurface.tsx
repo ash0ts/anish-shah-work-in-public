@@ -18,6 +18,7 @@ const ENTRY_CUE_BY_OBJECT = {
   collect: "collect-crate",
   play: "play-computer-boot",
   move: "move-tv",
+  travel: "travel-globe",
 } as const satisfies Partial<Record<RoomObjectId, string>>;
 
 type EntrancePreset = {

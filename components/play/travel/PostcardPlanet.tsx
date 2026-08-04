@@ -17,6 +17,7 @@ import type {
   TravelPlaceSummary,
   TravelTripSummary,
 } from "@/types/travel";
+import { useExperienceAudio } from "@/components/experience-audio/ExperienceAudioProvider";
 import type { TravelPreviewScenario } from "@/lib/server/travel/preview";
 import {
   loadTravelAdmin1Manifest,
@@ -151,6 +152,7 @@ export function PostcardPlanet({
   const [announcement, setAnnouncement] = useState("");
   const atlasBackRef = useRef<HTMLButtonElement>(null);
   const countrySearchRef = useRef<HTMLInputElement>(null);
+  const { playCue } = useExperienceAudio();
 
   const atlas = initialState.status === "ready" ? initialState.atlas : null;
   const admin1 =
@@ -211,12 +213,13 @@ export function PostcardPlanet({
         geography?.countries.find((country) => country.code === code)?.name ??
         atlas?.countries.find((country) => country.code === code)?.name ??
         code;
+      playCue("travel-country");
       setAnnouncement(`${name} selected.`);
       if (restoreDirectoryFocus) {
         requestAnimationFrame(() => atlasBackRef.current?.focus());
       }
     },
-    [atlas?.countries, geography?.countries],
+    [atlas?.countries, geography?.countries, playCue],
   );
 
   const selectPlace = useCallback(
@@ -227,9 +230,10 @@ export function PostcardPlanet({
       setSelectedRegionCode(place.admin1Code);
       setSelectedPlaceId(place.id);
       setZoom(0.82);
+      playCue("travel-pin");
       setAnnouncement(`${place.label} selected. Related trips are shown below.`);
     },
-    [places],
+    [places, playCue],
   );
 
   const handleGlobeCapability = useCallback(

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import TravelRoomScreen from "@/components/play/room-screens/TravelRoomScreen";
+import { SITE_COPY } from "@/lib/copy";
 import {
   getPublicTravelAtlas,
   parseTravelPreviewScenario,
@@ -19,9 +20,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const query = await searchParams;
   return publicPageMetadata({
-    title: "Travel · Postcard Planet",
-    description:
-      "Explore Anish Shah’s public trips, approximate places, and photographs through an interactive world atlas.",
+    title: SITE_COPY.play["travel-seo-title"],
+    description: SITE_COPY.play["travel-seo-description"],
     path: "/play/travel",
     noindex: hasPublicQuery(query),
   });

@@ -699,6 +699,7 @@ test("exact preview runtime returns deterministic synthetic travel data without 
     SITE_URL: "https://pr-26.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
+    PLAY_EXPERIENCE_MODE: "my-room-2001",
     TRAVEL_ATLAS_MODE: "atlas-v1",
   };
   try {

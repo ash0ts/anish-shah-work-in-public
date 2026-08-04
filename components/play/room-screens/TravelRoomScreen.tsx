@@ -1,5 +1,6 @@
 import type { PublicTravelAtlasEnvelope } from "@/types/travel";
 import type { TravelPreviewScenario } from "@/lib/server/travel/preview";
+import { SITE_COPY } from "@/lib/copy";
 import { PostcardPlanet } from "../travel/PostcardPlanet";
 import { TravelNoScriptAtlas } from "../travel/TravelNoScriptAtlas";
 import { ROOM_OBJECT_BY_ID } from "../room-platform/room-registry";
@@ -24,12 +25,9 @@ export default function TravelRoomScreen({
     >
       <ScreenNavigation object={object} />
       <header className={styles.travelHeader}>
-        <p>Travel signal · Approximate public geography</p>
+        <p>{object.screenEyebrow}</p>
         <h1>{object.title}</h1>
-        <span>
-          Spin a public travel log, open a country, and follow photographs back
-          to the trips that made them.
-        </span>
+        <span>{SITE_COPY.play["travel-screen-summary"]}</span>
       </header>
       <MatchCutSurface
         className={styles.planetSurface}

@@ -764,12 +764,12 @@ test("photo deletion removes the master and all deterministic private derivative
 });
 
 test("travel migration is additive and contains the complete private publication boundary", async () => {
-  const migrationNames = (await readdir(
-    new URL("../drizzle/", import.meta.url),
-  )).filter((name) => /^0006_.+\.sql$/.test(name));
-  assert.equal(migrationNames.length, 1);
+  const migrationNames = (await readdir(new URL("../drizzle/", import.meta.url)))
+    .filter((name) => /^\d{4}_.+\.sql$/u.test(name))
+    .sort();
+  assert.equal(migrationNames.at(-1), "0007_travel_atlas.sql");
   const migration = await readFile(
-    new URL(`../drizzle/${migrationNames[0]}`, import.meta.url),
+    new URL("../drizzle/0007_travel_atlas.sql", import.meta.url),
     "utf8",
   );
   for (const table of [

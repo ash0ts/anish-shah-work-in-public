@@ -164,6 +164,26 @@
         { "voice": "chip", "note": "D5", "offsetSeconds": 0, "durationSeconds": 0.08, "velocity": 0.12 }
       ]
     },
+    "travel-globe": {
+      "description": "The tabletop globe opens into the Postcard Planet atlas.",
+      "events": [
+        { "voice": "bass", "note": "F2", "offsetSeconds": 0, "durationSeconds": 0.16, "velocity": 0.18 },
+        { "voice": "chip", "note": "C5", "offsetSeconds": 0.08, "durationSeconds": 0.08, "velocity": 0.12 }
+      ]
+    },
+    "travel-country": {
+      "description": "A country locks into the center of the travel atlas.",
+      "events": [
+        { "voice": "chip", "note": "F5", "offsetSeconds": 0, "durationSeconds": 0.05, "velocity": 0.1 },
+        { "voice": "chip", "note": "C6", "offsetSeconds": 0.05, "durationSeconds": 0.08, "velocity": 0.11 }
+      ]
+    },
+    "travel-pin": {
+      "description": "A published place pin is selected on the globe.",
+      "events": [
+        { "voice": "chip", "note": "A5", "offsetSeconds": 0, "durationSeconds": 0.07, "velocity": 0.12 }
+      ]
+    },
     "robot-arrival": {
       "description": "The simulation robot arrives above the room.",
       "events": [

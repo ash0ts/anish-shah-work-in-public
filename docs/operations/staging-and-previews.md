@@ -196,10 +196,12 @@ Leave the two simulation approval variables unset for the disabled
 infrastructure release. They are mandatory only for the subsequent
 `campaign-v1` activation.
 
-The infrastructure staging deployment normally reports
-`0006_public_model_simulation.sql` as pending. Include it exactly in
-`STAGING_MIGRATION_LIST` only when the remote pending list does; later releases
-use an empty migration list. `staging:plan` rejects an enabled campaign without
+An integrated Simulation-and-Travel staging database reports
+`0006_public_model_simulation.sql` followed by `0007_travel_atlas.sql` as
+pending when it still ends at `0005`. Include only the exact files reported by
+the remote pending list, in that order; later releases use an empty migration
+list. Never rename or replace a migration already applied to staging.
+`staging:plan` rejects an enabled campaign without
 at least one approved provider name and a 64-character sanitized digest. It
 records the campaign version, experience mode, AI mode, provider, model,
 provider names, and digest—never approval references or credentials.
