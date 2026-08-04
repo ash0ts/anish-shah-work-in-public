@@ -5,9 +5,11 @@
 One Vinext application is deployed as an owner-controlled Cloudflare Worker.
 Static assets and server-rendered pages share the public origin. D1 stores only
 sanitized publication/editorial state, encrypted connector credentials,
-bounded public snapshots, OAuth/promotion transactions, sync history, and
-audits. KV stores versioned sanitized publication snapshots for verified
-last-known-good fallback.
+bounded public snapshots, owner-authored Travel state, Simulation session and
+approval state, OAuth/promotion transactions, sync history, and audits. KV
+stores versioned sanitized publication snapshots for verified last-known-good
+fallback. Private R2 holds processed, metadata-free Travel masters; its keys
+are never a public interface.
 
 ```text
 anonymous visitor ──> public HTML and GET connector projections
@@ -18,6 +20,12 @@ owner ──> Cloudflare Access ──> Worker JWT verification ──> email al
                                                         └──> Studio + writes
 
 provider API ──> exact normalization/projector ──> D1 snapshot ──> public JSON
+
+owner ──> protected Travel Desk ──> strip metadata ──> private R2 master
+                                          │
+                                          └──> atomic D1/KV atlas snapshot
+
+visitor ──> published photo id + digest ──> snapshot authorization ──> variant
 ```
 
 Access is not the sole authorization decision. The Worker validates signature,
@@ -40,23 +48,27 @@ behavior and [Copywriting](../copywriting.md) for the freelancer-safe surface.
 ## My Room boundary
 
 My Room, 2001 is the authoritative Play experience. `/play` reads no connector
-data and renders a semantic six-object directory. Each direct object route
-loads only its associated provider. The optional Three/R3F runtime is isolated
-under `components/play/room-3d/**`, requested only after explicit room entry and
-capability checks, and never owns content or navigation. See
+or Travel data and renders a semantic seven-object directory. Each direct route
+loads only its provider or sanitized Travel publication. Room R3F is isolated
+under `components/play/room-3d/**`; the full globe is isolated under
+`components/play/travel/**`. Both remain semantic HTML first and never own
+content or navigation. See
 [My Room architecture](./my-room-2001.md).
 
 ## Code ownership boundaries
 
 - `app/` and `components/` own routes, semantic rendering, and progressive enhancement.
-- `components/play/room-3d/` is the only permitted Three.js runtime boundary.
+- `components/play/room-3d/` and `components/play/travel/` are the only permitted Three.js runtime boundaries.
 - `lib/server/` owns auth, encryption, provider projection, publication policy,
-  D1 repositories, and write authorization.
+  Travel publication/media authorization, Simulation state, D1 repositories,
+  and write authorization.
 - `worker/` owns headers, origin/tier enforcement, rate limits, Access injection,
   redacted observability, retention, and scheduled Discogs refresh.
 - `content/` owns private-safe curation, generated public data, and the copy deck.
 - `drizzle/` is forward-only schema history.
 - `scripts/` owns deterministic generation, validation, preview, staging, and release evidence.
+- `public/assets/travel/geography/` contains deterministic Natural Earth-derived
+  country IDs and bounded admin-1 geometry; it contains no owner Travel data.
 
 ## Four isolated tiers
 
@@ -64,8 +76,8 @@ capability checks, and never owns content or navigation. See
 | --- | --- | --- | --- |
 | Local | Local D1 and local-only secrets | Real, with local registrations | No |
 | PR preview | None; sanitized content + synthetic fixtures | None | No |
-| Staging | Dedicated D1/KV/secrets/Access/apps | Real, staging-only | No |
-| Production | Production D1/KV/secrets/Access/apps | Real, production-only | Yes |
+| Staging | Dedicated D1/KV/R2/secrets/Access/apps/Gateway | Real, staging-only | No |
+| Production | Production D1/KV/R2/secrets/Access/apps/Gateway | Real, production-only | Yes |
 
 Code may move between tiers; credentials, tokens, snapshots, D1 rows, KV
 envelopes, encryption keys, and publication approval do not. The private OpenAI

@@ -10,12 +10,12 @@ The site has four deliberately isolated execution contexts:
 | Tier | Origin | State | Intended use |
 | --- | --- | --- | --- |
 | Local | `http://localhost:3000` | Local D1 and local-only secrets | Development |
-| PR preview | `https://pr-<number>.anish-shah-is.online` | Checked-in public content and synthetic connector fixtures | Visual and interaction review |
-| Staging | `https://staging.anish-shah-is.online` | Dedicated D1, KV, secrets, Access app, and provider registrations | OAuth, migration, connector, and Safari acceptance |
-| Production | `https://anish-shah-is.online` | Production D1, KV, secrets, Access, and provider registrations | Public site |
+| PR preview | `https://pr-<number>.anish-shah-is.online` | Checked-in public content and synthetic connector/Travel fixtures; no R2 | Visual and interaction review |
+| Staging | `https://staging.anish-shah-is.online` | Dedicated D1, KV, R2, secrets, Access app, and provider registrations | OAuth, media, migration, connector, and Safari acceptance |
+| Production | `https://anish-shah-is.online` | Production D1, KV, R2, secrets, Access, and provider registrations | Public site |
 
 Code can move between tiers. Credentials, OAuth transactions, snapshots,
-database rows, KV envelopes, encryption keys, rate-limit salts, and publication
+database rows, KV envelopes, R2 objects, encryption keys, rate-limit salts, and publication
 approval never do.
 
 Hosted tiers must declare `DEPLOYMENT_TIER`, `SITE_URL`,
@@ -33,8 +33,10 @@ reviewed infrastructure commands. Ordinary staging scripts do not create them:
 - Custom Domain `staging.anish-shah-is.online`.
 - D1 database `anish-shah-work-in-public-staging`.
 - Dedicated `PUBLICATION_CACHE` KV namespace.
-- Five staging-only Rate Limiting namespace identifiers, including a dedicated
-  `SIMULATION_RATE_LIMITER` namespace.
+- Dedicated private `anish-shah-travel-media-staging` R2 bucket and `IMAGES`
+  processing binding.
+- Six staging-only Rate Limiting namespace identifiers, including dedicated
+  `SIMULATION_RATE_LIMITER` and `TRAVEL_MEDIA_RATE_LIMITER` namespaces.
 - Dedicated `CONNECTOR_ENCRYPTION_KEY`, `RATE_LIMIT_SALT`, and
   `SIMULATION_SESSION_HMAC_KEY` secrets.
 - A staging Access application and audience.
@@ -120,12 +122,14 @@ export STAGING_VALIDATED_SHA="$(git rev-parse HEAD)"
 export STAGING_CLOUDFLARE_D1_DATABASE_ID='<staging D1 UUID>'
 export STAGING_CLOUDFLARE_D1_DATABASE_NAME='anish-shah-work-in-public-staging'
 export STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID='<staging KV ID>'
+export STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET='anish-shah-travel-media-staging'
 export STAGING_CF_ACCESS_AUD='<staging Access audience>'
 export STAGING_OWNER_RATE_LIMIT_NAMESPACE_ID='<staging namespace>'
 export STAGING_ARTWORK_RATE_LIMIT_NAMESPACE_ID='<staging namespace>'
 export STAGING_PROMOTION_RATE_LIMIT_NAMESPACE_ID='<staging namespace>'
 export STAGING_OAUTH_CALLBACK_RATE_LIMIT_NAMESPACE_ID='<staging namespace>'
 export STAGING_SIMULATION_RATE_LIMIT_NAMESPACE_ID='<staging namespace>'
+export STAGING_TRAVEL_MEDIA_RATE_LIMIT_NAMESPACE_ID='<staging namespace>'
 
 export OWNER_EMAILS='<exact owner email>'
 export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
@@ -148,6 +152,8 @@ in the first release; changing it makes the prepared configuration fail closed.
 The generator hashes each supplied staging coordinate and fails if any D1, KV,
 Access audience, or Rate Limiting namespace matches the pinned production
 contract. Updating that production contract requires a reviewed code change.
+R2 bucket names and Rate Limiting namespace IDs are also compared directly;
+staging and production Travel media resources may never match.
 The generator writes only the ignored
 `dist/server/wrangler.staging.json`.
 
@@ -290,7 +296,7 @@ Configure the GitHub `preview` environment with:
 
 Create a wildcard Access application for
 `pr-*.anish-shah-is.online/*`. Allow explicitly approved reviewers and the
-preview CI service token. Preview Workers contain no D1, KV, encryption,
+preview CI service token. Preview Workers contain no D1, KV, R2, encryption,
 provider, cron, Studio, write, promotion, or OAuth capability. The Worker
 accepts a verified Access service principal only in preview; it never grants
 owner authorization.
@@ -337,6 +343,11 @@ advertised, browser titles identify the tier, and dynamic responses are
 `private, no-store`. Access protection is required but is not treated as the
 only indexing control.
 
+Travel previews use synthetic trip records and first-party placeholders. They
+cannot upload, publish, read R2, or reach owner Studio. Real photo ingestion,
+metadata stripping, atomic publication, and media authorization are staging
+acceptance work. No media or Travel record is promoted between environments.
+
 ## Visual review evidence
 
 The Browser quality workflow produces a 14-day `room-browser-review-<SHA>`
@@ -345,7 +356,7 @@ synthetic screenshots for:
 
 - The static poster and neutral interactive room.
 - All four authored rotation bounds.
-- Each of the six focused room objects.
+- Each of the seven focused room objects, including Postcard Planet.
 - Every object screen in ready, empty, stale, unavailable, long-title, and
   missing-artwork states.
 - One ready mobile composition per object screen.

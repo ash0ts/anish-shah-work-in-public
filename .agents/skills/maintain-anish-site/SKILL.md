@@ -42,18 +42,22 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 ## Non-Negotiable Boundaries
 
 - Never print, stage, deploy, or copy secrets, `.env*`, `.wrangler`, local D1, `content/private`, OAuth material, raw provider payloads, internal evidence, or machine-local paths.
+- The helper scans tracked and changed text for high-confidence token formats, literal credential assignments, machine-local paths, internal workspace URLs, and private evidence markers. Use documented placeholders; never weaken the scanner to accommodate copied credentials.
 - Never hand-edit the immutable source files, generated public JSON, generated copy module, content attestation, or migration report. Preserve stable IDs, aliases, explicit metric subjects, and public projector validation.
 - New owner mutations live under `/api/studio/**` and require same-origin rejection, verified owner authorization, bounded body parsing, exact runtime validation, and sanitized no-store responses.
 - OAuth callbacks may be public only with exact callback origins plus encrypted, owner-bound, expiring, single-use state and replay prevention.
+- Do not assume Strava uses the generic connector repository.
+- Travel is an owner-authored publication, not a connector. Keep draft D1 state, versioned D1/KV publication, private tier-isolated R2 media, approximate geography, and the `TRAVEL_ATLAS_MODE` gate separate from provider state. Authorize public media against the active snapshot before any derivative-cache lookup.
+- Travel may use R3F, first-party geography, shaders, and browser-local image analysis only inside the scoped paths declared by `AGENTS.md`; its Canvas never replaces the semantic atlas.
 - Never rewrite an applied D1 migration. Only the audited one-time flow may transfer reviewed Hardcover, Steam, and Strava setup from local to production; never move OAuth material, snapshots, D1 rows, KV envelopes, or encryption keys between environments.
 - Do not deploy, migrate hosted D1, rotate keys, change Access, or mutate provider registrations unless the user explicitly requests that exact action.
 
 ## Environment Contract
 
 - Local: loopback, isolated local D1, local secrets, ordinary development.
-- PR preview: Access-protected, synthetic static fixtures, no D1/KV/provider calls/Studio/OAuth/secrets.
-- Staging: Access-protected, isolated Worker/D1/KV/secrets/provider registrations; never a production-data clone.
-- Production: `https://anish-shah-is.online`, Access-protected owner surfaces, exact-SHA guarded release.
+- PR preview: Access-protected, synthetic static fixtures, no D1/KV/R2/provider calls/Studio/OAuth/secrets.
+- Staging: Access-protected, isolated Worker/D1/KV/R2/secrets/provider registrations; never a production-data clone.
+- Production: `https://anish-shah-is.online`, Access-protected owner surfaces, production D1/KV/R2, and exact-SHA guarded release.
 - Private Sites deployment: reference/recovery only, never production rollback or public proxy.
 
 ## Helper Safety Contract
@@ -62,6 +66,7 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - `--run` executes selected checks. `--full` runs `validate` and `validate:browser`.
 - `--base <ref>` includes committed changes from that merge base through `HEAD`; use it for PR and freelancer review.
 - Owner write, Access/auth, and OAuth code require matching security/connector regression tests.
+- Travel owner APIs require `tests/travel-security.test.mjs`; Travel schema, geography, or media work requires its focused checks, a clean local migration, and the browser gate.
 - Copy changes require copy parsing, voice/audit, owner fact-check, diff, rendered, metadata, and browser checks. Skill and docs changes require their dedicated validators.
 - Release-code edits select ordinary `npm run validate`. `npm run validate:release` is only for a clean, pushed, explicitly approved production candidate with exact-SHA workflow evidence.
 - The helper never deploys, migrates hosted state, rotates credentials, or mutates Git.

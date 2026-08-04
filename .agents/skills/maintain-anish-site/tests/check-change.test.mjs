@@ -209,6 +209,25 @@ test("--base rejects Git-option injection", () => {
   assert.match(output(result), /safe Git ref/);
 });
 
+test("every Travel source class selects the complete Travel validation gate", () => {
+  for (const travelPath of [
+    "scripts/travel/generate-geography.mjs",
+    "public/assets/travel/geography/manifest.v1.json",
+    "lib/travel/globe-math.ts",
+  ]) {
+    const result = plan(travelPath);
+    assert.equal(result.status, 0, `${travelPath}\n${output(result)}`);
+    for (const command of [
+      "npm run travel:geography:check",
+      "npm run test:backend",
+      "npm run test:rendered",
+      "npm run db:local:migrate:clean",
+      "npm run validate:browser",
+    ]) {
+      assert.match(result.stdout, new RegExp(command.replaceAll(" ", "\\s+")), `${travelPath}: ${command}`);
+    }
+  }
+});
 test("Access and authentication changes fail classification without coverage", () => {
   const missingTest = plan("worker/access.ts");
   assert.equal(missingTest.status, 1);

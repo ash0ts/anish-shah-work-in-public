@@ -77,6 +77,38 @@ production fallback. Restore D1 first, verify its active publication hash, then
 republish through Studio to stage a new immutable KV version and advance the
 pointer.
 
+### Travel photo, location, or private-master exposure
+
+Unpublish the affected trip in Travel Desk first. Public media resolution checks
+the active Travel snapshot before edge cache lookup, so unpublication removes
+the trip, its places, and all associated photo responses together. Confirm the
+public atlas, trip route, and each known media URL no longer resolve. Do not
+publish a replacement while containment is in progress.
+
+Preserve only non-sensitive identifiers needed for the incident record. Never
+copy the original photo, EXIF, GPS, R2 key, or signed request into an issue or
+log. Delete affected stripped masters and temporary objects through the audited
+Travel workflow, verify the D1 photo/upload rows and publication snapshot no
+longer reference them, run orphan cleanup, and republish only after captions,
+alt text, precision, and safety review. Exact GPS should never exist in D1 or
+permanent R2; if it appears, treat that as a boundary failure and widen the
+review to every object produced by the same processing path.
+
+For a takedown request, use the LinkedIn contact in `SECURITY.md`, unpublish the
+whole trip immediately, then complete deletion and document the result
+privately. Do not wait for a normal code release.
+
+### Travel R2 or Images outage
+
+Keep the atlas text and semantic geography available only when the active
+snapshot remains valid; unavailable media should return the neutral bounded
+response, never an arbitrary R2 object or remote proxy. Disable new uploads and
+publishing until `TRAVEL_MEDIA`, `IMAGES`, cleanup heartbeat, and publication
+checks recover. Do not substitute the staging bucket, make the production
+bucket public, or copy media across environments. Worker rollback does not
+restore or remove R2 objects, so reconcile D1/KV publication and private media
+state independently.
+
 ## Closeout
 
 After containment, document scope, root cause, timeline, affected records,

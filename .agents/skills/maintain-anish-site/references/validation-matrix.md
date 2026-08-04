@@ -15,6 +15,8 @@ node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run --base or
 | canonical curation/presentation/generator/types | content verification, attestation, content tests, typecheck; rendered/privacy checks when public |
 | public app/components/CSS/SEO | typecheck, lint, build, rendered tests; browser checks for responsive/interactive work |
 | connectors, Studio, OAuth | typecheck, content/backend/security tests, exact public projector and provider-failure coverage |
+| Travel atlas, Travel Desk, geography, uploads/media, or room-globe integration | `travel:geography:check`, backend and rendered tests, clean local D1 migration, Travel security coverage, and full browser gate |
+| Simulation campaign, session, Gateway, Action/Tactical, or shared audio | backend/security and rendered tests, exact runtime/privacy coverage, and full browser gate; verify authored fallback and gesture gating |
 | Worker/auth/CSP/publication/security | backend/security tests, build, bundle scan, dependency audit |
 | D1 migrations | clean local migration plus relevant backend/content tests; never edit an applied migration |
 | README/docs | `npm run docs:check` plus link/command freshness review |
@@ -39,6 +41,8 @@ Run `validate:release` only for a clean, pushed, approved production candidate a
 
 - Public UI/copy: affected routes at 320, 390, 768, 1024, 1440, and 1920px; long copy; owner verification for every fact-check field; claim qualification; 200–400% zoom; keyboard/focus; reduced motion; forced colors; metadata/JSON-LD; no JavaScript.
 - My Room: zero connector reads on `/play`, one provider per object route, intent-gated R3F, drag/click discrimination, Back/Escape/focus restoration, static capability fallbacks.
+- Travel: zero Travel reads on `/play`, semantic country/region/place parity, click-versus-drag behavior, no-JavaScript/WebGL fallbacks, planned/current publication limits, metadata stripping, active-snapshot media authorization, and immediate unpublish behavior.
+- Simulation: Action/Tactical completion parity, authored fallback, optional-text privacy, bounded sessions/budgets, output rejection, and gesture-gated audio.
 - Studio/OAuth: logged out, non-owner, owner, origin/body guards, denial/expiry/replay/wrong owner, refresh/replacement/disconnect, sanitized errors.
 - Environments: preview fixtures only, staging isolation/noindex, production exact host/Access, private Sites unchanged.
 - Release: follow the canonical runbook's thirteen smoke checks and distinguish automated evidence from manual inspection.
