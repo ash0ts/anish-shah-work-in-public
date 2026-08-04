@@ -2,6 +2,14 @@ import { privateJson } from "./security-headers";
 
 const WRITE_BODY_LIMIT_BYTES = 16_384;
 const PROMOTION_BODY_LIMIT_BYTES = 65_536;
+const TRAVEL_UPLOAD_BODY_LIMIT_BYTES = 20 * 1024 * 1024;
+const TRAVEL_UPLOAD_PATH = /^\/api\/studio\/travel\/uploads\/[^/]+$/;
+const TRAVEL_UPLOAD_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+]);
 
 export async function boundedApiWrite(
   request: Request,
@@ -12,6 +20,33 @@ export async function boundedApiWrite(
     !pathname.startsWith("/api/") ||
     !request.body
   ) {
+    return request;
+  }
+  const travelUpload =
+    request.method === "PUT" && TRAVEL_UPLOAD_PATH.test(pathname);
+  if (travelUpload) {
+    const contentType = (request.headers.get("content-type") ?? "")
+      .split(";", 1)[0]
+      ?.trim()
+      .toLowerCase();
+    if (!contentType || !TRAVEL_UPLOAD_TYPES.has(contentType)) {
+      return privateJson(
+        "Travel photos must be JPEG, PNG, WebP, or HEIC.",
+        "invalid_media_type",
+        415,
+      );
+    }
+    const declaredLength = request.headers.get("content-length");
+    if (
+      declaredLength !== null &&
+      (!/^\d+$/.test(declaredLength) ||
+        Number(declaredLength) > TRAVEL_UPLOAD_BODY_LIMIT_BYTES)
+    ) {
+      return privateJson("Request body is too large.", "request_too_large", 413);
+    }
+    // The upload route streams directly into its private temporary R2 prefix.
+    // It performs an independent streamed byte count before finalizing. Do not
+    // buffer the media body in middleware.
     return request;
   }
   const maxBytes =

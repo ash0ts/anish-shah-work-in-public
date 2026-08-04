@@ -226,7 +226,7 @@ The browser gate builds once, then reuses the same `dist` for:
 - public route, keyboard, focus, consent, reflow, and overflow checks;
 - My Room public behavior and five fresh-runner interaction shards;
 - direct `/play/watch`, `/play/read`, `/play/listen`, `/play/collect`,
-  `/play/play`, and `/play/move` route isolation;
+  `/play/play`, `/play/move`, and `/play/travel` route isolation;
 - reduced-motion, forced-colors, Save-Data, zoom, no-JavaScript, and static
   poster paths;
 - Axe serious/critical checks;
@@ -241,6 +241,12 @@ capture diagnostic state on failure.
 Run the manually dispatched ten-run Browser stability workflow after changing
 the room harness or containing flakiness. All ten independent jobs must pass on
 the same full SHA; a single successful rerun is not stability evidence.
+
+Travel coverage additionally verifies the server-rendered atlas and trip pages,
+country/admin-1 synchronization, click-versus-drag behavior, active-snapshot
+media authorization, upload bounds, EXIF removal, atomic publication, and the
+disabled-mode 404/sitemap boundary. Preview uses synthetic Travel data and has
+no R2 binding.
 
 Simulation browser coverage must exercise both Action and Tactical completion,
 the semantic no-JavaScript dossier, reduced-motion/forced-colors/Save-Data

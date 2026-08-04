@@ -18,6 +18,7 @@ const ENTRY_CUE_BY_OBJECT = {
   collect: "collect-crate",
   play: "play-computer-boot",
   move: "move-tv",
+  travel: "travel-globe",
 } as const satisfies Partial<Record<RoomObjectId, string>>;
 
 type EntrancePreset = {
@@ -81,6 +82,15 @@ const ENTRANCE_PRESETS: Record<RoomObjectId, EntrancePreset> = {
       scaleY: [0.06, 1],
       duration: 420,
       ease: "out(3)",
+    },
+  },
+  travel: {
+    initial: { opacity: 0, transform: "scale(0.12)" },
+    animation: {
+      opacity: [0, 1],
+      scale: [0.12, 1],
+      duration: 520,
+      ease: "out(4)",
     },
   },
 };

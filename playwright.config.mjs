@@ -26,7 +26,7 @@ const persistedState =
 const experienceMode = playMode === "room" ? "my-room-2001" : "classic";
 const previewRuntimeVariables =
   playMode === "room"
-    ? " --var DEPLOYMENT_TIER:preview --var PREVIEW_PR_NUMBER:1 --var SITE_URL:https://pr-1.anish-shah-is.online --var PRODUCTION_SITE_URL:https://anish-shah-is.online --var PUBLIC_CONTENT_MODE:static_preview --var SIMULATION_EXPERIENCE_MODE:campaign-v1 --var SIMULATION_AI_MODE:fixture --var SIMULATION_PROVIDER:fixture --var SIMULATION_MODEL:authored-fixture-v1"
+    ? " --var DEPLOYMENT_TIER:preview --var PREVIEW_PR_NUMBER:1 --var SITE_URL:https://pr-1.anish-shah-is.online --var PRODUCTION_SITE_URL:https://anish-shah-is.online --var PUBLIC_CONTENT_MODE:static_preview --var SIMULATION_EXPERIENCE_MODE:campaign-v1 --var SIMULATION_AI_MODE:fixture --var SIMULATION_PROVIDER:fixture --var SIMULATION_MODEL:authored-fixture-v1 --var TRAVEL_ATLAS_MODE:atlas-v1"
     : "";
 
 export default defineConfig({

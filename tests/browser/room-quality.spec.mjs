@@ -47,6 +47,13 @@ const objects = [
     foundation: "Cardio feed · Strava",
     title: "Cardio Television",
   },
+  {
+    id: "travel",
+    label: "Travel",
+    provider: null,
+    foundation: "Travel signal · Approximate public geography",
+    title: "Postcard Planet",
+  },
 ];
 const directRoutes = objects.map(({ id }) => `/play/${id}`);
 const widths = [320, 390, 768, 1024, 1440, 1920];
@@ -310,25 +317,112 @@ async function settlePaint(page) {
   });
 }
 
+const ROOM_OBJECT_ANCHORS = {
+  watch: { wide: [0.465, 0.35], compact: [0.46, 0.31] },
+  read: { wide: [0.58, 0.37], compact: [0.6, 0.39] },
+  listen: { wide: [0.36, 0.4], compact: [0.36, 0.36] },
+  collect: { wide: [0.22, 0.6], compact: [0.24, 0.6] },
+  play: { wide: [0.52, 0.7], compact: [0.58, 0.69] },
+  move: { wide: [0.86, 0.61], compact: [0.91, 0.58] },
+  travel: { wide: [0.64, 0.48], compact: [0.78, 0.49] },
+};
+const ROOM_ANCHOR_OFFSETS = [
+  [0, 0],
+  [-0.025, 0],
+  [0.025, 0],
+  [0, -0.035],
+  [0, 0.035],
+];
+const ROOM_POINTER_SEARCH_DEADLINE_MS = 12_000;
+
+async function nextAnimationFrame(page) {
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(resolve)),
+  );
+}
+
+function roomPoint(bounds, normalizedX, normalizedY) {
+  return {
+    x: bounds.x + bounds.width * Math.min(0.98, Math.max(0.02, normalizedX)),
+    y: bounds.y + bounds.height * Math.min(0.98, Math.max(0.02, normalizedY)),
+  };
+}
+
+async function stableRoomHit(page, stage, point, expectedId = null) {
+  await page.mouse.move(point.x, point.y);
+  // One frame is enough for each coarse probe. A possible match receives a
+  // second rendered frame before it is accepted, preserving real R3F raycast
+  // coverage without paying two frames for every empty grid coordinate.
+  await nextAnimationFrame(page);
+  const first = await stage.getAttribute("data-room-hovered-object");
+  if (!first || (expectedId && first !== expectedId)) return null;
+  await nextAnimationFrame(page);
+  const second = await stage.getAttribute("data-room-hovered-object");
+  return second === first ? { id: first, ...point } : null;
+}
+
+function likelyRoomPoints(bounds, id) {
+  const anchorSet = ROOM_OBJECT_ANCHORS[id];
+  // The room camera switches to its tighter composition well before the
+  // semantic page becomes mobile-sized. Treat the 1200px regression viewport
+  // as compact so probes follow the projected props after the resize.
+  const anchor = anchorSet?.[bounds.width < 1300 ? "compact" : "wide"];
+  if (!anchor) return [];
+  return ROOM_ANCHOR_OFFSETS.map(([x, y]) =>
+    roomPoint(bounds, anchor[0] + x, anchor[1] + y),
+  );
+}
+
+async function primeRoomPointerSearch(page, bounds) {
+  const viewport = page.viewportSize();
+  const candidates = [
+    { x: 1, y: 1 },
+    { x: Math.max(1, (viewport?.width ?? 2) - 2), y: 1 },
+    { x: 1, y: Math.max(1, (viewport?.height ?? 2) - 2) },
+  ];
+  const outside = candidates.find(
+    ({ x, y }) =>
+      x < bounds.x ||
+      x > bounds.x + bounds.width ||
+      y < bounds.y ||
+      y > bounds.y + bounds.height,
+  );
+  await page.mouse.move(outside?.x ?? 1, outside?.y ?? 1);
+  await nextAnimationFrame(page);
+}
+
+function coarseRoomPoints(bounds) {
+  const points = [];
+  // This bounded fallback covers the authored object band without scanning
+  // the empty ceiling and floor margins of the fisheye stage.
+  for (let row = 0; row < 7; row += 1) {
+    for (let column = 0; column < 12; column += 1) {
+      points.push(
+        roomPoint(bounds, 0.08 + column * 0.076, 0.24 + row * 0.085),
+      );
+    }
+  }
+  return points;
+}
+
 async function findInteractiveRoomPoint(page) {
   const stage = page.locator("[data-room-poster-stage]");
   const bounds = await stage.boundingBox();
   if (!bounds) throw new Error("The interactive room has no visible stage.");
 
-  for (let row = 2; row <= 9; row += 1) {
-    for (let column = 1; column <= 15; column += 1) {
-      const x = bounds.x + (bounds.width * column) / 16;
-      const y = bounds.y + (bounds.height * row) / 11;
-      await page.mouse.move(x, y);
-      await page.evaluate(
-        () =>
-          new Promise((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(resolve)),
-          ),
-      );
-      const id = await stage.getAttribute("data-room-hovered-object");
-      if (id) return { id, x, y };
+  await primeRoomPointerSearch(page, bounds);
+  const deadline = Date.now() + ROOM_POINTER_SEARCH_DEADLINE_MS;
+  for (const { id } of objects) {
+    for (const point of likelyRoomPoints(bounds, id)) {
+      if (Date.now() >= deadline) break;
+      const hit = await stableRoomHit(page, stage, point, id);
+      if (hit) return hit;
     }
+  }
+  for (const point of coarseRoomPoints(bounds)) {
+    if (Date.now() >= deadline) break;
+    const hit = await stableRoomHit(page, stage, point);
+    if (hit) return hit;
   }
 
   throw new Error("No procedural room object responded to a real pointer ray.");
@@ -340,19 +434,25 @@ async function findAllInteractiveRoomPoints(page) {
   if (!bounds) throw new Error("The interactive room has no visible stage.");
 
   const points = new Map();
-  for (let row = 1; row <= 17 && points.size < objects.length; row += 1) {
-    for (let column = 1; column <= 27 && points.size < objects.length; column += 1) {
-      const x = bounds.x + (bounds.width * column) / 28;
-      const y = bounds.y + (bounds.height * row) / 18;
-      await page.mouse.move(x, y);
-      await page.evaluate(
-        () =>
-          new Promise((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(resolve)),
-          ),
-      );
-      const id = await stage.getAttribute("data-room-hovered-object");
-      if (id && !points.has(id)) points.set(id, { id, x, y });
+  await primeRoomPointerSearch(page, bounds);
+  const deadline = Date.now() + ROOM_POINTER_SEARCH_DEADLINE_MS;
+
+  for (const { id } of objects) {
+    for (const point of likelyRoomPoints(bounds, id)) {
+      if (Date.now() >= deadline) break;
+      const hit = await stableRoomHit(page, stage, point, id);
+      if (hit) {
+        points.set(id, hit);
+        break;
+      }
+    }
+  }
+
+  if (points.size < objects.length) {
+    for (const point of coarseRoomPoints(bounds)) {
+      if (points.size === objects.length || Date.now() >= deadline) break;
+      const hit = await stableRoomHit(page, stage, point);
+      if (hit && !points.has(hit.id)) points.set(hit.id, hit);
     }
   }
 
@@ -589,7 +689,7 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(
       page.getByRole("heading", { name: "The room behind the résumé." }),
     ).toBeVisible();
-    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(6);
+    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
     await expect(page.locator("canvas")).toHaveCount(0);
     expect(connectors).toEqual([]);
     expect(runtimeScripts).toEqual([]);
@@ -762,7 +862,7 @@ test.describe("My Room 2001 browser quality", () => {
 
     const room = page.getByRole("dialog", { name: "Interactive room" });
     const leave = room.getByRole("button", { name: "Leave room" });
-    const lastObject = room.locator('[data-room-object-control="move"]');
+    const lastObject = room.locator('[data-room-object-control="travel"]');
     await expect(room).toBeVisible();
     await expectRoomReady(page, { context: "testing the room focus trap" });
     await expect(leave).toBeFocused();
@@ -803,7 +903,7 @@ test.describe("My Room 2001 browser quality", () => {
 
     await lastObject.focus();
     await expect(room.locator("[data-room-object-cue]")).toContainText(
-      "TreadmillMove",
+      "Tabletop world globeTravel",
     );
     await expect(lastObject).toHaveAttribute("data-focused", "true");
     await lastObject.press("Tab");
@@ -1467,7 +1567,7 @@ test.describe("My Room 2001 browser quality", () => {
     });
   }
 
-  test("all six object foundations remain available without JavaScript", async ({ browser }) => {
+  test("all seven object foundations remain available without JavaScript", async ({ browser }) => {
     const context = await browser.newContext({
       javaScriptEnabled: false,
       viewport: { width: 390, height: 844 },
@@ -1572,7 +1672,7 @@ test.describe("My Room 2001 browser quality", () => {
       const page = await context.newPage();
       const runtimeScripts = runtimeChunkRequests(page);
       await page.goto("/play", { waitUntil: "networkidle" });
-      await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(6);
+      await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
       await expect(page.getByRole("button", { name: "Enter the room" })).toHaveCount(0);
       await expect(page.locator("canvas")).toHaveCount(0);
       expect(runtimeScripts).toEqual([]);

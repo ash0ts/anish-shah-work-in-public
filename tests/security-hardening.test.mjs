@@ -896,12 +896,14 @@ test("public Cloudflare release config is generated without embedding secrets", 
   assert.match(prepare, /migrations_dir:\s*"\.\.\/\.\.\/drizzle"/);
   assert.match(prepare, /CLOUDFLARE_PUBLICATION_CACHE_ID/);
   assert.match(prepare, /binding:\s*"PUBLICATION_CACHE"/);
+  assert.match(prepare, /binding:\s*"TRAVEL_MEDIA"/);
   for (const binding of [
     "OWNER_RATE_LIMITER",
     "ARTWORK_RATE_LIMITER",
     "PROMOTION_RATE_LIMITER",
     "OAUTH_CALLBACK_RATE_LIMITER",
     "SIMULATION_RATE_LIMITER",
+    "TRAVEL_MEDIA_RATE_LIMITER",
   ]) {
     assert.match(prepare, new RegExp(`name:\\s*"${binding}"`));
   }

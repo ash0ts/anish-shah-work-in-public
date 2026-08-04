@@ -14,4 +14,5 @@ export const ROOM_SCREEN_LOADERS = {
   collect: () => import("../room-screens/CollectRoomScreen"),
   play: () => import("../room-screens/PlayRoomScreen"),
   move: () => import("../room-screens/MoveRoomScreen"),
+  travel: () => import("../room-screens/TravelRoomScreen"),
 } satisfies Record<RoomObjectId, RoomScreenLoader>;

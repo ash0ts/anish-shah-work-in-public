@@ -60,6 +60,7 @@ function validReleaseConfigFixture() {
     PLAY_EXPERIENCE_MODE: "my-room-2001",
     SIMULATION_EXPERIENCE_MODE: "disabled",
     SIMULATION_AI_MODE: "authored-only",
+    TRAVEL_ATLAS_MODE: "disabled",
   };
   const expected = expectedPublicReleaseConfig(environment, {
     head,
@@ -69,6 +70,14 @@ function validReleaseConfigFixture() {
     environment,
     expected,
     config: {
+      main: "index.js",
+      compatibility_date: "2026-07-31",
+      compatibility_flags: ["nodejs_compat"],
+      jsx_factory: "React.createElement",
+      jsx_fragment: "React.Fragment",
+      no_bundle: true,
+      rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
+      assets: { directory: "../client" },
       name: "anish-shah-work-in-public",
       topLevelName: "anish-shah-work-in-public",
       account_id: expected.accountId,
@@ -86,12 +95,17 @@ function validReleaseConfigFixture() {
       kv_namespaces: [
         { binding: "PUBLICATION_CACHE", id: expected.publicationCacheId },
       ],
+      r2_buckets: [
+        { binding: "TRAVEL_MEDIA", bucket_name: "anish-shah-travel-media" },
+      ],
+      images: { binding: "IMAGES" },
       ratelimits: [
         ["OWNER_RATE_LIMITER", "88001001", 30],
         ["ARTWORK_RATE_LIMITER", "88001002", 120],
         ["PROMOTION_RATE_LIMITER", "88001003", 6],
         ["OAUTH_CALLBACK_RATE_LIMITER", "88001004", 20],
         ["SIMULATION_RATE_LIMITER", "88001005", 12],
+        ["TRAVEL_MEDIA_RATE_LIMITER", "88001006", 180],
       ].map(([name, namespace_id, limit]) => ({
         name,
         namespace_id,
@@ -115,6 +129,7 @@ function validReleaseConfigFixture() {
         SIMULATION_AI_MODE: expected.simulationAiMode,
         SIMULATION_PROVIDER: "anthropic",
         SIMULATION_MODEL: "claude-sonnet-5",
+        TRAVEL_ATLAS_MODE: expected.travelAtlasMode,
       },
       observability: {
         enabled: true,
@@ -155,6 +170,21 @@ test("production release resources must match the pinned deployment contract", (
   );
 });
 
+test("production release configuration rejects unexpected Worker bindings", () => {
+  const { config, expected } = validReleaseConfigFixture();
+  assert.throws(
+    () =>
+      assertPublicReleaseConfig(
+        {
+          ...config,
+          services: [{ binding: "UNREVIEWED", service: "other-worker" }],
+        },
+        expected,
+      ),
+    /exact public-release boundary/,
+  );
+});
+
 test("release parsers return exact migration and Worker version identifiers", () => {
   assert.deepEqual(
     exactMigrationNames("pending 0005_steady_publication_guard.sql; unrelated.sql"),
@@ -174,6 +204,7 @@ test("release preflight rejects a configuration that weakens production boundari
   assert.equal(expected.playExperienceMode, "my-room-2001");
   assert.equal(expected.simulationExperienceMode, "disabled");
   assert.equal(expected.simulationAiMode, "authored-only");
+  assert.equal(expected.travelAtlasMode, "disabled");
   assert.throws(
     () =>
       expectedPublicReleaseConfig(
@@ -201,6 +232,26 @@ test("release preflight rejects a configuration that weakens production boundari
         { head: expected.head, contentVersion: expected.contentVersion },
       ),
     /enabled production simulation must use live AI/,
+  );
+  assert.throws(
+    () =>
+      expectedPublicReleaseConfig(
+        { ...environment, TRAVEL_ATLAS_MODE: "experimental" },
+        { head: expected.head, contentVersion: expected.contentVersion },
+      ),
+    /disabled or atlas-v1/,
+  );
+  assert.throws(
+    () =>
+      expectedPublicReleaseConfig(
+        {
+          ...environment,
+          PLAY_EXPERIENCE_MODE: "classic",
+          TRAVEL_ATLAS_MODE: "atlas-v1",
+        },
+        { head: expected.head, contentVersion: expected.contentVersion },
+      ),
+    /atlas-v1 requires PLAY_EXPERIENCE_MODE=my-room-2001/,
   );
   assert.throws(
     () =>

@@ -54,6 +54,22 @@ Record its namespace ID in the private infrastructure inventory. Reuse that
 namespace across releases; do not delete or recreate it for an ordinary
 deployment.
 
+Postcard Planet adds one private production media bucket. Create it once and
+keep its name exactly `anish-shah-travel-media`:
+
+```bash
+npx --no-install wrangler r2 bucket create anish-shah-travel-media
+```
+
+The generated production configuration binds that bucket as `TRAVEL_MEDIA`,
+Cloudflare Images as `IMAGES`, and the Travel media rate limiter as
+`TRAVEL_MEDIA_RATE_LIMITER` with the reviewed production namespace
+`88001005`. Treat the bucket and namespace as durable production coordinates.
+They must never equal their staging counterparts, and PR preview receives none
+of these bindings. Cloudflare Images must be enabled for the owning account
+before accepting an upload; the Worker fails closed when either media binding
+is unavailable.
+
 Set durable secrets interactively only during initial provisioning or an
 explicitly approved rotation:
 
@@ -160,6 +176,7 @@ export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
 export CF_ACCESS_AUD='<Access application audience>'
 export SIMULATION_EXPERIENCE_MODE='disabled'
 export SIMULATION_AI_MODE='authored-only'
+export TRAVEL_ATLAS_MODE='disabled'
 npm run validate:release
 ```
 
@@ -182,6 +199,13 @@ building. Hosted production rejects fixture mode and rejects an enabled
 campaign that is not live. These non-secret values are embedded in the exact
 Worker configuration and cannot be changed after validation without rebuilding
 and replanning the release.
+
+Keep `TRAVEL_ATLAS_MODE=disabled` for the first code deployment. Preparing
+private trips in production Studio does not publish `/play/travel`. A later
+guarded release may select `atlas-v1` only with an owner-reviewed active Travel
+snapshot and explicit visual acceptance. The integrated schema adds Simulation
+as `0006_public_model_simulation.sql` and Travel as `0007_travel_atlas.sql`; list
+only migrations still pending on the target database.
 
 ## 2. Capture read-only production coordinates
 

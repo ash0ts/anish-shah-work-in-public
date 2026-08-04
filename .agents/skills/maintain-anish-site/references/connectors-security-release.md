@@ -9,7 +9,14 @@
 - Every provider publishes through an exact runtime projector. No raw payload, standalone account identifier, credential, or arbitrary remote artwork URL enters public JSON.
 - Provider artwork resolves only host-free allowlisted keys from a currently published snapshot.
 
-## Owner and OAuth Pattern
+Travel is an owner-authored publication, not a provider connector. Drafts and exact
+media authorization records live in D1, sanitized versioned snapshots use D1/KV,
+and metadata-free masters/derivatives live in a tier-isolated private R2 bucket.
+Verify a photo against the active snapshot before reading a derivative; unpublish
+must make every media URL fail on its next request. Exact GPS, source filenames,
+raw uploads, and R2 keys never enter public contracts or logs.
+
+## Owner Write Pattern
 
 Owner JSON writes reject cross-origin requests, verify Access plus exact owner allowlist, parse a bounded body, reject unknown fields, and return sanitized `private, no-store` responses. New mutations live under `/api/studio/**`.
 
@@ -18,9 +25,9 @@ OAuth callbacks are public only because providers must reach them. Require exact
 ## Four-Tier Isolation
 
 - Local: loopback-only owner fallback, local D1/secrets, no hosted identity assumptions.
-- PR preview: synthetic sanitized fixtures, no D1/KV/Studio/OAuth/provider network/cron/secrets, Access-protected and globally noindexed.
-- Staging: dedicated Worker, D1, KV, rate limits, Access audience, secrets, callbacks, and provider registrations. It never imports production state.
-- Production: apex-only host, production D1/KV/Access/secrets, and exact-SHA release guard.
+- PR preview: synthetic sanitized fixtures, no D1/KV/R2/Studio/OAuth/provider network/AI Gateway/cron/secrets, Access-protected and globally noindexed.
+- Staging: dedicated Worker, D1, KV, R2, rate limits, Access audience, secrets, callbacks, provider registrations, and Simulation Gateway. It never imports production state.
+- Production: apex-only host, production D1/KV/R2/Access/secrets, separate Simulation Gateway, and exact-SHA release guard.
 - Private Sites deployment: reference/recovery only; it is not a production rollback target.
 
 Local promotion may transfer only reviewed, explicitly portable provider setup over HTTPS. It never transfers snapshots, encryption keys, OAuth-provider credentials/tokens, or publication approvals. No staging/production transfer exists.
@@ -32,10 +39,13 @@ Local promotion may transfer only reviewed, explicitly portable provider setup o
 - Disconnect deletes provider credentials/config, snapshots, pending OAuth state, sync history, and provider audit records, then unpublishes.
 - Third-party frames remain consent-gated and CSP allowlists exact.
 - Update Privacy and tests whenever retrieval, storage, retention, disclosure, or deletion changes.
+- Travel whole-trip publication is atomic. Planned/current trips are month-level,
+  country/region-only, and photo-free; completed trips may use owner-approved
+  0.1-degree approximate-city points and reviewed photos.
 
 ## Release Boundary
 
-Hosted mutations require explicit authorization. The guarded production contract requires exact successful URLs for Validate, Gitleaks, CodeQL, and Browser Quality at the candidate SHA. Record `PLAY_EXPERIENCE_MODE`, `CONTENT_VERSION`, and `COPY_VERSION` in the release plan and attestation.
+Hosted mutations require explicit authorization. The guarded production contract requires exact successful URLs for Validate, Gitleaks, CodeQL, and Browser Quality at the candidate SHA. Record `PLAY_EXPERIENCE_MODE`, `TRAVEL_ATLAS_MODE`, `SIMULATION_EXPERIENCE_MODE`, `SIMULATION_AI_MODE`, `CONTENT_VERSION`, and `COPY_VERSION` in the release plan and attestation.
 
 Ordinary release-code changes run `npm run validate`. Only a clean, pushed, approved candidate with required exact-SHA evidence runs `npm run validate:release`, release planning, upload, staging, or deployment.
 
@@ -44,6 +54,6 @@ Before an authorized release:
 1. Pin the exact source SHA and reuse one hashed, immutable `dist` through rendered/browser/Lighthouse/bundle tests and planning.
 2. Record the current Worker version and D1 Time Travel bookmark.
 3. Apply only reviewed additive migrations and stage the exact candidate at 0%.
-4. Verify D1/KV publication, both versions, canonical origin, My Room mode, `/play` plus all six object routes, owner health, Access, and connectors.
+4. Verify D1/KV publication, both versions, canonical origin, My Room mode, `/play` plus all seven object routes, Travel media authorization, Simulation mode, owner health, Access, and connectors.
 5. Promote only through the guarded command and run the thirteen runbook smoke checks.
 6. Roll back Worker code separately from D1. Restore D1 only when proven causal and explicitly confirmed.

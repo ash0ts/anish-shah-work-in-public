@@ -5,9 +5,12 @@ export const ROOM_OBJECT_IDS = [
   "collect",
   "play",
   "move",
+  "travel",
 ] as const;
 
 export type RoomObjectId = (typeof ROOM_OBJECT_IDS)[number];
+
+export type RoomConnectorObjectId = Exclude<RoomObjectId, "travel">;
 
 export type RoomProviderById = {
   watch: "myanimelist";
@@ -18,7 +21,19 @@ export type RoomProviderById = {
   move: "strava";
 };
 
-export type RoomProviderId = RoomProviderById[RoomObjectId];
+export type RoomProviderId = RoomProviderById[RoomConnectorObjectId];
+
+export type RoomContentSourceById = {
+  readonly [Id in RoomConnectorObjectId]: {
+    kind: "connector";
+    provider: RoomProviderById[Id];
+  };
+} & {
+  readonly travel: { kind: "travel-log" };
+};
+
+export type RoomContentSource =
+  RoomContentSourceById[keyof RoomContentSourceById];
 
 export type RoomRotation = {
   /** Polar rotation, in degrees. */
@@ -33,8 +48,7 @@ export type RoomObjectDefinition<Id extends RoomObjectId = RoomObjectId> = {
   route: `/play/${Id}`;
   label: string;
   roomLabel: string;
-  provider: RoomProviderById[Id];
-  providerLabel: string;
+  contentSource: RoomContentSourceById[Id];
   object: string;
   screenEyebrow: string;
   title: string;

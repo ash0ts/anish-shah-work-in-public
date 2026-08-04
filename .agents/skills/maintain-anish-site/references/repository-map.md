@@ -5,15 +5,20 @@ Paths are relative to the repository root.
 ## Runtime Ownership
 
 - `app/`: Next/Vinext public routes and server-rendered foundations.
-- `app/play/**`: My Room overview plus six semantic object routes.
+- `app/play/**`: My Room overview plus seven semantic object routes.
 - `components/play/**`: object-screen shell and provider-specific Play UI.
-- `components/play/room-3d/**`: the sole permitted Three/R3F runtime boundary; dynamically loaded only after explicit room entry.
+- `components/play/room-3d/**`: intent-gated Room and Pocket Room R3F runtime.
+- `components/play/travel/**`: Postcard Planet semantic atlas and the only full-globe R3F boundary.
+- `app/simulation/**` and `components/simulation/**`: semantic campaign shell, Tactical mode, and the narrowly scoped Action Canvas bridge.
 - `app/studio/**`: owner-only operational interface. Git-owned copy is shown read-only here.
 - `app/api/studio/**`: canonical owner read/write APIs.
 - `app/api/connectors/**`: public reads, exact OAuth callbacks, and retained compatibility redirects—not new owner mutations.
 - `lib/server/http/**`: thin, reusable authenticated request handlers.
 - `lib/server/connectors/**`: provider contracts, clients, credentials, OAuth, refresh locks, public projectors, snapshots, audit, and retention.
 - `lib/server/strava-config.ts`: separate official-embed configuration, not the generic connector repository.
+- `lib/server/travel/**`: Postcard Planet drafts, policy, public projection, versioned publication, retention, uploads, and media authorization. Public atlas and paginated trip projectors stay narrower than stored publication records.
+- `app/studio/travel/**` and `app/api/studio/travel/**`: owner-only Travel Desk and writes. Exact GPS and original filenames remain browser-local intake suggestions and never enter public state.
+- `lib/server/simulation/**`: bounded session, budget, approval, grounding, and model-gateway contracts.
 - `worker/**`: host/tier enforcement, Cloudflare Access, CSP, headers, throttling, request correlation, and scheduled maintenance.
 - `drizzle/**`: ordered immutable D1 migrations.
 - `tests/**`: content, copy, backend/security, rendered, environment, and browser acceptance.
@@ -41,10 +46,10 @@ Runtime precedence is: sanitized canonical facts and structure, then published D
 
 ## My Room Contract
 
-- `/play` performs zero connector reads and offers a semantic six-object directory.
-- `/play/watch`, `/read`, `/listen`, `/collect`, `/play`, and `/move` load only their associated provider.
+- `/play` performs zero connector or Travel reads and offers a semantic seven-object directory.
+- `/play/watch`, `/read`, `/listen`, `/collect`, `/play`, and `/move` load only their associated provider; `/play/travel` loads only the sanitized Travel publication.
 - Canvas is decorative and `aria-hidden`; semantic controls, direct routes, browser Back, Escape, and focus restoration are authoritative.
-- Do not import Three/R3F into Worker, Studio, Home, Work, Sources, initial Play, or connector modules.
+- Do not import Three/R3F into Worker, Studio, Home, Work, Sources, initial Play, connector modules, or Simulation.
 - Preserve poster/static fallback for narrow screens, coarse pointers, reduced motion, forced colors, Save-Data, zoom, WebGL failure, and context loss.
 
 ## High-Risk Seams
@@ -52,6 +57,8 @@ Runtime precedence is: sanitized canonical facts and structure, then published D
 - `scripts/build-content.mjs` orchestrates `scripts/content/**`; refresh the public attestation whenever generator, curation, or output changes.
 - Connector repository facades span credentials/OAuth, public projectors, snapshots, locks, audit, retention, Studio, Play, and privacy tests. Change the whole contract, not one facade.
 - Discogs uses OAuth 1.0a, bounded sequential pagination, a six-hour public cutoff, and no provider artwork.
+- Travel is not a connector. It uses isolated D1/KV/R2 state, whole-trip atomic publication, publication-aware media delivery, and the `TRAVEL_ATLAS_MODE` gate. Preview uses synthetic fixtures and never receives R2.
+- Simulation keeps model prose separate from trusted fact cards, never stores free text or model prompts/responses, and must retain an authored fallback when AI is unavailable.
 - Hosted tier configuration is exact and mutually exclusive. Fixture mode is preview-only; staging and production must fail closed on missing or inconsistent bindings.
 - Worker middleware—not a successful local page—owns production security behavior.
 

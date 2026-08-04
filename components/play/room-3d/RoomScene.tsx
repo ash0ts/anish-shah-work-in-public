@@ -14,6 +14,7 @@ import { RoomInteractionController } from "./RoomInteractionController";
 import {
   BeigeComputer,
   CardioTelevision,
+  PostcardGlobe,
   PocketPlayer,
   ReadingShelf,
   RecordCrate,
@@ -31,6 +32,7 @@ const ROOM_SCENE_OBJECT_BY_ID = {
   collect: RecordCrate,
   play: BeigeComputer,
   move: CardioTelevision,
+  travel: PostcardGlobe,
 } as const satisfies Record<
   RoomObjectId,
   typeof WatchTelevision
@@ -42,6 +44,7 @@ export type RoomSceneProps = {
   onHoverChange?: (id: RoomObjectId | null) => void;
   onInteractionActiveChange?: (active: boolean) => void;
   onSettled?: () => void;
+  objectIds?: readonly RoomObjectId[];
   onRotationChange: (rotation: RoomRotation) => void;
   onSelect: (id: RoomObjectId) => void;
   presentation?: "desktop" | "pocket";
@@ -55,6 +58,7 @@ export function RoomScene({
   onHoverChange,
   onInteractionActiveChange,
   onSettled,
+  objectIds = ROOM_OBJECT_IDS,
   onRotationChange,
   onSelect,
   presentation = "desktop",
@@ -119,7 +123,7 @@ export function RoomScene({
           scale={presentation === "pocket" ? 0.92 : 1}
         >
           <RoomShell registerOccluder={registerOccluder} />
-          {ROOM_OBJECT_IDS.map((id) => {
+          {objectIds.map((id) => {
             const SceneObject = ROOM_SCENE_OBJECT_BY_ID[id];
             return (
               <SceneObject

@@ -34,7 +34,10 @@ test("Collect is a sixth lazy Play stream with a complete semantic fallback", as
   assert.match(streams, /window\.history\.replaceState/);
   assert.match(streams, /url\.searchParams\.set\("stream", stream\)/);
   assert.match(page, /roomExperienceEnabled\(\)/);
-  assert.match(page, /<RoomOverview fixture=\{fixture\}/);
+  assert.match(
+    page,
+    /<RoomOverview[\s\S]*?fixture=\{fixture\}[\s\S]*?travelEnabled=\{travelAtlasEnabled\(\)\}/,
+  );
 });
 
 test("Discogs uses a ruled shelf and an accessible pressing matrix", async () => {
@@ -116,7 +119,7 @@ test("Studio exposes Discogs OAuth1 and an explicit publication gate", async () 
   assert.match(controls, /case "discogs"/);
   assert.match(page, /resolveDiscogsCallbackUrl/);
   assert.match(page, /discogsCallbackUrl=\{discogsCallbackUrl\}/);
-  assert.match(privacy, /Six deliberately different connections/);
+  assert.match(privacy, /Six connections and one owner-authored atlas/);
   assert.match(privacy, /Discogs · Collect/);
   assert.match(privacy, /unavailable six hours/i);
   assert.match(privacy, /Discogs API Terms of Use/);

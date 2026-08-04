@@ -40,19 +40,19 @@ const roomRegistryKeys = (text, name) => {
     ),
   );
   assert.ok(match, `Expected a satisfies-checked literal ${name} registry`);
-  return [...match[1].matchAll(/^  (watch|read|listen|collect|play|move):/gm)].map(
+  return [...match[1].matchAll(/^  (watch|read|listen|collect|play|move|travel):/gm)].map(
     ([, id]) => id,
   );
 };
 
-test("the room registry is closed, unique, and maps six routes to six providers", async () => {
+test("the room registry is closed and maps seven routes to their content sources", async () => {
   const [types, registry] = await Promise.all([
     source("components/play/room-platform/room-types.ts"),
     source("components/play/room-platform/room-registry.ts"),
   ]);
   assert.match(
     types,
-    /ROOM_OBJECT_IDS\s*=\s*\[\s*"watch",\s*"read",\s*"listen",\s*"collect",\s*"play",\s*"move",?\s*\]/,
+    /ROOM_OBJECT_IDS\s*=\s*\[\s*"watch",\s*"read",\s*"listen",\s*"collect",\s*"play",\s*"move",\s*"travel",?\s*\]/,
   );
   for (const [id, provider] of [
     ["watch", "myanimelist"],
@@ -65,7 +65,7 @@ test("the room registry is closed, unique, and maps six routes to six providers"
     assert.match(
       registry,
       new RegExp(
-        `${id}: \\{[\\s\\S]*?id: "${id}"[\\s\\S]*?route: "/play/${id}"[\\s\\S]*?provider: "${provider}"[\\s\\S]*?meshRoot: "OBJ__${id}"`,
+        `${id}: \\{[\\s\\S]*?id: "${id}"[\\s\\S]*?route: "/play/${id}"[\\s\\S]*?contentSource: \\{ kind: "connector", provider: "${provider}" \\}[\\s\\S]*?meshRoot: "OBJ__${id}"`,
       ),
     );
     assert.match(
@@ -73,6 +73,11 @@ test("the room registry is closed, unique, and maps six routes to six providers"
       new RegExp(`${id}: '\\[data-room-object-link="${id}"\\]'`),
     );
   }
+  assert.match(
+    registry,
+    /travel: \{[\s\S]*?route: "\/play\/travel"[\s\S]*?contentSource: \{ kind: "travel-log" \}[\s\S]*?meshRoot: "OBJ__travel"/,
+  );
+  assert.match(registry, /travel: '\[data-room-object-link="travel"\]'/);
   assert.match(registry, /satisfies RoomObjectRegistry/);
   assert.match(registry, /satisfies RoomFocusTargetRegistry/);
   assert.match(registry, /Record<RoomObjectId, RoomObjectDefinition>/);
@@ -89,16 +94,20 @@ test("route, screen, provider, object, and focus registries have identical close
     source("lib/server/play-screen-foundation.ts"),
     source("app/play/[objectSlug]/page.tsx"),
   ]);
-  const expected = ["watch", "read", "listen", "collect", "play", "move"];
+  const expected = ["watch", "read", "listen", "collect", "play", "move", "travel"];
   for (const [text, name] of [
     [registry, "ROOM_OBJECT_BY_ID"],
     [registry, "ROOM_FOCUS_TARGET_BY_ID"],
     [screens, "ROOM_SCREEN_LOADERS"],
-    [foundation, "ROOM_PROVIDER_ADAPTERS"],
     [route, "ROOM_ROUTE_FOUNDATIONS"],
   ]) {
     assert.deepEqual(roomRegistryKeys(text, name), expected, name);
   }
+  assert.deepEqual(
+    roomRegistryKeys(foundation, "ROOM_PROVIDER_ADAPTERS"),
+    expected.filter((id) => id !== "travel"),
+    "ROOM_PROVIDER_ADAPTERS",
+  );
 });
 
 test("the room reducer clamps rotation and ignores stale transitions", async () => {
@@ -165,6 +174,7 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
         "CollectRoomScreen.tsx",
         "PlayRoomScreen.tsx",
         "MoveRoomScreen.tsx",
+        "TravelRoomScreen.tsx",
       ].map((name) => source(`components/play/room-screens/${name}`)),
     ),
   ]);
@@ -178,6 +188,15 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
   assert.match(provider, /data-room-object-link/);
   assert.match(provider, /pendingRoomNavigation\.current = id/);
   assert.match(provider, /activeObjectRouteOrigin\.current === "room"/);
+  assert.match(
+    provider,
+    /priorRouteObject === activeRouteObject &&[\s\S]*activeObjectRouteOrigin\.current === "room"/,
+  );
+  assert.ok(
+    provider.includes(
+      'if (/^\\/play\\/travel\\/trips\\/[^/]+\\/?$/.test(pathname))',
+    ),
+  );
   assert.match(provider, /if \(returnWithBrowserHistory\) router\.back\(\)/);
   assert.match(provider, /else \{[\s\S]*routeWithPreviewFixture\([\s\S]*"\/play"/);
   assert.match(provider, /previewFixtureFromSearch\(window\.location\.search\)/);
@@ -385,8 +404,16 @@ test("Play overview is provider-free while validated direct routes use closed di
       new RegExp(`getCollectionScreenFoundation\\("${provider}"`),
     );
   }
-  assert.match(foundation, /satisfies Record<RoomObjectId, RoomProviderAdapter>/);
+  assert.match(foundation, /satisfies Record<RoomConnectorObjectId, RoomProviderAdapter>/);
   assert.match(direct, /satisfies Record<RoomObjectId, RoomRouteFoundation>/);
+  assert.match(
+    direct,
+    /travel: async \(\) => \{[\s\S]*?if \(!travelAtlasEnabled\(\)\) notFound\(\)/,
+  );
+  assert.match(
+    direct,
+    /object\.contentSource\.kind === "travel-log" && !travelAtlasEnabled\(\)/,
+  );
   assert.match(direct, /return ROOM_ROUTE_FOUNDATIONS\[object\.id\]\(query\)/);
   assert.match(screens, /satisfies Record<RoomObjectId, RoomScreenLoader>/);
   for (const screen of [
@@ -396,6 +423,7 @@ test("Play overview is provider-free while validated direct routes use closed di
     "CollectRoomScreen",
     "PlayRoomScreen",
     "MoveRoomScreen",
+    "TravelRoomScreen",
   ]) {
     assert.match(screens, new RegExp(`import\\("\\.\\./room-screens/${screen}"\\)`));
   }
@@ -413,6 +441,7 @@ test("all direct Play routes are no-store publication-backed paths", () => {
     "/play/collect",
     "/play/play",
     "/play/move",
+    "/play/travel",
   ]) {
     assert.equal(isPlayPath(pathname), true);
   }
@@ -420,7 +449,7 @@ test("all direct Play routes are no-store publication-backed paths", () => {
   assert.equal(isPlayPath("/playlist"), false);
 });
 
-test("six authored screens preserve provider and consent boundaries", async () => {
+test("seven authored screens preserve provider, travel, and consent boundaries", async () => {
   const [registry, copy, ...screens] = await Promise.all(
     [
       "../room-platform/room-registry.ts",
@@ -431,6 +460,7 @@ test("six authored screens preserve provider and consent boundaries", async () =
       "CollectRoomScreen.tsx",
       "PlayRoomScreen.tsx",
       "MoveRoomScreen.tsx",
+      "TravelRoomScreen.tsx",
     ].map((name) =>
       source(
         name.startsWith("../")
@@ -440,18 +470,18 @@ test("six authored screens preserve provider and consent boundaries", async () =
     ),
   );
   const combined = screens.join("\n");
-  for (const [id, objectTitle, screenEyebrow, providerLabel, screenTitle] of [
-    ["watch", "TV", "Channel 11", "MyAnimeList", "Midnight Broadcast"],
-    ["read", "Bookshelf", "Shelf light on", "Hardcover", "Bedside Shelf"],
-    ["listen", "Music player", "Top Tracks", "Spotify", "Pocket Player"],
-    ["collect", "Record crate", "Crate 01", "Discogs", "Crate Archive"],
-    ["play", "Computer", "Desktop 01", "Steam", "Desktop Library"],
-    ["move", "Treadmill", "Cardio feed", "Strava", "Cardio Television"],
+  for (const [id, objectTitle, screenEyebrow, providerId, providerLabel, screenTitle] of [
+    ["watch", "TV", "Channel 11", "myanimelist", "MyAnimeList", "Midnight Broadcast"],
+    ["read", "Bookshelf", "Shelf light on", "hardcover", "Hardcover", "Bedside Shelf"],
+    ["listen", "Music player", "Top Tracks", "spotify", "Spotify", "Pocket Player"],
+    ["collect", "Record crate", "Crate 01", "discogs", "Discogs", "Crate Archive"],
+    ["play", "Computer", "Desktop 01", "steam", "Steam", "Desktop Library"],
+    ["move", "Treadmill", "Cardio feed", "strava", "Strava", "Cardio Television"],
   ]) {
     assert.match(
       registry,
       new RegExp(
-        `${id}: \\{[\\s\\S]*?providerLabel: "${providerLabel}"[\\s\\S]*?object: SITE_COPY\\.play\\["${id}-title"\\][\\s\\S]*?screenEyebrow: [^\\n]*SITE_COPY\\.play\\["${id}-screen-eyebrow"\\][^\\n]*${providerLabel}[\\s\\S]*?title: SITE_COPY\\.play\\["${id}-screen-title"\\]`,
+        `${id}: \\{[\\s\\S]*?contentSource: \\{ kind: "connector", provider: "${providerId}" \\}[\\s\\S]*?object: SITE_COPY\\.play\\["${id}-title"\\][\\s\\S]*?screenEyebrow: [^\\n]*SITE_COPY\\.play\\["${id}-screen-eyebrow"\\][^\\n]*${providerLabel}[\\s\\S]*?title: SITE_COPY\\.play\\["${id}-screen-title"\\]`,
       ),
     );
     assert.match(copy, new RegExp(`## ${id}-title\\n${objectTitle}`));
@@ -467,7 +497,13 @@ test("six authored screens preserve provider and consent boundaries", async () =
       (count, screen) => count + (screen.match(/<p>\{object\.screenEyebrow\}<\/p>/g)?.length ?? 0),
       0,
     ),
-    6,
+    7,
+  );
+  assert.match(copy, /## travel-title\nGlobe/);
+  assert.match(copy, /## travel-screen-title\nPostcard Planet/);
+  assert.match(
+    registry,
+    /travel: \{[\s\S]*?contentSource: \{ kind: "travel-log" \}[\s\S]*?approachPoseId: "travel-approach"[\s\S]*?meshRoot: "OBJ__travel"/,
   );
   assert.match(combined, /provider="myanimelist"/);
   assert.match(combined, /provider="hardcover"/);
@@ -476,6 +512,7 @@ test("six authored screens preserve provider and consent boundaries", async () =
   assert.match(combined, /<DiscogsStream/);
   assert.match(combined, /presentation="crate"/);
   assert.match(combined, /routePath="\/play\/collect"/);
+  assert.match(combined, /<PostcardPlanet/);
   assert.doesNotMatch(combined, /from\s+["']three["']|<canvas\b|autoplay/i);
 });
 
@@ -522,7 +559,7 @@ test("each object screen has a distinct cancellable match-cut enhancement", asyn
   const matchCut = await source(
     "components/play/room-screens/MatchCutSurface.tsx",
   );
-  for (const id of ["watch", "read", "listen", "collect", "play", "move"]) {
+  for (const id of ["watch", "read", "listen", "collect", "play", "move", "travel"]) {
     assert.match(matchCut, new RegExp(`^  ${id}: \\{`, "m"));
   }
   assert.match(matchCut, /import \{ animate \} from "animejs"/);
@@ -551,4 +588,20 @@ test("Collect defines readable ink directly against its recessed catalog", async
     );
   }
   assert.match(css, /\.crateWell\s*\{[\s\S]*var\(--paper\)/);
+});
+
+test("Travel trip pages expose bounded semantic page-size controls", async () => {
+  const [trip, route] = await Promise.all([
+    source("components/play/travel/TravelTripLog.tsx"),
+    source("app/play/travel/trips/[slug]/page.tsx"),
+  ]);
+  assert.match(trip, /const PAGE_SIZES = \[12, 24, 36\] as const/);
+  assert.match(trip, /aria-label="Photos per page"/);
+  assert.match(trip, /firstVisibleIndex/);
+  assert.match(trip, /Math\.min\(requestedPage, maximumPage\)/);
+  assert.match(route, /noindex: hasPublicQuery\(query\)/);
+  assert.match(route, /\^\[1-9\]\\d\*\$/);
+  assert.match(route, /raw === "24"/);
+  assert.match(route, /raw === "36"/);
+  assert.doesNotMatch(route, /parseInt/);
 });

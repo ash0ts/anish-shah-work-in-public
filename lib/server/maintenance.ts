@@ -11,6 +11,7 @@ import {
   simulationProviderApprovalDigest,
   type SimulationHealthSummary,
 } from "./simulation/health";
+import { getTravelHealth, type TravelHealth } from "./travel";
 export {
   PUBLICATION_MAINTENANCE_KEY,
   recordMaintenanceState,
@@ -69,7 +70,16 @@ export type StudioHealth = {
   simulation: SimulationHealthSummary & {
     providerApprovalDigest: string | null;
   };
+  travel: TravelHealth & {
+    mode: "disabled" | "atlas-v1";
+  };
 };
+
+function travelMode(): "disabled" | "atlas-v1" {
+  return runtimeValue("TRAVEL_ATLAS_MODE") === "atlas-v1"
+    ? "atlas-v1"
+    : "disabled";
+}
 
 function canonicalOriginState(): StudioHealth["canonicalOrigin"] {
   if (runtimeValue("AUTH_MODE") !== "cloudflare_access") {
@@ -156,6 +166,10 @@ export async function getStudioHealth(): Promise<StudioHealth> {
   const releaseSha = deployedValue("RELEASE_SHA", /^[a-f0-9]{40}$/);
   const contentVersion = deployedValue("CONTENT_VERSION", /^[a-f0-9]{16}$/);
   const canonicalOrigin = canonicalOriginState();
+  const travel = {
+    ...(await getTravelHealth()),
+    mode: travelMode(),
+  } satisfies StudioHealth["travel"];
   const database = runtimeDatabase();
   const [simulationSummary, providerApprovalDigest] = await Promise.all([
     getSimulationHealthSummary(new Date(checkedAt), database),
@@ -181,6 +195,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
         lastSuccessfulAt: null,
       })),
       simulation,
+      travel,
     };
   }
 
@@ -241,10 +256,14 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       !releaseSha ||
       !contentVersion ||
       !safeMigrationName ||
-      canonicalOrigin.status === "setup_required";
+      canonicalOrigin.status === "setup_required" ||
+      (travel.mode === "atlas-v1" && !travel.configured);
     const degraded =
       retentionHeartbeat.status !== "current" ||
-      connectors.some((connector) => connector.status === "error");
+      connectors.some((connector) => connector.status === "error") ||
+      (travel.mode === "atlas-v1" &&
+        (travel.cleanupHeartbeat.status === "stale" ||
+          travel.cleanupHeartbeat.status === "error"));
     return {
       status: setupRequired ? "setup_required" : degraded ? "degraded" : "healthy",
       checkedAt,
@@ -259,6 +278,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       retentionHeartbeat,
       connectors,
       simulation,
+      travel,
     };
   } catch {
     return {
@@ -276,6 +296,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
         lastSuccessfulAt: null,
       })),
       simulation,
+      travel,
     };
   }
 }

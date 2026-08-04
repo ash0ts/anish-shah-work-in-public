@@ -9,9 +9,14 @@ import { SITE_COPY } from "@/lib/copy";
 
 export function RoomOverview({
   fixture,
+  travelEnabled = false,
 }: {
   fixture?: PreviewFixtureScenario;
+  travelEnabled?: boolean;
 }) {
+  const objects = travelEnabled
+    ? ROOM_OBJECTS
+    : ROOM_OBJECTS.filter(({ id }) => id !== "travel");
   return (
     <main
       className={`site-main ${styles.page}`}
@@ -39,7 +44,7 @@ export function RoomOverview({
         <div className={styles.posterField} aria-hidden="true">
           <picture>
             <source
-              srcSet="/assets/play/my-room-2001-neutral.50f82f186444.avif"
+              srcSet="/assets/play/my-room-2001-neutral.01c6f825bbc1.avif"
               type="image/avif"
             />
             <img
@@ -47,7 +52,7 @@ export function RoomOverview({
               decoding="async"
               height="1000"
               loading="eager"
-              src="/assets/play/my-room-2001-neutral.af662c65ec99.webp"
+              src="/assets/play/my-room-2001-neutral.00d2bc80d8dc.webp"
               width="1600"
             />
           </picture>
@@ -62,7 +67,7 @@ export function RoomOverview({
             <h2 id="room-directory-title">{SITE_COPY.play["directory-title"]}</h2>
           </header>
           <ol>
-            {ROOM_OBJECTS.map((object, index) => (
+            {objects.map((object, index) => (
               <li key={object.id}>
                 <Link
                   data-room-object-link={object.id}

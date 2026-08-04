@@ -67,14 +67,14 @@ function RoomPosterFallback({
     >
       <picture>
         <source
-          srcSet="/assets/play/my-room-2001-neutral.50f82f186444.avif"
+          srcSet="/assets/play/my-room-2001-neutral.01c6f825bbc1.avif"
           type="image/avif"
         />
         <img
           alt=""
           decoding="async"
           height="1000"
-          src="/assets/play/my-room-2001-neutral.af662c65ec99.webp"
+          src="/assets/play/my-room-2001-neutral.00d2bc80d8dc.webp"
           width="1600"
         />
       </picture>
@@ -272,6 +272,7 @@ export function RoomRuntime() {
               {pocket ? (
                 <LazyPocketRoomStage
                   focusedId={room.focusedId}
+                  objectIds={room.enabledObjectIds}
                   onContextLoss={reportContextLoss}
                   onHoverChange={room.focusObject}
                   onPerformanceMiss={reportPocketPerformanceMiss}
@@ -284,6 +285,7 @@ export function RoomRuntime() {
               ) : (
                 <LazyRoomStage
                   focusedId={room.focusedId}
+                  objectIds={room.enabledObjectIds}
                   onContextLoss={reportContextLoss}
                   onHoverChange={room.focusObject}
                   onReady={markReady}
@@ -390,7 +392,9 @@ export function RoomRuntime() {
         data-room-object-dock
       >
         <ol>
-          {ROOM_OBJECTS.map((object) => (
+          {ROOM_OBJECTS.filter((object) =>
+            room.enabledObjectIds.includes(object.id),
+          ).map((object) => (
             <li key={object.id}>
               <button
                 aria-pressed={room.selectedId === object.id}

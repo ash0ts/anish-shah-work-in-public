@@ -33,6 +33,7 @@ export type RoomStageProps = {
   onHoverChange?: (id: RoomObjectId | null) => void;
   onProjectionChange?: (projection: RoomProjection) => void;
   onReady?: () => void;
+  objectIds?: readonly RoomObjectId[];
   onRotationChange: (rotation: RoomRotation) => void;
   onSelect: (id: RoomObjectId) => void;
   rotation: RoomRotation;
@@ -198,6 +199,7 @@ export function RoomStage({
   onHoverChange,
   onProjectionChange,
   onReady,
+  objectIds,
   onRotationChange,
   onSelect,
   rotation,
@@ -233,16 +235,16 @@ export function RoomStage({
     ) {
       return;
     }
+    clearInitializationWatchdog();
     readySent.current = true;
     onProjectionChange?.(projection);
     onReady?.();
-  }, [onProjectionChange, onReady, projection]);
+  }, [clearInitializationWatchdog, onProjectionChange, onReady, projection]);
 
   const handleStableFrame = useCallback(() => {
-    clearInitializationWatchdog();
     projectionStable.current = true;
     reportReadyIfStable();
-  }, [clearInitializationWatchdog, reportReadyIfStable]);
+  }, [reportReadyIfStable]);
 
   const handleSceneSettled = useCallback(() => {
     sceneSettled.current = true;
@@ -293,6 +295,7 @@ export function RoomStage({
       onHoverChange={handleHoverChange}
       onSettled={handleSceneSettled}
       onRotationChange={onRotationChange}
+      objectIds={objectIds}
       onSelect={onSelect}
       rotation={rotation}
       selectedId={selectedId}

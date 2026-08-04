@@ -8,7 +8,6 @@ export function RoomEntryControl() {
   const room = useRoomExperience();
   const capability = useRoomCapability();
   const checking = capability.reasons.includes("checking");
-
   if (room.fallbackReason) {
     return (
       <div className={styles.entryControl}>

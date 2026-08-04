@@ -2,9 +2,13 @@ import type { MetadataRoute } from "next";
 import { ROOM_OBJECTS } from "../components/play/room-platform/room-registry";
 import { canonicalMetadataOrigin } from "../lib/deployment-environment";
 import { runtimeHostedDeploymentPresentation } from "../lib/server/deployment-presentation";
-import { roomExperienceEnabled } from "../lib/server/play-experience";
+import {
+  roomExperienceEnabled,
+  travelAtlasEnabled,
+} from "../lib/server/play-experience";
 import { simulationExperienceEnabled } from "../lib/server/simulation/policy";
 import { getPublicContentView } from "../lib/server/public-content";
+import { getPublicTravelAtlas } from "../lib/server/travel";
 import { workArchiveRecordsFrom } from "../lib/work-index";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -56,8 +60,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
+  const travelEnabled = travelAtlasEnabled();
   const playRoutes: MetadataRoute.Sitemap = roomExperienceEnabled()
-    ? ROOM_OBJECTS.map((object) => ({
+    ? ROOM_OBJECTS.filter(
+        ({ id }) => id !== "travel" || travelEnabled,
+      ).map((object) => ({
         url: `${baseUrl}${object.route}`,
         lastModified,
         changeFrequency: "weekly" as const,
@@ -75,6 +82,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         },
       ]
     : [];
+  const atlas = travelEnabled ? await getPublicTravelAtlas() : null;
+  const tripRoutes: MetadataRoute.Sitemap =
+    atlas?.status === "ready"
+      ? atlas.atlas.trips.map((trip) => ({
+          url: `${baseUrl}/play/travel/trips/${encodeURIComponent(trip.slug)}`,
+          lastModified: new Date(atlas.atlas.publishedAt),
+          changeFrequency: "monthly" as const,
+          priority: 0.35,
+        }))
+      : [];
 
-  return [...publicRoutes, ...playRoutes, ...simulationRoutes, ...workRoutes];
+  return [
+    ...publicRoutes,
+    ...playRoutes,
+    ...simulationRoutes,
+    ...tripRoutes,
+    ...workRoutes,
+  ];
 }

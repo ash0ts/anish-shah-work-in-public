@@ -738,3 +738,104 @@ export function CardioTelevision({ active, registerHitTarget }: ObjectProps) {
     </ObjectRoot>
   );
 }
+
+function LowPolyGlobe({ active }: { active: boolean }) {
+  const globe = useRef<Group>(null);
+  const targetRotation = useRef(active ? Math.PI * 1.7 : 0.45);
+  const { invalidate } = useThree();
+
+  useEffect(() => {
+    targetRotation.current = active ? Math.PI * 1.7 : 0.45;
+    invalidate();
+  }, [active, invalidate]);
+
+  useFrame((_, rawDelta) => {
+    const object = globe.current;
+    if (!object) return;
+    const next = MathUtils.damp(
+      object.rotation.y,
+      targetRotation.current,
+      active ? 7 : 10,
+      Math.min(rawDelta, 0.05),
+    );
+    object.rotation.y = next;
+    if (Math.abs(next - targetRotation.current) > 0.001) invalidate();
+  }, -3);
+
+  return (
+    <group ref={globe} rotation={[0.13, 0.45, -0.08]}>
+      <mesh material={ROOM_MATERIALS.violetDark}>
+        <icosahedronGeometry args={[0.59, 2]} />
+      </mesh>
+      <mesh material={ROOM_MATERIALS.mintDark} rotation={[0.05, 0.15, -0.08]}>
+        <sphereGeometry args={[0.605, 12, 7, 0.1, 1.05, 0.55, 1.05]} />
+      </mesh>
+      <mesh material={ROOM_MATERIALS.amber} rotation={[-0.18, 1.9, 0.15]}>
+        <sphereGeometry args={[0.608, 12, 7, 0.2, 0.82, 0.85, 0.9]} />
+      </mesh>
+      <mesh material={ROOM_MATERIALS.coral} rotation={[0.2, 3.42, -0.1]}>
+        <sphereGeometry args={[0.61, 12, 7, 0.16, 0.74, 1.35, 0.72]} />
+      </mesh>
+      <mesh
+        material={ROOM_BASIC_MATERIALS.workBlue}
+        rotation={[Math.PI / 2, 0, 0]}
+      >
+        <torusGeometry args={[0.598, 0.009, 5, 32]} />
+      </mesh>
+      <mesh material={ROOM_BASIC_MATERIALS.workBlue} rotation={[0, 0, 0]}>
+        <torusGeometry args={[0.598, 0.009, 5, 32]} />
+      </mesh>
+      {([
+        [-0.31, 0.4, 0.48, ROOM_MATERIALS.coral],
+        [0.37, 0.18, 0.46, ROOM_MATERIALS.amber],
+        [0.04, -0.43, 0.41, ROOM_MATERIALS.mintDark],
+      ] as const).map(([x, y, z, pinMaterial]) => (
+        <mesh
+          key={`${x}-${y}`}
+          material={pinMaterial}
+          position={[x, y, z]}
+        >
+          <sphereGeometry args={[0.045, 8, 6]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** A selection-only room prop. Independent globe controls live on /play/travel. */
+export function PostcardGlobe({ active, registerHitTarget }: ObjectProps) {
+  return (
+    <ObjectRoot
+      active={active}
+      activeTilt={-0.01}
+      interactionTarget={
+        <HitTarget
+          id="travel"
+          position={[0, 1.45, 0]}
+          register={registerHitTarget}
+          size={[1.45, 2.55, 1.35]}
+        />
+      }
+      position={[1.48, 0, -2.75]}
+      rotation={[0, -0.08, 0]}
+      scale={0.94}
+    >
+      <SelectionMarker active={active} radius={0.77} />
+      <mesh material={ROOM_MATERIALS.graphite} position={[0, 0.12, 0]}>
+        <cylinderGeometry args={[0.58, 0.72, 0.18, 16]} />
+      </mesh>
+      <mesh material={ROOM_MATERIALS.woodLight} position={[0, 0.66, 0]}>
+        <cylinderGeometry args={[0.075, 0.11, 1.0, 12]} />
+      </mesh>
+      <group position={[0, 1.58, 0]} rotation={[0, 0, -0.24]}>
+        <mesh material={ROOM_MATERIALS.shellLight} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.69, 0.045, 8, 36]} />
+        </mesh>
+        <mesh material={ROOM_MATERIALS.shellLight} position={[0, -0.7, 0]}>
+          <sphereGeometry args={[0.08, 10, 8]} />
+        </mesh>
+        <LowPolyGlobe active={active} />
+      </group>
+    </ObjectRoot>
+  );
+}

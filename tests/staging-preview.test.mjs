@@ -41,6 +41,10 @@ const { previewConnectorSnapshot, previewStravaSnapshot } = await import(
 const { projectConnectorSnapshotForPublic } = await import(
   "../lib/server/connectors/public-gallery.ts"
 );
+const { previewTravelAtlas } = await import("../lib/server/travel/preview.ts");
+const { snapshotContainsPhoto } = await import(
+  "../lib/server/travel/projector.ts"
+);
 const {
   getCollectionScreenFoundation,
   getDiscogsScreenFoundation,
@@ -88,12 +92,14 @@ function stagingEnvironment() {
     STAGING_CLOUDFLARE_D1_DATABASE_ID: "11111111-1111-4111-8111-111111111111",
     STAGING_CLOUDFLARE_D1_DATABASE_NAME: "anish-shah-work-in-public-staging",
     STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID: "1".repeat(32),
+    STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET: "anish-shah-travel-media-staging",
     STAGING_CF_ACCESS_AUD: "staging-access-audience",
     STAGING_OWNER_RATE_LIMIT_NAMESPACE_ID: "99001001",
     STAGING_ARTWORK_RATE_LIMIT_NAMESPACE_ID: "99001002",
     STAGING_PROMOTION_RATE_LIMIT_NAMESPACE_ID: "99001003",
     STAGING_OAUTH_CALLBACK_RATE_LIMIT_NAMESPACE_ID: "99001004",
     STAGING_SIMULATION_RATE_LIMIT_NAMESPACE_ID: "99001005",
+    STAGING_TRAVEL_MEDIA_RATE_LIMIT_NAMESPACE_ID: "99001006",
     OWNER_EMAILS: "owner@example.com",
     CF_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
   };
@@ -114,6 +120,11 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
   assert.equal(config.vars.SIMULATION_AI_MODE, "live");
   assert.equal(config.vars.SIMULATION_MODEL, "claude-sonnet-5");
   assert.equal(config.compatibility_date, "2026-07-30");
+  assert.equal(config.vars.TRAVEL_ATLAS_MODE, "atlas-v1");
+  assert.deepEqual(config.r2_buckets, [
+    { binding: "TRAVEL_MEDIA", bucket_name: "anish-shah-travel-media-staging" },
+  ]);
+  assert.deepEqual(config.images, { binding: "IMAGES" });
   assert.equal(config.vars.PRODUCTION_SITE_URL, "https://anish-shah-is.online");
   assert.equal(config.observability.logs.invocation_logs, false);
   assert.deepEqual(config.triggers.crons, ["47 * * * *"]);
@@ -131,6 +142,13 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
       STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID: productionKvId,
     }, contentVersion),
     /must differ/,
+  );
+  assert.throws(
+    () => expectedStagingCoordinates({
+      ...stagingEnvironment(),
+      STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET: "anish-shah-travel-media",
+    }, contentVersion),
+    /non-production R2 bucket/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
@@ -257,6 +275,8 @@ test("preview config has no durable, secret, cron, Studio, or OAuth capability",
   assert.equal(config.name, "anish-shah-work-in-public-pr-42");
   assert.deepEqual(config.d1_databases, []);
   assert.deepEqual(config.kv_namespaces, []);
+  assert.equal("r2_buckets" in config, false);
+  assert.equal("images" in config, false);
   assert.deepEqual(config.ratelimits, []);
   assert.equal(config.triggers, undefined);
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "static_preview");
@@ -266,6 +286,7 @@ test("preview config has no durable, secret, cron, Studio, or OAuth capability",
   assert.equal(config.vars.SIMULATION_AI_MODE, "fixture");
   assert.equal(config.vars.SIMULATION_PROVIDER, "fixture");
   assert.equal(config.compatibility_date, "2026-07-30");
+  assert.equal(config.vars.TRAVEL_ATLAS_MODE, "atlas-v1");
   assert.equal("OWNER_EMAILS" in config.vars, false);
   assert.equal("CONNECTOR_ENCRYPTION_KEY" in config.vars, false);
   assert.doesNotThrow(() =>
@@ -406,17 +427,18 @@ test("sitemap publishes room routes only for the production-facing room mode", a
     };
     const classic = await sitemap();
     assert.equal(
-      classic.filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move)$/.test(url)).length,
+      classic.filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move|travel)$/.test(url)).length,
       0,
     );
 
     globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
       PLAY_EXPERIENCE_MODE: "my-room-2001",
+      TRAVEL_ATLAS_MODE: "atlas-v1",
     };
     const room = await sitemap();
     assert.deepEqual(
       room
-        .filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move)$/.test(url))
+        .filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move|travel)$/.test(url))
         .map(({ url }) => new URL(url).pathname)
         .sort(),
       [
@@ -425,6 +447,7 @@ test("sitemap publishes room routes only for the production-facing room mode", a
         "/play/move",
         "/play/play",
         "/play/read",
+        "/play/travel",
         "/play/watch",
       ],
     );
@@ -435,10 +458,108 @@ test("sitemap publishes room routes only for the production-facing room mode", a
       PRODUCTION_SITE_URL: "https://anish-shah-is.online",
       PUBLIC_CONTENT_MODE: "d1_kv_required",
       PLAY_EXPERIENCE_MODE: "my-room-2001",
+      TRAVEL_ATLAS_MODE: "atlas-v1",
     };
     assert.deepEqual(await sitemap(), []);
   } finally {
     globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
+  }
+});
+
+test("production sitemap publishes only ready active Travel trip URLs", async () => {
+  const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+  const sitemap = (await import("../app/sitemap.ts")).default;
+  const snapshot = await previewTravelAtlas();
+  const production = {
+    DEPLOYMENT_TIER: "production",
+    SITE_URL: "https://anish-shah-is.online",
+    PRODUCTION_SITE_URL: "https://anish-shah-is.online",
+    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    TRAVEL_ATLAS_MODE: "atlas-v1",
+  };
+  const databaseFor = (activeSnapshot) => ({
+    prepare(query) {
+      return {
+        async first() {
+          if (!query.includes("FROM travel_publication_state")) return null;
+          return activeSnapshot
+            ? {
+                snapshotJson: JSON.stringify(activeSnapshot),
+                contentHash: activeSnapshot.contentHash,
+              }
+            : null;
+        },
+      };
+    },
+  });
+  const tripUrlsFrom = (entries) =>
+    entries
+      .map(({ url }) => url)
+      .filter((url) => new URL(url).pathname.startsWith("/play/travel/trips/"))
+      .sort();
+  const tripEntriesFrom = (entries) =>
+    entries.filter(({ url }) =>
+      new URL(url).pathname.startsWith("/play/travel/trips/"),
+    );
+
+  try {
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      ...production,
+      DB: databaseFor(snapshot),
+    };
+    const published = await sitemap();
+    assert.deepEqual(
+      tripUrlsFrom(published),
+      snapshot.trips
+        .map(
+          ({ slug }) =>
+            `https://anish-shah-is.online/play/travel/trips/${encodeURIComponent(slug)}`,
+        )
+        .sort(),
+    );
+    assert.ok(
+      tripEntriesFrom(published).every(
+        ({ lastModified }) =>
+          lastModified?.toISOString() === snapshot.publishedAt,
+      ),
+    );
+
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      ...production,
+      TRAVEL_ATLAS_MODE: "disabled",
+      DB: databaseFor(snapshot),
+    };
+    assert.deepEqual(tripUrlsFrom(await sitemap()), []);
+
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      ...production,
+      DB: databaseFor(null),
+    };
+    assert.deepEqual(tripUrlsFrom(await sitemap()), []);
+
+    for (const environment of [
+      {
+        DEPLOYMENT_TIER: "staging",
+        SITE_URL: "https://staging.anish-shah-is.online",
+        PUBLIC_CONTENT_MODE: "d1_kv_required",
+      },
+      {
+        DEPLOYMENT_TIER: "preview",
+        PREVIEW_PR_NUMBER: "42",
+        SITE_URL: "https://pr-42.anish-shah-is.online",
+        PUBLIC_CONTENT_MODE: "static_preview",
+      },
+    ]) {
+      globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+        ...production,
+        ...environment,
+        DB: databaseFor(snapshot),
+      };
+      assert.deepEqual(await sitemap(), [], environment.DEPLOYMENT_TIER);
+    }
+  } finally {
+    if (previous === undefined) delete globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+    else globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
   }
 });
 
@@ -535,6 +656,88 @@ test("preview blocks provider frames and serves only neutral artwork", async () 
     await artwork?.text(),
     /open\.spotify\.com|i\.scdn\.co|myanimelist|hardcover|steam|strava/i,
   );
+});
+
+test("preview Travel media is read-only and closed to the exact synthetic fixture", async () => {
+  const origin = "https://pr-42.anish-shah-is.online";
+  const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+  globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+    DEPLOYMENT_TIER: "preview",
+    PREVIEW_PR_NUMBER: "42",
+    SITE_URL: origin,
+    PRODUCTION_SITE_URL: "https://anish-shah-is.online",
+    PUBLIC_CONTENT_MODE: "static_preview",
+    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    TRAVEL_ATLAS_MODE: "atlas-v1",
+  };
+  try {
+    const fixture = await previewTravelAtlas();
+    const photo = fixture.trips.flatMap((trip) => trip.photos)[0];
+    assert.ok(photo, "preview fixture must contain a photo");
+    const pathname =
+      `/api/travel-media/${photo.id}/480/${photo.mediaDigest}`;
+    const request = new Request(`${origin}${pathname}`);
+
+    assert.equal(
+      hostedDeploymentBoundaryResponse(request, "preview"),
+      null,
+      "the route projector, not a blanket Worker response, authorizes Travel media",
+    );
+    assert.equal(
+      hostedDeploymentBoundaryResponse(
+        new Request(`${origin}${pathname}`, { method: "HEAD" }),
+        "preview",
+      ),
+      null,
+    );
+    for (const method of ["POST", "PUT", "DELETE"]) {
+      const blocked = hostedDeploymentBoundaryResponse(
+        new Request(`${origin}${pathname}`, { method }),
+        "preview",
+      );
+      assert.equal(blocked?.status, 405, method);
+      assert.equal(blocked?.headers.get("allow"), "GET, HEAD", method);
+    }
+
+    assert.equal(
+      snapshotContainsPhoto(fixture, photo.id, photo.mediaDigest),
+      true,
+    );
+    assert.equal(
+      snapshotContainsPhoto(
+        fixture,
+        "photo_not_in_fixture",
+        photo.mediaDigest,
+      ),
+      false,
+    );
+    assert.equal(
+      snapshotContainsPhoto(fixture, photo.id, "f".repeat(64)),
+      false,
+    );
+
+    const [routeSource, httpSource, mediaSource] = await Promise.all([
+      readFile(
+        new URL(
+          "../app/api/travel-media/[photoId]/[variant]/[digest]/route.ts",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+      readFile(new URL("../lib/server/travel/http.ts", import.meta.url), "utf8"),
+      readFile(new URL("../lib/server/travel/media.ts", import.meta.url), "utf8"),
+    ]);
+    assert.match(routeSource, /export async function GET/);
+    assert.match(routeSource, /export async function HEAD/);
+    assert.match(httpSource, /variant === "480"[\s\S]*variant === "960"[\s\S]*variant === "1920"/);
+    assert.match(httpSource, /\^\[a-f0-9\]\{64\}\$/);
+    assert.match(
+      mediaSource,
+      /snapshotContainsPhoto\(fixture, input\.photoId, input\.digest\)/,
+    );
+  } finally {
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
+  }
 });
 
 test("preview cleanup can detach only its exact domain and Worker pair", () => {
@@ -930,6 +1133,7 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.match(runner, /"tests\/browser\/public-quality\.spec\.mjs"/);
   assert.match(runner, /const roomShardCount = 5;/);
   assert.match(runner, /"tests\/browser\/room-quality\.spec\.mjs"/);
+  assert.match(runner, /"tests\/browser\/travel-atlas\.spec\.mjs"/);
   assert.match(runner, /"--fully-parallel"/);
   assert.match(runner, /`--shard=\$\{shard\}\/\$\{roomShardCount\}`/);
   assert.match(runner, /BROWSER_QUALITY_PORT: String\(port\)/);
@@ -1058,7 +1262,7 @@ test("browser quality isolates workerd lifecycles without weakening review evide
       ]),
     );
   }
-  assert.equal(complete.length, 43);
+  assert.equal(complete.length, 44);
   assert.equal(partitioned.length, complete.length);
   assert.equal(new Set(partitioned).size, partitioned.length);
   assert.deepEqual([...partitioned].sort(), [...complete].sort());

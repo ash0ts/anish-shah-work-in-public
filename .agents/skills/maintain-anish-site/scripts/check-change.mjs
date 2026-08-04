@@ -289,12 +289,12 @@ const authOrOAuthChanged = paths.some((value) =>
 const securityTestChanged = paths.some(
   (value) =>
     !deleted.has(value) &&
-    /^tests\/(?:backend|security|cloudflare|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
+    /^tests\/(?:backend|security|cloudflare|travel-(?:backend|security)|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
 );
 const securityTestsDeleted = paths.filter(
   (value) =>
     deleted.has(value) &&
-    /^tests\/(?:backend|security|cloudflare|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
+    /^tests\/(?:backend|security|cloudflare|travel-(?:backend|security)|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
 );
 if (securityTestsDeleted.length > 0 && !securityTestChanged) {
   violations.push(
@@ -390,6 +390,16 @@ const backendChanged = paths.some((value) =>
   ]),
 );
 const migrationChanged = paths.some((value) => /^drizzle\//.test(value));
+const travelChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^app\/(?:api\/studio\/travel|api\/travel(?:-media)?|studio\/travel|play\/travel)\//,
+    /^components\/play\/travel\//,
+    /^lib\/(?:server\/)?travel\//,
+    /^public\/assets\/travel\//,
+    /^scripts\/travel\//,
+    /^types\/travel\.ts$/,
+  ]),
+);
 const securityOrReleaseChanged = paths.some((value) =>
   matchesAny(value, [
     /^worker\//,
@@ -509,6 +519,13 @@ if (backendChanged) {
 }
 if (migrationChanged) {
   addCheck("npm run db:local:migrate:clean");
+}
+if (travelChanged) {
+  addCheck("npm run travel:geography:check");
+  addCheck("npm run test:backend");
+  addCheck("npm run test:rendered");
+  addCheck("npm run db:local:migrate:clean");
+  addCheck("npm run validate:browser");
 }
 if (securityOrReleaseChanged) {
   addCheck("npm run typecheck");

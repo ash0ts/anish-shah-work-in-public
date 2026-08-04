@@ -26,6 +26,7 @@ export const PLAY_OBJECT_LANGUAGE = {
   collect: { category: "Collect", objectName: "Record crate" },
   play: { category: "Games", objectName: "Computer" },
   move: { category: "Move", objectName: "Treadmill" },
+  travel: { category: "Travel", objectName: "Globe" },
 } as const;
 
 const PROFILE_BUDGETS = {
@@ -56,10 +57,10 @@ function profileForField(surface: string, key: string): CopyVoiceProfile {
     if (key === "role-summary") return "work-role-summary";
     return "role";
   }
-  if (surface === "play" && /^(?:watch|read|listen|collect|play|move)-title$/u.test(key)) {
+  if (surface === "play" && /^(?:watch|read|listen|collect|play|move|travel)-title$/u.test(key)) {
     return "play-object-title";
   }
-  if (surface === "play" && /^(?:watch|read|listen|collect|play|move)-description$/u.test(key)) {
+  if (surface === "play" && /^(?:watch|read|listen|collect|play|move|travel)-description$/u.test(key)) {
     return "play-object-description";
   }
   if (key === "seo-title" || key === "default-title" || key === "title-template") {

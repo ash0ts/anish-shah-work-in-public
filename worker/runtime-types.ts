@@ -2,11 +2,13 @@ export interface WorkerEnv {
   ASSETS: Fetcher;
   DB?: D1Database;
   PUBLICATION_CACHE?: KVNamespace;
+  TRAVEL_MEDIA?: R2Bucket;
   OWNER_RATE_LIMITER?: RateLimitBinding;
   ARTWORK_RATE_LIMITER?: RateLimitBinding;
   PROMOTION_RATE_LIMITER?: RateLimitBinding;
   OAUTH_CALLBACK_RATE_LIMITER?: RateLimitBinding;
   SIMULATION_RATE_LIMITER?: RateLimitBinding;
+  TRAVEL_MEDIA_RATE_LIMITER?: RateLimitBinding;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -42,6 +44,7 @@ export interface WorkerEnv {
   SIMULATION_GATEWAY_BYOK_ALIAS?: string;
   SIMULATION_LOCAL_ANTHROPIC_API_KEY?: string;
   SIMULATION_DAILY_MODEL_LIMIT?: string;
+  TRAVEL_ATLAS_MODE?: string;
 }
 
 export interface WorkerExecutionContext {

@@ -29,16 +29,20 @@ Assets in scope include:
 
 - provider credentials, OAuth state, and owner write authority;
 - unpublished editorial state and sanitized connector snapshots;
+- private Travel drafts and metadata-free masters, approximate public geography, and active-snapshot media authorization;
+- Simulation sessions, budgets, provider approvals, and the non-retention boundary for visitor/model text;
 - D1/KV publication integrity;
 - the boundary between private source material and public content; and
 - the plain-text copy deck as untrusted contributor input.
 
 Assume anonymous clients can send arbitrary headers, paths, query strings,
-bodies, artwork keys, callbacks, and request volume. Primary threats are forged
+bodies, artwork or Travel-media keys, callbacks, hostile image containers,
+oversized/chunked uploads, prompt injection, and request volume. Primary threats are forged
 identity, cross-origin owner writes, OAuth disclosure or replay, unsafe provider
-or copywriter input reaching public output, arbitrary artwork proxying, XSS,
-framing, publication fallback restoring hidden records, dependency compromise,
-and accidental secret/private-data commits.
+or copywriter input reaching public output, arbitrary artwork or R2 proxying,
+EXIF/GPS disclosure, image polyglots and pixel bombs, stale cached photos after
+unpublication, unsafe model output, XSS, framing, publication fallback restoring
+hidden records, dependency compromise, and accidental secret/private-data commits.
 
 Cloudflare Access is the edge gate, not the only authorization check. The
 Worker validates Access JWT signature, issuer, audience, expiry, and identity;
@@ -73,7 +77,11 @@ through the incident runbook.
   encryption, or write capability.
 - The production connector encryption key is durable state. Loss requires
   reconnecting providers; suspected compromise requires revocation and a
-  planned full credential reset.
+  planned credential reset.
+- Production Travel media stays in the private `TRAVEL_MEDIA` R2 bucket. Never
+  copy masters between local, staging, and production, expose R2 object keys,
+  or use a public bucket/domain. Unpublishing is the immediate access-control
+  response; verified deletion of derived media and draft state is the follow-up.
 
 Follow [Incidents](./docs/operations/incidents.md) for containment,
 [Rollback](./docs/operations/rollback.md) for Worker or D1 recovery, and

@@ -50,6 +50,13 @@
       "when": 1785862291147,
       "tag": "0006_public_model_simulation",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1785864095741,
+      "tag": "0007_travel_atlas",
+      "breakpoints": true
     }
   ]
 }

@@ -42,10 +42,10 @@ test("0006 has coherent Drizzle lineage and introduces only Simulation state", a
     ),
   ]);
 
-  assert.deepEqual(journal.entries.at(-1), {
+  assert.deepEqual(journal.entries[6], {
     idx: 6,
     version: "6",
-    when: journal.entries.at(-1).when,
+    when: journal.entries[6].when,
     tag: "0006_public_model_simulation",
     breakpoints: true,
   });
@@ -74,12 +74,12 @@ test("0006 has coherent Drizzle lineage and introduces only Simulation state", a
 
 test("0006 upgrades a populated 0005 database without changing existing state", async () => {
   const migrations = await orderedMigrations();
-  assert.equal(migrations.at(-1), "0006_public_model_simulation.sql");
+  assert.equal(migrations[6], "0006_public_model_simulation.sql");
 
   const database = new DatabaseSync(":memory:");
   try {
     database.exec("PRAGMA foreign_keys = ON");
-    await apply(database, migrations.slice(0, -1));
+    await apply(database, migrations.slice(0, 6));
     database
       .prepare(
         "INSERT INTO maintenance_state (key, status, details_json, checked_at) VALUES (?, ?, ?, ?)",
@@ -92,7 +92,7 @@ test("0006 upgrades a populated 0005 database without changing existing state", 
       .run("fixture", "ciphertext", "iv", "Upgrade fixture");
 
     const tablesBefore = schemaNames(database, "table");
-    await apply(database, [migrations.at(-1)]);
+    await apply(database, [migrations[6]]);
     const tablesAfter = schemaNames(database, "table");
 
     assert.deepEqual(

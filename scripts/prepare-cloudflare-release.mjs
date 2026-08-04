@@ -5,7 +5,9 @@ import {
   PUBLIC_CLOUDFLARE_ACCOUNT_ID,
   PUBLIC_SITE_ORIGIN,
   requiredHostedPlayExperienceMode,
+  PRODUCTION_TRAVEL_MEDIA_BUCKET,
 } from "./lib/release-config-contract.mjs";
+import { safeGeneratedWorkerBase } from "./lib/hosted-config-contract.mjs";
 
 const root = process.cwd();
 const generatedConfigPath = resolve(root, "dist/server/wrangler.json");
@@ -118,6 +120,10 @@ if (
     "Production simulation must be disabled/authored-only or campaign-v1/live.",
   );
 }
+const travelAtlasMode = process.env.TRAVEL_ATLAS_MODE?.trim() || "disabled";
+if (travelAtlasMode !== "disabled" && travelAtlasMode !== "atlas-v1") {
+  throw new Error("TRAVEL_ATLAS_MODE must be disabled or atlas-v1.");
+}
 const releaseSha = required("RELEASE_VALIDATED_SHA").toLowerCase();
 if (!/^[a-f0-9]{40}$/.test(releaseSha)) {
   throw new Error("RELEASE_VALIDATED_SHA must be an exact 40-character commit SHA.");
@@ -131,7 +137,9 @@ const publicBundle = JSON.parse(
 if (!/^[a-f0-9]{16}$/.test(publicBundle.contentVersion)) {
   throw new Error("The public content bundle has an invalid content version.");
 }
-const config = JSON.parse(await readFile(generatedConfigPath, "utf8"));
+const config = safeGeneratedWorkerBase(
+  JSON.parse(await readFile(generatedConfigPath, "utf8")),
+);
 config.name = "anish-shah-work-in-public";
 config.topLevelName = config.name;
 config.account_id = PUBLIC_CLOUDFLARE_ACCOUNT_ID;
@@ -152,6 +160,13 @@ config.kv_namespaces = [
     id: publicationKvId,
   },
 ];
+config.r2_buckets = [
+  {
+    binding: "TRAVEL_MEDIA",
+    bucket_name: PRODUCTION_TRAVEL_MEDIA_BUCKET,
+  },
+];
+config.images = { binding: "IMAGES" };
 config.ratelimits = [
   {
     name: "OWNER_RATE_LIMITER",
@@ -178,6 +193,11 @@ config.ratelimits = [
     namespace_id: "88001005",
     simple: { limit: 12, period: 60 },
   },
+  {
+    name: "TRAVEL_MEDIA_RATE_LIMITER",
+    namespace_id: "88001006",
+    simple: { limit: 180, period: 60 },
+  },
 ];
 config.vars = {
   AUTH_MODE: "cloudflare_access",
@@ -197,6 +217,7 @@ config.vars = {
   SIMULATION_AI_MODE: simulationAiMode,
   SIMULATION_PROVIDER: "anthropic",
   SIMULATION_MODEL: "claude-sonnet-5",
+  TRAVEL_ATLAS_MODE: travelAtlasMode,
 };
 config.observability = {
   enabled: true,
