@@ -35,6 +35,7 @@ export ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/anish-runner/job-started-hook.sh
   --url "$repository" \
   --token "$token" \
   --name "${label}-${instance_id}-${architecture_label}" \
+  --work /home/runner/_work \
   --labels "self-hosted,linux,${architecture_label},${label}" \
   --no-default-labels \
   --ephemeral \

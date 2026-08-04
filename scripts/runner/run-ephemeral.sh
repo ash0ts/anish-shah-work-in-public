@@ -36,7 +36,6 @@ esac
 arguments=(
   run
   --rm
-  --init
   --interactive
   --name "${label}-${instance_id}-${architecture}"
   --platform "$platform"

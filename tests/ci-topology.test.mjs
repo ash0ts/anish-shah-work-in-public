@@ -258,6 +258,7 @@ test("disposable runner images pin and verify every downloaded runtime", async (
   assert.equal((dockerfile.match(/sha256sum --check --strict/gu) ?? []).length, 2);
   assert.match(entrypoint, /--ephemeral/u);
   assert.match(entrypoint, /--disableupdate/u);
+  assert.match(entrypoint, /--work \/home\/runner\/_work/u);
   assert.match(entrypoint, /--no-default-labels/u);
   assert.match(entrypoint, /self-hosted,linux,\$\{architecture_label\},\$\{label\}/u);
   assert.match(entrypoint, /RUNNER_INSTANCE_ID/u);
@@ -280,6 +281,7 @@ test("disposable runner images pin and verify every downloaded runtime", async (
   assert.doesNotMatch(`${dockerfile}\n${run}`, /sudo|--privileged/u);
   assert.match(run, /--cap-drop ALL/u);
   assert.match(run, /--security-opt no-new-privileges/u);
+  assert.doesNotMatch(run, /--init/u);
   assert.match(run, /--cpus 4/u);
   assert.match(run, /--memory 10g/u);
   assert.match(run, /--pids-limit 512/u);
