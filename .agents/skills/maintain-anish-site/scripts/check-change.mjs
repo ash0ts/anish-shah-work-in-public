@@ -6,11 +6,12 @@ import path from "node:path";
 import { verifyAttestedArtifacts } from "./content-attestation-policy.mjs";
 import { scanSensitiveContent } from "./sensitive-content.mjs";
 
-const HELP = `Usage: node check-change.mjs [--plan | --run | --full] [--path <repo-relative-path>]...
+const HELP = `Usage: node check-change.mjs [--plan | --run | --full] [--base <git-ref>] [--path <repo-relative-path>]...
 
   --plan   Print guardrails and selected checks (default).
   --run    Run checks selected from changed paths.
   --full   Run the complete repository validation gate.
+  --base   Include committed changes from the merge-base with this ref through HEAD.
   --path   Classify an explicit safe fixture path instead of reading git state.
 `;
 
@@ -22,6 +23,7 @@ function fail(message) {
 let mode = "plan";
 let explicitMode = false;
 const fixturePaths = [];
+let baseRef = null;
 const argumentsList = process.argv.slice(2);
 for (let index = 0; index < argumentsList.length; index += 1) {
   const argument = argumentsList[index];
@@ -42,6 +44,17 @@ for (let index = 0; index < argumentsList.length; index += 1) {
     index += 1;
     continue;
   }
+  if (argument === "--base") {
+    const value = argumentsList[index + 1];
+    if (!value || value.startsWith("--")) fail("--base requires a Git ref.");
+    if (baseRef !== null) fail("Provide --base only once.");
+    if (/^[\s-]|[\u0000-\u001f\u007f]/u.test(value)) {
+      fail("--base must be a safe Git ref, not an option or control string.");
+    }
+    baseRef = value;
+    index += 1;
+    continue;
+  }
   fail(`Unknown argument: ${argument}`);
 }
 
@@ -58,6 +71,19 @@ function runGit(args, { allowFailure = false } = {}) {
 
 const root = runGit(["rev-parse", "--show-toplevel"]).stdout.trim();
 if (!root) fail("Run this helper inside the anish-site Git repository.");
+if (baseRef !== null && fixturePaths.length > 0) {
+  fail("Use either --base or --path fixtures, not both.");
+}
+
+const baseCommit =
+  baseRef === null
+    ? null
+    : runGit([
+        "rev-parse",
+        "--verify",
+        "--end-of-options",
+        `${baseRef}^{commit}`,
+      ]).stdout.trim();
 
 function normalizeRelativePath(value) {
   const normalized = path.posix.normalize(value.replaceAll("\\", "/"));
@@ -83,6 +109,16 @@ function lines(result) {
 function changedPaths() {
   if (fixturePaths.length) return fixturePaths.map(normalizeRelativePath);
   const values = [
+    ...(baseCommit
+      ? lines(
+          runGit([
+            "diff",
+            "--name-only",
+            "--diff-filter=ACMRD",
+            `${baseCommit}...HEAD`,
+          ]),
+        )
+      : []),
     ...lines(runGit(["diff", "--name-only", "--diff-filter=ACMRD"])),
     ...lines(runGit(["diff", "--cached", "--name-only", "--diff-filter=ACMRD"])),
     ...lines(runGit(["ls-files", "--others", "--exclude-standard"])),
@@ -94,6 +130,16 @@ function deletedPaths() {
   if (fixturePaths.length) return new Set();
   return new Set(
     [
+      ...(baseCommit
+        ? lines(
+            runGit([
+              "diff",
+              "--name-only",
+              "--diff-filter=D",
+              `${baseCommit}...HEAD`,
+            ]),
+          )
+        : []),
       ...lines(runGit(["diff", "--name-only", "--diff-filter=D"])),
       ...lines(runGit(["diff", "--cached", "--name-only", "--diff-filter=D"])),
     ].map(normalizeRelativePath),
@@ -260,6 +306,7 @@ if ((ownerRouteChanged || authOrOAuthChanged) && !securityTestChanged) {
 }
 
 const checks = [];
+const domains = new Set();
 function addCheck(command) {
   if (!checks.includes(command)) checks.push(command);
 }
@@ -273,6 +320,48 @@ const contentChanged = paths.some((value) =>
     /^types\/content/,
   ]),
 );
+const copyChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^content\/copy\//,
+    /^lib\/(?:copy|copy-contract|copy-ownership)\.ts$/,
+    /^lib\/server\/(?:copy-ownership|root-metadata)\.ts$/,
+    /^scripts\/(?:generate-copy-deck|copy-deck-diff|copy-only-lane|capture-copy-preview)\.mjs$/,
+    /^scripts\/lib\/(?:copy-deck|copy-only-lane)\.mjs$/,
+    /^types\/copy\.ts$/,
+  ]),
+);
+const docsChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^README\.md$/,
+    /^CONTRIBUTING\.md$/,
+    /^SECURITY\.md$/,
+    /^docs\//,
+    /^content\/README\.md$/,
+  ]),
+);
+const localDxChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^\.env\.example$/,
+    /^scripts\/(?:setup-local|doctor)\.mjs$/,
+    /^scripts\/lib\/local-dx\.mjs$/,
+    /^tests\/local-dx\.test\.mjs$/,
+  ]),
+);
+const docsToolingChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^scripts\/check-docs\.mjs$/,
+    /^scripts\/lib\/docs-check\.mjs$/,
+    /^tests\/docs-check\.test\.mjs$/,
+  ]),
+);
+const skillToolingChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^scripts\/validate-repository-skills\.mjs$/,
+    /^tests\/repository-skills\.test\.mjs$/,
+  ]),
+);
+const developerExperienceChanged =
+  localDxChanged || docsToolingChanged || skillToolingChanged;
 const uiChanged = paths.some((value) =>
   matchesAny(value, [
     /^app\/(?!api\/)/,
@@ -314,9 +403,11 @@ const securityOrReleaseChanged = paths.some((value) =>
 const dependencyChanged = paths.some((value) =>
   /^(?:package\.json|package-lock\.json|vite\.config\.|tsconfig\.|next\.config\.)/.test(value),
 );
-const skillChanged = paths.some(
-  (value) => value === "AGENTS.md" || value.startsWith(".agents/skills/"),
-);
+const skillChanged =
+  skillToolingChanged ||
+  paths.some(
+    (value) => value === "AGENTS.md" || value.startsWith(".agents/skills/"),
+  );
 const responsivePlayChanged = paths.some((value) =>
   matchesAny(value, [
     /^components\/(?:PersonalStreams|SpotifyStream|spotify\/|play\/)/,
@@ -330,9 +421,20 @@ const releaseChanged = paths.some((value) =>
     /^scripts\/deployable-artifact-manifest\.mjs$/,
     /^scripts\/lib\/release(?:-[a-z0-9]+)*-contract\.mjs$/,
     /^scripts\/lib\/deployable-artifact-contract\.mjs$/,
-    /^docs\/operations\/release\.md$/,
   ]),
 );
+
+if (contentChanged) domains.add("canonical-content");
+if (copyChanged) domains.add("copy-deck");
+if (docsChanged) domains.add("documentation");
+if (uiChanged) domains.add("public-ui");
+if (connectorChanged) domains.add("connectors");
+if (backendChanged) domains.add("backend-storage");
+if (migrationChanged) domains.add("migration");
+if (securityOrReleaseChanged) domains.add("security-release");
+if (dependencyChanged) domains.add("dependencies-build");
+if (skillChanged) domains.add("agent-maintenance");
+if (developerExperienceChanged) domains.add("developer-experience");
 
 const deletedReleaseGuard = paths.find(
   (value) =>
@@ -353,6 +455,31 @@ if (contentChanged) {
   addCheck("npm run content:attest");
   addCheck("npm run test:content");
   addCheck("npm run typecheck");
+}
+if (copyChanged) {
+  addCheck("npm run copy:check");
+  addCheck("npm run copy:test");
+  addCheck(
+    baseRef === null
+      ? "npm run copy:diff"
+      : `npm run copy:diff -- --base ${baseCommit}`,
+  );
+  addCheck("npm run typecheck");
+  addCheck("npm run build");
+  addCheck("npm run test:rendered");
+  addCheck("npm run validate:browser");
+}
+if (docsChanged) {
+  addCheck("npm run docs:check");
+}
+if (localDxChanged) {
+  addCheck("npm run test:local-dx");
+  addCheck("npm run lint");
+}
+if (docsToolingChanged) {
+  addCheck("npm run docs:check");
+  addCheck("npm run test:local-dx");
+  addCheck("npm run lint");
 }
 if (uiChanged) {
   addCheck("npm run typecheck");
@@ -381,12 +508,20 @@ if (securityOrReleaseChanged) {
 }
 if (dependencyChanged) {
   checks.length = 0;
-  addCheck("npm run lint");
-  addCheck("npm test");
-  addCheck("npm run security:audit");
+  addCheck("npm run validate");
+  if (copyChanged) {
+    addCheck(
+      baseRef === null
+        ? "npm run copy:diff"
+        : `npm run copy:diff -- --base ${baseCommit}`,
+    );
+    addCheck("npm run validate:browser");
+  } else if (responsivePlayChanged) {
+    addCheck("npm run validate:browser");
+  }
 }
 if (skillChanged) {
-  notes.push("Validate changed skills with skill-creator's quick_validate.py before handoff.");
+  addCheck("npm run skill:validate");
   addCheck("npm run test:maintenance-skill");
 }
 if (responsivePlayChanged) {
@@ -394,8 +529,23 @@ if (responsivePlayChanged) {
 }
 if (releaseChanged) {
   checks.length = 0;
-  addCheck("npm run validate:release");
-  notes.push("Release validation never deploys, migrates production, rotates credentials, or mutates Git.");
+  addCheck("npm run validate");
+  if (copyChanged) {
+    addCheck(
+      baseRef === null
+        ? "npm run copy:diff"
+        : `npm run copy:diff -- --base ${baseCommit}`,
+    );
+    addCheck("npm run validate:browser");
+  } else if (responsivePlayChanged) {
+    addCheck("npm run validate:browser");
+  }
+  notes.push(
+    "This validates release-code changes only. Run validate:release separately only for a clean, pushed, explicitly approved production candidate with exact-SHA workflow evidence.",
+  );
+  notes.push(
+    "The maintenance helper never deploys, migrates a hosted database, rotates credentials, or mutates Git.",
+  );
 }
 
 if (mode === "full") {
@@ -408,6 +558,13 @@ console.log("Maintenance change plan");
 console.log(`Repository: ${root}`);
 console.log(`Paths: ${paths.length}`);
 for (const value of paths) console.log(`  - ${value}`);
+console.log(`Base: ${baseRef === null ? "working tree" : `${baseRef} (${baseCommit})`}`);
+console.log("Domains:");
+if (domains.size) {
+  for (const domain of [...domains].sort()) console.log(`  - ${domain}`);
+} else {
+  console.log("  - none");
+}
 
 if (violations.length) {
   console.error("\nGuardrail violations:");

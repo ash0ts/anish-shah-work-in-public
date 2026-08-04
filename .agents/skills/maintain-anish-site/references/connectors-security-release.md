@@ -1,65 +1,49 @@
-# Connectors, Security, and Release
+# Connectors, Security, Environments, and Release
 
 ## Provider Model
 
-- MyAnimeList and Spotify use owner-only OAuth with separate local and production applications.
-- Discogs uses owner-only OAuth 1.0a with separate local and production applications; its public physical-media catalog is review-gated, text-only, refreshable after four hours, and unavailable after six.
-- Hardcover uses an owner API token.
-- Steam uses a Web API key plus SteamID64 and requires a truthful storage-country setting.
-- Strava stores a validated public profile and optional official embed through `lib/server/strava-config.ts`; it is not part of the generic `ConnectorProvider` repository.
-- Public connector JSON must pass the provider-specific allowlist in `lib/server/connectors/public-payload-policy.ts`.
-- Provider artwork uses host-free stored references resolved by the publication-aware artwork endpoint. Never expose or accept an arbitrary remote image proxy.
+- MyAnimeList and Spotify use owner-only OAuth 2 with separate applications per live environment.
+- Discogs uses OAuth 1.0a HMAC-SHA1, server nonces/timestamps, owner-bound request transactions, exact callbacks, and separate applications. Its text-first catalog refreshes after four hours and becomes unavailable after six.
+- Hardcover uses an owner API token. Steam uses API key plus SteamID64 and a truthful storage-country gate.
+- Strava stores a validated public profile and optional official embed separately from the generic connector repository.
+- Every provider publishes through an exact runtime projector. No raw payload, standalone account identifier, credential, or arbitrary remote artwork URL enters public JSON.
+- Provider artwork resolves only host-free allowlisted keys from a currently published snapshot.
 
-## Owner Write Pattern
+## Owner and OAuth Pattern
 
-For a JSON owner mutation:
+Owner JSON writes reject cross-origin requests, verify Access plus exact owner allowlist, parse a bounded body, reject unknown fields, and return sanitized `private, no-store` responses. New mutations live under `/api/studio/**`.
 
-1. Reject cross-origin writes with `rejectCrossOriginWrite(request)`.
-2. Authorize the verified owner with `authorizeOwnerApi()`.
-3. Read JSON with `readBoundedJsonBody()` and an endpoint-specific byte limit.
-4. Validate an exact object shape and reject unknown or secret-bearing public fields.
-5. Return `private, no-store` and sanitized errors.
+OAuth callbacks are public only because providers must reach them. Require exact environment callback, encrypted owner binding, ten-minute expiry, single use, replay protection, safe fixed redirects, proactive token refresh, and sanitized failure states. Never log URL/query data, identities, codes, verifiers, signatures, tokens, or provider payloads.
 
-Create canonical mutations under `/api/studio/**`. Existing `/api/connectors/**` credential, refresh, OAuth-start, and Strava-config routes are compatibility redirects; do not use them in new client code.
+## Four-Tier Isolation
 
-OAuth callbacks remain public because providers must reach them. Bind each callback to encrypted, owner-bound, single-use state with a ten-minute expiry, exact redirect URI, replay protection, fixed safe Studio redirects, token refresh/rotation, and sanitized failure states. Never include codes or tokens in logs, audit details, redirects, or client bundles.
+- Local: loopback-only owner fallback, local D1/secrets, no hosted identity assumptions.
+- PR preview: synthetic sanitized fixtures, no D1/KV/Studio/OAuth/provider network/cron/secrets, Access-protected and globally noindexed.
+- Staging: dedicated Worker, D1, KV, rate limits, Access audience, secrets, callbacks, and provider registrations. It never imports production state.
+- Production: apex-only host, production D1/KV/Access/secrets, and exact-SHA release guard.
+- Private Sites deployment: reference/recovery only; it is not a production rollback target.
 
-## Local and Production Isolation
+Local promotion may transfer only reviewed, explicitly portable provider setup over HTTPS. It never transfers snapshots, encryption keys, OAuth-provider credentials/tokens, or publication approvals. No staging/production transfer exists.
 
-- Local Studio runs on loopback with local D1 and a local-only encryption key.
-- Production Studio requires a verified Cloudflare Access JWT and an exact match in `OWNER_EMAILS`.
-- Never set `LOCAL_OWNER_EMAIL` in hosted environments.
-- Never copy local D1 state or replace the production encryption key.
-- The one-time promotion flow may transfer reviewed Hardcover, Steam, and Strava setup over HTTPS. It never transfers snapshots, local encryption, MyAnimeList credentials/tokens, Spotify credentials/tokens, Discogs credentials/tokens, or OAuth-provider publication approval.
-- Reauthorize MyAnimeList, Spotify, and Discogs separately in production against their exact production callbacks.
+## Publication, Retention, and Disconnect
 
-## Publication and Deletion
+- D1 commits validated publication state; versioned `PUBLICATION_CACHE` KV advances only after D1 succeeds. If both are unavailable/invalid in production, return a noindexed `503`, never the checked-in bundle.
+- Preserve last-known-good connector data only within provider-specific windows.
+- Disconnect deletes provider credentials/config, snapshots, pending OAuth state, sync history, and provider audit records, then unpublishes.
+- Third-party frames remain consent-gated and CSP allowlists exact.
+- Update Privacy and tests whenever retrieval, storage, retention, disclosure, or deletion changes.
 
-- Publish only sanitized snapshots and retain the provider-specific bounded history.
-- Direct production commits the active publication in D1 and advances a
-  versioned `PUBLICATION_CACHE` KV pointer only after D1 succeeds. Invalid or
-  unavailable D1 and KV state returns a noindexed `503`, never the full static
-  bundle.
-- Preserve last-known-good data only within its documented stale/publication window.
-- Disconnect must delete credentials or configuration, snapshots, pending OAuth state, sync history, and provider-specific audit records, then unpublish the stream.
-- Keep third-party frames consent-gated and CSP allowlists exact.
-- Update public Privacy copy and tests when retrieval, storage, retention, disclosure, or deletion behavior changes.
+## Release Boundary
 
-## Cloudflare Release Boundary
+Hosted mutations require explicit authorization. The guarded production contract requires exact successful URLs for Validate, Gitleaks, CodeQL, and Browser Quality at the candidate SHA. Record `PLAY_EXPERIENCE_MODE`, `CONTENT_VERSION`, and `COPY_VERSION` in the release plan and attestation.
 
-Public production is the owner-controlled Cloudflare Worker with D1 and the
-versioned `PUBLICATION_CACHE` KV fallback. The existing Sites deployment stays
-private as a reference/recovery environment. Do not request workspace-admin
-access, expose a bypass token, proxy Sites publicly, or weaken either access
-policy.
+Ordinary release-code changes run `npm run validate`. Only a clean, pushed, approved candidate with required exact-SHA evidence runs `npm run validate:release`, release planning, upload, staging, or deployment.
 
-Deployment is an explicit external mutation. Perform it only when directly requested and follow `docs/operations/release.md`:
+Before an authorized release:
 
-1. Start from a reviewed clean source state.
-2. Run the complete validation gate.
-3. Prepare the generated Worker config without `LOCAL_OWNER_EMAIL` or embedded secrets, run the final bundle scan, and write the deterministic deployable-artifact manifest.
-4. Preserve the production encryption key; set secrets separately.
-5. Require every guarded mutation to recheck the exact `dist/client` and `dist/server` artifact set; apply only planned new migrations and stage the candidate at 0%.
-6. Verify health, D1/KV publication, and the release marker through the candidate version override before promotion.
-7. Smoke-test public pages logged out, protected owner routes logged out, and owner Studio while authenticated.
-8. Roll back the Worker version on failure; restore D1 separately only with explicit confirmation. Do not weaken Access or change the private Sites environment.
+1. Pin the exact source SHA and reuse one hashed, immutable `dist` through rendered/browser/Lighthouse/bundle tests and planning.
+2. Record the current Worker version and D1 Time Travel bookmark.
+3. Apply only reviewed additive migrations and stage the exact candidate at 0%.
+4. Verify D1/KV publication, both versions, canonical origin, My Room mode, `/play` plus all six object routes, owner health, Access, and connectors.
+5. Promote only through the guarded command and run the thirteen runbook smoke checks.
+6. Roll back Worker code separately from D1. Restore D1 only when proven causal and explicitly confirmed.

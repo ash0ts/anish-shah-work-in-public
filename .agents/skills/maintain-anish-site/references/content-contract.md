@@ -1,46 +1,44 @@
-# Content Contract
+# Content and Copy Contract
 
-## Authority Order
+## Canonical Authority
 
-1. Four immutable CSV/Markdown source files live one directory above the repository.
-2. `content/curation/content-v1.1.json` records stable observation IDs, aliases, relations, corrections, and conservative canonical grouping.
-3. `content/curation/work-groups.v1.json` defines the public WorkGroup presentation layer.
-4. `content/curation/public-claim-upgrades.v1.json` records reviewed rounded claim replacements and immutable source selectors.
-5. `content/presentation/metric-groups.v1.json` orders approved public measures.
-6. `scripts/build-content.mjs` deterministically generates the owner bundle, public bundle, schema, and migration report.
-7. `content/public/anish-content.public.v1.json` is the only canonical content bundle imported by the application.
+1. Four owner-held CSV/Markdown inputs are immutable observations.
+2. `content/curation/content-v1.1.json` owns stable observations, aliases, relations, corrections, and conservative grouping.
+3. `content/curation/work-groups.v1.json` owns WorkGroup membership and structure.
+4. Reviewed claim and metric presentation files own approved rounded quantitative claims.
+5. `scripts/build-content.mjs` deterministically generates owner/public bundles, schema, report, and attestation.
+6. `content/public/anish-content.public.v1.json` is the only checked-in canonical public bundle imported by the application.
 
-Do not hand-edit generated bundles, schemas, or migration reports. Change the owning curation/presentation input or importer, then regenerate.
+Do not hand-edit generated bundles, schemas, attestations, or reports. Complete regeneration requires owner-held inputs; a clean clone can build the site but cannot truthfully recreate source migration history.
 
-## Privacy Boundary
+## Presentation Precedence
 
-- `content/private/anish-content.v1.json` is owner-only, ignored by Git, and excluded from builds and deployment.
-- Never copy exact private values, internal evidence, local paths, provider payloads, private names, raw notes, or internal URLs into public content, D1 editorial records, metadata, tests, logs, or screenshots.
-- Public impact metrics use approved display strings and explicit scope, attribution, period, qualifier, subject, and evidence.
-- Item outcome selectors may return only directly scoped metrics. Program or portfolio context requires an explicit mapping and separate label.
-- Source observations, occurrences, artifacts, translations, mirrors, and references must not inflate unique-work totals.
+1. The sanitized canonical bundle supplies facts, IDs, relations, metrics, evidence, URLs, and structure.
+2. Published D1 state controls allowlisted visibility, ordering, caveats, and owner metric wording.
+3. `content/copy/**` supplies only declared page and WorkGroup presentation fields.
 
-## Stable Identity and Grouping
+`CONTENT_VERSION` identifies canonical data. `COPY_VERSION` hashes every copy source, field contract, parser, and generator. Record both in preview metadata, owner health, release plans, and attestations.
 
-- Preserve opaque IDs when correcting a title, date, URL, or organization.
-- Preserve previous slugs as aliases and keep legacy redirects working.
-- Do not merge records by title alone. Require an exact canonical URL, an existing typed relation, or a reviewed curation override corroborated by evidence.
-- Keep source titles and observations immutable in the owner bundle. Curate separate public display and short titles.
-- Assign every archive-visible entity to one WorkGroup or document why it remains nested or context-only.
+## Copy Ownership
 
-## Content Workflow
+Copywriters may directly edit declared narrative, framing, CTA, navigation, metadata, room flavor, and non-behavioral labels. WorkGroup/profile/methodology prose is fact-check risk and requires owner verification.
 
-1. Confirm all four external inputs are present. If not, report that regeneration is unavailable; never fabricate or copy private inputs into the repository.
-2. Edit only the owning curation, presentation, or importer file.
-3. Run:
+The copy deck cannot own metrics, evidence, dates, IDs, slugs, relationships, URLs, ordering, visibility, privacy/security/legal language, provider attribution/policy, connector payloads, states, behavior, or generated data. Those belong in a proposal or linked engineering change. Use `$edit-anish-site-copy` for copy-only work.
 
-   ```bash
-   node scripts/build-content.mjs
-   npm run verify:content
-   npm run test:content
-   ```
+The parser rejects unknown/duplicate/missing headings, altered stable-ID markers, HTML, JSX, scripts, code fences, embedded links, control characters, private paths/domains, and field-length violations. Copy renders as plain React text; Markdown is never interpreted.
 
-4. Review the generated migration report and diff. Investigate changed counts, IDs, slugs, relations, exclusions, metrics, or evidence rather than accepting churn.
-5. Run privacy and rendered checks before handoff when changed content appears publicly.
+## Privacy and Attribution
 
-The checked-in public bundle enables application builds in a clean clone, but complete regeneration depends on owner-held inputs outside the repository. Treat that limitation explicitly; do not claim CI reproduces the migration from raw sources.
+- `content/private/anish-content.v1.json` and raw inputs remain owner-only, ignored, and undeployed.
+- Never expose exact private values, internal evidence, local paths, raw notes, provider payloads, private names, or internal URLs in copy, D1, metadata, tests, logs, screenshots, or previews.
+- Public metrics retain approved display strings plus scope, attribution, period, qualifier, subject, and evidence.
+- Outcome selectors show only directly scoped metrics. Program/portfolio context requires explicit mapping and a separate label.
+- Occurrences, recordings, translations, mirrors, references, and source observations cannot inflate unique-work totals.
+
+## Stable Identity and Workflow
+
+- Correcting title/date/URL never changes an opaque ID; previous slugs remain aliases.
+- Never merge on title alone. Require canonical URL, typed relation, or reviewed corroborated override.
+- Every archive-visible entity belongs to one WorkGroup or has a documented nested/context-only decision.
+- Canonical changes run the generator, content verification/tests, privacy review, and attestation review.
+- Copy changes run `copy:check`, `copy:diff -- --base <ref>`, `copy:test`, rendered checks, and affected-route browser review.

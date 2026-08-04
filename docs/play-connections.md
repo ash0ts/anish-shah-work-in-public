@@ -1,18 +1,22 @@
 # Play connections: owner setup
 
-The protected Studio connects six personal streams without putting credentials
+This is the provider setup, freshness, publication, and recovery authority for
+Play. The protected Studio connects six personal streams without putting credentials
 in source code, deployment artifacts, public APIs, or browser storage.
+
+My Room, 2001 is the public presentation. `/play` reads no connector data; each
+direct route reads only the provider shown below:
 
 ## Credential map
 
-| Stream | Provider | Obtain from provider | Enter in Studio | Verification |
-| --- | --- | --- | --- | --- |
-| Watch | MyAnimeList | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current** |
-| Read | Hardcover | Personal API token | Token, with or without `Bearer` | **Refresh now → Current** |
-| Listen | Spotify | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
-| Collect | Discogs | Consumer key and consumer secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
-| Play | Steam | Web API key and 17-digit SteamID64 | Both values | **Refresh now → Current** |
-| Move | Strava | Public athlete URL and optional cumulative feed | Athlete URL + complete generated profile-feed/summary iframe | Save; Play uses the checked feed or profile-link fallback |
+| Route | Stream | Provider | Obtain from provider | Enter in Studio | Verification |
+| --- | --- | --- | --- | --- | --- |
+| `/play/watch` | Watch | MyAnimeList | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current** |
+| `/play/read` | Read | Hardcover | Personal API token | Token, with or without `Bearer` | **Refresh now → Current** |
+| `/play/listen` | Listen | Spotify | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
+| `/play/collect` | Collect | Discogs | Consumer key and consumer secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
+| `/play/play` | Play | Steam | Web API key and 17-digit SteamID64 | Both values | **Refresh now → Current** |
+| `/play/move` | Move | Strava | Public athlete URL and optional cumulative feed | Athlete URL + complete generated profile-feed/summary iframe | Save; Play uses the checked feed or profile-link fallback |
 
 MyAnimeList is the important distinction: its developer portal correctly gives
 you a **client ID** and **client secret**. Those identify the application.
@@ -35,18 +39,18 @@ For every API-backed stream, the verification sequence is **Connect or
 authorize → Refresh now → confirm Current**. Saving a credential alone does not
 prove that the provider accepted it.
 
-## Local Studio and production Studio
+## Environment isolation
 
-Local and production are isolated on purpose:
+Local, staging, and production are isolated on purpose. PR previews contain
+synthetic fixtures and cannot connect to providers.
 
-| | Local Studio | Production Studio |
-| --- | --- | --- |
-| Address | `http://localhost:3000/studio` | `${PRODUCTION_SITE_URL}/studio` on the public Worker |
-| Identity | Loopback-only development owner | Cloudflare Access + exact owner allowlist |
-| Database | Project-local D1 in `.wrangler/state` | Owner-controlled Cloudflare D1 |
-| Encryption | Local-only key | Existing production key; do not rotate |
-| Credentials | Test credentials or a separate local registration | Re-encrypted after explicit production review |
-| Propagation | One-time server-to-server handoff | Validation publishes a sanitized snapshot |
+| | Local Studio | Staging Studio | Production Studio |
+| --- | --- | --- | --- |
+| Address | `http://localhost:3000/studio` | `https://staging.anish-shah-is.online/studio` | `https://anish-shah-is.online/studio` |
+| Identity | Loopback-only development owner | Dedicated Access audience + owner allowlist | Production Access + owner allowlist |
+| State | Project-local D1 and local key | Dedicated staging D1/KV/key | Production D1/KV/key |
+| OAuth | Local registration | Staging registration | Production registration |
+| Transfer | May stage only the portable production subset | No transfers | Owner reviews a payload staged from local |
 
 ### Start the local Studio
 
@@ -56,16 +60,18 @@ Run:
 cd "/path/to/anish-site"
 npm install --global npm@11.6.2 --ignore-scripts
 npm ci
-test -f .env.local || cp .env.example .env.local
-openssl rand -base64 32
+npm run setup:local
 ```
 
-Open `.env.local` and set:
+The bootstrap creates independent encryption and rate-limit values without
+printing them and applies owner-only file permissions. Open `.env.local` and
+set the two owner fields to the same address. Confirm these non-secret values:
 
 ```dotenv
 OWNER_EMAILS=your-owner-email@example.com
 LOCAL_OWNER_EMAIL=your-owner-email@example.com
 CONNECTOR_ENCRYPTION_KEY=<the newly generated local-only value>
+RATE_LIMIT_SALT=<the separately generated local-only value>
 STEAM_DATA_STORAGE_COUNTRIES=United States
 SITE_URL=http://localhost:3000
 PRODUCTION_SITE_URL=https://anish-shah-is.online
@@ -73,7 +79,14 @@ PRODUCTION_SITE_URL=https://anish-shah-is.online
 
 `LOCAL_OWNER_EMAIL` must exactly match an address in `OWNER_EMAILS`. Never add
 `LOCAL_OWNER_EMAIL` to production, and never replace the production encryption
-key with this local key.
+key with either local value. Full local setup and troubleshooting are owned by
+[Testing](./testing.md).
+
+After replacing both email placeholders, verify the local environment:
+
+```bash
+npm run doctor
+```
 
 Provider credentials and profile URLs are intentionally not loaded from
 `.env` or `.env.local`. Variables such as `MAL_CLIENT_ID`,
@@ -104,7 +117,7 @@ stay in the local D1 sandbox.
 
 ### Promote safely
 
-1. Validate locally with `npm run lint && npm test`.
+1. Validate locally with `npm run validate` and inspect all affected Play routes.
 2. Deploy code, migrations, and intentional non-secret settings.
 3. Open the Access-protected production Studio and select **Create one-time
    transfer code**. The code expires after ten minutes and works once.
@@ -118,7 +131,7 @@ stay in the local D1 sandbox.
    production key, and leaves existing production state unchanged for a
    provider that fails validation.
 6. Authorize MyAnimeList, Spotify, and Discogs separately with their production
-   applications, then inspect all six streams on `/play`.
+   applications, then inspect all six direct object routes.
 
 The transfer never includes MyAnimeList, Spotify, or Discogs app credentials or
 OAuth tokens; Spotify or Discogs snapshots and publication approval; any other
@@ -127,9 +140,31 @@ key. A
 staged payload expires after thirty minutes. Production does not publish it
 until the allowlisted owner applies it.
 
+The server-to-server import endpoint is intentionally outside the Studio Access
+cookie path so a loopback server can reach it. It rejects browser origins and
+cookies, is body-bounded and throttled, and authenticates the exact production
+origin and encrypted transaction with the high-entropy, single-use transfer
+code. Listing and applying a staged payload remain Access- and owner-protected.
+
+### Live staging callbacks
+
+Stable staging uses separate provider applications and these exact callbacks:
+
+```text
+https://staging.anish-shah-is.online/api/connectors/myanimelist/oauth/callback
+https://staging.anish-shah-is.online/api/connectors/spotify/oauth/callback
+https://staging.anish-shah-is.online/api/connectors/discogs/oauth/callback
+```
+
+Enter all staging credentials through staging Studio. Staging cannot issue,
+stage, or accept production promotion codes. Verify OAuth, refresh, publication
+acknowledgement, expiry/recovery, and Safari behavior there without copying any
+production credential, snapshot, D1 row, KV value, or encryption key. See the
+[staging runbook](./operations/staging-and-previews.md).
+
 ## MyAnimeList
 
-Use separate MyAnimeList API clients for local and production.
+Use separate MyAnimeList API clients for local, staging, and production.
 
 ### Local client
 
@@ -199,7 +234,8 @@ retrying—the last successful snapshot remains live.
 
 ## Spotify
 
-Use separate Spotify applications for local and production. Spotify does not
+Use separate Spotify applications for local and production. Live staging uses
+a third application bound only to staging. Spotify does not
 accept `localhost` as an OAuth redirect host; the local callback must use the
 explicit loopback address `127.0.0.1` even when Studio itself is already open
 at `localhost`.
@@ -276,7 +312,7 @@ application in production Studio.
 
 ## Discogs
 
-Use separate Discogs applications for local testing and production. Discogs
+Use separate Discogs applications for local, staging, and production. Discogs
 calls the two application values a consumer key and consumer secret.
 
 ### Local application

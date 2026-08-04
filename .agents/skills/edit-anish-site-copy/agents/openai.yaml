@@ -1,0 +1,6 @@
+interface:
+  display_name: "Edit Anish Site Copy"
+  short_description: "Safely edit the site's public copy deck"
+  default_prompt: "Use $edit-anish-site-copy to revise the requested public wording only through the approved Markdown copy deck, identify fact-check fields, and move code or protected-data requests into an implementation request."
+policy:
+  allow_implicit_invocation: true

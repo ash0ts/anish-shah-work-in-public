@@ -1,5 +1,11 @@
 # My Room, 2001 — Interactive Object Archive
 
+> **Historical design context.** This RFC records the exploration that led to
+> the shipped room. It is not the current implementation or operations
+> authority. Use [the current My Room architecture](../architecture/my-room-2001.md),
+> [testing](../testing.md), and [the release runbook](../operations/release.md)
+> for maintenance decisions.
+
 - Status: replacement implementation RFC
 - Surface: `/play` and object-specific Play routes
 - Experience: draggable fisheye low-poly room with unique object interfaces

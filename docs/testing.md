@@ -1,18 +1,107 @@
-# Testing and release gates
+# Local setup and validation
 
-## Authoritative local gate
+This is the sole authority for local setup, development servers, and validation
+selection. Release commands and production smoke tests belong only in the
+[production runbook](./operations/release.md).
+
+## Fresh clone
+
+Use Node `24.18.0` and npm `11.6.2` as pinned by `.node-version` and
+`packageManager`.
 
 ```bash
 npm install --global npm@11.6.2 --ignore-scripts
 npm ci
-npm run db:local:migrate
+npm run setup:local
+```
+
+`setup:local` is safe to rerun. It creates `.env.local` from `.env.example`
+when absent, fills only missing or blank `CONNECTOR_ENCRYPTION_KEY` and
+`RATE_LIMIT_SALT` values with independent random 32-byte values, writes
+atomically, and applies mode `0600`. It never prints or replaces a value. It
+refuses CI, hosted origins, non-loopback configuration, and duplicate keys.
+
+After bootstrap, set `OWNER_EMAILS` and `LOCAL_OWNER_EMAIL` to the same owner
+address. `SITE_URL` must remain an exact loopback origin and
+`PRODUCTION_SITE_URL` must remain `https://anish-shah-is.online` for the bounded
+promotion workflow. Do not copy the local encryption key or D1 state to another
+tier.
+
+Then verify the completed local configuration:
+
+```bash
+npm run doctor
+```
+
+`doctor` is read-only. It checks the pinned toolchain, lockfile installation,
+environment presence and permissions without printing values, owner/loopback
+consistency, local D1 and migration inventory, the actual pinned Playwright
+Chromium executable, Safari/Chromium availability for manual review, ports 3000
+and 3001, and the default My Room mode. Fix every `FAIL`; review `WARN` output
+before treating a machine as release-capable.
+
+## Development servers
+
+```bash
+npm run dev:studio
+```
+
+This applies local migrations and starts My Room, 2001 at
+`http://localhost:3000`. The loopback-only owner fallback is accepted only in
+development. Stop a conflicting process rather than silently changing the
+OAuth callback port.
+
+Classic Play is retained for one cleanup window and must be requested
+explicitly:
+
+```bash
+npm run dev:classic
+npm run dev:studio:classic
+```
+
+Do not rely on Classic behavior for new work. Production, staging, and PR
+previews declare `PLAY_EXPERIENCE_MODE` explicitly; missing hosted mode
+configuration fails closed.
+
+## Fast checks by change type
+
+```bash
+# classify changed files and print required checks
+node .agents/skills/maintain-anish-site/scripts/check-change.mjs --plan --base origin/main
+
+# execute the selected checks
+node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run --base origin/main
+
+# complete local handoff suite; never deploys or mutates remote state
+node .agents/skills/maintain-anish-site/scripts/check-change.mjs --full --base origin/main
+```
+
+Focused commands:
+
+```bash
+npm run copy:check
+npm run copy:diff -- --base origin/main
+npm run copy:test
+npm run docs:check
+npm run skill:validate
+npm run typecheck
+npm run lint
+npm run test:backend
+```
+
+Use `npm ci`, not `npm install`, for reproducible review and CI.
+
+## Authoritative non-browser gate
+
+```bash
 npm run validate
 ```
 
-`validate` covers public-content attestation, lint, typechecking, content and
-privacy contracts, backend authorization, production build, release-bundle
-scanning, rendered HTTP routes, and dependency advisories. GitHub Validate runs
-the same command after applying all migrations to a clean local D1.
+`validate` checks the copy deck and `COPY_VERSION`, public-content attestation,
+documentation and skill structure, lint, a clean local D1 migration, content
+and privacy contracts, backend authorization/security, the production build,
+rendered routes, bundle/privacy closure, and dependency advisories. The build is
+created once inside the command and reused by its candidate checks.
 
 Run the manually dispatched Validate, Gitleaks, CodeQL, and Browser Quality
 workflows with the same full 40-character commit SHA before release. The
@@ -43,19 +132,22 @@ The workflows do not select a GitHub environment or reference repository or
 environment secrets; actions receive only the workflow's short-lived,
 read-only `GITHUB_TOKEN`.
 
-Dispatch the four release-evidence workflows from their trusted definition on
-`main`, checking out one already-pushed commit:
+Dispatch the four release-evidence workflows from a trusted owner-controlled
+workflow branch, checking out one already-pushed commit. Use `main` for an
+ordinary merged release or the active `release/*` branch while validating a
+release candidate; never use an unreviewed feature branch as `WORKFLOW_REF`:
 
 ```bash
 export VALIDATED_SHA='<full 40-character pushed commit SHA>'
+export WORKFLOW_REF='release/2.0.0' # or main
 
-gh workflow run ci.yml --ref main \
+gh workflow run ci.yml --ref "$WORKFLOW_REF" \
   -f commit_sha="$VALIDATED_SHA" -f runner_label=anish-release
-gh workflow run gitleaks.yml --ref main \
+gh workflow run gitleaks.yml --ref "$WORKFLOW_REF" \
   -f commit_sha="$VALIDATED_SHA" -f runner_label=anish-release
-gh workflow run codeql.yml --ref main \
+gh workflow run codeql.yml --ref "$WORKFLOW_REF" \
   -f commit_sha="$VALIDATED_SHA" -f runner_label=anish-release
-gh workflow run browser-quality.yml --ref main \
+gh workflow run browser-quality.yml --ref "$WORKFLOW_REF" \
   -f commit_sha="$VALIDATED_SHA" -f runner_label=anish-release
 ```
 
@@ -63,50 +155,70 @@ Run the optional stability soak only when its explicit ten-run evidence is
 required:
 
 ```bash
-gh workflow run browser-stability.yml --ref main \
+gh workflow run browser-stability.yml --ref "$WORKFLOW_REF" \
   -f commit_sha="$VALIDATED_SHA" -f runner_label=anish-release
 ```
 
 Use the resulting Actions run URLs normally. A self-hosted run does not waive
 or replace any assertion, artifact, browser, security, or release-plan check.
 
-## Browser quality
+Private-source regeneration is an owner operation because CI does not possess
+the immutable CSV/Markdown inputs. After a deliberate regeneration:
 
-Install the pinned Chromium build once, then run the browser gate:
+```bash
+node scripts/build-content.mjs
+npm run verify:content
+npm run content:attest:write
+npm run content:attest
+```
+
+Commit the public projection, schema/report changes, curation, and safe
+attestation together. Never commit `content/private/`.
+
+## Browser, accessibility, and performance gate
+
+Install the pinned Chromium build once:
 
 ```bash
 npx --no-install playwright install chromium
 npm run validate:browser
 ```
 
-The Playwright/Axe suite exercises real Worker pages and covers:
+The browser gate builds once, then reuses the same `dist` for:
 
-- 320, 390, 640, 768, 1024, 1440, and 1920px viewports
-- `scrollWidth`, 200%/400% equivalent reflow widths, and text-spacing overrides
-- keyboard operation, focus restoration, and consent flows
-- reduced motion and forced colors
-- Axe serious/critical findings on the five primary public routes
+- public route, keyboard, focus, consent, reflow, and overflow checks;
+- My Room public behavior and five fresh-runner interaction shards;
+- direct `/play/watch`, `/play/read`, `/play/listen`, `/play/collect`,
+  `/play/play`, and `/play/move` route isolation;
+- reduced-motion, forced-colors, Save-Data, zoom, no-JavaScript, and static
+  poster paths;
+- Axe serious/critical checks;
+- room review screenshots and recording; and
+- Lighthouse mobile budgets of at least 0.90 with CLS no greater than 0.1.
 
-The browser command runs two isolated passes automatically: classic Play first,
-then My Room 2001 under the exact synthetic-preview boundary. The room pass also
-checks the six direct object routes, provider-free overview, deferred Three.js
-loading, poster fallback, fixture propagation, and the reduced-motion,
-Save-Data, and forced-color paths that must never request the 3D runtime. Do not
-run the command a second time with a manual `PLAY_EXPERIENCE_MODE` override.
+The local browser harness uses the pinned `wrangler-e2e` alias only. Production
+build and deployment continue using the repository’s production Wrangler
+version. Browser jobs wait for semantic room readiness with a 15-second SLO and
+capture diagnostic state on failure.
 
-The same command runs Lighthouse directly against a second local Worker preview
-and enforces mobile performance, accessibility, SEO, and best-practice scores of
-at least 0.90 plus CLS no greater than 0.1. JSON reports stay in the ignored
-`.lighthouse/` directory; CI does not upload them.
+Run the manually dispatched ten-run Browser stability workflow after changing
+the room harness or containing flakiness. All ten independent jobs must pass on
+the same full SHA; a single successful rerun is not stability evidence.
 
-Remote PR previews contain deterministic synthetic connector fixtures and are
-for visual/interaction review only. Use stable staging for real OAuth,
-connector refresh, D1 migration, and Safari acceptance. A preview URL is never
-evidence that provider integration or production data is healthy.
+## CI and exact-SHA release evidence
 
-## Content changes
+Normal PRs run Validate, Gitleaks, CodeQL, and path-classified Browser Quality.
+Documentation-only PRs may skip the expensive browser jobs. Copy-only PRs also
+run the restricted copy lane described in [Copywriting](./copywriting.md).
 
-Full private-source regeneration cannot run on ordinary CI. The owner must run
-`verify:content`, update the safe attestation, and include the public projection,
-schema/report changes, and attestation in one PR. CI then proves those public
-artifacts remain byte-identical to the attestation.
+Every staging or production release nevertheless requires four distinct,
+successful runs for the exact 40-character SHA:
+
+1. `Validate` from `.github/workflows/ci.yml`
+2. `Gitleaks` from `.github/workflows/gitleaks.yml`
+3. `CodeQL` from `.github/workflows/codeql.yml`
+4. manually dispatched `Browser Quality` from `.github/workflows/browser-quality.yml`
+
+The release planner verifies repository, workflow identity/path, active state,
+event type where required, conclusion, URL, and commit SHA. See the environment
+variables and guarded artifact flow in [Production release](./operations/release.md).

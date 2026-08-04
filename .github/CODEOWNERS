@@ -2,8 +2,13 @@
 # GitHub surfaces them even if this repository cannot enforce branch protection.
 * @ash0ts
 /.github/ @ash0ts
+/.agents/ @ash0ts
+/content/copy/ @ash0ts
 /content/curation/ @ash0ts
 /content/presentation/ @ash0ts
+/docs/architecture/ @ash0ts
+/docs/operations/ @ash0ts
+/docs/copywriting.md @ash0ts
 /drizzle/ @ash0ts
 /lib/server/ @ash0ts
 /scripts/prepare-cloudflare-release.mjs @ash0ts

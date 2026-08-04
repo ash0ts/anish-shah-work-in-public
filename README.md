@@ -1,125 +1,79 @@
 # Anish Shah — Work in Public
 
-An authored portfolio of applied AI products, education, open source,
+An owner-operated portfolio of applied AI products, education, open source,
 technical storytelling, and community programs from 2021 onward.
 
-## What is here
+## Public experience
 
-- `/` — technical focus, career arc, Bodies of Work, and qualified impact
-- `/work` — 82 WorkGroups connecting 186 searchable public forms
-- `/work/[slug]` — one story with its appearances, artifacts, and evidence
-- `/play` — a semantic six-object room directory for bounded MyAnimeList, Hardcover, Spotify, Discogs, Steam, and Strava streams
-- `/play/[object]` — one provider-specific collection screen, usable without the optional 3D room
-- `/sources` — archive accounting, claim context, and public bibliography
-- `/studio` — owner-only editorial and connector controls
+- `/` — professional thesis, selected Bodies of Work, trajectory, and qualified impact
+- `/work` — the complete, searchable WorkGroup archive
+- `/work/[slug]` — one body of work with its public forms and evidence
+- `/play` — My Room, 2001: a semantic six-object collection directory
+- `/play/watch`, `/play/read`, `/play/listen`, `/play/collect`, `/play/play`, `/play/move` — one provider per direct route
+- `/sources` — archive accounting, claims, methodology, and bibliography
+- `/privacy` — privacy, connector, retention, and contact information
+- `/studio` — owner-only editorial and connector operations
 
-The public site is semantic HTML first. Anime.js adds bounded enhancement. The
-Work archive remains entirely two-dimensional; only the explicitly activated
-Play room may lazy-load Three.js. There is no autoplay or scroll hijacking.
+The public experience is server-rendered HTML first. The Work archive stays
+two-dimensional. Three.js is isolated to the explicitly entered Play room, and
+every collection remains reachable without WebGL or JavaScript.
 
-## Start locally
+## Start here
 
-Use Node `24.18.0` and npm `11.6.2`.
+Use Node `24.18.0` and npm `11.6.2`. The complete fresh-clone, local-security,
+database, browser, and validation workflow lives in [Testing](./docs/testing.md).
+The short path is:
 
 ```bash
-npm install --global npm@11.6.2 --ignore-scripts
 npm ci
-cp .env.example .env.local
-# Set matching OWNER_EMAILS and LOCAL_OWNER_EMAIL values, then generate the two
-# independent local-only values described in .env.example:
-# CONNECTOR_ENCRYPTION_KEY and RATE_LIMIT_SALT.
-npm run local:security:setup
+npm run setup:local
+# Replace the OWNER_EMAILS and LOCAL_OWNER_EMAIL placeholders in .env.local.
+npm run doctor
 npm run dev:studio
 ```
 
-Open `http://localhost:3000/studio`. Local credentials, snapshots, and D1 data
-remain under the ignored local environment. `LOCAL_OWNER_EMAIL` is rejected in
-hosted environments.
+Do not invent local secrets or hosted settings by hand when the setup command
+can create them safely. Never copy local credentials, D1 data, or encryption
+material to staging or production.
 
-The Play redesign is server-gated while it is reviewed:
+## Architecture in one minute
 
-```bash
-PLAY_EXPERIENCE_MODE=my-room-2001 npm run dev:studio
-```
+- `content/public/` contains the sanitized canonical facts and structure.
+- `content/copy/` contains reviewed, Git-owned presentation wording.
+- D1 controls published visibility, ordering, caveats, metric wording, encrypted
+  connector credentials, and bounded provider snapshots.
+- Workers KV holds only a validated last-known-good public publication.
+- Cloudflare Access plus Worker JWT validation and the exact owner allowlist
+  protect Studio and owner writes.
+- Production fails closed when D1 and KV cannot provide a valid publication.
+- Local, synthetic PR preview, live staging, and production never share durable
+  connector or database state.
 
-With the variable omitted, `/play` retains the classic six-stream interface.
-The room overview reads no provider data; each direct object route reads only
-its associated sanitized public connector snapshot.
+See [Architecture](./docs/architecture/overview.md),
+[Content and state](./docs/architecture/content-and-state.md), and
+[My Room, 2001](./docs/architecture/my-room-2001.md).
 
-## Validate
+## Common work
 
-```bash
-npm run validate
-```
+- Application changes: follow [Contributing](./CONTRIBUTING.md) and
+  [Testing](./docs/testing.md).
+- Copy changes: follow [Copywriting](./docs/copywriting.md) and edit only
+  `content/copy/**/*.md`.
+- Provider setup or recovery: use [Play connections](./docs/play-connections.md).
+- Preview and staging work: use [Staging and PR previews](./docs/operations/staging-and-previews.md).
+- Production release: use the sole [Production release runbook](./docs/operations/release.md).
+- Rollback or incident response: use [Rollback](./docs/operations/rollback.md)
+  and [Incidents](./docs/operations/incidents.md).
 
-That command verifies the checked-in public-content attestation, lint,
-typechecking, a clean local D1 migration, content/privacy behavior, backend
-authorization, the production build, rendered routes, release-bundle hygiene,
-and dependency gates.
+## Trust boundary
 
-`npm run validate:browser` builds the Worker, checks public routes in Chromium
-at six viewport widths, runs Axe against key pages, and enforces mobile
-Lighthouse scores of at least 90 with CLS at most 0.1. Reports remain local and
-are never uploaded to a third party.
+Private source CSV/Markdown files and the exact owner bundle stay outside Git
+and deployment. Public facts are regenerated through the content pipeline;
+generated JSON is never hand-edited. Provider credentials are entered through
+the protected Studio and encrypted before D1 storage.
 
-## Content boundary
+`https://anish-shah-is.online` is the sole public production origin. The
+private OpenAI Sites deployment remains a reference/recovery environment, not a
+public rollback target.
 
-The four private CSV/Markdown source files live one directory above this
-project. They are immutable migration inputs and never enter Git or deployment
-artifacts. The application reads only
-`content/public/anish-content.public.v1.json`; its safe checksums and counts live
-beside it in `anish-content.public.v1.attestation.json`.
-
-For an owner content release:
-
-```bash
-node scripts/build-content.mjs
-npm run verify:content
-npm run content:attest:write
-npm run content:attest
-```
-
-The ignored exact owner bundle remains under `content/private/`. See
-[the content architecture](./docs/architecture/content-and-state.md).
-
-## Production
-
-Public production is an owner-controlled Cloudflare Worker with D1 as the
-publication authority and a versioned Workers KV last-known-good cache.
-`https://anish-shah-is.online` is the sole public origin; the generated release
-configuration pins that Custom Domain and disables the `workers.dev` hostname.
-Cloudflare Access plus an exact application allowlist protects `/studio/**` and
-`/api/studio/**`. The private OpenAI Sites deployment is a recovery/reference
-environment, not a public rollback target.
-
-Release only a clean, pushed, validated commit. The release gate binds the
-exact `dist/client` and `dist/server` bytes with a deterministic manifest,
-alongside three exact-commit CI runs. Capture a D1 Time Travel bookmark and both
-Worker version IDs, then record the result under `releases/`.
-Follow the [release runbook](./docs/operations/release.md) and
-[rollback runbook](./docs/operations/rollback.md). No command in this repository
-automatically weakens Access or copies production credentials.
-
-Feature work is reviewed first through synthetic, Access-protected
-`pr-<number>.anish-shah-is.online` previews. A selected validated SHA may then
-be deployed to the fully isolated `staging.anish-shah-is.online` Worker for
-real OAuth and connector testing. Staging has separate D1, KV, secrets,
-rate-limit namespaces, Access audience, and provider registrations; it cannot
-promote data to production. See the
-[staging and preview runbook](./docs/operations/staging-and-previews.md).
-
-## Documentation
-
-- [Architecture and trust boundaries](./docs/architecture/overview.md)
-- [Content and state](./docs/architecture/content-and-state.md)
-- [Testing](./docs/testing.md)
-- [Play connector setup](./docs/play-connections.md)
-- [My Room, 2001 interaction RFC](./docs/play-experience-prototypes/my-room-2001-interactive-object-archive.md)
-- [Release](./docs/operations/release.md)
-- [Staging and PR previews](./docs/operations/staging-and-previews.md)
-- [Rollback and D1 restore](./docs/operations/rollback.md)
-- [Incidents and credential recovery](./docs/operations/incidents.md)
-- [Observability](./docs/operations/observability.md)
-- [Contributing](./CONTRIBUTING.md) and [security reporting](./SECURITY.md)
-
-The repository is private and intentionally has no open-source license.
+This repository is private and intentionally has no open-source license.
