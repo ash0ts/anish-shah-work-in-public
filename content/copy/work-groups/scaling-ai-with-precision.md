@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0011 -->
 
 ## display-title
-Scaling AI with Precision
+Scaling AI systems with precision
 
 ## short-title
-Scaling AI with Precision
+Scaling AI systems
 
 ## summary
-No replay located
+I delivered a Deep Dive session on scaling AI systems with precision.
 
 ## role-summary
-Deep Dive speaker
+I delivered the Deep Dive session.

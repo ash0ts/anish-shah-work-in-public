@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0030 -->
 
 ## display-title
-AI Customization: Fine-Tuning Azure OpenAI Service Models — BRK101
+Fine-tuning Azure OpenAI models — BRK101
 
 ## short-title
-AI Customization: Fine-Tuning Azure OpenAI Service Models — BRK101
+Azure OpenAI fine-tuning
 
 ## summary
-Co-speaker with Ami Patel and Steve Sweetman.
+I co-presented a BRK101 session on fine-tuning Azure OpenAI Service models.
 
 ## role-summary
-Co-speaker with Ami Patel and Steve Sweetman
+I co-presented with Ami Patel and Steve Sweetman.

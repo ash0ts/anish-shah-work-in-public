@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0009 -->
 
 ## display-title
-Large Language Model Agents
+Large-language-model agents
 
 ## short-title
-LLM Agents
+LLM agents
 
 ## summary
-Webinar speaker.
+I presented a webinar on large-language-model agents.
 
 ## role-summary
-Webinar speaker
+I presented the LLM-agent webinar.

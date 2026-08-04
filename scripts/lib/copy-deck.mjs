@@ -27,7 +27,7 @@ const EXECUTABLE_SYNTAX = /(?:```|~~~|<script|<iframe|\bon\w+\s*=|\$\{|\{\{|\{%|
 const METRIC_SHAPED_COPY = [
   /(?:[$€£]\s*\d|\b(?:USD|EUR|GBP)\s+\d)/iu,
   /\b\d+(?:\.\d+)?\s*%/u,
-  /\b\d+(?:\.\d+)?\s*[KMB]\+?/u,
+  /\b\d+(?:\.\d+)?[KMB]\+?(?!\p{L})/iu,
   /\b\d[\d,.]*\+?\s+(?:course\s+)?(?:enrollments?|registrants?|attendees?|users?|organizations?|revenue|ARR|pipeline|tool\s+calls?|signups?|leads?|customers?)\b/iu,
 ];
 const METRIC_SUBJECT = /\b(?:course\s+enrollments?|enrollments?|registrants?|attendees?|learners?|completions?|users?|organizations?|accounts?|customers?|signups?|leads?|tool\s+calls?|weekly\s+active|returning|re-?engaged|conversion(?:s|\s+rate)?|pipeline|ARR|revenue|bookings?|public\s+forms?|source\s+records?|evidence\s+records?)\b/iu;
@@ -239,7 +239,10 @@ export async function readCopyDeck(root) {
 export async function copyVersionForDeck(root, sourceFiles) {
   const implementationPaths = [
     "lib/copy-contract.ts",
+    "lib/copy-voice-contract.ts",
     "scripts/lib/copy-deck.mjs",
+    "scripts/lib/copy-voice.mjs",
+    "scripts/copy-voice-check.mjs",
     "scripts/generate-copy-deck.mjs",
   ];
   const files = [...sourceFiles];

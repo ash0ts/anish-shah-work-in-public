@@ -24,9 +24,9 @@ export default function WatchRoomScreen({
     <main data-room-screen id="main" className={`${styles.page} ${styles.watchPage}`} tabIndex={-1}>
       <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.watchHeader} id="watch-program-note">
-        <p>Channel 11 · MyAnimeList public signal</p>
+        <p>Channel 11 · MyAnimeList</p>
         <h1>{object.title}</h1>
-        <span>Late-night seasons, long-running favorites, and the watch list as it stands.</span>
+        <span>{object.description}</span>
       </header>
       <section className={styles.television} aria-label="MyAnimeList collection">
         <div className={styles.televisionControls} aria-hidden="true">
@@ -41,7 +41,7 @@ export default function WatchRoomScreen({
           </nav>
           <p>
             <span>11:00 PM</span>
-            <strong>Public library transmission</strong>
+            <strong>Anime library</strong>
             <b>On air</b>
           </p>
         </div>

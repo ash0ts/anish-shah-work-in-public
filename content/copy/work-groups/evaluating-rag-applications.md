@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0032 -->
 
 ## display-title
-Evaluating RAG Applications
+Evaluating RAG applications
 
 ## short-title
-Evaluating RAG Applications
+RAG evaluation
 
 ## summary
-Event page records 187 guests
+I hosted and co-facilitated a session on evaluating retrieval-augmented generation applications.
 
 ## role-summary
-Host and co-facilitator
+I hosted and co-facilitated the session.

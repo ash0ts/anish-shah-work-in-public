@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0098 -->
 
 ## display-title
-Understanding PII Detection Guardrails
+Evaluating PII detection guardrails
 
 ## short-title
-Understanding PII Detection Guardrails
+PII detection guardrails
 
 ## summary
-Author.
+I wrote a report on evaluating guardrails for PII detection.
 
 ## role-summary
-Author
+I authored the PII-guardrails report.

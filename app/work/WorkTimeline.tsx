@@ -24,10 +24,6 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
         bucket,
         year,
         works,
-        formCount: works.reduce(
-          (count, work) => count + work.formCount,
-          0,
-        ),
       };
     }),
   );
@@ -60,7 +56,7 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
       >
         <table>
           <caption>
-            Bodies of work by year, with exact work and public-form counts
+          Projects by line and year, with exact project counts
           </caption>
           <thead>
             <tr>
@@ -97,7 +93,7 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
                       <span>{bucket.shortTitle}</span>
                     </Link>
                   </th>
-                  {rowCells.map(({ formCount, works, year }) => {
+                  {rowCells.map(({ works, year }) => {
                     const selected =
                       query.bucket === bucket.id &&
                       query.year === String(year);
@@ -125,10 +121,6 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
                             <span>
                               {works.length === 1 ? "work" : "works"}
                             </span>
-                            <small>
-                              {formCount}{" "}
-                              {formCount === 1 ? "form" : "forms"}
-                            </small>
                           </Link>
                         ) : (
                           <span

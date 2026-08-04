@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0094 -->
 
 ## display-title
-How to Optimize GPU Cost with Weights and Biases
+Optimizing GPU cost with W&B
 
 ## short-title
-How to Optimize GPU Cost with Weights and Biases
+GPU cost with W&B
 
 ## summary
-Author.
+I wrote a report on using W&B to analyze and optimize GPU cost.
 
 ## role-summary
-Author
+I authored the GPU-cost report.

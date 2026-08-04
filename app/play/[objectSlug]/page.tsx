@@ -130,7 +130,7 @@ export async function generateMetadata({
   }
   return publicPageMetadata({
     title: `${object.label} · ${object.title}`,
-    description: `${object.description} Browse the current public snapshot and provider attribution.`,
+    description: `${object.description} Browse the collection and its provider attribution.`,
     path: object.route,
     noindex: hasPublicQuery(query),
   });

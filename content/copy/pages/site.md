@@ -1,16 +1,16 @@
 <!-- copy-page: site -->
 
 ## default-title
-Anish Shah — Applied AI, in public
+Anish Shah — Applied AI systems
 
 ## title-template
 %s — Anish Shah
 
 ## root-description
-An inspectable archive of Anish Shah’s work across applied AI, education, products, and technical communities.
+I build agent tooling, evaluation systems, open source, and technical education at Weights & Biases.
 
 ## social-description
-Products, education, open source, and technical communities—with the public work attached.
+Agent systems, evaluation, open source, and technical education—with sources attached.
 
 ## header-wordmark
 Anish Shah
@@ -46,19 +46,19 @@ Skip to content
 Page not found
 
 ## not-found-meta-description
-The requested page is not part of Anish Shah’s public site.
+That page is not part of Anish Shah’s site.
 
 ## not-found-code
-404 · Not in the public index
+404 · Page not found
 
 ## not-found-title
-This path stops here.
+That page isn’t here.
 
 ## not-found-body
-The page may have moved, or it may never have been part of the public archive. The work index keeps current and legacy records discoverable.
+Try the project index or return home.
 
 ## not-found-work-cta
-Explore the work
+Browse projects
 
 ## not-found-home-cta
-Return home
+Go home

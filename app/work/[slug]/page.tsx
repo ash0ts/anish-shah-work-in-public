@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { publicBundle } from "@/lib/content";
+import { SITE_COPY } from "@/lib/copy";
 import { isKnownUnavailablePublicUrl } from "@/lib/public-url-health";
 import {
   findWorkGroupBySlugFrom,
@@ -276,7 +277,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
         id={!hasMultipleForms ? primary.id : undefined}
       >
         <div className={styles.heroTop}>
-          <Link href="/work">← Work index</Link>
+          <Link href="/work">← {SITE_COPY.work["detail-back"]}</Link>
           <div className={styles.kicker} aria-label="Work classification">
             <span>{bucket}</span>
             <span>{workGroupPeriodLabel(group)}</span>
@@ -293,15 +294,11 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
       </header>
 
       <section className={styles.facts} aria-label="Work facts">
-        <Fact label="Documented role" value={group.roleSummary} />
-        <Fact label="Period" value={formatGroupPeriod(group)} />
+        <Fact label={SITE_COPY.work["detail-role"]} value={group.roleSummary} />
+        <Fact label={SITE_COPY.work["detail-period"]} value={formatGroupPeriod(group)} />
         <Fact
-          label="Organization"
-          value={organizations.join(" / ") || "Independent/public"}
-        />
-        <Fact
-          label={hasMultipleForms ? "Nested public forms" : "Public form"}
-          value={String(items.length)}
+          label={SITE_COPY.work["detail-organization"]}
+          value={organizations.join(" / ") || "Independent"}
         />
       </section>
 
@@ -320,9 +317,9 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
               className={styles.members}
               aria-labelledby="members-title"
             >
-              <p className={styles.sectionLabel}>Inside this body of work</p>
+              <p className={styles.sectionLabel}>{SITE_COPY.work["detail-included"]}</p>
               <h2 id="members-title">
-                {memberEntities.length} connected works, one public story.
+                {memberEntities.length} connected projects.
               </h2>
               <ol>
                 {memberEntities.map((entity) =>
@@ -347,8 +344,8 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
               className={styles.outcomes}
               aria-labelledby="outcomes-title"
             >
-              <p className={styles.sectionLabel}>Direct outcomes</p>
-              <h2 id="outcomes-title">Outcomes attached to this work.</h2>
+              <p className={styles.sectionLabel}>{SITE_COPY.work["detail-results"]}</p>
+              <h2 id="outcomes-title">Results tied to this work.</h2>
               <MetricRows metrics={outcomes} />
             </section>
           ) : null}
@@ -359,7 +356,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
               aria-labelledby="context-title"
             >
               <p className={styles.sectionLabel}>
-                Program context · not direct attribution
+                {SITE_COPY.work["detail-context"]}
               </p>
               <h2 id="context-title">The wider program.</h2>
               <MetricRows metrics={context} compact />
@@ -369,7 +366,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
 
         {evidence.length ? (
           <aside className={styles.evidence}>
-            <p className={styles.sectionLabel}>Public evidence</p>
+            <p className={styles.sectionLabel}>{SITE_COPY.work["detail-sources"]}</p>
             <ol>
               {evidence.map((source) => (
                 <li key={source.id}>
@@ -403,8 +400,8 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           aria-labelledby="appearances-title"
         >
           <header>
-            <p className={styles.sectionLabel}>Nested public forms</p>
-            <h2 id="appearances-title">Appearances and artifacts</h2>
+            <p className={styles.sectionLabel}>Related material</p>
+            <h2 id="appearances-title">{SITE_COPY.work["detail-materials"]}</h2>
           </header>
           <ol>
             {items.map((item) => (
@@ -428,7 +425,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           aria-labelledby="related-context-title"
         >
           <header>
-            <p className={styles.sectionLabel}>Related public context</p>
+            <p className={styles.sectionLabel}>{SITE_COPY.work["detail-related"]}</p>
             <h2 id="related-context-title">Programs and references</h2>
           </header>
           <ol>
@@ -440,8 +437,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                 </div>
                 <h3>{item.displayTitle}</h3>
                 <p>
-                  Related context only. It is not counted as another form of
-                  this work.
+                  Related context only. It is not counted as another project.
                 </p>
                 <PublicArtifactLink item={item} />
               </li>
@@ -491,7 +487,7 @@ function appearanceTitle(
     item.displayTitle === group.title
       ? humanizeWorkFilter(item.type)
       : item.displayTitle;
-  return item.id === primary.id ? `${title} · primary form` : title;
+  return item.id === primary.id ? `${title} · primary artifact` : title;
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
@@ -563,7 +559,7 @@ function PublicArtifactLink({
     >
       {primary
         ? `Open the ${humanizeWorkFilter(item.type).toLocaleLowerCase()}`
-        : "Open this public form"}{" "}
+        : "Open this artifact"}{" "}
       <span aria-hidden="true">↗</span>
     </a>
   );

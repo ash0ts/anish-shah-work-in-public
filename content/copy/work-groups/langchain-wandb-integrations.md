@@ -1,13 +1,13 @@
 <!-- copy-record: group:products:langchain-integrations -->
 
 ## display-title
-LangChain W&B integrations
+W&B integrations for LangChain
 
 ## short-title
-LangChain integrations
+LangChain × W&B
 
 ## summary
-Public W&B integration contributions across LangChain, with the release-note citation retained as context.
+I contributed two W&B integration changes to LangChain.
 
 ## role-summary
-Contributor
+I contributed through two LangChain pull requests.

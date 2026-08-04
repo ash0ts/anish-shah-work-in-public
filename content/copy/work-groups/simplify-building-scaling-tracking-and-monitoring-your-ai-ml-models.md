@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0003 -->
 
 ## display-title
-Simplify Building, Scaling, Tracking, and Monitoring Your AI/ML Models
+Building and monitoring AI/ML models
 
 ## short-title
-Simplify Building, Scaling, Tracking, and Monitoring Your AI/ML Models
+AI/ML model operations
 
 ## summary
-Webinar speaker.
+I presented a webinar on building, scaling, tracking, and monitoring AI/ML models.
 
 ## role-summary
-Webinar speaker
+I presented the model-operations webinar.

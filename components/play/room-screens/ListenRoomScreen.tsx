@@ -20,7 +20,7 @@ export default function ListenRoomScreen({
       <header className={styles.listenHeader}>
         <p>Spotify · One returned order at a time</p>
         <h1>{object.title}</h1>
-        <span>Top Tracks are Spotify-calculated affinity—not play counts or listening history.</span>
+        <span>{object.description}</span>
       </header>
       <section className={styles.pocketPlayer} aria-label="Spotify Top Tracks">
         <div className={styles.playerTop} aria-hidden="true">

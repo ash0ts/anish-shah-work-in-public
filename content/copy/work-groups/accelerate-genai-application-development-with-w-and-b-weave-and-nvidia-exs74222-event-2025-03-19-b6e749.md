@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0038 -->
 
 ## display-title
-Accelerate GenAI Application Development with W&B Weave and NVIDIA — EXS74222
+Developing GenAI applications with Weave and NVIDIA
 
 ## short-title
-GenAI Apps with W&B Weave and NVIDIA
+GenAI with Weave and NVIDIA
 
 ## summary
-GTC session presenter.
+I presented a GTC session on using W&B Weave and NVIDIA tooling for GenAI application development.
 
 ## role-summary
-GTC session presenter
+I delivered the GTC session.

@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0004 -->
 
 ## display-title
-Understanding the Landscape of the Latest Large Models
+Surveying the latest large models
 
 ## short-title
-Understanding the Landscape of the Latest Large Models
+Latest large models
 
 ## summary
-Recording uploaded March 5, 2023
+I presented a conference survey of the latest large language models.
 
 ## role-summary
-Conference speaker
+I presented the large-model conference session.

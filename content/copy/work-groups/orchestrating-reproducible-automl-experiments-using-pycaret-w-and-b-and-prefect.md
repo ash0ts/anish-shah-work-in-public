@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0002 -->
 
 ## display-title
-Orchestrating Reproducible AutoML Experiments using PyCaret, W&B, and Prefect
-
-## short-title
 Reproducible AutoML with PyCaret, W&B, and Prefect
 
+## short-title
+Reproducible AutoML
+
 ## summary
-No replay or retrospective located
+I was listed as a speaker for a session on reproducible AutoML experiments with PyCaret, W&B, and Prefect.
 
 ## role-summary
-Listed speaker
+I appeared on the AutoML session's speaker listing.

@@ -451,7 +451,7 @@ test("RSC presentation reads hosted tier from Cloudflare runtime bindings", asyn
     const metadata = runtimeRootMetadata();
     assert.equal(
       metadata.title.default,
-      "[PR #42] Anish Shah — Applied AI, in public",
+      "[PR #42] Anish Shah — Applied AI systems",
     );
     assert.deepEqual(metadata.robots, {
       index: false,

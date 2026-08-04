@@ -22,6 +22,7 @@ import {
   loadConnector,
 } from "./connector-model";
 import { PanelHeading, StreamEmpty, StreamStatus } from "./StreamChrome";
+import { SITE_COPY } from "@/lib/copy";
 
 type DiscogsView = "pattern" | "gallery";
 type PageSize = 12 | 24 | 36;
@@ -175,7 +176,7 @@ export function DiscogsStream({
       <header className={styles.collectionHeader}>
         {presentation === "crate" ? (
           <div className={styles.cratePanelHeading}>
-            <span>Public collection · Discogs</span>
+            <span>Collection totals</span>
             <h2>The physical catalog.</h2>
             <p>{payload.coverage}</p>
           </div>
@@ -198,7 +199,7 @@ export function DiscogsStream({
             }}
             type="button"
           >
-            {presentation === "crate" ? "Inventory" : "Pattern"}
+            {SITE_COPY.play["view-overview"]}
           </button>
           <button
             aria-pressed={view === "gallery"}
@@ -208,7 +209,7 @@ export function DiscogsStream({
             }}
             type="button"
           >
-            {presentation === "crate" ? "Flip through" : "Gallery"}
+            {SITE_COPY.play["view-browse-all"]}
           </button>
         </div>
       </header>
@@ -270,13 +271,13 @@ export function DiscogsStream({
           />
         ) : (
           <div className={styles.galleryUnavailable} aria-live="polite">
-            <strong>The physical catalog is preparing its first index.</strong>
+            <strong>{SITE_COPY.play["collection-unavailable"]}</strong>
             <p>
-              The searchable shelf is not available yet. The pattern view
+              The searchable shelf is not available yet. The overview
               remains available.
             </p>
             <button onClick={() => setView("pattern")} type="button">
-              Return to pattern
+              {SITE_COPY.play["return-overview"]}
             </button>
           </div>
         )}
@@ -292,6 +293,7 @@ export function DiscogsStream({
         Discogs page.
       </p>
       <StreamStatus
+        profileLabel={SITE_COPY.play["profile-discogs"]}
         profileUrl={payload.profileUrl}
         stale={state.stale}
         syncedAt={payload.syncedAt || state.fetchedAt}
@@ -577,7 +579,7 @@ function DiscogsGallery({
         <noscript>
           <p className={styles.noScriptViewLink}>
             <a href={discogsViewUrl(routePath, "pattern", fixture)}>
-              Return to the collection pattern
+              {SITE_COPY.play["return-overview"]}
             </a>
           </p>
         </noscript>
@@ -587,7 +589,7 @@ function DiscogsGallery({
         <span>
           {start}—{end} of {gallery.totalItems.toLocaleString()} releases
         </span>
-        <span>{busy ? "Updating shelf…" : "Public physical-media snapshot"}</span>
+        <span>{busy ? "Updating shelf…" : SITE_COPY.play["view-browse-all"]}</span>
       </div>
 
       {gallery.items.length ? (

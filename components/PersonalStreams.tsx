@@ -7,48 +7,54 @@ import { MovementStream } from "./play/MovementStream";
 import styles from "./PersonalStreams.module.css";
 import { SpotifyStream } from "./SpotifyStream";
 import type { PreviewFixtureScenario, StreamId } from "./play/connector-model";
+import { SITE_COPY } from "@/lib/copy";
 
 const streams = [
   {
     id: "watch",
-    label: "Watch",
+    category: "Watch",
+    label: SITE_COPY.play["watch-title"],
     provider: "MyAnimeList",
-    fallback: "Public watch states, genre patterns, eras, and recent activity.",
+    fallback: SITE_COPY.play["watch-description"],
   },
   {
     id: "read",
-    label: "Read",
+    category: "Read",
+    label: SITE_COPY.play["read-title"],
     provider: "Hardcover",
-    fallback: "Reading states, ratings, and a public shelf.",
+    fallback: SITE_COPY.play["read-description"],
   },
   {
     id: "listen",
-    label: "Listen",
+    category: "Listen",
+    label: SITE_COPY.play["listen-title"],
     provider: "Spotify",
-    fallback:
-      "Spotify-calculated Top Tracks across three time windows, shown as an ordinal ranked groove rather than play counts.",
+    fallback: SITE_COPY.play["listen-description"],
   },
   {
     id: "collect",
-    label: "Collect",
+    category: "Collect",
+    label: SITE_COPY.play["collect-title"],
     provider: "Discogs",
-    fallback:
-      "A public physical-media catalog, with copies and distinct releases kept separate. The interactive shelf loads only after Collect is selected.",
+    fallback: SITE_COPY.play["collect-description"],
   },
   {
     id: "play",
-    label: "Play",
+    category: "Games",
+    label: SITE_COPY.play["play-title"],
     provider: "Steam",
-    fallback: "Rounded library and playtime patterns.",
+    fallback: SITE_COPY.play["play-description"],
   },
   {
     id: "move",
-    label: "Move",
+    category: "Move",
+    label: SITE_COPY.play["move-title"],
     provider: "Strava",
-    fallback: "An official public embed, loaded only after consent.",
+    fallback: SITE_COPY.play["move-description"],
   },
 ] as const satisfies ReadonlyArray<{
   id: StreamId;
+  category: string;
   label: string;
   provider: string;
   fallback: string;
@@ -109,7 +115,7 @@ export function PersonalStreams({
           {streams.map((stream) => (
             <details key={stream.id} open={stream.id === initialStream}>
               <summary>
-                {stream.label} · {stream.provider}
+                {stream.label} · {stream.category} · {stream.provider}
               </summary>
               {stream.id === "listen" && spotifyNoScript ? (
                 spotifyNoScript
@@ -137,7 +143,9 @@ export function PersonalStreams({
               type="button"
             >
               <span>{stream.label}</span>
-              <small>{stream.provider}</small>
+              <small>
+                {stream.category} · {stream.provider}
+              </small>
             </button>
           ))}
         </div>

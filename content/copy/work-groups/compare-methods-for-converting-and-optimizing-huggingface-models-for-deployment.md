@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0051 -->
 
 ## display-title
-Compare Methods for Converting and Optimizing HuggingFace Models for Deployment
+Converting Hugging Face models for deployment
 
 ## short-title
-Optimizing Hugging Face Models for Deployment
+Hugging Face model deployment
 
 ## summary
-W&B Fully Connected editorial item
+I coauthored a comparison of methods for converting and optimizing Hugging Face models for deployment.
 
 ## role-summary
-Coauthor with Manan Goel
+I coauthored the article with Manan Goel.

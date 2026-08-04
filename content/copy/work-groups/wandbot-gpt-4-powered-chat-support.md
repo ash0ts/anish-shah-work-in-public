@@ -1,16 +1,16 @@
 <!-- copy-record: group:writing:wandbot -->
 
 ## display-title
-WandBot: GPT-4 Powered Chat Support
+WandBot: GPT-4 documentation support
 
 ## short-title
-WandBot
+WandBot support system
 
 ## summary
-A public technical account of W&B's GPT-4-powered documentation assistant.
+I coauthored an account of W&B's GPT-4-powered documentation assistant.
 
 ## role-summary
-Coauthor
+I coauthored the article.
 
 ## home-title
 WandBot: GPT-4 documentation support

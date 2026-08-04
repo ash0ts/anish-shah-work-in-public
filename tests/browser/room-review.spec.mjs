@@ -7,12 +7,12 @@ import { expectRoomReady } from "./helpers/room-readiness.mjs";
 const capture = process.env.ROOM_CAPTURE_VISUALS === "1";
 const reviewDirectory = path.resolve(".playwright/room-review");
 const objects = [
-  ["watch", "Midnight Broadcast"],
-  ["read", "Borrowed Shelf"],
-  ["listen", "Pocket Player"],
-  ["collect", "Crate Archive"],
-  ["play", "Desktop Library"],
-  ["move", "Cardio Television"],
+  ["watch", "TV"],
+  ["read", "Bookshelf"],
+  ["listen", "Music player"],
+  ["collect", "Record crate"],
+  ["play", "Computer"],
+  ["move", "Treadmill"],
 ];
 const scenarios = [
   "ready",

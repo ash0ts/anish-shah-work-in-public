@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0021 -->
 
 ## display-title
-Judgment Day Hackathon
+Judging the Judgment Day Hackathon
 
 ## short-title
-Judgment Day Hackathon
+Judgment Day
 
 ## summary
-In-person at the W&B office
+I judged an in-person AI hackathon at the W&B office.
 
 ## role-summary
-Judge
+I judged the project submissions.

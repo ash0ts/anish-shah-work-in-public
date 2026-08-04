@@ -121,7 +121,7 @@ async function loadSpotifyUrl(
     if (signal.aborted) throw error;
     return {
       status: "unavailable",
-      message: "The last public Spotify snapshot is temporarily unavailable.",
+      message: "Spotify is temporarily unavailable.",
     };
   }
 }
@@ -173,7 +173,7 @@ export function spotifyEmbedUrl(
 export function syncLabel(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Sync date unavailable";
-  return `Synced ${new Intl.DateTimeFormat("en-US", {
+  return `Updated ${new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",

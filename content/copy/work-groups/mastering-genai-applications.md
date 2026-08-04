@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0034 -->
 
 ## display-title
-Mastering GenAI Applications
+Building GenAI applications
 
 ## short-title
-Mastering GenAI Applications
+GenAI applications
 
 ## summary
-Hands-on workshop speaker.
+I led a hands-on workshop on building GenAI applications.
 
 ## role-summary
-Hands-on workshop speaker
+I led the hands-on application workshop.

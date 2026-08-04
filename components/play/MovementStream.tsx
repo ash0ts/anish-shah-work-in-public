@@ -10,6 +10,7 @@ import {
   type StravaPayload,
 } from "./connector-model";
 import { PanelHeading, StreamEmpty } from "./StreamChrome";
+import { SITE_COPY } from "@/lib/copy";
 
 export function MovementStream({
   show,
@@ -56,8 +57,8 @@ export function MovementStream({
         <div className={styles.empty} aria-live="polite">
           <span aria-hidden="true">○</span>
           <p>
-            {state.message} The public activity embed may be unpublished or
-            being replaced. No third-party content was loaded.
+            {state.message} The activity feed may be unavailable or changing.
+            No third-party content was loaded.
           </p>
         </div>
       );
@@ -118,7 +119,7 @@ export function MovementStream({
         </span>
         <span>{publishedLabel(state.payload.updatedAt)}</span>
         <a href={state.payload.profileUrl} rel="noreferrer" target="_blank">
-          Open Strava profile
+          {SITE_COPY.play["profile-strava"]}
         </a>
       </div>
     </>

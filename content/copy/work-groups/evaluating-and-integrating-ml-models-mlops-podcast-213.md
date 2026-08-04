@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0076 -->
 
 ## display-title
-Evaluating and Integrating ML Models — MLOps Podcast #213
+Evaluating and integrating ML models
 
 ## short-title
-Evaluating and Integrating ML Models — MLOps Podcast #213
+MLOps Podcast #213
 
 ## summary
-51:56
+I joined Morgan McGuire on MLOps Podcast #213 to discuss evaluating and integrating ML models.
 
 ## role-summary
-Guest with Morgan McGuire
+I appeared as a guest with Morgan McGuire.

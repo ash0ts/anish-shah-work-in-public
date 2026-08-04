@@ -28,6 +28,7 @@ import {
   type SpotifyTrackSummary,
   type SpotifyView,
 } from "./model";
+import { SITE_COPY } from "@/lib/copy";
 
 export function SpotifyRankedGroove({
   payload,
@@ -343,10 +344,10 @@ export function SpotifyRankedGroove({
 
       <SpotifyAttribution />
       <div className={styles.status}>
-        <span>{stale ? "Last-known-good snapshot" : "Current public snapshot"}</span>
+        {stale ? <span>{SITE_COPY.play["status-stale"]}</span> : null}
         <span>{syncLabel(payload.syncedAt || fetchedAt)}</span>
         <a href={payload.profileUrl} rel="noreferrer" target="_blank">
-          Open Spotify profile
+          {SITE_COPY.play["profile-spotify"]}
         </a>
       </div>
     </>

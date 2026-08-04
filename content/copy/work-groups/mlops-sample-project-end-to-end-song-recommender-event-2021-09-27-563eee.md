@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0001 -->
 
 ## display-title
-MLOps Sample Project: End to End Song Recommender
+End-to-end MLOps song recommender
 
 ## short-title
-MLOps Sample Project: End to End Song Recommender
+MLOps song recommender
 
 ## summary
-Upload date; exact live presentation date is not indexed
+I built and presented a capstone project that applied an end-to-end MLOps workflow to song recommendation.
 
 ## role-summary
-Capstone presenter and project author
+I built the project and presented the capstone.

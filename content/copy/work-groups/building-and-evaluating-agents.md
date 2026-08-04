@@ -1,16 +1,16 @@
 <!-- copy-record: group:talks:building-evaluating-agents -->
 
 ## display-title
-Building and Evaluating Agents
+Building agents with evaluation in the loop
 
 ## short-title
-Building and Evaluating Agents
+Building and evaluating agents
 
 ## summary
-A public talk on building agent systems with evaluation in the loop.
+I presented how to build agent systems with evaluation integrated into development.
 
 ## role-summary
-Conference speaker
+I presented the agent-building conference session.
 
 ## home-title
 Building agents with evaluation in the loop

@@ -4,61 +4,106 @@
 Play
 
 ## seo-description
-Explore Anish Shah’s anime, reading, music, physical-media, gaming, and movement collections through bounded public snapshots.
+Explore the anime, books, music, records, games, and miles I keep coming back to.
 
 ## intro-eyebrow
-My Room, 2001 · Six public collections
+My Room, 2001
 
 ## intro-title
-Come in. Pick something up.
+Come in and pick something up.
 
 ## intro-summary
-A low-poly room for the things outside the work: anime, books, music, records, games, and movement. Every object still opens as a normal page.
+Anime, books, music, records, games, and miles—the things I keep coming back to. Every object also opens as a regular page.
 
 ## poster-still-label
-Still room
+Room preview
 
 ## poster-capable-label
-Enter on capable desktop browsers
+Enter to look around
 
 ## directory-eyebrow
-Object directory
+Choose an object
 
 ## directory-title
-Six ways into the room.
+Pick something up.
+
+## view-overview
+Overview
+
+## view-browse-all
+Browse all
+
+## loading-collection
+Loading the collection…
+
+## collection-unavailable
+This collection is not available yet.
+
+## return-overview
+Return to overview
+
+## status-stale
+Refresh delayed
+
+## profile-myanimelist
+Open on MyAnimeList
+
+## profile-hardcover
+Open on Hardcover
+
+## profile-spotify
+Open on Spotify
+
+## profile-discogs
+Open on Discogs
+
+## profile-steam
+Open on Steam
+
+## profile-strava
+Open on Strava
+
+## watch-collection-title
+Anime shelf
+
+## read-collection-title
+Reading shelf
+
+## play-collection-title
+Game library
 
 ## watch-title
-Midnight Broadcast
+TV
 
 ## watch-description
-Late-night broadcasts, unfinished seasons, and a shelf that always has one more episode.
+Anime I return to, what I’m watching, and the full shelf.
 
 ## read-title
-Borrowed Shelf
+Bookshelf
 
 ## read-description
-Dog-eared spines, recent finds, and the feeling of borrowing one more book.
+Books in progress, finished, rated, and waiting.
 
 ## listen-title
-Pocket Player
+Music player
 
 ## listen-description
-A pocket-sized soundtrack with twelve places to land the needle.
+The twelve tracks Spotify puts closest to the surface for me.
 
 ## collect-title
-Crate Archive
+Record crate
 
 ## collect-description
-A crate to flip through slowly, one sleeve and one decade at a time.
+Records on my shelf, sorted by format and decade.
 
 ## play-title
-Desktop Library
+Computer
 
 ## play-description
-A beige desktop crowded with games worth booting up again.
+Games I own, games I return to, and rounded playtime.
 
 ## move-title
-Cardio Television
+Treadmill
 
 ## move-description
-A tiny cardio television for the miles and rides outside the room.
+Recent rides and runs, when Strava’s public feed is available.

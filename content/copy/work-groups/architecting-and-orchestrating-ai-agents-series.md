@@ -1,16 +1,16 @@
 <!-- copy-record: group:talks:architecting-agents -->
 
 ## display-title
-Architecting and Orchestrating AI Agents
+Architecting and orchestrating AI agents
 
 ## short-title
-Architecting AI Agents
+Architecting AI agents
 
 ## summary
-A talk developed across four public deliveries, including a Google-focused edition.
+I developed and delivered a talk on agent architecture and orchestration across four events, including a Google-focused edition.
 
 ## role-summary
-Speaker and workshop instructor
+I spoke and led workshops across the series.
 
 ## home-title
 Architecting & orchestrating AI agents

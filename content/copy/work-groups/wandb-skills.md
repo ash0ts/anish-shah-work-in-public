@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0163 -->
 
 ## display-title
-W&B Skills
+W&B Skills repository
 
 ## short-title
-W&B Skills
+W&B Skills contributions
 
 ## summary
-Contributor.
+I contributed to W&B's public skills repository.
 
 ## role-summary
-Contributor
+I contributed to the upstream repository.

@@ -1,16 +1,16 @@
 <!-- copy-record: group:courses:startup-school -->
 
 ## display-title
-Google Cloud Gen AI Startup School 2025
+Google Cloud GenAI Startup School
 
 ## short-title
-Startup School
+GenAI Startup School
 
 ## summary
-One Startup School lesson delivered for EMEA/APAC and the Americas, with its replay.
+I taught one GenAI application lesson across EMEA/APAC and the Americas, with a public replay.
 
 ## role-summary
-Presenter
+I presented both regional sessions.
 
 ## home-title
 Google Cloud Startup School: GenAI applications

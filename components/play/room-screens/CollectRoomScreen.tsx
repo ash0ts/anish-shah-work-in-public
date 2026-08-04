@@ -26,7 +26,7 @@ export default function CollectRoomScreen({
       <header className={styles.collectHeader}>
         <p>Discogs · Physical collection</p>
         <h1>{object.title}</h1>
-        <span>Physical releases, duplicate copies, formats, and decades in one searchable crate.</span>
+        <span>{object.description}</span>
       </header>
       <section className={styles.recordCrate} aria-labelledby="collect-status-title">
         <div className={styles.recordSleeves} aria-hidden="true">
@@ -42,7 +42,7 @@ export default function CollectRoomScreen({
           surface={object.matchCutSurface}
         >
           <div className={styles.crateLabel}>
-            <p id="collect-status-title">Crate 01 · Public physical collection</p>
+            <p id="collect-status-title">Crate 01 · Physical collection</p>
             <span>Cataloged without flattening duplicate copies</span>
           </div>
           <div className={styles.crateWell}>

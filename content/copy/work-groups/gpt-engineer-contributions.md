@@ -1,13 +1,13 @@
 <!-- copy-record: group:products:gpt-engineer -->
 
 ## display-title
-GPT Engineer contributions
+Two contributions to GPT Engineer
 
 ## short-title
-GPT Engineer
+GPT Engineer pull requests
 
 ## summary
-A related pair of public contributions to GPT Engineer.
+I contributed two related changes to GPT Engineer.
 
 ## role-summary
-Contributor
+I contributed through two GPT Engineer pull requests.

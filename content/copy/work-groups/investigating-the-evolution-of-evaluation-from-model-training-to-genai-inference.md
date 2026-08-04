@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0027 -->
 
 ## display-title
-Investigating the Evolution of Evaluation from Model Training to GenAI Inference
+Evaluation from model training to GenAI inference
 
 ## short-title
-Evaluation from Training to GenAI Inference
+Evaluation across the ML lifecycle
 
 ## summary
-Exact session slot not recovered
+I presented how evaluation changes from model training through GenAI inference.
 
 ## role-summary
-In-person technical speaker
+I delivered the in-person evaluation talk.

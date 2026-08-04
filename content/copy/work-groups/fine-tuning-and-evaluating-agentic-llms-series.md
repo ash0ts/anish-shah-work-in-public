@@ -1,16 +1,16 @@
 <!-- copy-record: group:courses:agentic-llm-series -->
 
 ## display-title
-Fine-Tuning and Evaluating LLMs for Agentic Use Cases
+Fine-tuning and evaluating agentic LLMs
 
 ## short-title
-Agentic LLM workshop series
+Agentic LLM workshops
 
 ## summary
-A multi-session public workshop series on adapting and evaluating LLMs for agentic use cases.
+I co-taught a multi-session workshop on adapting and evaluating LLMs for agentic use cases.
 
 ## role-summary
-Speaker and co-instructor
+I spoke and co-instructed across the series.
 
 ## home-title
 Agentic LLM fine-tuning & evaluation

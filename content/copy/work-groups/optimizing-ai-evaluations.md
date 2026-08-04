@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0024 -->
 
 ## display-title
-Optimizing AI Evaluations
+Improving AI evaluation workflows
 
 ## short-title
-Optimizing AI Evaluations
+AI evaluation workflows
 
 ## summary
-Meetup speaker.
+I spoke at a meetup about improving AI evaluation workflows.
 
 ## role-summary
-Meetup speaker
+I presented the evaluation-workflow talk.

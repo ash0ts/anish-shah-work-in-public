@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0071 -->
 
 ## display-title
-Everything You Wanted to Know About LLMOps but Were Afraid to Ask
+Practical questions about LLMOps
 
 ## short-title
-Everything You Wanted to Know About LLMOps but Were Afraid to Ask
+LLMOps in practice
 
 ## summary
-39:51
+I joined an interview about the practical demands of operating LLM applications.
 
 ## role-summary
-Interview guest
+I appeared as the interview guest.

@@ -1,16 +1,16 @@
 <!-- copy-record: group:talks:llm-agent-fine-tuning -->
 
 ## display-title
-LLM Agent Fine-Tuning
+Fine-tuning LLM agents
 
 ## short-title
-LLM Agent Fine-Tuning
+LLM agent fine-tuning
 
 ## summary
-A talk delivered first as a public session and later at NVIDIA GTC.
+I presented a session on fine-tuning LLM agents for task automation, first publicly and later at NVIDIA GTC.
 
 ## role-summary
-Speaker and session presenter
+I presented both deliveries of the session.
 
 ## home-title
 LLM agent fine-tuning for task automation

@@ -17,128 +17,57 @@ export function BodiesOfWork({ buckets }: { buckets: FeaturedBuckets }) {
 
   useLayoutEffect(() => {
     const root = rootRef.current;
-    if (
-      !root ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
+    if (!root || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
 
-    const activeAnimations = new Map<
-      HTMLDetailsElement,
-      Array<ReturnType<typeof animate>>
-    >();
-    const details = Array.from(
-      root.querySelectorAll<HTMLDetailsElement>("details[data-bucket]"),
-    );
-    const cancelFor = (detail: HTMLDetailsElement) => {
-      activeAnimations.get(detail)?.forEach((animation) => animation.cancel());
-      activeAnimations.delete(detail);
-    };
-    const onToggle = (event: Event) => {
-      const detail = event.currentTarget as HTMLDetailsElement;
-      cancelFor(detail);
-      if (!detail.open) return;
-
-      const body = detail.querySelector<HTMLElement>("[data-bucket-body]");
-      const rows = detail.querySelectorAll("[data-work-row]");
-      const animations: Array<ReturnType<typeof animate>> = [];
-      if (body) {
-        animations.push(
-          animate(body, {
-            opacity: [0.84, 1],
-            translateY: ["0.3rem", 0],
-            duration: 280,
-            ease: "out(4)",
-          }),
-        );
-      }
-      if (rows.length) {
-        animations.push(
-          animate(rows, {
-            translateX: ["0.25rem", 0],
-            duration: 320,
-            delay: stagger(38),
-            ease: "out(4)",
-          }),
-        );
-      }
-      activeAnimations.set(detail, animations);
-    };
-
-    details.forEach((detail) => detail.addEventListener("toggle", onToggle));
-    return () => {
-      details.forEach((detail) => {
-        detail.removeEventListener("toggle", onToggle);
-        cancelFor(detail);
+    const rows = root.querySelectorAll<HTMLElement>("[data-work-line]");
+    let motion: { cancel: () => void } | null = null;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting) return;
+      observer.disconnect();
+      motion = animate(rows, {
+        opacity: [0.72, 1],
+        translateY: ["0.3rem", 0],
+        duration: 320,
+        delay: stagger(45),
+        ease: "out(4)",
       });
+    }, { rootMargin: "0px 0px -10% 0px" });
+    observer.observe(root);
+    return () => {
+      observer.disconnect();
+      motion?.cancel();
     };
   }, []);
 
   return (
     <section
       className={styles.section}
-      aria-labelledby="bodies-of-work-title"
+      aria-labelledby="lines-of-work-title"
       ref={rootRef}
     >
       <header className={styles.heading}>
-        <div>
-          <p>{SITE_COPY.home["selected-eyebrow"]}</p>
-          <h2 id="bodies-of-work-title">
-            {SITE_COPY.home["selected-heading"]}
-          </h2>
-        </div>
-        <p>
-          {SITE_COPY.home["selected-summary"]}
-        </p>
+        <p>{SITE_COPY.home["selected-eyebrow"]}</p>
+        <h2 id="lines-of-work-title">{SITE_COPY.home["selected-heading"]}</h2>
       </header>
 
-      <div className={styles.bucketList}>
-        {buckets.map((bucket, index) => {
-          const years = bucket.groups.flatMap((group) =>
-            [group.yearStart, group.yearEnd].filter(
-              (year): year is number => year !== null,
-            ),
-          );
-          const period = years.length
-            ? `${Math.min(...years)}—${String(Math.max(...years)).slice(-2)}`
-            : "Public index";
-          return (
-            <details
-              className={styles.bucket}
-              data-bucket={bucket.id}
-              key={bucket.id}
-              open={index === 0}
-            >
-              <summary>
-                <h3>{bucket.title}</h3>
-                <small>{period}</small>
-                <i aria-hidden="true">+</i>
-              </summary>
-              <div className={styles.bucketBody} data-bucket-body>
-                <p>{bucket.statement}</p>
-                <ol>
-                  {bucket.groups.map((group) => (
-                    <li data-work-row key={group.id}>
-                      <Link href={`/work/${group.slug}`} prefetch={false}>
-                        <span>
-                          {workGroupPeriodLabel(group)} · {group.homeRole}
-                        </span>
-                        <strong>{group.homeTitle}</strong>
-                        <i aria-hidden="true">↗</i>
-                      </Link>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </details>
-          );
+      <ol className={styles.lines}>
+        {buckets.flatMap((bucket) => {
+          const group = bucket.groups[0];
+          if (!group) return [];
+          return [
+            <li data-work-line data-bucket={bucket.id} key={bucket.id}>
+              <h3>{bucket.title}</h3>
+              <Link href={`/work/${group.slug}`} prefetch={false}>
+                <span>{workGroupPeriodLabel(group)} · {group.homeRole}</span>
+                <strong>{group.homeTitle}</strong>
+                <i aria-hidden="true">↗</i>
+              </Link>
+            </li>,
+          ];
         })}
-      </div>
-
-      <Link className={styles.indexLink} href="/work">
-        {SITE_COPY.home["complete-index-cta"]} <span aria-hidden="true">↗</span>
-      </Link>
+      </ol>
     </section>
   );
 }

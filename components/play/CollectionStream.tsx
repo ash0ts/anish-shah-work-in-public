@@ -23,6 +23,7 @@ import {
 import { GalleryView } from "./CollectionGallery";
 import { PatternView } from "./CollectionPattern";
 import { PanelHeading, StreamEmpty, StreamStatus } from "./StreamChrome";
+import { SITE_COPY } from "@/lib/copy";
 
 export function CollectionStream({
   provider,
@@ -172,14 +173,14 @@ export function CollectionStream({
             onClick={() => setView("pattern")}
             type="button"
           >
-            Pattern
+            {SITE_COPY.play["view-overview"]}
           </button>
           <button
             aria-pressed={view === "gallery"}
             onClick={() => setView("gallery")}
             type="button"
           >
-            Gallery
+            {SITE_COPY.play["view-browse-all"]}
           </button>
         </div>
       </header>
@@ -223,13 +224,13 @@ export function CollectionStream({
           />
         ) : (
           <div className={styles.galleryUnavailable} aria-live="polite">
-            <strong>The full collection is preparing its first index.</strong>
+            <strong>{SITE_COPY.play["collection-unavailable"]}</strong>
             <p>
-              The pattern view remains available. Refresh this provider once
-              from Studio to publish the searchable gallery.
+              The overview remains available while the searchable collection
+              is prepared.
             </p>
             <button onClick={() => setView("pattern")} type="button">
-              Return to pattern
+              {SITE_COPY.play["return-overview"]}
             </button>
           </div>
         )}
@@ -249,6 +250,13 @@ export function CollectionStream({
         </p>
       ) : null}
       <StreamStatus
+        profileLabel={
+          provider === "myanimelist"
+            ? SITE_COPY.play["profile-myanimelist"]
+            : provider === "hardcover"
+              ? SITE_COPY.play["profile-hardcover"]
+              : SITE_COPY.play["profile-steam"]
+        }
         profileUrl={payload.profileUrl}
         stale={state.stale}
         syncedAt={payload.syncedAt || state.fetchedAt}

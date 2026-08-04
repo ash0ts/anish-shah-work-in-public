@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0069 -->
 
 ## display-title
-Accelerating Diffusion with Hugging Face
+Accelerating diffusion-model workflows
 
 ## short-title
-Accelerating Diffusion with Hugging Face
+Diffusion with Hugging Face
 
 ## summary
-46:17
+I co-presented a session on accelerating diffusion-model workflows with Hugging Face.
 
 ## role-summary
-Co-presenter with Zach Mueller and Suraj Patil
+I co-presented with Zach Mueller and Suraj Patil.

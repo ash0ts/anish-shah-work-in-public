@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0097 -->
 
 ## display-title
-How to Use Azure OpenAI and Azure AI Studio with Weights & Biases Weave
+Tracing Azure OpenAI with W&B Weave
 
 ## short-title
-Azure AI Studio with W&B Weave
+Azure OpenAI with Weave
 
 ## summary
-Azure/Weave cookbook
+I wrote a cookbook for using Azure OpenAI and Azure AI Studio with W&B Weave.
 
 ## role-summary
-Author
+I authored the cookbook.

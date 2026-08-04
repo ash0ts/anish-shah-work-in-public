@@ -265,38 +265,10 @@ test("generated archive links never reintroduce the removed view parameter", () 
 test("the color calendar has four semantic rows, six years, and exact archive counts", () => {
   const years = [2021, 2022, 2023, 2024, 2025, 2026];
   const expected = {
-    "products-open-source": [
-      [0, 0],
-      [1, 2],
-      [4, 7],
-      [4, 6],
-      [2, 2],
-      [3, 4],
-    ],
-    "courses-learning": [
-      [0, 0],
-      [0, 0],
-      [0, 0],
-      [2, 10],
-      [2, 10],
-      [0, 0],
-    ],
-    "writing-research": [
-      [1, 1],
-      [4, 6],
-      [9, 14],
-      [7, 14],
-      [0, 0],
-      [1, 1],
-    ],
-    "talks-programs": [
-      [1, 2],
-      [2, 10],
-      [10, 20],
-      [19, 37],
-      [11, 23],
-      [1, 1],
-    ],
+    "products-open-source": [0, 1, 4, 4, 2, 3],
+    "courses-learning": [0, 0, 0, 2, 2, 0],
+    "writing-research": [1, 4, 9, 7, 0, 1],
+    "talks-programs": [1, 2, 10, 19, 11, 1],
   };
 
   assert.equal(workBuckets.length, 4);
@@ -309,10 +281,7 @@ test("the color calendar has four semantic rows, six years, and exact archive co
           const works = records
             .filter((record) => record.bucket === bucket.id)
             .filter((record) => activeInYear(record, year));
-          return [
-            works.length,
-            works.reduce((count, work) => count + work.formCount, 0),
-          ];
+          return works.length;
         }),
       ]),
     ),
@@ -321,7 +290,7 @@ test("the color calendar has four semantic rows, six years, and exact archive co
 
   const maximum = Math.max(
     ...Object.values(expected).flatMap((row) =>
-      row.map(([workCount]) => workCount),
+      row,
     ),
   );
   assert.equal(maximum, 19);
@@ -329,7 +298,7 @@ test("the color calendar has four semantic rows, six years, and exact archive co
     Object.fromEntries(
       Object.entries(expected).map(([bucket, row]) => [
         bucket,
-        row.map(([workCount]) => densityLevel(workCount, maximum)),
+        row.map((workCount) => densityLevel(workCount, maximum)),
       ]),
     ),
     {
@@ -370,14 +339,10 @@ test("timeline cell links preserve active query filters while selecting body and
   assert.equal(url.searchParams.has("page"), false);
 });
 
-test("Work source renders four body folds and a semantic server-rendered color calendar", async () => {
-  const [source, timeline, behavior, css, packageJson] = await Promise.all([
+test("Work source renders a paginated four-line index and semantic color calendar", async () => {
+  const [source, timeline, css, packageJson] = await Promise.all([
     readFile(new URL("../app/work/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/work/WorkTimeline.tsx", import.meta.url), "utf8"),
-    readFile(
-      new URL("../app/work/WorkFilterBehavior.tsx", import.meta.url),
-      "utf8",
-    ),
     readFile(new URL("../app/work/work.module.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8").then(
       JSON.parse,
@@ -388,26 +353,31 @@ test("Work source renders four body folds and a semantic server-rendered color c
   assert.match(source, /<WorkTimeline query=\{query\} records=\{timelineRecords\}/);
   assert.match(source, /countWorkFacetOptions\(allWorks, "theme"\)/);
   assert.match(source, /countWorkFacetOptions\(allWorks, "media"\)/);
-  assert.match(source, /countWorkFacetOptions\(allWorks, "ecosystem"\)/);
-  assert.match(source, /countWorkFacetOptions\(allWorks, "contribution"\)/);
+  assert.doesNotMatch(source, /countWorkFacetOptions\(allWorks, "ecosystem"\)/);
+  assert.doesNotMatch(source, /countWorkFacetOptions\(allWorks, "contribution"\)/);
   assert.doesNotMatch(
     source,
-    /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot|const perPage|pagination/i,
+    /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot/i,
   );
   assert.doesNotMatch(
     source,
     /from\s+["'](?:three|@react-three\/)|import\(["'](?:three|@react-three\/)/,
   );
-  for (const name of [
-    "bucket",
-    "topic",
-    "year",
-    "format",
-    "organization",
-    "role",
-  ]) {
-    assert.match(source, new RegExp(`name="${name}"`));
+  for (const name of ["bucket", "topic", "year", "format"]) {
+    assert.match(source, new RegExp(`<FilterSelect[\\s\\S]{0,240}name="${name}"`));
   }
+  assert.doesNotMatch(
+    source,
+    /<FilterSelect[\s\S]{0,240}name="(?:organization|role)"/,
+  );
+  assert.match(source, /<input name="organization" type="hidden"/);
+  assert.match(source, /<input name="role" type="hidden"/);
+  assert.match(
+    source,
+    /<details[\s\S]{0,180}className=\{styles\.moreFilters\}[\s\S]{0,180}id="work-more-filters"[\s\S]*?name="format"/,
+  );
+  assert.match(source, /(?:WORK_ARCHIVE_PAGE_SIZE|pageSize|perPage)\s*=\s*24/);
+  assert.match(source, /\.slice\(\s*(?:pageStart|start|offset|\(query\.page - 1\) \* 24)/);
   assert.doesNotMatch(source, /name="view"/);
 
   assert.match(
@@ -425,18 +395,18 @@ test("Work source renders four body folds and a semantic server-rendered color c
   assert.match(timeline, /workArchiveHref\(query,/);
   assert.match(timeline, /\}\#work-index`/);
   assert.match(timeline, /works\.length/);
-  assert.match(timeline, /formCount/);
+  assert.doesNotMatch(timeline, /formCount/);
   assert.match(timeline, /densityLevel\(/);
   assert.match(timeline, /Math\.ceil\(Math\.sqrt\(count \/ maximum\) \* 5\)/);
   assert.doesNotMatch(timeline, /@observablehq|canvas|three|webgl/i);
   assert.equal(packageJson.dependencies["@observablehq/plot"], undefined);
 
-  assert.doesNotMatch(
+  assert.match(
     source,
-    /id="work-(?:more-)?filters"[\s\S]{0,80}\bopen\b/,
-    "Filter disclosures must not SSR open and collapse after paint",
+    /id="work-more-filters"[\s\S]{0,100}open=\{Boolean\(query\.format\)\}/,
+    "Medium should open server-side only when that filter is active",
   );
-  assert.match(behavior, /min-width:\s*1101px/);
+  assert.doesNotMatch(source, /WorkFilterBehavior|defaultOpen/);
   assert.match(css, /@media\s*\(max-width:\s*1100px\)/);
   assert.match(
     css,

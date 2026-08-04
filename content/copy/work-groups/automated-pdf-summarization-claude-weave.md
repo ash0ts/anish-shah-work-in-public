@@ -1,16 +1,16 @@
 <!-- copy-record: group:writing:automated-pdf-summarization -->
 
 ## display-title
-Automated PDF Summarization with Claude and W&B Weave
+Automated paper summarization with Claude and Weave
 
 ## short-title
-Automated PDF Summarization
+PDF summarization with Claude
 
 ## summary
-A practical article and cookbook implementation for summarizing arXiv papers with Claude and W&B Weave.
+I wrote and implemented a workflow for summarizing arXiv papers with Claude 3.5 Sonnet and W&B Weave.
 
 ## role-summary
-Author and implementation contributor
+I authored the article and contributed the cookbook implementation.
 
 ## home-title
 arXiv summarization with Claude & Weave

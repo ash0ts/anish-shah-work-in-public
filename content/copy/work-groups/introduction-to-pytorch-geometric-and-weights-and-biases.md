@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0054 -->
 
 ## display-title
-Introduction to PyTorch Geometric and Weights & Biases
+Graph learning with PyTorch Geometric
 
 ## short-title
-Introduction to PyTorch Geometric and Weights & Biases
+PyTorch Geometric with W&B
 
 ## summary
-W&B Fully Connected editorial item
+I wrote an introduction to graph learning with PyTorch Geometric and W&B.
 
 ## role-summary
-Author
+I authored the PyTorch Geometric introduction.

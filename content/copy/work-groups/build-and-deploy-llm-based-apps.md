@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0006 -->
 
 ## display-title
-Build and Deploy LLM-Based Apps
+Building and deploying LLM applications
 
 ## short-title
-Build and Deploy LLM-Based Apps
+Build and deploy LLM apps
 
 ## summary
-Organizer, lead instructor, and content creator.
+I organized and led instruction for a workshop on building and deploying LLM applications.
 
 ## role-summary
-Organizer, lead instructor, and content creator
+I organized the program, led instruction, and created its content.

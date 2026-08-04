@@ -23,15 +23,13 @@ test("Collect is a sixth lazy Play stream with a complete semantic fallback", as
     /active === "collect" \? <DiscogsStream fixture=\{fixture\} \/> : null/,
     "Discogs must not mount before Collect is active",
   );
-  assert.match(
-    streams,
-    /interactive shelf loads only after Collect is selected/i,
-  );
+  assert.match(streams, /SITE_COPY\.play\["collect-description"\]/);
   assert.match(discogs, /loadConnector<DiscogsPublicSnapshot>\([\s\S]*?"discogs"/);
   assert.match(discogs, /new URLSearchParams\([\s\S]*?pageSize/);
   assert.match(page, /streamIdFromValue\(query\.stream\)/);
   assert.match(page, /initialStream=\{streamIdFromValue\(query\.stream\)\}/);
-  assert.match(classic, /six optional public streams/);
+  assert.match(classic, /SITE_COPY\.play\["intro-title"\]/);
+  assert.doesNotMatch(classic, /pattern \/ gallery \/ groove/i);
   assert.match(classic, /initialStream=\{initialStream\}/);
   assert.match(streams, /window\.history\.replaceState/);
   assert.match(streams, /url\.searchParams\.set\("stream", stream\)/);
@@ -48,7 +46,8 @@ test("Discogs uses a ruled shelf and an accessible pressing matrix", async () =>
   assert.match(discogs, /Pressings and releases, kept distinct/);
   assert.match(discogs, /presentation === "crate"/);
   assert.match(discogs, /The physical catalog/);
-  assert.match(discogs, /Flip through/);
+  assert.match(discogs, /SITE_COPY\.play\["view-overview"\]/);
+  assert.match(discogs, /SITE_COPY\.play\["view-browse-all"\]/);
   assert.match(discogs, /physical items/);
   assert.match(discogs, /distinct releases/);
   assert.match(

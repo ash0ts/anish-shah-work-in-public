@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0031 -->
 
 ## display-title
-Fine-Tuning the GPT Model Series for Agent Applications
+Fine-tuning GPT models for agent applications
 
 ## short-title
-Fine-Tuning the GPT Model Series for Agent Applications
+GPT fine-tuning for agents
 
 ## summary
-Co-presenter with Gerard Woods.
+I co-presented how to fine-tune GPT models for agent applications.
 
 ## role-summary
-Co-presenter with Gerard Woods
+I co-presented the session with Gerard Woods.

@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0063 -->
 
 ## display-title
-Automated Medical Note Generation: Fine-Tuning GPT Models for Clinical Documentation Using Azure OpenAI and Weights & Biases
+Fine-tuning GPT models for clinical notes
 
 ## short-title
-Fine-Tuning GPT Models for Clinical Notes
+GPT fine-tuning for clinical notes
 
 ## summary
-W&B Fully Connected editorial item
+I documented a workflow for fine-tuning GPT models to generate clinical notes with Azure OpenAI and W&B.
 
 ## role-summary
-Author
+I authored the article and contributed the accompanying example.

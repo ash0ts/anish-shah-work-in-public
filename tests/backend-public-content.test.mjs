@@ -743,9 +743,11 @@ test("public runtime reads publication snapshots, never editable drafts", async 
   assert.match(runtime, /PublicContentUnavailableError/);
   assert.match(runtime, /resolveKvFallback/);
   assert.doesNotMatch(runtime, /FROM public_records/);
-  for (const route of [home, work, detail, classicPlay, sources]) {
+  for (const route of [home, work, detail, sources]) {
     assert.match(route, /getPublicContentView/);
   }
+  assert.match(classicPlay, /SITE_COPY\.play/);
+  assert.doesNotMatch(classicPlay, /narrative:play:personal-streams/);
   for (const route of [home, work, detail, play, sources]) {
     assert.match(route, /dynamic = "force-dynamic"/);
   }

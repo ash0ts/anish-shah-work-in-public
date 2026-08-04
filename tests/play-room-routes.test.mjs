@@ -441,12 +441,12 @@ test("six authored screens preserve provider and consent boundaries", async () =
   );
   const combined = screens.join("\n");
   for (const [id, title] of [
-    ["watch", "Midnight Broadcast"],
-    ["read", "Borrowed Shelf"],
-    ["listen", "Pocket Player"],
-    ["collect", "Crate Archive"],
-    ["play", "Desktop Library"],
-    ["move", "Cardio Television"],
+    ["watch", "TV"],
+    ["read", "Bookshelf"],
+    ["listen", "Music player"],
+    ["collect", "Record crate"],
+    ["play", "Computer"],
+    ["move", "Treadmill"],
   ]) {
     assert.match(registry, new RegExp(`SITE_COPY\\.play\\["${id}-title"\\]`));
     assert.match(copy, new RegExp(`## ${id}-title\\n${title}`));

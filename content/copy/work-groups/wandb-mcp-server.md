@@ -1,16 +1,16 @@
 <!-- copy-record: group:products:wandb-mcp -->
 
 ## display-title
-W&B MCP Server
+W&B MCP Server: agent-native experiment access
 
 ## short-title
-W&B MCP Server
+MCP for W&B
 
 ## summary
-An agent-native interface for inspecting W&B experiments and traces.
+I helped build an MCP interface that lets agents inspect W&B experiments and traces.
 
 ## role-summary
-Contributor and coauthor
+I contributed to the server and coauthored its launch article.
 
 ## home-title
 W&B MCP Server

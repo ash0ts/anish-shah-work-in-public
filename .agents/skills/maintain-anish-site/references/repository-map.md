@@ -25,10 +25,19 @@ Paths are relative to the repository root.
 - `content/copy/pages/**`: Git-owned page presentation prose.
 - `content/copy/work-groups/**`: Git-owned WorkGroup display/short titles, summaries, and role summaries, each bound to a stable sanitized ID.
 - `scripts/lib/copy-deck.mjs`: strict plain-text parser and generator.
-- `lib/copy.ts`, `lib/copy-contract.ts`, `lib/copy-ownership.ts`: typed registry and runtime ownership.
+- `lib/copy.ts`, `lib/copy-contract.ts`, `lib/copy-ownership.ts`, `lib/copy-voice-contract.ts`: typed registry, runtime ownership, and deterministic public-voice policy.
+- `scripts/copy-voice-check.mjs` and `scripts/lib/copy-voice.mjs`: copy voice and claim-qualification audit tooling.
 - Generated copy modules are ignored build products. Copywriters commit only the source Markdown deck.
 
 Runtime precedence is: sanitized canonical facts and structure, then published D1 visibility/order/caveats/metric wording, then declared Git-owned copy fields. D1 values shadowed by the deck are reported for owner review rather than silently becoming authoritative.
+
+## Public UI and Language Contract
+
+- `frontend-design` is the only creative skill and is required when public-language work changes layout, interaction, or hierarchy.
+- Work stays a two-dimensional, server-rendered semantic color calendar; copy changes do not authorize a second archive or WebGL navigation.
+- Public copy uses a first-person technical voice and the sequence outcome → mechanism → proof → meaning. Keep one claim per sentence and its qualifier adjacent.
+- The copy deck owns only allowlisted presentation prose. Sanitized canonical facts and D1 publication state remain authoritative for identity, metrics, evidence, visibility, ordering, and caveats.
+- Keep motion brief, interruptible, and nonessential. Do not use copy or presentation work to introduce film, autoplay, or scroll capture.
 
 ## My Room Contract
 

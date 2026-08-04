@@ -18,6 +18,7 @@ const [
   workGroupsSource,
   workPageSource,
   timelineSource,
+  impactSource,
   packageJson,
 ] =
   await Promise.all([
@@ -43,6 +44,7 @@ const [
     path.join(projectRoot, "app/work/WorkTimeline.tsx"),
     "utf8",
   ),
+  readFile(path.join(projectRoot, "lib/home-impact.ts"), "utf8"),
   readFile(path.join(projectRoot, "package.json"), "utf8").then(JSON.parse),
 ]);
 const copyDeck = await buildCopyDeck(projectRoot);
@@ -108,19 +110,19 @@ test("Bodies of Work resolves four parallel buckets with three featured stories 
   }
 });
 
-test("Home is semantic HTML with one expanded bucket and no numbered decoration", () => {
+test("Home is a semantic four-line index with one representative link per line", () => {
   assert.match(homeSource, /<HomeIntroduction/);
   assert.match(homeSource, /<BodiesOfWork/);
-  assert.match(bodySource, /<details/);
-  assert.match(bodySource, /open=\{index === 0\}/);
+  assert.match(bodySource, /data-work-line/);
+  assert.match(bodySource, /bucket\.groups\[0\]/);
   assert.equal(
     copyDeck.pages.home["selected-heading"],
-    "Systems, curricula, writing, and technical sessions.",
+    "Four ways I put AI systems into the world.",
   );
   assert.match(bodySource, /SITE_COPY\.home\["selected-heading"\]/u);
-  assert.match(bodySource, /group\.homeTitle/);
-  assert.match(bodySource, /group\.homeRole/);
-  assert.match(bodySource, /bucket\.groups\.map/);
+  assert.match(bodySource, /<strong>\{group\.homeTitle\}<\/strong>/);
+  assert.doesNotMatch(bodySource, /bucket\.groups\.map/);
+  assert.doesNotMatch(bodySource, /<details|<summary/);
   assert.doesNotMatch(bodySource, /bucket\.number|padStart/);
   assert.doesNotMatch(bodySource, /canvas|three|webgl/i);
 });
@@ -130,31 +132,20 @@ test("Home and Work share one expert-facing four-body taxonomy", () => {
     (index) => copyDeck.pages.work[`bucket-${index}-title`],
   );
   for (const label of [
-    "Systems & Open Source",
-    "Curricula & Workshops",
-    "Technical Writing & Implementations",
-    "Technical Talks & Programs",
+    "Agent systems & open source",
+    "Technical education",
+    "Research, writing & implementations",
+    "Talks, workshops & programs",
   ]) {
     assert(bucketTitles.includes(label), label);
   }
-  const featuredTitles = Object.values(expectedFeatured)
-    .flat()
-    .map((id) => copyDeck.workGroups[id].homeTitle);
-  for (const title of [
-    "W&B MCP Server",
-    "EvalForge: evaluation-criteria generation & alignment",
-    "W&B logging & checkpointing for Lightning Fabric",
-    "AI curriculum: prompting, evaluation & agents",
-    "Agentic LLM fine-tuning & evaluation",
-    "Google Cloud Startup School: GenAI applications",
-    "WandBot: GPT-4 documentation support",
-    "Prompt engineering with LangChain & W&B",
-    "arXiv summarization with Claude & Weave",
-    "Architecting & orchestrating AI agents",
-    "LLM agent fine-tuning for task automation",
-    "Building agents with evaluation in the loop",
+  for (const id of [
+    "group:products:wandb-mcp",
+    "group:courses:ai-curriculum",
+    "group:writing:wandbot",
+    "group:talks:architecting-agents",
   ]) {
-    assert(featuredTitles.includes(title), title);
+    assert.match(workGroupsSource, new RegExp(id.replaceAll(":", "\\:")));
   }
   assert.match(workGroupsSource, /SITE_COPY\.work\["bucket-1-title"\]/u);
   assert.match(workGroupsSource, /workGroupCopyFor\(group\.id\)/u);
@@ -166,11 +157,12 @@ test("Home and Work share one expert-facing four-body taxonomy", () => {
   assert.match(workGroupsSource, /return workBuckets\.map/);
 });
 
-test("Bodies of Work motion enhances native details without hiding SSR content", () => {
+test("Bodies of Work motion enhances ruled rows without hiding SSR content", () => {
   assert.match(bodySource, /import \{ animate, stagger \} from "animejs"/);
   assert.match(bodySource, /useLayoutEffect/);
-  assert.match(bodySource, /addEventListener\("toggle", onToggle\)/);
-  assert.match(bodySource, /animation\.cancel\(\)/);
+  assert.match(bodySource, /IntersectionObserver/);
+  assert.match(bodySource, /observer\.disconnect\(\)/);
+  assert.match(bodySource, /motion\?\.cancel\(\)/);
   assert.match(bodySource, /prefers-reduced-motion: reduce/);
   assert.doesNotMatch(bodySource, /opacity:\s*\[0,\s*1\]/);
 });
@@ -192,10 +184,10 @@ test("Work pairs its four-body SSR index with a semantic body-by-year color cale
   assert.match(workPageSource, /workBuckets\.map/);
   assert.match(workPageSource, /data-work-body=\{bucket\.id\}/);
   assert.match(workPageSource, /<WorkTimeline/);
-  assert.doesNotMatch(
-    workPageSource,
-    /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot|pagination/i,
-  );
+  assert.doesNotMatch(workPageSource, /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot/i);
+  assert.match(workPageSource, /const perPage = 24/);
+  assert.match(workPageSource, /filtered\.slice\(pageStart, pageStart \+ perPage\)/);
+  assert.match(workPageSource, /aria-label="Work pages"/);
   assert.doesNotMatch(
     workPageSource,
     /from\s+["'](?:three|@react-three\/)|import\(["'](?:three|@react-three\/)/,
@@ -216,7 +208,7 @@ test("Work pairs its four-body SSR index with a semantic body-by-year color cale
   assert.match(timelineSource, /data-year=\{year\}/);
   assert.match(timelineSource, /data-density=\{density \|\| undefined\}/);
   assert.match(timelineSource, /workArchiveHref\(query,/);
-  assert.match(timelineSource, /formCount/);
+  assert.doesNotMatch(timelineSource, /formCount/);
   assert.match(timelineSource, /densityLevel\(/);
   assert.doesNotMatch(
     timelineSource,
@@ -235,6 +227,20 @@ test("Work pairs its four-body SSR index with a semantic body-by-year color cale
     false,
   );
   assert.equal(packageJson.dependencies["@observablehq/plot"], undefined);
+});
+
+test("Home proof statements resolve the three required qualified metric IDs", () => {
+  for (const metricId of [
+    "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+    "metric:courses:enrollments:2026-07-30",
+    "metric:events:pipeline-supported:2024-2025",
+  ]) {
+    assert.match(impactSource, new RegExp(metricId.replaceAll(":", "\\:")));
+  }
+  assert.match(impactSource, /throw new Error/);
+  assert.match(impactSource, /missing, unpublished, or assigned to the wrong theme/);
+  assert.match(impactSource, /must be public and include its limit/);
+  assert.match(impactSource, /SITE_COPY\.home\["proof-1-statement"\]/);
 });
 
 test("the superseded chapter-stack and Three.js implementation is gone", () => {

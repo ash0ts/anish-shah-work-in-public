@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0043 -->
 
 ## display-title
-Agent Observability
+Observing AI agents
 
 ## short-title
-Agent Observability
+Agent observability
 
 ## summary
-AI Innovators meetup speaker.
+I spoke at an AI Innovators meetup about agent observability.
 
 ## role-summary
-AI Innovators meetup speaker
+I spoke about observability at the AI Innovators meetup.

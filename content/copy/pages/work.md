@@ -4,67 +4,97 @@
 Work
 
 ## seo-description
-Browse Anish Shah’s applied AI systems, curricula, technical writing, open-source contributions, and public sessions.
+Browse my agent systems, courses, implementations, open-source contributions, talks, and workshops.
 
 ## masthead-title
-One body of work. Every public form attached.
+Projects, without the duplicates.
 
 ## masthead-summary
-Systems, curricula, technical writing, and public sessions are the durable units. Recordings, translations, repositories, and appearances remain nested beneath them.
+I group projects by what I built—not every place they appeared. Talks, recordings, translations, and code stay attached to the underlying work.
 
 ## search-label
-Search work and public forms
+Search projects, talks, and code
 
 ## search-placeholder
-Agents, evaluation, MCP, LangChain…
+Agents, evaluation, MCP, LangChain
 
 ## index-default-heading
-All work, inside four bodies.
+All projects
 
 ## index-filtered-heading
-Filtered work
+Matching projects
 
 ## index-summary
-Open a line to inspect every work and its public forms.
+Open a line to browse the projects inside it.
 
 ## no-results
-No work matches those filters.
+No projects match those filters.
 
 ## clear-search
-Clear the search
+Clear filters
+
+## detail-back
+Project index
+
+## detail-role
+My role
+
+## detail-period
+When
+
+## detail-organization
+With
+
+## detail-included
+What this included
+
+## detail-results
+Results
+
+## detail-context
+Program context · not direct attribution
+
+## detail-sources
+Sources
+
+## detail-materials
+Talks, recordings, and code
+
+## detail-related
+Related projects
 
 ## bucket-1-title
-Systems & Open Source
+Agent systems & open source
 
 ## bucket-1-short-title
 Systems
 
 ## bucket-1-statement
-Agent-facing interfaces, evaluation tooling, and ML infrastructure integrations released as public software.
+Interfaces, evaluation tools, and infrastructure integrations built for agents and ML teams.
 
 ## bucket-2-title
-Curricula & Workshops
+Technical education
 
 ## bucket-2-short-title
-Curricula
+Education
 
 ## bucket-2-statement
-Courses and multi-session instruction spanning prompting, LLM evaluation, fine-tuning, and agent engineering.
+Courses and workshops on prompting, evaluation, fine-tuning, and agent engineering.
 
 ## bucket-3-title
-Technical Writing & Implementations
+Research, writing & implementations
 
 ## bucket-3-short-title
-Writing
+Research
 
 ## bucket-3-statement
-Articles and public implementations covering LLM support systems, prompt engineering, and arXiv summarization.
+Articles and implementations that make agent behavior, evaluation, and model systems easier to inspect.
 
 ## bucket-4-title
-Technical Talks & Programs
+Talks, workshops & programs
 
 ## bucket-4-short-title
-Talks
+Programs
 
 ## bucket-4-statement
-Public sessions on agent architecture, model fine-tuning, and evaluation across conferences and practitioner programs.
+Sessions on agent architecture, model adaptation, and evaluation for researchers and practitioners.

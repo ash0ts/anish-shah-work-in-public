@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0049 -->
 
 ## display-title
-NYC AI Innovators Meetup
+NYC AI Innovators meetup
 
 ## short-title
-NYC AI Innovators Meetup
+NYC AI Innovators
 
 ## summary
-No replay found through July 30, 2026
+I spoke at and helped host the NYC AI Innovators meetup.
 
 ## role-summary
-Meetup speaker/host
+I spoke and helped host the meetup.

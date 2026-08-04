@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0013 -->
 
 ## display-title
-Mastering MLOps with W&B and Microsoft Phi-2
+MLOps with W&B and Microsoft Phi-2
 
 ## short-title
-Mastering MLOps with W&B and Microsoft Phi-2
+MLOps with Phi-2
 
 ## summary
-Presenter.
+I presented how to manage MLOps workflows with W&B and Microsoft Phi-2.
 
 ## role-summary
-Presenter
+I presented the Phi-2 MLOps session.

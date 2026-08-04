@@ -26,7 +26,7 @@ export default function ReadRoomScreen({
       <header className={styles.readHeader} id="read-desk-note">
         <p>Hardcover · Personal circulation desk</p>
         <h1>{object.title}</h1>
-        <span>What is open, what is finished, and what is waiting on the shelf.</span>
+        <span>{object.description}</span>
       </header>
       <section className={styles.bookshelf} aria-label="Hardcover collection">
         <div className={styles.shelfCrown} aria-hidden="true">
@@ -47,7 +47,7 @@ export default function ReadRoomScreen({
               </div>
               <div>
                 <dt>Collection</dt>
-                <dd>Public shelf</dd>
+                <dd>My shelf</dd>
               </div>
             </dl>
           </aside>

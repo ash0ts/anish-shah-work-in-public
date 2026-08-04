@@ -110,8 +110,9 @@ test("Play supplies a server-rendered Spotify no-JavaScript list", async () => {
   assert.match(page, /spotifyNoScript=\{/);
   assert.match(page, /<ol>[\s\S]*?open\.spotify\.com\/track/);
   assert.match(page, /shortTerm\.tracks\.slice\(0, 12\)/);
-  assert.match(page, /Open Spotify profile/);
-  assert.match(page, /six optional public streams/);
+  assert.match(page, /SITE_COPY\.play\["profile-spotify"\]/);
+  assert.match(page, /SITE_COPY\.play\["intro-title"\]/);
+  assert.doesNotMatch(page, /six optional public streams/i);
 
   const streams = await readFile(streamsSourceUrl, "utf8");
   assert.match(streams, /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/);

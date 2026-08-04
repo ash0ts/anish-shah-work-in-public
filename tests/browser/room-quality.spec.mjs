@@ -8,43 +8,43 @@ const objects = [
     id: "watch",
     label: "Watch",
     provider: "myanimelist",
-    foundation: "MyAnimeList public signal",
-    title: "Midnight Broadcast",
+    foundation: "Channel 11 · MyAnimeList",
+    title: "TV",
   },
   {
     id: "read",
     label: "Read",
     provider: "hardcover",
     foundation: "Hardcover · Personal circulation desk",
-    title: "Borrowed Shelf",
+    title: "Bookshelf",
   },
   {
     id: "listen",
     label: "Listen",
     provider: "spotify",
     foundation: "Spotify · One returned order at a time",
-    title: "Pocket Player",
+    title: "Music player",
   },
   {
     id: "collect",
     label: "Collect",
     provider: "discogs",
     foundation: "Discogs · Physical collection",
-    title: "Crate Archive",
+    title: "Record crate",
   },
   {
     id: "play",
-    label: "Play",
+    label: "Games",
     provider: "steam",
-    foundation: "Steam · Public library snapshot",
-    title: "Desktop Library",
+    foundation: "Steam · Game library",
+    title: "Computer",
   },
   {
     id: "move",
     label: "Move",
     provider: "strava",
-    foundation: "Strava · Consent-gated public feed",
-    title: "Cardio Television",
+    foundation: "Strava · Feed by consent",
+    title: "Treadmill",
   },
 ];
 const directRoutes = objects.map(({ id }) => `/play/${id}`);
@@ -389,7 +389,9 @@ test.describe("My Room 2001 browser quality", () => {
 
     const response = await page.goto("/play", { waitUntil: "networkidle" });
     expect(response?.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: "Come in. Pick something up." })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Come in and pick something up." }),
+    ).toBeVisible();
     await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(6);
     await expect(page.locator("canvas")).toHaveCount(0);
     expect(connectors).toEqual([]);
@@ -517,7 +519,7 @@ test.describe("My Room 2001 browser quality", () => {
       "/play/collect?fixture=maximum-density&pageSize=12",
       { waitUntil: "domcontentloaded" },
     );
-    await page.getByRole("button", { name: "Flip through" }).click();
+    await page.getByRole("button", { name: "Browse all" }).click();
     await expect(page.locator('input[name="fixture"]')).toHaveValue(
       "maximum-density",
     );
@@ -599,7 +601,7 @@ test.describe("My Room 2001 browser quality", () => {
 
     await lastObject.focus();
     await expect(room.locator("[data-room-object-cue]")).toContainText(
-      "Cardio televisionMove",
+      "TreadmillMove",
     );
     await expect(lastObject).toHaveAttribute("data-focused", "true");
     await lastObject.press("Tab");
@@ -962,7 +964,7 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(page).toHaveURL(/\/play\/watch$/);
     await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
     await expect(page.locator("[data-room-announcer]")).toContainText(
-      "Opened Watch: Midnight Broadcast.",
+      "Opened Watch: TV.",
     );
 
     await page.getByRole("link", { name: "Back to room" }).click();
@@ -1089,7 +1091,7 @@ test.describe("My Room 2001 browser quality", () => {
     page,
   }) => {
     await page.goto("/play/read", { waitUntil: "networkidle" });
-    await expect(page.getByRole("heading", { name: "Borrowed Shelf" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Bookshelf" })).toBeVisible();
     await expect(page.locator("main[data-room-screen]")).toHaveCount(1);
     await expect(page.getByRole("dialog", { name: "Interactive room" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Back to room" })).toBeVisible();
@@ -1127,7 +1129,7 @@ test.describe("My Room 2001 browser quality", () => {
     releaseWatchRequest();
 
     await expect(page).toHaveURL(/\/play\/play$/, { timeout: 10_000 });
-    await expect(page.getByRole("heading", { name: "Desktop Library" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Computer" })).toBeVisible();
     await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
     await page.getByRole("link", { name: "Back to room" }).click();
     await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });

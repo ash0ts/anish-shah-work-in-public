@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0091 -->
 
 ## display-title
-Kedro + MLFlow + WANDB?
+Comparing Kedro, MLflow, and W&B
 
 ## short-title
-Kedro + MLFlow + WANDB?
+Kedro, MLflow, and W&B
 
 ## summary
-FourthBrain-era Spotify/MLOps report
+I wrote an MLOps report comparing Kedro, MLflow, and W&B through a Spotify project.
 
 ## role-summary
-Author
+I authored the MLOps comparison.

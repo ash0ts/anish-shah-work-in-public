@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import styles from "../SpotifyStream.module.css";
 import { spotifyEmbedUrl, type SpotifyEmbedReference } from "./model";
+import { SITE_COPY } from "@/lib/copy";
 
 export function SpotifyFallback({
   message,
@@ -97,7 +98,7 @@ export function SpotifyFallback({
         <div className={styles.status}>
           <span>Profile-link fallback</span>
           <a href={profileUrl} rel="noreferrer" target="_blank">
-            Open Spotify profile
+            {SITE_COPY.play["profile-spotify"]}
           </a>
         </div>
       ) : null}

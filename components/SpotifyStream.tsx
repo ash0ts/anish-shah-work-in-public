@@ -10,6 +10,7 @@ import {
   type SpotifyState,
 } from "./spotify/model";
 import type { PreviewFixtureScenario } from "./play/connector-model";
+import { SITE_COPY } from "@/lib/copy";
 
 export function SpotifyStream({
   active = true,
@@ -53,7 +54,7 @@ export function SpotifyStream({
     return serverFallback ? (
       <div className={styles.serverFoundation}>{serverFallback}</div>
     ) : (
-      <SpotifyMessage loading message="Loading the last public snapshot…" />
+      <SpotifyMessage loading message={SITE_COPY.play["loading-collection"]} />
     );
   }
 
