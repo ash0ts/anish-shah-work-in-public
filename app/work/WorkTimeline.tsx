@@ -130,9 +130,7 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
                             prefetch={false}
                             aria-current={selected ? "page" : undefined}
                             aria-label={`${works.length} ${
-                              works.length === 1 ? "work" : "works"
-                            } and ${formCount} public ${
-                              formCount === 1 ? "form" : "forms"
+                              works.length === 1 ? "project" : "projects"
                             } in ${bucket.title}, ${year}`}
                             href={`${workArchiveHref(query, {
                               bucket: bucket.id,

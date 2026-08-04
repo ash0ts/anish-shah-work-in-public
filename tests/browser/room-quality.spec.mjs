@@ -2,7 +2,6 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { expectRoomReady } from "./helpers/room-readiness.mjs";
 import { Object3D, PerspectiveCamera, Vector3 } from "three";
-import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
 const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 const objects = [

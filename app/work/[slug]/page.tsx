@@ -319,7 +319,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
               aria-labelledby="outcomes-title"
             >
               <p className={styles.sectionLabel}>Direct outcomes</p>
-              <h2 id="outcomes-title">Outcomes attached to this work.</h2>
+              <h2 id="outcomes-title">{SITE_COPY.work["detail-results"]}</h2>
               <MetricRows metrics={outcomes} />
             </section>
           ) : null}
