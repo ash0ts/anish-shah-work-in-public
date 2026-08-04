@@ -236,7 +236,7 @@ test("all public routes expose useful server-rendered content", async () => {
     },
     {
       path: "/privacy",
-      required: [/I keep personal data deliberately small/i, /Storage and retention/i],
+      required: [/Personal data stays deliberately small/i, /Storage and retention/i],
     },
   ];
 
