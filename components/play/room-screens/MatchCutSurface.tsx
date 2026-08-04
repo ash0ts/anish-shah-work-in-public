@@ -4,11 +4,21 @@ import { animate } from "animejs";
 import {
   type CSSProperties,
   type ReactNode,
+  useEffect,
   useLayoutEffect,
   useRef,
 } from "react";
 
+import { useExperienceAudio } from "@/components/experience-audio/ExperienceAudioProvider";
 import type { RoomObjectId } from "../room-platform/room-types";
+
+const ENTRY_CUE_BY_OBJECT = {
+  watch: "watch-power",
+  read: "read-page",
+  collect: "collect-crate",
+  play: "play-computer-boot",
+  move: "move-tv",
+} as const satisfies Partial<Record<RoomObjectId, string>>;
 
 type EntrancePreset = {
   initial: CSSProperties;
@@ -88,6 +98,12 @@ export function MatchCutSurface({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const preset = ENTRANCE_PRESETS[objectId];
+  const { enabled: audioEnabled, playCue } = useExperienceAudio();
+
+  useEffect(() => {
+    if (!audioEnabled || objectId === "listen") return;
+    playCue(ENTRY_CUE_BY_OBJECT[objectId]);
+  }, [audioEnabled, objectId, playCue]);
 
   useLayoutEffect(() => {
     const element = ref.current;

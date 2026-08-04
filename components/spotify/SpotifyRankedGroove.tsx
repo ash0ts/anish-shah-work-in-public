@@ -1,6 +1,7 @@
 "use client";
 
 import { animate } from "animejs";
+import { useExperienceAudio } from "@/components/experience-audio/ExperienceAudioProvider";
 import {
   type KeyboardEvent,
   type MouseEvent,
@@ -39,6 +40,10 @@ export function SpotifyRankedGroove({
   fetchedAt: string;
   stale: boolean;
 }) {
+  const {
+    enabled: experienceAudioEnabled,
+    playCue,
+  } = useExperienceAudio();
   const [range, setRange] = useState<SpotifyTimeRange>("short_term");
   const [view, setView] = useState<SpotifyView>("groove");
   const initialTracks = payload.windows.short_term?.tracks.slice(0, 12) ?? [];
@@ -52,6 +57,10 @@ export function SpotifyRankedGroove({
   const previousAngle = useRef(0);
   const grooveMarks = useRef<Array<HTMLButtonElement | null>>([]);
   const railButtons = useRef<Array<HTMLButtonElement | null>>([]);
+
+  useEffect(() => {
+    if (experienceAudioEnabled) playCue("listen-boot");
+  }, [experienceAudioEnabled, playCue]);
 
   const tracks = (payload.windows[range]?.tracks ?? []).slice(0, 12);
   const selectedIndex = Math.max(
@@ -118,6 +127,7 @@ export function SpotifyRankedGroove({
   }, [playerConsent, playerTrack]);
 
   const closePlayer = (restoreFocus: boolean) => {
+    if (playerTrackId) playCue("listen-open-close");
     setPlayerTrackId(null);
     setPlayerConsent(false);
     if (restoreFocus) {
@@ -126,11 +136,13 @@ export function SpotifyRankedGroove({
   };
 
   const selectTrack = (track: SpotifyTrackSummary) => {
+    playCue("listen-nav");
     setSelectedId(track.id);
     if (playerTrackId && playerTrackId !== track.id) closePlayer(false);
   };
 
   const selectRange = (next: SpotifyTimeRange) => {
+    playCue("listen-nav");
     const nextTracks = (payload.windows[next]?.tracks ?? []).slice(0, 12);
     setRange(next);
     setSelectedId(nextTracks[0]?.id ?? "");
@@ -138,6 +150,7 @@ export function SpotifyRankedGroove({
   };
 
   const selectView = (next: SpotifyView) => {
+    playCue("listen-nav");
     closePlayer(false);
     setView(next);
   };
@@ -146,6 +159,7 @@ export function SpotifyRankedGroove({
     track: SpotifyTrackSummary,
     event: MouseEvent<HTMLButtonElement>,
   ) => {
+    playCue("listen-open-close");
     playerInvoker.current = event.currentTarget;
     setSelectedId(track.id);
     setPlayerTrackId(track.id);
