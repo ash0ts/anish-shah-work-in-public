@@ -35,7 +35,7 @@ export default function WatchRoomScreen({
           <span>● ● ●</span>
         </div>
         <div className={styles.broadcastGuide}>
-          <nav aria-label="Midnight Broadcast sections">
+          <nav aria-label={`${object.title} sections`}>
             <a href="#watch-program-note">Program note</a>
             <a href="#watch-library">Watch library</a>
           </nav>

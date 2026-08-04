@@ -3,6 +3,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { PreviewEnvironmentNotice } from "@/components/PreviewEnvironmentNotice";
 import { runtimeRootMetadata } from "@/lib/server/root-metadata";
+import { SITE_COPY } from "@/lib/copy";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -22,7 +23,7 @@ export default function RootLayout({
       <body>
         <PreviewEnvironmentNotice />
         <a className="skip-link" href="#main">
-          Skip to content
+          {SITE_COPY.site["skip-link"]}
         </a>
         <SiteHeader />
         <div className="site-frame">

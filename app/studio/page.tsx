@@ -8,6 +8,7 @@ import { resolveDiscogsCallbackUrl } from "@/lib/server/connectors/discogs-oauth
 import { resolveMyAnimeListCallbackUrl } from "@/lib/server/connectors/myanimelist-oauth";
 import { resolveSpotifyCallbackUrl } from "@/lib/server/connectors/spotify-oauth";
 import { getStudioOverview } from "@/lib/server/connectors";
+import { getCopyOwnershipReport } from "@/lib/server/copy-ownership";
 import { listEditorialRecords } from "@/lib/server/editorial";
 import { ownerAuthorizationForEmail } from "@/lib/server/owner-auth";
 import { ensureSanitizedPublicRecords } from "@/lib/server/public-record-seed";
@@ -16,6 +17,7 @@ import {
   ConnectorControls,
   StravaConnectorControls,
 } from "./ConnectorControls";
+import { CopyOwnershipSummary } from "./CopyOwnershipSummary";
 import { EditorialRecords } from "./EditorialRecords";
 import { PlayPromotionControls } from "./PlayPromotionControls";
 import styles from "./studio.module.css";
@@ -124,10 +126,13 @@ export default async function StudioPage() {
   }
   const overview = await getStudioOverview(user.email);
   const connectors = overview.connectors;
-  const initialEditorialRecords =
+  const [initialEditorialRecords, copyOwnershipReport] =
     overview.status === "ready"
-      ? await listEditorialRecords({ limit: 50, offset: 0 })
-      : null;
+      ? await Promise.all([
+          listEditorialRecords({ limit: 50, offset: 0 }),
+          getCopyOwnershipReport().catch(() => null),
+        ])
+      : [null, null];
 
   return (
     <main className={styles.shell} id="main">
@@ -324,10 +329,12 @@ export default async function StudioPage() {
                 : "No publication snapshot yet"}
             </strong>
           </div>
+          <CopyOwnershipSummary report={copyOwnershipReport} />
           {initialEditorialRecords ? (
             <EditorialRecords
               initial={initialEditorialRecords}
               isLocalSandbox={isLocalStudio}
+              copyOwnershipReport={copyOwnershipReport}
             />
           ) : null}
         </section>

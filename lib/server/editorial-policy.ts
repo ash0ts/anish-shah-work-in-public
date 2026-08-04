@@ -24,6 +24,10 @@ export type PatchValidation =
   | { ok: true; value: EditorialRecordPatch; changedFields: string[] }
   | { ok: false; code: string; message: string };
 
+export type EditorialOwnershipValidation =
+  | { ok: true }
+  | { ok: false; code: "copy_owned_field"; message: string };
+
 const VISIBILITIES = new Set<EditorialVisibility>([
   "public",
   "review_required",
@@ -193,6 +197,24 @@ export function validateEditorialPatch(value: unknown): PatchValidation {
   }
 
   return { ok: true, value: patch, changedFields: keys.sort() };
+}
+
+export function validateEditorialPatchOwnership(
+  recordType: string,
+  patch: EditorialRecordPatch,
+): EditorialOwnershipValidation {
+  if (
+    recordType === "work_group" &&
+    patch.approvedPublicWording !== undefined
+  ) {
+    return {
+      ok: false,
+      code: "copy_owned_field",
+      message: "WorkGroup wording is owned by the reviewed Git copy deck.",
+    };
+  }
+
+  return { ok: true };
 }
 
 export function validatePublicProjection(

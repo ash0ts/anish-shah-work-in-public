@@ -421,9 +421,10 @@ test("all direct Play routes are no-store publication-backed paths", () => {
 });
 
 test("six authored screens preserve provider and consent boundaries", async () => {
-  const [registry, ...screens] = await Promise.all(
+  const [registry, copy, ...screens] = await Promise.all(
     [
       "../room-platform/room-registry.ts",
+      "../../../content/copy/pages/play.md",
       "WatchRoomScreen.tsx",
       "ReadRoomScreen.tsx",
       "ListenRoomScreen.tsx",
@@ -439,15 +440,16 @@ test("six authored screens preserve provider and consent boundaries", async () =
     ),
   );
   const combined = screens.join("\n");
-  for (const title of [
-    "Midnight Broadcast",
-    "Borrowed Shelf",
-    "Pocket Player",
-    "Crate Archive",
-    "Desktop Library",
-    "Cardio Television",
+  for (const [id, title] of [
+    ["watch", "Midnight Broadcast"],
+    ["read", "Borrowed Shelf"],
+    ["listen", "Pocket Player"],
+    ["collect", "Crate Archive"],
+    ["play", "Desktop Library"],
+    ["move", "Cardio Television"],
   ]) {
-    assert.match(registry, new RegExp(title));
+    assert.match(registry, new RegExp(`SITE_COPY\\.play\\["${id}-title"\\]`));
+    assert.match(copy, new RegExp(`## ${id}-title\\n${title}`));
   }
   assert.match(combined, /provider="myanimelist"/);
   assert.match(combined, /provider="hardcover"/);
@@ -467,18 +469,18 @@ test("Watch, Read, and Play have provider-specific semantic appliances", async (
     source("components/play/room-screens/RoomScreens.module.css"),
   ]);
 
-  assert.match(watch, /aria-label="Midnight Broadcast sections"/);
+  assert.match(watch, /aria-label=\{`\$\{object\.title\} sections`\}/);
   assert.match(watch, /href="#watch-program-note"/);
   assert.match(watch, /href="#watch-library"/);
   assert.match(watch, /data-room-collection-presentation="broadcast-guide"/);
 
-  assert.match(read, /aria-label="Borrowed Shelf sections"/);
+  assert.match(read, /aria-label=\{`\$\{object\.title\} sections`\}/);
   assert.match(read, /href="#read-desk-note"/);
   assert.match(read, /href="#read-library"/);
   assert.match(read, /data-room-collection-presentation="circulation-shelf"/);
   assert.match(read, /<dl>/);
 
-  assert.match(play, /aria-label="Desktop Library shortcuts"/);
+  assert.match(play, /aria-label=\{`\$\{object\.title\} shortcuts`\}/);
   assert.match(play, /href="#play-system-note"/);
   assert.match(play, /href="#play-library"/);
   assert.match(play, /data-room-collection-presentation="desktop-library"/);

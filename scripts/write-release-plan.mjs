@@ -16,6 +16,7 @@ import {
   RELEASE_BUILD_CHECKPOINT_PATH,
   verifyReleaseBuildCheckpoint,
 } from "./lib/release-build-checkpoint.mjs";
+import { buildCopyDeck } from "./lib/copy-deck.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -268,6 +269,7 @@ const publicationCheckpoint = publicationCheckpointForPlan({
   bootstrapPlanned: process.env.RELEASE_PREDEPLOY_BOOTSTRAP === "1",
   previousVersion,
 });
+const { copyVersion } = await buildCopyDeck(root);
 
 const record = {
   schemaVersion: "1.2",
@@ -276,6 +278,7 @@ const record = {
   repository,
   contentVersion: contentAttestation.contentVersion,
   playExperienceMode,
+  copyVersion,
   publicContentSha256: publicContent.sha256,
   deployableArtifacts: {
     artifactSetSha256:

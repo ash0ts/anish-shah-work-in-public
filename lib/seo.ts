@@ -1,7 +1,38 @@
 import type { Metadata } from "next";
+import type { AnishContentBundle } from "../types/content";
 import {
   canonicalMetadataOrigin,
 } from "./deployment-environment";
+import { SITE_COPY } from "./copy";
+
+export type SitePresentationIdentity = {
+  siteName: string;
+  homeTitle: string;
+  titleTemplate: string;
+  defaultTitle: string;
+};
+
+export function sitePresentationIdentity(): SitePresentationIdentity {
+  return {
+    siteName: SITE_COPY.site["header-wordmark"],
+    homeTitle: SITE_COPY.home["seo-title"],
+    titleTemplate: SITE_COPY.site["title-template"],
+    defaultTitle: SITE_COPY.site["default-title"],
+  };
+}
+
+export function socialPageTitle(
+  title: string,
+  identity: SitePresentationIdentity = sitePresentationIdentity(),
+): string {
+  return identity.titleTemplate.replace("%s", title);
+}
+
+export function socialArtworkAlt(
+  identity: SitePresentationIdentity = sitePresentationIdentity(),
+): string {
+  return identity.defaultTitle;
+}
 
 export function siteOrigin(): string {
   return canonicalMetadataOrigin().replace(/\/+$/, "");
@@ -27,7 +58,8 @@ export function publicPageMetadata({
   type = "website",
 }: PublicPageMetadataInput): Metadata {
   const canonical = absoluteSiteUrl(path);
-  const socialTitle = `${title} — Anish Shah`;
+  const identity = sitePresentationIdentity();
+  const socialTitle = socialPageTitle(title, identity);
 
   return {
     title,
@@ -41,13 +73,13 @@ export function publicPageMetadata({
       description,
       type,
       url: canonical,
-      siteName: "Anish Shah",
+      siteName: identity.siteName,
       images: [
         {
           url: absoluteSiteUrl("/og.jpg"),
           width: 1200,
           height: 630,
-          alt: "Anish Shah — applied AI, in public",
+          alt: socialArtworkAlt(identity),
         },
       ],
     },
@@ -57,6 +89,49 @@ export function publicPageMetadata({
       description,
       images: [absoluteSiteUrl("/og.jpg")],
     },
+  };
+}
+
+export function buildHomeStructuredData(
+  bundle: Pick<AnishContentBundle, "profile">,
+  profileUrl: string,
+  identity: SitePresentationIdentity = sitePresentationIdentity(),
+) {
+  const personId = `${profileUrl}#anish-shah`;
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "ProfilePage",
+        "@id": `${profileUrl}#profile-page`,
+        url: profileUrl,
+        name: socialPageTitle(identity.homeTitle, identity),
+        description: bundle.profile.summary,
+        mainEntity: { "@id": personId },
+      },
+      {
+        "@type": "Person",
+        "@id": personId,
+        name: bundle.profile.name,
+        url: profileUrl,
+        jobTitle: bundle.profile.headline,
+        description: bundle.profile.summary,
+        sameAs: bundle.profile.links.map((link) => link.href),
+        worksFor: {
+          "@type": "Organization",
+          name: "Weights & Biases",
+          url: "https://wandb.ai/",
+        },
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${profileUrl}#website`,
+        url: profileUrl,
+        name: identity.siteName,
+        description: SITE_COPY.site["root-description"],
+        publisher: { "@id": personId },
+      },
+    ],
   };
 }
 

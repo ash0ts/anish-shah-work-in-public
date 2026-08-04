@@ -53,8 +53,48 @@ jobs:
             gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${PREVIEW_PR_NUMBER}/comments" -f body="$body" >/dev/null
           fi
 
-  deploy:
+  inspect:
+    name: route preview lane with trusted code
     if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.pull_requests[0].number != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      copy_only: ${{ steps.copy_lane.outputs.eligible }}
+      pr_number: ${{ github.event.workflow_run.pull_requests[0].number }}
+    steps:
+      - name: Check out trusted lane classifier
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Use Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - name: Reclassify current PR paths
+        id: copy_lane
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIEW_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          EXPECTED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          endpoint="repos/${GITHUB_REPOSITORY}/pulls/${PREVIEW_PR_NUMBER}"
+          snapshot="$(gh api "$endpoint" --jq '[.state, .head.sha, .head.repo.full_name] | @tsv')"
+          test "$snapshot" = $'open\t'"${EXPECTED_HEAD_SHA}"$'\t'"${GITHUB_REPOSITORY}"
+          gh api --paginate "${endpoint}/files" --jq '.[] | {filename, status}' \
+            | jq -s '.' > "${RUNNER_TEMP}/preview-pr-files.json"
+          node scripts/copy-only-lane.mjs classify \
+            --changes-file "${RUNNER_TEMP}/preview-pr-files.json" \
+            --github-output "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: inspect
+    if: >-
+      needs.inspect.outputs.copy_only != 'true' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.head_repository.full_name == github.repository &&

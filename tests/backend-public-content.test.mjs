@@ -341,7 +341,12 @@ test("published WorkGroups resolve only against visible member records", async (
   assert.equal(merged.workGroups[0].featuredOrder, null);
   assert.equal(
     merged.workGroups[0].summary,
-    "A compact public summary. — Evidence stays attached.",
+    `${group.summary} — Evidence stays attached.`,
+  );
+  assert.doesNotMatch(
+    merged.workGroups[0].summary,
+    /A compact public summary/u,
+    "retained D1 WorkGroup wording must not replace Git-owned copy",
   );
 
   const emptySnapshot = await snapshotWith([workGroupRecord(group)]);

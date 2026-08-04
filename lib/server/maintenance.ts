@@ -5,6 +5,7 @@ import {
 } from "../deployment-environment";
 import { runtimeDatabase, runtimeValue } from "./runtime-env";
 import { RETENTION_MAINTENANCE_KEY } from "./maintenance-state";
+import { COPY_VERSION } from "../copy";
 export {
   PUBLICATION_MAINTENANCE_KEY,
   recordMaintenanceState,
@@ -42,6 +43,7 @@ export type StudioHealth = {
   checkedAt: string;
   releaseSha: string | null;
   contentVersion: string | null;
+  copyVersion: string;
   canonicalOrigin: {
     status: "ready" | "setup_required" | "not_applicable";
     expected: string;
@@ -153,6 +155,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       checkedAt,
       releaseSha,
       contentVersion,
+      copyVersion: COPY_VERSION,
       canonicalOrigin,
       migration: { status: "setup_required", latestApplied: null },
       retentionHeartbeat: { status: "never_run", lastRunAt: null },
@@ -230,6 +233,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       checkedAt,
       releaseSha,
       contentVersion,
+      copyVersion: COPY_VERSION,
       canonicalOrigin,
       migration: {
         status: safeMigrationName ? "ready" : "setup_required",
@@ -244,6 +248,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       checkedAt,
       releaseSha,
       contentVersion,
+      copyVersion: COPY_VERSION,
       canonicalOrigin,
       migration: { status: "setup_required", latestApplied: null },
       retentionHeartbeat: { status: "error", lastRunAt: null },

@@ -19,6 +19,7 @@ import {
 import {
   type EditorialRecordPatch,
   type EditorialVisibility,
+  validateEditorialPatchOwnership,
   validatePublicProjection,
 } from "./editorial-policy";
 
@@ -214,6 +215,14 @@ export async function patchEditorialRecord(
     throw new EditorialError(
       "revision_conflict",
       "This record changed after it was loaded. Refresh before saving.",
+      409,
+    );
+  }
+  const ownership = validateEditorialPatchOwnership(current.recordType, patch);
+  if (!ownership.ok) {
+    throw new EditorialError(
+      ownership.code,
+      ownership.message,
       409,
     );
   }

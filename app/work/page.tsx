@@ -20,12 +20,12 @@ import { getPublicContentView } from "@/lib/server/public-content";
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
 import { WorkFilterBehavior } from "./WorkFilterBehavior";
 import { WorkTimeline } from "./WorkTimeline";
+import { SITE_COPY } from "@/lib/copy";
 import styles from "./work.module.css";
 
 export const dynamic = "force-dynamic";
 
-const workDescription =
-  "Browse Anish Shah’s applied AI systems, curricula, technical writing, open-source contributions, and public sessions.";
+const workDescription = SITE_COPY.work["seo-description"];
 
 export async function generateMetadata({
   searchParams,
@@ -34,7 +34,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const params = await searchParams;
   return publicPageMetadata({
-    title: "Work",
+    title: SITE_COPY.work["seo-title"],
     description: workDescription,
     path: "/work",
     noindex: hasPublicQuery(params),
@@ -110,8 +110,8 @@ export default async function WorkPage({
   const explorerHeading = query.query
     ? `Results for “${query.query}”`
     : activeFilterCount
-      ? "Filtered work"
-      : "All work, inside four bodies.";
+      ? SITE_COPY.work["index-filtered-heading"]
+      : SITE_COPY.work["index-default-heading"];
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
@@ -121,12 +121,8 @@ export default async function WorkPage({
           2021—now
         </p>
         <div className={styles.mastheadBody}>
-          <h1>One body of work. Every public form attached.</h1>
-          <p>
-            Systems, curricula, technical writing, and public sessions are the
-            durable units. Recordings, translations, repositories, and
-            appearances remain nested beneath them.
-          </p>
+          <h1>{SITE_COPY.work["masthead-title"]}</h1>
+          <p>{SITE_COPY.work["masthead-summary"]}</p>
         </div>
       </header>
 
@@ -140,11 +136,11 @@ export default async function WorkPage({
             <input name="practice" type="hidden" value={query.practice} />
           ) : null}
           <label className={styles.search}>
-            <span id="work-search-title">Search work and public forms</span>
+            <span id="work-search-title">{SITE_COPY.work["search-label"]}</span>
             <input
               defaultValue={query.query}
               name="q"
-              placeholder="Agents, evaluation, MCP, LangChain…"
+              placeholder={SITE_COPY.work["search-placeholder"]}
               type="search"
             />
           </label>
@@ -250,7 +246,7 @@ export default async function WorkPage({
               {explorerHeading}
             </h2>
           </div>
-          <p>Open a line to inspect every work and its public forms.</p>
+          <p>{SITE_COPY.work["index-summary"]}</p>
         </header>
         <FilteredResultFocus
           active={hasScopedResults || query.page > 1}
@@ -303,9 +299,9 @@ export default async function WorkPage({
 
         {!filtered.length ? (
           <div className={styles.empty}>
-            <p>No work matches those filters.</p>
+            <p>{SITE_COPY.work["no-results"]}</p>
             <Link href="/work" prefetch={false}>
-              Clear the search
+              {SITE_COPY.work["clear-search"]}
             </Link>
           </div>
         ) : null}

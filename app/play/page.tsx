@@ -9,11 +9,11 @@ import {
   previewFixtureScenario,
 } from "@/lib/server/preview-connector-fixtures";
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
+import { SITE_COPY } from "@/lib/copy";
 
 export const dynamic = "force-dynamic";
 
-const playDescription =
-  "Explore Anish Shah’s anime, reading, music, physical-media, gaming, and movement collections through bounded public snapshots.";
+const playDescription = SITE_COPY.play["seo-description"];
 
 type PlaySearchParams = Record<string, string | string[] | undefined>;
 
@@ -24,7 +24,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const query = await searchParams;
   return publicPageMetadata({
-    title: "Play",
+    title: SITE_COPY.play["seo-title"],
     description: playDescription,
     path: "/play",
     noindex: hasPublicQuery(query),

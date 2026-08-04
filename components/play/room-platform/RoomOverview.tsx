@@ -4,6 +4,7 @@ import { routeWithPreviewFixture } from "./preview-fixture-navigation";
 import { ROOM_OBJECTS } from "./room-registry";
 import { RoomEntryControl } from "./RoomEntryControl";
 import styles from "./RoomOverview.module.css";
+import { SITE_COPY } from "@/lib/copy";
 
 export function RoomOverview({
   fixture,
@@ -17,14 +18,10 @@ export function RoomOverview({
       id="main"
     >
       <header className={styles.intro}>
-        <p>My Room, 2001 · Six public collections</p>
-        <h1>Come in. Pick something up.</h1>
+        <p>{SITE_COPY.play["intro-eyebrow"]}</p>
+        <h1>{SITE_COPY.play["intro-title"]}</h1>
         <div>
-          <p>
-            A low-poly room for the things outside the work: anime, books,
-            music, records, games, and movement. Every object still opens as a
-            normal page.
-          </p>
+          <p>{SITE_COPY.play["intro-summary"]}</p>
           <RoomEntryControl />
         </div>
       </header>
@@ -46,14 +43,14 @@ export function RoomOverview({
             />
           </picture>
           <p>
-            <span>Still room</span>
-            <b>Enter on capable desktop browsers</b>
+            <span>{SITE_COPY.play["poster-still-label"]}</span>
+            <b>{SITE_COPY.play["poster-capable-label"]}</b>
           </p>
         </div>
         <nav className={styles.directory} aria-labelledby="room-directory-title">
           <header>
-            <p>Object directory</p>
-            <h2 id="room-directory-title">Six ways into the room.</h2>
+            <p>{SITE_COPY.play["directory-eyebrow"]}</p>
+            <h2 id="room-directory-title">{SITE_COPY.play["directory-title"]}</h2>
           </header>
           <ol>
             {ROOM_OBJECTS.map((object, index) => (

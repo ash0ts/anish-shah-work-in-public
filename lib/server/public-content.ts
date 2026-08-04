@@ -32,9 +32,15 @@ import {
 } from "./public-content-selector";
 import { readPublicationFallback } from "./publication-fallback";
 import { previewFixtureRuntime } from "../deployment-environment";
+import { applyCopyDeckToBundle } from "../copy";
 export { PUBLICATION_FALLBACK_KEY } from "./publication-fallback";
 
-const staticPublicBundle = publicBundleJson as AnishContentBundle;
+// Apply Git-owned presentation copy before D1 visibility/order/caveat merging.
+// This preserves owner-controlled caveats while making retained WorkGroup
+// wording non-authoritative everywhere, including KV recovery.
+const staticPublicBundle = applyCopyDeckToBundle(
+  publicBundleJson as AnishContentBundle,
+);
 
 export class PublicContentUnavailableError extends Error {
   constructor() {
@@ -118,12 +124,15 @@ export async function getPublicContentView(): Promise<ResolvedPublicContent> {
     PLAY_EXPERIENCE_MODE: runtimeValue("PLAY_EXPERIENCE_MODE"),
   };
   if (previewFixtureRuntime(runtime)) {
-    return resolvePublicContentFromSnapshotRow(staticPublicBundle, null);
+    return await resolvePublicContentFromSnapshotRow(
+      staticPublicBundle,
+      null,
+    );
   }
   const failClosed =
     runtimeValue("PUBLIC_CONTENT_MODE") === "d1_kv_required" ||
     runtimeValue("AUTH_MODE") === "cloudflare_access";
-  return getPublicContentViewFromStores(
+  return await getPublicContentViewFromStores(
     runtimeDatabase(),
     runtimePublicationKv(),
     { failClosed },

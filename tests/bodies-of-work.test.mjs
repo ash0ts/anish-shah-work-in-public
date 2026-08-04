@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { buildCopyDeck } from "../scripts/lib/copy-deck.mjs";
 
 const projectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -44,6 +45,7 @@ const [
   ),
   readFile(path.join(projectRoot, "package.json"), "utf8").then(JSON.parse),
 ]);
+const copyDeck = await buildCopyDeck(projectRoot);
 
 const expectedFeatured = {
   "products-open-source": [
@@ -111,10 +113,11 @@ test("Home is semantic HTML with one expanded bucket and no numbered decoration"
   assert.match(homeSource, /<BodiesOfWork/);
   assert.match(bodySource, /<details/);
   assert.match(bodySource, /open=\{index === 0\}/);
-  assert.match(
-    bodySource,
-    /Systems, curricula, writing, and technical sessions\./,
+  assert.equal(
+    copyDeck.pages.home["selected-heading"],
+    "Systems, curricula, writing, and technical sessions.",
   );
+  assert.match(bodySource, /SITE_COPY\.home\["selected-heading"\]/u);
   assert.match(bodySource, /group\.homeTitle/);
   assert.match(bodySource, /group\.homeRole/);
   assert.match(bodySource, /bucket\.groups\.map/);
@@ -123,14 +126,20 @@ test("Home is semantic HTML with one expanded bucket and no numbered decoration"
 });
 
 test("Home and Work share one expert-facing four-body taxonomy", () => {
+  const bucketTitles = [1, 2, 3, 4].map(
+    (index) => copyDeck.pages.work[`bucket-${index}-title`],
+  );
   for (const label of [
     "Systems & Open Source",
     "Curricula & Workshops",
     "Technical Writing & Implementations",
     "Technical Talks & Programs",
   ]) {
-    assert(workGroupsSource.includes(label), label);
+    assert(bucketTitles.includes(label), label);
   }
+  const featuredTitles = Object.values(expectedFeatured)
+    .flat()
+    .map((id) => copyDeck.workGroups[id].homeTitle);
   for (const title of [
     "W&B MCP Server",
     "EvalForge: evaluation-criteria generation & alignment",
@@ -145,8 +154,10 @@ test("Home and Work share one expert-facing four-body taxonomy", () => {
     "LLM agent fine-tuning for task automation",
     "Building agents with evaluation in the loop",
   ]) {
-    assert(workGroupsSource.includes(title), title);
+    assert(featuredTitles.includes(title), title);
   }
+  assert.match(workGroupsSource, /SITE_COPY\.work\["bucket-1-title"\]/u);
+  assert.match(workGroupsSource, /workGroupCopyFor\(group\.id\)/u);
   assert.doesNotMatch(workGroupsSource, /title: "Products \/ Open Source"/);
   assert.doesNotMatch(workGroupsSource, /title: "Courses \/ Learning"/);
   assert.doesNotMatch(workGroupsSource, /title: "Writing \/ Research"/);
