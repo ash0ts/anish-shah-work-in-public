@@ -1,6 +1,8 @@
 .page {
   --screen-ink: #17223b;
   --screen-paper: #f4f7f8;
+  --screen-nav-bg: var(--screen-paper);
+  --screen-nav-selection: var(--screen-ink);
   width: min(100%, 100rem);
   min-width: 0;
   margin: 0 auto;
@@ -22,24 +24,115 @@
   text-transform: uppercase;
 }
 
-.screenNavigation a {
+.roomBack {
   display: inline-flex;
   width: fit-content;
   min-height: 44px;
+  gap: 0.45rem;
   align-items: center;
   color: currentColor;
   font-weight: 650;
   text-decoration: none;
 }
 
-.screenNavigation a:hover,
-.screenNavigation a:focus-visible {
+.roomBack:hover,
+.roomBack:focus-visible {
   color: var(--work-blue);
 }
 
-.screenNavigation span {
+.screenCurrent {
+  min-width: 0;
   color: currentColor;
+  overflow-wrap: anywhere;
   text-align: right;
+}
+
+.objectSwitcher {
+  position: relative;
+  display: none;
+  min-width: 0;
+}
+
+.objectSwitcher summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-end;
+  color: currentColor;
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+
+.objectSwitcher summary::-webkit-details-marker {
+  display: none;
+}
+
+.objectSwitcher summary::after {
+  margin-left: 0.4rem;
+  content: "+";
+}
+
+.objectSwitcher[open] summary::after {
+  content: "−";
+}
+
+.objectSwitcher ul {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  display: grid;
+  width: min(19rem, calc(100vw - 2rem));
+  margin: 0;
+  padding: 0.35rem;
+  border: 1px solid currentColor;
+  background: var(--screen-nav-bg);
+  box-shadow: 0.35rem 0.4rem 0 color-mix(in srgb, currentColor 24%, transparent);
+  list-style: none;
+}
+
+.objectSwitcher li {
+  min-width: 0;
+}
+
+.objectSwitcher a {
+  display: grid;
+  min-width: 0;
+  min-height: 48px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  color: currentColor;
+  text-decoration: none;
+}
+
+.objectSwitcher li + li a {
+  border-top: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+}
+
+.objectSwitcher a:hover,
+.objectSwitcher a:focus-visible,
+.objectSwitcher a[aria-current="page"] {
+  color: var(--screen-nav-bg);
+  background: var(--screen-nav-selection);
+}
+
+.objectSwitcher summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.objectSwitcher a span,
+.objectSwitcher a small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.objectSwitcher a small {
+  font-size: 0.65rem;
+  text-transform: uppercase;
 }
 
 .watchHeader,
@@ -96,6 +189,8 @@
 
 /* Watch: a charcoal late-night television with a luminous glass field. */
 .watchPage {
+  --screen-nav-bg: #141a24;
+  --screen-nav-selection: #eaf8ef;
   color: #eaf8ef;
   background: #141a24;
 }
@@ -257,6 +352,8 @@
 /* Read: warm timber, broad shelves, and a quiet paper interior. */
 .readPage {
   --blue: #8b4d17;
+  --screen-nav-bg: #f2dfb7;
+  --screen-nav-selection: #342113;
   color: #342113;
   background: #f2dfb7;
 }
@@ -438,6 +535,8 @@
 /* Listen: translucent pocket hardware, with the existing ordinal groove inside. */
 .listenPage {
   --blue: #6948d9;
+  --screen-nav-bg: #d9cdfb;
+  --screen-nav-selection: #2f214f;
   color: #2f214f;
   background: #d9cdfb;
 }
@@ -513,6 +612,8 @@
   --blue: #594ac8;
   --line: #c8bfaa;
   --paper: #f4efdf;
+  --screen-nav-bg: #c8b8ff;
+  --screen-nav-selection: #211b3f;
   color: var(--ink);
   background:
     radial-gradient(circle at 50% 52%, rgb(255 255 255 / 28%), transparent 38rem),
@@ -708,6 +809,8 @@
 /* Play: a warm beige CRT and an original, non-branded desktop frame. */
 .playPage {
   --blue: #2a6973;
+  --screen-nav-bg: #d4c6a3;
+  --screen-nav-selection: #2d2a24;
   color: #2d2a24;
   background: #d4c6a3;
 }
@@ -890,6 +993,8 @@
 /* Move: an institutional cardio deck with a deliberately off television. */
 .movePage {
   --blue: #0b6f64;
+  --screen-nav-bg: #b8dfd5;
+  --screen-nav-selection: #173c38;
   color: #173c38;
   background: #b8dfd5;
 }
@@ -939,14 +1044,41 @@
 .treadmillDeck i { display: block; width: 100%; height: 2rem; background: #3d5754; transform: perspective(10rem) rotateX(45deg); }
 
 @media (max-width: 760px) {
-  .page { padding-top: 1rem; }
-
-  .screenNavigation {
-    align-items: flex-start;
+  .page {
+    padding-top: 0;
+    padding-bottom: calc(3rem + env(safe-area-inset-bottom));
   }
 
-  .screenNavigation span {
-    max-width: 50%;
+  .screenNavigation {
+    position: sticky;
+    z-index: 20;
+    top: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: center;
+    min-height: calc(54px + env(safe-area-inset-top));
+    margin: 0 calc(-1 * var(--gutter)) 1.35rem;
+    padding: env(safe-area-inset-top) var(--gutter) 0;
+    border-bottom: 1px solid currentColor;
+    background: color-mix(in srgb, var(--screen-nav-bg) 94%, transparent);
+    backdrop-filter: blur(0.65rem);
+  }
+
+  .roomBack,
+  .objectSwitcher summary {
+    min-height: 53px;
+  }
+
+  .screenCurrent {
+    max-width: none;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  .objectSwitcher {
+    display: block;
   }
 
   .watchHeader,
@@ -974,7 +1106,17 @@
   .collectHeader h1,
   .playHeader h1,
   .moveHeader h1 {
-    font-size: clamp(3rem, 16vw, 5.3rem);
+    font-size: clamp(2.5rem, 13vw, 4.5rem);
+    line-height: 0.88;
+  }
+
+  .watchHeader,
+  .readHeader,
+  .listenHeader,
+  .collectHeader,
+  .playHeader,
+  .moveHeader {
+    margin-bottom: 1.35rem;
   }
 
   .television,
@@ -994,7 +1136,10 @@
     border-radius: 0.65rem;
   }
 
-  .pocketPlayer { border-radius: 1.5rem; }
+  .pocketPlayer {
+    padding: 0.75rem;
+    border-radius: 1.5rem;
+  }
   .recordCrate {
     margin-top: 2rem;
     padding-top: 5rem;
@@ -1017,10 +1162,24 @@
   }
   .crateLabel span { text-align: left; }
 
-  .broadcastGuide,
+  .broadcastGuide {
+    grid-template-columns: 1fr;
+  }
+
   .shelfComposition,
   .desktopWorkspace {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .shelfInterior,
+  .computerDisplay {
+    order: 1;
+  }
+
+  .circulationCard,
+  .desktopShortcuts {
+    order: 2;
   }
 
   .broadcastGuide nav,
@@ -1065,16 +1224,66 @@
   }
 }
 
+@media (max-width: 600px) {
+  .watchHeader > p,
+  .readHeader > p,
+  .listenHeader > p,
+  .collectHeader > p,
+  .playHeader > p,
+  .moveHeader > p {
+    font-size: 0.68rem;
+  }
+
+  .shelfCrown,
+  .shelfFeet,
+  .playerTop,
+  .playerWheel,
+  .desktopShortcuts,
+  .computerTaskbar,
+  .computerBadge,
+  .computerStand,
+  .cardioControls,
+  .treadmillDeck {
+    display: none;
+  }
+
+  .recordCrate {
+    margin-top: 0;
+    padding: 0;
+  }
+
+  .recordSleeves,
+  .crateRails,
+  .crateFront::before,
+  .crateFront::after {
+    display: none;
+  }
+
+  .crateFront {
+    padding: 0.45rem;
+    border-width: 0.45rem;
+    box-shadow: 0 0.65rem 0 #433a83;
+  }
+
+  .crateWell {
+    padding: 0.65rem;
+  }
+
+  .computerBezel,
+  .cardioTelevision {
+    padding: 0.45rem;
+    border-radius: 0.85rem;
+    box-shadow: none;
+  }
+
+  .cardioDisplay {
+    width: 100%;
+    min-height: 0;
+    overflow: visible;
+  }
+}
+
 @media (max-width: 390px) {
-  .screenNavigation {
-    display: grid;
-  }
-
-  .screenNavigation span {
-    max-width: none;
-    text-align: left;
-  }
-
   .televisionControls i,
   .televisionControls span,
   .shelfCrown i {
@@ -1104,20 +1313,6 @@
     grid-column: 1;
   }
 
-  .recordCrate { padding-top: 3.75rem; }
-  .recordSleeves { height: 5.5rem; }
-  .recordSleeves i {
-    width: 4.5rem;
-    flex-basis: 4.5rem;
-  }
-  .recordSleeves i:nth-child(n + 5) { display: none; }
-  .crateFront {
-    border-width: 0.45rem;
-    box-shadow: 0 0.7rem 0 #433a83;
-  }
-  .crateFront::before,
-  .crateFront::after,
-  .crateRails { display: none; }
   .crateLabel { margin-inline: 0; }
 
   .watchProgram ol[data-provider="myanimelist"],

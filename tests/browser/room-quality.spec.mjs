@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { expectRoomReady } from "./helpers/room-readiness.mjs";
+import { Object3D, PerspectiveCamera, Vector3 } from "three";
 
 const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 const objects = [
@@ -351,6 +352,197 @@ async function findAllInteractiveRoomPoints(page) {
   }
 
   return points;
+}
+
+const POCKET_HIT_TARGET_GEOMETRY = {
+  watch: {
+    hit: [0, 1.12, 0],
+    position: [-3.22, 0.56, -2.82],
+    rotationY: 0.18,
+    scale: 1.12,
+  },
+  read: {
+    hit: [0, 1.5, 0],
+    position: [-0.35, 0, -2.94],
+    rotationY: 0,
+    scale: 1.06,
+  },
+  listen: {
+    hit: [0, 1.05, 0],
+    position: [-1.28, 0, -0.42],
+    rotationY: 0.16,
+    scale: 1.2,
+  },
+  collect: {
+    hit: [0, 0.68, 0],
+    position: [-2.82, 0, 1.54],
+    rotationY: 0.12,
+    scale: 1.08,
+  },
+  play: {
+    hit: [-0.04, 1.48, 0],
+    position: [1.48, 0, 1.12],
+    rotationY: 0.22,
+    scale: 0.92,
+  },
+  move: {
+    hit: [0, 1.12, -0.34],
+    position: [3.48, 0, -1.95],
+    rotationY: 0.12,
+    scale: 1.12,
+  },
+};
+
+async function projectedPocketRoomPoints(page) {
+  const stage = page.locator("[data-room-poster-stage]");
+  const bounds = await stage.boundingBox();
+  if (!bounds) throw new Error("The Pocket Room has no visible stage.");
+
+  const camera = new PerspectiveCamera(
+    44,
+    bounds.width / bounds.height,
+    0.1,
+    60,
+  );
+  camera.position.set(8.2, 7.1, 10.4);
+  camera.lookAt(0, 1.05, -0.4);
+  camera.updateProjectionMatrix();
+  camera.updateMatrixWorld();
+
+  const points = new Map();
+  for (const object of objects) {
+    const geometry = POCKET_HIT_TARGET_GEOMETRY[object.id];
+    const overview = new Object3D();
+    const room = new Object3D();
+    room.position.set(0, -0.8, 0);
+    room.scale.setScalar(0.92);
+    overview.add(room);
+    const objectRoot = new Object3D();
+    objectRoot.position.fromArray(geometry.position);
+    objectRoot.rotation.y = geometry.rotationY;
+    objectRoot.scale.setScalar(geometry.scale);
+    room.add(objectRoot);
+    const hit = new Object3D();
+    hit.position.fromArray(geometry.hit);
+    objectRoot.add(hit);
+    overview.updateMatrixWorld(true);
+
+    const projected = new Vector3();
+    hit.getWorldPosition(projected).project(camera);
+    points.set(object.id, {
+      id: object.id,
+      x: Math.min(
+        bounds.x + bounds.width - 8,
+        Math.max(bounds.x + 8, bounds.x + ((projected.x + 1) * bounds.width) / 2),
+      ),
+      y: Math.min(
+        bounds.y + bounds.height - 8,
+        Math.max(bounds.y + 8, bounds.y + ((1 - projected.y) * bounds.height) / 2),
+      ),
+    });
+  }
+
+  return points;
+}
+
+async function resolveProjectedPocketRoomPoint(page, stage, expectedId, point) {
+  const bounds = await stage.boundingBox();
+  if (!bounds) throw new Error("The Pocket Room has no visible stage.");
+  const offsets = [
+    [0, 0],
+    [-18, 0],
+    [18, 0],
+    [-36, 0],
+    [36, 0],
+    [0, -24],
+    [0, 24],
+    [-36, -24],
+    [-36, 24],
+    [-60, 0],
+    [-60, -32],
+    [-60, 32],
+  ];
+
+  for (const [offsetX, offsetY] of offsets) {
+    const candidate = {
+      id: expectedId,
+      x: Math.min(
+        bounds.x + bounds.width - 8,
+        Math.max(bounds.x + 8, point.x + offsetX),
+      ),
+      y: Math.min(
+        bounds.y + bounds.height - 8,
+        Math.max(bounds.y + 8, point.y + offsetY),
+      ),
+    };
+    await page.mouse.move(candidate.x, candidate.y);
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    if ((await stage.getAttribute("data-room-hovered-object")) === expectedId) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`${expectedId} did not resolve near its projected hit target.`);
+}
+
+async function dispatchTouch(client, type, points = []) {
+  await client.send("Input.dispatchTouchEvent", {
+    type,
+    touchPoints: points.map(({ id = 1, x, y }) => ({
+      force: 1,
+      id: typeof id === "number" ? id : 1,
+      radiusX: 2,
+      radiusY: 2,
+      x: Math.round(x),
+      y: Math.round(y),
+    })),
+  });
+}
+
+async function touchTap(client, point) {
+  await dispatchTouch(client, "touchStart", [point]);
+  await dispatchTouch(client, "touchEnd");
+}
+
+async function touchSwipe(client, point, deltaX) {
+  await dispatchTouch(client, "touchStart", [point]);
+  await dispatchTouch(client, "touchMove", [
+    { ...point, x: point.x + deltaX / 2 },
+  ]);
+  await dispatchTouch(client, "touchMove", [
+    { ...point, x: point.x + deltaX },
+  ]);
+  await dispatchTouch(client, "touchEnd");
+}
+
+async function touchSwipeAcrossRenderedFrames(client, page, point, deltaX) {
+  await dispatchTouch(client, "touchStart", [point]);
+  for (let step = 1; step <= 6; step += 1) {
+    await dispatchTouch(client, "touchMove", [
+      { ...point, x: point.x + (deltaX * step) / 6 },
+    ]);
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(resolve)),
+    );
+  }
+  await dispatchTouch(client, "touchEnd");
+}
+
+async function selectPocketView(room, view) {
+  await room.getByRole("button", { name: "Reset view" }).click();
+  await expect(room.getByText("View 2 of 3", { exact: true })).toBeVisible();
+  if (view === 1) {
+    await room.getByRole("button", { name: "Previous view" }).click();
+  } else if (view === 3) {
+    await room.getByRole("button", { name: "Next view" }).click();
+  }
+  await expect(room.getByText(`View ${view} of 3`, { exact: true })).toBeVisible();
+  await new Promise((resolve) => setTimeout(resolve, 360));
 }
 
 async function activeElementReport(page) {
@@ -1326,8 +1518,6 @@ test.describe("My Room 2001 browser quality", () => {
   });
 
   for (const capability of [
-    "mobile",
-    "coarse-pointer",
     "reduced-motion",
     "forced-colors",
     "save-data",
@@ -1339,10 +1529,7 @@ test.describe("My Room 2001 browser quality", () => {
       browser,
     }) => {
       const context = await browser.newContext({
-        viewport:
-          capability === "mobile"
-            ? { width: 390, height: 844 }
-            : { width: 1440, height: 900 },
+        viewport: { width: 1440, height: 900 },
         reducedMotion: capability === "reduced-motion" ? "reduce" : "no-preference",
         forcedColors: capability === "forced-colors" ? "active" : "none",
       });
@@ -1352,24 +1539,6 @@ test.describe("My Room 2001 browser quality", () => {
             configurable: true,
             value: { saveData: true },
           });
-        });
-      }
-      if (capability === "coarse-pointer") {
-        await context.addInitScript(() => {
-          const nativeMatchMedia = window.matchMedia.bind(window);
-          window.matchMedia = (query) => {
-            if (query !== "(pointer: fine)") return nativeMatchMedia(query);
-            return {
-              matches: false,
-              media: query,
-              onchange: null,
-              addEventListener() {},
-              addListener() {},
-              dispatchEvent: () => true,
-              removeEventListener() {},
-              removeListener() {},
-            };
-          };
         });
       }
       if (capability === "zoom-200" || capability === "zoom-400") {
@@ -1400,4 +1569,363 @@ test.describe("My Room 2001 browser quality", () => {
       await context.close();
     });
   }
+
+  for (const capability of ["mobile", "coarse-pointer"]) {
+    test(`${capability} opens the touch-native Pocket Room only after intent`, async ({
+      browser,
+    }) => {
+      const context = await browser.newContext({
+        hasTouch: capability === "mobile",
+        viewport:
+          capability === "mobile"
+            ? { width: 390, height: 844 }
+            : { width: 1024, height: 768 },
+      });
+      if (capability === "coarse-pointer") {
+        await context.addInitScript(() => {
+          const nativeMatchMedia = window.matchMedia.bind(window);
+          window.matchMedia = (query) => {
+            if (query !== "(pointer: fine)") return nativeMatchMedia(query);
+            return {
+              matches: false,
+              media: query,
+              onchange: null,
+              addEventListener() {},
+              addListener() {},
+              dispatchEvent: () => true,
+              removeEventListener() {},
+              removeListener() {},
+            };
+          };
+        });
+      }
+
+      const page = await context.newPage();
+      const runtimeScripts = runtimeChunkRequests(page);
+      await page.goto("/play", { waitUntil: "networkidle" });
+      await expect(page.locator("canvas")).toHaveCount(0);
+      expect(runtimeScripts).toEqual([]);
+
+      await page
+        .getByRole("button", { name: "Open the pocket room" })
+        .click();
+      const room = page.getByRole("dialog", { name: "Interactive room" });
+      await expect(room).toHaveAttribute(
+        "data-room-presentation-tier",
+        "pocket",
+        { timeout: roomReadyTimeout },
+      );
+      await expect(page.locator('[data-projection="pocket-perspective"]')).toBeVisible();
+      await expect(page.getByText("Ready", { exact: true })).toBeVisible({
+        timeout: roomReadyTimeout,
+      });
+      await expect(room.getByRole("button", { name: "Previous view" })).toBeVisible();
+      await expect(room.getByRole("button", { name: "Next view" })).toBeVisible();
+      await expect(room.locator('[data-room-object-control="watch"]')).toBeVisible();
+      expect(runtimeScripts.length).toBeGreaterThan(0);
+      expect(
+        runtimeScripts.some((url) => /assets\/RoomStage-[^/]+\.js/.test(url)),
+      ).toBe(false);
+      await context.close();
+    });
+  }
+
+  test("Pocket Room rejects twenty 3D swipe activations per object", async ({
+    browser,
+  }) => {
+    test.setTimeout(240_000);
+    const context = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 390, height: 844 },
+    });
+    await context.addInitScript(() => {
+      const nativeNow = performance.now.bind(performance);
+      let lastReal = nativeNow();
+      let virtualNow = lastReal;
+      Object.defineProperty(performance, "now", {
+        configurable: true,
+        value: () => {
+          const currentReal = nativeNow();
+          virtualNow += Math.min(16, Math.max(0, currentReal - lastReal));
+          lastReal = currentReal;
+          return virtualNow;
+        },
+      });
+    });
+
+    const page = await context.newPage();
+    await page.goto("/play", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open the pocket room" }).click();
+    const room = page.getByRole("dialog", { name: "Interactive room" });
+    await expect(room).toHaveAttribute(
+      "data-room-presentation-tier",
+      "pocket",
+      { timeout: roomReadyTimeout },
+    );
+    await expect(page.getByText("Ready", { exact: true })).toBeVisible({
+      timeout: roomReadyTimeout,
+    });
+
+    const client = await context.newCDPSession(page);
+    await selectPocketView(room, 2);
+    const objectTouchTargets = await projectedPocketRoomPoints(page);
+    const stage = page.locator("[data-room-poster-stage]");
+    for (const object of objects) {
+      const point = objectTouchTargets.get(object.id);
+      if (!point) throw new Error(`${object.id} has no projected touch target.`);
+      objectTouchTargets.set(
+        object.id,
+        await resolveProjectedPocketRoomPoint(
+          page,
+          stage,
+          object.id,
+          point,
+        ),
+      );
+    }
+
+    for (const object of objects) {
+      const target = objectTouchTargets.get(object.id);
+      if (!target) throw new Error(`${object.id} has no 3D touch target.`);
+      for (let index = 0; index < 20; index += 1) {
+        await selectPocketView(room, 2);
+        await touchSwipe(
+          client,
+          target,
+          index % 2 === 0 ? 48 : -48,
+        );
+        await expect(page).toHaveURL(/\/play$/);
+      }
+    }
+
+    await context.close();
+  });
+
+  test("Pocket Room activates every object and resets readiness after resize", async ({
+    browser,
+  }) => {
+    test.setTimeout(720_000);
+    const context = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 390, height: 844 },
+    });
+    await context.addInitScript(() => {
+      // This case isolates pointer policy from the separately tested
+      // performance downgrade. SwiftShader can report synthetic >33ms deltas
+      // during repeated route transitions even when gesture handling is sound.
+      const nativeNow = performance.now.bind(performance);
+      let lastReal = nativeNow();
+      let virtualNow = lastReal;
+      Object.defineProperty(performance, "now", {
+        configurable: true,
+        value: () => {
+          const currentReal = nativeNow();
+          virtualNow += Math.min(16, Math.max(0, currentReal - lastReal));
+          lastReal = currentReal;
+          return virtualNow;
+        },
+      });
+    });
+    const page = await context.newPage();
+    await page.goto("/play", { waitUntil: "networkidle" });
+    await page.evaluate(() => {
+      const states = [];
+      Object.defineProperty(window, "__pocketBootStates", {
+        configurable: true,
+        value: states,
+      });
+      const record = () => {
+        const value = document
+          .querySelector("[data-room-boot-status]")
+          ?.textContent?.trim();
+        if (value && states.at(-1) !== value) states.push(value);
+      };
+      new MutationObserver(record).observe(document.body, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+      record();
+    });
+    await page.getByRole("button", { name: "Open the pocket room" }).click();
+    let room = page.getByRole("dialog", { name: "Interactive room" });
+    await expect(room).toHaveAttribute(
+      "data-room-presentation-tier",
+      "pocket",
+      { timeout: roomReadyTimeout },
+    );
+    await expect(page.getByText("Ready", { exact: true })).toBeVisible({
+      timeout: roomReadyTimeout,
+    });
+
+    const client = await context.newCDPSession(page);
+
+    for (const object of objects) {
+      for (let index = 0; index < 20; index += 1) {
+        const control = room.locator(
+          `[data-room-object-control="${object.id}"]`,
+        );
+        await control.tap();
+        await expect(page).toHaveURL(new RegExp(`/play/${object.id}$`), {
+          timeout: 10_000,
+        });
+        await page.keyboard.press("Escape");
+        await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+        room = page.getByRole("dialog", { name: "Interactive room" });
+        await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
+        await expect(
+          room.locator(`[data-room-object-control="${object.id}"]`),
+        ).toBeFocused();
+      }
+    }
+
+    const stage = page.locator("[data-room-poster-stage]");
+    const stageBounds = await stage.boundingBox();
+    if (!stageBounds) throw new Error("The Pocket Room has no visible stage.");
+    const stagePoint = {
+      x: stageBounds.x + stageBounds.width / 2,
+      y: stageBounds.y + stageBounds.height / 2,
+    };
+    await touchSwipe(client, stagePoint, 48);
+    await expect(room.getByText(/View [13] of 3/)).toBeVisible();
+    await room.getByRole("button", { name: "Reset view" }).click();
+
+    const directPoint = await findInteractiveRoomPoint(page);
+    await touchTap(client, directPoint);
+    await expect(page).toHaveURL(new RegExp(`/play/${directPoint.id}$`), {
+      timeout: 10_000,
+    });
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+    room = page.getByRole("dialog", { name: "Interactive room" });
+
+    await dispatchTouch(client, "touchStart", [directPoint]);
+    await dispatchTouch(client, "touchCancel");
+    await expect(page).toHaveURL(/\/play$/);
+
+    await dispatchTouch(client, "touchStart", [directPoint]);
+    await dispatchTouch(client, "touchMove", [
+      directPoint,
+      { id: 2, x: directPoint.x + 18, y: directPoint.y + 4 },
+    ]);
+    await dispatchTouch(client, "touchEnd");
+    await expect(page).toHaveURL(/\/play$/);
+
+    await selectPocketView(room, 2);
+    await dispatchTouch(client, "touchStart", [directPoint]);
+    await page.setViewportSize({ width: 844, height: 500 });
+    await dispatchTouch(client, "touchEnd");
+    await expect(room).toHaveAttribute("data-room-presentation-tier", "static");
+    await expect(page.locator("canvas")).toHaveCount(0);
+    await expect(page.locator("[data-room-runtime] img")).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(room).toHaveAttribute(
+      "data-room-presentation-tier",
+      "pocket",
+      { timeout: roomReadyTimeout },
+    );
+    await expect(page.getByText("Ready", { exact: true })).toBeVisible({
+      timeout: roomReadyTimeout,
+    });
+    const bootStates = await page.evaluate(() => window.__pocketBootStates);
+    expect(bootStates).toContain("Opening room");
+    expect(bootStates).toContain("Placing objects");
+    expect(bootStates.at(-1)).toBe("Ready");
+
+    await context.close();
+  });
+
+  test("Pocket Room ignores idle gaps and downgrades after sustained slow frames", async ({
+    browser,
+  }) => {
+    test.setTimeout(90_000);
+    const context = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 390, height: 844 },
+    });
+    await context.addInitScript(() => {
+      window.__pocketForceSlowFrame = false;
+      let animationFrame = 0;
+      let delayedAnimationFrame = -1;
+      const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (callback) =>
+        nativeRequestAnimationFrame((time) => {
+          animationFrame += 1;
+          callback(time);
+        });
+
+      for (const Context of [
+        window.WebGL2RenderingContext,
+        window.WebGLRenderingContext,
+      ].filter(Boolean)) {
+        for (const method of [
+          "drawArrays",
+          "drawElements",
+          "drawArraysInstanced",
+          "drawElementsInstanced",
+        ]) {
+          const original = Context.prototype[method];
+          if (typeof original !== "function") continue;
+          Context.prototype[method] = function (...args) {
+            if (
+              window.__pocketForceSlowFrame &&
+              delayedAnimationFrame !== animationFrame
+            ) {
+              delayedAnimationFrame = animationFrame;
+              const startedAt = performance.now();
+              while (performance.now() - startedAt < 55) {
+                // Test-only simulation of a completed Pocket frame missing budget.
+              }
+            }
+            return original.apply(this, args);
+          };
+        }
+      }
+    });
+
+    const page = await context.newPage();
+    await page.goto("/play", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open the pocket room" }).click();
+    const room = page.getByRole("dialog", { name: "Interactive room" });
+    await expect(page.getByText("Ready", { exact: true })).toBeVisible({
+      timeout: roomReadyTimeout,
+    });
+
+    await page.waitForTimeout(1_200);
+    await room.getByRole("button", { name: "Next view" }).click();
+    await expect(room).toBeVisible();
+    await room.getByRole("button", { name: "Reset view" }).click();
+
+    const client = await context.newCDPSession(page);
+    const stage = page.locator("[data-room-poster-stage]");
+    const stageBounds = await stage.boundingBox();
+    if (!stageBounds) throw new Error("The Pocket Room has no visible stage.");
+    const stagePoint = {
+      x: stageBounds.x + stageBounds.width / 2,
+      y: stageBounds.y + stageBounds.height / 2,
+    };
+
+    await page.evaluate(() => {
+      window.__pocketForceSlowFrame = true;
+    });
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      if (!(await stage.isVisible().catch(() => false))) break;
+      await touchSwipeAcrossRenderedFrames(
+        client,
+        page,
+        stagePoint,
+        attempt % 2 === 0 ? 72 : -72,
+      );
+    }
+
+    await expect(room).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.locator("[data-room-overview]")).toBeVisible();
+    await expect(page.locator("canvas")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Open the pocket room" })).toHaveCount(0);
+    await expect(page.locator("[data-room-announcer]")).toContainText(
+      "interactive room is unavailable",
+    );
+    await context.close();
+  });
 });

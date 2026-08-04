@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import styles from "../PersonalStreams.module.css";
+import { GalleryFilterDisclosure } from "./CollectionGallery";
 import {
   type ConnectorState,
   type DiscogsFormat,
@@ -528,51 +529,53 @@ function DiscogsGallery({
             <button type="submit">Search</button>
           </span>
         </div>
-        <DiscogsSelect
-          label="Format"
-          name="format"
-          onChange={onFormat}
-          options={gallery.formats.map((entry) => ({
-            value: entry.id,
-            label: entry.label + " · " + entry.count,
-          }))}
-          value={format}
-        />
-        <DiscogsSelect
-          label="Decade"
-          name="decade"
-          onChange={onDecade}
-          options={gallery.decades.map((entry) => ({
-            value: entry.id,
-            label: entry.label + " · " + entry.count,
-          }))}
-          value={decade}
-        />
-        <DiscogsSelect
-          label="Sort"
-          name="sort"
-          onChange={onSort}
-          options={gallery.sorts.map((entry) => ({
-            value: entry.id,
-            label:
-              entry.id === "artist"
-                ? "Artist · A–Z"
-                : entry.id === "title"
-                  ? "Title · A–Z"
-                  : "Year · newest",
-          }))}
-          value={sort}
-        />
-        <DiscogsSelect
-          label="Per page"
-          name="pageSize"
-          onChange={(value) => onPageSize(Number(value) as PageSize)}
-          options={[12, 24, 36].map((value) => ({
-            value: String(value),
-            label: String(value),
-          }))}
-          value={String(pageSize)}
-        />
+        <GalleryFilterDisclosure>
+            <DiscogsSelect
+              label="Format"
+              name="format"
+              onChange={onFormat}
+              options={gallery.formats.map((entry) => ({
+                value: entry.id,
+                label: entry.label + " · " + entry.count,
+              }))}
+              value={format}
+            />
+            <DiscogsSelect
+              label="Decade"
+              name="decade"
+              onChange={onDecade}
+              options={gallery.decades.map((entry) => ({
+                value: entry.id,
+                label: entry.label + " · " + entry.count,
+              }))}
+              value={decade}
+            />
+            <DiscogsSelect
+              label="Sort"
+              name="sort"
+              onChange={onSort}
+              options={gallery.sorts.map((entry) => ({
+                value: entry.id,
+                label:
+                  entry.id === "artist"
+                    ? "Artist · A–Z"
+                    : entry.id === "title"
+                      ? "Title · A–Z"
+                      : "Year · newest",
+              }))}
+              value={sort}
+            />
+            <DiscogsSelect
+              label="Per page"
+              name="pageSize"
+              onChange={(value) => onPageSize(Number(value) as PageSize)}
+              options={[12, 24, 36].map((value) => ({
+                value: String(value),
+                label: String(value),
+              }))}
+              value={String(pageSize)}
+            />
+        </GalleryFilterDisclosure>
       </form>
 
       {routePath ? (

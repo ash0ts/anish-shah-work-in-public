@@ -1,4 +1,4 @@
-export type RoomInteractivePointerType = "mouse" | "pen";
+export type RoomInteractivePointerType = "mouse" | "pen" | "touch";
 
 /**
  * The room is a desktop progressive enhancement. Touch input remains owned by
@@ -6,8 +6,13 @@ export type RoomInteractivePointerType = "mouse" | "pen";
  */
 export function isRoomInteractivePointer(
   pointerType: string,
+  allowTouch = false,
 ): pointerType is RoomInteractivePointerType {
-  return pointerType === "mouse" || pointerType === "pen";
+  return (
+    pointerType === "mouse" ||
+    pointerType === "pen" ||
+    (allowTouch && pointerType === "touch")
+  );
 }
 
 export function isCompetingRoomPointer(

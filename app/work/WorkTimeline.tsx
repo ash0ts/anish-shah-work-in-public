@@ -7,8 +7,10 @@ import { workBuckets } from "@/lib/work-groups";
 import type { WorkArchiveRecord } from "@/lib/work-index";
 import { SITE_COPY } from "@/lib/copy";
 import styles from "./WorkTimeline.module.css";
+import { WorkTimelineControls } from "./WorkTimelineControls";
 
 const years = [2021, 2022, 2023, 2024, 2025, 2026] as const;
+const frameId = "work-timeline-frame";
 
 type WorkTimelineProps = {
   query: WorkArchiveQuery;
@@ -32,6 +34,15 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
     1,
     ...cells.map((cell) => cell.works.length),
   );
+  const availableYears = years.filter((year) =>
+    cells.some((cell) => cell.year === year && cell.works.length > 0),
+  );
+  const requestedYear = Number(query.year);
+  const initialYear = years.includes(
+    requestedYear as (typeof years)[number],
+  )
+    ? requestedYear
+    : (availableYears.at(-1) ?? years.at(-1) ?? 2026);
 
   return (
     <section
@@ -48,9 +59,17 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
         <p>{SITE_COPY.work["timeline-summary"]}</p>
       </header>
 
+      <WorkTimelineControls
+        availableYears={[...availableYears]}
+        frameId={frameId}
+        initialYear={initialYear}
+        years={years}
+      />
+
       <div
         aria-label="Work timeline table. Scroll horizontally to compare years."
         className={styles.frame}
+        id={frameId}
         role="region"
         tabIndex={0}
       >
@@ -62,7 +81,7 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
             <tr>
               <th scope="col">Line of work</th>
               {years.map((year) => (
-                <th key={year} scope="col">
+                <th data-timeline-year={year} key={year} scope="col">
                   {year}
                 </th>
               ))}
@@ -110,6 +129,11 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
                           <Link
                             prefetch={false}
                             aria-current={selected ? "page" : undefined}
+                            aria-label={`${works.length} ${
+                              works.length === 1 ? "work" : "works"
+                            } and ${formCount} public ${
+                              formCount === 1 ? "form" : "forms"
+                            } in ${bucket.title}, ${year}`}
                             href={`${workArchiveHref(query, {
                               bucket: bucket.id,
                               page: null,

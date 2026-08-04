@@ -1028,7 +1028,7 @@ test("browser quality isolates workerd lifecycles without weakening review evide
       ]),
     );
   }
-  assert.equal(complete.length, 40);
+  assert.equal(complete.length, 43);
   assert.equal(partitioned.length, complete.length);
   assert.equal(new Set(partitioned).size, partitioned.length);
   assert.deepEqual([...partitioned].sort(), [...complete].sort());

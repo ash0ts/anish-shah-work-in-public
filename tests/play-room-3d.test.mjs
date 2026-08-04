@@ -13,13 +13,19 @@ import {
 
 import {
   evaluateRoomCapability,
+  POCKET_ROOM_MINIMUM_VIEWPORT_HEIGHT,
+  POCKET_ROOM_MINIMUM_VIEWPORT_WIDTH,
   ROOM_MINIMUM_VIEWPORT_WIDTH,
 } from "../components/play/room-3d/room-capability.ts";
 import {
+  adjacentPocketRoomRotation,
   clampRoomRotation,
   crossedRoomDragThreshold,
+  POCKET_ROOM_DRAG_THRESHOLD_PX,
+  rotationFromPocketPointerDelta,
   ROOM_DRAG_THRESHOLD_PX,
   rotationFromPointerDelta,
+  snapPocketRoomRotation,
 } from "../components/play/room-3d/room-math.ts";
 import {
   FISHEYE_FRAME_RENDER_BUDGET,
@@ -39,6 +45,7 @@ import { resolveRoomRayHit } from "../components/play/room-3d/room-hit-resolutio
 
 const capableEnvironment = {
   viewportWidth: ROOM_MINIMUM_VIEWPORT_WIDTH,
+  viewportHeight: 900,
   finePointer: true,
   reducedMotion: false,
   forcedColors: false,
@@ -53,12 +60,16 @@ const ROOM_RENDERER_GZIP_HARD_CEILING_BYTES = 325 * 1024;
 test("room capability fails closed for every ineligible environment", () => {
   assert.deepEqual(evaluateRoomCapability(capableEnvironment), {
     eligible: true,
+    tier: "desktop-fisheye",
     reasons: [],
   });
 
   const cases = [
-    ["viewportWidth", ROOM_MINIMUM_VIEWPORT_WIDTH - 1, "narrow-viewport"],
-    ["finePointer", false, "coarse-pointer"],
+    [
+      "viewportWidth",
+      POCKET_ROOM_MINIMUM_VIEWPORT_WIDTH - 1,
+      "narrow-viewport",
+    ],
     ["reducedMotion", true, "reduced-motion"],
     ["forcedColors", true, "forced-colors"],
     ["zoomScale", 2, "zoomed"],
@@ -73,8 +84,43 @@ test("room capability fails closed for every ineligible environment", () => {
       [key]: value,
     });
     assert.equal(result.eligible, false);
+    assert.equal(result.tier, "static");
     assert.deepEqual(result.reasons, [reason]);
   }
+
+  assert.deepEqual(
+    evaluateRoomCapability({
+      ...capableEnvironment,
+      viewportWidth: 390,
+      viewportHeight: 844,
+      finePointer: false,
+    }),
+    { eligible: true, tier: "pocket", reasons: [] },
+  );
+
+  assert.deepEqual(
+    evaluateRoomCapability({ ...capableEnvironment, finePointer: false }),
+    { eligible: true, tier: "pocket", reasons: [] },
+  );
+
+  assert.deepEqual(
+    evaluateRoomCapability({
+      ...capableEnvironment,
+      viewportWidth: 390,
+      viewportHeight: POCKET_ROOM_MINIMUM_VIEWPORT_HEIGHT - 1,
+      finePointer: false,
+    }),
+    { eligible: false, tier: "static", reasons: ["narrow-viewport"] },
+  );
+
+  assert.deepEqual(
+    evaluateRoomCapability({
+      ...capableEnvironment,
+      viewportHeight: POCKET_ROOM_MINIMUM_VIEWPORT_HEIGHT - 1,
+    }),
+    { eligible: true, tier: "desktop-fisheye", reasons: [] },
+    "A short desktop window keeps the existing desktop room",
+  );
 });
 
 test("room pointer math preserves the eight-pixel click dead zone", () => {
@@ -88,10 +134,38 @@ test("room pointer math preserves the eight-pixel click dead zone", () => {
   );
 });
 
+test("pocket room gestures use a larger dead zone and three authored stops", () => {
+  assert.equal(
+    crossedRoomDragThreshold(
+      [0, 0],
+      [POCKET_ROOM_DRAG_THRESHOLD_PX, 0],
+      POCKET_ROOM_DRAG_THRESHOLD_PX,
+    ),
+    false,
+  );
+  assert.deepEqual(rotationFromPocketPointerDelta({ x: 4, y: 0 }, 80), {
+    x: 0,
+    y: 12,
+  });
+  assert.deepEqual(snapPocketRoomRotation({ x: 3, y: -7 }), {
+    x: 0,
+    y: -12,
+  });
+  assert.deepEqual(adjacentPocketRoomRotation({ x: 0, y: 0 }, -1), {
+    x: 0,
+    y: -12,
+  });
+  assert.deepEqual(adjacentPocketRoomRotation({ x: 0, y: 12 }, 1), {
+    x: 0,
+    y: 12,
+  });
+});
+
 test("room pointer policy reserves WebGL gestures for one mouse or pen", () => {
   assert.equal(isRoomInteractivePointer("mouse"), true);
   assert.equal(isRoomInteractivePointer("pen"), true);
   assert.equal(isRoomInteractivePointer("touch"), false);
+  assert.equal(isRoomInteractivePointer("touch", true), true);
   assert.equal(isRoomInteractivePointer(""), false);
   assert.equal(isCompetingRoomPointer(null, 2), false);
   assert.equal(isCompetingRoomPointer(2, 2), false);
@@ -196,7 +270,8 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
   assert.match(controller, /onLostPointerCapture/);
   assert.match(controller, /target instanceof Element/);
   assert.match(controller, /onRotationPreview\(nextView\)/);
-  assert.match(controller, /onRotationCommit\(current\.latestView\)/);
+  assert.match(controller, /snapPocketRoomRotation\(current\.latestView\)/);
+  assert.match(controller, /: current\.latestView/);
   assert.match(controller, /resumeHoverFromRelease/);
   assert.match(controller, /usePathname/);
   assert.match(controller, /resolveRoomRayHit/);
@@ -210,6 +285,61 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
     FISHEYE_FRAME_RENDER_BUDGET.actualDrawCalls >
       PROCEDURAL_ROOM_RENDER_BUDGET.visibleDrawCalls,
   );
+});
+
+test("pocket renderer is a separate intent-loaded perspective stage", async () => {
+  const [runtime, runtimeStyles, overviewStyles, pocket, desktop] = await Promise.all([
+    readFile(
+      new URL(
+        "../components/play/room-platform/RoomRuntime.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../components/play/room-platform/RoomRuntime.module.css",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../components/play/room-platform/RoomOverview.module.css",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/play/room-3d/PocketRoomStage.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/play/room-3d/RoomStage.tsx", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(runtime, /import\("\.\.\/room-3d\/PocketRoomStage"\)/);
+  assert.match(runtime, /import\("\.\.\/room-3d\/RoomStage"\)/);
+  assert.match(runtime, /capability\.tier === "pocket"/);
+  assert.match(runtime, /type PocketEntryPhase = "opening" \| "placing" \| "ready"/);
+  assert.match(runtime, /duration: 520/);
+  assert.match(runtime, /data-pocket-entry-phase/);
+  assert.match(runtimeStyles, /pocket-frame-fold 520ms/);
+  assert.match(runtimeStyles, /pocket-dock-rise 130ms/);
+  assert.match(overviewStyles, /@media \(max-width: 1099px\)/);
+  assert.match(overviewStyles, /clamp\(15rem, 44svh, 24rem\)/);
+  assert.match(pocket, /data-projection="pocket-perspective"/);
+  assert.match(pocket, /dpr=\{\[1, 1\.15\]\}/);
+  assert.match(pocket, /frameloop="demand"/);
+  assert.match(pocket, /presentation="pocket"/);
+  assert.match(pocket, /failIfMajorPerformanceCaveat: true/);
+  assert.match(pocket, /duration > 33/);
+  assert.match(pocket, /}, 450\)/);
+  assert.match(pocket, /}, 520\)/);
+  assert.doesNotMatch(pocket, /Fisheye|postprocessing|OrbitControls/);
+  assert.match(desktop, /<ResponsiveFisheye>/);
 });
 
 test("fisheye health ignores warmup and downgrades only after sustained misses", () => {

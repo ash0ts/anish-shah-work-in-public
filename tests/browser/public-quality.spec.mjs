@@ -117,6 +117,115 @@ test("skip navigation reaches the main content", async ({ page }) => {
   await expect(page.locator("#main")).toBeVisible();
 });
 
+test("mobile Work keeps search, calendar years, and filter-sheet focus synchronized", async ({
+  page,
+}) => {
+  test.skip(roomMode, "The Work mobile contract is mode-independent.");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/work", { waitUntil: "networkidle" });
+
+  const search = page.getByRole("searchbox", {
+    name: "Search work and public forms",
+  });
+  const calendar = page.getByRole("region", {
+    name: /Work timeline table/,
+  });
+  await expect(search).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Line" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Year" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Topic" })).toBeVisible();
+  await expect(calendar).toBeVisible();
+  const calendarBounds = await calendar.boundingBox();
+  expect(calendarBounds?.y ?? Infinity).toBeLessThan(844);
+  await expect(page.locator('[data-work-year="2026"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(
+    page.getByRole("group", {
+      name: "Choose a year to view in the work calendar",
+    }),
+  ).toHaveAttribute("data-ready", "true");
+
+  await calendar.evaluate((frame) => {
+    const header = frame.querySelector('[data-timeline-year="2024"]');
+    const sticky = frame.querySelector("thead th:first-child");
+    if (!(header instanceof HTMLElement) || !(sticky instanceof HTMLElement)) {
+      throw new Error("The mobile calendar is missing its 2024 column.");
+    }
+    frame.scrollTo({ left: header.offsetLeft - sticky.offsetWidth });
+  });
+  await expect(page.locator('[data-work-year="2024"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  const railAlignment = await page.locator("[data-year-rail]").evaluate(
+    (rail) => {
+      const selected = rail.querySelector('[data-work-year="2024"]');
+      if (!(selected instanceof HTMLElement)) return Infinity;
+      const railBox = rail.getBoundingClientRect();
+      const buttonBox = selected.getBoundingClientRect();
+      return Math.abs(
+        buttonBox.left + buttonBox.width / 2 -
+          (railBox.left + railBox.width / 2),
+      );
+    },
+  );
+  expect(railAlignment).toBeLessThanOrEqual(2);
+
+  const filters = page.getByRole("button", { name: /^Filters/ });
+  await filters.click();
+  const dialog = page.getByRole("dialog", { name: "Filter the calendar" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("combobox", { name: "Medium" })).toBeVisible();
+  await expect(dialog.getByRole("combobox", { name: "Line" })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Close filters" }).click();
+  await expect(filters).toBeFocused();
+
+  await expect(page.locator("details[data-work-body][open]")).toHaveCount(0);
+  await expect(page.locator("li[data-work-id]")).toHaveCount(24);
+  await page.getByRole("link", { name: "Page 2" }).click();
+  await expect(page).toHaveURL(/\/work\?page=2#work-index$/);
+  await expect(page.locator("li[data-work-id]")).toHaveCount(24);
+  await expect(page.locator("#work-index-title")).toBeFocused();
+
+  const overflow = await pageOverflow(page);
+  expect(overflow.offenders).toEqual([]);
+  expect(overflow.documentWidth).toBeLessThanOrEqual(391);
+});
+
+test("Work supporting material is mobile-collapsible and fragment-safe", async ({
+  page,
+}) => {
+  test.skip(roomMode, "The Work detail contract is mode-independent.");
+  const route = "/work/architecting-and-orchestrating-ai-agents-series";
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(route, { waitUntil: "networkidle" });
+  const appearances = page
+    .locator("details[data-supporting-disclosure]")
+    .filter({ hasText: "Appearances and artifacts" });
+  await expect(appearances).not.toHaveAttribute("open", "");
+  await expect(appearances.locator(":scope > ol")).not.toBeVisible();
+  await appearances.locator(":scope > summary").click();
+  await expect(appearances.locator(":scope > ol")).toBeVisible();
+  const firstAnchor = await appearances.locator(":scope > ol > li").first().getAttribute("id");
+  expect(firstAnchor).toBeTruthy();
+
+  await page.goto(`${route}#${firstAnchor}`, { waitUntil: "networkidle" });
+  const anchored = page
+    .locator("details[data-supporting-disclosure]")
+    .filter({ hasText: "Appearances and artifacts" });
+  await expect(anchored).toHaveAttribute("open", "");
+  await expect(page.locator(`[id="${firstAnchor}"]`)).toBeVisible();
+
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.goto(route, { waitUntil: "networkidle" });
+  const desktopAppearances = page
+    .locator("details[data-supporting-disclosure]")
+    .filter({ hasText: "Appearances and artifacts" });
+  await expect(desktopAppearances.locator(":scope > ol")).toBeVisible();
+});
+
 test("Spotify rank navigation and consent remain keyboard-first", async ({ page }) => {
   test.skip(roomMode, "Classic Play owns the tabbed Spotify interaction.");
   const timestamp = "2026-08-02T12:00:00.000Z";

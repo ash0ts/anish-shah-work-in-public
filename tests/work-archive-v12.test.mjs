@@ -10,7 +10,9 @@ const {
   filterWorkArchiveRecords,
   legacyMapRedirectPath,
   matchingChildForQuery,
+  paginateWorkArchiveRecords,
   parseWorkArchiveQuery,
+  WORK_ARCHIVE_PAGE_SIZE,
   workArchiveHref,
 } = await tsImport("../lib/work-archive-query.ts", import.meta.url);
 const { workArchiveRecordsFrom } = await tsImport(
@@ -262,6 +264,26 @@ test("generated archive links never reintroduce the removed view parameter", () 
   assert.equal(url.searchParams.has("view"), false);
 });
 
+test("the archive paginates exactly 24 canonical works while preserving order", () => {
+  assert.equal(WORK_ARCHIVE_PAGE_SIZE, 24);
+  const first = paginateWorkArchiveRecords(records, 1);
+  const second = paginateWorkArchiveRecords(records, 2);
+  const last = paginateWorkArchiveRecords(records, 999);
+
+  assert.equal(first.items.length, 24);
+  assert.equal(second.items.length, 24);
+  assert.equal(first.rangeStart, 1);
+  assert.equal(first.rangeEnd, 24);
+  assert.equal(second.rangeStart, 25);
+  assert.equal(second.rangeEnd, 48);
+  assert.deepEqual(
+    [...first.items, ...second.items].map((record) => record.id),
+    records.slice(0, 48).map((record) => record.id),
+  );
+  assert.equal(last.currentPage, Math.ceil(records.length / 24));
+  assert.equal(last.rangeEnd, records.length);
+});
+
 test("the color calendar has four semantic rows, six years, and exact archive counts", () => {
   const years = [2021, 2022, 2023, 2024, 2025, 2026];
   const expected = {
@@ -340,10 +362,37 @@ test("timeline cell links preserve active query filters while selecting body and
 });
 
 test("Work source renders a paginated four-line index and semantic color calendar", async () => {
-  const [source, timeline, css, packageJson] = await Promise.all([
+  const [
+    source,
+    timeline,
+    timelineControls,
+    mobileFilters,
+    bodyBehavior,
+    css,
+    timelineCss,
+    detailSource,
+    packageJson,
+  ] = await Promise.all([
     readFile(new URL("../app/work/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/work/WorkTimeline.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/work/WorkTimelineControls.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/work/WorkMobileFilters.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/work/WorkBodyBehavior.tsx", import.meta.url),
+      "utf8",
+    ),
     readFile(new URL("../app/work/work.module.css", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/work/WorkTimeline.module.css", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../app/work/[slug]/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8").then(
       JSON.parse,
     ),
@@ -359,6 +408,10 @@ test("Work source renders a paginated four-line index and semantic color calenda
     source,
     /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot/i,
   );
+  assert.match(source, /paginateWorkArchiveRecords\(filtered, query\.page\)/);
+  assert.match(source, /page\.items\.filter/);
+  assert.match(source, /<WorkPagination/);
+  assert.match(source, /workArchiveHref\(query, \{ page:/);
   assert.doesNotMatch(
     source,
     /from\s+["'](?:three|@react-three\/)|import\(["'](?:three|@react-three\/)/,
@@ -376,8 +429,7 @@ test("Work source renders a paginated four-line index and semantic color calenda
     source,
     /<details[\s\S]{0,180}className=\{styles\.moreFilters\}[\s\S]{0,180}id="work-more-filters"[\s\S]*?name="format"/,
   );
-  assert.match(source, /(?:WORK_ARCHIVE_PAGE_SIZE|pageSize|perPage)\s*=\s*24/);
-  assert.match(source, /\.slice\(\s*(?:pageStart|start|offset|\(query\.page - 1\) \* 24)/);
+  assert.equal(WORK_ARCHIVE_PAGE_SIZE, 24);
   assert.doesNotMatch(source, /name="view"/);
 
   assert.match(
@@ -392,6 +444,9 @@ test("Work source renders a paginated four-line index and semantic color calenda
   assert.match(timeline, /data-bucket=\{bucket\.id\}/);
   assert.match(timeline, /data-year=\{year\}/);
   assert.match(timeline, /data-density=\{density \|\| undefined\}/);
+  assert.match(timeline, /data-timeline-year=\{year\}/);
+  assert.match(timeline, /<WorkTimelineControls/);
+  assert.match(timeline, /availableYears\.at\(-1\)/);
   assert.match(timeline, /workArchiveHref\(query,/);
   assert.match(timeline, /\}\#work-index`/);
   assert.match(timeline, /works\.length/);
@@ -401,13 +456,33 @@ test("Work source renders a paginated four-line index and semantic color calenda
   assert.doesNotMatch(timeline, /@observablehq|canvas|three|webgl/i);
   assert.equal(packageJson.dependencies["@observablehq/plot"], undefined);
 
+  assert.match(timelineControls, /scrollToYear/);
+  assert.match(timelineControls, /prefers-reduced-motion: reduce/);
+  assert.match(timelineControls, /aria-pressed=\{selectedYear === year\}/);
+  assert.match(timelineCss, /scroll-snap-type:\s*inline mandatory/);
+  assert.match(timelineCss, /width:\s*calc\(100vw - 7\.25rem\)/);
+
+  assert.match(mobileFilters, /HTMLDialogElement\.prototype\.showModal/);
+  assert.match(mobileFilters, /<dialog/);
+  assert.match(mobileFilters, /action="\/work#work-index"/);
+  assert.match(mobileFilters, /triggerRef\.current\?\.focus\(\)/);
+  assert.doesNotMatch(mobileFilters, /name="(?:bucket|topic|year)"[\s\S]{0,120}<select/);
+  assert.match(source, /allLabel="All lines"[\s\S]*label="Line of work"[\s\S]*name="bucket"/);
+  assert.match(source, /allLabel="All years"[\s\S]*label="Year"[\s\S]*name="year"/);
+  assert.match(source, /allLabel="All topics"[\s\S]*label="Topic"[\s\S]*name="topic"/);
+  assert.match(css, /\.mobileFilterDialog::backdrop/);
+  assert.match(detailSource, /<dl className=\{styles\.facts\}/);
+  assert.match(detailSource, /<dt>\{label\}<\/dt>/);
+
   assert.match(
     source,
     /id="work-more-filters"[\s\S]{0,100}open=\{Boolean\(query\.format\)\}/,
-    "Medium should open server-side only when that filter is active",
+    "Format should open server-side when that filter is active",
   );
-  assert.doesNotMatch(source, /WorkFilterBehavior|defaultOpen/);
-  assert.match(css, /@media\s*\(max-width:\s*1100px\)/);
+  assert.doesNotMatch(source, /WorkFilterBehavior/);
+  assert.match(bodyBehavior, /body\.open = false/);
+  assert.match(bodyBehavior, /min-width:\s*761px/);
+  assert.match(css, /@media\s*\(max-width:\s*760px\)/);
   assert.match(
     css,
     /\.moreFilters:not\(\[open\]\)\s*>\s*\.secondaryFilters\s*\{[\s\S]*?display:\s*none/,

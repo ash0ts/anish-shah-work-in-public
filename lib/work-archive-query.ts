@@ -18,6 +18,18 @@ export type WorkArchiveQuery = {
   page: number;
 };
 
+export const WORK_ARCHIVE_PAGE_SIZE = 24;
+
+export type WorkArchivePage<T> = {
+  currentPage: number;
+  items: T[];
+  pageSize: number;
+  rangeEnd: number;
+  rangeStart: number;
+  totalItems: number;
+  totalPages: number;
+};
+
 type WorkArchiveQueryPatch = Partial<
   Record<
     | "q"
@@ -220,6 +232,32 @@ export function filterWorkArchiveRecords(
       (!query.practice || work.practice === query.practice)
     );
   });
+}
+
+export function paginateWorkArchiveRecords<T>(
+  records: T[],
+  requestedPage: number,
+  pageSize = WORK_ARCHIVE_PAGE_SIZE,
+): WorkArchivePage<T> {
+  const safePageSize = Math.max(1, Math.trunc(pageSize));
+  const totalItems = records.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / safePageSize));
+  const normalizedPage = Number.isFinite(requestedPage)
+    ? Math.max(1, Math.trunc(requestedPage))
+    : 1;
+  const currentPage = Math.min(normalizedPage, totalPages);
+  const startIndex = (currentPage - 1) * safePageSize;
+  const items = records.slice(startIndex, startIndex + safePageSize);
+
+  return {
+    currentPage,
+    items,
+    pageSize: safePageSize,
+    rangeEnd: totalItems ? startIndex + items.length : 0,
+    rangeStart: totalItems ? startIndex + 1 : 0,
+    totalItems,
+    totalPages,
+  };
 }
 
 export function humanizeWorkFilter(value: string): string {

@@ -67,11 +67,13 @@ export function MovementStream({
   }
 
   return (
-    <>
-      <PanelHeading
-        title="Outside, on purpose."
-        description="A cumulative public movement feed when Strava permits anonymous embedding, with the athlete profile always available."
-      />
+    <div className={styles.movementStream}>
+      <div className={styles.movementIntro}>
+        <PanelHeading
+          title="Outside, on purpose."
+          description="A cumulative public movement feed when Strava permits anonymous embedding, with the athlete profile always available."
+        />
+      </div>
       {show && state.payload.embed ? (
         <div className={styles.embed} ref={embedRef} tabIndex={-1}>
           <iframe
@@ -122,6 +124,6 @@ export function MovementStream({
           {SITE_COPY.play["profile-strava"]}
         </a>
       </div>
-    </>
+    </div>
   );
 }

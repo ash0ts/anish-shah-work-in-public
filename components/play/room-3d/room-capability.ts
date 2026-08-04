@@ -1,4 +1,12 @@
 export const ROOM_MINIMUM_VIEWPORT_WIDTH = 1100;
+export const POCKET_ROOM_MINIMUM_VIEWPORT_WIDTH = 320;
+export const POCKET_ROOM_MINIMUM_VIEWPORT_HEIGHT = 560;
+
+export type RoomPresentationTier =
+  | "static"
+  | "pocket"
+  | "desktop-perspective"
+  | "desktop-fisheye";
 
 export type RoomCapabilityReason =
   | "checking"
@@ -13,6 +21,7 @@ export type RoomCapabilityReason =
 
 export type RoomCapabilityInput = Readonly<{
   viewportWidth: number;
+  viewportHeight: number;
   finePointer: boolean;
   reducedMotion: boolean;
   forcedColors: boolean;
@@ -24,6 +33,7 @@ export type RoomCapabilityInput = Readonly<{
 
 export type RoomCapabilityResult = Readonly<{
   eligible: boolean;
+  tier: RoomPresentationTier;
   reasons: readonly RoomCapabilityReason[];
 }>;
 
@@ -31,11 +41,15 @@ export function evaluateRoomCapability(
   input: RoomCapabilityInput,
 ): RoomCapabilityResult {
   const reasons: RoomCapabilityReason[] = [];
+  const desktop =
+    input.viewportWidth >= ROOM_MINIMUM_VIEWPORT_WIDTH && input.finePointer;
 
-  if (input.viewportWidth < ROOM_MINIMUM_VIEWPORT_WIDTH) {
+  if (
+    input.viewportWidth < POCKET_ROOM_MINIMUM_VIEWPORT_WIDTH ||
+    (!desktop && input.viewportHeight < POCKET_ROOM_MINIMUM_VIEWPORT_HEIGHT)
+  ) {
     reasons.push("narrow-viewport");
   }
-  if (!input.finePointer) reasons.push("coarse-pointer");
   if (input.reducedMotion) reasons.push("reduced-motion");
   if (input.forcedColors) reasons.push("forced-colors");
   if (input.zoomScale >= 2) reasons.push("zoomed");
@@ -43,9 +57,12 @@ export function evaluateRoomCapability(
   if (!input.documentVisible) reasons.push("document-hidden");
   if (!input.webgl2Available) reasons.push("webgl2-unavailable");
 
+  if (reasons.length > 0) return { eligible: false, tier: "static", reasons };
+
   return {
-    eligible: reasons.length === 0,
-    reasons,
+    eligible: true,
+    tier: desktop ? "desktop-fisheye" : "pocket",
+    reasons: [],
   };
 }
 
@@ -91,13 +108,14 @@ export function detectRoomCapability(): RoomCapabilityResult {
     typeof document === "undefined" ||
     typeof navigator === "undefined"
   ) {
-    return { eligible: false, reasons: ["checking"] };
+    return { eligible: false, tier: "static", reasons: ["checking"] };
   }
 
   const connection = (navigator as NavigatorWithConnection).connection;
 
   return evaluateRoomCapability({
     viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
     finePointer: window.matchMedia("(pointer: fine)").matches,
     reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     forcedColors: window.matchMedia("(forced-colors: active)").matches,

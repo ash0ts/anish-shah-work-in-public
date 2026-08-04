@@ -40,9 +40,11 @@ export type RoomSceneProps = {
   approachPoseId: RoomApproachPoseId | null;
   focusedId?: RoomObjectId | null;
   onHoverChange?: (id: RoomObjectId | null) => void;
+  onInteractionActiveChange?: (active: boolean) => void;
   onSettled?: () => void;
   onRotationChange: (rotation: RoomRotation) => void;
   onSelect: (id: RoomObjectId) => void;
+  presentation?: "desktop" | "pocket";
   rotation: RoomRotation;
   selectedId: RoomObjectId | null;
 };
@@ -51,9 +53,11 @@ export function RoomScene({
   approachPoseId,
   focusedId = null,
   onHoverChange,
+  onInteractionActiveChange,
   onSettled,
   onRotationChange,
   onSelect,
+  presentation = "desktop",
   rotation,
   selectedId,
 }: RoomSceneProps) {
@@ -111,7 +115,8 @@ export function RoomScene({
         rotation={rotation}
       >
         <group
-          position={[0, -0.55, 0]}
+          position={presentation === "pocket" ? [0, -0.8, 0] : [0, -0.55, 0]}
+          scale={presentation === "pocket" ? 0.92 : 1}
         >
           <RoomShell registerOccluder={registerOccluder} />
           {ROOM_OBJECT_IDS.map((id) => {
@@ -129,9 +134,11 @@ export function RoomScene({
             hitTargets={hitTargets}
             occluders={occluders}
             onHoverChange={setHovered}
+            onInteractionActiveChange={onInteractionActiveChange}
             onRotationCommit={onRotationChange}
             onRotationPreview={previewRotation}
             onSelect={onSelect}
+            presentation={presentation}
             rotation={rotation}
           />
         </group>
