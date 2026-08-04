@@ -6,6 +6,7 @@ export interface WorkerEnv {
   ARTWORK_RATE_LIMITER?: RateLimitBinding;
   PROMOTION_RATE_LIMITER?: RateLimitBinding;
   OAUTH_CALLBACK_RATE_LIMITER?: RateLimitBinding;
+  SIMULATION_RATE_LIMITER?: RateLimitBinding;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -29,6 +30,16 @@ export interface WorkerEnv {
   DEPLOYMENT_TIER?: string;
   PREVIEW_PR_NUMBER?: string;
   PLAY_EXPERIENCE_MODE?: string;
+  SIMULATION_EXPERIENCE_MODE?: string;
+  SIMULATION_AI_MODE?: string;
+  SIMULATION_PROVIDER?: string;
+  SIMULATION_MODEL?: string;
+  SIMULATION_SESSION_HMAC_KEY?: string;
+  SIMULATION_GATEWAY_ACCOUNT_ID?: string;
+  SIMULATION_GATEWAY_ID?: string;
+  SIMULATION_GATEWAY_TOKEN?: string;
+  SIMULATION_GATEWAY_BYOK_ALIAS?: string;
+  SIMULATION_DAILY_MODEL_LIMIT?: string;
 }
 
 export interface WorkerExecutionContext {

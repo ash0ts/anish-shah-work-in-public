@@ -216,3 +216,66 @@ export const maintenanceState = sqliteTable("maintenance_state", {
   checkedAt: text("checked_at").notNull(),
   updatedAt: timestamp("updated_at"),
 });
+
+/**
+ * Short-lived game state only. The JSON column contains allowlisted campaign
+ * IDs, enum signals, score counters, and one exact-validated response projection
+ * used only for idempotent retry. Visitor prose, model prompts, and raw provider
+ * responses must never be written here.
+ */
+export const simulationSessions = sqliteTable(
+  "simulation_sessions",
+  {
+    sessionHash: text("session_hash").primaryKey(),
+    campaignVersion: text("campaign_version").notNull(),
+    status: text("status").notNull().default("active"),
+    revision: integer("revision").notNull().default(0),
+    sceneId: text("scene_id").notNull().default("act-1"),
+    safeStateJson: text("safe_state_json").notNull(),
+    freeTextTurns: integer("free_text_turns").notNull().default(0),
+    generationCalls: integer("generation_calls").notNull().default(0),
+    turnCount: integer("turn_count").notNull().default(0),
+    pendingRequestId: text("pending_request_id"),
+    generationLeaseUntil: text("generation_lease_until"),
+    lastRequestId: text("last_request_id"),
+    lastResponseJson: text("last_response_json"),
+    createdAt: timestamp("created_at"),
+    updatedAt: timestamp("updated_at"),
+    expiresAt: text("expires_at").notNull(),
+  },
+  (table) => [
+    index("simulation_sessions_expiry_idx").on(table.expiresAt),
+    index("simulation_sessions_status_updated_idx").on(
+      table.status,
+      table.updatedAt,
+    ),
+  ],
+);
+
+/** Aggregate counters only; no visitor or prompt content. */
+export const simulationDailyBudget = sqliteTable("simulation_daily_budget", {
+  budgetDate: text("budget_date").primaryKey(),
+  modelCalls: integer("model_calls").notNull().default(0),
+  authoredFallbacks: integer("authored_fallbacks").notNull().default(0),
+  updatedAt: timestamp("updated_at"),
+});
+
+/** Owner-only evidence that a provider may be used by the simulation. */
+export const simulationProviderApprovals = sqliteTable(
+  "simulation_provider_approvals",
+  {
+    provider: text("provider").primaryKey(),
+    scopesJson: text("scopes_json").notNull().default("[]"),
+    reference: text("reference").notNull(),
+    approvedAt: text("approved_at").notNull(),
+    expiresAt: text("expires_at"),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+    updatedAt: timestamp("updated_at"),
+  },
+  (table) => [
+    index("simulation_provider_approvals_enabled_expiry_idx").on(
+      table.enabled,
+      table.expiresAt,
+    ),
+  ],
+);

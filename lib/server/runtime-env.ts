@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 type RuntimeBindings = {
   DB?: D1Database;
   PUBLICATION_CACHE?: KVNamespace;
+  SIMULATION_RATE_LIMITER?: RateLimitBinding;
   NODE_ENV?: string;
   OWNER_EMAILS?: string;
   CONNECTOR_ENCRYPTION_KEY?: string;
@@ -18,6 +19,16 @@ type RuntimeBindings = {
   DEPLOYMENT_TIER?: string;
   PREVIEW_PR_NUMBER?: string;
   PLAY_EXPERIENCE_MODE?: string;
+  SIMULATION_EXPERIENCE_MODE?: string;
+  SIMULATION_AI_MODE?: string;
+  SIMULATION_PROVIDER?: string;
+  SIMULATION_MODEL?: string;
+  SIMULATION_SESSION_HMAC_KEY?: string;
+  SIMULATION_GATEWAY_ACCOUNT_ID?: string;
+  SIMULATION_GATEWAY_ID?: string;
+  SIMULATION_GATEWAY_TOKEN?: string;
+  SIMULATION_GATEWAY_BYOK_ALIAS?: string;
+  SIMULATION_DAILY_MODEL_LIMIT?: string;
 };
 
 function cloudflareBindings(): RuntimeBindings {
@@ -29,7 +40,10 @@ function cloudflareBindings(): RuntimeBindings {
 }
 
 export function runtimeValue(
-  name: Exclude<keyof RuntimeBindings, "DB" | "PUBLICATION_CACHE">,
+  name: Exclude<
+    keyof RuntimeBindings,
+    "DB" | "PUBLICATION_CACHE" | "SIMULATION_RATE_LIMITER"
+  >,
 ): string | undefined {
   const cloudflareValue = cloudflareBindings()[name];
   if (typeof cloudflareValue === "string" && cloudflareValue.trim()) {

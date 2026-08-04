@@ -36,8 +36,8 @@
     "content:attest": "node scripts/public-content-attestation.mjs --check",
     "content:attest:write": "node scripts/public-content-attestation.mjs --write",
     "test:content": "node --test tests/content-pipeline.test.mjs tests/content-privacy.test.mjs tests/content-connectors.test.mjs tests/content-connector-gallery.test.mjs tests/content-connector-artwork.test.mjs tests/content-myanimelist-oauth.test.mjs tests/content-spotify-connector.test.mjs tests/content-spotify-oauth.test.mjs tests/content-discogs-connector.test.mjs tests/content-discogs-oauth.test.mjs tests/content-steam-connector.test.mjs tests/content-workgroups.test.mjs tests/bodies-of-work.test.mjs tests/work-facets.test.mjs tests/work-archive-v12.test.mjs",
-    "test:backend": "node --test tests/backend-security.test.mjs tests/security-hardening.test.mjs tests/cloudflare-access.test.mjs tests/backend-public-content.test.mjs tests/backend-connector-privacy.test.mjs tests/content-strava-config.test.mjs tests/play-promotion.test.mjs tests/preview-readiness.test.mjs tests/public-record-seed.test.mjs tests/release-build-checkpoint.test.mjs tests/release-guards.test.mjs tests/spotify-studio-surface.test.mjs tests/staging-preview.test.mjs",
-    "test:rendered": "node --test tests/spotify-play-ui.test.mjs tests/discogs-play-ui.test.mjs tests/play-room-routes.test.mjs tests/play-room-3d.test.mjs tests/rendered-html.test.mjs && node --test tests/redesign-acceptance.test.mjs",
+    "test:backend": "node --test tests/backend-security.test.mjs tests/security-hardening.test.mjs tests/cloudflare-access.test.mjs tests/backend-public-content.test.mjs tests/backend-connector-privacy.test.mjs tests/content-strava-config.test.mjs tests/play-promotion.test.mjs tests/preview-readiness.test.mjs tests/public-record-seed.test.mjs tests/release-build-checkpoint.test.mjs tests/release-guards.test.mjs tests/simulation-backend.test.mjs tests/simulation-play-grounding.test.mjs tests/spotify-studio-surface.test.mjs tests/staging-preview.test.mjs",
+    "test:rendered": "node --test tests/experience-audio.test.mjs tests/room-simulation-ingress.test.mjs tests/simulation-ui.test.mjs tests/spotify-play-ui.test.mjs tests/discogs-play-ui.test.mjs tests/play-room-routes.test.mjs tests/play-room-3d.test.mjs tests/rendered-html.test.mjs && node --test tests/redesign-acceptance.test.mjs",
     "test:maintenance-skill": "npm run skill:validate && node --test .agents/skills/maintain-anish-site/tests/check-change.test.mjs tests/repository-skills.test.mjs",
     "test:local-dx": "node --test tests/local-dx.test.mjs tests/docs-check.test.mjs",
     "test": "npm run test:maintenance-skill && npm run test:local-dx && npm run copy:test && npm run typecheck && npm run test:content && npm run test:backend && npm run build && npm run bundle:scan && npm run test:rendered",
@@ -55,6 +55,8 @@
     "deployable:attest": "node scripts/deployable-artifact-manifest.mjs --check",
     "deployable:attest:write": "node scripts/deployable-artifact-manifest.mjs --write",
     "brand:assets": "node scripts/generate-favicon.mjs",
+    "audio:validate": "node scripts/validate-experience-audio.mjs",
+    "audio:build": "node scripts/build-experience-audio.mjs",
     "db:generate": "drizzle-kit generate",
     "db:local:migrate": "node scripts/apply-local-d1-migrations.mjs",
     "db:local:migrate:clean": "node scripts/apply-local-d1-migrations.mjs --clean",
@@ -84,16 +86,22 @@
     "bundle:scan": "node scripts/scan-release-bundle.mjs"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "4.0.28",
     "@react-three/drei": "10.7.7",
     "@react-three/fiber": "9.6.1",
+    "@xstate/react": "6.1.0",
+    "ai": "7.0.50",
     "animejs": "4.5.0",
     "drizzle-orm": "0.45.2",
     "jose": "6.2.5",
     "next": "16.2.12",
+    "phaser": "4.2.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-server-dom-webpack": "19.2.8",
-    "three": "0.185.1"
+    "three": "0.185.1",
+    "tone": "15.1.22",
+    "xstate": "5.32.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",

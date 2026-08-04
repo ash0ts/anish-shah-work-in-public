@@ -11,6 +11,8 @@ function isContentBackedPublicPath(pathname: string): boolean {
     pathname === "/play" ||
     pathname === "/play/" ||
     pathname.startsWith("/play/") ||
+    pathname === "/simulation" ||
+    pathname === "/simulation/" ||
     pathname === "/sources" ||
     pathname === "/sources/" ||
     pathname === "/work" ||
