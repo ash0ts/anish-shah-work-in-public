@@ -42,17 +42,35 @@ const modelTurnSchema = jsonSchema<ModelTurnOutput>({
   },
 });
 
-function gatewayConfiguration(): {
-  baseURL: string;
-  token: string;
-  byokAlias: string;
-  model: string;
-} | null {
+type AnthropicConfiguration =
+  | {
+      transport: "gateway";
+      baseURL: string;
+      token: string;
+      byokAlias: string;
+      model: string;
+    }
+  | {
+      transport: "direct-local";
+      apiKey: string;
+      model: string;
+    };
+
+function anthropicConfiguration(): AnthropicConfiguration | null {
+  const runtime = simulationRuntimeConfiguration();
+  if (!runtime.configured || runtime.aiMode !== "live") return null;
+  const model = runtime.model;
+  if (runtime.aiTransport === "direct-local") {
+    const apiKey = runtimeValue("SIMULATION_LOCAL_ANTHROPIC_API_KEY") ?? "";
+    return apiKey.length >= 20
+      ? { transport: "direct-local", apiKey, model }
+      : null;
+  }
+  if (runtime.aiTransport !== "gateway") return null;
   const accountId = runtimeValue("SIMULATION_GATEWAY_ACCOUNT_ID") ?? "";
   const gatewayId = runtimeValue("SIMULATION_GATEWAY_ID") ?? "";
   const token = runtimeValue("SIMULATION_GATEWAY_TOKEN") ?? "";
   const byokAlias = runtimeValue("SIMULATION_GATEWAY_BYOK_ALIAS") ?? "";
-  const model = runtimeValue("SIMULATION_MODEL") ?? "claude-sonnet-5";
   if (
     !/^[a-f0-9]{32}$/i.test(accountId) ||
     !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(gatewayId) ||
@@ -63,6 +81,7 @@ function gatewayConfiguration(): {
     return null;
   }
   return {
+    transport: "gateway",
     baseURL: `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/anthropic`,
     token,
     byokAlias,
@@ -118,25 +137,37 @@ export class CloudflareAnthropicSimulationProvider
   readonly source = "generated" as const;
 
   async generateTurn(input: GroundedTurnInput): Promise<unknown> {
-    const configuration = gatewayConfiguration();
+    const configuration = anthropicConfiguration();
     if (!configuration) throw new Error("simulation_ai_unavailable");
-    const headers: Record<string, string> = {
-      "cf-aig-authorization": `Bearer ${configuration.token}`,
-      "cf-aig-collect-log": "false",
-      "cf-aig-collect-log-payload": "false",
-      "cf-aig-skip-cache": "true",
-      "cf-aig-max-attempts": "1",
-      "cf-aig-request-timeout": "7500",
-      "cf-aig-byok-alias": configuration.byokAlias,
-    };
-    // The provider SDK requires an API-key field even though AI Gateway injects
-    // the real BYOK credential upstream. Keep this inert marker non-secret.
-    const gatewayManagedApiKey = ["gateway", "managed", "byok"].join("-");
+    const transportHeaders: Record<string, string> | undefined =
+      configuration.transport === "gateway"
+        ? {
+            "cf-aig-authorization": `Bearer ${configuration.token}`,
+            "cf-aig-collect-log": "false",
+            "cf-aig-collect-log-payload": "false",
+            "cf-aig-skip-cache": "true",
+            "cf-aig-max-attempts": "1",
+            "cf-aig-request-timeout": "7500",
+            "cf-aig-byok-alias": configuration.byokAlias,
+          }
+        : undefined;
+    const apiKey =
+      configuration.transport === "direct-local"
+        ? configuration.apiKey
+        : ["locally", "managed", "provider", "credential"].join("-");
     const anthropic = createAnthropic({
-      baseURL: configuration.baseURL,
-      apiKey: gatewayManagedApiKey,
-      headers,
-      fetch: (url, init) => fetch(url, { ...init, redirect: "error" }),
+      ...(configuration.transport === "gateway"
+        ? { baseURL: configuration.baseURL }
+        : {}),
+      apiKey,
+      headers: transportHeaders,
+      fetch: async (url, init) => {
+        const response = await fetch(url, { ...init, redirect: "manual" });
+        if (response.status >= 300 && response.status < 400) {
+          throw new Error("simulation_provider_redirect_rejected");
+        }
+        return response;
+      },
       name: "anish-simulation-anthropic",
     });
     const result = await generateText({
@@ -149,9 +180,11 @@ export class CloudflareAnthropicSimulationProvider
         description: "A bounded reaction from the public-model game character.",
       }),
       maxOutputTokens: 300,
+      providerOptions: {
+        anthropic: { thinking: { type: "disabled" } },
+      },
       maxRetries: 0,
       timeout: MODEL_TIMEOUT_MS,
-      abortSignal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
       telemetry: { isEnabled: false },
       include: {
         requestBody: false,

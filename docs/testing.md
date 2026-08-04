@@ -112,6 +112,28 @@ SIMULATION_AI_MODE=fixture \
 npm run dev:studio
 ```
 
+To smoke-test real Claude behavior locally, keep the provider key in an existing
+owner-only environment file and pass that file to the guarded launcher:
+
+```bash
+npm run dev:simulation:live -- \
+  --env-file '/absolute/path/to/permission-restricted/.env'
+```
+
+The launcher reads only `ANTHROPIC_API_KEY`, removes every variable declared by
+that shared file from the child environment, and binds the key only to the
+loopback development Worker for that process lifetime. The key is never copied
+into `.env.local`, Git, D1, the browser, or a build artifact. The direct
+transport is accepted only for an exact `http://localhost:3000` development
+origin; preview, staging, production, non-loopback origins, and
+`NODE_ENV=production` fail closed. Stop it with Control-C. A generated turn is labeled
+`Generated reaction · facts supplied by server` in the opponent panel.
+
+This direct local smoke test proves model compatibility and the authored fallback. It
+is not release evidence for Cloudflare AI Gateway, Gateway logging/DLP,
+Guardrails, BYOK, hosted rate limiting, provider approvals, or spend controls.
+Those remain staging acceptance requirements.
+
 `npm run setup:local` creates a missing ignored
 `SIMULATION_SESSION_HMAC_KEY` alongside the other local-only security values
 without printing any of them. Apply the normal local migration command before
@@ -240,9 +262,10 @@ node --test tests/simulation-backend.test.mjs
 node --test tests/release-guards.test.mjs tests/staging-preview.test.mjs
 ```
 
-Live AI testing happens only on isolated staging after its Gateway, spend cap,
-DLP/Guardrails, provider approvals, session key, D1, and rate limiter are
-configured. A successful local fixture or PR preview is not live-model evidence.
+Release-quality live AI testing happens only on isolated staging after its
+Gateway, spend cap, DLP/Guardrails, provider approvals, session key, D1, and
+rate limiter are configured. A successful direct local smoke test, fixture, or
+PR preview is not hosted live-model evidence.
 
 ## CI and exact-SHA release evidence
 

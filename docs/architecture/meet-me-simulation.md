@@ -73,9 +73,9 @@ one-way rate limiting, four model calls per campaign, twelve campaign turns,
 and a daily global budget bound cost and replay. An uncertain provider request
 is never retried automatically.
 
-## AI Gateway
+## AI transport
 
-Live mode uses Claude Sonnet 5 through an authenticated Cloudflare AI Gateway
+Hosted live mode uses Claude Sonnet 5 through an authenticated Cloudflare AI Gateway
 and the AI SDK provider abstraction. Provider credentials are stored in the
 Gateway through BYOK; the Worker receives only its own environment-specific
 Gateway coordinates, run token, optional BYOK alias, and model selection.
@@ -101,10 +101,20 @@ schema-constrained requests with an eight-second application deadline and never
 retries an uncertain provider call. Claude Sonnet 5 must not receive non-default
 `temperature`, `top_p`, or `top_k` values.
 
-The Anthropic API key exists only in Gateway BYOK storage. The Worker receives a
+In hosted environments, the Anthropic API key exists only in Gateway BYOK
+storage. The Worker receives a
 Gateway token and alias, not the provider key. Gateway IDs, tokens, aliases,
 session keys, budgets, and approval state are different in staging and
 production and never appear in release plans or checked-in configuration.
+
+Local development also has an explicit `direct-local` smoke-test transport.
+The guarded launcher reads `ANTHROPIC_API_KEY` from an owner-only file and binds
+it only to the loopback development Worker for that process lifetime. The key
+is never written to local configuration or persistence. Runtime policy accepts
+this transport only for the exact loopback development origin. Hosted tiers,
+production mode, other app ports, and non-loopback origins reject it. Direct
+local results verify model/schema compatibility only; all hosted Gateway
+controls are still tested on isolated staging before release.
 
 Cloudflare references:
 

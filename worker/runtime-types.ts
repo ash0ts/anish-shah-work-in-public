@@ -32,6 +32,7 @@ export interface WorkerEnv {
   PLAY_EXPERIENCE_MODE?: string;
   SIMULATION_EXPERIENCE_MODE?: string;
   SIMULATION_AI_MODE?: string;
+  SIMULATION_AI_TRANSPORT?: string;
   SIMULATION_PROVIDER?: string;
   SIMULATION_MODEL?: string;
   SIMULATION_SESSION_HMAC_KEY?: string;
@@ -39,6 +40,7 @@ export interface WorkerEnv {
   SIMULATION_GATEWAY_ID?: string;
   SIMULATION_GATEWAY_TOKEN?: string;
   SIMULATION_GATEWAY_BYOK_ALIAS?: string;
+  SIMULATION_LOCAL_ANTHROPIC_API_KEY?: string;
   SIMULATION_DAILY_MODEL_LIMIT?: string;
 }
 

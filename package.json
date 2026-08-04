@@ -13,6 +13,7 @@
     "dev:classic": "PLAY_EXPERIENCE_MODE=classic WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext dev",
     "dev:studio": "npm run db:local:migrate && npm run dev",
     "dev:studio:classic": "npm run db:local:migrate && npm run dev:classic",
+    "dev:simulation:live": "NODE_USE_SYSTEM_CA=1 node scripts/run-local-simulation-live.mjs",
     "setup:local": "node scripts/setup-local.mjs",
     "local:security:setup": "npm run setup:local",
     "doctor": "node scripts/doctor.mjs",

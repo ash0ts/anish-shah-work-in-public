@@ -56,7 +56,11 @@ const {
   releaseSimulationTurn,
   reserveSimulationTurn,
 } = repositoryModule;
-const { simulationAiMode, simulationRuntimeConfiguration } = runtimeModule;
+const {
+  simulationAiMode,
+  simulationAiTransport,
+  simulationRuntimeConfiguration,
+} = runtimeModule;
 const {
   resolveSimulationProviderTurn,
   SimulationServiceError,
@@ -741,7 +745,48 @@ test("hosted fixture mode fails closed and live mode requires Gateway BYOK", asy
   );
 });
 
-test("provider source enforces Gateway privacy headers and never supports raw provider keys", () => {
+test("direct Anthropic transport is restricted to exact local development", async () => {
+  const directLocal = {
+    NODE_ENV: "development",
+    SITE_URL: "http://localhost:3000",
+    SIMULATION_EXPERIENCE_MODE: "campaign-v1",
+    SIMULATION_AI_MODE: "live",
+    SIMULATION_AI_TRANSPORT: "direct-local",
+    SIMULATION_PROVIDER: "anthropic",
+    SIMULATION_MODEL: "claude-sonnet-5",
+    SIMULATION_LOCAL_ANTHROPIC_API_KEY: "l".repeat(40),
+  };
+  await withRuntime(directLocal, async () => {
+    assert.equal(simulationAiTransport(), "direct-local");
+    assert.equal(simulationRuntimeConfiguration().configured, true);
+  });
+  for (const invalid of [
+    { ...directLocal, DEPLOYMENT_TIER: "staging" },
+    { ...directLocal, DEPLOYMENT_TIER: "production" },
+    { ...directLocal, SITE_URL: "https://anish-shah-is.online" },
+    { ...directLocal, SITE_URL: "http://localhost:3001" },
+    { ...directLocal, NODE_ENV: "production" },
+  ]) {
+    await withRuntime(invalid, async () => {
+      assert.equal(simulationAiTransport(), "invalid");
+      assert.equal(simulationRuntimeConfiguration().configured, false);
+    });
+  }
+  const missingKey = { ...directLocal };
+  delete missingKey.SIMULATION_LOCAL_ANTHROPIC_API_KEY;
+  await withRuntime(missingKey, async () => {
+    assert.equal(simulationAiTransport(), "direct-local");
+    assert.equal(simulationRuntimeConfiguration().configured, false);
+  });
+  await withRuntime(
+    { ...directLocal, SIMULATION_LOCAL_ANTHROPIC_API_KEY: `${"x".repeat(20)} y` },
+    async () => {
+      assert.equal(simulationRuntimeConfiguration().configured, false);
+    },
+  );
+});
+
+test("provider source enforces Gateway privacy headers and rejects hosted raw-key configuration", () => {
   const source = readFileSync(
     new URL("../lib/server/simulation/provider.ts", import.meta.url),
     "utf8",
@@ -752,13 +797,43 @@ test("provider source enforces Gateway privacy headers and never supports raw pr
     '"cf-aig-skip-cache": "true"',
     '"cf-aig-max-attempts": "1"',
     '"cf-aig-request-timeout": "7500"',
-    "AbortSignal.timeout(MODEL_TIMEOUT_MS)",
+    "timeout: MODEL_TIMEOUT_MS",
     "maxRetries: 0",
+    'anthropic: { thinking: { type: "disabled" } }',
+    'redirect: "manual"',
+    "response.status >= 300 && response.status < 400",
   ]) {
     assert.match(source, new RegExp(requirement.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
   assert.doesNotMatch(source, /SIMULATION_ANTHROPIC_API_KEY/);
+  assert.doesNotMatch(source, /process\.env\.ANTHROPIC_API_KEY/);
   assert.doesNotMatch(source, /temperature\s*:/);
   assert.doesNotMatch(source, /topP\s*:/);
   assert.doesNotMatch(source, /topK\s*:/);
+});
+
+test("local live-model launcher isolates shared env values from the app process", () => {
+  const launcher = readFileSync(
+    new URL("../scripts/run-local-simulation-live.mjs", import.meta.url),
+    "utf8",
+  );
+  const vite = readFileSync(new URL("../vite.config.ts", import.meta.url), "utf8");
+  assert.match(launcher, /candidateStat\.mode & 0o077/);
+  assert.match(launcher, /for \(const name of assignedNames\) delete childEnvironment\[name\]/);
+  assert.match(launcher, /SIMULATION_AI_TRANSPORT: "direct-local"/);
+  assert.match(launcher, /SIMULATION_LOCAL_ANTHROPIC_API_KEY: apiKey/);
+  assert.doesNotMatch(launcher, /console\.(?:log|error)\([^\n]*apiKey/);
+  for (const binding of [
+    "RATE_LIMIT_SALT",
+    "SIMULATION_SESSION_HMAC_KEY",
+    "SIMULATION_AI_TRANSPORT",
+    "SIMULATION_LOCAL_ANTHROPIC_API_KEY",
+  ]) {
+    assert.match(vite, new RegExp(`"${binding}"`));
+  }
+  assert.match(vite, /process\.env\[name\] \?\? localEnvironment\[name\]/);
+  assert.match(
+    vite,
+    /process\.env\.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = "false"/,
+  );
 });
