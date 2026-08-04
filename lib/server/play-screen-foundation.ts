@@ -8,7 +8,7 @@ import type {
   PreviewFixtureScenario,
   StravaPayload,
 } from "@/components/play/connector-model";
-import type { RoomObjectId } from "@/components/play/room-platform/room-types";
+import type { RoomConnectorObjectId } from "@/components/play/room-platform/room-types";
 import type {
   SpotifyPublicSnapshot,
   SpotifyState,
@@ -253,4 +253,4 @@ export const ROOM_PROVIDER_ADAPTERS = {
   collect: (values) => getDiscogsScreenFoundation(values),
   play: (values) => getCollectionScreenFoundation("steam", values),
   move: (values) => getMovementScreenFoundation(values),
-} satisfies Record<RoomObjectId, RoomProviderAdapter>;
+} satisfies Record<RoomConnectorObjectId, RoomProviderAdapter>;

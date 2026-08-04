@@ -46,6 +46,7 @@ type RoomExperienceContextValue = RoomExperienceState & {
   selectObject(id: RoomObjectId): void;
   notifyRuntimeMounted(): void;
   objectRouteActive: boolean;
+  enabledObjectIds: readonly RoomObjectId[];
   revealSimulation(): void;
   simulationEnabled: boolean;
   simulationTransitioning: boolean;
@@ -55,6 +56,8 @@ type RoomExperienceContextValue = RoomExperienceState & {
 type ObjectRouteOrigin = "direct" | "room";
 
 const ROOM_HISTORY_ORIGIN_KEY = "__anishRoomOrigin";
+const ROOM_HISTORY_DEPTH_KEY = "__anishRoomDepth";
+const ROOM_HISTORY_PATH_KEY = "__anishRoomPath";
 
 const RoomExperienceContext = createContext<RoomExperienceContextValue | null>(
   null,
@@ -112,14 +115,14 @@ function LazyRoomFallback({ onLeave }: { onLeave: () => void }) {
     >
       <picture>
         <source
-          srcSet="/assets/play/my-room-2001-neutral.50f82f186444.avif"
+          srcSet="/assets/play/my-room-2001-neutral.01c6f825bbc1.avif"
           type="image/avif"
         />
         <img
           alt=""
           decoding="async"
           height="1000"
-          src="/assets/play/my-room-2001-neutral.af662c65ec99.webp"
+          src="/assets/play/my-room-2001-neutral.00d2bc80d8dc.webp"
           width="1600"
         />
       </picture>
@@ -235,6 +238,7 @@ function SimulationRevealSignal({
 }
 
 function routeObject(pathname: string): RoomObjectId | null {
+  if (/^\/play\/travel\/trips\/[^/]+\/?$/.test(pathname)) return "travel";
   const match = /^\/play\/([^/]+)\/?$/.exec(pathname);
   return match && isRoomObjectId(match[1]) ? match[1] : null;
 }
@@ -244,13 +248,28 @@ function historyRoomObject(): RoomObjectId | null {
   return typeof value === "string" && isRoomObjectId(value) ? value : null;
 }
 
-function markRoomHistoryEntry(id: RoomObjectId) {
+function historyRoomDepth(): number | null {
+  const value = window.history.state?.[ROOM_HISTORY_DEPTH_KEY];
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function historyRoomPath(): string | null {
+  const value = window.history.state?.[ROOM_HISTORY_PATH_KEY];
+  return typeof value === "string" ? value : null;
+}
+
+function markRoomHistoryEntry(id: RoomObjectId, depth = 1) {
   const currentState =
     window.history.state && typeof window.history.state === "object"
       ? window.history.state
       : {};
   window.history.replaceState(
-    { ...currentState, [ROOM_HISTORY_ORIGIN_KEY]: id },
+    {
+      ...currentState,
+      [ROOM_HISTORY_ORIGIN_KEY]: id,
+      [ROOM_HISTORY_DEPTH_KEY]: depth,
+      [ROOM_HISTORY_PATH_KEY]: window.location.pathname,
+    },
     "",
     window.location.href,
   );
@@ -262,15 +281,19 @@ function clearRoomHistoryEntry() {
   if (!(ROOM_HISTORY_ORIGIN_KEY in currentState)) return;
   const nextState = { ...currentState };
   delete nextState[ROOM_HISTORY_ORIGIN_KEY];
+  delete nextState[ROOM_HISTORY_DEPTH_KEY];
+  delete nextState[ROOM_HISTORY_PATH_KEY];
   window.history.replaceState(nextState, "", window.location.href);
 }
 
 export function RoomExperienceProvider({
   children,
   simulationEnabled,
+  travelEnabled = false,
 }: {
   children: ReactNode;
   simulationEnabled: boolean;
+  travelEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -287,11 +310,21 @@ export function RoomExperienceProvider({
   const pendingFocus = useRef<RoomObjectId | null>(null);
   const pendingRoomNavigation = useRef<RoomObjectId | null>(null);
   const activeObjectRouteOrigin = useRef<ObjectRouteOrigin | null>(null);
+  const activeObjectRouteDepth = useRef(0);
   const previousRouteObject = useRef<RoomObjectId | null>(routeObject(pathname));
   const focusRequestEpoch = useRef(0);
   const focusRequestCleanup = useRef<() => void>(() => undefined);
   const announcementEpoch = useRef(0);
   const roomEntered = useRef(state.entered);
+  const enabledObjectIds = useMemo<readonly RoomObjectId[]>(
+    () =>
+      travelEnabled
+        ? Object.keys(ROOM_OBJECT_BY_ID) as RoomObjectId[]
+        : (Object.keys(ROOM_OBJECT_BY_ID) as RoomObjectId[]).filter(
+            (id) => id !== "travel",
+          ),
+    [travelEnabled],
+  );
 
   const announce = useCallback((message: string) => {
     const epoch = ++announcementEpoch.current;
@@ -456,11 +489,29 @@ export function RoomExperienceProvider({
     if (activeRouteObject) {
       const pendingRoomEntry =
         pendingRoomNavigation.current === activeRouteObject;
+      const continuingRoomObject =
+        priorRouteObject === activeRouteObject &&
+        activeObjectRouteOrigin.current === "room";
       const enteredFromRoom =
         pendingRoomEntry ||
+        continuingRoomObject ||
         (roomEntered.current && historyRoomObject() === activeRouteObject);
-      if (pendingRoomEntry) markRoomHistoryEntry(activeRouteObject);
-      else if (!enteredFromRoom) clearRoomHistoryEntry();
+      if (enteredFromRoom) {
+        const storedDepth = historyRoomDepth();
+        const storedPathMatches = historyRoomPath() === pathname;
+        const depth = pendingRoomEntry
+          ? 1
+          : storedPathMatches && storedDepth
+            ? storedDepth
+            : Math.max(1, activeObjectRouteDepth.current + 1);
+        activeObjectRouteDepth.current = depth;
+        if (pendingRoomEntry || !storedPathMatches) {
+          markRoomHistoryEntry(activeRouteObject, depth);
+        }
+      } else {
+        activeObjectRouteDepth.current = 0;
+        clearRoomHistoryEntry();
+      }
       activeObjectRouteOrigin.current = enteredFromRoom ? "room" : "direct";
       pendingRoomNavigation.current = null;
       const object = ROOM_OBJECT_BY_ID[activeRouteObject];
@@ -470,6 +521,7 @@ export function RoomExperienceProvider({
     }
 
     activeObjectRouteOrigin.current = null;
+    activeObjectRouteDepth.current = 0;
     if (pathname === "/play" || pathname === "/play/") {
       const target = pendingFocus.current ?? lastInvoker.current;
       if (!target) return;
@@ -649,6 +701,7 @@ export function RoomExperienceProvider({
     const target = activeRouteObject ?? lastInvoker.current ?? state.focusedId;
     if (target) pendingFocus.current = target;
     const returnWithBrowserHistory = activeObjectRouteOrigin.current === "room";
+    const roomHistoryDepth = activeObjectRouteDepth.current;
     announce(
       target
         ? `Rewinding to My Room. ${ROOM_OBJECT_BY_ID[target].label} will remain selected.`
@@ -660,7 +713,9 @@ export function RoomExperienceProvider({
     const navigate = () => {
       if (epoch !== transitionEpoch.current || navigated) return;
       navigated = true;
-      if (returnWithBrowserHistory) router.back();
+      if (returnWithBrowserHistory && roomHistoryDepth > 1) {
+        window.history.go(-roomHistoryDepth);
+      } else if (returnWithBrowserHistory) router.back();
       else {
         router.push(
           routeWithPreviewFixture(
@@ -689,14 +744,14 @@ export function RoomExperienceProvider({
       cancelTransition();
       dispatch({ type: "fallback", reason });
       announce(
-        "The interactive room is unavailable. The object links remain available.",
+        `The interactive room is unavailable. The ${enabledObjectIds.length} object links remain available.`,
       );
       const target = lastInvoker.current ?? state.focusedId ?? "watch";
       focusAfterPaint(
         `[data-room-overview] [data-room-object-link="${target}"]`,
       );
     },
-    [announce, cancelTransition, focusAfterPaint, state.focusedId],
+    [announce, cancelTransition, enabledObjectIds.length, focusAfterPaint, state.focusedId],
   );
 
   const notifyRuntimeMounted = useCallback(() => {
@@ -876,6 +931,7 @@ export function RoomExperienceProvider({
       focusObject,
       notifyRuntimeMounted,
       objectRouteActive,
+      enabledObjectIds,
       revealSimulation,
       resetView,
       returnToRoom,
@@ -893,6 +949,7 @@ export function RoomExperienceProvider({
       focusObject,
       notifyRuntimeMounted,
       objectRouteActive,
+      enabledObjectIds,
       revealSimulation,
       resetView,
       returnToRoom,

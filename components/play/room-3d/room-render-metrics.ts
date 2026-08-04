@@ -6,23 +6,23 @@ import { ROOM_MATERIAL_SLOT_COUNT } from "./room-materials.ts";
  * cubemap faces before its final sphere composite.
  */
 export const PROCEDURAL_ROOM_RENDER_METRICS = Object.freeze({
-  visibleDrawCallUpperBound: 52,
+  visibleDrawCallUpperBound: 66,
   materialSlots: ROOM_MATERIAL_SLOT_COUNT,
-  visibleTriangleUpperBound: 28_000,
+  visibleTriangleUpperBound: 31_000,
   roundedBoxCount: 33,
   instancedDrawCalls: 11,
   repeatedMeshesCollapsed: 56,
-  hitProxyCount: 6,
+  hitProxyCount: 7,
 });
 
 export const PROCEDURAL_ROOM_RENDER_BUDGET = Object.freeze({
-  visibleDrawCalls: 53,
+  visibleDrawCalls: 68,
   materialSlots: 24,
   visibleTriangles: 80_000,
 });
 
 export const FISHEYE_FRAME_RENDER_BUDGET = Object.freeze({
-  actualDrawCalls: 320,
+  actualDrawCalls: 410,
   actualTriangles: 190_000,
   cubemapFaces: 6,
 });

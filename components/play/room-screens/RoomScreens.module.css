@@ -149,6 +149,53 @@
   margin-bottom: clamp(2rem, 4vw, 3.75rem);
 }
 
+.travelHeader {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.48fr);
+  gap: 0.65rem clamp(2rem, 7vw, 8rem);
+  align-items: end;
+  margin-bottom: clamp(2rem, 4vw, 3.75rem);
+}
+
+.travelHeader > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 560;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.travelHeader h1 {
+  margin: 0;
+  font-size: clamp(3.2rem, 7vw, 7.7rem);
+  font-variation-settings: "CASL" 0.35, "wght" 760;
+  line-height: 0.82;
+}
+
+.travelHeader > span {
+  max-width: 33rem;
+  font-weight: 540;
+  line-height: 1.5;
+}
+
+.travelPage {
+  color: #f3f5f7;
+  background: #08111f;
+}
+
+.travelPage .screenNavigation,
+.travelHeader > p {
+  color: #83e6ca;
+}
+
+.planetSurface {
+  min-width: 0;
+  transform-origin: center center;
+}
+
 .watchHeader > p,
 .readHeader > p,
 .listenHeader > p,
@@ -1086,7 +1133,8 @@
   .listenHeader,
   .collectHeader,
   .playHeader,
-  .moveHeader {
+  .moveHeader,
+  .travelHeader {
     grid-template-columns: 1fr;
     gap: 0.8rem;
   }
@@ -1096,7 +1144,8 @@
   .listenHeader > p,
   .collectHeader > p,
   .playHeader > p,
-  .moveHeader > p {
+  .moveHeader > p,
+  .travelHeader > p {
     grid-column: 1;
   }
 
@@ -1105,7 +1154,8 @@
   .listenHeader h1,
   .collectHeader h1,
   .playHeader h1,
-  .moveHeader h1 {
+  .moveHeader h1,
+  .travelHeader h1 {
     font-size: clamp(2.5rem, 13vw, 4.5rem);
     line-height: 0.88;
   }
@@ -1115,7 +1165,8 @@
   .listenHeader,
   .collectHeader,
   .playHeader,
-  .moveHeader {
+  .moveHeader,
+  .travelHeader {
     margin-bottom: 1.35rem;
   }
 

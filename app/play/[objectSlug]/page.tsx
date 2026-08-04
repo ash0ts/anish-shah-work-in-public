@@ -7,13 +7,17 @@ import {
 } from "@/components/play/room-platform/room-registry";
 import { ROOM_SCREEN_LOADERS } from "@/components/play/room-platform/room-screen-registry";
 import type { RoomObjectId } from "@/components/play/room-platform/room-types";
-import { roomExperienceEnabled } from "@/lib/server/play-experience";
+import {
+  roomExperienceEnabled,
+  travelAtlasEnabled,
+} from "@/lib/server/play-experience";
 import {
   ROOM_PROVIDER_ADAPTERS,
   previewFixtureForPlayRoute,
   type PlayRouteSearchParams,
 } from "@/lib/server/play-screen-foundation";
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
+import { getPublicTravelAtlas } from "@/lib/server/travel";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +111,14 @@ export const ROOM_ROUTE_FOUNDATIONS = {
       />
     );
   },
+  travel: async () => {
+    if (!travelAtlasEnabled()) notFound();
+    const [{ default: TravelRoomScreen }, initialState] = await Promise.all([
+      ROOM_SCREEN_LOADERS.travel(),
+      getPublicTravelAtlas(),
+    ]);
+    return <TravelRoomScreen initialState={initialState} />;
+  },
 } satisfies Record<RoomObjectId, RoomRouteFoundation>;
 
 export function generateStaticParams() {
@@ -128,6 +140,14 @@ export async function generateMetadata({
       noindex: true,
     });
   }
+  if (object.contentSource.kind === "travel-log" && !travelAtlasEnabled()) {
+    return publicPageMetadata({
+      title: "Travel atlas not found",
+      description: "This travel atlas is not currently public.",
+      path: "/play",
+      noindex: true,
+    });
+  }
   return publicPageMetadata({
     title: `${object.label} · ${object.title}`,
     description: `${object.description} Open the ${object.object.toLowerCase()} to explore the collection.`,
@@ -144,5 +164,8 @@ export default async function PlayObjectPage({
   const object = roomObject(objectSlug);
   if (!object) notFound();
   if (!roomExperienceEnabled()) redirect("/play");
+  if (object.contentSource.kind === "travel-log" && !travelAtlasEnabled()) {
+    notFound();
+  }
   return ROOM_ROUTE_FOUNDATIONS[object.id](query);
 }

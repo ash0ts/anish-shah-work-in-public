@@ -30,7 +30,7 @@ export default function PrivacyPage() {
 
       <article className={styles.policy}>
         <section>
-          <h2>Six deliberately different connections</h2>
+          <h2>Six connections and one owner-authored atlas</h2>
           <p>
             Each provider has a narrow input, a bounded public output, and an
             explicit deletion path.
@@ -122,6 +122,21 @@ export default function PrivacyPage() {
                 remains blocked until a visitor explicitly chooses to load it.
               </dd>
             </div>
+            <div>
+              <dt>Postcard Planet · Travel</dt>
+              <dd>
+                Anish uploads his own historical travel photos through the
+                protected owner Studio. Accepted images are reoriented,
+                stripped of embedded metadata, and stored as metadata-free
+                WebP masters in a private media bucket. The public atlas stores
+                only reviewed trip copy, required alt text, optional captions
+                and tags, and owner-approved geography. Approximate-city pins
+                are rounded to 0.1 degrees; exact GPS, original filenames,
+                camera identifiers, and raw uploads are never stored as public
+                data. Planned and current trips expose only country or region,
+                month-level dates, and no photos.
+              </dd>
+            </div>
           </dl>
         </section>
 
@@ -144,6 +159,15 @@ export default function PrivacyPage() {
             Operational history is limited to provider, result, timestamps,
             safe error codes, and item counts; it never contains credentials,
             OAuth codes, or raw payloads.
+          </p>
+          <p>
+            A raw Travel upload remains only while its protected upload
+            transaction is processed and is deleted after successful
+            conversion. Failed and abandoned temporary uploads are removed
+            within 24 hours. Processed photo masters remain private while the
+            owner keeps the trip; public variants are served only while their
+            exact photo and digest belong to the active publication. Photo
+            responses ask search engines not to index the images.
           </p>
           <p>
             {storageCountries
@@ -169,6 +193,13 @@ export default function PrivacyPage() {
             visibility marker. Private games are never reconstructed or
             inferred.
           </p>
+          <p>
+            Unpublishing a Travel trip immediately removes the trip and all of
+            its places and photos from the active public atlas. Deleting the
+            trip also schedules its private processed media for removal. There
+            is no per-photo public visibility switch: a reviewed trip publishes
+            or unpublishes as one unit.
+          </p>
         </section>
 
         <section>
@@ -183,6 +214,13 @@ export default function PrivacyPage() {
             configuration, but no request reaches Strava until the visitor
             grants consent. The site does not collect a visitor’s account data
             from any of these providers.
+          </p>
+          <p>
+            Opening Travel requests this site’s published atlas and, when a
+            visitor chooses a photo, a same-origin processed image. It does not
+            request map tiles, contact a geocoder, expose an original upload,
+            or collect a visitor location. The interactive globe and the
+            semantic atlas show the same reviewed public places.
           </p>
           <p>
             Spotify content is attributed to Spotify and links back to the

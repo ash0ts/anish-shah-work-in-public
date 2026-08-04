@@ -64,6 +64,7 @@ const allowedScopes = new Set([
   "room-public",
   "room-shard",
   "simulation",
+  "travel",
   "lighthouse",
 ]);
 if (!allowedScopes.has(scope)) {
@@ -97,6 +98,18 @@ if (
     port: 4174,
     segment: "public",
     arguments_: ["tests/browser/public-quality.spec.mjs"],
+  }) !== 0
+) {
+  failed = true;
+}
+
+if (
+  (scope === "all" || scope === "travel") &&
+  runPlaywright({
+    mode: "room",
+    port: 4181,
+    segment: "travel",
+    arguments_: ["tests/browser/travel-atlas.spec.mjs"],
   }) !== 0
 ) {
   failed = true;

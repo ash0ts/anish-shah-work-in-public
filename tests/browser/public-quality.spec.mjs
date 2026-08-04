@@ -505,7 +505,7 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
   }
   await page.goto("/play", { waitUntil: "load" });
   if (roomMode) {
-    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(6);
+    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
   } else {
     await expect(page.locator("noscript details")).toHaveCount(6);
   }

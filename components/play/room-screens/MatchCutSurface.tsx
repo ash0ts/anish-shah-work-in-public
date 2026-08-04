@@ -83,6 +83,15 @@ const ENTRANCE_PRESETS: Record<RoomObjectId, EntrancePreset> = {
       ease: "out(3)",
     },
   },
+  travel: {
+    initial: { opacity: 0, transform: "scale(0.12)" },
+    animation: {
+      opacity: [0, 1],
+      scale: [0.12, 1],
+      duration: 520,
+      ease: "out(4)",
+    },
+  },
 };
 
 export function MatchCutSurface({

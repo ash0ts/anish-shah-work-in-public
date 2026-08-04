@@ -443,11 +443,12 @@ test("Work-detail outcomes are direct while wider measures remain contextual", a
   }
 });
 
-test("Three.js stays inside the deferred Play room and out of archive navigation", async () => {
+test("Three.js stays inside deferred Play room and Travel boundaries", async () => {
   const sourceEntries = await Promise.all(
     (await runtimeSourceFiles())
       .filter((file) => /\.(?:js|mjs|ts|tsx)$/i.test(file))
       .filter((file) => !file.includes("components/play/room-3d/"))
+      .filter((file) => !file.includes("components/play/travel/"))
       .map(async (file) => ({ file, text: await readFile(file, "utf8") })),
   );
   for (const { file, text } of sourceEntries) {
@@ -469,6 +470,17 @@ test("Three.js stays inside the deferred Play room and out of archive navigation
     roomStage?.file ?? "",
     /^assets\/RoomStage-[\w-]+\.js$/,
     "the Three.js room must retain an independently cacheable chunk",
+  );
+  const travelStage = manifest["components/play/travel/TravelGlobeStage.tsx"];
+  assert.equal(
+    travelStage?.isDynamicEntry,
+    true,
+    "the Travel globe must remain a dynamic route-scoped entry",
+  );
+  assert.match(
+    travelStage?.file ?? "",
+    /^assets\/TravelGlobeStage-[\w-]+\.js$/,
+    "the Travel globe must retain an independently cacheable chunk",
   );
   for (const pathname of ["/", "/work"]) {
     assert.doesNotMatch(documentMarkup(await renderHtml(pathname)), /<canvas\b/i);
@@ -621,6 +633,14 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
   }
   assert.deepEqual(overflowMasking, [
     {
+      file: "app/studio/travel/travel.module.css",
+      selector: ".mapTable",
+    },
+    {
+      file: "app/studio/travel/travel.module.css",
+      selector: ".visuallyHidden",
+    },
+    {
       file: "app/work/WorkTimeline.module.css",
       selector: ".frame caption",
     },
@@ -667,6 +687,22 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
     {
       file: "components/play/room-screens/RoomScreens.module.css",
       selector: ".cardioDisplay",
+    },
+    {
+      file: "components/play/travel/PostcardPlanet.module.css",
+      selector: ".srOnly",
+    },
+    {
+      file: "components/play/travel/PostcardPlanet.module.css",
+      selector: ".globeFrame",
+    },
+    {
+      file: "components/play/travel/PostcardPlanet.module.css",
+      selector: ".tripCard picture,\n.tripFallback",
+    },
+    {
+      file: "components/play/travel/TravelGlobe.module.css",
+      selector: ".canvas",
     },
   ]);
   const timelineCss = await readFile(

@@ -3,7 +3,10 @@ import type { Metadata } from "next";
 import { ClassicPlayExperience } from "@/components/play/ClassicPlayExperience";
 import { streamIdFromValue } from "@/components/play/connector-model";
 import { RoomOverview } from "@/components/play/room-platform/RoomOverview";
-import { roomExperienceEnabled } from "@/lib/server/play-experience";
+import {
+  roomExperienceEnabled,
+  travelAtlasEnabled,
+} from "@/lib/server/play-experience";
 import {
   activePreviewFixtureRuntime,
   previewFixtureScenario,
@@ -45,7 +48,14 @@ export default async function PlayPage({
       )
     : undefined;
 
-  if (roomExperienceEnabled()) return <RoomOverview fixture={fixture} />;
+  if (roomExperienceEnabled()) {
+    return (
+      <RoomOverview
+        fixture={fixture}
+        travelEnabled={travelAtlasEnabled()}
+      />
+    );
+  }
 
   return (
     <ClassicPlayExperience

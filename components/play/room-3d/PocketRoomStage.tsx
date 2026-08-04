@@ -24,6 +24,7 @@ export type PocketRoomStageProps = {
   onHoverChange?: (id: RoomObjectId | null) => void;
   onPerformanceMiss?: () => void;
   onReady?: () => void;
+  objectIds?: readonly RoomObjectId[];
   onRotationChange: (rotation: RoomRotation) => void;
   onSelect: (id: RoomObjectId) => void;
   rotation: RoomRotation;
@@ -126,6 +127,7 @@ export function PocketRoomStage({
   onHoverChange,
   onPerformanceMiss = onContextLoss,
   onReady,
+  objectIds,
   onRotationChange,
   onSelect,
   rotation,
@@ -266,6 +268,7 @@ export function PocketRoomStage({
             onHoverChange={handleHover}
             onInteractionActiveChange={handleInteractionActiveChange}
             onRotationChange={onRotationChange}
+            objectIds={objectIds}
             onSelect={onSelect}
             onSettled={handleSettled}
             presentation="pocket"
