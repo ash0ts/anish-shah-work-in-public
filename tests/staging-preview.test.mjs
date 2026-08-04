@@ -862,9 +862,13 @@ test("CI shares the repository toolchain and preserves hidden build evidence", a
     readFile(new URL("../.github/dependabot.yml", import.meta.url), "utf8"),
   ]);
 
-  assert.match(action, /node-version-file: \.node-version/);
+  assert.match(
+    action,
+    /node-version-file: \$\{\{ inputs\.working-directory \}\}\/\.node-version/,
+  );
+  assert.match(action, /default: "\."/);
   assert.match(action, /require\('\.\/package\.json'\)\.packageManager/);
-  assert.match(action, /npm ci --ignore-scripts/);
+  assert.match(action, /npm ci --ignore-scripts --prefix/);
   for (const workflow of [validate, browser, preview]) {
     assert.match(workflow, /uses: \.\/\.github\/actions\/setup-repository/);
   }

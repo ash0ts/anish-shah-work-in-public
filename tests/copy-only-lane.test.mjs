@@ -189,11 +189,12 @@ test("trusted copy preview comments identify exact bytes and review risk", () =>
 });
 
 test("copy-only workflows preserve the unprivileged-to-trusted execution boundary", async () => {
-  const [validation, trusted, normal, cleanup] = await Promise.all([
+  const [validation, trusted, normal, cleanup, setupAction] = await Promise.all([
     readFile(path.join(root, ".github/workflows/copy-only-validate.yml"), "utf8"),
     readFile(path.join(root, ".github/workflows/copy-preview-deploy.yml"), "utf8"),
     readFile(path.join(root, ".github/workflows/preview-deploy.yml"), "utf8"),
     readFile(path.join(root, ".github/workflows/preview-cleanup.yml"), "utf8"),
+    readFile(path.join(root, ".github/actions/setup-repository/action.yml"), "utf8"),
   ]);
 
   assert.doesNotMatch(validation, /pull_request_target/u);
@@ -211,15 +212,22 @@ test("copy-only workflows preserve the unprivileged-to-trusted execution boundar
 
   assert.match(trusted, /workflow_run:/u);
   assert.match(trusted, /ref: \$\{\{ github\.workflow_sha \}\}/u);
+  assert.match(trusted, /fetch-depth: 0/u);
   assert.match(trusted, /environment: copy-preview/u);
   assert.match(trusted, /group: preview-pr-/u);
-  assert.match(trusted, /npm ci --ignore-scripts/u);
+  assert.match(trusted, /uses: \.\/trusted\/\.github\/actions\/setup-repository/u);
+  assert.match(trusted, /working-directory: site/u);
+  assert.match(setupAction, /npm ci --ignore-scripts --prefix/u);
   assert.match(trusted, /Check out exact base code[\s\S]*ref: \$\{\{ needs\.inspect\.outputs\.base_sha \}\}/u);
   assert.match(trusted, /Check out pristine base for trusted comparison[\s\S]*ref: \$\{\{ needs\.inspect\.outputs\.base_sha \}\}/u);
   assert.doesNotMatch(trusted, /ref: \$\{\{ needs\.inspect\.outputs\.head_sha \}\}/u);
   assert.match(trusted, /node trusted\/scripts\/copy-only-lane\.mjs apply/u);
   assert.match(trusted, /PREVIEW_SOURCE_SHA: \$\{\{ needs\.inspect\.outputs\.head_sha \}\}/u);
   assert.match(trusted, /Recheck exact head and base before privileged deployment/u);
+  assert.match(trusted, /test "\$base_ref" = "\$default_branch"/u);
+  assert.match(trusted, /git merge-base --is-ancestor "\$base_sha"/u);
+  assert.match(trusted, /A newer head, changed base, or closed PR superseded this failed validation/u);
+  assert.match(trusted, /A newer head, changed base, or closed PR superseded this preview result/u);
   assert.match(trusted, /mark_deploy_failed:/u);
   assert.match(trusted, /Any older preview is stale and must not be reviewed/u);
 
@@ -227,6 +235,6 @@ test("copy-only workflows preserve the unprivileged-to-trusted execution boundar
   assert.match(normal, /needs\.inspect\.outputs\.copy_only != 'true'/u);
   assert.match(normal, /environment: preview/u);
   assert.doesNotMatch(normal, /environment: copy-preview/u);
-  assert.match(normal, /group: preview-pr-/u);
-  assert.match(cleanup, /preview-pr-/u);
+  assert.match(normal, /group: preview-\$\{\{[\s\S]*format\('pr-\{0\}'/u);
+  assert.match(cleanup, /group: preview-\$\{\{[\s\S]*format\('pr-\{0\}'/u);
 });

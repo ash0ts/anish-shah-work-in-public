@@ -23,12 +23,14 @@ jobs:
       eligible: ${{ steps.copy_lane.outputs.eligible }}
       head_sha: ${{ steps.pr.outputs.head_sha }}
       base_sha: ${{ steps.pr.outputs.base_sha }}
+      base_ref: ${{ steps.pr.outputs.base_ref }}
       pr_number: ${{ steps.pr.outputs.pr_number }}
     steps:
       - name: Check out trusted default-branch tooling
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
           persist-credentials: false
       - name: Use Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -47,13 +49,20 @@ jobs:
           head_sha="$(jq -r '.head.sha' "${RUNNER_TEMP}/copy-pr.json")"
           base_sha="$(jq -r '.base.sha' "${RUNNER_TEMP}/copy-pr.json")"
           head_repo="$(jq -r '.head.repo.full_name' "${RUNNER_TEMP}/copy-pr.json")"
+          base_repo="$(jq -r '.base.repo.full_name' "${RUNNER_TEMP}/copy-pr.json")"
+          base_ref="$(jq -r '.base.ref' "${RUNNER_TEMP}/copy-pr.json")"
+          default_branch="$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.default_branch')"
           test "$state" = "open"
           test "$head_sha" = "$EXPECTED_HEAD_SHA"
           test "$head_repo" = "$GITHUB_REPOSITORY"
+          test "$base_repo" = "$GITHUB_REPOSITORY"
+          test "$base_ref" = "$default_branch"
           test "${#head_sha}" -eq 40
           test "${#base_sha}" -eq 40
+          git merge-base --is-ancestor "$base_sha" "${{ github.workflow_sha }}"
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
           echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          echo "base_ref=$base_ref" >> "$GITHUB_OUTPUT"
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
       - name: Reclassify changed paths using trusted tooling
         id: copy_lane
@@ -83,7 +92,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
           HEAD_SHA: ${{ needs.inspect.outputs.head_sha }}
+          BASE_SHA: ${{ needs.inspect.outputs.base_sha }}
+          BASE_REF: ${{ needs.inspect.outputs.base_ref }}
         run: |
+          endpoint="repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
+          snapshot="$(gh api "$endpoint" --jq '[.state, .head.sha, .base.sha, .base.ref, .head.repo.full_name, .base.repo.full_name] | @tsv')"
+          expected=$'open\t'"${HEAD_SHA}"$'\t'"${BASE_SHA}"$'\t'"${BASE_REF}"$'\t'"${GITHUB_REPOSITORY}"$'\t'"${GITHUB_REPOSITORY}"
+          if [ "$snapshot" != "$expected" ]; then
+            echo "A newer head, changed base, or closed PR superseded this failed validation."
+            exit 0
+          fi
           marker='<!-- anish-site-preview -->'
           body="${marker}
           Copy-only validation failed for current SHA \`${HEAD_SHA}\`. Any older preview is stale and must not be reviewed."
@@ -185,10 +203,11 @@ jobs:
           PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
           EXPECTED_HEAD_SHA: ${{ needs.inspect.outputs.head_sha }}
           EXPECTED_BASE_SHA: ${{ needs.inspect.outputs.base_sha }}
+          EXPECTED_BASE_REF: ${{ needs.inspect.outputs.base_ref }}
         run: |
           endpoint="repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
-          snapshot="$(gh api "$endpoint" --jq '[.state, .head.sha, .base.sha, .head.repo.full_name] | @tsv')"
-          test "$snapshot" = $'open\t'"${EXPECTED_HEAD_SHA}"$'\t'"${EXPECTED_BASE_SHA}"$'\t'"${GITHUB_REPOSITORY}"
+          snapshot="$(gh api "$endpoint" --jq '[.state, .head.sha, .base.sha, .base.ref, .head.repo.full_name, .base.repo.full_name] | @tsv')"
+          test "$snapshot" = $'open\t'"${EXPECTED_HEAD_SHA}"$'\t'"${EXPECTED_BASE_SHA}"$'\t'"${EXPECTED_BASE_REF}"$'\t'"${GITHUB_REPOSITORY}"$'\t'"${GITHUB_REPOSITORY}"
       - name: Deploy the ephemeral copy preview
         working-directory: site
         env:
@@ -247,7 +266,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.inspect.outputs.head_sha }}
+          BASE_SHA: ${{ needs.inspect.outputs.base_sha }}
+          BASE_REF: ${{ needs.inspect.outputs.base_ref }}
         run: |
+          endpoint="repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
+          snapshot="$(gh api "$endpoint" --jq '[.state, .head.sha, .base.sha, .base.ref, .head.repo.full_name, .base.repo.full_name] | @tsv')"
+          expected=$'open\t'"${HEAD_SHA}"$'\t'"${BASE_SHA}"$'\t'"${BASE_REF}"$'\t'"${GITHUB_REPOSITORY}"$'\t'"${GITHUB_REPOSITORY}"
+          if [ "$snapshot" != "$expected" ]; then
+            echo "A newer head, changed base, or closed PR superseded this preview result."
+            exit 0
+          fi
           marker='<!-- anish-site-preview -->'
           body="$(cat site/.copy-preview/comment.md)"
           comment_id="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" --jq ".[] | select(.body | startswith(\"${marker}\")) | .id" | head -n 1)"
@@ -273,11 +302,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ needs.inspect.outputs.pr_number }}
           HEAD_SHA: ${{ needs.inspect.outputs.head_sha }}
+          BASE_SHA: ${{ needs.inspect.outputs.base_sha }}
+          BASE_REF: ${{ needs.inspect.outputs.base_ref }}
         run: |
           endpoint="repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
-          current="$(gh api "$endpoint" --jq '[.state, .head.sha] | @tsv')"
-          if [ "$current" != $'open\t'"${HEAD_SHA}" ]; then
-            echo "A newer head superseded this failed deployment; no comment changed."
+          current="$(gh api "$endpoint" --jq '[.state, .head.sha, .base.sha, .base.ref, .head.repo.full_name, .base.repo.full_name] | @tsv')"
+          expected=$'open\t'"${HEAD_SHA}"$'\t'"${BASE_SHA}"$'\t'"${BASE_REF}"$'\t'"${GITHUB_REPOSITORY}"$'\t'"${GITHUB_REPOSITORY}"
+          if [ "$current" != "$expected" ]; then
+            echo "A newer head, changed base, or closed PR superseded this failed deployment; no comment changed."
             exit 0
           fi
           marker='<!-- anish-site-preview -->'
