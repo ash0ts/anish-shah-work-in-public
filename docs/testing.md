@@ -144,7 +144,7 @@ is owner-dispatched. When hosted minutes are unavailable, use the checked-in
 disposable runner image documented in [`.github/runner/README.md`](../.github/runner/README.md).
 
 The image pins Ubuntu 24.04 by architecture-specific digest, Node 24.18.0, npm
-11.6.2, Playwright 1.62.1, and GitHub runner 2.332.0. Downloaded Node and runner
+11.6.2, Playwright 1.62.1, and GitHub runner 2.336.0. Downloaded Node and runner
 archives are SHA-256 verified. Build native ARM64 for Validate, Gitleaks, and
 Browser Quality; use the AMD64 image only for CodeQL. This avoids repeated x64
 emulation while preserving CodeQL compatibility.

@@ -5,7 +5,7 @@ GitHub-hosted minutes. They are not deployment machines and receive no
 Cloudflare, provider, staging, production, D1, KV, R2, or SSH credentials.
 
 The Ubuntu 24.04 images, Node 24.18.0 archives, npm 11.6.2, Playwright 1.62.1,
-and GitHub runner 2.332.0 are exact pins. The image build verifies the published
+and GitHub runner 2.336.0 are exact pins. The image build verifies the published
 Node and runner SHA-256 values before extraction. Optional corporate CA input is
 a BuildKit secret used only by the networked build step. It is removed before
 each layer is committed and is never part of the resulting image. The build

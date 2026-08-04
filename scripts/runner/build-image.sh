@@ -20,7 +20,7 @@ case "$architecture" in
     node_arch=arm64
     node_sha=58c9520501f6ae2b52d5b210444e24b9d0c029a58c5011b797bc1fe7105886f6
     runner_arch=arm64
-    runner_sha=b72f0599cdbd99dd9513ab64fcb59e424fc7359c93b849e8f5efdd5a72f743a6
+    runner_sha=58b758e420b87093fbd4bfddd368074960053e2f1388f01848c82624b90f27d1
     install_browsers=1
     ;;
   amd64)
@@ -29,7 +29,7 @@ case "$architecture" in
     node_arch=x64
     node_sha=55aa7153f9d88f28d765fcdad5ae6945b5c0f98a36881703817e4c450fa76742
     runner_arch=x64
-    runner_sha=f2094522a6b9afeab07ffb586d1eb3f190b6457074282796c497ce7dce9e0f2a
+    runner_sha=04cf0be1aff4c3ec3554466c39124ca250e3effd8873bb7e8d68535aa9505d5d
     install_browsers=0
     ;;
   *)
