@@ -164,6 +164,15 @@ function existsInHead(value) {
   );
 }
 
+function existedBeforeChange(value) {
+  if (baseCommit === null) return existsInHead(value);
+  return (
+    runGit(["cat-file", "-e", `${baseCommit}:${value}`], {
+      allowFailure: true,
+    }).status === 0
+  );
+}
+
 function isSensitivePath(value) {
   const base = path.posix.basename(value);
   if (value === "content/private/.gitignore") return false;
@@ -214,7 +223,11 @@ for (const value of paths) {
   if (isSensitivePath(value) && !deleted.has(value)) {
     violations.push(`${value}: sensitive or machine-local path must not be changed or staged.`);
   }
-  if (/^drizzle\/\d+_[^/]+\.sql$/.test(value) && existsInHead(value)) {
+  if (
+    (/^drizzle\/\d+_[^/]+\.sql$/.test(value) ||
+      /^drizzle\/meta\/\d+_snapshot\.json$/.test(value)) &&
+    existedBeforeChange(value)
+  ) {
     violations.push(`${value}: applied migrations are immutable; add the next migration instead.`);
   }
 }
@@ -376,7 +389,7 @@ const connectorChanged = paths.some((value) =>
   matchesAny(value, [
     /^app\/api\/(?:studio\/)?connectors\//,
     /^app\/studio\/(?:ConnectorControls|connectors\/)/,
-    /^components\/(?:PersonalStreams|SpotifyStream|play\/|spotify\/)/,
+    /^components\/(?:SpotifyStream|play\/|spotify\/)/,
     /^lib\/server\/(?:connectors|http\/(?:connector|myanimelist|spotify|discogs)|strava-config|play-promotion)/,
     /^drizzle\//,
   ]),
@@ -400,6 +413,67 @@ const travelChanged = paths.some((value) =>
     /^types\/travel\.ts$/,
   ]),
 );
+const simulationChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^app\/(?:api\/simulation|api\/studio\/simulation|simulation)\//,
+    /^components\/simulation\//,
+    /^content\/presentation\/simulation(?:\.|\/)/,
+    /^lib\/(?:server\/)?simulation\//,
+    /^scripts\/(?:run-local-simulation-live|simulation-)/,
+    /^tests\/simulation(?:-|\/)/,
+    /^types\/simulation\.ts$/,
+  ]),
+);
+const simulationSensitiveChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^app\/api\/(?:simulation|studio\/simulation)\//,
+    /^lib\/server\/simulation\//,
+  ]),
+);
+const simulationRegressionChanged = paths.some(
+  (value) =>
+    !deleted.has(value) &&
+    /^tests\/simulation-(?:backend|migrations|play-grounding)\.test\.mjs$/.test(
+      value,
+    ),
+);
+if (simulationSensitiveChanged && !simulationRegressionChanged) {
+  violations.push(
+    "Simulation API, session, Gateway, or privacy code changed without a Simulation backend/security regression test in the same change.",
+  );
+}
+
+const travelMediaSensitiveChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^app\/api\/(?:studio\/travel\/(?:photos|uploads)|travel-media)\//,
+    /^lib\/server\/travel\/(?:repository\/)?(?:media|photos|uploads-media|publication)(?:\.|\/)/,
+  ]),
+);
+const travelRegressionChanged = paths.some(
+  (value) =>
+    !deleted.has(value) &&
+    /^tests\/travel-(?:backend|security)\.test\.mjs$/.test(value),
+);
+if (travelMediaSensitiveChanged && !travelRegressionChanged) {
+  violations.push(
+    "Travel upload, media, photo, or publication code changed without a Travel backend/security regression test in the same change.",
+  );
+}
+
+const roomRegistryChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^app\/play\/\[objectSlug\]\//,
+    /^components\/play\/room-platform\/(?:room-object-contract|room-registry|room-types)\.ts$/,
+  ]),
+);
+const roomRegistryRegressionChanged = paths.some(
+  (value) => !deleted.has(value) && value === "tests/play-room-routes.test.mjs",
+);
+if (roomRegistryChanged && !roomRegistryRegressionChanged) {
+  violations.push(
+    "The closed room registry or direct-route dispatch changed without a registry-parity regression test in the same change.",
+  );
+}
 const securityOrReleaseChanged = paths.some((value) =>
   matchesAny(value, [
     /^worker\//,
@@ -422,7 +496,7 @@ const skillChanged =
   );
 const responsivePlayChanged = paths.some((value) =>
   matchesAny(value, [
-    /^components\/(?:PersonalStreams|SpotifyStream|spotify\/|play\/)/,
+    /^components\/(?:SpotifyStream|spotify\/|play\/)/,
     /^app\/play\//,
   ]),
 );
@@ -443,6 +517,8 @@ if (uiChanged) domains.add("public-ui");
 if (connectorChanged) domains.add("connectors");
 if (backendChanged) domains.add("backend-storage");
 if (migrationChanged) domains.add("migration");
+if (travelChanged) domains.add("travel");
+if (simulationChanged) domains.add("simulation");
 if (securityOrReleaseChanged) domains.add("security-release");
 if (dependencyChanged) domains.add("dependencies-build");
 if (skillChanged) domains.add("agent-maintenance");
@@ -526,6 +602,16 @@ if (travelChanged) {
   addCheck("npm run test:rendered");
   addCheck("npm run db:local:migrate:clean");
   addCheck("npm run validate:browser");
+}
+if (simulationChanged) {
+  addCheck("npm run typecheck");
+  addCheck("npm run test:backend");
+  addCheck("npm run test:rendered");
+  addCheck("npm run bundle:scan");
+  addCheck("npm run validate:browser");
+  notes.push(
+    "For Simulation incidents, verify AI Gateway prompt/response logging and caching are disabled before changing hosted configuration; preserve only sanitized incident evidence and follow the owner-authorized deletion/containment runbook.",
+  );
 }
 if (securityOrReleaseChanged) {
   addCheck("npm run typecheck");

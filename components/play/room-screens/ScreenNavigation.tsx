@@ -39,7 +39,9 @@ export function ScreenNavigation({
       <details className={styles.objectSwitcher}>
         <summary>Objects</summary>
         <ul>
-          {ROOM_OBJECTS.map((candidate) => (
+          {ROOM_OBJECTS.filter((candidate) =>
+            room.enabledObjectIds.includes(candidate.id),
+          ).map((candidate) => (
             <li key={candidate.id}>
               <Link
                 aria-current={candidate.id === object.id ? "page" : undefined}

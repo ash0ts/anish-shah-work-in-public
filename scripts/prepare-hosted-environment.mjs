@@ -8,6 +8,7 @@ import {
   previewConfiguration,
   stagingConfiguration,
 } from "./lib/hosted-config-contract.mjs";
+import { matchingReleaseVersion, readPackageReleaseVersion } from "./lib/release-version.mjs";
 
 const tier = process.argv[2];
 if (tier !== "staging" && tier !== "preview") {
@@ -21,7 +22,7 @@ const sourcePath = path.join(root, "dist/server/wrangler.json");
 await access(sourcePath).catch(() => {
   throw new Error("Run the production build before preparing hosted configuration.");
 });
-const [base, bundle] = await Promise.all([
+const [base, bundle, packageVersion] = await Promise.all([
   readFile(sourcePath, "utf8").then(JSON.parse),
   readFile(
     tier === "preview"
@@ -29,24 +30,30 @@ const [base, bundle] = await Promise.all([
       : path.join(root, "content/public/anish-content.public.v1.json"),
     "utf8",
   ).then(JSON.parse),
+  readPackageReleaseVersion(root),
 ]);
 const environment = tier === "staging"
   ? { ...process.env, RELEASE_VALIDATED_SHA: process.env.STAGING_VALIDATED_SHA }
   : process.env;
 if (
   tier === "preview" &&
-  (bundle.schemaVersion !== "1.1" ||
+  (bundle.schemaVersion !== "1.2" ||
     bundle.syntheticConnectorData !== true ||
     bundle.releaseSha !== process.env.RELEASE_VALIDATED_SHA?.trim().toLowerCase() ||
     bundle.sourceSha !== bundle.releaseSha ||
     !/^[a-f0-9]{40}$/.test(bundle.workflowSha ?? "") ||
-    bundle.prNumber !== process.env.PREVIEW_PR_NUMBER?.trim())
+    bundle.prNumber !== process.env.PREVIEW_PR_NUMBER?.trim() ||
+    bundle.releaseVersion !== packageVersion)
 ) {
   throw new Error("The preview artifact metadata does not match this PR and SHA.");
 }
 const expected = tier === "staging"
-  ? expectedStagingCoordinates(environment, bundle.contentVersion)
-  : expectedPreviewCoordinates(process.env, bundle.contentVersion);
+  ? expectedStagingCoordinates(environment, bundle.contentVersion, packageVersion)
+  : expectedPreviewCoordinates(
+      { ...process.env, RELEASE_VERSION: matchingReleaseVersion(bundle.releaseVersion, packageVersion) },
+      bundle.contentVersion,
+      packageVersion,
+    );
 const config = tier === "staging"
   ? stagingConfiguration(base, expected)
   : previewConfiguration(base, expected);

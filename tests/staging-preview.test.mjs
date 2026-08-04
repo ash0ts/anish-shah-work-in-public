@@ -28,6 +28,18 @@ import {
   stagingSmokePaths,
   waitForReadOnlyStagingReadiness,
 } from "../scripts/lib/staging-http-contract.mjs";
+import {
+  assertStagingDeployment,
+  assertStagingCandidateHealth,
+  assertStagingCheckpointReceipt,
+  assertFreshStagingPromotionCheckpoint,
+  assertStagingPublication,
+  assertStagingTriggerReceipt,
+  createStagingCheckpointReceipt,
+  createStagingTriggerReceipt,
+  stagingActionRequiresCleanMigrations,
+  waitForStagingDeploymentState,
+} from "../scripts/lib/staging-release-state.mjs";
 
 register("./content-connector-loader.mjs", import.meta.url);
 
@@ -55,6 +67,9 @@ const {
 
 const contentVersion = "b".repeat(16);
 const releaseSha = "a".repeat(40);
+const releaseVersion = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 const productionD1Id = [
   "b9dbe711", "1cb2", "4d9d", "b8a9", "e8c9817a8284",
 ].join("-");
@@ -89,6 +104,7 @@ function stagingEnvironment() {
   return {
     STAGING_VALIDATED_SHA: releaseSha,
     RELEASE_VALIDATED_SHA: releaseSha,
+    RELEASE_VERSION: releaseVersion,
     STAGING_CLOUDFLARE_D1_DATABASE_ID: "11111111-1111-4111-8111-111111111111",
     STAGING_CLOUDFLARE_D1_DATABASE_NAME: "anish-shah-work-in-public-staging",
     STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID: "1".repeat(32),
@@ -106,7 +122,7 @@ function stagingEnvironment() {
 }
 
 test("staging config uses only isolated resources and exact noindex-ready boundaries", () => {
-  const expected = expectedStagingCoordinates(stagingEnvironment(), contentVersion);
+  const expected = expectedStagingCoordinates(stagingEnvironment(), contentVersion, releaseVersion);
   const config = stagingConfiguration(generatedBase(), expected);
   assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
   assert.equal(config.name, "anish-shah-work-in-public-staging");
@@ -115,7 +131,7 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
   ]);
   assert.equal(config.vars.DEPLOYMENT_TIER, "staging");
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "d1_kv_required");
-  assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
+  assert.equal(config.vars.RELEASE_VERSION, releaseVersion);
   assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "campaign-v1");
   assert.equal(config.vars.SIMULATION_AI_MODE, "live");
   assert.equal(config.vars.SIMULATION_MODEL, "claude-sonnet-5");
@@ -133,35 +149,35 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_CLOUDFLARE_D1_DATABASE_ID: productionD1Id,
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /must differ/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID: productionKvId,
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /must differ/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET: "anish-shah-travel-media",
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /non-production R2 bucket/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_CF_ACCESS_AUD: productionAccessAudience,
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /must differ/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_OWNER_RATE_LIMIT_NAMESPACE_ID: "88001001",
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /non-production/,
   );
 });
@@ -171,7 +187,7 @@ test("staging can apply simulation persistence with the campaign disabled first"
     ...stagingEnvironment(),
     STAGING_SIMULATION_EXPERIENCE_MODE: "disabled",
   };
-  const expected = expectedStagingCoordinates(environment, contentVersion);
+  const expected = expectedStagingCoordinates(environment, contentVersion, releaseVersion);
   const config = stagingConfiguration(generatedBase(), expected);
   assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
   assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "disabled");
@@ -184,13 +200,488 @@ test("staging can apply simulation persistence with the campaign disabled first"
           STAGING_SIMULATION_EXPERIENCE_MODE: "fixture",
         },
         contentVersion,
+        releaseVersion,
       ),
     /disabled or campaign-v1/,
   );
 });
 
-test("staging room smoke includes every direct object route", () => {
-  const paths = stagingSmokePaths("my-room-2001");
+test("staging can bootstrap Travel privately before atlas activation", () => {
+  const environment = {
+    ...stagingEnvironment(),
+    STAGING_TRAVEL_ATLAS_MODE: "disabled",
+  };
+  const expected = expectedStagingCoordinates(
+    environment,
+    contentVersion,
+    releaseVersion,
+  );
+  const config = stagingConfiguration(generatedBase(), expected);
+  assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
+  assert.equal(config.vars.TRAVEL_ATLAS_MODE, "disabled");
+  assert.throws(
+    () =>
+      expectedStagingCoordinates(
+        {
+          ...stagingEnvironment(),
+          STAGING_TRAVEL_ATLAS_MODE: "fixture",
+        },
+        contentVersion,
+        releaseVersion,
+      ),
+    /disabled or atlas-v1/,
+  );
+});
+
+test("staging candidate receipts bind health, copy, Simulation, Travel, and publication state", () => {
+  const candidateVersion = "candidate-version-1234";
+  const priorVersion = "prior-version-5678";
+  const plan = {
+    preparedAt: "2026-08-04T10:00:00.000Z",
+    releaseVersion,
+    contentVersion,
+    copyVersion: "c".repeat(16),
+    previousWorkerVersion: priorVersion,
+    travelAtlasMode: "atlas-v1",
+    simulation: {
+      campaignVersion: "meet-me-4n1sh-v1",
+      experienceMode: "campaign-v1",
+      aiMode: "live",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      approvedProviders: ["hardcover"],
+      approvalStateDigest: "d".repeat(64),
+    },
+  };
+  const health = {
+    status: "healthy",
+    releaseSha,
+    releaseVersion,
+    contentVersion,
+    copyVersion: plan.copyVersion,
+    simulation: {
+      campaignVersion: plan.simulation.campaignVersion,
+      experienceMode: "campaign-v1",
+      aiMode: "live",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      configured: true,
+      approvedProviders: ["hardcover"],
+      providerApprovalDigest: plan.simulation.approvalStateDigest,
+    },
+    travel: {
+      mode: "atlas-v1",
+      configured: true,
+      activePublication: { contentHash: "e".repeat(64) },
+      cleanupHeartbeat: { status: "current" },
+    },
+  };
+  const publication = {
+    status: "ready",
+    contentVersion,
+    contentHash: "f".repeat(64),
+    kvPointerMatches: true,
+  };
+  const deployment = {
+    id: "deployment-12345678",
+    strategy: "percentage",
+    versions: [
+      { version_id: priorVersion, percentage: 100 },
+      { version_id: candidateVersion, percentage: 0 },
+    ],
+  };
+  assert.doesNotThrow(() =>
+    assertStagingCandidateHealth(health, { head: releaseSha, plan }),
+  );
+  assert.doesNotThrow(() => assertStagingPublication(publication, plan));
+
+  const receipt = createStagingCheckpointReceipt({
+    head: releaseSha,
+    workerVersion: candidateVersion,
+    planSha256: "1".repeat(64),
+    plan,
+    health,
+    publication,
+    deployment,
+    checkedAt: "2026-08-04T10:01:00.000Z",
+  });
+  assert.doesNotThrow(() =>
+    assertStagingCheckpointReceipt(receipt, {
+      head: releaseSha,
+      workerVersion: candidateVersion,
+      planSha256: "1".repeat(64),
+      plan,
+      health,
+      publication,
+      deployment,
+      notBefore: plan.preparedAt,
+    }),
+  );
+  assert.throws(
+    () =>
+      assertStagingCheckpointReceipt(receipt, {
+        head: releaseSha,
+        workerVersion: candidateVersion,
+        planSha256: "1".repeat(64),
+        plan,
+        health: {
+          ...health,
+          travel: {
+            ...health.travel,
+            activePublication: { contentHash: "2".repeat(64) },
+          },
+        },
+        publication,
+        deployment,
+        notBefore: plan.preparedAt,
+      }),
+    /does not match current state/,
+  );
+  assert.throws(
+    () =>
+      assertStagingCheckpointReceipt(receipt, {
+        head: releaseSha,
+        workerVersion: candidateVersion,
+        planSha256: "1".repeat(64),
+        plan,
+        health,
+        publication,
+        deployment: { ...deployment, id: "deployment-raced-9999" },
+        notBefore: plan.preparedAt,
+      }),
+    /does not match current state/,
+  );
+  assert.throws(
+    () =>
+      assertStagingCandidateHealth(
+        { ...health, copyVersion: "3".repeat(16) },
+        { head: releaseSha, plan },
+      ),
+    /does not match the planned SHA and versions/,
+  );
+  assert.throws(
+    () =>
+      assertStagingCandidateHealth(
+        {
+          ...health,
+          travel: {
+            ...health.travel,
+            cleanupHeartbeat: { status: "never_run" },
+          },
+        },
+        { head: releaseSha, plan },
+      ),
+    /not configured, published, and current/,
+  );
+});
+
+test("staging deployment guards enforce exact 0/100 and promoted traffic", () => {
+  const candidateVersion = "candidate-version-1234";
+  const priorVersion = "prior-version-5678";
+  const staged = {
+    id: "deployment-12345678",
+    strategy: "percentage",
+    versions: [
+      { version_id: priorVersion, percentage: 100 },
+      { version_id: candidateVersion, percentage: 0 },
+    ],
+  };
+  const promoted = {
+    id: "deployment-87654321",
+    strategy: "percentage",
+    versions: [{ version_id: candidateVersion, percentage: 100 }],
+  };
+  assert.deepEqual(
+    assertStagingDeployment(staged, {
+      candidateVersion,
+      priorVersion,
+      phase: "staged",
+    }).traffic,
+    [
+      { versionId: candidateVersion, percentage: 0 },
+      { versionId: priorVersion, percentage: 100 },
+    ].sort((left, right) => left.versionId.localeCompare(right.versionId)),
+  );
+  assert.doesNotThrow(() =>
+    assertStagingDeployment(promoted, {
+      candidateVersion,
+      phase: "deployed",
+    }),
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        {
+          ...staged,
+          versions: [
+            { version_id: priorVersion, percentage: 90 },
+            { version_id: candidateVersion, percentage: 10 },
+          ],
+        },
+        { candidateVersion, priorVersion, phase: "staged" },
+      ),
+    /not isolated at 0%/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        {
+          ...promoted,
+          versions: [
+            ...promoted.versions,
+            { version_id: priorVersion, percentage: 0 },
+          ],
+        },
+        { candidateVersion, phase: "deployed" },
+      ),
+    /not the sole 100%/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        { ...staged, strategy: "unknown" },
+        { candidateVersion, priorVersion, phase: "staged" },
+      ),
+    /status is malformed/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        {
+          ...staged,
+          versions: [
+            { version_id: candidateVersion, percentage: "0" },
+            { version_id: priorVersion, percentage: 100 },
+          ],
+        },
+        { candidateVersion, priorVersion, phase: "staged" },
+      ),
+    /allocation is malformed/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        {
+          ...staged,
+          versions: [
+            { version_id: candidateVersion, percentage: 0 },
+            { version_id: candidateVersion, percentage: 100 },
+          ],
+        },
+        { candidateVersion, priorVersion, phase: "staged" },
+      ),
+    /allocation is ambiguous/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        {
+          ...staged,
+          versions: [
+            { version_id: candidateVersion, percentage: 0 },
+            { version_id: priorVersion, percentage: 99 },
+          ],
+        },
+        { candidateVersion, priorVersion, phase: "staged" },
+      ),
+    /allocation is ambiguous/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(staged, {
+        candidateVersion,
+        priorVersion: candidateVersion,
+        phase: "staged",
+      }),
+    /expected staging Worker deployment is invalid/,
+  );
+});
+
+test("staging promotion rejects candidate state changed after checkpoint", async () => {
+  const candidateVersion = "candidate-version-1234";
+  const priorVersion = "prior-version-5678";
+  const plan = {
+    preparedAt: "2026-08-04T10:00:00.000Z",
+    previousWorkerVersion: priorVersion,
+    releaseVersion,
+    contentVersion,
+    copyVersion: "c".repeat(16),
+    travelAtlasMode: "atlas-v1",
+    simulation: {
+      campaignVersion: "campaign-v1",
+      experienceMode: "campaign-v1",
+      aiMode: "live",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      approvedProviders: ["hardcover"],
+      approvalStateDigest: "d".repeat(64),
+    },
+  };
+  const checkpointHealth = {
+    status: "healthy",
+    releaseSha,
+    releaseVersion,
+    contentVersion,
+    copyVersion: plan.copyVersion,
+    simulation: {
+      campaignVersion: plan.simulation.campaignVersion,
+      experienceMode: plan.simulation.experienceMode,
+      aiMode: plan.simulation.aiMode,
+      provider: plan.simulation.provider,
+      model: plan.simulation.model,
+      configured: true,
+      approvedProviders: plan.simulation.approvedProviders,
+      providerApprovalDigest: plan.simulation.approvalStateDigest,
+    },
+    travel: {
+      mode: "atlas-v1",
+      configured: true,
+      activePublication: { contentHash: "e".repeat(64) },
+      cleanupHeartbeat: { status: "current" },
+    },
+  };
+  const publication = {
+    status: "ready",
+    contentVersion,
+    contentHash: "f".repeat(64),
+    kvPointerMatches: true,
+  };
+  const deployment = {
+    id: "deployment-12345678",
+    strategy: "percentage",
+    versions: [
+      { version_id: priorVersion, percentage: 100 },
+      { version_id: candidateVersion, percentage: 0 },
+    ],
+  };
+  const checkpointReceipt = createStagingCheckpointReceipt({
+    head: releaseSha,
+    workerVersion: candidateVersion,
+    planSha256: "1".repeat(64),
+    plan,
+    health: checkpointHealth,
+    publication,
+    deployment,
+    checkedAt: "2026-08-04T10:01:00.000Z",
+  });
+  let candidateReads = 0;
+  await assert.rejects(
+    assertFreshStagingPromotionCheckpoint({
+      readDeployment: async () => deployment,
+      readCandidateState: async () => {
+        candidateReads += 1;
+        return {
+          health: {
+            ...checkpointHealth,
+            travel: {
+              ...checkpointHealth.travel,
+              activePublication: { contentHash: "2".repeat(64) },
+            },
+          },
+          publication,
+        };
+      },
+      checkpointReceipt,
+      expected: {
+        head: releaseSha,
+        workerVersion: candidateVersion,
+        planSha256: "1".repeat(64),
+        plan,
+        notBefore: plan.preparedAt,
+      },
+    }),
+    /does not match current state/,
+  );
+  assert.equal(candidateReads, 1);
+});
+
+test("staging deployment polling converges without repeating a write", async () => {
+  const candidateVersion = "candidate-version-1234";
+  const priorVersion = "prior-version-5678";
+  const deployments = [
+    {
+      id: "deployment-old-1234",
+      strategy: "percentage",
+      versions: [{ version_id: priorVersion, percentage: 100 }],
+    },
+    {
+      id: "deployment-new-5678",
+      strategy: "percentage",
+      versions: [
+        { version_id: candidateVersion, percentage: 0 },
+        { version_id: priorVersion, percentage: 100 },
+      ],
+    },
+  ];
+  let reads = 0;
+  let writes = 0;
+  writes += 1;
+  const accepted = await waitForStagingDeploymentState({
+    readDeployment: async () => deployments[Math.min(reads++, 1)],
+    waitForReadiness: async ({ check }) => {
+      assert.equal(await check(), false);
+      assert.equal(await check(), true);
+    },
+    candidateVersion,
+    priorVersion,
+    phase: "staged",
+  });
+  assert.equal(accepted.state.deploymentId, "deployment-new-5678");
+  assert.equal(reads, 2);
+  assert.equal(writes, 1);
+
+  await assert.rejects(
+    waitForStagingDeploymentState({
+      readDeployment: async () => deployments[0],
+      waitForReadiness: async ({ check }) => {
+        assert.equal(await check(), false);
+      },
+      candidateVersion,
+      priorVersion,
+      phase: "staged",
+    }),
+    /did not converge/,
+  );
+});
+
+test("staging trigger receipts and migration gates protect every post-upload action", () => {
+  const receipt = createStagingTriggerReceipt({
+    head: releaseSha,
+    configSha256: "4".repeat(64),
+    appliedAt: "2026-08-04T10:01:00.000Z",
+  });
+  assert.doesNotThrow(() =>
+    assertStagingTriggerReceipt(receipt, {
+      head: releaseSha,
+      configSha256: "4".repeat(64),
+      notBefore: "2026-08-04T10:00:00.000Z",
+    }),
+  );
+  assert.throws(
+    () =>
+      assertStagingTriggerReceipt(receipt, {
+        head: releaseSha,
+        configSha256: "5".repeat(64),
+        notBefore: "2026-08-04T10:00:00.000Z",
+      }),
+    /does not match this release/,
+  );
+  for (const action of [
+    "stage",
+    "bootstrap",
+    "checkpoint",
+    "deploy",
+    "smoke",
+  ]) {
+    assert.equal(stagingActionRequiresCleanMigrations(action), true);
+  }
+  for (const action of ["plan", "migrate", "upload", "rollback"]) {
+    assert.equal(stagingActionRequiresCleanMigrations(action), false);
+  }
+});
+
+test("staging smoke derives every enabled direct object route", () => {
+  const paths = stagingSmokePaths();
   assert.deepEqual(
     paths.filter((pathname) => pathname.startsWith("/play/")),
     [
@@ -203,10 +694,12 @@ test("staging room smoke includes every direct object route", () => {
     ],
   );
   assert.deepEqual(
-    stagingSmokePaths("classic").filter((pathname) => pathname.startsWith("/play/")),
-    [],
+    stagingSmokePaths({ travelEnabled: true }).filter((pathname) =>
+      pathname.startsWith("/play/"),
+    ),
+    [...paths.filter((pathname) => pathname.startsWith("/play/")), "/play/travel"],
   );
-  assert.throws(() => stagingSmokePaths("unknown"), /unsupported Play experience mode/);
+  assert.throws(() => stagingSmokePaths({ travelEnabled: "yes" }), /switch/);
 });
 
 test("staging fetches have a hard timeout and readiness retries only reads", async () => {
@@ -266,10 +759,11 @@ test("staging fetches have a hard timeout and readiness retries only reads", asy
 test("preview config has no durable, secret, cron, Studio, or OAuth capability", () => {
   const expected = expectedPreviewCoordinates({
     RELEASE_VALIDATED_SHA: releaseSha,
+    RELEASE_VERSION: releaseVersion,
     PREVIEW_PR_NUMBER: "42",
     PREVIEW_CF_ACCESS_AUD: "preview-access-audience",
     CF_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
-  }, contentVersion);
+  }, contentVersion, releaseVersion);
   const config = previewConfiguration(generatedBase(), expected);
   assert.doesNotThrow(() => assertPreviewConfiguration(config, expected));
   assert.equal(config.name, "anish-shah-work-in-public-pr-42");
@@ -280,8 +774,8 @@ test("preview config has no durable, secret, cron, Studio, or OAuth capability",
   assert.deepEqual(config.ratelimits, []);
   assert.equal(config.triggers, undefined);
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "static_preview");
+  assert.equal(config.vars.RELEASE_VERSION, releaseVersion);
   assert.equal(config.vars.DEPLOYMENT_TIER, "preview");
-  assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
   assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "campaign-v1");
   assert.equal(config.vars.SIMULATION_AI_MODE, "fixture");
   assert.equal(config.vars.SIMULATION_PROVIDER, "fixture");
@@ -309,6 +803,38 @@ test("preview config has no durable, secret, cron, Studio, or OAuth capability",
   }
 });
 
+test("preview middleware serves bounded fixtures without hosted rate-limit secrets", async () => {
+  const workerSource = await readFile(
+    new URL("../worker/index.ts", import.meta.url),
+    "utf8",
+  );
+  const previewBoundary = workerSource.indexOf(
+    "const boundaryFailure = hostedDeploymentBoundaryResponse",
+  );
+  const rateLimitBoundary = workerSource.indexOf(
+    'const enforceRequestRateLimits = deploymentTier !== "preview"',
+  );
+  const setupGuard = workerSource.indexOf(
+    "enforceRequestRateLimits &&\n        requiresConfiguredRateLimit",
+  );
+  const applicationRoute = workerSource.indexOf(
+    "await routeApplicationRequest(appRequest, env, ctx, pathname)",
+  );
+
+  assert.ok(previewBoundary >= 0);
+  assert.ok(rateLimitBoundary > previewBoundary);
+  assert.ok(setupGuard > rateLimitBoundary);
+  assert.ok(applicationRoute > setupGuard);
+  assert.match(
+    workerSource,
+    /const discogsReadLimited = enforceRequestRateLimits[\s\S]*?throttleDiscogsPublicRead/,
+  );
+  assert.match(
+    workerSource,
+    /const travelMediaLimited = enforceRequestRateLimits[\s\S]*?throttleTravelMedia/,
+  );
+});
+
 test("host routing accepts only the exact origin for each declared tier", () => {
   const options = { development: false, sitesRuntime: false };
   const production = {
@@ -316,14 +842,14 @@ test("host routing accepts only the exact origin for each declared tier", () => 
     SITE_URL: "https://anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "d1_kv_required",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   };
   const staging = {
     DEPLOYMENT_TIER: "staging",
     SITE_URL: "https://staging.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "d1_kv_required",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   };
   const preview = {
     DEPLOYMENT_TIER: "preview",
@@ -331,7 +857,7 @@ test("host routing accepts only the exact origin for each declared tier", () => 
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   };
   assert.equal(productionOriginResponse(
     new Request("https://anish-shah-is.online/work"), production, options,
@@ -352,21 +878,18 @@ test("host routing accepts only the exact origin for each declared tier", () => 
     new Request("https://staging.anish-shah-is.online/work"),
     { ...staging, PUBLIC_CONTENT_MODE: "static_preview" }, options,
   )?.status, 503);
-  for (const playMode of [undefined, "unknown"]) {
-    const invalid = { ...preview, PLAY_EXPERIENCE_MODE: playMode };
-    assert.equal(
-      productionOriginResponse(
-        new Request("https://pr-42.anish-shah-is.online/play"),
-        invalid,
-        options,
-      )?.status,
-      503,
-    );
-  }
+  assert.equal(productionOriginResponse(
+    new Request("https://anish-shah-is.online/work"),
+    { ...production, RELEASE_VERSION: undefined }, options,
+  )?.status, 503);
+  assert.equal(productionOriginResponse(
+    new Request("https://anish-shah-is.online/work"),
+    { ...production, RELEASE_VERSION: "v2.0.0" }, options,
+  )?.status, 503);
   assert.equal(
     productionOriginResponse(
       new Request("https://pr-42.anish-shah-is.online/play"),
-      { ...preview, PLAY_EXPERIENCE_MODE: "classic" },
+      preview,
       options,
     ),
     null,
@@ -418,21 +941,28 @@ test("staging callbacks alone bypass identity while preview remains fully gated"
   );
 });
 
-test("sitemap publishes room routes only for the production-facing room mode", async () => {
+test("sitemap always publishes enabled room routes and never exposes disabled Travel", async () => {
   const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
   const sitemap = (await import("../app/sitemap.ts")).default;
   try {
-    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
-      PLAY_EXPERIENCE_MODE: "classic",
-    };
-    const classic = await sitemap();
-    assert.equal(
-      classic.filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move|travel)$/.test(url)).length,
-      0,
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {};
+    const withoutTravel = await sitemap();
+    assert.deepEqual(
+      withoutTravel
+        .filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move|travel)$/.test(url))
+        .map(({ url }) => new URL(url).pathname)
+        .sort(),
+      [
+        "/play/collect",
+        "/play/listen",
+        "/play/move",
+        "/play/play",
+        "/play/read",
+        "/play/watch",
+      ],
     );
 
     globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
-      PLAY_EXPERIENCE_MODE: "my-room-2001",
       TRAVEL_ATLAS_MODE: "atlas-v1",
     };
     const room = await sitemap();
@@ -457,7 +987,7 @@ test("sitemap publishes room routes only for the production-facing room mode", a
       SITE_URL: "https://staging.anish-shah-is.online",
       PRODUCTION_SITE_URL: "https://anish-shah-is.online",
       PUBLIC_CONTENT_MODE: "d1_kv_required",
-      PLAY_EXPERIENCE_MODE: "my-room-2001",
+      RELEASE_VERSION: releaseVersion,
       TRAVEL_ATLAS_MODE: "atlas-v1",
     };
     assert.deepEqual(await sitemap(), []);
@@ -474,7 +1004,6 @@ test("production sitemap publishes only ready active Travel trip URLs", async ()
     DEPLOYMENT_TIER: "production",
     SITE_URL: "https://anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
     TRAVEL_ATLAS_MODE: "atlas-v1",
   };
   const databaseFor = (activeSnapshot) => ({
@@ -542,12 +1071,14 @@ test("production sitemap publishes only ready active Travel trip URLs", async ()
         DEPLOYMENT_TIER: "staging",
         SITE_URL: "https://staging.anish-shah-is.online",
         PUBLIC_CONTENT_MODE: "d1_kv_required",
+        RELEASE_VERSION: releaseVersion,
       },
       {
         DEPLOYMENT_TIER: "preview",
         PREVIEW_PR_NUMBER: "42",
         SITE_URL: "https://pr-42.anish-shah-is.online",
         PUBLIC_CONTENT_MODE: "static_preview",
+        RELEASE_VERSION: releaseVersion,
       },
     ]) {
       globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
@@ -589,7 +1120,7 @@ test("RSC presentation reads hosted tier from Cloudflare runtime bindings", asyn
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   };
   try {
     const [{ runtimeRootMetadata }, { PreviewEnvironmentNotice }, robotsModule, sitemapModule] =
@@ -667,7 +1198,7 @@ test("preview Travel media is read-only and closed to the exact synthetic fixtur
     SITE_URL: origin,
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
     TRAVEL_ATLAS_MODE: "atlas-v1",
   };
   try {
@@ -812,7 +1343,7 @@ test("preview fixtures activate only under an exact preview runtime", () => {
     "SITE_URL",
     "PRODUCTION_SITE_URL",
     "PUBLIC_CONTENT_MODE",
-    "PLAY_EXPERIENCE_MODE",
+    "RELEASE_VERSION",
   ];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   Object.assign(process.env, {
@@ -821,7 +1352,7 @@ test("preview fixtures activate only under an exact preview runtime", () => {
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   });
   try {
     const ready = previewConnectorSnapshot(
@@ -874,7 +1405,7 @@ test("preview fixtures activate only under an exact preview runtime", () => {
   }
 });
 
-test("all six direct room foundations use projected preview data without durable state", async () => {
+test("all six connector-backed room foundations use projected preview data without durable state", async () => {
   const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
   globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
     DEPLOYMENT_TIER: "preview",
@@ -882,7 +1413,7 @@ test("all six direct room foundations use projected preview data without durable
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   };
   try {
     const [watch, read, collect, play, listen, move, stale] = await Promise.all([
@@ -942,7 +1473,7 @@ test("preview Discogs fixtures preserve format and decade variation", () => {
     "SITE_URL",
     "PRODUCTION_SITE_URL",
     "PUBLIC_CONTENT_MODE",
-    "PLAY_EXPERIENCE_MODE",
+    "RELEASE_VERSION",
   ];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   Object.assign(process.env, {
@@ -951,7 +1482,7 @@ test("preview Discogs fixtures preserve format and decade variation", () => {
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: releaseVersion,
   });
   try {
     const snapshot = previewConnectorSnapshot(
@@ -1057,6 +1588,8 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
   );
   assert.match(metadata, /process\.env\.PREVIEW_SOURCE_SHA/);
   assert.match(metadata, /sourceSha: releaseSha/);
+  assert.match(metadata, /schemaVersion: "1\.2"/);
+  assert.match(metadata, /releaseVersion/);
   assert.match(metadata, /workflowSha/);
   assert.match(prepare, /bundle\.sourceSha !== bundle\.releaseSha/);
   assert.match(cleanup, /preview-cleanup\.mjs cleanup --apply/);
@@ -1150,6 +1683,11 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.match(lighthouse, /node_modules\/wrangler-e2e\/bin\/wrangler\.js/);
   assert.match(lighthouse, /const e2eCompatibilityDate = "2026-07-28"/);
   assert.match(lighthouse, /"--compatibility-date",\n\s+e2eCompatibilityDate/);
+  assert.doesNotMatch(
+    lighthouse,
+    /DEPLOYMENT_TIER:preview|PUBLIC_CONTENT_MODE:static_preview/,
+    "Lighthouse must evaluate production-like indexability, not the intentionally noindexed preview tier.",
+  );
   const hostedConfiguration = await readFile(
     new URL("../scripts/lib/hosted-config-contract.mjs", import.meta.url),
     "utf8",
@@ -1237,7 +1775,6 @@ test("browser quality isolates workerd lifecycles without weakening review evide
         encoding: "utf8",
         env: {
           ...process.env,
-          BROWSER_PLAY_MODE: "room",
           BROWSER_QUALITY_PORT: "4190",
           BROWSER_QUALITY_SEGMENT: "partition-check",
           BROWSER_QUALITY_STATE_DIR: ".wrangler/browser-quality-partition-check",
@@ -1331,11 +1868,11 @@ test("browser docs-only classification sees both sides of a source-to-docs renam
   }
 });
 
-test("Play propagates a preview fixture through every active stream", async () => {
+test("Play propagates a preview fixture through every connector-backed room route", async () => {
   const [
     page,
-    classic,
-    streams,
+    direct,
+    foundation,
     collection,
     gallery,
     discogs,
@@ -1343,8 +1880,8 @@ test("Play propagates a preview fixture through every active stream", async () =
     movement,
   ] = await Promise.all([
     readFile(new URL("../app/play/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../components/play/ClassicPlayExperience.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../components/PersonalStreams.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/play/[objectSlug]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/play-screen-foundation.ts", import.meta.url), "utf8"),
     readFile(new URL("../components/play/CollectionStream.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/CollectionGallery.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/DiscogsStream.tsx", import.meta.url), "utf8"),
@@ -1352,16 +1889,9 @@ test("Play propagates a preview fixture through every active stream", async () =
     readFile(new URL("../components/play/MovementStream.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /activePreviewFixtureRuntime\(\)/);
-  assert.match(
-    page,
-    /<ClassicPlayExperience[\s\S]*fixture=\{fixture\}[\s\S]*initialStream=\{streamIdFromValue\(query\.stream\)\}/,
-  );
-  assert.match(classic, /<PersonalStreams[\s\S]*fixture=\{fixture\}/);
-  assert.match(classic, /initialStream=\{initialStream\}/);
-  assert.match(streams, /CollectionStream provider="myanimelist" fixture=\{fixture\}/);
-  assert.match(streams, /DiscogsStream fixture=\{fixture\}/);
-  assert.match(streams, /SpotifyStream[\s\S]*fixture=\{fixture\}/);
-  assert.match(streams, /MovementStream[\s\S]*fixture=\{fixture\}/);
+  assert.match(page, /<RoomOverview[\s\S]*fixture=\{fixture\}/);
+  assert.match(direct, /previewFixtureForPlayRoute\(query\)/);
+  assert.match(foundation, /previewFixtureForPlayRoute/);
   assert.match(collection, /parameters\.set\("fixture", fixture\)/);
   assert.match(discogs, /parameters\.set\("fixture", fixture\)/);
   assert.match(spotify, /loadSpotifyFixture\(controller\.signal, fixture\)/);
@@ -1443,10 +1973,19 @@ test("staging release bootstraps and verifies its isolated D1/KV publication", a
     packageJson.scripts["staging:bootstrap"],
     "node scripts/staging-release.mjs bootstrap",
   );
+  assert.equal(
+    packageJson.scripts["staging:stage"],
+    "node scripts/staging-release.mjs stage",
+  );
+  assert.equal(
+    packageJson.scripts["staging:deploy"],
+    "node scripts/staging-release.mjs deploy",
+  );
   assert.match(script, /action === "bootstrap"/);
+  assert.match(script, /action === "stage"/);
   assert.match(script, /\/api\/studio\/publish/);
   assert.match(script, /\/api\/studio\/publication-checkpoint/);
-  assert.match(script, /kvPointerMatches !== true/);
+  assert.match(script, /\/api\/studio\/release-checkpoint/);
   assert.match(script, /STAGING_SITE_ORIGIN/);
   assert.match(script, /STAGING_BROWSER_URL/);
   assert.match(script, /event,workflowDatabaseId/);
@@ -1455,7 +1994,45 @@ test("staging release bootstraps and verifies its isolated D1/KV publication", a
   assert.match(script, /verifyReleaseBuildCheckpoint\(root\)/);
   assert.match(script, /releaseBuildCheckpointSha256/);
   assert.match(script, /waitForCandidateReadiness/);
-  assert.match(script, /stagingSmokePaths\(plan\.playExperienceMode\)/);
+  assert.match(script, /stagingSmokePaths\(\{[\s\S]*travelEnabled:/);
+  assert.match(script, /Cloudflare-Workers-Version-Overrides/);
+  assert.match(script, /assertStagingCandidateHealth/);
+  assert.match(script, /assertStagingCheckpointReceipt/);
+  assert.match(script, /requireNoPendingMigrations/);
+  assert.match(script, /requireStagingTriggerReceipt/);
+  assert.match(script, /deployments",\s*"status"/);
+  assert.match(script, /\/api\/studio\/maintenance\/bootstrap/);
+  assert.match(script, /requireStagedCandidate/);
+  assert.match(script, /waitForStagingDeploymentState/);
+
+  const stageStart = script.indexOf('if (action === "stage")');
+  const stageEnd = script.indexOf("} else {", stageStart);
+  const deployStart = script.indexOf('} else if (action === "deploy")', stageStart);
+  const smokeStart = script.indexOf('} else if (action === "smoke")', deployStart);
+  assert.notEqual(stageStart, -1);
+  assert.notEqual(stageEnd, -1);
+  assert.notEqual(deployStart, -1);
+  assert.notEqual(smokeStart, -1);
+  const stage = script.slice(stageStart, stageEnd);
+  const deploy = script.slice(deployStart, smokeStart);
+  assert.match(stage, /`\$\{requested\}@0%`/);
+  assert.match(stage, /`\$\{plan\.previousWorkerVersion\}@100%`/);
+  assert.match(stage, /waitForStagingDeployment\(plan, \{ phase: "staged" \}\)/);
+  assert.doesNotMatch(stage, /`\$\{requested\}@100%`/);
+  assert.equal(
+    deploy.indexOf("assertStagingCheckpointReceipt") <
+      deploy.indexOf("assertReleaseMarker(remoteReleaseMarker()") &&
+      deploy.indexOf("assertReleaseMarker(remoteReleaseMarker()") <
+        deploy.indexOf('`${workerVersion}@100%`'),
+    true,
+  );
+  assert.equal(
+    deploy.indexOf("requireStagedCandidate(plan)") <
+      deploy.indexOf("assertStagingCheckpointReceipt") &&
+      deploy.indexOf('`${workerVersion}@100%`') <
+        deploy.indexOf('phase: "deployed"'),
+    true,
+  );
 });
 
 test("staging Studio renders an explicit non-promotable boundary", async () => {

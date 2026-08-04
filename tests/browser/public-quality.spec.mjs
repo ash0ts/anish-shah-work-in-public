@@ -1,10 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { installDiscogsFixture } from "./fixtures/discogs.mjs";
 
 const routes = ["/", "/work", "/play", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
-const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 
 async function pageOverflow(page) {
   return page.evaluate(() => {
@@ -120,18 +118,19 @@ test("skip navigation reaches the main content", async ({ page }) => {
 test("mobile Work keeps search, calendar years, and filter-sheet focus synchronized", async ({
   page,
 }) => {
-  test.skip(roomMode, "The Work mobile contract is mode-independent.");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/work", { waitUntil: "networkidle" });
 
   const search = page.getByRole("searchbox", {
-    name: "Search work and public forms",
+    name: "Search projects, talks, and code",
   });
   const calendar = page.getByRole("region", {
     name: /Work timeline table/,
   });
   await expect(search).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Line" })).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Line of work" }),
+  ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Year" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Topic" })).toBeVisible();
   await expect(calendar).toBeVisible();
@@ -177,8 +176,10 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
   await filters.click();
   const dialog = page.getByRole("dialog", { name: "Filter the calendar" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("combobox", { name: "Medium" })).toBeVisible();
-  await expect(dialog.getByRole("combobox", { name: "Line" })).toHaveCount(0);
+  await expect(dialog.getByRole("combobox", { name: "Format" })).toBeVisible();
+  await expect(
+    dialog.getByRole("combobox", { name: "Line of work" }),
+  ).toHaveCount(0);
   await dialog.getByRole("button", { name: "Close filters" }).click();
   await expect(filters).toBeFocused();
 
@@ -197,13 +198,12 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
 test("Work supporting material is mobile-collapsible and fragment-safe", async ({
   page,
 }) => {
-  test.skip(roomMode, "The Work detail contract is mode-independent.");
   const route = "/work/architecting-and-orchestrating-ai-agents-series";
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(route, { waitUntil: "networkidle" });
-  const appearances = page
-    .locator("details[data-supporting-disclosure]")
-    .filter({ hasText: "Appearances and artifacts" });
+  const appearances = page.locator(
+    "details[data-supporting-disclosure]:has(#appearances-title)",
+  );
   await expect(appearances).not.toHaveAttribute("open", "");
   await expect(appearances.locator(":scope > ol")).not.toBeVisible();
   await appearances.locator(":scope > summary").click();
@@ -212,76 +212,21 @@ test("Work supporting material is mobile-collapsible and fragment-safe", async (
   expect(firstAnchor).toBeTruthy();
 
   await page.goto(`${route}#${firstAnchor}`, { waitUntil: "networkidle" });
-  const anchored = page
-    .locator("details[data-supporting-disclosure]")
-    .filter({ hasText: "Appearances and artifacts" });
+  const anchored = page.locator(
+    "details[data-supporting-disclosure]:has(#appearances-title)",
+  );
   await expect(anchored).toHaveAttribute("open", "");
   await expect(page.locator(`[id="${firstAnchor}"]`)).toBeVisible();
 
   await page.setViewportSize({ width: 1024, height: 900 });
   await page.goto(route, { waitUntil: "networkidle" });
-  const desktopAppearances = page
-    .locator("details[data-supporting-disclosure]")
-    .filter({ hasText: "Appearances and artifacts" });
+  const desktopAppearances = page.locator(
+    "details[data-supporting-disclosure]:has(#appearances-title)",
+  );
   await expect(desktopAppearances.locator(":scope > ol")).toBeVisible();
 });
 
 test("Spotify rank navigation and consent remain keyboard-first", async ({ page }) => {
-  test.skip(roomMode, "Classic Play owns the tabbed Spotify interaction.");
-  const timestamp = "2026-08-02T12:00:00.000Z";
-  const tracks = [
-    {
-      id: "track-one",
-      position: 1,
-      title: "First Track",
-      artists: [{ id: "artist-one", name: "First Artist" }],
-      album: {
-        id: "album-one",
-        title: "First Album",
-        releaseYear: 2025,
-        artwork: null,
-      },
-      durationMs: 181_000,
-      explicit: false,
-    },
-    {
-      id: "track-two",
-      position: 2,
-      title: "Second Track",
-      artists: [{ id: "artist-two", name: "Second Artist" }],
-      album: {
-        id: "album-two",
-        title: "Second Album",
-        releaseYear: 2024,
-        artwork: null,
-      },
-      durationMs: 202_000,
-      explicit: true,
-    },
-  ];
-  await page.route("**/api/connectors/spotify", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      status: 200,
-      body: JSON.stringify({
-        status: "ready",
-        fetchedAt: timestamp,
-        stale: false,
-        payload: {
-          provider: "spotify",
-          profileUrl: "https://open.spotify.com/user/portfolio-owner",
-          coverage: "Spotify-calculated affinity; not play counts",
-          windows: {
-            short_term: { tracks },
-            medium_term: { tracks },
-            long_term: { tracks },
-          },
-          syncedAt: timestamp,
-          freshUntil: "2026-08-03T00:00:00.000Z",
-        },
-      }),
-    });
-  });
   await page.route("https://open.spotify.com/embed/**", async (route) => {
     await route.fulfill({
       contentType: "text/html",
@@ -290,92 +235,78 @@ test("Spotify rank navigation and consent remain keyboard-first", async ({ page 
     });
   });
 
-  await page.goto("/play", { waitUntil: "networkidle" });
-  await page.getByRole("tab", { name: /Listen.*Spotify/i }).click();
+  await page.goto("/play/listen", { waitUntil: "networkidle" });
   await expect(page.getByRole("heading", { name: "Top Tracks, in returned order." })).toBeVisible();
   await expect(page.locator("iframe")).toHaveCount(0);
 
-  const firstRank = page.getByRole("button", {
-    name: "Rank 1, First Track by First Artist",
+  const rankList = page.getByRole("list", {
+    name: "Spotify Top Tracks in returned order",
   });
-  const secondRank = page.getByRole("button", {
-    name: "Rank 2, Second Track by Second Artist",
-  });
+  const ranks = rankList.getByRole("button");
+  await expect(ranks).toHaveCount(12);
+  const firstRank = ranks.nth(0);
+  const secondRank = ranks.nth(1);
+  await expect(firstRank).toHaveAccessibleName(/^Rank 1, .+ by .+$/);
+  await expect(secondRank).toHaveAccessibleName(/^Rank 2, .+ by .+$/);
   await firstRank.focus();
-  await firstRank.press("End");
+  await firstRank.press("ArrowRight");
   await expect(secondRank).toBeFocused();
+  await expect(secondRank).toHaveAttribute("aria-pressed", "true");
 
   const listenHere = page.getByRole("button", { name: "Listen here" }).first();
   await listenHere.click();
   await expect(page.locator("iframe")).toHaveCount(0);
   await page.getByRole("button", { name: "Load Spotify player" }).click();
-  await expect(page.locator('iframe[title*="Second Track"]')).toHaveCount(1);
+  await expect(page.locator('iframe[title^="Listen to "]')).toHaveCount(1);
   await page.getByRole("button", { name: "Close player" }).click();
   await expect(page.locator("iframe")).toHaveCount(0);
   await expect(listenHere).toBeFocused();
 });
 
-test("Discogs remains lazy and the six Play streams use keyboard selection", async ({ page }) => {
-  test.skip(roomMode, "Classic Play owns the tabbed Discogs interaction.");
-  const requests = [];
-  await installDiscogsFixture(page, requests);
+test("Discogs remains lazy until the Record crate route is selected", async ({ page }) => {
+  const connectorRequests = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/connectors/discogs") {
+      connectorRequests.push(request.url());
+    }
+  });
   await page.goto("/play", { waitUntil: "networkidle" });
-
-  const tabs = page.getByRole("tab");
-  await expect(tabs).toHaveCount(6);
-  await expect(tabs).toHaveText([
-    /TV\s*Watch\s*·\s*MyAnimeList/,
-    /Bookshelf\s*Read\s*·\s*Hardcover/,
-    /Music player\s*Listen\s*·\s*Spotify/,
-    /Record crate\s*Collect\s*·\s*Discogs/,
-    /Computer\s*Games\s*·\s*Steam/,
-    /Treadmill\s*Move\s*·\s*Strava/,
-  ]);
-  expect(requests).toHaveLength(0);
-
-  const watch = page.getByRole("tab", { name: /TV.*Watch.*MyAnimeList/i });
-  const read = page.getByRole("tab", { name: /Bookshelf.*Read.*Hardcover/i });
-  const listen = page.getByRole("tab", { name: /Music player.*Listen.*Spotify/i });
-  const collect = page.getByRole("tab", { name: /Record crate.*Collect.*Discogs/i });
-  await watch.focus();
-  await watch.press("ArrowRight");
-  await expect(read).toBeFocused();
-  await read.press("ArrowRight");
-  await expect(listen).toBeFocused();
-  await listen.press("ArrowRight");
-  await expect(collect).toBeFocused();
-  await expect(collect).toHaveAttribute("aria-selected", "true");
+  expect(connectorRequests).toHaveLength(0);
+  await page.locator('[data-room-object-link="collect"]').click();
+  await expect(page).toHaveURL(/\/play\/collect$/);
   await expect(
-    page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
+    page.getByRole("region", { name: "Discogs physical catalog" }),
   ).toBeVisible();
-  await expect.poll(() => requests.length).toBe(1);
-  await expect(page).toHaveURL(/\/play\?stream=collect$/);
+  await expect(
+    page.getByRole("heading", { name: "Inside the crate." }),
+  ).toBeVisible();
+  expect(connectorRequests).toHaveLength(0);
 });
 
-test("Play stream deep links survive reload and reject unknown selections", async ({ page }) => {
-  test.skip(roomMode, "Classic Play owns stream query deep links.");
-  const requests = [];
-  await installDiscogsFixture(page, requests);
+test("legacy Play stream links redirect permanently and reject unknown selections", async ({
+  page,
+  request,
+}) => {
+  const redirect = await request.get("/play?stream=collect", {
+    maxRedirects: 0,
+  });
+  expect(redirect.status()).toBe(308);
+  expect(new URL(redirect.headers().location).pathname).toBe("/play/collect");
 
   await page.goto("/play?stream=collect", { waitUntil: "networkidle" });
-  const collect = page.getByRole("tab", { name: /Collect.*Discogs/i });
-  await expect(collect).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(/\/play\/collect$/);
   await expect(
-    page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
+    page.getByRole("region", { name: "Discogs physical catalog" }),
   ).toBeVisible();
-  await expect.poll(() => requests.length).toBe(1);
 
   await page.reload({ waitUntil: "networkidle" });
-  await expect(collect).toHaveAttribute("aria-selected", "true");
   await expect(
-    page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
+    page.getByRole("region", { name: "Discogs physical catalog" }),
   ).toBeVisible();
-  await expect.poll(() => requests.length).toBe(2);
 
   await page.goto("/play?stream=unknown", { waitUntil: "networkidle" });
-  await expect(
-    page.getByRole("tab", { name: /Watch.*MyAnimeList/i }),
-  ).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(/\/play\?stream=unknown$/);
+  await expect(page.locator("[data-room-overview]")).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
     "noindex, follow",
@@ -383,16 +314,12 @@ test("Play stream deep links survive reload and reject unknown selections", asyn
 });
 
 test("Discogs Overview and Browse all support filters and pagination", async ({ page }) => {
-  test.skip(roomMode, "Classic Play exercises the shared Discogs presentation with browser fixtures.");
-  const requests = [];
-  await installDiscogsFixture(page, requests);
-  await page.goto("/play", { waitUntil: "networkidle" });
-  await page.getByRole("tab", { name: /Collect.*Discogs/i }).click();
+  await page.goto("/play/collect", { waitUntil: "networkidle" });
 
   const physicalTotal = page.getByText("physical items", { exact: true }).locator("..");
   const releaseTotal = page.getByText("distinct releases", { exact: true }).locator("..");
-  await expect(physicalTotal.getByText("29", { exact: true })).toBeVisible();
-  await expect(releaseTotal.getByText("26", { exact: true })).toBeVisible();
+  await expect(physicalTotal.getByText("16", { exact: true })).toBeVisible();
+  await expect(releaseTotal.getByText("14", { exact: true })).toBeVisible();
   const matrix = page.getByRole("table", {
     name: "Physical item counts by format and release decade",
   });
@@ -409,28 +336,40 @@ test("Discogs Overview and Browse all support filters and pagination", async ({ 
   ).toEqual([]);
 
   await page.getByRole("button", { name: "Browse all" }).click();
-  await expect(page.getByText("1—12 of 26 releases")).toBeVisible();
+  await expect(page).toHaveURL(
+    (url) => url.searchParams.get("view") === "gallery",
+  );
+  await expect(page.getByText("1—12 of 14 releases")).toBeVisible();
   await expect(page.locator("ol li").filter({ has: page.locator('a[href*="discogs.com/release/"]') })).toHaveCount(12);
 
-  await page.getByRole("button", { name: "Next →" }).click();
-  await expect(page.getByText("13—24 of 26 releases")).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Discogs catalog pages" })
+    .getByRole("link", { name: /^Next/ })
+    .click();
+  await expect(page.getByText("13—14 of 14 releases")).toBeVisible();
   await expect(page.locator("ol[role='list']")).toHaveAttribute("start", "13");
-  await expect.poll(() => requests.at(-1)?.searchParams.get("page")).toBe("2");
+  await expect(page).toHaveURL(/page=2/);
 
   await page.getByRole("combobox", { name: /^Per page/ }).selectOption("24");
-  await expect(page.getByText("1—24 of 26 releases")).toBeVisible();
-  await expect.poll(() => requests.at(-1)?.searchParams.get("pageSize")).toBe("24");
+  await expect(page.getByText("1—14 of 14 releases")).toBeVisible();
+  await expect(page).toHaveURL(/pageSize=24/);
 
   await page.getByRole("combobox", { name: /^Format/ }).selectOption("vinyl");
-  await expect.poll(() => requests.at(-1)?.searchParams.get("format")).toBe("vinyl");
+  await expect(page).toHaveURL(/format=vinyl/);
   await page.getByRole("combobox", { name: /^Sort/ }).selectOption("year");
-  await expect.poll(() => requests.at(-1)?.searchParams.get("sort")).toBe("year");
+  await expect(page).toHaveURL(/sort=year/);
 
-  await page.getByRole("searchbox", { name: /^Find a title or artist/ }).fill("Blue Logic");
+  await page
+    .getByRole("searchbox", { name: /^Find a title or artist/ })
+    .fill("Physical Signal 12");
   await page.getByRole("button", { name: "Search" }).click();
   await expect(page.getByText("1—1 of 1 releases")).toBeVisible();
-  await expect(page.getByRole("link", { name: /Blue Logic.*Arc Lab/i })).toBeVisible();
-  await expect.poll(() => requests.at(-1)?.searchParams.get("q")).toBe("Blue Logic");
+  await expect(
+    page.getByRole("link", {
+      name: /Physical Signal 12.*Synthetic Artist 5/i,
+    }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/q=Physical(?:\+|%20)Signal(?:\+|%20)12/);
 
   axe = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -444,14 +383,12 @@ test("Discogs Overview and Browse all support filters and pagination", async ({ 
 });
 
 test("Discogs Overview and Browse all fit 320–1920px viewports", async ({ page }) => {
-  test.skip(roomMode, "Room routes receive server-selected connector state; their layout matrix is covered separately.");
-  await installDiscogsFixture(page);
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/play/collect", { waitUntil: "networkidle" });
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
-    await page.goto("/play", { waitUntil: "networkidle" });
-    await page.getByRole("tab", { name: /Collect.*Discogs/i }).click();
     await expect(
-      page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
+      page.getByRole("region", { name: "Discogs physical catalog" }),
     ).toBeVisible();
 
     let overflow = await pageOverflow(page);
@@ -463,7 +400,7 @@ test("Discogs Overview and Browse all fit 320–1920px viewports", async ({ page
     expect(overflow.documentWidth).toBeLessThanOrEqual(width + 1);
 
     await page.getByRole("button", { name: "Browse all" }).click();
-    await expect(page.getByText("1—12 of 26 releases")).toBeVisible();
+    await expect(page.getByText("1—12 of 14 releases")).toBeVisible();
     overflow = await pageOverflow(page);
     expect(overflow, `Browse all @ ${width}px: ${JSON.stringify(overflow.offenders)}`).toMatchObject({
       documentWidth: expect.any(Number),
@@ -471,6 +408,13 @@ test("Discogs Overview and Browse all fit 320–1920px viewports", async ({ page
       offenders: [],
     });
     expect(overflow.documentWidth).toBeLessThanOrEqual(width + 1);
+
+    await page.getByRole("button", { name: "Overview" }).click();
+    await expect(
+      page.getByRole("table", {
+        name: "Physical item counts by format and release decade",
+      }),
+    ).toBeVisible();
   }
 });
 
@@ -504,11 +448,7 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
   }
   await page.goto("/play", { waitUntil: "load" });
-  if (roomMode) {
-    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
-  } else {
-    await expect(page.locator("noscript details")).toHaveCount(6);
-  }
+  await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
   await expect(page.locator("iframe")).toHaveCount(0);
   await context.close();
 });

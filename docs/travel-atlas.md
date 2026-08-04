@@ -111,7 +111,8 @@ pointers so mobile browser chrome cannot falsely disable capable-mobile 3D.
 
 ## Environment setup
 
-Staging requires a dedicated private R2 bucket and fifth rate-limit namespace:
+Staging requires a dedicated private R2 bucket and dedicated Travel media
+rate-limit namespace:
 
 ```text
 STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET

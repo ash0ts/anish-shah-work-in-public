@@ -4,7 +4,9 @@ import { animate } from "animejs";
 import {
   Component,
   lazy,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
+  type PointerEvent as ReactPointerEvent,
   Suspense,
   useCallback,
   useEffect,
@@ -116,6 +118,10 @@ export function RoomRuntime() {
   const notifyRuntimeMounted = room.notifyRuntimeMounted;
   const setRoomFallback = room.setFallback;
   const runtimeRef = useRef<HTMLElement>(null);
+  const activeCanvasTouchPointer = useRef<number | null>(null);
+  const blockedRetargetedClick = useRef<{
+    expiresAt: number;
+  } | null>(null);
   const capability = useRoomCapability();
   const [readyCapability, setReadyCapability] =
     useState<RoomCapabilityResult | null>(null);
@@ -146,6 +152,32 @@ export function RoomRuntime() {
   useEffect(() => {
     notifyRuntimeMounted();
   }, [notifyRuntimeMounted]);
+
+  useEffect(() => {
+    const blockInterruptedCanvasTouch = () => {
+      if (activeCanvasTouchPointer.current === null) return;
+      activeCanvasTouchPointer.current = null;
+      blockedRetargetedClick.current = {
+        expiresAt: performance.now() + 1_000,
+      };
+    };
+
+    window.addEventListener("resize", blockInterruptedCanvasTouch, {
+      passive: true,
+    });
+    window.visualViewport?.addEventListener(
+      "resize",
+      blockInterruptedCanvasTouch,
+      { passive: true },
+    );
+    return () => {
+      window.removeEventListener("resize", blockInterruptedCanvasTouch);
+      window.visualViewport?.removeEventListener(
+        "resize",
+        blockInterruptedCanvasTouch,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     if (capability.tier !== "pocket") return;
@@ -220,6 +252,50 @@ export function RoomRuntime() {
     }
   };
 
+  const trackCanvasTouch = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.pointerType !== "touch" || !event.isPrimary) return;
+    if (event.target instanceof HTMLCanvasElement) {
+      activeCanvasTouchPointer.current = event.pointerId;
+      return;
+    }
+
+    // Pointer IDs can be reused. A real new touch on a semantic control must
+    // never inherit suppression from an earlier interrupted Canvas gesture.
+    if (blockedRetargetedClick.current) {
+      blockedRetargetedClick.current = null;
+    }
+  };
+
+  const finishCanvasTouch = (event: ReactPointerEvent<HTMLElement>) => {
+    if (activeCanvasTouchPointer.current === event.pointerId) {
+      activeCanvasTouchPointer.current = null;
+    }
+  };
+
+  const suppressRetargetedCanvasClick = (
+    event: ReactMouseEvent<HTMLElement>,
+  ) => {
+    const pointerEvent = event.nativeEvent as PointerEvent;
+    const blocked = blockedRetargetedClick.current;
+    if (
+      !blocked ||
+      performance.now() > blocked.expiresAt ||
+      pointerEvent.pointerType !== "touch"
+    ) {
+      if (blocked && performance.now() > blocked.expiresAt) {
+        blockedRetargetedClick.current = null;
+      }
+      return;
+    }
+
+    // Chromium can retarget a touch to the semantic dock when a resize removes
+    // the Canvas between pointer-down and pointer-up, then synthesize a click
+    // on that newly exposed button. Discard only that interrupted pointer.
+    blockedRetargetedClick.current = null;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   return (
     <section
       aria-hidden={blocked || undefined}
@@ -235,7 +311,11 @@ export function RoomRuntime() {
       data-presenting={presenting}
       data-returning={returning || undefined}
       inert={blocked}
+      onClickCapture={suppressRetargetedCanvasClick}
       onKeyDown={containFocus}
+      onPointerCancelCapture={finishCanvasTouch}
+      onPointerDownCapture={trackCanvasTouch}
+      onPointerUpCapture={finishCanvasTouch}
       ref={runtimeRef}
       role="dialog"
     >

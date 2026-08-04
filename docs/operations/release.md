@@ -58,13 +58,22 @@ Postcard Planet adds one private production media bucket. Create it once and
 keep its name exactly `anish-shah-travel-media`:
 
 ```bash
+export CLOUDFLARE_ACCOUNT_ID='690e6286eb53a6df1bd0080633caf91f'
+npx --no-install wrangler whoami
+npx --no-install wrangler r2 bucket list
 npx --no-install wrangler r2 bucket create anish-shah-travel-media
 ```
+
+Require `whoami` to show that exact account. The list command must succeed
+before the create command. Cloudflare error
+`10042` means R2 is not enabled for the owning account; enable it in the
+Cloudflare dashboard and repeat the read-only check. Do not bypass the failure
+or substitute a staging bucket.
 
 The generated production configuration binds that bucket as `TRAVEL_MEDIA`,
 Cloudflare Images as `IMAGES`, and the Travel media rate limiter as
 `TRAVEL_MEDIA_RATE_LIMITER` with the reviewed production namespace
-`88001005`. Treat the bucket and namespace as durable production coordinates.
+`88001006`. Treat the bucket and namespace as durable production coordinates.
 They must never equal their staging counterparts, and PR preview receives none
 of these bindings. Cloudflare Images must be enabled for the owning account
 before accepting an upload; the Worker fails closed when either media binding
@@ -114,33 +123,6 @@ a second, no-migration activation release with `campaign-v1` and live AI. This
 ordering prevents a release plan from claiming approvals before their protected
 table exists.
 
-### One-time apex cutover
-
-Before the first apex release, configure the existing Cloudflare Access
-application with both `anish-shah-is.online/studio*` and
-`anish-shah-is.online/api/studio/*`, preserving its audience and exact-email
-Allow policy. Public pages and `/api/connectors/**` must remain outside Access.
-
-Attach `anish-shah-is.online` as the existing Worker's Custom Domain before
-zero-traffic staging. The generated release configuration declares only that
-apex route; it does not declare `www`. Configure a proxied `www` placeholder
-and a permanent Cloudflare `www`-to-apex redirect separately.
-
-Register these production OAuth callbacks before checking the staged release:
-
-```text
-https://anish-shah-is.online/api/connectors/myanimelist/oauth/callback
-https://anish-shah-is.online/api/connectors/spotify/oauth/callback
-https://anish-shah-is.online/api/connectors/discogs/oauth/callback
-```
-
-Cancel or let any pending authorization transaction expire before replacing a
-provider callback. Existing accepted tokens remain authoritative unless Studio
-explicitly requests reauthorization. After the apex release passes logged-out,
-owner, connector, metadata, and security-header checks, disable the legacy
-`workers.dev` hostname and remove its old Access destinations. Do not add an
-application redirect for it.
-
 ## 1. Validate the exact commit and bytes
 
 Merge through a reviewed PR, then manually dispatch Validate, Gitleaks, CodeQL,
@@ -150,8 +132,13 @@ and successful conclusions must be valid. The temporary owner-runner option in
 identities and gates intact when hosted Actions capacity is unavailable. On the
 release machine:
 
+For a release candidate, validate the pushed `release/<semver>` branch and keep
+the `release/* → main` pull request draft. A production release validates the
+exact merged `main` SHA. Tags are immutable: fixes after `v2.0.0-rc.1` produce
+`v2.0.0-rc.2`; never move an RC tag.
+
 ```bash
-git switch main
+git switch release/2.0.0 # use main only for an authorized final release
 git pull --ff-only
 git status --short
 export RELEASE_VALIDATED_SHA="$(git rev-parse HEAD)"
@@ -170,7 +157,7 @@ export CLOUDFLARE_D1_DATABASE_ID='<production D1 UUID>'
 export CLOUDFLARE_D1_DATABASE_NAME='anish-shah-work-in-public'
 export CLOUDFLARE_PUBLICATION_CACHE_ID='<production KV namespace ID>'
 export PUBLIC_SITE_URL='https://anish-shah-is.online'
-export PLAY_EXPERIENCE_MODE='my-room-2001'
+export RELEASE_VERSION="$(node -p "require('./package.json').version")"
 export OWNER_EMAILS='<exact owner email>'
 export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
 export CF_ACCESS_AUD='<Access application audience>'
@@ -180,6 +167,14 @@ export TRAVEL_ATLAS_MODE='disabled'
 npm run validate:release
 ```
 
+`RELEASE_VERSION` must be exact SemVer and must exactly equal the checked-in
+`package.json` version. Release candidates therefore use the matching package
+version such as `2.0.0-rc.1`; a missing, prefixed (`v2.0.0`), or mismatched
+value fails configuration generation before any hosted command can run. Keep
+the draft release branch on its RC version. Bump both package files to `2.0.0`
+only in the separately authorized final-production change after the release PR
+is approved.
+
 `validate:release` runs prebuild validation, creates the deployable build once,
 prepares the reviewed non-secret Worker configuration, writes an immutable
 release-build checkpoint, and reuses those exact bytes for candidate scans,
@@ -188,10 +183,10 @@ checkpoint fails if any file is rebuilt or changed. Install the pinned
 Playwright Chromium build before running it; do not bypass the browser gate
 while claiming accessibility or performance results.
 
-My Room, 2001 is the current production mode. The hosted configuration must
-record it explicitly; a missing mode cannot fall back to Classic. The release
-plan also computes `COPY_VERSION` from the copy deck and parser contract. It is
-distinct from canonical-data `CONTENT_VERSION`.
+My Room, 2001 and its seven semantic object routes are the only Play runtime.
+There is no hosted Classic flag or fallback. The release plan records
+`RELEASE_VERSION` and also computes `COPY_VERSION` from the copy deck and parser
+contract. `COPY_VERSION` is distinct from canonical-data `CONTENT_VERSION`.
 
 For the later activation release, use
 `SIMULATION_EXPERIENCE_MODE=campaign-v1` and `SIMULATION_AI_MODE=live` before
@@ -305,7 +300,7 @@ exact `HEAD`, and concluded successfully. Browser Quality must be a
 `workflow_dispatch` run. URLs alone are not trusted. The plan records:
 
 - the validated commit SHA and all four GitHub Actions identities and URLs;
-- explicit `PLAY_EXPERIENCE_MODE`, `CONTENT_VERSION`, and `COPY_VERSION`;
+- explicit `RELEASE_VERSION`, `CONTENT_VERSION`, and `COPY_VERSION`;
 - the public content version and exact sanitized bundle SHA-256;
 - the deployable artifact-set hash, file count, byte count, and manifest hash;
 - the prior Worker version;
@@ -493,8 +488,8 @@ production:
    `anish-shah-is.online/api/studio/*` require Access, the owner succeeds, and
    a non-owner remains denied.
 
-When the recorded mode is `my-room-2001`, the attestation also requires six
-direct-route checks:
+My Room is the only Play runtime, so the attestation always requires its six
+connector-backed direct-route checks:
 
 15. `play_watch`: `/play/watch` renders Watch and reads only MyAnimeList.
 16. `play_read`: `/play/read` renders Read and reads only Hardcover.
@@ -502,6 +497,11 @@ direct-route checks:
 18. `play_collect`: `/play/collect` renders Collect and the eligible Discogs public state.
 19. `play_play`: `/play/play` renders Play and reads only Steam.
 20. `play_move`: `/play/move` renders Move and keeps the Strava frame consent-gated.
+
+When Travel is enabled, the attestation additionally requires:
+
+21. `play_travel`: `/play/travel` renders the semantic atlas, loads no
+    connector, and serves only media authorized by the active Travel snapshot.
 
 Also verify that `/play` itself performs no connector read before object
 selection, the semantic directory works without WebGL, and no inactive provider
@@ -518,15 +518,15 @@ After all checks required by the recorded Play and simulation modes pass:
 ```bash
 export RELEASE_WORKER_VERSION='<deployed version id>'
 export RELEASE_SMOKE_TESTED_AT='2026-08-03T18:00:00.000Z'
-export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health,simulation_experience,canonical_apex,www_redirect,workers_dev_disabled,preview_urls_disabled,request_id_header,access_destinations,play_watch,play_read,play_listen,play_collect,play_play,play_move'
+export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health,simulation_experience,canonical_apex,www_redirect,workers_dev_disabled,preview_urls_disabled,request_id_header,access_destinations,play_watch,play_read,play_listen,play_collect,play_play,play_move,play_travel'
 npm run release:attest
 ```
 
 `release:attest` rechecks the clean commit and `RELEASE_VALIDATED_SHA`, verifies
 that the ignored release plan still matches the content attestation and Worker
 configuration, verifies the guarded non-versioned-trigger receipt, and requires
-exactly the base and direct-route smoke identifiers selected by the recorded
-Play and simulation modes. It then
+exactly the base, Simulation, connector-route, and enabled Travel smoke
+identifiers selected by the release plan. It then
 writes a new immutable `releases/<date>-<sha>.json` containing the prior and
 current Worker versions, content and copy versions, D1 recovery coordinates,
 four validation URLs, trigger reconciliation, domain-cutover evidence, and

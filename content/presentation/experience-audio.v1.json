@@ -79,7 +79,7 @@
       ]
     },
     "read-select": {
-      "description": "A book is selected from the Borrowed Shelf.",
+      "description": "A book is selected from the Bedside Shelf.",
       "events": [
         { "voice": "chip", "note": "E5", "offsetSeconds": 0, "durationSeconds": 0.09, "velocity": 0.16 }
       ]

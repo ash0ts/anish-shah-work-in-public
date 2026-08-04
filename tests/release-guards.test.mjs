@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -17,8 +17,9 @@ import {
   publicationCheckpointForPlan,
   REQUIRED_VALIDATION_RUNS,
   requireExactUploadedVersion,
-  requiredSmokeTestsForPlayMode,
+  requiredPlaySmokeTests,
   ROOM_PLAY_SMOKE_TESTS,
+  TRAVEL_PLAY_SMOKE_TEST,
   runGuardedMigration,
   simulationReleaseRecord,
   assertSimulationReleaseRecord,
@@ -28,6 +29,12 @@ import {
   assertPublicReleaseConfig,
   expectedPublicReleaseConfig,
 } from "../scripts/lib/release-config-contract.mjs";
+import {
+  assertReleaseBranch,
+  exactReleaseVersion,
+  matchingReleaseVersion,
+  releaseBranchForVersion,
+} from "../scripts/lib/release-version.mjs";
 import {
   assertTriggerDeploymentReceipt,
   createTriggerDeploymentReceipt,
@@ -41,6 +48,9 @@ import {
 function validReleaseConfigFixture() {
   const head = "a".repeat(40);
   const contentVersion = "b".repeat(16);
+  const packageVersion = JSON.parse(
+    readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+  ).version;
   const productionD1Id = [
     "b9dbe711", "1cb2", "4d9d", "b8a9", "e8c9817a8284",
   ].join("-");
@@ -57,14 +67,15 @@ function validReleaseConfigFixture() {
     CLOUDFLARE_D1_DATABASE_ID: productionD1Id,
     CLOUDFLARE_D1_DATABASE_NAME: "anish-shah-work-in-public",
     CLOUDFLARE_PUBLICATION_CACHE_ID: productionKvId,
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
     SIMULATION_EXPERIENCE_MODE: "disabled",
     SIMULATION_AI_MODE: "authored-only",
     TRAVEL_ATLAS_MODE: "disabled",
+    RELEASE_VERSION: packageVersion,
   };
   const expected = expectedPublicReleaseConfig(environment, {
     head,
     contentVersion,
+    packageVersion,
   });
   return {
     environment,
@@ -121,10 +132,10 @@ function validReleaseConfigFixture() {
         SITE_URL: expected.siteUrl,
         STEAM_DATA_STORAGE_COUNTRIES: "United States",
         RELEASE_SHA: head,
+        RELEASE_VERSION: packageVersion,
         CONTENT_VERSION: contentVersion,
         PUBLIC_CONTENT_MODE: "d1_kv_required",
         DEPLOYMENT_TIER: "production",
-        PLAY_EXPERIENCE_MODE: expected.playExperienceMode,
         SIMULATION_EXPERIENCE_MODE: expected.simulationExperienceMode,
         SIMULATION_AI_MODE: expected.simulationAiMode,
         SIMULATION_PROVIDER: "anthropic",
@@ -170,6 +181,43 @@ test("production release resources must match the pinned deployment contract", (
   );
 });
 
+test("release versions are exact SemVer and must match package.json", () => {
+  assert.equal(exactReleaseVersion("2.0.0-rc.1"), "2.0.0-rc.1");
+  assert.equal(exactReleaseVersion("2.0.0+build.7"), "2.0.0+build.7");
+  for (const invalid of ["v2.0.0", "2.0", "2.0.0-01", " 2.0.0", "2.0.0 "]) {
+    assert.throws(() => exactReleaseVersion(invalid), /exact SemVer/);
+  }
+  assert.throws(
+    () => matchingReleaseVersion("2.0.0-rc.2", "2.0.0-rc.1"),
+    /exactly match package\.json/,
+  );
+  const { environment, expected } = validReleaseConfigFixture();
+  assert.throws(
+    () => expectedPublicReleaseConfig(
+      { ...environment, RELEASE_VERSION: "2.0.0-rc.2" },
+      {
+        head: expected.head,
+        contentVersion: expected.contentVersion,
+        packageVersion: expected.releaseVersion,
+      },
+    ),
+    /exactly match package\.json/,
+  );
+});
+
+test("staging release branches match the stable SemVer line", () => {
+  assert.equal(releaseBranchForVersion("2.0.0-rc.1"), "release/2.0.0");
+  assert.equal(releaseBranchForVersion("2.0.0+build.7"), "release/2.0.0");
+  assert.equal(
+    assertReleaseBranch("release/2.0.0", "2.0.0-rc.1"),
+    "release/2.0.0",
+  );
+  assert.throws(
+    () => assertReleaseBranch("codex/feature", "2.0.0-rc.1"),
+    /require branch release\/2\.0\.0/,
+  );
+});
+
 test("production release configuration rejects unexpected Worker bindings", () => {
   const { config, expected } = validReleaseConfigFixture();
   assert.throws(
@@ -201,23 +249,18 @@ test("release parsers return exact migration and Worker version identifiers", ()
 test("release preflight rejects a configuration that weakens production boundaries", () => {
   const { config, environment, expected } = validReleaseConfigFixture();
   assert.doesNotThrow(() => assertPublicReleaseConfig(config, expected));
-  assert.equal(expected.playExperienceMode, "my-room-2001");
   assert.equal(expected.simulationExperienceMode, "disabled");
   assert.equal(expected.simulationAiMode, "authored-only");
   assert.equal(expected.travelAtlasMode, "disabled");
-  assert.throws(
-    () =>
-      expectedPublicReleaseConfig(
-        { ...environment, PLAY_EXPERIENCE_MODE: "experimental" },
-        { head: expected.head, contentVersion: expected.contentVersion },
-      ),
-    /must be explicitly set to classic or my-room-2001/,
+  assert.equal(
+    expected.releaseVersion,
+    JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version,
   );
   assert.throws(
     () =>
       expectedPublicReleaseConfig(
         { ...environment, SIMULATION_EXPERIENCE_MODE: "experimental" },
-        { head: expected.head, contentVersion: expected.contentVersion },
+        { head: expected.head, contentVersion: expected.contentVersion, packageVersion: expected.releaseVersion },
       ),
     /disabled or campaign-v1/,
   );
@@ -229,7 +272,7 @@ test("release preflight rejects a configuration that weakens production boundari
           SIMULATION_EXPERIENCE_MODE: "campaign-v1",
           SIMULATION_AI_MODE: "authored-only",
         },
-        { head: expected.head, contentVersion: expected.contentVersion },
+        { head: expected.head, contentVersion: expected.contentVersion, packageVersion: expected.releaseVersion },
       ),
     /enabled production simulation must use live AI/,
   );
@@ -237,21 +280,9 @@ test("release preflight rejects a configuration that weakens production boundari
     () =>
       expectedPublicReleaseConfig(
         { ...environment, TRAVEL_ATLAS_MODE: "experimental" },
-        { head: expected.head, contentVersion: expected.contentVersion },
+        { head: expected.head, contentVersion: expected.contentVersion, packageVersion: expected.releaseVersion },
       ),
     /disabled or atlas-v1/,
-  );
-  assert.throws(
-    () =>
-      expectedPublicReleaseConfig(
-        {
-          ...environment,
-          PLAY_EXPERIENCE_MODE: "classic",
-          TRAVEL_ATLAS_MODE: "atlas-v1",
-        },
-        { head: expected.head, contentVersion: expected.contentVersion },
-      ),
-    /atlas-v1 requires PLAY_EXPERIENCE_MODE=my-room-2001/,
   );
   assert.throws(
     () =>
@@ -300,33 +331,6 @@ test("release preflight rejects a configuration that weakens production boundari
         expected,
       ),
     /exact public-release boundary/,
-  );
-});
-
-test("production Play mode must be explicit and supported for every hosted release", () => {
-  const { environment, expected } = validReleaseConfigFixture();
-  const missingMode = { ...environment };
-  delete missingMode.PLAY_EXPERIENCE_MODE;
-  assert.throws(
-    () => expectedPublicReleaseConfig(missingMode, {
-      head: expected.head,
-      contentVersion: expected.contentVersion,
-    }),
-    /PLAY_EXPERIENCE_MODE is required/,
-  );
-  assert.equal(
-    expectedPublicReleaseConfig(
-      { ...environment, PLAY_EXPERIENCE_MODE: "classic" },
-      { head: expected.head, contentVersion: expected.contentVersion },
-    ).playExperienceMode,
-    "classic",
-  );
-  assert.throws(
-    () => expectedPublicReleaseConfig(
-      { ...environment, PLAY_EXPERIENCE_MODE: "experimental" },
-      { head: expected.head, contentVersion: expected.contentVersion },
-    ),
-    /must be explicitly set to classic or my-room-2001/,
   );
 });
 
@@ -701,17 +705,17 @@ test("workflow evidence resolves to its fixed active workflow identity", () => {
   }
 });
 
-test("My Room releases require direct-route smoke evidence", () => {
+test("every release requires registry-derived room smoke evidence", () => {
   const base = ["public_routes", "security_headers"];
-  assert.deepEqual(requiredSmokeTestsForPlayMode(base, "classic"), base);
   assert.deepEqual(
-    requiredSmokeTestsForPlayMode(base, "my-room-2001"),
+    requiredPlaySmokeTests(base),
     [...base, ...ROOM_PLAY_SMOKE_TESTS],
   );
-  assert.throws(
-    () => requiredSmokeTestsForPlayMode(base, "unknown"),
-    /unsupported Play experience mode/,
+  assert.deepEqual(
+    requiredPlaySmokeTests(base, { travelEnabled: true }),
+    [...base, ...ROOM_PLAY_SMOKE_TESTS, TRAVEL_PLAY_SMOKE_TEST],
   );
+  assert.throws(() => requiredPlaySmokeTests(base, { travelEnabled: "yes" }), /switch/);
 });
 
 test("release evidence derives and binds the GitHub upstream repository", () => {
@@ -783,6 +787,7 @@ test("publication compatibility and zero-traffic bootstrap are explicit", () => 
 test("remote release marker binds staged SHA to the current publication", () => {
   const head = "a".repeat(40);
   const contentVersion = "b".repeat(16);
+  const releaseVersion = "2.0.0-rc.1";
   const contentHash = "c".repeat(64);
   const checkedAt = "2026-08-03T12:00:00.000Z";
   const marker = parseRemoteReleaseMarker(
@@ -793,6 +798,7 @@ test("remote release marker binds staged SHA to the current publication", () => 
             status: "ready",
             detailsJson: JSON.stringify({
               releaseSha: head,
+              releaseVersion,
               contentVersion,
               contentHash,
               verifiedAt: checkedAt,
@@ -808,6 +814,7 @@ test("remote release marker binds staged SHA to the current publication", () => 
   assert.doesNotThrow(() =>
     assertReleaseMarker(marker, {
       head,
+      releaseVersion,
       contentVersion,
       preparedAt: "2026-08-03T11:59:00.000Z",
     }),
@@ -818,6 +825,7 @@ test("remote release marker binds staged SHA to the current publication", () => 
         { ...marker, currentContentHash: "d".repeat(64) },
         {
           head,
+          releaseVersion,
           contentVersion,
           preparedAt: "2026-08-03T11:59:00.000Z",
         },
@@ -828,6 +836,7 @@ test("remote release marker binds staged SHA to the current publication", () => 
     () =>
       assertReleaseMarker(marker, {
         head,
+        releaseVersion,
         contentVersion,
         preparedAt: "2026-08-03T12:01:00.000Z",
       }),

@@ -12,6 +12,7 @@ content/copy/
   pages/home.md
   pages/work.md
   pages/play.md
+  pages/simulation.md
   pages/sources.md
   work-groups/<readable-slug>.md
 ```
@@ -57,6 +58,7 @@ accessibility review:
 - Home framing and CTA labels;
 - Work and Play introductions;
 - room overview and object flavor text;
+- Travel atlas framing and Simulation invitation, instructions, and nonfactual encounter flavor through declared fields;
 - search placeholders and non-behavioral labels;
 - 404 text;
 - page titles and SEO/social descriptions; and
@@ -91,6 +93,13 @@ The deck cannot change:
   routes, button behavior, or programmatic accessible names; or
 - generated bundles, schemas, attestations, migrations, credentials, workflows,
   deployment code, or Studio.
+
+Travel trip titles, dates, place labels, captions, tags, geography precision,
+photo-safety decisions, and media policy are owner/fact-controlled in Travel
+Desk. Simulation disclosure, factual cards, metrics, model/provider policy,
+system prompts, safety behavior, budgets, session rules, fallback behavior, and
+provider approvals are likewise protected. Copywriters may propose changes to
+those surfaces, but they cannot implement them through an editorial field.
 
 Describe one of these changes in **Implementation or visual requests** in the
 copy PR template. The owner can add an engineering commit, which moves the PR

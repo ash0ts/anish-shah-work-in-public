@@ -18,6 +18,7 @@ import {
   verifyReleaseBuildCheckpoint,
 } from "./lib/release-build-checkpoint.mjs";
 import { buildCopyDeck } from "./lib/copy-deck.mjs";
+import { readPackageReleaseVersion } from "./lib/release-version.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -243,12 +244,9 @@ const [
 const contentAttestation = JSON.parse(contentAttestationBytes.toString("utf8"));
 const releaseConfig = JSON.parse(releaseConfigBytes.toString("utf8"));
 const simulationManifest = JSON.parse(simulationManifestBytes.toString("utf8"));
-const playExperienceMode = releaseConfig.vars?.PLAY_EXPERIENCE_MODE;
-if (
-  playExperienceMode !== "classic" &&
-  playExperienceMode !== "my-room-2001"
-) {
-  throw new Error("The prepared hosted Worker config has no explicit supported Play mode.");
+const travelAtlasMode = releaseConfig.vars?.TRAVEL_ATLAS_MODE;
+if (travelAtlasMode !== "disabled" && travelAtlasMode !== "atlas-v1") {
+  throw new Error("The prepared hosted Worker config has no supported Travel mode.");
 }
 const publicContent = contentAttestation.artifacts?.find(
   (artifact) => artifact.path === "content/public/anish-content.public.v1.json",
@@ -274,6 +272,10 @@ const publicationCheckpoint = publicationCheckpointForPlan({
   previousVersion,
 });
 const { copyVersion } = await buildCopyDeck(root);
+const releaseVersion = await readPackageReleaseVersion(root);
+if (releaseConfig.vars?.RELEASE_VERSION !== releaseVersion) {
+  throw new Error("The prepared Worker release version does not match package.json.");
+}
 const simulation = simulationReleaseRecord({
   campaignVersion: simulationManifest.campaignVersion,
   experienceMode: releaseConfig.vars?.SIMULATION_EXPERIENCE_MODE,
@@ -285,12 +287,13 @@ const simulation = simulationReleaseRecord({
 });
 
 const record = {
-  schemaVersion: "1.2",
+  schemaVersion: "1.3",
   preparedAt: isoDate(new Date().toISOString(), "preparedAt"),
   commitSha: head,
   repository,
+  releaseVersion,
   contentVersion: contentAttestation.contentVersion,
-  playExperienceMode,
+  travelAtlasMode,
   copyVersion,
   publicContentSha256: publicContent.sha256,
   deployableArtifacts: {

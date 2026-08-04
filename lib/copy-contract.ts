@@ -3,6 +3,10 @@ import type {
   CopyPageId,
 } from "@/types/copy";
 import { copyVoicePolicyForField } from "./copy-voice-contract.ts";
+import {
+  SIMULATION_ACTION_COPY_IDS,
+  SIMULATION_CURIOSITY_COPY_IDS,
+} from "./simulation/campaign-copy-contract.ts";
 
 function field(
   surface: string,
@@ -109,6 +113,14 @@ export const COPY_PAGE_DEFINITIONS = {
     field("play", "collection-unavailable", "editorial", 120),
     field("play", "return-overview", "editorial", 48),
     field("play", "status-stale", "editorial", 48),
+    field("play", "collection-search-placeholder", "editorial", 100),
+    field("play", "collection-no-results-title", "editorial", 100),
+    field("play", "collection-no-results-body", "editorial", 180),
+    field("play", "collect-search-placeholder", "editorial", 100),
+    field("play", "collect-no-results-title", "editorial", 100),
+    field("play", "collect-no-results-body", "editorial", 180),
+    field("play", "travel-search-placeholder", "editorial", 100),
+    field("play", "travel-no-results", "editorial", 120),
     field("play", "profile-myanimelist", "editorial", 48),
     field("play", "profile-hardcover", "editorial", 48),
     field("play", "profile-spotify", "editorial", 48),
@@ -182,6 +194,13 @@ export const COPY_PAGE_DEFINITIONS = {
     field("simulation", "dossier-summary", "editorial", 320, {
       allowParagraphs: true,
     }),
+    ...SIMULATION_ACTION_COPY_IDS.flatMap((action) => [
+      field("simulation", `action-${action}-label`, "editorial", 60),
+      field("simulation", `action-${action}-hint`, "editorial", 180),
+    ]),
+    ...SIMULATION_CURIOSITY_COPY_IDS.map((curiosity) =>
+      field("simulation", `curiosity-${curiosity}`, "editorial", 180),
+    ),
   ],
 } as const satisfies Record<CopyPageId, readonly CopyFieldDefinition[]>;
 

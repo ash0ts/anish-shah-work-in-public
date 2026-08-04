@@ -9,6 +9,7 @@ import {
   COPY_PAGE_DEFINITIONS,
   WORK_GROUP_COPY_DEFINITIONS,
 } from "../../lib/copy-contract.ts";
+import { effectiveCopyRisk } from "../../lib/copy-voice-contract.ts";
 
 export const COPY_PAGE_FILES = {
   site: "content/copy/pages/site.md",
@@ -43,6 +44,13 @@ const PERCENT_METRIC_WORDING = new RegExp(
   `(?:${PERCENT_WORDING.source}(?:\\s+[\\p{L}-]+){0,3}\\s+${METRIC_SUBJECT.source}|${METRIC_SUBJECT.source}(?:\\s+[\\p{L}-]+){0,3}\\s+${PERCENT_WORDING.source})`,
   "iu",
 );
+const PROTECTED_REVENUE_LANGUAGE = /\b(?:ARR|annual\s+recurring\s+revenue|revenue)\b/iu;
+const PROTECTED_EDITORIAL_PIPELINE_LANGUAGE = /\b(?:bookings?|commercial\s+pipeline|event\s+pipeline|pipeline)\b/iu;
+const PROTECTED_PROVIDER_POLICY_LANGUAGE = /\b(?:OAuth|access\s+tokens?|refresh\s+tokens?|API\s+keys?|credentials?|retention|deletion|consent|provider\s+(?:policy|terms?|contract)|rate[- ]limits?|synchroni[sz](?:e|ed|ation)|disconnect(?:ed|ion)?|reauthori[sz](?:e|ation)|public\s+payload|raw\s+payload|encrypt(?:ed|ion))\b/iu;
+const PROTECTED_DATA_BEHAVIOR = /(?:\b(?:stores?|retains?|logs?|deletes?|sends?|transmits?|shares?|processes?)\b(?:\s+[\p{L}-]+){0,6}\s+\b(?:data|tokens?|credentials?|prompts?|responses?|answers?|messages?|visitor\s+text)\b|\b(?:data|tokens?|credentials?|prompts?|responses?|answers?|messages?|visitor\s+text)\b(?:\s+[\p{L}-]+){0,6}\s+\b(?:stored|retained|logged|deleted|sent|transmitted|shared|processed)\b)/iu;
+const PROTECTED_TRAVEL_PRECISION = /\b(?:exact\s+(?:GPS|location|coordinates?)|live\s+location|real[- ]time\s+location|precise\s+coordinates?|latitude|longitude|current\s+whereabouts)\b/iu;
+const PROTECTED_SIMULATION_IDENTITY = /\b(?:authoritative|official|faithful|exact|real)\s+(?:digital\s+)?(?:representative|copy|version|twin)\b|\b4N1SH\s+is\s+Anish\b/iu;
+const PROTECTED_SIMULATION_SYSTEM = /\b(?:system\s+prompt|provider\s+approval|daily\s+(?:model\s+)?budget|session\s+(?:expiry|retention)|Anthropic|Cloudflare\s+AI\s+Gateway)\b/iu;
 
 function failure(file, message) {
   throw new Error(`${file}: ${message}`);
@@ -150,6 +158,22 @@ export function validateCopyValue({ file, definition, value }) {
     failure(
       file,
       `${definition.key} contains quantitative metric wording; propose metric changes for owner review instead`,
+    );
+  }
+  if (
+    PROTECTED_REVENUE_LANGUAGE.test(value) ||
+    (definition.risk === "editorial" &&
+      PROTECTED_EDITORIAL_PIPELINE_LANGUAGE.test(value)) ||
+    PROTECTED_PROVIDER_POLICY_LANGUAGE.test(value) ||
+    PROTECTED_DATA_BEHAVIOR.test(value) ||
+    PROTECTED_TRAVEL_PRECISION.test(value) ||
+    (definition.surface === "simulation" &&
+      (PROTECTED_SIMULATION_IDENTITY.test(value) ||
+        PROTECTED_SIMULATION_SYSTEM.test(value)))
+  ) {
+    failure(
+      file,
+      `${definition.key} contains protected claim, provider, privacy, location, or model-policy wording; submit it as an owner-reviewed implementation request instead`,
     );
   }
   if (definition.key === "seo-description" && value.length < 80) {
@@ -275,11 +299,46 @@ export async function buildCopyDeck(root) {
 export async function copyRiskManifest(root) {
   const deck = await readCopyDeck(root);
   const fields = [];
+  const playRouteForKey = (key) => {
+    const objectRoutes = {
+      watch: "/play/watch",
+      read: "/play/read",
+      listen: "/play/listen",
+      collect: "/play/collect",
+      play: "/play/play",
+      move: "/play/move",
+      travel: "/play/travel",
+    };
+    for (const [objectId, route] of Object.entries(objectRoutes)) {
+      if (key.startsWith(`${objectId}-`)) return route;
+    }
+    const profileRoutes = {
+      "profile-myanimelist": "/play/watch",
+      "profile-hardcover": "/play/read",
+      "profile-spotify": "/play/listen",
+      "profile-discogs": "/play/collect",
+      "profile-steam": "/play/play",
+      "profile-strava": "/play/move",
+    };
+    if (profileRoutes[key]) return profileRoutes[key];
+    return new Set([
+      "view-overview",
+      "view-browse-all",
+      "loading-collection",
+      "collection-unavailable",
+      "return-overview",
+      "status-stale",
+    ]).has(key)
+      ? "all-play-routes"
+      : "/play";
+  };
   for (const [pageId, values] of Object.entries(deck.pages)) {
     const definitions = definitionsByKey(COPY_PAGE_DEFINITIONS[pageId]);
     for (const key of Object.keys(values)) {
       const route =
-        pageId === "home"
+        pageId === "play"
+          ? playRouteForKey(key)
+          : pageId === "home"
           ? "/"
           : pageId !== "site"
             ? `/${pageId}`
@@ -290,7 +349,12 @@ export async function copyRiskManifest(root) {
                   key === "skip-link"
                 ? "all-public-routes"
                 : "/";
-      fields.push({ key: `${pageId}.${key}`, risk: definitions.get(key).risk, route });
+      const definition = definitions.get(key);
+      fields.push({
+        key: `${pageId}.${key}`,
+        risk: effectiveCopyRisk(definition.risk, values[key]),
+        route,
+      });
     }
   }
   for (const [groupId, values] of Object.entries(deck.workGroups)) {
@@ -298,7 +362,12 @@ export async function copyRiskManifest(root) {
     const definitions = definitionsByKey(WORK_GROUP_COPY_DEFINITIONS);
     for (const key of Object.keys(values)) {
       const sourceKey = key.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`);
-      fields.push({ key: `${groupId}.${sourceKey}`, risk: definitions.get(sourceKey).risk, route: `/work/${group.slug}` });
+      const definition = definitions.get(sourceKey);
+      fields.push({
+        key: `${groupId}.${sourceKey}`,
+        risk: effectiveCopyRisk(definition.risk, values[key]),
+        route: `/work/${group.slug}`,
+      });
     }
   }
   return fields;

@@ -16,7 +16,7 @@ const [plan, releaseBuildCheckpoint, releaseBuildCheckpointBytes] =
   ]);
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 if (
-  plan.schemaVersion !== "1.2" ||
+  plan.schemaVersion !== "1.3" ||
   !plan.simulation ||
   plan.releaseBuildCheckpoint?.sha256 !==
     sha256(releaseBuildCheckpointBytes) ||
@@ -53,6 +53,7 @@ const script = `(async () => {
   };
   const health = await readJson("/api/studio/health");
   if (health.releaseSha !== ${JSON.stringify(plan.commitSha)}) throw new Error("Version override did not reach the validated Worker.");
+  if (health.releaseVersion !== ${JSON.stringify(plan.releaseVersion)}) throw new Error("Version override did not expose the planned release version.");
   const simulation = health.simulation;
   const campaignEnabled = ${JSON.stringify(plan.simulation.experienceMode === "campaign-v1")};
   const approvalMismatch = campaignEnabled && (simulation?.providerApprovalDigest !== ${JSON.stringify(plan.simulation.approvalStateDigest)} || JSON.stringify(simulation?.approvedProviders) !== ${JSON.stringify(JSON.stringify(plan.simulation.approvedProviders))});
@@ -66,10 +67,10 @@ const script = `(async () => {
     throw new Error("D1/KV publication checkpoint did not reconcile.");
   }
   const confirmed = await readJson("/api/studio/release-checkpoint", {method: "POST"});
-  if (confirmed.checkpoint?.releaseSha !== ${JSON.stringify(plan.commitSha)} || confirmed.checkpoint?.contentVersion !== ${JSON.stringify(plan.contentVersion)} || confirmed.checkpoint?.contentHash !== checkpoint.contentHash) {
+  if (confirmed.checkpoint?.releaseSha !== ${JSON.stringify(plan.commitSha)} || confirmed.checkpoint?.releaseVersion !== ${JSON.stringify(plan.releaseVersion)} || confirmed.checkpoint?.contentVersion !== ${JSON.stringify(plan.contentVersion)} || confirmed.checkpoint?.contentHash !== checkpoint.contentHash) {
     throw new Error("The protected release checkpoint did not bind the staged Worker and active publication.");
   }
-  console.log({publishedRecords: published?.publication?.recordCount ?? null, releaseSha: confirmed.checkpoint.releaseSha, contentVersion: checkpoint.contentVersion, contentHash: checkpoint.contentHash, kvPointerMatches: checkpoint.kvPointerMatches, simulation: {campaignVersion: simulation.campaignVersion, experienceMode: simulation.experienceMode, aiMode: simulation.aiMode, provider: simulation.provider, model: simulation.model, configured: simulation.configured, approvedProviders: simulation.approvedProviders}});
+  console.log({publishedRecords: published?.publication?.recordCount ?? null, releaseSha: confirmed.checkpoint.releaseSha, releaseVersion: health.releaseVersion, contentVersion: checkpoint.contentVersion, contentHash: checkpoint.contentHash, kvPointerMatches: checkpoint.kvPointerMatches, simulation: {campaignVersion: simulation.campaignVersion, experienceMode: simulation.experienceMode, aiMode: simulation.aiMode, provider: simulation.provider, model: simulation.model, configured: simulation.configured, approvedProviders: simulation.approvedProviders}});
 })()`;
 
 console.log(script);

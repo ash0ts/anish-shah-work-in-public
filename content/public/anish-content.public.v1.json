@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.2",
-  "contentVersion": "1f95080f1833343b",
+  "contentVersion": "9ec1fdd9a3ff0a5b",
   "generatedAt": "2026-07-30T00:00:00.000Z",
   "sourceSummary": {
     "footprintRows": 184,
@@ -22173,13 +22173,6 @@
       "title": "Convene",
       "body": "Create technical programs where practitioners can learn, test ideas, and connect work to measurable program outcomes.",
       "placement": "work",
-      "publicationState": "public"
-    },
-    {
-      "id": "narrative:play:personal-streams",
-      "title": "Outside the work",
-      "body": "Bounded, owner-controlled snapshots make anime, books, music, and games explorable. Movement stays inside an official Strava embed loaded only after visitor intent.",
-      "placement": "play",
       "publicationState": "public"
     },
     {

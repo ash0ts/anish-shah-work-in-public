@@ -13,7 +13,7 @@ export const COPY_ONLY_REPORT_SCHEMA_VERSION = "1.0";
 const SHA = /^[a-f0-9]{40}$/u;
 const HASH = /^[a-f0-9]{64}$/u;
 const REPOSITORY = /^[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}$/u;
-const PAGE_PATH = /^content\/copy\/pages\/(?:site|home|work|play|sources)\.md$/u;
+const PAGE_PATH = /^content\/copy\/pages\/(?:site|home|work|play|simulation|sources)\.md$/u;
 const WORK_GROUP_PATH = /^content\/copy\/work-groups\/[a-z0-9]+(?:-[a-z0-9]+)*\.md$/u;
 const MAX_COPY_FILE_BYTES = 64 * 1024;
 const MAX_PACKAGE_BYTES = 2 * 1024 * 1024;
@@ -313,6 +313,7 @@ function validateChange(change) {
     typeof change.route !== "string" ||
     !(
       change.route === "all-public-routes" ||
+      change.route === "all-play-routes" ||
       /^\/(?:[a-z0-9-]+(?:\/[a-z0-9-]+)*)?$/u.test(change.route)
     ) ||
     !Number.isInteger(change.beforeLength) ||

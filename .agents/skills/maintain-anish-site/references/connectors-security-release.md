@@ -45,15 +45,47 @@ Local promotion may transfer only reviewed, explicitly portable provider setup o
 
 ## Release Boundary
 
-Hosted mutations require explicit authorization. The guarded production contract requires exact successful URLs for Validate, Gitleaks, CodeQL, and Browser Quality at the candidate SHA. Record `PLAY_EXPERIENCE_MODE`, `TRAVEL_ATLAS_MODE`, `SIMULATION_EXPERIENCE_MODE`, `SIMULATION_AI_MODE`, `CONTENT_VERSION`, and `COPY_VERSION` in the release plan and attestation.
+Hosted mutations require explicit authorization. The guarded production contract requires exact successful URLs for Validate, Gitleaks, CodeQL, and Browser Quality at the candidate SHA. Record `RELEASE_VERSION`, `TRAVEL_ATLAS_MODE`, `SIMULATION_EXPERIENCE_MODE`, `SIMULATION_AI_MODE`, `CONTENT_VERSION`, and `COPY_VERSION` in the release plan and attestation. My Room is unconditional; no hosted Classic/Play-mode flag remains.
+
+`RELEASE_VERSION` is exact SemVer and must equal `package.json`. Generated
+preview/staging/production configuration, owner health, release checkpoints,
+plans, commands, and attestations all fail closed on a missing or mismatched
+version.
 
 Ordinary release-code changes run `npm run validate`. Only a clean, pushed, approved candidate with required exact-SHA evidence runs `npm run validate:release`, release planning, upload, staging, or deployment.
+
+An explicit request to stage a named release candidate authorizes only the enumerated staging train for that exact SHA: guarded plan, listed additive migrations, immutable upload, staging traffic change, bootstrap, checkpoint, smoke checks, and rollback if acceptance fails. It never authorizes production traffic, production migrations, secret rotation, provider reauthorization, or copying production state. Stop before any mutation whose resource, migration list, evidence URL, or prior-version checkpoint differs from the approved plan.
+
+## Simulation Gateway Incident Response
+
+For suspected prompt/response logging, caching, or data-loss-prevention failure:
+
+1. Diagnose read-only first: verify the configured staging or production Gateway, payload-logging state, cache state, DLP/Guardrails, model alias, budgets, and sanitized application health. Do not retrieve or reproduce prompt bodies.
+2. Contain by disabling `SIMULATION_EXPERIENCE_MODE` or selecting authored-only behavior through an explicitly authorized hosted configuration change. Do not silently switch providers or weaken the fallback.
+3. Preserve only sanitized evidence: request IDs, release SHA, coarse time window, configuration-state booleans, affected call count, and provider response class. Never copy captured prompts, responses, visitor text, Access assertions, or identifiers into issues, logs, or release artifacts.
+4. If a provider or Gateway retained payloads, use its owner console and documented deletion controls after explicit authorization; record only the deletion request/reference and completion state.
+5. Add a behavior-level regression test for the causal code or configuration contract, run Simulation backend/privacy, rendered, bundle, and browser gates, and require fresh exact-SHA release evidence before reenabling live mode.
+
+Investigation authority is not mutation authority. Changing Gateway logging, provider keys, budgets, secrets, or hosted feature state remains a separately auditable owner action.
 
 Before an authorized release:
 
 1. Pin the exact source SHA and reuse one hashed, immutable `dist` through rendered/browser/Lighthouse/bundle tests and planning.
 2. Record the current Worker version and D1 Time Travel bookmark.
-3. Apply only reviewed additive migrations and stage the exact candidate at 0%.
-4. Verify D1/KV publication, both versions, canonical origin, My Room mode, `/play` plus all seven object routes, Travel media authorization, Simulation mode, owner health, Access, and connectors.
-5. Promote only through the guarded command and run the thirteen runbook smoke checks.
-6. Roll back Worker code separately from D1. Restore D1 only when proven causal and explicitly confirmed.
+3. Apply only reviewed additive migrations, reconcile the exact trigger
+   configuration, and stage the candidate at 0% while the prior version remains
+   at 100%.
+4. Require Cloudflare deployment status to report the exact candidate-at-0 and
+   prior-at-100 split. For a fresh staging database, invoke only the guarded
+   staging maintenance bootstrap through the version override so the general
+   retention heartbeat exists before checkpointing.
+5. Exercise the exact candidate through the Worker-version override. Verify
+   D1/KV publication, `RELEASE_VERSION`, `CONTENT_VERSION`, `COPY_VERSION`,
+   canonical origin, My Room, `/play` plus all seven object routes, Travel media
+   authorization/publication/cleanup, Simulation mode and approval digest,
+   owner health, Access, and connectors. Record the guarded checkpoint receipt.
+6. Promote only when a fresh status read matches the checkpointed deployment;
+   then require candidate-only 100% traffic before running the registry-derived
+   smoke set from the canonical runbook. Never retry an uncertain deployment
+   write automatically.
+7. Roll back Worker code separately from D1. Restore D1 only when proven causal and explicitly confirmed.

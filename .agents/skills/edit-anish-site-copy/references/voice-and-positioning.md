@@ -41,7 +41,7 @@ Not every field needs all four parts. A headline may carry the outcome while nea
 - Evidence records: **sources**.
 - “Public forms” appears only where the methodology genuinely needs that term.
 
-Doorway object names in Play are fixed: TV, Bookshelf, Music player, Record crate, Computer, and Treadmill. Put authored themes in screen headings or flavor copy, never in place of the literal doorway name. Category mappings and routes are structural.
+Doorway object names in Play are fixed: TV, Bookshelf, Music player, Record crate, Computer, Treadmill, and Globe. Put authored themes in screen headings or flavor copy, never in place of the literal doorway name. Category mappings and routes are structural.
 
 ## Editing test
 

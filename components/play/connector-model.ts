@@ -176,30 +176,6 @@ export type ConnectorState<T> =
   | { status: "unavailable"; message: string }
   | { status: "ready"; payload: T; fetchedAt: string; stale: boolean };
 
-export type StreamId =
-  | "watch"
-  | "read"
-  | "listen"
-  | "collect"
-  | "play"
-  | "move";
-
-export const streamIds = [
-  "watch",
-  "read",
-  "listen",
-  "collect",
-  "play",
-  "move",
-] as const satisfies readonly StreamId[];
-
-export function streamIdFromValue(value: unknown): StreamId {
-  const candidate = Array.isArray(value) ? value[0] : value;
-  return typeof candidate === "string" &&
-    streamIds.includes(candidate as StreamId)
-    ? (candidate as StreamId)
-    : "watch";
-}
 export type CollectionProvider = "myanimelist" | "hardcover" | "steam";
 export type ConnectorProvider = CollectionProvider | "discogs" | "strava";
 export type CollectionView = "pattern" | "gallery";
@@ -253,26 +229,6 @@ export const providerTitles: Record<CollectionProvider, string> = {
   hardcover: SITE_COPY.play["read-collection-title"],
   steam: SITE_COPY.play["play-collection-title"],
 };
-
-export function syncLabel(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Sync date unavailable";
-  return `Updated ${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date)}`;
-}
-
-export function publishedLabel(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Publish date unavailable";
-  return `Updated ${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date)}`;
-}
 
 export async function loadConnector<T>(
   provider: ConnectorProvider,

@@ -290,13 +290,22 @@ test("canonical editorial slugs belong to WorkGroups, not their nested forms", (
       .length,
     157,
   );
-  assert.equal(records.length, 287);
+  const expectedRecordCount =
+    publicBundle.items.length +
+    publicBundle.metrics.length +
+    publicBundle.narratives.length +
+    publicBundle.workGroups.length;
+  assert.equal(records.length, expectedRecordCount);
   assert.doesNotThrow(() => assertUniquePublicRecordSeedKeys(records));
 });
 
 test("seed metadata invalidates an older projection algorithm", () => {
   const contentVersion = publicBundle.contentVersion;
-  const recordCount = 287;
+  const recordCount =
+    publicBundle.items.length +
+    publicBundle.metrics.length +
+    publicBundle.narratives.length +
+    publicBundle.workGroups.length;
   assert.equal(
     isCurrentPublicRecordSeedMetadata(
       { contentVersion, recordCount },

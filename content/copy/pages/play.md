@@ -45,6 +45,30 @@ Return to overview
 ## status-stale
 Refresh delayed
 
+## collection-search-placeholder
+Search this collection
+
+## collection-no-results-title
+No titles match this view.
+
+## collection-no-results-body
+Change the search or filter to return to the collection.
+
+## collect-search-placeholder
+Search the record shelf
+
+## collect-no-results-title
+No releases match this view.
+
+## collect-no-results-body
+Change the title, artist, format, or decade to widen the shelf.
+
+## travel-search-placeholder
+Search the public atlas
+
+## travel-no-results
+No countries match that search.
+
 ## profile-myanimelist
 Open on MyAnimeList
 

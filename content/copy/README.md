@@ -5,6 +5,12 @@ It cannot change facts, IDs, routes, URLs, metrics, evidence, relationships,
 visibility, ordering, connector policy, privacy language, or application
 behavior.
 
+`pages/play.md` owns only room, object, and Travel presentation framing.
+`pages/simulation.md` owns only the Simulation invitation, instructions,
+nonfactual encounter flavor, and metadata fields declared by the typed
+contract. Travel trip facts/media safety and Simulation facts/model/privacy/
+safety behavior remain protected owner or engineering surfaces.
+
 ## Editing rules
 
 1. Edit only the text below an existing `## field-name` heading.

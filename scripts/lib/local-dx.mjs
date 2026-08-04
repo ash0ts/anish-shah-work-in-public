@@ -523,15 +523,6 @@ export async function createDoctorReport({
           : ".env.local is readable or writable by group/others; run npm run setup:local.",
       ),
     );
-    if (parsed?.values.get("PLAY_EXPERIENCE_MODE") === "classic") {
-      checks.push(
-        check(
-          "local-play-override",
-          "fail",
-          ".env.local overrides the default My Room experience; remove that entry and use the explicit Classic command when needed.",
-        ),
-      );
-    }
   }
 
   const migration = await migrationInventory(root);
@@ -583,18 +574,14 @@ export async function createDoctorReport({
   }
 
   const defaultDev = packageJson.scripts?.dev ?? "";
-  const classicDev = packageJson.scripts?.["dev:classic"] ?? "";
+  const authoritativeRoom = defaultDev.includes("vinext dev");
   checks.push(
     check(
       "play-mode",
-      defaultDev.includes("PLAY_EXPERIENCE_MODE=my-room-2001") &&
-        classicDev.includes("PLAY_EXPERIENCE_MODE=classic")
-        ? "pass"
-        : "fail",
-      defaultDev.includes("PLAY_EXPERIENCE_MODE=my-room-2001") &&
-        classicDev.includes("PLAY_EXPERIENCE_MODE=classic")
-        ? "My Room 2001 is the default; Classic is explicit."
-        : "Local Play commands do not enforce the expected My Room/Classic modes.",
+      authoritativeRoom ? "pass" : "fail",
+      authoritativeRoom
+        ? "My Room is the only local Play experience."
+        : "Local Play commands still expose the retired experience mode.",
     ),
   );
 

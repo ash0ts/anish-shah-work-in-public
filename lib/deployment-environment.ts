@@ -4,7 +4,6 @@ export const STAGING_SITE_ORIGIN = "https://staging.anish-shah-is.online";
 export const PREVIEW_HOST_SUFFIX = ".anish-shah-is.online";
 
 export type HostedDeploymentTier = "preview" | "staging" | "production";
-export type PlayExperienceMode = "classic" | "my-room-2001";
 
 export type DeploymentEnvironmentValues = {
   DEPLOYMENT_TIER?: string;
@@ -12,8 +11,15 @@ export type DeploymentEnvironmentValues = {
   SITE_URL?: string;
   PRODUCTION_SITE_URL?: string;
   PUBLIC_CONTENT_MODE?: string;
-  PLAY_EXPERIENCE_MODE?: string;
+  RELEASE_VERSION?: string;
 };
+
+const SEMVER_PATTERN =
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
+
+export function validReleaseVersion(value: string | undefined): boolean {
+  return typeof value === "string" && SEMVER_PATTERN.test(value);
+}
 
 function exactHttpsOrigin(value: string | undefined): string | null {
   if (!value) return null;
@@ -66,12 +72,7 @@ export function hostedEnvironmentConfigured(
   const tier = hostedDeploymentTier(values.DEPLOYMENT_TIER);
   const expected = expectedHostedOrigin(values);
   if (!tier || !expected) return false;
-  if (
-    values.PLAY_EXPERIENCE_MODE !== "classic" &&
-    values.PLAY_EXPERIENCE_MODE !== "my-room-2001"
-  ) {
-    return false;
-  }
+  if (!validReleaseVersion(values.RELEASE_VERSION)) return false;
   if (exactHttpsOrigin(values.SITE_URL) !== expected) return false;
   if (exactHttpsOrigin(values.PRODUCTION_SITE_URL) !== PUBLIC_SITE_ORIGIN) {
     return false;

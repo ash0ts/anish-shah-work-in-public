@@ -1,5 +1,6 @@
-import styles from "../PersonalStreams.module.css";
-import { syncLabel, type ConnectorState } from "./connector-model";
+import styles from "./StreamPresentation.module.css";
+import type { ConnectorState } from "./connector-model";
+import { updatedDateLabel } from "./updated-date-label";
 import { SITE_COPY } from "@/lib/copy";
 
 export function PanelHeading({
@@ -46,7 +47,7 @@ export function StreamStatus({
   return (
     <div className={styles.status}>
       {stale ? <span>{SITE_COPY.play["status-stale"]}</span> : null}
-      <span>{syncLabel(syncedAt)}</span>
+      <span>{updatedDateLabel(syncedAt)}</span>
       {profileUrl ? (
         <a href={profileUrl} rel="noreferrer" target="_blank">
           {profileLabel}

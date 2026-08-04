@@ -281,7 +281,7 @@ function DiscogsPresentationControls({
       ) : null}
       {config?.publishCollection ? (
         <p className={styles.publicStreamLink}>
-          <a href="/play?stream=collect" rel="noreferrer" target="_blank">
+          <a href="/play/collect" rel="noreferrer" target="_blank">
             View the published Collect stream
           </a>
         </p>

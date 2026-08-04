@@ -52,15 +52,16 @@ test("campaign exposes exactly two optional bounded visitor-text moments", () =>
 });
 
 test("Tactical has a complete textual state and cannot import Phaser", async () => {
-  const [campaign, tactical, action, page] = await Promise.all([
+  const [campaign, bridge, tactical, action, page] = await Promise.all([
     source("components/simulation/SimulationCampaign.tsx"),
+    source("components/simulation/campaign/ActionBridge.tsx"),
     source("components/simulation/TacticalArena.tsx"),
     source("components/simulation/ActionArena.tsx"),
     source("app/simulation/page.tsx"),
   ]);
 
-  assert.match(campaign, /lazy\(\(\) => import\("\.\/ActionArena"\)\)/);
-  assert.doesNotMatch(campaign, /import Phaser from/);
+  assert.doesNotMatch(campaign, /ActionArena|Phaser|phaser/);
+  assert.doesNotMatch(bridge, /import Phaser from/);
   assert.doesNotMatch(tactical, /phaser/i);
   assert.match(tactical, /role="img"/);
   assert.match(tactical, /aria-label=\{`Five by five evidence field/);
@@ -72,29 +73,123 @@ test("Tactical has a complete textual state and cannot import Phaser", async () 
   assert.doesNotMatch(page, /ActionArena|phaser/i);
 });
 
-test("campaign invalidates stale async work and hands focus between scenes", async () => {
-  const [campaign, client] = await Promise.all([
-    source("components/simulation/SimulationCampaign.tsx"),
-    source("components/simulation/simulation-client.ts"),
-  ]);
-  assert.match(campaign, /runEpochRef/);
-  assert.match(campaign, /activeRequestsRef/);
-  assert.match(campaign, /controller\.abort\(\)/);
-  assert.match(campaign, /runEpoch !== runEpochRef\.current/);
-  assert.match(campaign, /pendingTurns/);
-  assert.match(campaign, /data-simulation-stage/);
-  assert.match(campaign, /focus\(\{ preventScroll: true \}\)/);
-  assert.match(campaign, /aria-live="polite" aria-atomic="true"/);
-  assert.match(client, /signal\?: AbortSignal/);
+test("campaign machine preserves progression, scores, async turns, and reset", async () => {
+  const [{ createActor }, { campaignMachine, campaignSceneId, campaignStageKind }] =
+    await Promise.all([
+      import("xstate"),
+      import("../components/simulation/campaign/campaign-state.ts"),
+    ]);
+  const dossier = {
+    ...manifest,
+    contentVersion: "test-content",
+    generatedAt: "2026-08-04T00:00:00.000Z",
+    publicationSource: "published_snapshot",
+    facts: manifest.facts.map((fact) => ({
+      ...fact,
+      title: fact.id,
+      qualifier: fact.qualifier ?? null,
+      href: fact.href ?? null,
+      bucket: "test",
+      roleSummary: "test",
+    })),
+    metrics: [],
+    providerDoorways: [
+      { provider: "hardcover", label: "Read", route: "/play/read" },
+    ],
+  };
+  const actor = createActor(campaignMachine, { input: { dossier } }).start();
+  assert.equal(actor.getSnapshot().value, "boot");
+  actor.send({
+    type: "START",
+    mode: "tactical",
+    difficulty: "expert",
+    curiosity: "research",
+  });
+  assert.equal(actor.getSnapshot().value, "act1Wave");
+  assert.equal(campaignSceneId("act1Wave"), "act-1");
+  assert.equal(campaignStageKind("act1Wave"), "wave");
+  actor.send({
+    type: "WAVE_COMPLETE",
+    progress: {
+      context: 1,
+      signalsFound: 3,
+      elapsedSeconds: 20,
+      recalibrations: 1,
+    },
+  });
+  assert.equal(actor.getSnapshot().value, "act1Debrief");
+  assert.equal(actor.getSnapshot().context.scores.signalFound, 3);
+  assert.equal(actor.getSnapshot().context.recalibrations, 1);
+  actor.send({ type: "TURN_REQUESTED" });
+  assert.equal(actor.getSnapshot().context.pendingTurns, 1);
+  actor.send({
+    type: "TURN_RESOLVED",
+    response: {
+      revision: 1,
+      source: "fixture",
+      opponent: {
+        opponentLine: "A grounded response.",
+        responseMode: "counter",
+        revealEntityIds: ["group:test"],
+        visitorSignals: ["evaluation-rigor"],
+      },
+      factCards: [
+        {
+          id: "fact:test",
+          statement: "A public statement.",
+          qualifier: null,
+          href: "/work/test",
+          evidenceIds: ["evidence:test"],
+        },
+      ],
+      nextActions: [],
+    },
+  });
+  assert.equal(actor.getSnapshot().context.pendingTurns, 0);
+  assert.equal(actor.getSnapshot().context.scores.claimsGrounded, 1);
+  assert.deepEqual(actor.getSnapshot().context.revealedFactIds, ["fact:test"]);
+  actor.send({ type: "ADVANCE", sceneId: "act-1", actionId: "trace-the-system" });
+  assert.equal(actor.getSnapshot().value, "act2Wave");
+  actor.send({ type: "RESET" });
+  assert.equal(actor.getSnapshot().value, "boot");
+  assert.deepEqual(actor.getSnapshot().context.scores, {
+    signalFound: 0,
+    claimsGrounded: 0,
+    curiosityFollowed: 0,
+  });
+  actor.stop();
+});
+
+test("capability selection keeps constrained visitors in Tactical", async () => {
+  const { recommendedSimulationMode } = await import(
+    "../components/simulation/campaign/campaign-capabilities.ts"
+  );
+  const capable = {
+    reducedMotion: false,
+    forcedColors: false,
+    zoomScale: 1,
+    saveData: false,
+    canvasAvailable: true,
+    viewportWidth: 1440,
+  };
+  assert.equal(recommendedSimulationMode(capable), "action");
+  for (const constrained of [
+    { ...capable, reducedMotion: true },
+    { ...capable, forcedColors: true },
+    { ...capable, zoomScale: 1.5 },
+    { ...capable, saveData: true },
+    { ...capable, canvasAvailable: false },
+    { ...capable, viewportWidth: 759 },
+  ]) {
+    assert.equal(recommendedSimulationMode(constrained), "tactical");
+  }
 });
 
 test("no-JavaScript renders the dossier without dead campaign controls", async () => {
-  const [page, campaign, copy] = await Promise.all([
+  const [page, copy] = await Promise.all([
     source("app/simulation/page.tsx"),
-    source("components/simulation/SimulationCampaign.tsx"),
     source("content/copy/pages/simulation.md"),
   ]);
-  assert.match(campaign, /data-simulation-interactive/);
   assert.match(page, /\[data-simulation-interactive\] \{ display: none !important; \}/);
   assert.match(page, /SITE_COPY\.simulation\["noscript-summary"\]/);
   assert.match(copy, /complete inspectable source deck remains available below/u);
@@ -193,24 +288,82 @@ test("sessionStorage projection contains safe progress only", async () => {
 });
 
 test("Conversation Key has the exact deterministic handoff contract", async () => {
-  const campaign = await source("components/simulation/SimulationCampaign.tsx");
-  assert.match(campaign, /<h3>Three observations<\/h3>/);
-  assert.match(campaign, /\.slice\([\s\S]*?0,[\s\S]*?3/);
-  assert.match(campaign, /<h3>Two artifacts<\/h3>/);
-  assert.match(campaign, /\.slice\([\s\S]*?0,[\s\S]*?2/);
-  assert.match(campaign, /<h3>One public doorway<\/h3>/);
-  assert.match(campaign, /<h3>A better question<\/h3>/);
-  assert.match(campaign, /https:\/\/www\.linkedin\.com\/in\/anish-shah/);
+  const { buildConversationKey } = await import(
+    "../components/simulation/campaign/conversation-key.ts"
+  );
+  const facts = [1, 2, 3, 4].map((index) => ({
+    id: `fact:${index}`,
+    subjectIds: [`group:${index}`],
+    title: `Fact ${index}`,
+    allowedStatement: `Statement ${index}`,
+    qualifier: null,
+    publicEvidenceIds: [`evidence:${index}`],
+    href: `/work/fact-${index}`,
+    bucket: "test",
+    roleSummary: "test",
+  }));
+  const key = buildConversationKey({
+    dossier: {
+      schemaVersion: "1.0",
+      campaignVersion: "test",
+      contentVersion: "test",
+      generatedAt: "2026-08-04T00:00:00.000Z",
+      publicationSource: "published_snapshot",
+      persona: manifest.persona,
+      facts,
+      metrics: [],
+      scenes: [],
+      providerDoorways: [
+        { provider: "hardcover", label: "Read", route: "/play/read" },
+      ],
+      fallbackDialogue: [],
+    },
+    mode: "tactical",
+    difficulty: "standard",
+    curiosity: "research",
+    revision: 4,
+    pendingTurns: 0,
+    lastOpponent: null,
+    responseSource: null,
+    revealedFactIds: ["fact:2", "fact:3", "fact:4"],
+    visitorSignals: [],
+    selectedDoorway: "read",
+    scores: { signalFound: 4, claimsGrounded: 3, curiosityFollowed: 2 },
+    recalibrations: 0,
+  });
+  assert.deepEqual(key.observations.map(({ id }) => id), [
+    "fact:2",
+    "fact:3",
+    "fact:4",
+  ]);
+  assert.deepEqual(key.workLinks.map(({ id }) => id), ["fact:2", "fact:3"]);
+  assert.equal(key.doorway?.route, "/play/read");
+  assert.equal(
+    key.question,
+    "Which claims survive contact with inspectable evidence?",
+  );
 });
 
 test("all campaign audio calls use declared simulation cue slots", async () => {
-  const [campaign, audioManifest] = await Promise.all([
-    source("components/simulation/SimulationCampaign.tsx"),
+  const [audio, audioManifest] = await Promise.all([
+    import(
+      "../components/simulation/campaign/campaign-audio.ts"
+    ),
     source("content/presentation/experience-audio.v1.json").then(JSON.parse),
   ]);
   const ids = new Set(Object.keys(audioManifest.cues));
-  const called = [...campaign.matchAll(/playCue\(\s*["']([^"']+)["']/g)].map(
-    ([, id]) => id,
+  const called = [
+    "boot",
+    "act1Wave",
+    "act2Wave",
+    "act3Wave",
+    "bossWave",
+    "ending",
+  ].map(audio.campaignAudioCueForState);
+  called.push(
+    ...["hit", "evidence", "near-miss", "recalibrate"].map(
+      audio.arenaFeedbackAudioCue,
+    ),
   );
   for (const id of called) assert.ok(ids.has(id), `${id} is not declared`);
 });

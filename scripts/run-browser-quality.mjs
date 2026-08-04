@@ -38,16 +38,15 @@ function run(binary, arguments_, environment = {}, { continueOnFailure = false }
   return status;
 }
 
-function runPlaywright({ mode, port, segment = "", arguments_ = [] }) {
+function runPlaywright({ port, segment = "", arguments_ = [] }) {
   const suffix = segment ? `-${segment}` : "";
-  const relativeStateDirectory = `.wrangler/browser-quality-${mode}${suffix}`;
+  const relativeStateDirectory = `.wrangler/browser-quality-room${suffix}`;
   const stateDirectory = path.join(root, relativeStateDirectory);
   rmSync(stateDirectory, { force: true, recursive: true });
   return run(
     process.execPath,
     ["node_modules/@playwright/test/cli.js", "test", ...arguments_],
     {
-      BROWSER_PLAY_MODE: mode,
       BROWSER_QUALITY_PORT: String(port),
       BROWSER_QUALITY_SEGMENT: segment,
       BROWSER_QUALITY_STATE_DIR: relativeStateDirectory,
@@ -60,7 +59,6 @@ function runPlaywright({ mode, port, segment = "", arguments_ = [] }) {
 const scope = process.env.BROWSER_QUALITY_SCOPE?.trim() || "all";
 const allowedScopes = new Set([
   "all",
-  "classic",
   "room-public",
   "room-shard",
   "simulation",
@@ -84,17 +82,10 @@ if (scope !== "room-shard" && configuredShard) {
 }
 
 let failed = false;
-if (
-  (scope === "all" || scope === "classic") &&
-  runPlaywright({ mode: "classic", port: 4173 }) !== 0
-) {
-  failed = true;
-}
 
 if (
   (scope === "all" || scope === "room-public") &&
   runPlaywright({
-    mode: "room",
     port: 4174,
     segment: "public",
     arguments_: ["tests/browser/public-quality.spec.mjs"],
@@ -106,7 +97,6 @@ if (
 if (
   (scope === "all" || scope === "travel") &&
   runPlaywright({
-    mode: "room",
     port: 4181,
     segment: "travel",
     arguments_: ["tests/browser/travel-atlas.spec.mjs"],
@@ -118,7 +108,6 @@ if (
 if (scope === "all" || scope === "simulation") {
   if (
     runPlaywright({
-      mode: "room",
       port: 4180,
       segment: "simulation-core",
       arguments_: [
@@ -132,7 +121,6 @@ if (scope === "all" || scope === "simulation") {
   }
   if (
     runPlaywright({
-      mode: "room",
       port: 4186,
       segment: "simulation-fallbacks",
       arguments_: [
@@ -153,7 +141,6 @@ if (scope === "all" || scope === "room-shard") {
   for (let shard = firstRoomShard; shard <= lastRoomShard; shard += 1) {
     if (
       runPlaywright({
-        mode: "room",
         port: 4174 + shard,
         segment: `quality-shard-${shard}`,
         arguments_: [

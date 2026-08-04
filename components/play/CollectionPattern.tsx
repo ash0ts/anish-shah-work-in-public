@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import styles from "../PersonalStreams.module.css";
+import styles from "./StreamPresentation.module.css";
 import type {
   CollectionPayload,
   CollectionProvider,

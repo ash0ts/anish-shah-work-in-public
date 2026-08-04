@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         run: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 35
     steps:
       - name: Validate owner dispatch
@@ -65,7 +65,7 @@ jobs:
         run: npm run validate:browser
       - name: Upload soak failure evidence
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: browser-soak-${{ matrix.run }}-failure-${{ inputs.commit_sha }}
           path: |
@@ -82,7 +82,7 @@ jobs:
     name: ten-run browser stability
     if: always()
     needs: soak
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest' }}
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '["self-hosted","linux","x64","anish-release"]' || '["ubuntu-latest"]') }}
     steps:
       - name: Require all ten independent runs
         env:

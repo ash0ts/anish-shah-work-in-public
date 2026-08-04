@@ -212,21 +212,33 @@ test("copy documents reject renamed, duplicate, unknown, and missing fields", ()
 });
 
 test("editable Play flavor copy excludes guarded provider-policy literals", async () => {
-  const play = await readFile(path.join(root, "content/copy/pages/play.md"), "utf8");
+  const [play, gallery, discogs, travel] = await Promise.all([
+    readFile(path.join(root, "content/copy/pages/play.md"), "utf8"),
+    readFile(path.join(root, "components/play/CollectionGallery.tsx"), "utf8"),
+    readFile(path.join(root, "components/play/DiscogsStream.tsx"), "utf8"),
+    readFile(path.join(root, "components/play/travel/PostcardPlanet.tsx"), "utf8"),
+  ]);
   assert.doesNotMatch(
     play,
     /Spotify-calculated|returned order|play counts|visitor consent|official public movement feed|OAuth|retention|coverage/iu,
   );
+  assert.match(gallery, /SITE_COPY\.play\["collection-search-placeholder"\]/u);
+  assert.match(discogs, /SITE_COPY\.play\["collect-search-placeholder"\]/u);
+  assert.match(travel, /SITE_COPY\.play\["travel-search-placeholder"\]/u);
 });
 
 test("Simulation presentation copy is deck-owned while model disclosures remain guarded", async () => {
-  const [deck, campaignManifest, simulationPage] = await Promise.all([
+  const [deck, campaignManifest, simulationPage, campaignCopy] = await Promise.all([
     buildCopyDeck(root),
     readFile(
       path.join(root, "content/presentation/simulation.v1.json"),
       "utf8",
     ),
     readFile(path.join(root, "app/simulation/page.tsx"), "utf8"),
+    readFile(
+      path.join(root, "components/simulation/campaign/campaign-copy.ts"),
+      "utf8",
+    ),
   ]);
 
   assert.equal(deck.pages.simulation["ingress-cta"], "Reveal the simulation");
@@ -236,6 +248,10 @@ test("Simulation presentation copy is deck-owned while model disclosures remain 
   );
   assert.match(simulationPage, /SITE_COPY\.simulation\["seo-title"\]/u);
   assert.match(simulationPage, /SITE_COPY\.simulation\["noscript-summary"\]/u);
+  assert.equal(deck.pages.simulation["action-probe-label"], "Probe");
+  assert.match(campaignCopy, /SIMULATION_ACTION_COPY_IDS\.map/u);
+  assert.match(campaignCopy, /SITE_COPY\.simulation\[`action-\$\{action\}-hint`\]/u);
+  assert.doesNotMatch(campaignCopy, /Ask what evidence could prove/u);
 
   const simulationCopy = await readFile(
     path.join(root, "content/copy/pages/simulation.md"),
@@ -305,6 +321,18 @@ test("editable 404 copy is typed, rendered, and reported against the 404 surface
   assert.equal(
     manifest.find((entry) => entry.key === "site.not-found-title")?.route,
     "/404",
+  );
+  assert.equal(
+    manifest.find((entry) => entry.key === "play.travel-screen-title")?.route,
+    "/play/travel",
+  );
+  assert.equal(
+    manifest.find((entry) => entry.key === "play.loading-collection")?.route,
+    "all-play-routes",
+  );
+  assert.equal(
+    manifest.find((entry) => entry.key === "simulation.boot-title")?.route,
+    "/simulation",
   );
 });
 
@@ -528,4 +556,8 @@ test("release and staging guards bind mutations and attestations to COPY_VERSION
   assert.match(attestation, /copyVersion: plan\.copyVersion/u);
   assert.match(staging, /copyVersion,/u);
   assert.match(staging, /plan\.copyVersion !== copyVersion/u);
+  assert.match(plan, /releaseVersion,/u);
+  assert.match(command, /plan\.releaseVersion !== releaseVersion/u);
+  assert.match(attestation, /releaseVersion,/u);
+  assert.match(staging, /plan\.releaseVersion !== releaseVersion/u);
 });

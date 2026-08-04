@@ -1,14 +1,14 @@
 # My Room, 2001 — current architecture
 
-This document describes the shipped implementation. The original
-[interaction RFC](../play-experience-prototypes/my-room-2001-interactive-object-archive.md)
-is historical design context, not an operations or implementation authority.
+This document is the implementation and operations authority for the shipped
+room. Historical prototype RFCs are intentionally not retained in the active
+documentation tree.
 
 ## Route contract
 
 My Room is the authoritative Play experience:
 
-| Route | Object | Provider |
+| Route | Object | Source |
 | --- | --- | --- |
 | `/play` | semantic room overview | none |
 | `/play/watch` | graphite television | MyAnimeList |
@@ -17,23 +17,28 @@ My Room is the authoritative Play experience:
 | `/play/collect` | record crate | Discogs |
 | `/play/play` | beige computer | Steam |
 | `/play/move` | treadmill television | Strava |
+| `/play/travel` | tabletop globe | owner-published Travel atlas |
 
-`/play` performs zero connector reads. Each object route dispatches through a
-closed literal registry and requests only its associated public connector
-projection. Unknown slugs 404. Query variants are noindexed. Provider data,
-artwork, and embeds stay in the DOM and never enter the Canvas.
+`/play` performs zero connector or Travel reads. Each object route dispatches
+through a closed structural contract and a matching literal executable map.
+It requests only its associated public connector projection or sanitized Travel
+publication. Unknown slugs 404. Query variants are noindexed. Provider data,
+artwork, Travel photos, and embeds stay in the DOM and never enter the room
+Canvas.
 
 ## Semantic-first shell
 
 `app/play/layout.tsx` installs the room state provider. `RoomOverview` renders
-the poster, Enter Room control, and six ordinary links server-side. Directly
+the poster, room entry control, and seven ordinary links server-side. Directly
 loading an object route renders its useful collection screen without creating
 the room. Browser Back and the explicit return control remain authoritative;
 focus returns to the corresponding semantic object control.
 
-The six screen loaders, object definitions, provider adapters, and focus targets
-use closed registries with identical keys. Route parameters, D1 values, mesh
-metadata, or provider payloads cannot select executable modules.
+The seven screen loaders, object definitions, content-source adapters, scene objects,
+and focus targets use closed registries with identical keys. Route parameters,
+D1 values, mesh metadata, or provider payloads cannot select executable
+modules. Travel is removed from every public room surface when its feature gate
+is disabled.
 
 ## Optional Three.js runtime
 
@@ -61,6 +66,26 @@ instanced repeated objects. It uses one Canvas, bounded rotation, explicit view
 controls, no physics, no orbit controls, no zoom/pan/inertia, and no autoplay or
 scroll capture. The room has no idle animation requirement.
 
+When the reviewed neutral room composition changes, capture that pose and run
+`npm run room:poster -- <screenshot.png>`. The tool emits content-hashed AVIF
+and WebP fallbacks under `public/assets/play` and enforces the 200 KB budget for
+each format. Update the poster imports and remove superseded hashes in the same
+reviewed change.
+
+## Pocket Room
+
+Eligible coarse-pointer viewports receive a separate portrait composition only
+after `OPEN THE POCKET ROOM`. It reuses the room's first-party primitives but
+uses a normal perspective camera, three authored stops, visible Previous/Next/
+Reset controls, and a semantic safe-area dock. It never downloads the desktop
+fisheye module. Save-Data, reduced motion, forced colors, high zoom, failed
+WebGL, sustained frame misses, or context loss keep the complete poster and
+directory instead.
+
+Pocket taps use same-object pointer down/up with a larger movement threshold;
+swipes, multiple pointers, cancellation, rotation, and lost capture cannot open
+an object. The dock remains the authoritative accessible interface.
+
 ## Input and transitions
 
 Mouse and pen may rotate or select. An eight-pixel threshold separates click
@@ -74,7 +99,7 @@ the asynchronous return while preserving the selected object.
 
 ## Data and privacy invariants
 
-- No connector fetch occurs on the room overview.
+- No connector or Travel fetch occurs on the room overview.
 - No inactive provider, artwork, iframe, or screen chunk is preloaded.
 - Spotify and Strava third-party frames remain consent-gated.
 - Preview fixtures are accepted only in the exact preview tier.

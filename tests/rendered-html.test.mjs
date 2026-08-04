@@ -214,13 +214,14 @@ test("all public routes expose useful server-rendered content", async () => {
       path: "/play",
       required: [
         /The room behind the résumé\./i,
-        />TV</i,
-        />Bookshelf</i,
-        />Music player</i,
-        />Record crate</i,
-        />Computer</i,
-        />Treadmill</i,
-        /<noscript\b/i,
+        />TV · Watch</i,
+        />Bookshelf · Read</i,
+        />Music player · Listen</i,
+        />Record crate · Collect</i,
+        />Computer · Games</i,
+        />Treadmill · Move</i,
+        /data-room-static-stage="true"/i,
+        /aria-labelledby="room-directory-title"/i,
       ],
     },
     {
@@ -245,7 +246,7 @@ test("all public routes expose useful server-rendered content", async () => {
     for (const pattern of route.required) {
       assert.match(html, pattern, `${route.path} is missing ${pattern}`);
     }
-    assert.match(html, /<main id="main"/i);
+    assert.match(html, /<main\b[^>]*\bid="main"[^>]*>/i);
   }
   const workHtml = await renderHtml("/work");
   assert.doesNotMatch(workHtml, /name="organization"/i);

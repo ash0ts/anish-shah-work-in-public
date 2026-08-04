@@ -41,18 +41,25 @@ if (
   throw new Error("The trusted copy-preview report is invalid.");
 }
 
+const playRoutes = [
+  "/play",
+  "/play/watch",
+  "/play/read",
+  "/play/listen",
+  "/play/collect",
+  "/play/play",
+  "/play/move",
+  "/play/travel",
+];
 const expanded = report.affectedRoutes.flatMap((route) =>
-  route === "all-public-routes"
+  route === "all-play-routes"
+    ? playRoutes
+    : route === "all-public-routes"
     ? [
         "/",
         "/work",
-        "/play",
-        "/play/watch",
-        "/play/read",
-        "/play/listen",
-        "/play/collect",
-        "/play/play",
-        "/play/move",
+        ...playRoutes,
+        "/simulation",
         "/sources",
         "/privacy",
       ]

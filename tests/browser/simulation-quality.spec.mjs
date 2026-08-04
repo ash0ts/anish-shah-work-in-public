@@ -15,11 +15,7 @@ const requested = (requests, asset) =>
   requests.some((url) => new URL(url).pathname.endsWith(`/${asset}`));
 
 const widths = [320, 390, 768, 1024, 1440, 1920];
-
-test.skip(
-  process.env.BROWSER_PLAY_MODE !== "room",
-  "Simulation browser coverage runs against the fixture-backed My Room tier.",
-);
+const startCampaignButtonName = "Begin the campaign";
 
 async function overflowState(page) {
   return page.evaluate(() => {
@@ -75,8 +71,15 @@ test("Tactical keeps Phaser and Tone deferred and receives focus", async ({ page
   const requests = [];
   page.on("request", (request) => requests.push(request.url()));
   await page.goto("/simulation", { waitUntil: "networkidle" });
-  await page.getByRole("radio", { name: /Tactical/ }).check();
-  await page.getByRole("button", { name: "Boot the public model" }).click();
+  const actionChoice = page.getByRole("radio", { name: /Action/ });
+  const tacticalChoice = page.getByRole("radio", { name: /Tactical/ });
+  // The capability recommendation is applied on the first animation frame.
+  // Wait for it before making the visitor's explicit Tactical choice so that
+  // the recommendation cannot race and overwrite the test interaction.
+  await expect(actionChoice).toBeChecked();
+  await tacticalChoice.check();
+  await expect(tacticalChoice).toBeChecked();
+  await page.getByRole("button", { name: startCampaignButtonName }).click();
   const stage = page.locator("[data-simulation-stage]");
   await expect(stage).toBeFocused();
   await expect(page.locator("[data-simulation-tactical-arena]")).toBeVisible();
@@ -95,7 +98,7 @@ test("Action loads Phaser only after explicit selection", async ({ page }) => {
   await page.goto("/simulation", { waitUntil: "networkidle" });
   expect(requested(requests, actionChunk)).toBe(false);
   await page.getByRole("radio", { name: /Action/ }).check();
-  await page.getByRole("button", { name: "Boot the public model" }).click();
+  await page.getByRole("button", { name: startCampaignButtonName }).click();
   await expect(page.locator("[data-simulation-action-arena]")).toBeVisible();
   expect(requested(requests, actionChunk)).toBe(true);
   expect(requested(requests, toneChunk)).toBe(false);
@@ -107,7 +110,7 @@ test("reduced motion selects Tactical without loading Phaser", async ({ page }) 
   page.on("request", (request) => requests.push(request.url()));
   await page.goto("/simulation", { waitUntil: "networkidle" });
   await expect(page.getByRole("radio", { name: /Tactical/ })).toBeChecked();
-  await page.getByRole("button", { name: "Boot the public model" }).click();
+  await page.getByRole("button", { name: startCampaignButtonName }).click();
   await expect(page.locator("[data-simulation-tactical-arena]")).toBeVisible();
   expect(requested(requests, actionChunk)).toBe(false);
 });
@@ -118,7 +121,9 @@ test.describe("without JavaScript", () => {
   test("shows the inspectable dossier without a dead game form", async ({ page }) => {
     const response = await page.goto("/simulation", { waitUntil: "domcontentloaded" });
     expect(response?.status()).toBe(200);
-    await expect(page.getByRole("button", { name: "Boot the public model" })).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: startCampaignButtonName }),
+    ).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "The public model’s source deck." })).toBeVisible();
     await expect(
       page.getByLabel("Anish simulation disclosure", { exact: true }),
@@ -127,10 +132,6 @@ test.describe("without JavaScript", () => {
 });
 
 test("room reveal isolates its background while the robot transition runs", async ({ page }) => {
-  test.skip(
-    process.env.BROWSER_PLAY_MODE !== "room",
-    "The reveal transition belongs to My Room 2001, not Classic Play.",
-  );
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/play", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Enter the room" }).click();

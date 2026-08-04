@@ -38,6 +38,10 @@ const { pruneConnectorRetention } = await tsImport(
   "../lib/server/connectors/repository-retention.ts",
   import.meta.url,
 );
+const { bootstrapStagingRetention } = await tsImport(
+  "../lib/server/staging-maintenance.ts",
+  import.meta.url,
+);
 const { RELEASE_MARKER_HEADER, securedResponse } = await tsImport(
   "../worker/security-headers.ts",
   import.meta.url,
@@ -511,7 +515,7 @@ test("direct production accepts only the configured canonical apex", () => {
     SITE_URL: "https://anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "d1_kv_required",
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    RELEASE_VERSION: "2.0.0-rc.1",
   };
   const production = { development: false, sitesRuntime: false };
   assert.equal(
@@ -546,29 +550,6 @@ test("direct production accepts only the configured canonical apex", () => {
   assert.equal(misconfigured?.status, 503);
   assert.equal(misconfigured?.headers.get("retry-after"), "60");
 
-  for (const playMode of [undefined, "", "unknown"]) {
-    const playEnvironment = { ...environment };
-    if (playMode === undefined) delete playEnvironment.PLAY_EXPERIENCE_MODE;
-    else playEnvironment.PLAY_EXPERIENCE_MODE = playMode;
-    const response = productionOriginResponse(
-      new Request("https://anish-shah-is.online/play"),
-      playEnvironment,
-      production,
-    );
-    assert.equal(response?.status, 503, `hosted mode ${String(playMode)}`);
-    assert.equal(response?.headers.get("cache-control"), "private, no-store");
-    assert.match(response?.headers.get("x-robots-tag") ?? "", /noindex/);
-  }
-
-  assert.equal(
-    productionOriginResponse(
-      new Request("https://anish-shah-is.online/play"),
-      { ...environment, PLAY_EXPERIENCE_MODE: "classic" },
-      production,
-    ),
-    null,
-  );
-
   assert.equal(
     productionOriginResponse(
       new Request("http://127.0.0.1:3000/work"),
@@ -599,7 +580,7 @@ test("direct production accepts only the configured canonical apex", () => {
   assert.equal(
     productionOriginResponse(
       new Request(`${privateSitesOrigin}/work`),
-      { PLAY_EXPERIENCE_MODE: "classic" },
+      {},
       { development: false, sitesRuntime: true },
     ),
     null,
@@ -708,7 +689,7 @@ test("provider OAuth callbacks are one-way throttled before application routing"
     readFile(new URL("../worker/rate-limiting.ts", import.meta.url), "utf8"),
   ]);
   const callbackStart = worker.indexOf(
-    "const oauthCallbackLimited = await throttleOAuthCallback",
+    "const oauthCallbackLimited = enforceRequestRateLimits",
   );
   const applicationRoute = worker.indexOf(
     "routeApplicationRequest(appRequest",
@@ -733,7 +714,7 @@ test("anonymous Discogs reads are one-way throttled before publication storage i
     readFile(new URL("../worker/rate-limiting.ts", import.meta.url), "utf8"),
   ]);
   const throttleStart = worker.indexOf(
-    "const discogsReadLimited = await throttleDiscogsPublicRead",
+    "const discogsReadLimited = enforceRequestRateLimits",
   );
   const publicationRead = worker.indexOf(
     "const unavailable = await publicationAvailabilityResponse",
@@ -823,13 +804,68 @@ test("hourly retention clears expired promotion ciphertext and deletes old hando
   assert.equal(details.deletedPromotionTransactions, 6);
 });
 
+test("the owner-only staging bootstrap initializes a fresh retention heartbeat", async () => {
+  const statements = [];
+  const database = {
+    prepare(sql) {
+      const statement = {
+        sql,
+        values: [],
+        bind(...values) {
+          this.values = values;
+          return this;
+        },
+        async run() {
+          return { success: true };
+        },
+      };
+      statements.push(statement);
+      return statement;
+    },
+    async batch(batchStatements) {
+      return batchStatements.map(() => ({ meta: { changes: 0 } }));
+    },
+  };
+  const now = new Date("2026-08-04T12:00:00.000Z");
+  assert.deepEqual(
+    await bootstrapStagingRetention(database, "staging", now),
+    { ok: true, checkedAt: now.toISOString() },
+  );
+  assert(
+    statements.some((statement) =>
+      statement.sql.includes("INSERT INTO maintenance_state"),
+    ),
+  );
+  assert.deepEqual(
+    await bootstrapStagingRetention(database, "production", now),
+    { ok: false, code: "not_staging" },
+  );
+  assert.deepEqual(
+    await bootstrapStagingRetention(null, "staging", now),
+    { ok: false, code: "binding_unavailable" },
+  );
+
+  const route = await readFile(
+    new URL(
+      "../app/api/studio/maintenance/bootstrap/route.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(route, /rejectCrossOriginWrite/);
+  assert.match(route, /authorizeOwnerApi/);
+  assert.match(route, /runtimeValue\("DEPLOYMENT_TIER"\)/);
+  assert.match(route, /accepts no request fields/);
+  assert.match(route, /private, no-store/);
+});
+
 test("the public promotion import is rate-limited before its body is read", async () => {
   const [worker, rateLimit] = await Promise.all([
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../worker/rate-limiting.ts", import.meta.url), "utf8"),
   ]);
   const promotionStart = worker.indexOf(
-    "const promotionLimited = await throttlePromotionImport",
+    "const promotionLimited = enforceRequestRateLimits",
   );
   const bodyRead = worker.indexOf(
     "const bounded = await boundedApiWrite",
@@ -909,6 +945,7 @@ test("public Cloudflare release config is generated without embedding secrets", 
   }
   assert.match(prepare, /invocation_logs:\s*false/);
   assert.match(prepare, /RELEASE_SHA:\s*releaseSha/);
+  assert.match(prepare, /RELEASE_VERSION:\s*releaseVersion/);
   assert.match(prepare, /CONTENT_VERSION:\s*publicBundle\.contentVersion/);
   assert.match(prepare, /PUBLIC_CONTENT_MODE:\s*"d1_kv_required"/);
   assert.match(prepare, /config\.account_id\s*=\s*PUBLIC_CLOUDFLARE_ACCOUNT_ID/);
@@ -967,7 +1004,7 @@ test("owner-dispatched exact-SHA checks may use only the temporary release runne
     ),
   );
   const runnerExpression =
-    "github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && 'anish-release' || 'ubuntu-latest'";
+    "fromJSON(github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner && inputs.runner_label == 'anish-release' && '[\"self-hosted\",\"linux\",\"x64\",\"anish-release\"]' || '[\"ubuntu-latest\"]')";
 
   for (const [index, workflow] of workflows.entries()) {
     assert.match(workflow, /runner_label:\n\s+description:/, workflowNames[index]);
@@ -994,6 +1031,12 @@ test("owner-dispatched exact-SHA checks may use only the temporary release runne
     assert.ok(
       runTargets.every((target) => target.includes(runnerExpression)),
       `${workflowNames[index]} must keep automatic work hosted`,
+    );
+    assert.ok(
+      runTargets.every((target) =>
+        target.includes('["self-hosted","linux","x64","anish-release"]'),
+      ),
+      `${workflowNames[index]} must require every release-runner label`,
     );
     assert.doesNotMatch(workflow, /^\s+environment:/m, workflowNames[index]);
     assert.doesNotMatch(workflow, /secrets:\s+inherit/, workflowNames[index]);
@@ -1098,6 +1141,16 @@ test("publication failover and maintenance health fail closed", async () => {
   );
   assert.match(maintenance, /expectedHostedOrigin/);
   assert.match(maintenance, /hostedEnvironmentConfigured/);
+  assert.match(maintenance, /releaseVersion/);
+  assert.match(maintenance, /!releaseVersion/);
+  assert.match(
+    maintenance,
+    /travel\.mode === "atlas-v1"[\s\S]*?!travel\.configured \|\| !travel\.activePublication/,
+  );
+  assert.match(
+    maintenance,
+    /travel\.mode === "atlas-v1"[\s\S]*?travel\.cleanupHeartbeat\.status !== "current"/,
+  );
 });
 
 test("custom Worker observability never records raw request identifiers", async () => {

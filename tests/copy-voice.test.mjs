@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   PLAY_OBJECT_LANGUAGE,
   copyVoicePolicyForField,
+  effectiveCopyRisk,
 } from "../lib/copy-voice-contract.ts";
 import { COPY_PAGE_DEFINITIONS } from "../lib/copy-contract.ts";
 import { parseCopyDocument } from "../scripts/lib/copy-deck.mjs";
@@ -192,6 +193,52 @@ test("metric guards distinguish compact magnitudes from product model names", ()
         definitions: [definition],
       }),
     /quantitative metric wording/u,
+  );
+});
+
+test("protected wording cannot be hidden inside an editable copy field", () => {
+  const probes = [
+    ["home", "primary-cta", "Browse ARR results"],
+    ["play", "listen-description", "Spotify refreshes access after visitor consent."],
+    ["play", "travel-seo-description", "Browse exact GPS coordinates and a live location for each trip."],
+    ["simulation", "boot-summary", "Meet an authoritative digital representative that retains every answer."],
+  ];
+
+  for (const [surface, key, value] of probes) {
+    const definition = COPY_PAGE_DEFINITIONS[surface].find(
+      (candidate) => candidate.key === key,
+    );
+    assert(definition, `${surface}.${key}`);
+    assert.throws(
+      () =>
+        parseCopyDocument({
+          file: "fixture.md",
+          source: `<!-- copy-page: fixture -->\n\n## ${key}\n${value}\n`,
+          expectedMarker: "<!-- copy-page: fixture -->",
+          definitions: [definition],
+        }),
+      /protected claim, provider, privacy, location, or model-policy wording/u,
+      `${surface}.${key}`,
+    );
+  }
+});
+
+test("concrete factual language raises editorial copy to fact-check review", () => {
+  assert.equal(
+    effectiveCopyRisk("editorial", "Open the room"),
+    "editorial",
+  );
+  assert.equal(
+    effectiveCopyRisk("editorial", "Spotify puts these tracks closest to the surface."),
+    "fact_check",
+  );
+  assert.equal(
+    effectiveCopyRisk("editorial", "I built this integration in 2026."),
+    "fact_check",
+  );
+  assert.equal(
+    effectiveCopyRisk("fact_check", "A concise label"),
+    "fact_check",
   );
 });
 

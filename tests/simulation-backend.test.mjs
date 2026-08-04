@@ -95,6 +95,7 @@ const localRuntime = {
   DB: null,
   NODE_ENV: "development",
   SITE_URL: "http://localhost:3000",
+  RELEASE_VERSION: "2.0.0-rc.1",
   SIMULATION_EXPERIENCE_MODE: "campaign-v1",
   SIMULATION_AI_MODE: "fixture",
   SIMULATION_SESSION_HMAC_KEY: hmacKey,
@@ -698,6 +699,7 @@ test("health output is sanitized and approval digest omits references", async ()
       assert.doesNotMatch(JSON.stringify(health), /private-contact/);
 
       const ownerHealth = await getStudioHealth();
+      assert.equal(ownerHealth.releaseVersion, "2.0.0-rc.1");
       assert.equal(ownerHealth.simulation.campaignVersion, "meet-me-4n1sh-v1");
       assert.deepEqual(ownerHealth.simulation.approvedProviders, ["hardcover"]);
       assert.equal(ownerHealth.simulation.providerApprovalDigest, digest);

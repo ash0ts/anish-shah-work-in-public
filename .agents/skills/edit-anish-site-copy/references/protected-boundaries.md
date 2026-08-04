@@ -9,6 +9,8 @@ The copy deck cannot directly alter:
 - Connector coverage literals, public payloads, sync/error states, button behavior, routes, or programmatic accessible names.
 - Generated content/copy modules, schemas, attestations, private inputs, migration reports, snapshots, or D1/KV state.
 - Credentials, environment files, Studio, connectors, migrations, CI workflows, Cloudflare configuration, or deployment scripts.
+- Travel trip facts, dates, place labels, geography precision, captions, tags, photo safety decisions, media retention, or publication state.
+- Simulation disclosure, factual cards, model/provider policy, system prompts, safety rules, budgets, session behavior, authored fallback, or provider approvals.
 
 Do not soften, round, aggregate, or newly infer a number to make a sentence read better. Do not turn supported pipeline into revenue, enrollments into unique people, appearances into unique works, or association into personal causation.
 

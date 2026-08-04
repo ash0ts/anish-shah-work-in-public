@@ -21,7 +21,6 @@ import { SpotifyAttribution, SpotifyMessage } from "./SpotifyFallback";
 import {
   artistLabel,
   groovePoint,
-  syncLabel,
   timeRanges,
   type RankSurface,
   type SpotifyPublicSnapshot,
@@ -29,6 +28,7 @@ import {
   type SpotifyTrackSummary,
   type SpotifyView,
 } from "./model";
+import { updatedDateLabel } from "@/components/play/updated-date-label";
 import { SITE_COPY } from "@/lib/copy";
 
 export function SpotifyRankedGroove({
@@ -359,7 +359,7 @@ export function SpotifyRankedGroove({
       <SpotifyAttribution />
       <div className={styles.status}>
         {stale ? <span>{SITE_COPY.play["status-stale"]}</span> : null}
-        <span>{syncLabel(payload.syncedAt || fetchedAt)}</span>
+        <span>{updatedDateLabel(payload.syncedAt || fetchedAt)}</span>
         <a href={payload.profileUrl} rel="noreferrer" target="_blank">
           {SITE_COPY.play["profile-spotify"]}
         </a>

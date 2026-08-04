@@ -1,5 +1,6 @@
 import type {
   CopyFieldDefinition,
+  CopyRisk,
   CopyVoiceProfile,
 } from "@/types/copy";
 
@@ -28,6 +29,22 @@ export const PLAY_OBJECT_LANGUAGE = {
   move: { category: "Move", objectName: "Treadmill" },
   travel: { category: "Travel", objectName: "Globe" },
 } as const;
+
+const FACTUAL_COPY_LANGUAGE = /\b(?:20\d{2}|Weights\s*&\s*Biases|W&B|MyAnimeList|Hardcover|Spotify|Discogs|Steam|Strava|Anthropic|Cloudflare|MCP|OAuth|API|evaluation|observability|enrollments?|registrants?|attendees?|pipeline)\b|\bI\s+(?:built|coauthored|authored|wrote|taught|presented|supported|implemented|integrated|launched|published)\b/iu;
+
+/**
+ * Static field ownership is the minimum review level. Concrete factual
+ * language can only raise that level; it can never downgrade a fact-check
+ * field to editorial.
+ */
+export function effectiveCopyRisk(
+  baseRisk: CopyRisk,
+  value: string,
+): CopyRisk {
+  return baseRisk === "fact_check" || FACTUAL_COPY_LANGUAGE.test(value)
+    ? "fact_check"
+    : "editorial";
+}
 
 const PROFILE_BUDGETS = {
   "metadata-title": { maxWords: 12, maxSentences: 1 },

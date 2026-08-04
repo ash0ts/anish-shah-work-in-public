@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { matchingReleaseVersion } from "./release-version.mjs";
 
 export const PUBLIC_SITE_ORIGIN = "https://anish-shah-is.online";
 export const PUBLIC_CLOUDFLARE_ACCOUNT_ID =
@@ -78,19 +79,6 @@ function required(env, name) {
   return value;
 }
 
-export function requiredHostedPlayExperienceMode(env) {
-  const playExperienceMode = required(env, "PLAY_EXPERIENCE_MODE");
-  if (
-    playExperienceMode !== "classic" &&
-    playExperienceMode !== "my-room-2001"
-  ) {
-    throw new Error(
-      "Hosted PLAY_EXPERIENCE_MODE must be explicitly set to classic or my-room-2001.",
-    );
-  }
-  return playExperienceMode;
-}
-
 function exactHttpsOrigin(value, name) {
   let url;
   try {
@@ -112,7 +100,11 @@ function exactHttpsOrigin(value, name) {
   return url.origin;
 }
 
-export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
+export function expectedPublicReleaseConfig(env, { head, contentVersion, packageVersion }) {
+  const releaseVersion = matchingReleaseVersion(
+    required(env, "RELEASE_VERSION"),
+    packageVersion,
+  );
   const siteUrl = exactHttpsOrigin(required(env, "PUBLIC_SITE_URL"), "PUBLIC_SITE_URL");
   if (siteUrl !== PUBLIC_SITE_ORIGIN) {
     throw new Error("PUBLIC_SITE_URL must be the repository's pinned canonical origin.");
@@ -164,7 +156,6 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(databaseName)) {
     throw new Error("CLOUDFLARE_D1_DATABASE_NAME is invalid.");
   }
-  const playExperienceMode = requiredHostedPlayExperienceMode(env);
   const simulationExperienceMode =
     env.SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
   if (
@@ -198,16 +189,9 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
   if (travelAtlasMode !== "disabled" && travelAtlasMode !== "atlas-v1") {
     throw new Error("TRAVEL_ATLAS_MODE must be disabled or atlas-v1.");
   }
-  if (
-    travelAtlasMode === "atlas-v1" &&
-    playExperienceMode !== "my-room-2001"
-  ) {
-    throw new Error(
-      "TRAVEL_ATLAS_MODE=atlas-v1 requires PLAY_EXPERIENCE_MODE=my-room-2001.",
-    );
-  }
   return {
     head,
+    releaseVersion,
     contentVersion,
     siteUrl,
     teamDomain,
@@ -216,7 +200,6 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
     databaseId,
     databaseName,
     publicationCacheId,
-    playExperienceMode,
     simulationExperienceMode,
     simulationAiMode,
     travelAtlasMode,
@@ -236,10 +219,10 @@ export function assertPublicReleaseConfig(config, expected) {
     SITE_URL: expected.siteUrl,
     STEAM_DATA_STORAGE_COUNTRIES: "United States",
     RELEASE_SHA: expected.head,
+    RELEASE_VERSION: expected.releaseVersion,
     CONTENT_VERSION: expected.contentVersion,
     PUBLIC_CONTENT_MODE: "d1_kv_required",
     DEPLOYMENT_TIER: "production",
-    PLAY_EXPERIENCE_MODE: expected.playExperienceMode,
     SIMULATION_EXPERIENCE_MODE: expected.simulationExperienceMode,
     SIMULATION_AI_MODE: expected.simulationAiMode,
     SIMULATION_PROVIDER: "anthropic",
@@ -286,11 +269,7 @@ export function assertPublicReleaseConfig(config, expected) {
     JSON.stringify(config?.rules) ===
       JSON.stringify([{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }]) &&
     JSON.stringify(config?.assets) === JSON.stringify({ directory: "../client" });
-  const compatibleExperienceModes =
-    expected.travelAtlasMode !== "atlas-v1" ||
-    expected.playExperienceMode === "my-room-2001";
   if (
-    !compatibleExperienceModes ||
     !exactTopLevelKeys ||
     !exactInertBuildBase ||
     config?.name !== "anish-shah-work-in-public" ||

@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import styles from "../PersonalStreams.module.css";
+import styles from "./StreamPresentation.module.css";
 import {
   loadConnector,
-  publishedLabel,
   type ConnectorState,
   type PreviewFixtureScenario,
   type StravaPayload,
 } from "./connector-model";
+import { updatedDateLabel } from "./updated-date-label";
 import { PanelHeading, StreamEmpty } from "./StreamChrome";
 import { SITE_COPY } from "@/lib/copy";
 
@@ -119,7 +119,7 @@ export function MovementStream({
             ? "Loads only after interaction"
             : "Profile-link fallback"}
         </span>
-        <span>{publishedLabel(state.payload.updatedAt)}</span>
+        <span>{updatedDateLabel(state.payload.updatedAt, "Publish date unavailable")}</span>
         <a href={state.payload.profileUrl} rel="noreferrer" target="_blank">
           {SITE_COPY.play["profile-strava"]}
         </a>

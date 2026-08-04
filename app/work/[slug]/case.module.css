@@ -480,14 +480,6 @@
   list-style: none;
 }
 
-.appearancesNote {
-  max-width: 52ch;
-  margin: -0.8rem 0 1.5rem;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 0.8rem;
-  line-height: 1.45;
-}
-
 .appearances li {
   min-width: 0;
   padding: 1.25rem 1.25rem 1.25rem 0;

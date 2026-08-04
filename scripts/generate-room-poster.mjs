@@ -49,7 +49,7 @@ for (const output of outputs) {
 process.stdout.write(
   `${JSON.stringify(
     {
-      source,
+      source: path.basename(source),
       outputs: outputs.map((output) => ({
         path: `/assets/play/${output.name}`,
         bytes: output.bytes.byteLength,

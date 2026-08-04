@@ -170,13 +170,4 @@ export function spotifyEmbedUrl(
   return `https://open.spotify.com/embed/${kind}/${encodeURIComponent(id)}`;
 }
 
-export function syncLabel(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Sync date unavailable";
-  return `Updated ${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date)}`;
-}
 import type { PreviewFixtureScenario } from "../play/connector-model";

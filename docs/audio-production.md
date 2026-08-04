@@ -23,7 +23,7 @@ changes scoring, or replaces a visible status.
   shorten a visual transition without enabling or disabling sound.
 
 The checked-in source of truth is
-`content/presentation/experience-audio.v1.json`. It contains 43 deliberately
+`content/presentation/experience-audio.v1.json`. It contains 46 deliberately
 quiet procedural placeholder cues. The strict validator requires the complete
 slot set so a later composition pass can replace sounds without renaming the
 gameplay contract.
@@ -34,7 +34,7 @@ gameplay contract.
 | --- | --- | --- |
 | Shared room | `sound-on`, `room-enter`, `interface-confirm`, `interface-return` | Active in the shared provider and room platform. |
 | Watch · Midnight Broadcast | `watch-power`, `watch-tune`, `watch-select` | Reserved for screen-level placement. |
-| Read · Borrowed Shelf | `read-page`, `read-select` | Reserved for screen-level placement. |
+| Read · Bedside Shelf | `read-page`, `read-select` | Reserved for screen-level placement. |
 | Listen · Pocket Player | `listen-boot`, `listen-nav`, `listen-open-close` | Active on boot, bounded navigation, and official-player open/close. |
 | Collect · Crate Archive | `collect-crate`, `collect-sleeve`, `collect-select` | Reserved for screen-level placement. |
 | Play · Desktop Library | `play-computer-boot`, `play-load`, `play-select` | Reserved for screen-level placement. |

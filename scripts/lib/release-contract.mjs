@@ -1,3 +1,5 @@
+import { ROOM_OBJECT_CONTRACT } from "../../components/play/room-platform/room-object-contract.ts";
+
 export function exactMigrationNames(output) {
   return [
     ...new Set(String(output).match(/\b\d{4}_[A-Za-z0-9_]+\.sql\b/g) ?? []),
@@ -227,24 +229,28 @@ export function assertActiveActionsWorkflow(
   };
 }
 
-export const ROOM_PLAY_SMOKE_TESTS = Object.freeze([
-  "play_watch",
-  "play_read",
-  "play_listen",
-  "play_collect",
-  "play_play",
-  "play_move",
-]);
+export const ROOM_PLAY_SMOKE_TESTS = Object.freeze(
+  ROOM_OBJECT_CONTRACT.filter(({ id }) => id !== "travel").map(
+    ({ smokeTest }) => smokeTest,
+  ),
+);
 
-export function requiredSmokeTestsForPlayMode(base, playExperienceMode) {
+export const TRAVEL_PLAY_SMOKE_TEST = ROOM_OBJECT_CONTRACT.find(
+  ({ id }) => id === "travel",
+).smokeTest;
+
+export function requiredPlaySmokeTests(base, { travelEnabled = false } = {}) {
   if (!Array.isArray(base) || base.some((value) => typeof value !== "string")) {
     throw new Error("The base smoke-test contract is invalid.");
   }
-  if (playExperienceMode === "classic") return [...base];
-  if (playExperienceMode === "my-room-2001") {
-    return [...base, ...ROOM_PLAY_SMOKE_TESTS];
+  if (typeof travelEnabled !== "boolean") {
+    throw new Error("The Travel smoke-test switch is invalid.");
   }
-  throw new Error("The release plan contains an unsupported Play experience mode.");
+  return [
+    ...base,
+    ...ROOM_PLAY_SMOKE_TESTS,
+    ...(travelEnabled ? [TRAVEL_PLAY_SMOKE_TEST] : []),
+  ];
 }
 
 export function githubRepositoryFromRemoteUrl(value) {
@@ -427,12 +433,13 @@ export function parseRemoteReleaseMarker(output) {
 
 export function assertReleaseMarker(
   marker,
-  { head, contentVersion, preparedAt },
+  { head, releaseVersion, contentVersion, preparedAt },
 ) {
   const checkedAt = Date.parse(marker.checkedAt ?? "");
   if (
     marker.status !== "ready" ||
     marker.details?.releaseSha !== head ||
+    marker.details?.releaseVersion !== releaseVersion ||
     marker.details?.contentVersion !== contentVersion ||
     !/^[a-f0-9]{64}$/.test(marker.details?.contentHash ?? "") ||
     marker.currentContentHash !== marker.details.contentHash ||

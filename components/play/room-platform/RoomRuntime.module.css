@@ -118,31 +118,6 @@
   opacity: 0.7;
 }
 
-.fallback {
-  display: grid;
-  min-height: min(58rem, 65svh);
-  place-content: center;
-  padding: 2rem;
-  border: 1px solid #17223b;
-  text-align: center;
-}
-
-.fallback strong {
-  font-family: var(--font-display);
-  font-size: clamp(1.8rem, 4vw, 4rem);
-}
-
-.fallback p {
-  max-width: 34rem;
-  margin: 0.75rem auto;
-}
-
-.fallback small {
-  color: #6e6476;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-}
-
 .stageSlot {
   position: relative;
   justify-self: center;
@@ -603,7 +578,6 @@
 
 @media (forced-colors: active) {
   .runtime,
-  .fallback,
   .posterFallback,
   .posterFallback p,
   .objectCue {

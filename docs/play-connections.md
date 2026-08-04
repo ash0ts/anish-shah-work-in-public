@@ -131,7 +131,7 @@ stay in the local D1 sandbox.
    production key, and leaves existing production state unchanged for a
    provider that fails validation.
 6. Authorize MyAnimeList, Spotify, and Discogs separately with their production
-   applications, then inspect all six direct object routes.
+   applications, then inspect all six connector-backed object routes.
 
 The transfer never includes MyAnimeList, Spotify, or Discogs app credentials or
 OAuth tokens; Spotify or Discogs snapshots and publication approval; any other

@@ -26,6 +26,7 @@ import {
   TRIGGER_RECEIPT_PATH,
 } from "./lib/release-trigger-contract.mjs";
 import { buildCopyDeck } from "./lib/copy-deck.mjs";
+import { readPackageReleaseVersion } from "./lib/release-version.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const configPath = path.join(root, "dist/server/wrangler.public.json");
@@ -118,11 +119,14 @@ async function verifyPlan() {
   const config = JSON.parse(configBytes.toString("utf8"));
   const simulationManifest = JSON.parse(simulationManifestBytes.toString("utf8"));
   const { copyVersion } = await buildCopyDeck(root);
+  const releaseVersion = await readPackageReleaseVersion(root);
   if (
-    plan.schemaVersion !== "1.2" ||
+    plan.schemaVersion !== "1.3" ||
     plan.commitSha !== head ||
     plan.contentVersion !== attestation.contentVersion ||
     plan.copyVersion !== copyVersion ||
+    plan.releaseVersion !== releaseVersion ||
+    config.vars?.RELEASE_VERSION !== releaseVersion ||
     plan.checksums?.publicContentAttestationSha256 !== sha256(attestationBytes) ||
     plan.checksums?.preparedWorkerConfigSha256 !== sha256(configBytes) ||
     plan.checksums?.simulationCampaignManifestSha256 !==
@@ -149,8 +153,8 @@ async function verifyPlan() {
       sha256(deployableArtifactResult.bytes) ||
     config.vars?.RELEASE_SHA !== head ||
     config.vars?.CONTENT_VERSION !== plan.contentVersion ||
-    config.vars?.PLAY_EXPERIENCE_MODE !== plan.playExperienceMode ||
-    !["classic", "my-room-2001"].includes(plan.playExperienceMode) ||
+    config.vars?.TRAVEL_ATLAS_MODE !== plan.travelAtlasMode ||
+    !["disabled", "atlas-v1"].includes(plan.travelAtlasMode) ||
     !["compatible", "predeploy_bootstrap_required"].includes(
       plan.publicationCheckpoint?.status,
     )
@@ -351,6 +355,7 @@ if (action === "migrate") {
     });
     assertReleaseMarker(remoteReleaseMarker(), {
       head,
+      releaseVersion: plan.releaseVersion,
       contentVersion: plan.contentVersion,
       preparedAt: plan.preparedAt,
     });

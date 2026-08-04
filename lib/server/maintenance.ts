@@ -2,6 +2,7 @@ import { PUBLIC_SITE_ORIGIN } from "../site-constants";
 import {
   expectedHostedOrigin,
   hostedEnvironmentConfigured,
+  validReleaseVersion,
 } from "../deployment-environment";
 import { runtimeDatabase, runtimeValue } from "./runtime-env";
 import { RETENTION_MAINTENANCE_KEY } from "./maintenance-state";
@@ -48,6 +49,7 @@ export type StudioHealth = {
   status: "healthy" | "degraded" | "setup_required";
   checkedAt: string;
   releaseSha: string | null;
+  releaseVersion: string | null;
   contentVersion: string | null;
   copyVersion: string;
   canonicalOrigin: {
@@ -91,7 +93,7 @@ function canonicalOriginState(): StudioHealth["canonicalOrigin"] {
     SITE_URL: runtimeValue("SITE_URL"),
     PRODUCTION_SITE_URL: runtimeValue("PRODUCTION_SITE_URL"),
     PUBLIC_CONTENT_MODE: runtimeValue("PUBLIC_CONTENT_MODE"),
-    PLAY_EXPERIENCE_MODE: runtimeValue("PLAY_EXPERIENCE_MODE"),
+    RELEASE_VERSION: runtimeValue("RELEASE_VERSION"),
   };
   return {
     status: hostedEnvironmentConfigured(values) ? "ready" : "setup_required",
@@ -102,6 +104,11 @@ function canonicalOriginState(): StudioHealth["canonicalOrigin"] {
 function deployedValue(name: "RELEASE_SHA" | "CONTENT_VERSION", pattern: RegExp) {
   const value = runtimeValue(name)?.toLowerCase() ?? null;
   return value && pattern.test(value) ? value : null;
+}
+
+function deployedReleaseVersion(): string | null {
+  const value = runtimeValue("RELEASE_VERSION") ?? null;
+  return validReleaseVersion(value ?? undefined) ? value : null;
 }
 
 function retentionState(row: MaintenanceRow | null) {
@@ -164,6 +171,7 @@ function stravaState(
 export async function getStudioHealth(): Promise<StudioHealth> {
   const checkedAt = new Date().toISOString();
   const releaseSha = deployedValue("RELEASE_SHA", /^[a-f0-9]{40}$/);
+  const releaseVersion = deployedReleaseVersion();
   const contentVersion = deployedValue("CONTENT_VERSION", /^[a-f0-9]{16}$/);
   const canonicalOrigin = canonicalOriginState();
   const travel = {
@@ -184,6 +192,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       status: "setup_required",
       checkedAt,
       releaseSha,
+      releaseVersion,
       contentVersion,
       copyVersion: COPY_VERSION,
       canonicalOrigin,
@@ -254,20 +263,22 @@ export async function getStudioHealth(): Promise<StudioHealth> {
     ];
     const setupRequired =
       !releaseSha ||
+      !releaseVersion ||
       !contentVersion ||
       !safeMigrationName ||
       canonicalOrigin.status === "setup_required" ||
-      (travel.mode === "atlas-v1" && !travel.configured);
+      (travel.mode === "atlas-v1" &&
+        (!travel.configured || !travel.activePublication));
     const degraded =
       retentionHeartbeat.status !== "current" ||
       connectors.some((connector) => connector.status === "error") ||
       (travel.mode === "atlas-v1" &&
-        (travel.cleanupHeartbeat.status === "stale" ||
-          travel.cleanupHeartbeat.status === "error"));
+        travel.cleanupHeartbeat.status !== "current");
     return {
       status: setupRequired ? "setup_required" : degraded ? "degraded" : "healthy",
       checkedAt,
       releaseSha,
+      releaseVersion,
       contentVersion,
       copyVersion: COPY_VERSION,
       canonicalOrigin,
@@ -285,6 +296,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       status: "setup_required",
       checkedAt,
       releaseSha,
+      releaseVersion,
       contentVersion,
       copyVersion: COPY_VERSION,
       canonicalOrigin,

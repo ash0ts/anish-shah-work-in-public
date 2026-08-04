@@ -8,7 +8,7 @@ import {
   useLayoutEffect,
   useRef,
 } from "react";
-import styles from "../PersonalStreams.module.css";
+import styles from "./StreamPresentation.module.css";
 import type {
   CollectionProvider,
   GalleryItem,
@@ -77,7 +77,7 @@ export function GalleryView({
               maxLength={80}
               name="q"
               onChange={(event) => onDraftQuery(event.target.value)}
-              placeholder="Search this collection"
+              placeholder={SITE_COPY.play["collection-search-placeholder"]}
               type="search"
               value={draftQuery}
             />
@@ -139,8 +139,8 @@ export function GalleryView({
         </ol>
       ) : (
         <div className={styles.noResults} data-stream-item>
-          <strong>No titles match this view.</strong>
-          <p>Change the search or filter to return to the collection.</p>
+          <strong>{SITE_COPY.play["collection-no-results-title"]}</strong>
+          <p>{SITE_COPY.play["collection-no-results-body"]}</p>
         </div>
       )}
 

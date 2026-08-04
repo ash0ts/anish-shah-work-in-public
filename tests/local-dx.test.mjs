@@ -43,8 +43,7 @@ async function writeDoctorFixture(root, options = {}) {
       engines: { node: "24.18.x" },
       packageManager: "npm@11.6.2",
       scripts: {
-        dev: "PLAY_EXPERIENCE_MODE=my-room-2001 vinext dev",
-        "dev:classic": "PLAY_EXPERIENCE_MODE=classic vinext dev",
+        dev: "vinext dev",
       },
     }),
   );
@@ -308,9 +307,7 @@ test("doctor treats missing optional runtime state as warnings but unsafe config
   );
 
   const unsafeRoot = await temporaryRoot();
-  const unsafeFixture = await writeDoctorFixture(unsafeRoot, {
-    environment: { PLAY_EXPERIENCE_MODE: "classic" },
-  });
+  const unsafeFixture = await writeDoctorFixture(unsafeRoot);
   await chmod(path.join(unsafeRoot, ".env.local"), 0o644);
   const unsafeReport = await createDoctorReport({
     root: unsafeRoot,
@@ -326,12 +323,6 @@ test("doctor treats missing optional runtime state as warnings but unsafe config
   assert.equal(
     unsafeReport.checks.some(
       (entry) => entry.id === "environment-permissions" && entry.status === "fail",
-    ),
-    true,
-  );
-  assert.equal(
-    unsafeReport.checks.some(
-      (entry) => entry.id === "local-play-override" && entry.status === "fail",
     ),
     true,
   );

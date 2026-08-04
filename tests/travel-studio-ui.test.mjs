@@ -17,6 +17,18 @@ async function source(path) {
   return readFile(new URL(path, ROOT), "utf8");
 }
 
+async function travelDeskSource() {
+  const modules = [
+    "app/studio/travel/TravelDesk.tsx",
+    "app/studio/travel/TravelTripPanel.tsx",
+    "app/studio/travel/TravelPlacePanel.tsx",
+    "app/studio/travel/TravelPhotoIntake.tsx",
+    "app/studio/travel/TravelPublicationPreview.tsx",
+    "app/studio/travel/travel-desk-model.ts",
+  ];
+  return (await Promise.all(modules.map(source))).join("\n");
+}
+
 test("Travel Desk is independently owner-protected and noindexed", async () => {
   const page = await source("app/studio/travel/page.tsx");
   assert.match(page, /requireChatGPTUser\("\/studio\/travel"\)/);
@@ -214,7 +226,7 @@ test("upload bytes carry the transaction trip revision as a strong If-Match", as
 test("photo intake keeps filenames and exact EXIF GPS out of requests and React state", async () => {
   const api = await source("app/studio/travel/api.ts");
   const intake = await source("app/studio/travel/photo-intake.ts");
-  const desk = await source("app/studio/travel/TravelDesk.tsx");
+  const desk = await travelDeskSource();
   assert.doesNotMatch(api, /file\.name|filename|originalName/i);
   assert.doesNotMatch(desk, /file\.name|originalName/i);
   assert.doesNotMatch(`${api}\n${intake}\n${desk}`, /console\.(?:log|warn|error)/);
@@ -228,7 +240,7 @@ test("photo intake keeps filenames and exact EXIF GPS out of requests and React 
 });
 
 test("whole-trip publication protects active travel and requires a complete safety review", async () => {
-  const desk = await source("app/studio/travel/TravelDesk.tsx");
+  const desk = await travelDeskSource();
   const contracts = await source("app/studio/travel/contracts.ts");
   assert.match(desk, /Planned\/current trips cannot publish while photos are attached/);
   assert.match(desk, /Remove approximate-city pins from planned\/current travel/);
@@ -239,7 +251,7 @@ test("whole-trip publication protects active travel and requires a complete safe
 });
 
 test("Travel Desk exposes an exact preview, accessible status, and keyboard-sized controls", async () => {
-  const desk = await source("app/studio/travel/TravelDesk.tsx");
+  const desk = await travelDeskSource();
   const css = await source("app/studio/travel/travel.module.css");
   assert.match(desk, /Exact public preview/);
   assert.match(desk, /getTravelTripPreview/);
@@ -269,7 +281,7 @@ test("Travel Desk exposes an exact preview, accessible status, and keyboard-size
 });
 
 test("map suggestions use packaged Natural Earth boundaries and require owner review", async () => {
-  const desk = await source("app/studio/travel/TravelDesk.tsx");
+  const desk = await travelDeskSource();
   const resolver = await source("app/studio/travel/geography-resolver.ts");
   assert.match(resolver, /loadTravelGeographyManifest/);
   assert.match(resolver, /loadTravelAdmin1Manifest/);
