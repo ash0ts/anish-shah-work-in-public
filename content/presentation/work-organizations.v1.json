@@ -48,7 +48,7 @@
         "group:talks:gradient-dissent"
       ],
       "featuredOrder": 1,
-      "logo": null
+      "brandAssetId": "weights-biases"
     },
     {
       "id": "google-cloud",
@@ -73,7 +73,7 @@
         "group:standalone:oc-fp-0024"
       ],
       "featuredOrder": 2,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "nvidia",
@@ -95,7 +95,7 @@
         "group:talks:model-customization"
       ],
       "featuredOrder": 3,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "hugging-face",
@@ -108,7 +108,7 @@
       ],
       "workGroupIds": ["group:products:diffusers-wandb"],
       "featuredOrder": 4,
-      "logo": null
+      "brandAssetId": "hugging-face"
     },
     {
       "id": "langchain",
@@ -118,7 +118,7 @@
       "sourceOrganizationIds": ["org:langchain-github"],
       "workGroupIds": ["group:products:langchain-integrations"],
       "featuredOrder": 5,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "openai",
@@ -128,7 +128,7 @@
       "sourceOrganizationIds": ["org:openai-github"],
       "workGroupIds": ["group:products:openai-cookbook"],
       "featuredOrder": 6,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "lightning-ai",
@@ -138,7 +138,7 @@
       "sourceOrganizationIds": ["org:lightning-ai-github"],
       "workGroupIds": ["group:products:lightning-fabric"],
       "featuredOrder": 7,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "gpt-engineer",
@@ -148,7 +148,7 @@
       "sourceOrganizationIds": ["org:gpt-engineer-github"],
       "workGroupIds": ["group:products:gpt-engineer"],
       "featuredOrder": 8,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "open-interpreter",
@@ -158,7 +158,7 @@
       "sourceOrganizationIds": ["org:open-interpreter-github"],
       "workGroupIds": ["group:standalone:ar-fp-0178"],
       "featuredOrder": 9,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "microsoft",
@@ -184,7 +184,7 @@
         "group:standalone:oc-fp-0008"
       ],
       "featuredOrder": 10,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "anyscale-ray-summit",
@@ -202,7 +202,7 @@
         "group:standalone:oc-fp-0003"
       ],
       "featuredOrder": 11,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "coreweave",
@@ -212,7 +212,7 @@
       "sourceOrganizationIds": ["org:w-and-b-coreweave"],
       "workGroupIds": ["group:talks:architecting-agents"],
       "featuredOrder": 12,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "pinecone",
@@ -222,7 +222,7 @@
       "sourceOrganizationIds": ["org:pinecone-w-and-b"],
       "workGroupIds": ["group:standalone:oc-fp-0032"],
       "featuredOrder": 13,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "snowflake",
@@ -232,7 +232,7 @@
       "sourceOrganizationIds": ["org:snowflake-developers"],
       "workGroupIds": ["group:standalone:oc-fp-0005"],
       "featuredOrder": 14,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "mlops-world",
@@ -251,7 +251,7 @@
         "group:standalone:oc-fp-0027"
       ],
       "featuredOrder": 15,
-      "logo": null
+      "brandAssetId": "mlops-world"
     },
     {
       "id": "mlops-community",
@@ -261,7 +261,7 @@
       "sourceOrganizationIds": ["org:mlops-community"],
       "workGroupIds": ["group:standalone:oc-fp-0076"],
       "featuredOrder": 16,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "datatalksclub",
@@ -271,7 +271,7 @@
       "sourceOrganizationIds": ["org:datatalksclub"],
       "workGroupIds": ["group:standalone:oc-fp-0009"],
       "featuredOrder": 17,
-      "logo": null
+      "brandAssetId": "datatalksclub"
     },
     {
       "id": "ai-tinkerers",
@@ -287,7 +287,7 @@
         "group:standalone:oc-fp-0025"
       ],
       "featuredOrder": 18,
-      "logo": null
+      "brandAssetId": "ai-tinkerers"
     },
     {
       "id": "odsc",
@@ -304,7 +304,7 @@
         "group:standalone:oc-fp-0002"
       ],
       "featuredOrder": 19,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "fourthbrain",
@@ -314,7 +314,7 @@
       "sourceOrganizationIds": ["org:fourthbrain"],
       "workGroupIds": ["group:standalone:oc-fp-0001"],
       "featuredOrder": 20,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "ai-stac",
@@ -324,7 +324,7 @@
       "sourceOrganizationIds": ["org:ai-stac-dev"],
       "workGroupIds": ["group:standalone:oc-fp-0023"],
       "featuredOrder": 21,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "bay-area-ai",
@@ -334,7 +334,7 @@
       "sourceOrganizationIds": ["org:microsoft-reactor-bay-area-ai"],
       "workGroupIds": ["group:standalone:oc-fp-0008"],
       "featuredOrder": 22,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "genai-innovators",
@@ -344,7 +344,7 @@
       "sourceOrganizationIds": ["org:genai-innovators-w-and-b"],
       "workGroupIds": ["group:standalone:oc-fp-0020"],
       "featuredOrder": 23,
-      "logo": null
+      "brandAssetId": null
     },
     {
       "id": "mdli-ops",
@@ -354,7 +354,7 @@
       "sourceOrganizationIds": ["org:mdli-ops"],
       "workGroupIds": ["group:standalone:oc-fp-0004"],
       "featuredOrder": 24,
-      "logo": null
+      "brandAssetId": null
     }
   ]
 }

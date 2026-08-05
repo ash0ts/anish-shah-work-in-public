@@ -41,9 +41,20 @@ test("the curated organization contract resolves exactly the vetted 24 marks", (
     ],
   );
   assert(resolved.every(({ projectCount }) => projectCount > 0));
-  assert(
-    resolved.every(({ logo }) => logo === null),
-    "Unverified remote or unofficial logos must use the wordmark fallback",
+  assert.deepEqual(
+    resolved.filter(({ logo }) => logo !== null).map(({ id }) => id),
+    [
+      "weights-biases",
+      "hugging-face",
+      "mlops-world",
+      "datatalksclub",
+      "ai-tinkerers",
+    ],
+  );
+  assert.equal(
+    resolved.find(({ id }) => id === "openai")?.logo,
+    null,
+    "A brand-page control without a verifiable raw asset keeps the fallback",
   );
   assert.equal(
     resolved.find(({ id }) => id === "weights-biases")?.projectCount,

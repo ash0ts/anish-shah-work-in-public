@@ -55,6 +55,40 @@ function circularAngleDistance(left, right) {
   return Math.min(distance, 360 - distance);
 }
 
+test("About and Work load only approved first-party brand artwork", async ({
+  baseURL,
+  page,
+}) => {
+  const firstPartyOrigin = new URL(baseURL).origin;
+  const remoteImageRequests = [];
+  page.on("request", (request) => {
+    if (request.resourceType() !== "image") return;
+    const url = new URL(request.url());
+    if (url.origin !== firstPartyOrigin) {
+      remoteImageRequests.push(request.url());
+    }
+  });
+
+  for (const [route, expectedCount] of [
+    ["/about", 1],
+    ["/work", 5],
+  ]) {
+    await page.goto(route, { waitUntil: "networkidle" });
+    const artwork = page.locator('img[src^="/assets/organizations/"]');
+    await expect(artwork).toHaveCount(expectedCount);
+    for (const src of await artwork.evaluateAll((images) =>
+      images.map((image) => image.getAttribute("src")),
+    )) {
+      expect(src).toMatch(/^\/assets\/organizations\/[a-z0-9.-]+\.(?:svg|png)$/u);
+    }
+  }
+
+  const openAiFallback = page.getByRole("link", { name: /^OpenAI:/u });
+  await expect(openAiFallback.getByText("OpenAI", { exact: true })).toBeVisible();
+  await expect(openAiFallback.locator("img")).toHaveCount(0);
+  expect(remoteImageRequests).toEqual([]);
+});
+
 for (const width of widths) {
   test(`public routes fit a ${width}px viewport`, async ({ page }) => {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });

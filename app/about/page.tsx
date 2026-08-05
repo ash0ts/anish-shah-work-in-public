@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { aboutCareerPhases } from "@/lib/about-career";
 import { SITE_COPY } from "@/lib/copy";
@@ -98,8 +99,24 @@ export default async function AboutPage() {
           {phases.map((phase) => (
             <li className={styles.phase} key={phase.id}>
               <p className={styles.period}>{phase.period}</p>
-              <span className={styles.employerMark} aria-hidden="true">
-                {phase.mark.label}
+              <span
+                aria-hidden="true"
+                className={styles.employerMark}
+                data-artwork={phase.mark.asset ? "true" : undefined}
+              >
+                {phase.mark.asset ? (
+                  <Image
+                    alt=""
+                    height={phase.mark.asset.height}
+                    loading="lazy"
+                    sizes="144px"
+                    src={phase.mark.asset.assetPath}
+                    unoptimized
+                    width={phase.mark.asset.width}
+                  />
+                ) : (
+                  phase.mark.label
+                )}
               </span>
               <div className={styles.phaseCopy}>
                 <h3>{phase.organization}</h3>

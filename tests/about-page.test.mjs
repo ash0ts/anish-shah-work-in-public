@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("the About career manifest declares exactly three reviewed typographic phases", async () => {
+test("the About career manifest declares one official mark and two reviewed fallbacks", async () => {
   const manifest = JSON.parse(
     await readFile(
       new URL("../content/presentation/career.v1.json", import.meta.url),
@@ -21,7 +21,7 @@ test("the About career manifest declares exactly three reviewed typographic phas
         id: "weights-and-biases",
         period: "2021–Now",
         organization: "Weights & Biases",
-        mark: "typographic",
+        mark: "official",
       },
       {
         id: "sap-and-brilliant-hire",
@@ -38,12 +38,11 @@ test("the About career manifest declares exactly three reviewed typographic phas
     ],
   );
   assert(
-    manifest.phases.every(
-      ({ mark, summaryCopyKey }) =>
-        mark.assetPath === null &&
-        mark.sourceUrl.startsWith("https://") &&
-        /^\d{4}-\d{2}-\d{2}$/u.test(mark.lastVerified) &&
-        /^career-phase-[1-3]-summary$/u.test(summaryCopyKey),
+    manifest.phases.every(({ mark, summaryCopyKey }) =>
+      /^career-phase-[1-3]-summary$/u.test(summaryCopyKey) &&
+      (mark.kind === "official"
+        ? mark.brandAssetId === "weights-biases"
+        : mark.brandAssetId === null),
     ),
   );
 });

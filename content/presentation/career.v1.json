@@ -8,11 +8,9 @@
       "track": "ML support → MLOps growth → agent systems",
       "summaryCopyKey": "career-phase-1-summary",
       "mark": {
-        "kind": "typographic",
+        "kind": "official",
         "label": "W&B",
-        "assetPath": null,
-        "sourceUrl": "https://wandb.ai/",
-        "lastVerified": "2026-08-05"
+        "brandAssetId": "weights-biases"
       }
     },
     {
@@ -24,9 +22,7 @@
       "mark": {
         "kind": "typographic",
         "label": "SAP",
-        "assetPath": null,
-        "sourceUrl": "https://www.sap.com/",
-        "lastVerified": "2026-08-05"
+        "brandAssetId": null
       }
     },
     {
@@ -38,9 +34,7 @@
       "mark": {
         "kind": "typographic",
         "label": "TU",
-        "assetPath": null,
-        "sourceUrl": "https://www.temple.edu/",
-        "lastVerified": "2026-08-05"
+        "brandAssetId": null
       }
     }
   ]

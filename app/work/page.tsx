@@ -88,7 +88,13 @@ export default async function WorkPage({
         relationship: mark.group,
         secondaryRelationships: mark.secondaryGroups,
         projectCount: mark.projectCount,
-        logo: mark.logo ? { src: mark.logo.assetPath } : null,
+        logo: mark.logo
+          ? {
+              src: mark.logo.assetPath,
+              width: mark.logo.width,
+              height: mark.logo.height,
+            }
+          : null,
       })),
     }));
   const filtered = filterWorkArchiveRecords(allWorks, query);

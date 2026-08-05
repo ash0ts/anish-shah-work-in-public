@@ -9,8 +9,8 @@ export type WorkOrganizationRelationship =
 
 export type WorkOrganizationLogoView = {
   src: `/assets/organizations/${string}`;
-  width?: number;
-  height?: number;
+  width: number;
+  height: number;
 };
 
 export type WorkOrganizationMarkView = {
@@ -137,11 +137,12 @@ function OrganizationMark({
         {mark.logo ? (
           <Image
             alt=""
-            height={mark.logo.height ?? 96}
+            height={mark.logo.height}
+            loading="lazy"
             sizes="160px"
             src={mark.logo.src}
             unoptimized
-            width={mark.logo.width ?? 240}
+            width={mark.logo.width}
           />
         ) : (
           <strong className={styles.wordmark}>{mark.name}</strong>

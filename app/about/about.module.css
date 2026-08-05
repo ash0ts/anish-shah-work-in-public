@@ -129,7 +129,7 @@
 .phase {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(7rem, 0.18fr) minmax(6rem, 0.14fr) minmax(0, 1fr);
+  grid-template-columns: minmax(7rem, 0.18fr) minmax(7.5rem, 0.14fr) minmax(0, 1fr);
   gap: clamp(1.25rem, 3vw, 3.5rem);
   align-items: start;
   padding: clamp(1.5rem, 3vw, 2.5rem) 0;
@@ -158,6 +158,23 @@
   font-weight: 760;
   letter-spacing: -0.04em;
   line-height: 1;
+}
+
+.employerMark[data-artwork="true"] {
+  width: clamp(7.5rem, 10vw, 9rem);
+  min-height: 4.6rem;
+  aspect-ratio: auto;
+  padding: 0.75rem;
+  color: var(--blueprint-ink);
+  background: var(--trace-white);
+}
+
+.employerMark img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 3rem;
+  object-fit: contain;
 }
 
 .phase:nth-child(2) .employerMark {
@@ -236,7 +253,7 @@
   }
 
   .phase {
-    grid-template-columns: minmax(4.5rem, 0.24fr) minmax(0, 1fr);
+    grid-template-columns: 7.5rem minmax(0, 1fr);
     gap: 1.25rem;
   }
 
@@ -248,6 +265,10 @@
   .employerMark {
     width: 4.6rem;
   }
+
+  .employerMark[data-artwork="true"] {
+    width: 7.5rem;
+  }
 }
 
 @media (forced-colors: active) {
@@ -256,5 +277,9 @@
   .phase:nth-child(3) .employerMark {
     color: CanvasText;
     background: Canvas;
+  }
+
+  .employerMark[data-artwork="true"] img {
+    forced-color-adjust: none;
   }
 }

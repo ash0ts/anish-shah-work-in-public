@@ -1,6 +1,7 @@
 import manifestJson from "@/content/presentation/work-organizations.v1.json" with {
   type: "json",
 };
+import { brandAssetForId, type BrandAsset } from "@/lib/brand-assets";
 import type { AnishContentBundle, WorkGroup } from "@/types/content";
 
 export const workOrganizationGroupDefinitions = [
@@ -12,12 +13,6 @@ export const workOrganizationGroupDefinitions = [
 export type WorkOrganizationGroupId =
   (typeof workOrganizationGroupDefinitions)[number]["id"];
 
-export type WorkOrganizationLogo = {
-  assetPath: `/assets/organizations/${string}.svg`;
-  sourceUrl: string;
-  lastVerified: string;
-};
-
 export type WorkOrganizationMark = {
   id: string;
   name: string;
@@ -26,11 +21,12 @@ export type WorkOrganizationMark = {
   sourceOrganizationIds: string[];
   workGroupIds: string[];
   featuredOrder: number;
-  logo: WorkOrganizationLogo | null;
+  brandAssetId: string | null;
 };
 
 export type ResolvedWorkOrganizationMark = WorkOrganizationMark & {
   projectCount: number;
+  logo: BrandAsset | null;
 };
 
 export type ResolvedWorkOrganizationSection = {
@@ -47,8 +43,6 @@ type WorkOrganizationManifest = {
 const IDENTIFIER = /^[a-z0-9][a-z0-9-]{0,79}$/;
 const ORGANIZATION_ID = /^org:[a-z0-9][a-z0-9-]{0,127}$/;
 const WORK_GROUP_ID = /^group:[a-z0-9][a-z0-9:-]{0,159}$/;
-const ASSET_PATH = /^\/assets\/organizations\/[a-z0-9][a-z0-9-]*\.svg$/;
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const groupIds = new Set<WorkOrganizationGroupId>(
   workOrganizationGroupDefinitions.map(({ id }) => id),
 );
@@ -75,49 +69,6 @@ function uniqueStrings(
     value.every((entry) => typeof entry === "string" && pattern.test(entry)) &&
     new Set(value).size === value.length
   );
-}
-
-function isHttpsUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      !url.username &&
-      !url.password &&
-      !url.port
-    );
-  } catch {
-    return false;
-  }
-}
-
-function isIsoCalendarDate(value: string): boolean {
-  if (!ISO_DATE.test(value)) return false;
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  return (
-    Number.isFinite(parsed.valueOf()) &&
-    parsed.toISOString().slice(0, 10) === value
-  );
-}
-
-function parseLogo(value: unknown): WorkOrganizationLogo | null {
-  if (value === null) return null;
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("work_organization_logo_invalid");
-  }
-  const logo = value as Record<string, unknown>;
-  if (
-    !exactKeys(logo, ["assetPath", "sourceUrl", "lastVerified"]) ||
-    typeof logo.assetPath !== "string" ||
-    !ASSET_PATH.test(logo.assetPath) ||
-    typeof logo.sourceUrl !== "string" ||
-    !isHttpsUrl(logo.sourceUrl) ||
-    typeof logo.lastVerified !== "string" ||
-    !isIsoCalendarDate(logo.lastVerified)
-  ) {
-    throw new Error("work_organization_logo_invalid");
-  }
-  return logo as WorkOrganizationLogo;
 }
 
 export function parseWorkOrganizationManifest(
@@ -150,7 +101,7 @@ export function parseWorkOrganizationManifest(
         "sourceOrganizationIds",
         "workGroupIds",
         "featuredOrder",
-        "logo",
+        "brandAssetId",
       ]) ||
       typeof mark.id !== "string" ||
       !IDENTIFIER.test(mark.id) ||
@@ -170,7 +121,10 @@ export function parseWorkOrganizationManifest(
       !uniqueStrings(mark.sourceOrganizationIds, ORGANIZATION_ID, 32) ||
       !uniqueStrings(mark.workGroupIds, WORK_GROUP_ID, 128) ||
       !Number.isSafeInteger(mark.featuredOrder) ||
-      (mark.featuredOrder as number) < 1
+      (mark.featuredOrder as number) < 1 ||
+      (mark.brandAssetId !== null &&
+        (typeof mark.brandAssetId !== "string" ||
+          !IDENTIFIER.test(mark.brandAssetId)))
     ) {
       throw new Error("work_organization_mark_invalid");
     }
@@ -185,7 +139,7 @@ export function parseWorkOrganizationManifest(
       sourceOrganizationIds: [...(mark.sourceOrganizationIds as string[])],
       workGroupIds: [...(mark.workGroupIds as string[])],
       featuredOrder: mark.featuredOrder as number,
-      logo: parseLogo(mark.logo),
+      brandAssetId: mark.brandAssetId as string | null,
     };
   });
 
@@ -278,6 +232,9 @@ export function workOrganizationMarksFrom(
           sourceOrganizationIds: [...mark.sourceOrganizationIds],
           workGroupIds: visibleWorkGroupIds,
           projectCount: visibleWorkGroupIds.length,
+          logo: mark.brandAssetId
+            ? brandAssetForId(mark.brandAssetId)
+            : null,
         },
       ];
     })
