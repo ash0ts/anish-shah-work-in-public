@@ -44,15 +44,23 @@ export function RoomOverview({
         <div className={styles.posterField} aria-hidden="true">
           <picture>
             <source
+              media="(max-width: 767px)"
+              srcSet="/assets/play/my-room-2001-neutral-mobile.27b17548d9bf.avif"
+              type="image/avif"
+            />
+            <source
               srcSet="/assets/play/my-room-2001-neutral.01c6f825bbc1.avif"
               type="image/avif"
             />
             <img
               alt=""
               decoding="async"
+              fetchPriority="high"
               height="1000"
               loading="eager"
+              sizes="(max-width: 767px) calc(100vw - 2rem), 60vw"
               src="/assets/play/my-room-2001-neutral.00d2bc80d8dc.webp"
+              srcSet="/assets/play/my-room-2001-neutral-mobile.95603956f4ee.webp 640w, /assets/play/my-room-2001-neutral.00d2bc80d8dc.webp 1600w"
               width="1600"
             />
           </picture>

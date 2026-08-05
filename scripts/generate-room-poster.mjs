@@ -13,30 +13,38 @@ if (!input) {
 
 const source = path.resolve(input);
 const outputDirectory = path.resolve("public/assets/play");
-const pipeline = sharp(source)
-  .rotate()
-  .resize({
-    width: 1600,
-    height: 1000,
-    fit: "cover",
-    position: "centre",
-    withoutEnlargement: false,
-  });
+const variants = [
+  { height: 1000, label: "", width: 1600 },
+  { height: 400, label: "mobile", width: 640 },
+];
 
-const [avif, webp] = await Promise.all([
-  pipeline.clone().avif({ quality: 58, effort: 7 }).toBuffer(),
-  pipeline.clone().webp({ quality: 78, effort: 6 }).toBuffer(),
-]);
-
-function contentName(format, bytes) {
+function contentName(label, format, bytes) {
   const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
-  return `my-room-2001-neutral.${digest}.${format}`;
+  const variant = label ? `-${label}` : "";
+  return `my-room-2001-neutral${variant}.${digest}.${format}`;
 }
 
-const outputs = [
-  { bytes: avif, name: contentName("avif", avif) },
-  { bytes: webp, name: contentName("webp", webp) },
-];
+const outputs = (
+  await Promise.all(
+    variants.map(async ({ height, label, width }) => {
+      const pipeline = sharp(source).rotate().resize({
+        width,
+        height,
+        fit: "cover",
+        position: "centre",
+        withoutEnlargement: false,
+      });
+      const [avif, webp] = await Promise.all([
+        pipeline.clone().avif({ quality: 58, effort: 7 }).toBuffer(),
+        pipeline.clone().webp({ quality: 78, effort: 6 }).toBuffer(),
+      ]);
+      return [
+        { bytes: avif, name: contentName(label, "avif", avif) },
+        { bytes: webp, name: contentName(label, "webp", webp) },
+      ];
+    }),
+  )
+).flat();
 
 await mkdir(outputDirectory, { recursive: true });
 for (const output of outputs) {
