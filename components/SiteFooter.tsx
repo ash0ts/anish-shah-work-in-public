@@ -35,8 +35,12 @@ export function SiteFooter() {
         ) : null}
       </nav>
       <nav className={styles.links} aria-label="Site information">
-        <Link href="/sources">{SITE_COPY.site["footer-sources"]}</Link>
-        <Link href="/privacy">{SITE_COPY.site["footer-privacy"]}</Link>
+        <Link href="/sources" prefetch={false}>
+          {SITE_COPY.site["footer-sources"]}
+        </Link>
+        <Link href="/privacy" prefetch={false}>
+          {SITE_COPY.site["footer-privacy"]}
+        </Link>
       </nav>
     </footer>
   );

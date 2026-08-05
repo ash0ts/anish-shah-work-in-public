@@ -472,36 +472,42 @@ test.describe("Postcard Planet", () => {
     await expect(pageSizes.getByRole("link", { name: "36" })).toBeVisible();
   });
 
-  for (const viewport of [
-    { label: "wide", width: 1440, height: 900, zoomSteps: 0 },
-    { label: "compact zoomed", width: 1024, height: 860, zoomSteps: 2 },
-  ]) {
-    test(`a real Canvas raycast selects a pin at ${viewport.label} scale`, async ({
-      page,
-    }) => {
-      test.setTimeout(90_000);
-      await page.setViewportSize({
-        width: viewport.width,
-        height: viewport.height,
+  test.describe("pin raycast reliability", () => {
+    // A retry would hide the default-scale regression this focused contract is
+    // meant to catch, even when the broader browser job permits one retry.
+    test.describe.configure({ retries: 0 });
+
+    for (const viewport of [
+      { label: "wide default", width: 1440, height: 900, zoomSteps: 0 },
+      { label: "compact zoomed", width: 1024, height: 860, zoomSteps: 2 },
+    ]) {
+      test(`a real Canvas raycast selects a pin at ${viewport.label} scale`, async ({
+        page,
+      }) => {
+        test.setTimeout(90_000);
+        await page.setViewportSize({
+          width: viewport.width,
+          height: viewport.height,
+        });
+        await page.goto("/play/travel", { waitUntil: "networkidle" });
+        await settleMatchCut(page);
+        await expect(page.locator('[data-globe-ready="true"]')).toHaveCount(1, {
+          timeout: 10_000,
+        });
+        await page.locator('[data-travel-country="JP"]').click();
+        for (let index = 0; index < viewport.zoomSteps; index += 1) {
+          await page.getByRole("button", { name: "Zoom globe in" }).click();
+        }
+        await page.waitForTimeout(900);
+        const point = await findTravelPinPoint(page, "place_preview_tokyo");
+        await page.mouse.click(point.x, point.y);
+        await expect(page.locator("[data-travel-place-inspector]")).toHaveAttribute(
+          "data-travel-place-inspector",
+          "place_preview_tokyo",
+        );
       });
-      await page.goto("/play/travel", { waitUntil: "networkidle" });
-      await settleMatchCut(page);
-      await expect(page.locator('[data-globe-ready="true"]')).toHaveCount(1, {
-        timeout: 10_000,
-      });
-      await page.locator('[data-travel-country="JP"]').click();
-      for (let index = 0; index < viewport.zoomSteps; index += 1) {
-        await page.getByRole("button", { name: "Zoom globe in" }).click();
-      }
-      await page.waitForTimeout(900);
-      const point = await findTravelPinPoint(page, "place_preview_tokyo");
-      await page.mouse.click(point.x, point.y);
-      await expect(page.locator("[data-travel-place-inspector]")).toHaveAttribute(
-        "data-travel-place-inspector",
-        "place_preview_tokyo",
-      );
-    });
-  }
+    }
+  });
 
   test("twenty real Canvas pin clicks and twenty pin-origin drags stay bounded", async ({
     page,

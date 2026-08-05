@@ -18,6 +18,44 @@ const repositoryRoot = new URL("../", import.meta.url);
 const source = (relativePath) =>
   readFile(new URL(relativePath, repositoryRoot), "utf8");
 
+test("audio startup has a deterministic bounded fallback", async () => {
+  const {
+    ExperienceAudioStartTimeoutError,
+    startAudioWithinDeadline,
+  } = await import(
+    "../components/experience-audio/audio-start.ts"
+  );
+
+  let deadline = null;
+  let cancelledHandle = null;
+  const pending = startAudioWithinDeadline(
+    () => new Promise(() => {}),
+    {
+      cancel: (handle) => {
+        cancelledHandle = handle;
+      },
+      schedule: (callback) => {
+        deadline = callback;
+        return 17;
+      },
+      timeoutMs: 25,
+    },
+  );
+  assert.equal(typeof deadline, "function");
+  deadline();
+  await assert.rejects(pending, ExperienceAudioStartTimeoutError);
+  assert.equal(cancelledHandle, 17);
+
+  let successTimerCancelled = false;
+  await startAudioWithinDeadline(() => Promise.resolve(), {
+    cancel: () => {
+      successTimerCancelled = true;
+    },
+    schedule: () => 18,
+  });
+  assert.equal(successTimerCancelled, true);
+});
+
 test("the experience audio manifest is strict, quiet, and deterministic", async () => {
   const manifest = JSON.parse(
     await source("content/presentation/experience-audio.v1.json"),
@@ -111,10 +149,13 @@ test("Tone remains behind explicit consent and outside non-experience routes", a
   ]);
   assert.doesNotMatch(provider, /^import .* from ["']tone["'];?$/m);
   assert.match(provider, /await import\("tone"\)/);
+  assert.match(provider, /startAudioWithinDeadline\(\(\) => imported\.start\(\)\)/);
   assert.match(provider, /onClick=\{\(\) => void setEnabled\(status !== "on"\)\}/);
   assert.match(provider, /pathname === "\/play"/);
   assert.match(provider, /pathname === "\/simulation"/);
   assert.match(provider, /disposeRuntime\(runtime\.current\)/);
+  assert.match(provider, /embeddedControlCount === 0/);
+  assert.match(provider, /data-experience-audio-placement=\{placement\}/);
   assert.match(layout, /<ExperienceAudioProvider>/);
   assert.doesNotMatch(
     provider,

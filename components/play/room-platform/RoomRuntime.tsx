@@ -13,6 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ExperienceAudioControl } from "@/components/experience-audio/ExperienceAudioProvider";
 import { useRoomCapability } from "../room-3d/Room3DGate";
 import type { RoomCapabilityResult } from "../room-3d/room-capability";
 import { adjacentPocketRoomRotation } from "../room-3d/room-math";
@@ -342,6 +343,9 @@ export function RoomRuntime() {
             Leave room
           </button>
           <RevealSimulationControl className={styles.simulationButton} />
+          {!presenting ? (
+            <ExperienceAudioControl className={styles.audioControl} />
+          ) : null}
         </div>
       </div>
 

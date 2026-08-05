@@ -86,7 +86,10 @@ test("Tactical keeps Phaser and Tone deferred and receives focus", async ({ page
   expect(requested(requests, actionChunk)).toBe(false);
   expect(requested(requests, toneChunk)).toBe(false);
   await page.getByRole("button", { name: "Sound on" }).click();
-  await expect(page.getByRole("button", { name: "Sound off" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^(?:Sound off|Retry sound)$/ }),
+  ).toBeVisible({ timeout: 4_000 });
+  await expect(page.getByRole("button", { name: "Starting sound…" })).toHaveCount(0);
   expect(requested(requests, toneChunk)).toBe(true);
   expect(requested(requests, actionChunk)).toBe(false);
 });

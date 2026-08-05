@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import audioManifestJson from "@/content/presentation/experience-audio.v1.json";
+import { startAudioWithinDeadline } from "./audio-start";
 import styles from "./ExperienceAudioProvider.module.css";
 
 type ExperienceCueId = keyof typeof audioManifestJson.cues;
@@ -63,6 +64,7 @@ function isAudioVoiceId(value: string): value is keyof AudioRuntime["voices"] {
 type ExperienceAudioContextValue = {
   enabled: boolean;
   playCue(id: ExperienceCueId): void;
+  registerEmbeddedControl(): () => void;
   setExternalMediaActive(source: ExternalMediaSource, active: boolean): void;
   setEnabled(enabled: boolean): Promise<void>;
   status: AudioStatus;
@@ -142,7 +144,18 @@ export function ExperienceAudioProvider({ children }: { children: ReactNode }) {
   const runtime = useRef<AudioRuntime | null>(null);
   const externalMedia = useRef(new Set<ExternalMediaSource>());
   const requestEpoch = useRef(0);
+  const [embeddedControlCount, setEmbeddedControlCount] = useState(0);
   const [status, setStatus] = useState<AudioStatus>("off");
+
+  const registerEmbeddedControl = useCallback(() => {
+    let registered = true;
+    setEmbeddedControlCount((count) => count + 1);
+    return () => {
+      if (!registered) return;
+      registered = false;
+      setEmbeddedControlCount((count) => Math.max(0, count - 1));
+    };
+  }, []);
 
   const setEnabled = useCallback(async (enabled: boolean) => {
     const epoch = ++requestEpoch.current;
@@ -161,7 +174,7 @@ export function ExperienceAudioProvider({ children }: { children: ReactNode }) {
       // Tone and its Web Audio graph are requested only from this explicit
       // visitor gesture. No experience route imports the engine eagerly.
       const imported = (await import("tone")) as unknown as ToneModule;
-      await imported.start();
+      await startAudioWithinDeadline(() => imported.start());
       if (epoch !== requestEpoch.current) return;
       const nextRuntime = createRuntime(imported, externalMedia.current.size > 0);
       runtime.current = nextRuntime;
@@ -230,12 +243,37 @@ export function ExperienceAudioProvider({ children }: { children: ReactNode }) {
     () => ({
       enabled: status === "on",
       playCue,
+      registerEmbeddedControl,
       setExternalMediaActive,
       setEnabled,
       status,
     }),
-    [playCue, setEnabled, setExternalMediaActive, status],
+    [playCue, registerEmbeddedControl, setEnabled, setExternalMediaActive, status],
   );
+
+  return (
+    <ExperienceAudioContext.Provider value={value}>
+      {children}
+      {visible && embeddedControlCount === 0 ? (
+        <ExperienceAudioControl placement="global" />
+      ) : null}
+    </ExperienceAudioContext.Provider>
+  );
+}
+
+export function ExperienceAudioControl({
+  className,
+  placement = "embedded",
+}: {
+  className?: string;
+  placement?: "embedded" | "global";
+}) {
+  const { registerEmbeddedControl, setEnabled, status } = useExperienceAudio();
+
+  useEffect(() => {
+    if (placement !== "embedded") return;
+    return registerEmbeddedControl();
+  }, [placement, registerEmbeddedControl]);
 
   const label =
     status === "loading"
@@ -247,39 +285,40 @@ export function ExperienceAudioProvider({ children }: { children: ReactNode }) {
           : "Sound on";
 
   return (
-    <ExperienceAudioContext.Provider value={value}>
-      {children}
-      {visible ? (
-        <div className={styles.control} data-experience-audio-control>
-          <button
-            aria-label={label}
-            aria-pressed={status === "on"}
-            disabled={status === "loading"}
-            onClick={() => void setEnabled(status !== "on")}
-            type="button"
-          >
-            <span className={styles.longLabel}>{label}</span>
-            <span aria-hidden="true" className={styles.shortLabel}>
-              {status === "on" ? "OFF" : status === "loading" ? "…" : "SND"}
-            </span>
-          </button>
-          <p
-            aria-atomic="true"
-            aria-live="polite"
-            className={styles.status}
-            role="status"
-          >
-            {status === "on"
-              ? "Experience sound is on."
-              : status === "unavailable"
-                ? "Experience sound could not start. The experience remains fully usable without it."
-                : status === "loading"
-                  ? "Starting experience sound."
-                  : "Experience sound is off."}
-          </p>
-        </div>
-      ) : null}
-    </ExperienceAudioContext.Provider>
+    <div
+      className={[styles.control, styles[`${placement}Control`], className]
+        .filter(Boolean)
+        .join(" ")}
+      data-experience-audio-control
+      data-experience-audio-placement={placement}
+    >
+      <button
+        aria-label={label}
+        aria-pressed={status === "on"}
+        disabled={status === "loading"}
+        onClick={() => void setEnabled(status !== "on")}
+        type="button"
+      >
+        <span className={styles.longLabel}>{label}</span>
+        <span aria-hidden="true" className={styles.shortLabel}>
+          {status === "on" ? "OFF" : status === "loading" ? "…" : "SND"}
+        </span>
+      </button>
+      <p
+        aria-atomic="true"
+        aria-live="polite"
+        className={styles.status}
+        role="status"
+      >
+        {status === "on"
+          ? "Experience sound is on."
+          : status === "unavailable"
+            ? "Experience sound could not start. The experience remains fully usable without it."
+            : status === "loading"
+              ? "Starting experience sound."
+              : "Experience sound is off."}
+      </p>
+    </div>
   );
 }
 

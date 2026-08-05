@@ -11,12 +11,17 @@ export function SiteHeader() {
   const wordmark = SITE_COPY.site["header-wordmark"];
   return (
     <header className={styles.header}>
-      <Link className={styles.wordmark} href="/" aria-label={`${wordmark}, home`}>
+      <Link
+        className={styles.wordmark}
+        href="/"
+        aria-label={`${wordmark}, home`}
+        prefetch={false}
+      >
         {wordmark}
       </Link>
       <nav className={styles.navigation} aria-label="Primary navigation">
         {navigation.map(([label, href]) => (
-          <Link key={href} href={href}>
+          <Link key={href} href={href} prefetch={false}>
             {label}
           </Link>
         ))}

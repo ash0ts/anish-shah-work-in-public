@@ -1,8 +1,4 @@
-"use client";
-
-import { animate, stagger } from "animejs";
 import Link from "next/link";
-import { useLayoutEffect, useRef } from "react";
 import {
   workGroupPeriodLabel,
   type featuredWorkBucketsFrom,
@@ -13,39 +9,10 @@ import styles from "./BodiesOfWork.module.css";
 type FeaturedBuckets = ReturnType<typeof featuredWorkBucketsFrom>;
 
 export function BodiesOfWork({ buckets }: { buckets: FeaturedBuckets }) {
-  const rootRef = useRef<HTMLElement>(null);
-
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
-
-    const rows = root.querySelectorAll<HTMLElement>("[data-work-line]");
-    let motion: { cancel: () => void } | null = null;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry?.isIntersecting) return;
-      observer.disconnect();
-      motion = animate(rows, {
-        opacity: [0.72, 1],
-        translateY: ["0.3rem", 0],
-        duration: 320,
-        delay: stagger(45),
-        ease: "out(4)",
-      });
-    }, { rootMargin: "0px 0px -10% 0px" });
-    observer.observe(root);
-    return () => {
-      observer.disconnect();
-      motion?.cancel();
-    };
-  }, []);
-
   return (
     <section
       className={styles.section}
       aria-labelledby="lines-of-work-title"
-      ref={rootRef}
     >
       <header className={styles.heading}>
         <p>{SITE_COPY.home["selected-eyebrow"]}</p>

@@ -315,8 +315,14 @@ test("Postcard Planet is demand-driven, pixel-bordered, and semantically navigab
   assert.match(stage, /visibilitychange/);
   assert.match(stage, /if \(material && sampler && readyFrames\.current < 2\)/);
   assert.match(stage, /onTextureFailure/);
-  assert.match(stage, /position \* 0\.5/);
-  assert.match(stage, /<sphereGeometry args=\{\[0\.07, 8, 6\]\}/);
+  assert.match(stage, /const PIN_HIT_RADIUS = 0\.1;/);
+  assert.match(stage, /const PIN_VISUAL_RADIUS = 0\.035;/);
+  assert.match(
+    stage,
+    /const PIN_VISUAL_SCALE = PIN_VISUAL_RADIUS \/ PIN_HIT_RADIUS;/,
+  );
+  assert.match(stage, /position \* \$\{PIN_VISUAL_SCALE\.toFixed\(2\)\}/);
+  assert.match(stage, /<sphereGeometry args=\{\[PIN_HIT_RADIUS, 8, 6\]\}/);
   assert.match(stage, /data-travel-globe-hovered-place/);
   assert.match(stage, /if \(pinching\.current\) \{[\s\S]*?cancelGesture\(\)/);
   assert.match(

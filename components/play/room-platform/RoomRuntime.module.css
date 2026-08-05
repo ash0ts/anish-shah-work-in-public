@@ -73,6 +73,21 @@
   gap: 0.45rem;
 }
 
+.runtimeBar .audioControl button {
+  min-width: 6.8rem;
+  padding: 0.55rem 0.8rem;
+  border-color: #55e4d0;
+  color: #eee4cf;
+  background: #101a29;
+}
+
+.runtimeBar .audioControl button:hover,
+.runtimeBar .audioControl button:focus-visible,
+.runtimeBar .audioControl button[aria-pressed="true"] {
+  color: #07101b;
+  background: #55e4d0;
+}
+
 .runtimeBar button,
 .controls button,
 .objects button {
@@ -554,6 +569,12 @@
   .runtime[data-room-presentation-tier="pocket"] .runtimeBar button {
     min-height: 44px;
     padding-inline: 0.6rem;
+  }
+
+  .runtime[data-room-presentation-tier="pocket"] .runtimeBar .audioControl button {
+    width: 44px;
+    min-width: 44px;
+    padding-inline: 0;
   }
 
   .runtime[data-room-presentation-tier="pocket"] .controls {

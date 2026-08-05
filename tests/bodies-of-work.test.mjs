@@ -157,27 +157,17 @@ test("Home and Work share one expert-facing four-body taxonomy", () => {
   assert.match(workGroupsSource, /return workBuckets\.map/);
 });
 
-test("Bodies of Work motion enhances ruled rows without hiding SSR content", () => {
-  assert.match(bodySource, /import \{ animate, stagger \} from "animejs"/);
-  assert.match(bodySource, /useLayoutEffect/);
-  assert.match(bodySource, /IntersectionObserver/);
-  assert.match(bodySource, /observer\.disconnect\(\)/);
-  assert.match(bodySource, /motion\?\.cancel\(\)/);
-  assert.match(bodySource, /prefers-reduced-motion: reduce/);
-  assert.doesNotMatch(bodySource, /opacity:\s*\[0,\s*1\]/);
+test("Bodies of Work stays server-rendered and does not hydrate for decorative motion", () => {
+  assert.doesNotMatch(bodySource, /"use client"/);
+  assert.doesNotMatch(bodySource, /animejs|useLayoutEffect|IntersectionObserver/);
+  assert.match(bodySource, /prefetch=\{false\}/);
 });
 
-test("Home keeps its LCP name static while non-LCP motion remains cancellable", () => {
-  assert.match(introductionSource, /import \{ animate \} from "animejs"/);
-  assert.match(introductionSource, /useLayoutEffect/);
-  assert.match(introductionSource, /animation\.cancel\(\)/);
-  assert.match(introductionSource, /prefers-reduced-motion: reduce/);
-  assert.match(introductionSource, /const copy = root\.querySelector/);
-  assert.match(introductionSource, /animate\(copy,/);
+test("Home keeps its LCP and introduction static without a client hydration boundary", () => {
+  assert.doesNotMatch(introductionSource, /"use client"/);
+  assert.doesNotMatch(introductionSource, /animejs|useLayoutEffect|useRef/);
   assert.doesNotMatch(introductionSource, /data-name-line/);
-  assert.doesNotMatch(introductionSource, /querySelectorAll\([^)]*name/i);
-  assert.doesNotMatch(introductionSource, /import\("animejs"\)/);
-  assert.doesNotMatch(introductionSource, /opacity:\s*\[0,\s*1\]/);
+  assert.match(introductionSource, /prefetch=\{false\}/);
 });
 
 test("Work pairs its four-body SSR index with a semantic body-by-year color calendar", () => {

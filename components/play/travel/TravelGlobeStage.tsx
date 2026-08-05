@@ -57,14 +57,17 @@ const ONE_TRIP = new Color("#45d7b1");
 const TWO_TRIPS = new Color("#f6c85e");
 const THREE_PLUS_TRIPS = new Color("#ff6847");
 const SELECTED_REGION = new Color("#347cff");
+const PIN_HIT_RADIUS = 0.1;
+const PIN_VISUAL_RADIUS = 0.035;
+const PIN_VISUAL_SCALE = PIN_VISUAL_RADIUS / PIN_HIT_RADIUS;
 const PIN = new MeshBasicMaterial({ color: "#fff8eb" });
 PIN.onBeforeCompile = (shader) => {
   shader.vertexShader = shader.vertexShader.replace(
     "#include <begin_vertex>",
-    "vec3 transformed = vec3(position * 0.5);",
+    `vec3 transformed = vec3(position * ${PIN_VISUAL_SCALE.toFixed(2)});`,
   );
 };
-PIN.customProgramCacheKey = () => "travel-pin-visual-half-v1";
+PIN.customProgramCacheKey = () => "travel-pin-hit-0.1-visual-0.035-v2";
 
 type CountrySampler = {
   image: ImageData;
@@ -625,9 +628,10 @@ function Planet({
           </lineSegments>
         ))}
         <Instances limit={Math.max(places.length, 1)} range={places.length}>
-          {/* Geometry remains 0.07 for pointer/touch raycasting; the material
-              renders it at half scale so every equal-size visible pin is 0.035. */}
-          <sphereGeometry args={[0.07, 8, 6]} />
+          {/* Raycasting uses the larger geometry while the vertex shader keeps
+              every visible pin at the established 0.035 radius. This improves
+              default-scale selection without changing the map's visual encoding. */}
+          <sphereGeometry args={[PIN_HIT_RADIUS, 8, 6]} />
           <primitive attach="material" object={PIN} />
           {places.map((place) => (
             <Instance

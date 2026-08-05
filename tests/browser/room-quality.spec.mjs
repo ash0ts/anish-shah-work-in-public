@@ -856,6 +856,66 @@ test.describe("My Room 2001 browser quality", () => {
     ).toEqual([]);
   });
 
+  for (const viewport of [
+    { height: 900, label: "desktop", width: 1440 },
+    { height: 844, label: "Pocket Room", width: 390 },
+  ]) {
+    test(`the sound control never covers ${viewport.label} room controls`, async ({
+      browser,
+    }) => {
+      const context = await browser.newContext({
+        hasTouch: viewport.width === 390,
+        viewport: { width: viewport.width, height: viewport.height },
+      });
+      const page = await context.newPage();
+      await page.goto("/play", { waitUntil: "networkidle" });
+      await page
+        .getByRole("button", {
+          name: viewport.width === 390 ? "Open the pocket room" : "Enter the room",
+        })
+        .click();
+      await expectRoomReady(page, {
+        context: `checking the ${viewport.label} audio placement`,
+        expectedTier: viewport.width === 390 ? "pocket" : undefined,
+      });
+
+      const placement = page.locator(
+        '[data-experience-audio-control][data-experience-audio-placement="embedded"]',
+      );
+      await expect(placement).toHaveCount(1);
+      const intersections = await page.evaluate(() => {
+        const audio = document
+          .querySelector("[data-experience-audio-control]")
+          ?.getBoundingClientRect();
+        if (!audio) return ["missing audio control"];
+        return [
+          ...document.querySelectorAll(
+            "[data-room-view-controls] button, [data-room-object-control]",
+          ),
+        ]
+          .filter((element) => {
+            const target = element.getBoundingClientRect();
+            return !(
+              audio.right <= target.left ||
+              audio.left >= target.right ||
+              audio.bottom <= target.top ||
+              audio.top >= target.bottom
+            );
+          })
+          .map((element) =>
+            element.getAttribute("data-room-object-control") ??
+            element.textContent?.trim() ??
+            element.tagName,
+          );
+      });
+      expect(intersections).toEqual([]);
+      await expect(
+        page.getByRole("button", { name: "Sound on" }),
+      ).toBeVisible();
+      await context.close();
+    });
+  }
+
   test("Enter traps focus and Leave restores the invoking control", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play", { waitUntil: "networkidle" });
@@ -896,6 +956,9 @@ test.describe("My Room 2001 browser quality", () => {
     });
     await expect(revealSimulation).toBeFocused();
     await revealSimulation.press("Tab");
+    const sound = room.getByRole("button", { name: "Sound on" });
+    await expect(sound).toBeFocused();
+    await sound.press("Tab");
     const firstViewControl = room.getByRole("button", { name: "Turn left" });
     await expect(firstViewControl).toBeFocused();
     await page.waitForTimeout(300);

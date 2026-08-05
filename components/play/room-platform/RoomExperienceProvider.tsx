@@ -348,6 +348,7 @@ export function RoomExperienceProvider({
       if (cancelled) return;
       cancelled = true;
       if (frame !== null) cancelAnimationFrame(frame);
+      window.removeEventListener("focusin", cancelForFocusChange, true);
       window.removeEventListener("keydown", cancelForUserInput, true);
       window.removeEventListener("pointerdown", cancelForUserInput, true);
       if (focusRequestCleanup.current === cleanup) {
@@ -356,7 +357,18 @@ export function RoomExperienceProvider({
     };
 
     const cancelForUserInput = () => cleanup();
+    const cancelForFocusChange = (event: FocusEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        candidates.some((selector) => target.matches(selector))
+      ) {
+        return;
+      }
+      cleanup();
+    };
     focusRequestCleanup.current = cleanup;
+    window.addEventListener("focusin", cancelForFocusChange, true);
     window.addEventListener("keydown", cancelForUserInput, true);
     window.addEventListener("pointerdown", cancelForUserInput, true);
 
