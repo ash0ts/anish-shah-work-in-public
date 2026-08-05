@@ -123,7 +123,7 @@ test("owner OAuth and write routes require a security regression test", () => {
 test("responsive Spotify changes require the browser quality gate", () => {
   const result = plan("components/spotify/RankedGroove.tsx");
   assert.equal(result.status, 0, output(result));
-  assert.match(result.stdout, /npm run validate:browser/);
+  assert.match(result.stdout, /npm run browser:public:existing/);
 });
 
 test("responsive Discogs changes require connector and browser gates", () => {
@@ -134,7 +134,7 @@ test("responsive Discogs changes require connector and browser gates", () => {
   assert.equal(result.status, 0, output(result));
   assert.match(result.stdout, /npm run test:content/);
   assert.match(result.stdout, /npm run test:backend/);
-  assert.match(result.stdout, /npm run validate:browser/);
+  assert.match(result.stdout, /npm run browser:public:existing/);
 });
 
 test("copy-deck edits select copy validation and browser review", () => {
@@ -147,7 +147,7 @@ test("copy-deck edits select copy validation and browser review", () => {
   assert.match(result.stdout, /npm run copy:diff/);
   assert.match(result.stdout, /npm run copy:audit/);
   assert.match(result.stdout, /owner-check every FACT-CHECK field/);
-  assert.match(result.stdout, /npm run validate:browser/);
+  assert.match(result.stdout, /npm run browser:public:existing/);
 });
 
 test("voice contracts and the copy skill select voice, audit, fact-check, and skill gates", () => {
@@ -167,7 +167,7 @@ test("mixed dependency and copy changes retain copy diff and browser gates", () 
   assert.equal(result.status, 0, output(result));
   assert.match(result.stdout, /npm run validate/);
   assert.match(result.stdout, /npm run copy:diff/);
-  assert.match(result.stdout, /npm run validate:browser/);
+  assert.match(result.stdout, /npm run browser:public:existing/);
 });
 
 test("mixed dependency and documentation changes retain documentation coverage", () => {
@@ -222,7 +222,7 @@ test("every Travel source class selects the complete Travel validation gate", ()
       "npm run test:backend",
       "npm run test:rendered",
       "npm run db:local:migrate:clean",
-      "npm run validate:browser",
+      "npm run browser:travel:existing",
     ]) {
       assert.match(result.stdout, new RegExp(command.replaceAll(" ", "\\s+")), `${travelPath}: ${command}`);
     }
@@ -252,7 +252,7 @@ test("Travel media mutations require behavior-level security coverage", () => {
   assert.equal(covered.status, 0, output(covered));
   assert.match(covered.stdout, /- travel/);
   assert.match(covered.stdout, /npm run test:backend/);
-  assert.match(covered.stdout, /npm run validate:browser/);
+  assert.match(covered.stdout, /npm run browser:travel:existing/);
 });
 
 test("Simulation server and test changes select privacy, rendered, bundle, and browser gates", () => {
@@ -273,7 +273,7 @@ test("Simulation server and test changes select privacy, rendered, bundle, and b
     "npm run test:backend",
     "npm run test:rendered",
     "npm run bundle:scan",
-    "npm run validate:browser",
+    "npm run browser:simulation:existing",
   ]) {
     assert.match(
       covered.stdout,
@@ -302,7 +302,8 @@ test("closed room registry changes require parity coverage", () => {
   );
   assert.equal(covered.status, 0, output(covered));
   assert.match(covered.stdout, /npm run test:rendered/);
-  assert.match(covered.stdout, /npm run validate:browser/);
+  assert.match(covered.stdout, /npm run browser:public:existing/);
+  assert.match(covered.stdout, /npm run browser:room:existing/);
 });
 
 test("ordinary documentation changes remain documentation-only", () => {

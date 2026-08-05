@@ -19,6 +19,13 @@ const port = configuredPort ? Number(configuredPort) : defaultPort;
 if (!Number.isSafeInteger(port) || port < 1024 || port > 65_535) {
   throw new Error("BROWSER_QUALITY_PORT must be between 1024 and 65535.");
 }
+// Release Browser Quality runs two isolated Wrangler previews concurrently.
+// Wrangler otherwise gives every process the same 9229 inspector port, which
+// makes the second preview fail before any product test can start.
+const inspectorPort = port + 5_000;
+if (inspectorPort > 65_535) {
+  throw new Error("BROWSER_QUALITY_PORT is too high to derive an inspector port.");
+}
 const segment = process.env.BROWSER_QUALITY_SEGMENT?.trim() ?? "";
 if (segment && !/^[a-z0-9-]{1,48}$/.test(segment)) {
   throw new Error("BROWSER_QUALITY_SEGMENT contains unexpected characters.");
@@ -65,7 +72,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      `WRANGLER_LOG_PATH=.wrangler/browser-quality-${playMode}${artifactSuffix}.log node node_modules/wrangler-e2e/bin/wrangler.js dev --config dist/server/wrangler.json --compatibility-date ${e2eCompatibilityDate} --port ${port} --ip 127.0.0.1 --local --var NODE_ENV:development${previewRuntimeVariables} --log-level error --persist-to ${persistedState}`,
+      `WRANGLER_LOG_PATH=.wrangler/browser-quality-${playMode}${artifactSuffix}.log node node_modules/wrangler-e2e/bin/wrangler.js dev --config dist/server/wrangler.json --compatibility-date ${e2eCompatibilityDate} --port ${port} --inspector-port ${inspectorPort} --ip 127.0.0.1 --local --var NODE_ENV:development${previewRuntimeVariables} --log-level error --persist-to ${persistedState}`,
     url: baseURL,
     reuseExistingServer: false,
     timeout: 30_000,

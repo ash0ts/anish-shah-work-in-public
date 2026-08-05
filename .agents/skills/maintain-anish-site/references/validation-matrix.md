@@ -44,9 +44,10 @@ remain automatic. Gitleaks runs on every PR. CodeQL runs for relevant source,
 security, dependency, workflow, and narrowly relevant security-test paths,
 weekly, and for every release candidate. Pushes to `main` establish the merged
 Validate/Gitleaks/CodeQL baseline; release branches use owner-dispatched exact-
-SHA evidence instead of automatic full runs. Complete Browser Quality,
-Lighthouse, and the two-worker/five-loop stability soak are manual exact-SHA
-evidence, not ordinary PR work.
+SHA evidence instead of automatic full runs. Bounded Browser Quality and
+Lighthouse are manual exact-SHA release evidence. The two-worker exhaustive
+interaction soak and visual capture are separate manual evidence required only
+for Room, Travel input, or browser-harness changes.
 
 Disposable release runners use one-time labels and trusted `main` or
 `release/<semver>` refs. They must require the exact current ref head, carry no
@@ -60,7 +61,7 @@ npm run validate
 npm run validate:browser
 ```
 
-`validate` covers copy/content attestations, lint, clean local D1 migrations, both repository skills, typechecking, content/backend tests, production build, bundle/privacy scans, rendered tests, and dependency policy. `validate:browser` covers Playwright, Axe, room behavior, responsive overflow, and Lighthouse.
+`validate` covers copy/content attestations, lint, clean local D1 migrations, both repository skills, typechecking, content/backend tests, production build, bundle/privacy scans, rendered tests, and dependency policy. `validate:browser` covers the fail-fast release-smoke Playwright, Axe, Room/Pocket, Travel, Simulation, Spotify WebKit, responsive-overflow, and Lighthouse gate. Use `validate:browser:full` or the manual stability workflow only for exhaustive investigation.
 
 Run `validate:release` only for a clean, pushed, approved production candidate after exact-SHA Validate, Gitleaks, CodeQL, and Browser Quality evidence exists. It must reuse and verify one immutable deployable artifact; it is not an ordinary development check.
 

@@ -41,11 +41,11 @@ test("CI classifier selects bounded validation and browser lanes", () => {
   const ui = classifyCiChanges(["components/SiteHeader.tsx"]);
   assert.equal(ui.lane, "ui");
   assert.equal(ui.requiresBuild, true);
-  assert.deepEqual(ui.browserScopes, ["room-public"]);
+  assert.deepEqual(ui.browserScopes, ["public"]);
 
   const room = classifyCiChanges(["components/play/room-3d/Room.tsx"]);
   assert.equal(room.lane, "room");
-  assert.deepEqual(room.browserScopes, ["room-public", "room-pr"]);
+  assert.deepEqual(room.browserScopes, ["public", "room-smoke"]);
 
   const simulation = classifyCiChanges([
     "components/simulation/SimulationCampaign.tsx",
@@ -173,10 +173,12 @@ test("repository setup reuses the exact baked release-runner toolchain", async (
 });
 
 test("release browser evidence reuses the exact Validate artifact", async () => {
-  const [validate, browser, soak] = await Promise.all([
+  const [validate, browser, soak, runner, playwrightConfig] = await Promise.all([
     text(".github/workflows/ci.yml"),
     text(".github/workflows/browser-quality.yml"),
     text(".github/workflows/browser-stability.yml"),
+    text("scripts/run-browser-quality.mjs"),
+    text("playwright.config.mjs"),
   ]);
   assert.match(validate, /name: validated-dist-\$\{\{ env\.VALIDATE_SOURCE_SHA \}\}/u);
   assert.match(validate, /npm run deployable:attest:write/u);
@@ -191,9 +193,20 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(browser, /npm run deployable:attest/u);
   assert.doesNotMatch(browser, /npm run build/u);
   assert.match(browser, /playwright install --with-deps chromium webkit/u);
-  assert.match(browser, /Exercise Spotify Ranked Groove in WebKit/u);
-  assert.match(browser, /playwright\.spotify-webkit\.config\.mjs/u);
-  assert.match(browser, /Spotify rank navigation and consent remain keyboard-first/u);
+  assert.match(browser, /npm run browser:release:existing/u);
+  assert.match(browser, /timeout-minutes: 20/u);
+  assert.doesNotMatch(browser, /Capture room review evidence/u);
+  assert.match(runner, /playwright\.spotify-webkit\.config\.mjs/u);
+  assert.match(runner, /Spotify rank navigation and consent remain keyboard-first/u);
+  assert.match(runner, /--retries=0/u);
+  assert.match(runner, /--max-failures=1/u);
+  assert.match(runner, /spawnSync\("ps", \["-axo", "pid=,ppid=,pgid="\]/u);
+  assert.match(runner, /process\.kill\(-groupId, name\)/u);
+  assert.match(runner, /detached: usesProcessGroups/u);
+  assert.match(runner, /timeoutMs: 9 \* 60_000/u);
+  assert.match(runner, /timeoutMs: 5 \* 60_000/u);
+  assert.match(playwrightConfig, /const inspectorPort = port \+ 5_000/u);
+  assert.match(playwrightConfig, /--inspector-port \$\{inspectorPort\}/u);
   for (const workflow of [validate, browser, soak]) {
     assert.match(workflow, /fetch-depth: 0/u);
     assert.match(
@@ -209,7 +222,8 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(soak, /workflow_dispatch\|push/u);
   assert.match(soak, /worker: \[1, 2\]/u);
   assert.match(soak, /max-parallel: 2/u);
-  assert.match(soak, /BROWSER_SOAK_LOOPS: "5"/u);
+  assert.match(soak, /BROWSER_SOAK_LOOPS: "1"/u);
+  assert.match(soak, /Capture non-blocking visual review evidence/u);
   assert.doesNotMatch(soak, /npm run build/u);
   assert.doesNotMatch(soak, /runs-on: ubuntu-latest/u);
 });

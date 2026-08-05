@@ -151,93 +151,75 @@ function launchWorker() {
   return { server, output: () => output };
 }
 
-async function runRouteAudit(route) {
-  const { server, output } = launchWorker();
-  try {
-    await waitForServer(server);
-    await assertRouteAvailable(route, server, output);
-    const chrome = await launchChrome();
-    try {
-      return await lighthouse(new URL(route, baseUrl).href, {
-        port: chrome.port,
-        output: "json",
-        logLevel: "error",
-        onlyCategories: categories,
-        formFactor: "mobile",
-        screenEmulation: {
-          mobile: true,
-          width: 390,
-          height: 844,
-          deviceScaleFactor: 2,
-          disabled: false,
-        },
-      });
-    } finally {
-      await chrome.kill();
-    }
-  } catch (error) {
-    const detail = output();
-    if (detail && error instanceof Error) {
-      error.message = `${error.message}\n${detail}`;
-    }
-    throw error;
-  } finally {
-    await stopProcess(server);
-  }
+async function runRouteAudit(route, server, serverOutput, chrome) {
+  await assertRouteAvailable(route, server, serverOutput);
+  return lighthouse(new URL(route, baseUrl).href, {
+    port: chrome.port,
+    output: "json",
+    logLevel: "error",
+    onlyCategories: categories,
+    formFactor: "mobile",
+    screenEmulation: {
+      mobile: true,
+      width: 390,
+      height: 844,
+      deviceScaleFactor: 2,
+      disabled: false,
+    },
+  });
 }
 
 const failures = [];
 
-for (const { mode, routes } of audits) {
- for (const route of routes) {
-  let result;
-  let lastError;
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    try {
-      result = await runRouteAudit(route);
-      if (!result?.lhr.runtimeError) break;
-      lastError = new Error(
-        `${result.lhr.runtimeError.code} — ${result.lhr.runtimeError.message}`,
+const { server, output } = launchWorker();
+let chrome;
+try {
+  await waitForServer(server);
+  chrome = await launchChrome();
+  for (const { mode, routes } of audits) {
+    for (const route of routes) {
+      const result = await runRouteAudit(route, server, output, chrome);
+      if (!result?.lhr || result.lhr.runtimeError) {
+        const runtime = result?.lhr?.runtimeError;
+        throw new Error(
+          runtime
+            ? `${mode} ${route}: ${runtime.code} — ${runtime.message}`
+            : `Lighthouse returned no result for ${mode} ${route}.`,
+        );
+      }
+      const reportPath = path.join(
+        reportDirectory,
+        `${reportName(route, mode)}.report.json`,
       );
-    } catch (error) {
-      lastError = error;
-    }
-    if (attempt === 1) {
-      const reason =
-        result?.lhr.runtimeError?.code ??
-        (lastError instanceof Error ? lastError.message.split("\n", 1)[0] : "unknown");
-      console.warn(
-        `${mode} ${route} Lighthouse audit failed once (${reason}); retrying with a fresh Worker and browser.`,
-      );
-    }
-  }
+      await writeFile(reportPath, result.report, "utf8");
 
-  if (!result || result.lhr.runtimeError) {
-    throw lastError ?? new Error(`Lighthouse returned no result for ${mode} ${route}.`);
-  }
-  const reportPath = path.join(
-    reportDirectory,
-    `${reportName(route, mode)}.report.json`,
-  );
-  await writeFile(reportPath, result.report, "utf8");
+      const summary = {};
+      for (const category of categories) {
+        const score = result.lhr.categories[category]?.score;
+        summary[category] = score;
+        if (typeof score !== "number" || score < minimumScore) {
+          failures.push(
+            `${mode} ${route} ${category}: ${score ?? "missing"} < ${minimumScore}`,
+          );
+        }
+      }
 
-  const summary = {};
-  for (const category of categories) {
-    const score = result.lhr.categories[category]?.score;
-    summary[category] = score;
-    if (typeof score !== "number" || score < minimumScore) {
-      failures.push(`${mode} ${route} ${category}: ${score ?? "missing"} < ${minimumScore}`);
+      const cls = result.lhr.audits["cumulative-layout-shift"]?.numericValue;
+      summary.cls = cls;
+      if (typeof cls !== "number" || cls > maximumCls) {
+        failures.push(`${mode} ${route} CLS: ${cls ?? "missing"} > ${maximumCls}`);
+      }
+
+      console.log(`${mode} ${route} ${JSON.stringify(summary)}`);
     }
   }
-
-  const cls = result.lhr.audits["cumulative-layout-shift"]?.numericValue;
-  summary.cls = cls;
-  if (typeof cls !== "number" || cls > maximumCls) {
-    failures.push(`${mode} ${route} CLS: ${cls ?? "missing"} > ${maximumCls}`);
-  }
-
-  console.log(`${mode} ${route} ${JSON.stringify(summary)}`);
- }
+} catch (error) {
+  const detail = output();
+  if (detail && error instanceof Error) error.message = `${error.message}\n${detail}`;
+  throw error;
+} finally {
+  if (chrome) await chrome.kill();
+  await stopProcess(server);
 }
 
 if (failures.length > 0) {

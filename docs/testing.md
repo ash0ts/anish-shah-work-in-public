@@ -135,7 +135,7 @@ approval record in a fixture or checked-in environment file.
 Run the manually dispatched Validate, Gitleaks, CodeQL, and Browser Quality
 workflows with the same full 40-character commit SHA before release. The
 checkout step rejects a different commit. Browser stability is a separate,
-optional ten-run soak and is not release-plan evidence.
+optional exhaustive interaction soak and is not release-plan evidence.
 
 ## Temporary owner runner
 
@@ -202,8 +202,8 @@ selected SHA must equal the pushed head of `WORKFLOW_REF`; ancestors, arbitrary
 feature commits, and other SHAs are rejected.
 
 Wait for Validate to finish and record its numeric run ID. Browser Quality
-downloads and verifies that run's immutable `dist`; it never rebuilds. The full
-suite stays on Chromium except for one bounded Spotify Ranked Groove interaction
+downloads and verifies that run's immutable `dist`; it never rebuilds. The
+bounded release-smoke suite stays on Chromium except for one Spotify Ranked Groove interaction
 in WebKit. That check complements rather than replaces the manual Safari staging
 acceptance in the staging runbook:
 
@@ -215,8 +215,8 @@ gh workflow run browser-quality.yml --ref "$WORKFLOW_REF" \
   -f runner_target=owner-arm64 -f jit_label="$BROWSER_LABEL"
 ```
 
-Run the optional stability soak only when its explicit ten-run evidence is
-required:
+Run the optional stability soak only after Room, Travel input, or browser-harness
+changes require exhaustive repeated-interaction and visual evidence:
 
 ```bash
 export SOAK_LABEL="anish-release-$(openssl rand -hex 6)"
@@ -248,24 +248,29 @@ attestation together. Never commit `content/private/`.
 
 ## Browser, accessibility, and performance gate
 
-Install the pinned Chromium build once:
+Install the pinned Chromium and WebKit builds once:
 
 ```bash
-npx --no-install playwright install chromium
+npx --no-install playwright install chromium webkit
 npm run validate:browser
 ```
 
 The browser gate builds once, then reuses the same `dist` for:
 
 - public route, keyboard, focus, consent, reflow, and overflow checks;
-- My Room public behavior and five fresh-runner interaction shards;
+- critical My Room and Pocket Room entry, navigation, focus, and fallback behavior;
 - direct `/play/watch`, `/play/read`, `/play/listen`, `/play/collect`,
   `/play/play`, `/play/move`, and `/play/travel` route isolation;
 - reduced-motion, forced-colors, Save-Data, zoom, no-JavaScript, and static
   poster paths;
 - Axe serious/critical checks;
-- room review screenshots and recording; and
 - Lighthouse mobile budgets of at least 0.90 with CLS no greater than 0.1.
+
+The release gate runs at most two isolated Chromium processes, uses no test
+retries, cancels remaining work on the first failure, reuses one Worker and
+browser for all Lighthouse routes, and targets completion within 15 minutes.
+Twenty-fold click/drag loops, all-object Pocket stress, performance-downgrade
+stress, and room-review captures belong to the separate manual stability soak.
 
 The local browser harness uses the pinned `wrangler-e2e` alias only. Production
 build and deployment continue using the repository’s production Wrangler
@@ -273,9 +278,10 @@ version. Browser jobs wait for semantic room readiness with a 15-second SLO and
 capture diagnostic state on failure.
 
 Run the manually dispatched Browser stability workflow only after changing the
-room/browser harness or containing flakiness. It reuses one validated build and
-runs two workers with five fresh browser processes each. All ten processes must
-pass on the same full SHA; a single successful rerun is not stability evidence.
+Room, Travel input, or browser harness, or while containing flakiness. It reuses
+one validated build and partitions one exhaustive pass across exactly two
+ephemeral workers. A rerun never converts an earlier failure into evidence for
+the failed SHA; diagnose and push a fix first.
 
 Travel coverage additionally verifies the server-rendered atlas and trip pages,
 country/admin-1 synchronization, click-versus-drag behavior, active-snapshot

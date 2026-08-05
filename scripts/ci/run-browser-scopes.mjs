@@ -7,7 +7,7 @@ try {
 } catch {
   throw new Error("CI_BROWSER_SCOPES must be a JSON array.");
 }
-const allowed = new Set(["room-public", "room-pr", "simulation", "travel"]);
+const allowed = new Set(["public", "room-smoke", "simulation", "travel"]);
 if (
   !Array.isArray(scopes) ||
   scopes.length === 0 ||

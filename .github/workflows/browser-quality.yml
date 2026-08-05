@@ -39,7 +39,7 @@ jobs:
   browser:
     name: browser
     runs-on: ${{ fromJSON(inputs.runner_target == 'owner-arm64' && format('["self-hosted","linux","arm64","{0}"]', inputs.jit_label) || '["ubuntu-latest"]') }}
-    timeout-minutes: 55
+    timeout-minutes: 20
     steps:
       - name: Validate owner exact-SHA dispatch
         env:
@@ -119,33 +119,8 @@ jobs:
       - name: Verify baked Chromium and WebKit on the disposable runner
         if: inputs.runner_target == 'owner-arm64'
         run: npx --no-install playwright install --dry-run chromium webkit
-      - name: Run complete browser, accessibility, and Lighthouse coverage
-        run: npm run validate:browser:existing
-      - name: Exercise Spotify Ranked Groove in WebKit
-        env:
-          BROWSER_QUALITY_PORT: "4191"
-          BROWSER_QUALITY_SEGMENT: spotify-webkit
-        run: >-
-          npx --no-install playwright test
-          tests/browser/public-quality.spec.mjs
-          --config playwright.spotify-webkit.config.mjs
-          --grep "Spotify rank navigation and consent remain keyboard-first"
-          --workers=1
-      - name: Capture room review evidence
-        run: npm run capture:room-review
-      - name: Upload room review evidence
-        if: success()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: room-browser-review-${{ env.BROWSER_SOURCE_SHA }}
-          path: |
-            .playwright/room-review
-            .playwright/results-room-review
-            .playwright/report-room-review
-            .wrangler/browser-quality-room-review.log
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
+      - name: Run bounded release browser, accessibility, WebKit, and Lighthouse coverage
+        run: npm run browser:release:existing
       - name: Upload browser failure evidence
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

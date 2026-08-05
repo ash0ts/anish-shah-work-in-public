@@ -90,8 +90,19 @@ function isRoom(pathname) {
     pathname.startsWith("components/play/room-3d/") ||
     pathname.startsWith("components/play/room/") ||
     pathname.startsWith("components/play/pocket-room/") ||
-    pathname.startsWith("app/play/") ||
+    pathname.startsWith("components/play/room-platform/") ||
+    pathname === "app/play/page.tsx" ||
+    pathname === "app/play/layout.tsx" ||
     pathname.includes("room")
+  );
+}
+
+function isPlayObject(pathname) {
+  return (
+    pathname.startsWith("app/play/") ||
+    pathname.startsWith("components/play/") ||
+    pathname.startsWith("components/Spotify") ||
+    pathname.startsWith("components/PersonalStreams")
   );
 }
 
@@ -122,9 +133,10 @@ function browserScopesFor(areas) {
   const specialized =
     areas.has("room") || areas.has("simulation") || areas.has("travel");
   if (!specialized && areas.has("ui")) {
-    scopes.push("room-public");
+    scopes.push("public");
   }
-  if (areas.has("room")) scopes.push("room-public", "room-pr");
+  if (areas.has("play")) scopes.push("public");
+  if (areas.has("room")) scopes.push("public", "room-smoke");
   if (areas.has("simulation")) scopes.push("simulation");
   if (areas.has("travel")) scopes.push("travel");
   return [...new Set(scopes)];
@@ -164,6 +176,7 @@ export function classifyCiChanges(inputPaths) {
     else if (isTravel(pathname)) areas.add("travel");
     else if (isSimulation(pathname)) areas.add("simulation");
     else if (isRoom(pathname)) areas.add("room");
+    else if (isPlayObject(pathname)) areas.add("play");
     else if (isBackend(pathname)) areas.add("backend");
     else if (isUserInterface(pathname)) areas.add("ui");
   }
@@ -174,13 +187,14 @@ export function classifyCiChanges(inputPaths) {
   );
   const crossDomain =
     specializedAreas.length > 1 ||
-    (specializedAreas.length === 1 && areas.size > 1);
+    (specializedAreas.length === 1 && areas.size > 1) ||
+    (areas.has("play") && areas.has("backend"));
   let lane;
   if (areas.has("full") || crossDomain) lane = "full";
   else if (areas.has("travel")) lane = "travel";
   else if (areas.has("simulation")) lane = "simulation";
   else if (areas.has("room")) lane = "room";
-  else if (areas.has("ui")) lane = "ui";
+  else if (areas.has("ui") || areas.has("play")) lane = "ui";
   else lane = "backend";
 
   const browserScopes = browserScopesFor(areas);

@@ -175,13 +175,14 @@ the draft release branch on its RC version. Bump both package files to `2.0.0`
 only in the separately authorized final-production change after the release PR
 is approved.
 
-`validate:release` runs prebuild validation, creates the deployable build once,
-prepares the reviewed non-secret Worker configuration, writes an immutable
-release-build checkpoint, and reuses those exact bytes for candidate scans,
-rendered tests, Browser Quality, Lighthouse, and release preflight. The final
-checkpoint fails if any file is rebuilt or changed. Install the pinned
-Playwright Chromium build before running it; do not bypass the browser gate
-while claiming accessibility or performance results.
+Download the exact `validated-dist-<SHA>` artifact produced by the successful
+Validate run before `validate:release`. The command verifies that attestation,
+adds only the reviewed non-secret Worker configuration, writes an immutable
+release-build checkpoint, runs candidate scans and rendered tests, and checks
+the four exact-SHA evidence URLs during release preflight. It does not rebuild
+or repeat Browser Quality and Lighthouse; their successful workflow already
+exercised the same Validate artifact. The final checkpoint fails if any
+deployable file changes.
 
 My Room, 2001 and its seven semantic object routes are the only Play runtime.
 There is no hosted Classic flag or fallback. The release plan records

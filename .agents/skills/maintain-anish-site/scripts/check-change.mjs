@@ -500,6 +500,13 @@ const responsivePlayChanged = paths.some((value) =>
     /^app\/play\//,
   ]),
 );
+const roomRuntimeChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^components\/play\/(?:room-3d|room-platform|pocket-room)\//,
+    /^app\/play\/(?:page|layout)\.tsx$/,
+    /^tests\/browser\/room-(?:quality|review)\.spec\.mjs$/,
+  ]),
+);
 const releaseChanged = paths.some((value) =>
   matchesAny(value, [
     /^releases\//,
@@ -561,7 +568,7 @@ if (copyChanged) {
   addCheck("npm run typecheck");
   addCheck("npm run build");
   addCheck("npm run test:rendered");
-  addCheck("npm run validate:browser");
+  addCheck("npm run browser:public:existing");
   notes.push(
     "Review copy:audit against the intended base and owner-check every FACT-CHECK field before merge.",
   );
@@ -601,14 +608,16 @@ if (travelChanged) {
   addCheck("npm run test:backend");
   addCheck("npm run test:rendered");
   addCheck("npm run db:local:migrate:clean");
-  addCheck("npm run validate:browser");
+  addCheck("npm run build");
+  addCheck("npm run browser:travel:existing");
 }
 if (simulationChanged) {
   addCheck("npm run typecheck");
   addCheck("npm run test:backend");
   addCheck("npm run test:rendered");
+  addCheck("npm run build");
   addCheck("npm run bundle:scan");
-  addCheck("npm run validate:browser");
+  addCheck("npm run browser:simulation:existing");
   notes.push(
     "For Simulation incidents, verify AI Gateway prompt/response logging and caching are disabled before changing hosted configuration; preserve only sanitized incident evidence and follow the owner-authorized deletion/containment runbook.",
   );
@@ -629,9 +638,10 @@ if (dependencyChanged) {
         ? "npm run copy:diff"
         : `npm run copy:diff -- --base ${baseCommit}`,
     );
-    addCheck("npm run validate:browser");
+    addCheck("npm run browser:public:existing");
   } else if (responsivePlayChanged) {
-    addCheck("npm run validate:browser");
+    addCheck("npm run browser:public:existing");
+    if (roomRuntimeChanged) addCheck("npm run browser:room:existing");
   }
 }
 if (skillChanged) {
@@ -640,7 +650,8 @@ if (skillChanged) {
   addCheck("npm run test:maintenance-skill");
 }
 if (responsivePlayChanged) {
-  addCheck("npm run validate:browser");
+  addCheck("npm run browser:public:existing");
+  if (roomRuntimeChanged) addCheck("npm run browser:room:existing");
 }
 if (releaseChanged) {
   checks.length = 0;
@@ -651,9 +662,10 @@ if (releaseChanged) {
         ? "npm run copy:diff"
         : `npm run copy:diff -- --base ${baseCommit}`,
     );
-    addCheck("npm run validate:browser");
+    addCheck("npm run browser:public:existing");
   } else if (responsivePlayChanged) {
-    addCheck("npm run validate:browser");
+    addCheck("npm run browser:public:existing");
+    if (roomRuntimeChanged) addCheck("npm run browser:room:existing");
   }
   notes.push(
     "This validates release-code changes only. Run validate:release separately only for a clean, pushed, explicitly approved production candidate with exact-SHA workflow evidence.",
@@ -666,7 +678,7 @@ if (releaseChanged) {
 if (mode === "full") {
   checks.length = 0;
   addCheck("npm run validate");
-  addCheck("npm run validate:browser");
+  addCheck("npm run browser:release:existing");
 }
 
 console.log("Maintenance change plan");

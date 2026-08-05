@@ -198,10 +198,13 @@ staging and production Travel media resources may never match.
 The generator writes only the ignored
 `dist/server/wrangler.staging.json`.
 
-`staging:prepare` runs the prebuild checks, builds exactly once, prepares the
-staging configuration, writes the release-build checkpoint, and reuses that
-same `dist` for candidate scans and Browser Quality. Subsequent staging commands
-verify the checkpoint and fail if any deployable byte changes.
+Download the exact `validated-dist-<SHA>` artifact produced by the successful
+Validate run before `staging:prepare`. The command verifies that attestation,
+adds only the reviewed staging configuration, writes the release-build
+checkpoint, and reuses those bytes for candidate scans. It does not rebuild or
+repeat Browser Quality; the separately recorded exact-SHA Browser Quality run
+already exercised the Validate artifact. Subsequent staging commands verify the
+checkpoint and fail if any deployable byte changes.
 
 Record the current staging Worker version, staging D1 Time Travel bookmark,
 reviewed migration list, and four exact-SHA successful workflow URLs. The

@@ -1568,10 +1568,7 @@ test("preview workflows deploy only requested immutable PR Gate builds from trus
     browserQuality,
     /EXPECTED_SHA: \$\{\{ env\.BROWSER_SOURCE_SHA \}\}/,
   );
-  assert.match(
-    browserQuality,
-    /name: room-browser-review-\$\{\{ env\.BROWSER_SOURCE_SHA \}\}/,
-  );
+  assert.doesNotMatch(browserQuality, /room-browser-review/);
   assert.match(browserQuality, /Download the exact Validate build/);
   assert.match(browserQuality, /run-id: \$\{\{ inputs\.validate_run_id \}\}/);
   assert.doesNotMatch(browserQuality, /npm run build/);
@@ -1680,17 +1677,18 @@ test("browser quality isolates workerd lifecycles without weakening review evide
 
   assert.match(runner, /segment: "public"/);
   assert.match(runner, /"tests\/browser\/public-quality\.spec\.mjs"/);
-  assert.match(runner, /const roomShardCount = 5;/);
+  assert.match(runner, /runReleaseBrowserGate/);
   assert.match(runner, /"tests\/browser\/room-quality\.spec\.mjs"/);
   assert.match(runner, /"tests\/browser\/travel-atlas\.spec\.mjs"/);
-  assert.match(runner, /"--fully-parallel"/);
-  assert.match(runner, /`--shard=\$\{shard\}\/\$\{activeRoomShardCount\}`/);
+  assert.match(runner, /releaseStressPattern/);
+  assert.match(runner, /"--retries=0"/);
+  assert.match(runner, /"--max-failures=1"/);
   assert.match(runner, /BROWSER_QUALITY_PORT: String\(port\)/);
   assert.match(runner, /BROWSER_QUALITY_SEGMENT: segment/);
   assert.match(runner, /BROWSER_QUALITY_SCOPE/);
   assert.match(runner, /BROWSER_QUALITY_SHARD/);
   assert.match(runner, /ROOM_CAPTURE_VISUALS: "0"/);
-  assert.match(runner, /continueOnFailure: true/);
+  assert.match(runner, /remaining release checks were cancelled/);
   assert.match(config, /process\.env\.BROWSER_QUALITY_PORT/);
   assert.match(config, /process\.env\.BROWSER_QUALITY_SEGMENT/);
   assert.match(config, /node_modules\/wrangler-e2e\/bin\/wrangler\.js/);
@@ -1715,7 +1713,7 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   );
   assert.equal(
     packageJson.scripts["validate:release"],
-    "npm run validate:release:prebuild && npm run build && npm run cloudflare:prepare:existing && node scripts/release-build-checkpoint.mjs --write && npm run validate:release:candidate && npm run validate:browser:existing && node scripts/release-build-checkpoint.mjs --check && node scripts/release-preflight.mjs",
+    "npm run deployable:attest && npm run cloudflare:prepare:existing && node scripts/release-build-checkpoint.mjs --write && npm run validate:release:candidate && node scripts/release-build-checkpoint.mjs --check && node scripts/release-preflight.mjs",
   );
   assert.doesNotMatch(packageJson.scripts["validate:release:prebuild"], /build/);
   assert.doesNotMatch(packageJson.scripts["validate:release:candidate"], /build/);
@@ -1727,7 +1725,7 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.doesNotMatch(packageJson.scripts["cloudflare:prepare:existing"], /build/);
   assert.equal(
     packageJson.scripts["staging:prepare"],
-    "npm run validate:release:prebuild && npm run build && npm run staging:prepare:existing && node scripts/release-build-checkpoint.mjs --write && npm run validate:release:candidate && npm run validate:browser:existing && node scripts/release-build-checkpoint.mjs --check",
+    "npm run deployable:attest && npm run staging:prepare:existing && node scripts/release-build-checkpoint.mjs --write && npm run validate:release:candidate && node scripts/release-build-checkpoint.mjs --check",
   );
   assert.doesNotMatch(packageJson.scripts["staging:prepare:existing"], /build/);
   assert.match(
@@ -1741,21 +1739,19 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.match(workflow, /run-id: \$\{\{ inputs\.validate_run_id \}\}/);
   assert.match(workflow, /test -s dist\/client\/\.vite\/manifest\.json/);
   assert.match(workflow, /npm run bundle:scan/);
-  assert.match(workflow, /npm run validate:browser:existing/);
-  assert.match(workflow, /name: Capture room review evidence/);
+  assert.match(workflow, /npm run browser:release:existing/);
   assert.doesNotMatch(workflow, /npm run build/);
   assert.match(workflow, /name: Upload browser failure evidence\n        if: failure\(\)/);
-  assert.match(workflow, /name: Capture room review evidence\n        run: npm run capture:room-review/);
-  assert.match(workflow, /\.playwright\/results-room-review/);
-  assert.match(workflow, /\.playwright\/report-room-review/);
+  assert.doesNotMatch(workflow, /Capture room review evidence/);
   assert.match(stability, /worker: \[1, 2\]/);
   assert.match(stability, /max-parallel: 2/);
-  assert.match(stability, /BROWSER_SOAK_LOOPS: "5"/);
+  assert.match(stability, /BROWSER_SOAK_LOOPS: "1"/);
   assert.match(stability, /run: node scripts\/ci\/run-browser-soak\.mjs/);
   assert.match(stability, /name: browser soak worker \$\{\{ matrix\.worker \}\}/);
   assert.match(stability, /name: Download the existing validated build/);
   assert.doesNotMatch(stability, /npm run build/);
   assert.doesNotMatch(stability, /runs-on: ubuntu-latest/);
+  assert.match(stability, /Capture non-blocking visual review evidence/);
   assert.match(packageJson.scripts["capture:room-review"], /BROWSER_QUALITY_PORT=4180/);
   assert.match(packageJson.scripts["capture:room-review"], /BROWSER_QUALITY_SEGMENT=review/);
 
@@ -1792,7 +1788,7 @@ test("browser quality isolates workerd lifecycles without weakening review evide
       ]),
     );
   }
-  assert.equal(complete.length, 44);
+  assert.ok(complete.length >= 44);
   assert.equal(partitioned.length, complete.length);
   assert.equal(new Set(partitioned).size, partitioned.length);
   assert.deepEqual([...partitioned].sort(), [...complete].sort());

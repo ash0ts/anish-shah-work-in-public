@@ -77,7 +77,9 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 ## Helper Safety Contract
 
 - `--plan` classifies paths and enforces guardrails without application checks.
-- `--run` executes selected checks. `--full` runs `validate` and `validate:browser`.
+- `--run` executes affected-surface checks. `--full` runs `validate` and the
+  bounded fail-fast release browser gate. Exhaustive 20-fold interaction stress
+  and visual capture belong to the separate manual stability workflow.
 - `--base <ref>` includes committed changes from that merge base through `HEAD`; use it for PR and freelancer review.
 - Owner write, Access/auth, and OAuth code require matching security/connector regression tests. Connector changes must prove public reads and cron make zero provider data-API calls, one Studio Refresh makes at most one attempt, and every failed attempt preserves the active snapshot.
 - Travel owner APIs require `tests/travel-security.test.mjs`; Travel schema, geography, or media work requires its focused checks, a clean local migration, and the browser gate.

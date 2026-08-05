@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       commit_sha:
-        description: Full 40-character SHA to soak-test
+        description: Full 40-character SHA for the optional exhaustive interaction soak
         required: true
         type: string
       validate_run_id:
@@ -41,7 +41,7 @@ jobs:
       matrix:
         worker: [1, 2]
     runs-on: ${{ fromJSON(inputs.runner_target == 'owner-arm64' && format('["self-hosted","linux","arm64","{0}"]', inputs.jit_label) || '["ubuntu-latest"]') }}
-    timeout-minutes: 70
+    timeout-minutes: 45
     steps:
       - name: Validate owner exact-SHA dispatch
         env:
@@ -117,11 +117,27 @@ jobs:
       - name: Install Chromium on GitHub-hosted runners
         if: inputs.runner_target == 'github-hosted'
         run: npx --no-install playwright install --with-deps chromium
-      - name: Run five fresh browser processes
+      - name: Run one exhaustive interaction partition
         env:
           BROWSER_SOAK_WORKER: ${{ matrix.worker }}
-          BROWSER_SOAK_LOOPS: "5"
+          BROWSER_SOAK_LOOPS: "1"
         run: node scripts/ci/run-browser-soak.mjs
+      - name: Capture non-blocking visual review evidence
+        if: matrix.worker == 1
+        run: npm run capture:room-review
+      - name: Upload visual review evidence
+        if: matrix.worker == 1 && success()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: room-browser-review-${{ inputs.commit_sha }}
+          path: |
+            .playwright/room-review
+            .playwright/results-room-review
+            .playwright/report-room-review
+            .wrangler/browser-quality-room-review.log
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
       - name: Upload soak failure evidence
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
