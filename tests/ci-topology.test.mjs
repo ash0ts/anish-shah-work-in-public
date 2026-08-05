@@ -182,6 +182,11 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(validate, /npm run deployable:attest:write/u);
   assert.match(browser, /validate_run_id:/u);
   assert.match(browser, /\.github\/workflows\/ci\.yml/u);
+  assert.match(browser, /curl --fail --silent --show-error --location/u);
+  assert.match(soak, /curl --fail --silent --show-error --location/u);
+  assert.match(browser, /https:\/\/api\.github\.com\/repos\/\$\{GITHUB_REPOSITORY\}\/actions\/runs\/\$\{VALIDATE_RUN_ID\}/u);
+  assert.match(soak, /https:\/\/api\.github\.com\/repos\/\$\{GITHUB_REPOSITORY\}\/actions\/runs\/\$\{VALIDATE_RUN_ID\}/u);
+  assert.doesNotMatch(`${browser}\n${soak}`, /\bgh api\b/u);
   assert.match(browser, /name: validated-dist-\$\{\{ env\.BROWSER_SOURCE_SHA \}\}/u);
   assert.match(browser, /npm run deployable:attest/u);
   assert.doesNotMatch(browser, /npm run build/u);
