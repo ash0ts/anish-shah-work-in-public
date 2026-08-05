@@ -286,13 +286,22 @@ async function runReleaseBrowserGate() {
           "Spotify rank navigation and consent remain keyboard-first",
         ],
       }),
+    ],
+    { label: "WebKit Spotify coverage", timeoutMs: 75_000 },
+  );
+
+  // Linux WebKit and Lighthouse each launch their own browser and Worker.
+  // Starting both simultaneously on the bounded ARM64 runner can cancel
+  // WebKit's provisional navigation before either product assertion runs.
+  await runConcurrentReleaseCommands(
+    [
       releaseCommand({
         label: "Lighthouse budgets",
         arguments_: ["scripts/run-lighthouse-quality.mjs"],
         environment: { BROWSER_QUALITY_RELEASE: "1" },
       }),
     ],
-    { label: "WebKit and Lighthouse coverage", timeoutMs: 5 * 60_000 },
+    { label: "Lighthouse coverage", timeoutMs: 3 * 60_000 },
   );
 }
 

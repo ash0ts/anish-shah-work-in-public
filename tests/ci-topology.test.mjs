@@ -211,7 +211,9 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(runner, /process\.kill\(-groupId, name\)/u);
   assert.match(runner, /detached: usesProcessGroups/u);
   assert.match(runner, /timeoutMs: 525_000/u);
-  assert.match(runner, /timeoutMs: 5 \* 60_000/u);
+  assert.match(runner, /label: "WebKit Spotify coverage"/u);
+  assert.match(runner, /label: "Lighthouse coverage"/u);
+  assert.match(runner, /timeoutMs: 3 \* 60_000/u);
   assert.match(playwrightConfig, /const inspectorPort = port \+ 5_000/u);
   assert.match(playwrightConfig, /--inspector-port \$\{inspectorPort\}/u);
   assert.equal(

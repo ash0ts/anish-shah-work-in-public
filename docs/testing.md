@@ -270,10 +270,11 @@ The release gate first runs Simulation's no-JavaScript and room-reveal fallback
 foundations in one short isolated process, then runs at most two Chromium
 processes for the normal and WebGL-heavy coverage. It uses no test retries,
 cancels remaining work on the first failure, reuses one Worker and browser for
-all Lighthouse routes, and gives its child processes a combined 15-minute hard
-budget. This prevents a SwiftShader-heavy room process from starving a newly
-created no-JavaScript Chromium renderer on a bounded release runner without
-weakening or retrying the assertion.
+all Lighthouse routes, and gives its child processes a combined 14.25-minute
+hard budget. WebKit completes before Lighthouse starts so two browser/server
+pairs never compete during startup. This prevents a SwiftShader-heavy room
+process from starving a newly created no-JavaScript Chromium renderer on a
+bounded release runner without weakening or retrying the assertion.
 Twenty-fold click/drag loops, all-object Pocket stress, performance-downgrade
 stress, and room-review captures belong to the separate manual stability soak.
 

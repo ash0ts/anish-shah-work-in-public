@@ -79,7 +79,8 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - `--plan` classifies paths and enforces guardrails without application checks.
 - `--run` executes affected-surface checks. `--full` runs `validate` and the
   bounded fail-fast release browser gate. The gate isolates Simulation fallback
-  foundations before parallel WebGL-heavy coverage, without retries.
+  foundations before parallel WebGL-heavy coverage and serializes WebKit before
+  Lighthouse, without retries.
   Exhaustive 20-fold interaction stress
   and visual capture belong to the separate manual stability workflow.
 - `--base <ref>` includes committed changes from that merge base through `HEAD`; use it for PR and freelancer review.
