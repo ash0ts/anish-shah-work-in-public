@@ -1,4 +1,4 @@
-name: Browser quality
+name: Browser Quality
 
 on:
   pull_request:
