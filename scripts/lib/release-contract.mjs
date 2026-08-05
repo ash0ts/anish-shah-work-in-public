@@ -239,6 +239,27 @@ export const TRAVEL_PLAY_SMOKE_TEST = ROOM_OBJECT_CONTRACT.find(
   ({ id }) => id === "travel",
 ).smokeTest;
 
+export function releaseTravelHealthMatches(travel, expectedMode) {
+  if (expectedMode === "disabled") {
+    return travel?.mode === "disabled";
+  }
+  if (expectedMode !== "atlas-v1") {
+    return false;
+  }
+
+  const contentHash = travel?.activePublication?.contentHash;
+  const tripCount = travel?.activePublication?.counts?.trips;
+  return (
+    travel?.mode === "atlas-v1" &&
+    travel.configured === true &&
+    typeof contentHash === "string" &&
+    /^[a-f0-9]{64}$/u.test(contentHash) &&
+    Number.isSafeInteger(tripCount) &&
+    tripCount >= 1 &&
+    travel.cleanupHeartbeat?.status === "current"
+  );
+}
+
 export function requiredPlaySmokeTests(base, { travelEnabled = false } = {}) {
   if (!Array.isArray(base) || base.some((value) => typeof value !== "string")) {
     throw new Error("The base smoke-test contract is invalid.");

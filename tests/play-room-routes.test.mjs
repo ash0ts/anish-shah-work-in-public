@@ -225,6 +225,16 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
   assert.match(provider, /const rotate = useCallback/);
   assert.doesNotMatch(provider, /focusObject: \(id\) => dispatch/);
   assert.match(provider, /Opened \$\{object\.label\}: \$\{object\.title\}\./);
+  assert.ok(
+    provider.includes(
+      "announce(`Opening the ${object.object.toLowerCase()}: ${object.label}.`);",
+    ),
+  );
+  assert.ok(
+    !provider.includes(
+      "announce(`Opening ${object.label} in the ${object.object.toLowerCase()}.`);",
+    ),
+  );
   assert.match(provider, /Returned to the room/);
   assert.match(provider, /data-room-return-status/);
   assert.match(provider, /Returning to the room/);

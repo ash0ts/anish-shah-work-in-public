@@ -18,6 +18,7 @@ import {
   REQUIRED_VALIDATION_RUNS,
   requireExactUploadedVersion,
   requiredPlaySmokeTests,
+  releaseTravelHealthMatches,
   ROOM_PLAY_SMOKE_TESTS,
   TRAVEL_PLAY_SMOKE_TEST,
   runGuardedMigration,
@@ -749,6 +750,52 @@ test("every release requires registry-derived room smoke evidence", () => {
     [...base, ...ROOM_PLAY_SMOKE_TESTS, TRAVEL_PLAY_SMOKE_TEST],
   );
   assert.throws(() => requiredPlaySmokeTests(base, { travelEnabled: "yes" }), /switch/);
+});
+
+test("production Travel health requires a current, nonempty atlas publication", () => {
+  const currentAtlas = {
+    mode: "atlas-v1",
+    configured: true,
+    activePublication: {
+      contentHash: "a".repeat(64),
+      counts: { trips: 1 },
+    },
+    cleanupHeartbeat: { status: "current" },
+  };
+
+  assert.equal(releaseTravelHealthMatches(currentAtlas, "atlas-v1"), true);
+  assert.equal(
+    releaseTravelHealthMatches({ mode: "disabled" }, "disabled"),
+    true,
+  );
+
+  for (const travel of [
+    { ...currentAtlas, configured: false },
+    { ...currentAtlas, activePublication: null },
+    {
+      ...currentAtlas,
+      activePublication: { ...currentAtlas.activePublication, contentHash: "short" },
+    },
+    {
+      ...currentAtlas,
+      activePublication: { ...currentAtlas.activePublication, counts: { trips: 0 } },
+    },
+    { ...currentAtlas, cleanupHeartbeat: { status: "stale" } },
+  ]) {
+    assert.equal(releaseTravelHealthMatches(travel, "atlas-v1"), false);
+  }
+  assert.equal(releaseTravelHealthMatches(currentAtlas, "disabled"), false);
+  assert.equal(releaseTravelHealthMatches(currentAtlas, "experimental"), false);
+});
+
+test("production checkpoint embeds the healthy Travel release guard", () => {
+  const source = readFileSync(
+    new URL("../scripts/publication-bootstrap-snippet.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /health\.status !== "healthy"/u);
+  assert.match(source, /releaseTravelHealthMatches\(travel,/u);
+  assert.match(source, /trip count, or cleanup state/u);
 });
 
 test("release evidence derives and binds the GitHub upstream repository", () => {

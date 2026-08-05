@@ -25,7 +25,7 @@ Lines of work
 Four ways I put AI systems into the world.
 
 ## impact-eyebrow
-Selected outcomes
+Selected signals
 
 ## impact-heading
 Use, learning, and program reach.

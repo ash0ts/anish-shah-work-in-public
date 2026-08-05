@@ -1418,7 +1418,7 @@ test.describe("My Room 2001 browser quality", () => {
     await page.getByRole("link", { name: "Back to room" }).click();
     const status = page.locator("[data-room-return-status]");
     await expect(status).toBeVisible();
-    await expect(status).toContainText("Back to the room");
+    await expect(status).toContainText("Opening the room");
     room = page.locator("[data-room-runtime]");
     await expect(room).toBeVisible();
     await expect(room).toHaveAttribute("data-room-transition-phase", "returning");
