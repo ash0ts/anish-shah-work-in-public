@@ -1,0 +1,238 @@
+{
+  "schemaVersion": "1.5",
+  "releasedAt": "2026-08-05T16:19:06.828Z",
+  "smokeTestedAt": "2026-08-05T16:18:53.000Z",
+  "commitSha": "344a8863a4356a89d7dc92e6f871f78c0d0eab3b",
+  "releaseVersion": "2.0.1",
+  "contentVersion": "9ec1fdd9a3ff0a5b",
+  "travelAtlasMode": "atlas-v1",
+  "copyVersion": "fd5c21f1b207575a",
+  "publicContentSha256": "06833d6f0fae7c539120d025d93ff1e3453ba27ceb14252006e7e52bc7073729",
+  "deployableArtifacts": {
+    "artifactSetSha256": "260bf66dc7168588d622f45155889444fb38a534051895a25df5b433944efc5d",
+    "fileCount": 200,
+    "totalBytes": 21172233
+  },
+  "releaseBuildCheckpoint": {
+    "sha256": "15f8dae3bfbdaf62cee661d074f8bb678f659b154e8af1483a8b19a868b9f4cf",
+    "artifactSetSha256": "260bf66dc7168588d622f45155889444fb38a534051895a25df5b433944efc5d",
+    "deployableManifestSha256": "afd33b98c026f5b306a5fabdc13070e950a035e68922c587b54f09dfbbfb19b7"
+  },
+  "publicationCheckpoint": {
+    "status": "compatible",
+    "contentHash": "1ac523947acfd27f97337e031a7f1a3a23634663e64121602d26781cb3c91456",
+    "contentVersion": "9ec1fdd9a3ff0a5b",
+    "kvPointerMatches": true
+  },
+  "simulation": {
+    "campaignVersion": "meet-me-4n1sh-v1",
+    "experienceMode": "coming-soon",
+    "aiMode": "authored-only",
+    "provider": "anthropic",
+    "model": "claude-sonnet-5",
+    "approvedProviders": [],
+    "approvalStateDigest": null
+  },
+  "releasePublication": {
+    "status": "ready",
+    "releaseSha": "344a8863a4356a89d7dc92e6f871f78c0d0eab3b",
+    "releaseVersion": "2.0.1",
+    "contentVersion": "9ec1fdd9a3ff0a5b",
+    "contentHash": "1ac523947acfd27f97337e031a7f1a3a23634663e64121602d26781cb3c91456",
+    "verifiedAt": "2026-08-05T16:12:47.275Z"
+  },
+  "validationRuns": [
+    {
+      "kind": "validate",
+      "name": "Validate",
+      "headSha": "344a8863a4356a89d7dc92e6f871f78c0d0eab3b",
+      "conclusion": "success",
+      "url": "https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/31022910696",
+      "event": "workflow_dispatch",
+      "workflowDatabaseId": 324570961,
+      "workflowPath": ".github/workflows/ci.yml",
+      "workflowState": "active"
+    },
+    {
+      "kind": "gitleaks",
+      "name": "Gitleaks",
+      "headSha": "344a8863a4356a89d7dc92e6f871f78c0d0eab3b",
+      "conclusion": "success",
+      "url": "https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/31022912287",
+      "event": "workflow_dispatch",
+      "workflowDatabaseId": 324570965,
+      "workflowPath": ".github/workflows/gitleaks.yml",
+      "workflowState": "active"
+    },
+    {
+      "kind": "codeql",
+      "name": "CodeQL",
+      "headSha": "344a8863a4356a89d7dc92e6f871f78c0d0eab3b",
+      "conclusion": "success",
+      "url": "https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/31022913590",
+      "event": "workflow_dispatch",
+      "workflowDatabaseId": 324570962,
+      "workflowPath": ".github/workflows/codeql.yml",
+      "workflowState": "active"
+    },
+    {
+      "kind": "browser",
+      "name": "Browser Quality",
+      "headSha": "344a8863a4356a89d7dc92e6f871f78c0d0eab3b",
+      "conclusion": "success",
+      "url": "https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/31023130146",
+      "event": "workflow_dispatch",
+      "workflowDatabaseId": 325954548,
+      "workflowPath": ".github/workflows/browser-quality.yml",
+      "workflowState": "active"
+    }
+  ],
+  "worker": {
+    "name": "anish-shah-work-in-public",
+    "previousVersion": "9badb927-d51c-4d40-8f8b-3c357bc5d501",
+    "currentVersion": "4ea851e7-95f5-40ae-8650-ce1c57dea9c5",
+    "deploymentId": "72d88ebe-7843-4ae7-9232-dbbf67f9b695",
+    "trafficPercentage": 100,
+    "travelAtlasMode": "atlas-v1"
+  },
+  "nonVersionedTriggers": {
+    "schemaVersion": "1.0",
+    "appliedAt": "2026-08-05T16:11:14.214Z",
+    "commitSha": "344a8863a4356a89d7dc92e6f871f78c0d0eab3b",
+    "preparedWorkerConfigSha256": "eacdbef544dee7cf5100502a9a3a16b686f5f6089c1fa8bc6fd39622d590093c",
+    "appliedBy": "wrangler_triggers_deploy",
+    "settings": {
+      "workerName": "anish-shah-work-in-public",
+      "canonicalOrigin": "https://anish-shah-is.online",
+      "routes": [
+        {
+          "pattern": "anish-shah-is.online",
+          "customDomain": true
+        }
+      ],
+      "workersDev": false,
+      "previewUrls": false,
+      "crons": [
+        "17 * * * *"
+      ]
+    }
+  },
+  "domainCutover": {
+    "canonicalOrigin": "https://anish-shah-is.online",
+    "wwwRedirect": "permanent_path_query_preserving",
+    "workersDev": "disabled",
+    "previewUrls": "disabled",
+    "requestIdHeader": "x-request-id",
+    "accessDestinations": [
+      "anish-shah-is.online/studio*",
+      "anish-shah-is.online/api/studio/*"
+    ],
+    "verifiedBySmokeTests": [
+      "canonical_apex",
+      "www_redirect",
+      "workers_dev_disabled",
+      "preview_urls_disabled",
+      "request_id_header",
+      "access_destinations"
+    ]
+  },
+  "d1": {
+    "preMigrationBookmark": "0000022e-00000000-000050be-f11c99f83d25394baea1d441a64ba790",
+    "migrations": []
+  },
+  "smokeTests": [
+    {
+      "id": "public_routes",
+      "status": "pass"
+    },
+    {
+      "id": "studio_access",
+      "status": "pass"
+    },
+    {
+      "id": "non_owner_denial",
+      "status": "pass"
+    },
+    {
+      "id": "connector_galleries",
+      "status": "pass"
+    },
+    {
+      "id": "oauth_callbacks",
+      "status": "pass"
+    },
+    {
+      "id": "security_headers",
+      "status": "pass"
+    },
+    {
+      "id": "owner_health",
+      "status": "pass"
+    },
+    {
+      "id": "simulation_experience",
+      "status": "pass"
+    },
+    {
+      "id": "canonical_apex",
+      "status": "pass"
+    },
+    {
+      "id": "www_redirect",
+      "status": "pass"
+    },
+    {
+      "id": "workers_dev_disabled",
+      "status": "pass"
+    },
+    {
+      "id": "preview_urls_disabled",
+      "status": "pass"
+    },
+    {
+      "id": "request_id_header",
+      "status": "pass"
+    },
+    {
+      "id": "access_destinations",
+      "status": "pass"
+    },
+    {
+      "id": "play_watch",
+      "status": "pass"
+    },
+    {
+      "id": "play_read",
+      "status": "pass"
+    },
+    {
+      "id": "play_listen",
+      "status": "pass"
+    },
+    {
+      "id": "play_collect",
+      "status": "pass"
+    },
+    {
+      "id": "play_play",
+      "status": "pass"
+    },
+    {
+      "id": "play_move",
+      "status": "pass"
+    },
+    {
+      "id": "play_travel",
+      "status": "pass"
+    }
+  ],
+  "checksums": {
+    "publicContentAttestationSha256": "9b880e8b0b3abd2783e509c73fe4f85df16b8cc9b18e26f1310512ff1bee56ba",
+    "preparedWorkerConfigSha256": "eacdbef544dee7cf5100502a9a3a16b686f5f6089c1fa8bc6fd39622d590093c",
+    "simulationCampaignManifestSha256": "63326421c7cfadf17c3aaaa79cf093871f11445df91bcae587e6cfa019294e41",
+    "deployableArtifactManifestSha256": "afd33b98c026f5b306a5fabdc13070e950a035e68922c587b54f09dfbbfb19b7",
+    "releaseBuildCheckpointSha256": "15f8dae3bfbdaf62cee661d074f8bb678f659b154e8af1483a8b19a868b9f4cf",
+    "releasePlanSha256": "ec73381e260b6d535401ba69bbd1284335773eeb383bc79f9c7eab746885d828",
+    "triggerDeploymentReceiptSha256": "36f6d7dfe6bbb83755a2f3cc63434276f1f1da06935e51d43fa42f16ebe4b456"
+  }
+}
