@@ -456,11 +456,21 @@ test("Work source renders a paginated four-line index and semantic color calenda
   assert.doesNotMatch(timeline, /@observablehq|canvas|three|webgl/i);
   assert.equal(packageJson.dependencies["@observablehq/plot"], undefined);
 
-  assert.match(timelineControls, /scrollToYear/);
+  assert.match(timelineControls, /setMobileYearPresentation/);
+  assert.match(timelineControls, /restoreFullCalendar/);
+  assert.match(timelineControls, /cell\.hidden = cellYear !== year/);
   assert.match(timelineControls, /prefers-reduced-motion: reduce/);
   assert.match(timelineControls, /aria-pressed=\{selectedYear === year\}/);
   assert.match(timelineCss, /scroll-snap-type:\s*inline mandatory/);
   assert.match(timelineCss, /width:\s*calc\(100vw - 7\.25rem\)/);
+  assert.match(
+    timelineCss,
+    /\.frame\[data-mobile-year\]\s*\{[\s\S]*?overflow-x:\s*hidden/,
+  );
+  assert.match(
+    timelineCss,
+    /\.frame\[data-mobile-year\] table\s*\{[\s\S]*?width:\s*100%[\s\S]*?min-width:\s*0/,
+  );
 
   assert.match(mobileFilters, /HTMLDialogElement\.prototype\.showModal/);
   assert.match(mobileFilters, /<dialog/);

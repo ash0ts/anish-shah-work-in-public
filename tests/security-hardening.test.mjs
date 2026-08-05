@@ -1185,7 +1185,16 @@ test("dependency audit treats missing or malformed audit metadata as failure", a
 });
 
 test("release evidence binds a pushed commit, migrations, and exact smoke checks", async () => {
-  const [plan, attestation, command, checkpointSnippet, contract, triggerContract, packageJson] =
+  const [
+    plan,
+    attestation,
+    command,
+    checkpointSnippet,
+    contract,
+    triggerContract,
+    smokeContract,
+    packageJson,
+  ] =
     await Promise.all([
       readFile(
         new URL("../scripts/write-release-plan.mjs", import.meta.url),
@@ -1208,6 +1217,10 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
         new URL("../scripts/lib/release-trigger-contract.mjs", import.meta.url),
         "utf8",
       ),
+      readFile(
+        new URL("../scripts/lib/release-smoke-contract.mjs", import.meta.url),
+        "utf8",
+      ),
       readFile(new URL("../package.json", import.meta.url), "utf8"),
     ]);
   assert.match(plan, /git\("rev-parse", "@\{upstream\}"\)/);
@@ -1218,6 +1231,7 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
   assert.match(plan, /migrations: migrationList\.map/);
   assert.match(plan, /sha256: sha256\(migrationBytes\[index\]\)/);
   assert.match(attestation, /REQUIRED_SMOKE_TESTS/);
+  assert.match(attestation, /requiredReleaseSmokeTests/);
   for (const check of [
     "public_routes",
     "studio_access",
@@ -1228,7 +1242,7 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
     "owner_health",
     "simulation_experience",
   ]) {
-    assert.match(attestation, new RegExp(`"${check}"`));
+    assert.match(smokeContract, new RegExp(`"${check}"`));
   }
   for (const check of [
     "canonical_apex",

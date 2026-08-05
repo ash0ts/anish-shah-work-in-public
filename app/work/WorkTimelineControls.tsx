@@ -25,69 +25,35 @@ export function WorkTimelineControls({
     if (!(frame instanceof HTMLElement)) return;
 
     const mobile = window.matchMedia("(max-width: 760px)");
-    let animationFrame = 0;
-
-    const headerForYear = (year: number) =>
-      frame.querySelector<HTMLElement>(`[data-timeline-year="${year}"]`);
-
-    const stickyColumnWidth = () =>
-      frame.querySelector<HTMLElement>("thead th:first-child")
-        ?.getBoundingClientRect().width ?? 0;
-
-    const nearestYear = () => {
-      if (!mobile.matches) return;
-      const target = frame.scrollLeft + stickyColumnWidth();
-      const nextYear = years.reduce((nearest, year) => {
-        const nearestHeader = headerForYear(nearest);
-        const candidateHeader = headerForYear(year);
-        if (!nearestHeader || !candidateHeader) return nearest;
-        return Math.abs(candidateHeader.offsetLeft - target) <
-          Math.abs(nearestHeader.offsetLeft - target)
-          ? year
-          : nearest;
-      }, selectedYearRef.current);
-      if (nextYear !== selectedYearRef.current) {
-        selectedYearRef.current = nextYear;
-        setSelectedYear(nextYear);
-        centerYearControl(controlsRef.current, nextYear, false);
-      }
-    };
-
-    const onScroll = () => {
-      window.cancelAnimationFrame(animationFrame);
-      animationFrame = window.requestAnimationFrame(nearestYear);
-    };
-
-    frame.addEventListener("scroll", onScroll, { passive: true });
 
     const start = window.requestAnimationFrame(() => {
-      if (mobile.matches) {
-        scrollToYear(frame, headerForYear(initialYear), false);
-        centerYearControl(controlsRef.current, initialYear, false);
-        nearestYear();
-      }
       if (controlsRef.current) controlsRef.current.dataset.ready = "true";
+      if (mobile.matches) {
+        setMobileYearPresentation(frame, initialYear);
+        centerYearControl(controlsRef.current, initialYear, false);
+      }
     });
 
     const syncMobileMode = () => {
-      if (!mobile.matches) return;
       window.requestAnimationFrame(() => {
-        scrollToYear(frame, headerForYear(selectedYearRef.current), false);
+        if (!mobile.matches) {
+          restoreFullCalendar(frame);
+          return;
+        }
+        setMobileYearPresentation(frame, selectedYearRef.current);
         centerYearControl(
           controlsRef.current,
           selectedYearRef.current,
           false,
         );
-        nearestYear();
       });
     };
     mobile.addEventListener("change", syncMobileMode);
 
     return () => {
-      frame.removeEventListener("scroll", onScroll);
       mobile.removeEventListener("change", syncMobileMode);
-      window.cancelAnimationFrame(animationFrame);
       window.cancelAnimationFrame(start);
+      restoreFullCalendar(frame);
     };
   }, [frameId, initialYear, years]);
 
@@ -99,8 +65,10 @@ export function WorkTimelineControls({
     if (!(frame instanceof HTMLElement) || !header) return;
     selectedYearRef.current = year;
     setSelectedYear(year);
-    scrollToYear(frame, header, true);
-    centerYearControl(controlsRef.current, year, true);
+    if (window.matchMedia("(max-width: 760px)").matches) {
+      setMobileYearPresentation(frame, year);
+    }
+    centerYearControl(controlsRef.current, year, false);
   };
 
   const selectedIndex = years.indexOf(selectedYear);
@@ -180,20 +148,32 @@ function centerYearControl(
   });
 }
 
-function scrollToYear(
-  frame: HTMLElement,
-  header: HTMLElement | null,
-  animate: boolean,
-) {
-  if (!header) return;
-  const stickyColumn = frame.querySelector<HTMLElement>(
-    "thead th:first-child",
+function setMobileYearPresentation(frame: HTMLElement, year: number) {
+  frame.dataset.mobileYear = String(year);
+  frame.setAttribute(
+    "aria-label",
+    `Work timeline table. Showing ${year}. Use the year controls to compare years.`,
   );
-  const reduceMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
-  frame.scrollTo({
-    behavior: animate && !reduceMotion ? "smooth" : "auto",
-    left: Math.max(0, header.offsetLeft - (stickyColumn?.offsetWidth ?? 0)),
-  });
+  for (const cell of frame.querySelectorAll<HTMLElement>(
+    "[data-timeline-year], [data-year]",
+  )) {
+    const cellYear = Number(
+      cell.dataset.timelineYear ?? cell.dataset.year,
+    );
+    cell.hidden = cellYear !== year;
+  }
+  frame.scrollLeft = 0;
+}
+
+function restoreFullCalendar(frame: HTMLElement) {
+  delete frame.dataset.mobileYear;
+  frame.setAttribute(
+    "aria-label",
+    "Work timeline table. Scroll horizontally to compare years.",
+  );
+  for (const cell of frame.querySelectorAll<HTMLElement>(
+    "[data-timeline-year], [data-year]",
+  )) {
+    cell.hidden = false;
+  }
 }

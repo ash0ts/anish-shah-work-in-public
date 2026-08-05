@@ -426,6 +426,9 @@ test("the public shell has the exact compact navigation and footer contract", as
   for (const label of ["Work", "Play"]) {
     assert.match(header, new RegExp(`>${label}<`));
   }
+  assert.match(header, /data-navigation-key="home"/i);
+  assert.match(header, /aria-label="Anish Shah, home"/i);
+  assert.match(header, /aria-current="page"/i);
   assert.match(header, /data-primary-navigation/i);
   assert.match(header, /data-primary-navigation-indicator/i);
   assert.doesNotMatch(header, />About</);

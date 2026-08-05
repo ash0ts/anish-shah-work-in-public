@@ -132,17 +132,31 @@ test("skip navigation reaches the main content", async ({ page }) => {
 test("the primary navigation signal lens follows the active route", async ({
   page,
 }) => {
-  await page.goto("/work", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "networkidle" });
   const navigation = page.getByRole("navigation", {
     name: "Primary navigation",
   });
+  const home = navigation.getByRole("link", { name: "Anish Shah, home" });
   const work = navigation.getByRole("link", { name: "Work" });
   const play = navigation.getByRole("link", { name: "Play" });
   const indicator = navigation.locator("[data-primary-navigation-indicator]");
+  const siteHeader = page.getByRole("banner");
+  const initialHeaderHeight = await siteHeader.evaluate(
+    (element) => element.getBoundingClientRect().height,
+  );
 
   await expect(navigation).toHaveAttribute("data-enhanced", "true");
+  await expect(navigation).toHaveAttribute("data-active-key", "home");
+  await expect(home).toHaveAttribute("aria-current", "page");
+  await expect(work).not.toHaveAttribute("aria-current", "page");
+  await expect(play).not.toHaveAttribute("aria-current", "page");
+  await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
+
+  await work.click();
+  await expect(page).toHaveURL(/\/work$/);
   await expect(navigation).toHaveAttribute("data-active-key", "work");
   await expect(work).toHaveAttribute("aria-current", "page");
+  await expect(home).not.toHaveAttribute("aria-current", "page");
   await expect(play).not.toHaveAttribute("aria-current", "page");
   await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
 
@@ -150,9 +164,40 @@ test("the primary navigation signal lens follows the active route", async ({
   await expect(page).toHaveURL(/\/play$/);
   await expect(navigation).toHaveAttribute("data-active-key", "play");
   await expect(play).toHaveAttribute("aria-current", "page");
+  await expect(home).not.toHaveAttribute("aria-current", "page");
   await expect(work).not.toHaveAttribute("aria-current", "page");
   await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
   await expect(indicator).toBeVisible();
+
+  await home.focus();
+  await expect(home).toBeFocused();
+  await home.press("Enter");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(navigation).toHaveAttribute("data-active-key", "home");
+  await expect(home).toHaveAttribute("aria-current", "page");
+  await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
+  await expect
+    .poll(() =>
+      page
+        .getByRole("banner")
+        .evaluate((element) => element.getBoundingClientRect().height),
+    )
+    .toBe(initialHeaderHeight);
+});
+
+test("reduced motion positions the primary navigation lens without a transition", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/", { waitUntil: "networkidle" });
+  const navigation = page.getByRole("navigation", {
+    name: "Primary navigation",
+  });
+
+  await navigation.getByRole("link", { name: "Work" }).click();
+  await expect(page).toHaveURL(/\/work$/);
+  await expect(navigation).toHaveAttribute("data-active-key", "work");
+  await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
 });
 
 async function signalLensAlignment(navigation) {
@@ -203,18 +248,34 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
       name: "Choose a year to view in the work calendar",
     }),
   ).toHaveAttribute("data-ready", "true");
+  const initialRailAlignment = await page.locator("[data-year-rail]").evaluate(
+    (rail) => {
+      const selected = rail.querySelector('[data-work-year="2026"]');
+      if (!(selected instanceof HTMLElement)) return Infinity;
+      const railBox = rail.getBoundingClientRect();
+      const buttonBox = selected.getBoundingClientRect();
+      return Math.abs(
+        buttonBox.left + buttonBox.width / 2 -
+          (railBox.left + railBox.width / 2),
+      );
+    },
+  );
+  expect(initialRailAlignment).toBeLessThanOrEqual(2);
 
-  await calendar.evaluate((frame) => {
-    const header = frame.querySelector('[data-timeline-year="2024"]');
-    const sticky = frame.querySelector("thead th:first-child");
-    if (!(header instanceof HTMLElement) || !(sticky instanceof HTMLElement)) {
-      throw new Error("The mobile calendar is missing its 2024 column.");
-    }
-    frame.scrollTo({ left: header.offsetLeft - sticky.offsetWidth });
-  });
+  await page.locator('[data-work-year="2024"]').click();
   await expect(page.locator('[data-work-year="2024"]')).toHaveAttribute(
     "aria-pressed",
     "true",
+  );
+  await expect(calendar).toHaveAttribute("data-mobile-year", "2024");
+  await expect(calendar.locator('[data-timeline-year="2024"]')).toBeVisible();
+  await expect(calendar.locator('[data-timeline-year="2025"]')).toBeHidden();
+  const calendarWidths = await calendar.evaluate((frame) => ({
+    client: frame.clientWidth,
+    scroll: frame.scrollWidth,
+  }));
+  expect(calendarWidths.scroll).toBeLessThanOrEqual(
+    calendarWidths.client + 1,
   );
   const railAlignment = await page.locator("[data-year-rail]").evaluate(
     (rail) => {
@@ -266,6 +327,52 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
   const overflow = await pageOverflow(page);
   expect(overflow.offenders).toEqual([]);
   expect(overflow.documentWidth).toBeLessThanOrEqual(391);
+});
+
+test("mobile Work keeps primary filter actions readable at 320px", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/work", { waitUntil: "networkidle" });
+
+  const filters = page.getByRole("button", { name: /^Filters/ });
+  const submit = page.getByRole("button", { name: "Show projects" });
+  await expect(filters).toBeVisible();
+  await expect(submit).toBeVisible();
+
+  const actionLayout = await Promise.all([
+    filters.boundingBox(),
+    submit.boundingBox(),
+    submit.evaluate((button) => ({
+      clientWidth: button.clientWidth,
+      scrollWidth: button.scrollWidth,
+      whiteSpace: getComputedStyle(button).whiteSpace,
+    })),
+  ]);
+  const [filterBox, submitBox, submitStyle] = actionLayout;
+  expect(Math.abs((filterBox?.height ?? 0) - (submitBox?.height ?? 0))).toBeLessThanOrEqual(1);
+  expect(submitStyle.scrollWidth).toBeLessThanOrEqual(
+    submitStyle.clientWidth + 1,
+  );
+  expect(submitStyle.whiteSpace).toBe("nowrap");
+
+  const selected = page.locator('[data-work-year="2026"]');
+  await expect(selected).toHaveAttribute("aria-pressed", "true");
+  const selectedVisibility = await selected.evaluate((button) => {
+    const rail = button.closest("[data-year-rail]");
+    if (!(rail instanceof HTMLElement)) return false;
+    const railBox = rail.getBoundingClientRect();
+    const buttonBox = button.getBoundingClientRect();
+    return (
+      buttonBox.left >= railBox.left - 1 &&
+      buttonBox.right <= railBox.right + 1
+    );
+  });
+  expect(selectedVisibility).toBe(true);
+
+  const overflow = await pageOverflow(page);
+  expect(overflow.offenders).toEqual([]);
+  expect(overflow.documentWidth).toBeLessThanOrEqual(321);
 });
 
 test("Work supporting material is mobile-collapsible and fragment-safe", async ({
