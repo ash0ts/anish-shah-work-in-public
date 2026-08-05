@@ -160,10 +160,11 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion, package
     env.SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
   if (
     simulationExperienceMode !== "disabled" &&
+    simulationExperienceMode !== "coming-soon" &&
     simulationExperienceMode !== "campaign-v1"
   ) {
     throw new Error(
-      "SIMULATION_EXPERIENCE_MODE must be disabled or campaign-v1.",
+      "SIMULATION_EXPERIENCE_MODE must be disabled, coming-soon, or campaign-v1.",
     );
   }
   const simulationAiMode =
@@ -183,6 +184,14 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion, package
   ) {
     throw new Error(
       "An enabled production simulation must use live AI with authored fallback.",
+    );
+  }
+  if (
+    simulationExperienceMode !== "campaign-v1" &&
+    simulationAiMode !== "authored-only"
+  ) {
+    throw new Error(
+      "A disabled or coming-soon production simulation must use authored-only mode.",
     );
   }
   const travelAtlasMode = env.TRAVEL_ATLAS_MODE?.trim() || "disabled";

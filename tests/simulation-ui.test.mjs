@@ -208,10 +208,28 @@ test("both gameplay modes use authored pacing and easier recalibration", async (
   assert.match(tactical, /setHazardRelief/);
 });
 
-test("disabled Simulation is server-gated and leaves no public shell", async () => {
-  const page = await source("app/simulation/page.tsx");
-  assert.match(page, /if \(!simulationExperienceEnabled\(\)\) notFound\(\)/);
+test("Simulation has separate disabled, coming-soon, and campaign route states", async () => {
+  const [page, comingSoon] = await Promise.all([
+    source("app/simulation/page.tsx"),
+    source("components/simulation/SimulationComingSoon.tsx"),
+  ]);
+
+  assert.match(page, /if \(mode === "disabled"\) notFound\(\)/);
+  assert.match(page, /if \(mode === "coming-soon"\)/);
+  assert.match(page, /<SimulationComingSoon \/>/);
+  assert.match(page, /noindex: mode !== "campaign-v1"/);
   assert.match(page, /if \(dossier\.scenes\.length !== 4 \|\| dossier\.facts\.length < 8\) notFound\(\)/);
+  assert.ok(
+    page.indexOf('mode === "coming-soon"') <
+      page.indexOf('import("@\/components\/simulation\/SimulationCampaign")'),
+    "The server-only placeholder must return before campaign code or content is loaded.",
+  );
+
+  assert.doesNotMatch(comingSoon, /["']use client["']/);
+  assert.match(comingSoon, /data-simulation-coming-soon/);
+  assert.match(comingSoon, /No model is running on this page/);
+  assert.match(comingSoon, /href="\/play"/);
+  assert.match(comingSoon, /href="\/work"/);
 });
 
 test("authored fallback remains a complete four-beat path", async () => {

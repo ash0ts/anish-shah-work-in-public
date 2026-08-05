@@ -11,7 +11,7 @@ source, research implementations, and public programs from 2021 onward.
 - `/play` — My Room, 2001: a semantic seven-object collection and travel directory
 - `/play/watch`, `/play/read`, `/play/listen`, `/play/collect`, `/play/play`, `/play/move` — one provider per direct route
 - `/play/travel` and `/play/travel/trips/[slug]` — Postcard Planet and canonical trip stories
-- `/simulation` — a feature-gated public-model campaign with Action and semantic Tactical modes
+- `/simulation` — a feature-gated public-model doorway or the full Action/Tactical campaign
 - `/sources` — archive accounting, claims, methodology, and bibliography
 - `/privacy` — privacy, connector, retention, and contact information
 - `/studio` — owner-only editorial and connector operations
@@ -92,11 +92,13 @@ repository, use `npm run dev:simulation:live -- --env-file <owner-only-file>`.
 See [Testing and release gates](docs/testing.md) for the exact safety boundary
 and verification label.
 
-Live staging and production use separate Cloudflare AI Gateways, session keys,
-rate-limit bindings, budgets, DLP/Guardrail policies, BYOK aliases, and owner
-approval registers. Gateway prompt/response logging and response caching stay
-off. Production remains disabled until its dedicated guarded release; no local
-or preview credential or approval can be promoted into it.
+Live campaign releases in staging and production use separate Cloudflare AI
+Gateways, session keys, rate-limit bindings, budgets, DLP/Guardrail policies,
+BYOK aliases, and owner approval registers. Gateway prompt/response logging and
+response caching stay off. The public `coming-soon` doorway runs none of that
+campaign infrastructure: it creates no session, reads no dossier, calls no
+model, stays out of the sitemap, and is noindexed. No local or preview
+credential or approval can be promoted into a hosted tier.
 
 ## Trust boundary
 

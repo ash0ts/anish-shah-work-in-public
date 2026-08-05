@@ -42,7 +42,9 @@ import {
   countryTexturePixel,
   latLngToVector3,
   resolveTravelGlobeGesture,
+  TRAVEL_GLOBE_COUNTRY_SURFACE_YAW,
   travelRegionTripCounts,
+  travelGlobeSurfaceQuaternion,
   vector3ToLatLng,
 } from "./travel-globe-math";
 import type {
@@ -415,6 +417,14 @@ function Planet({
     [atlas.trips],
   );
   const selectedPlace = places.find(({ id }) => id === selectedPlaceId) ?? null;
+  const selectedPlaceMarker = useMemo(() => {
+    if (!selectedPlace) return null;
+    const { lat, lng } = selectedPlace.publicPoint;
+    return {
+      position: latLngToVector3(lat, lng, 1.065),
+      quaternion: travelGlobeSurfaceQuaternion(lat, lng),
+    };
+  }, [selectedPlace]);
   const selectedCountry = geography.countries.find(
     ({ code }) => code === selectedCountryCode,
   );
@@ -614,7 +624,10 @@ function Planet({
         ref={globe}
         rotation={[0.13, -0.35, 0]}
       >
-        <mesh onClick={selectCountry}>
+        <mesh
+          onClick={selectCountry}
+          rotation={[0, TRAVEL_GLOBE_COUNTRY_SURFACE_YAW, 0]}
+        >
           <sphereGeometry args={[1, 72, 40]} />
           {material ? (
             <primitive attach="material" object={material} />
@@ -672,13 +685,10 @@ function Planet({
             />
           ))}
         </Instances>
-        {selectedPlace ? (
+        {selectedPlaceMarker ? (
           <mesh
-            position={latLngToVector3(
-              selectedPlace.publicPoint.lat,
-              selectedPlace.publicPoint.lng,
-              1.065,
-            )}
+            position={selectedPlaceMarker.position}
+            quaternion={selectedPlaceMarker.quaternion}
           >
             <ringGeometry args={[0.055, 0.078, 16]} />
             <meshBasicMaterial color="#347cff" side={DoubleSide} />

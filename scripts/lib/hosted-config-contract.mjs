@@ -193,9 +193,13 @@ export function expectedStagingCoordinates(environment, contentVersion, packageV
   const metadata = releaseMetadata(environment, contentVersion, packageVersion);
   const simulationExperienceMode =
     environment.STAGING_SIMULATION_EXPERIENCE_MODE?.trim() || "campaign-v1";
-  if (!new Set(["disabled", "campaign-v1"]).has(simulationExperienceMode)) {
+  if (
+    !new Set(["disabled", "coming-soon", "campaign-v1"]).has(
+      simulationExperienceMode,
+    )
+  ) {
     throw new Error(
-      "STAGING_SIMULATION_EXPERIENCE_MODE must be disabled or campaign-v1.",
+      "STAGING_SIMULATION_EXPERIENCE_MODE must be disabled, coming-soon, or campaign-v1.",
     );
   }
   const simulationAiMode =

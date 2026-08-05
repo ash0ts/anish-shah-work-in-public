@@ -2,7 +2,7 @@ import { runtimeValue } from "../runtime-env";
 import {
   simulationExperienceEnabled,
   simulationExperienceMode,
-} from "./policy";
+} from "./mode";
 
 export type SimulationAiMode =
   | "fixture"

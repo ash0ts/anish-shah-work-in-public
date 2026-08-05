@@ -123,6 +123,12 @@ a second, no-migration activation release with `campaign-v1` and live AI. This
 ordering prevents a release plan from claiming approvals before their protected
 table exists.
 
+A no-migration `coming-soon` release may follow the infrastructure release
+before campaign approval. It exposes the semantic doorway and server-rendered
+placeholder while keeping every Simulation API unavailable. It must use
+`SIMULATION_AI_MODE=authored-only`, carry no approval variables, stay noindexed,
+and remain absent from the sitemap.
+
 ## 1. Validate the exact commit and bytes
 
 Merge through a reviewed PR, then manually dispatch Validate, Gitleaks, CodeQL,
@@ -195,6 +201,15 @@ building. Hosted production rejects fixture mode and rejects an enabled
 campaign that is not live. These non-secret values are embedded in the exact
 Worker configuration and cannot be changed after validation without rebuilding
 and replanning the release.
+
+For a public placeholder release instead, use:
+
+```bash
+export SIMULATION_EXPERIENCE_MODE='coming-soon'
+export SIMULATION_AI_MODE='authored-only'
+```
+
+Do not set provider-approval variables for that mode.
 
 Keep `TRAVEL_ATLAS_MODE=disabled` for the first code deployment. Preparing
 private trips in production Studio does not publish `/play/travel`. A later
@@ -274,7 +289,7 @@ export RELEASE_SIMULATION_APPROVED_PROVIDERS='<comma-separated simulation.approv
 export RELEASE_SIMULATION_APPROVAL_DIGEST='<simulation.providerApprovalDigest>'
 ```
 
-Leave both unset while simulation is disabled.
+Leave both unset while Simulation is `disabled` or `coming-soon`.
 
 `RELEASE_PREVIOUS_WORKER_VERSION` is mandatory. Every release needs an existing
 version to hold 100% of traffic while the candidate is verified at 0%. If no
@@ -287,12 +302,13 @@ remote-pending filenames; do not include an already-applied, absent-from-Git,
 or unreviewed file.
 
 Use `0006_public_model_simulation.sql` only for the disabled infrastructure
-release and only when Wrangler reports it pending. The subsequent simulation
-activation release sets `RELEASE_MIGRATION_LIST=''`. An enabled release plan
-requires at least one allowlisted provider name and a 64-character approval
-digest. A disabled plan rejects stale approval variables. The plan records only
-campaign version, experience/AI mode, provider/model, sorted provider names, and
-the digest; it has no field for approval references or secrets.
+release and only when Wrangler reports it pending. Subsequent `coming-soon` or
+campaign activation releases set `RELEASE_MIGRATION_LIST=''`. A `campaign-v1`
+release plan requires at least one allowlisted provider name and a 64-character
+approval digest. Disabled and coming-soon plans reject stale approval
+variables. The plan records only campaign version, experience/AI mode,
+provider/model, sorted provider names, and the digest; it has no field for
+approval references or secrets.
 
 `release:plan` refuses a dirty worktree or a SHA mismatch. It also asks the
 authenticated GitHub CLI to verify that all four distinct Actions runs belong
@@ -470,10 +486,13 @@ production:
    contract. For an enabled campaign, Gateway readiness, provider names, and
    approval digest match the plan.
 8. `simulation_experience`: when disabled, the ingress is absent and route/APIs
-   return their documented unavailable behavior. When enabled, `/simulation`
-   and the sitemap entry are public, Action and Tactical both complete, exactly
-   two optional text moments are enforced, AI outage completes through authored
-   fallback, and no prompt/response or visitor text appears in logs or storage.
+   return their documented unavailable behavior. When coming soon, the ingress
+   and noindexed server-rendered route are public, the sitemap omits it, every
+   Simulation API is unavailable, and no dossier, session, model, Phaser, or
+   Tone code loads. With `campaign-v1`, `/simulation` and the sitemap entry are
+   public, Action and Tactical both complete, exactly two optional text moments
+   are enforced, AI outage completes through authored fallback, and no
+   prompt/response or visitor text appears in logs or storage.
 9. `canonical_apex`: the apex is the sole content-serving production origin and
    public HTML, metadata, sitemap, robots, and structured data use it.
 10. `www_redirect`: representative `www` paths and queries permanently redirect

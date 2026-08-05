@@ -32,7 +32,10 @@ the exact owner allowlist and is always `private, no-store`.
 - Confirm `/api/studio/health` matches the deployed SHA, `CONTENT_VERSION`, and
   `COPY_VERSION`, and has
   a current retention heartbeat.
-- When simulation is enabled, confirm Gateway readiness, the planned provider
+- In `coming-soon` mode, confirm owner health reports the mode as unconfigured
+  and that model-call/session counters do not change from public visits. Stored
+  owner approvals may remain in D1, but the release plan carries none and the
+  placeholder cannot use them. When the campaign is enabled, confirm Gateway readiness, the planned provider
   names/digest, and the configured daily model ceiling. Investigate fallback
   rate changes without adding prompt or response logging.
 - Inspect Studio connector health. Refresh a configured provider only when the
@@ -73,8 +76,9 @@ Gateway aggregate cost/latency instead.
 - retention heartbeat older than three hours
 - sudden artwork proxy rejection/rate-limit spikes
 - D1 migration mismatch or failed publication reconciliation
-- simulation Gateway unexpectedly unconfigured, approval digest drift, daily
-  cap exhaustion, or sustained elevated/high authored fallback
+- simulation Gateway unexpectedly unconfigured while `campaign-v1` is active,
+  approval digest drift, daily cap exhaustion, or sustained elevated/high
+  authored fallback
 
 Follow [incidents](./incidents.md) for containment. External alerts remain a
 future operational improvement; do not expose provider identities or secrets to

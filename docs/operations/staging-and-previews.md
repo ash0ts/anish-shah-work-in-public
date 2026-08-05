@@ -165,6 +165,9 @@ export OWNER_EMAILS='<exact owner email>'
 export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
 unset LOCAL_OWNER_EMAIL
 
+# Select exactly one reviewed Simulation presentation state for this candidate.
+export STAGING_SIMULATION_EXPERIENCE_MODE='coming-soon'
+
 npm run staging:prepare
 ```
 
@@ -181,14 +184,14 @@ migrate, upload, stage, bootstrap, checkpoint, and promote that
 infrastructure-only version without approval variables. Then enter provider
 approvals and author/publish an owner-reviewed Travel snapshot in staging
 Studio. Wait for the offset maintenance cron to record a current Travel cleanup
-heartbeat. Then unset both override variables, rebuild the staging
-configuration, and prepare a second no-migration activation plan using the
-sanitized health values below. This two-release bootstrap avoids inventing
-approval evidence or atlas state before their protected tables and media
-boundary exist. Keep both disabled variables set for every guarded command in
-the first release; changing either makes the prepared configuration fail
-closed. Owner Travel Desk writes remain available while the public atlas route
-is disabled.
+heartbeat. Then choose the reviewed public state for the next no-migration
+release: `coming-soon` publishes only the noindexed server-rendered doorway,
+while `campaign-v1` activates the live campaign and requires the sanitized
+approval values below. This two-release bootstrap avoids inventing approval
+evidence or atlas state before their protected tables and media boundary exist.
+Keep both disabled variables set for every guarded command in the first
+release; changing either makes the prepared configuration fail closed. Owner
+Travel Desk writes remain available while the public atlas route is disabled.
 
 The generator hashes each supplied staging coordinate and fails if any D1, KV,
 Access audience, or Rate Limiting namespace matches the pinned production
@@ -225,7 +228,8 @@ export STAGING_GITLEAKS_URL='https://github.com/ash0ts/anish-shah-work-in-public
 export STAGING_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export STAGING_BROWSER_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 
-# Copy only these sanitized values from owner-only GET /api/studio/health.
+# For campaign-v1 only, copy these sanitized values from owner-only health.
+# Leave both unset for disabled or coming-soon.
 export STAGING_SIMULATION_APPROVED_PROVIDERS='<comma-separated simulation.approvedProviders>'
 export STAGING_SIMULATION_APPROVAL_DIGEST='<simulation.providerApprovalDigest>'
 
@@ -236,11 +240,11 @@ export STAGING_WORKER_VERSION='<uploaded staging version>'
 npm run staging:stage
 ```
 
-Leave the two simulation approval variables unset for the disabled
-infrastructure release. They are mandatory only for the subsequent
-`campaign-v1` activation. Leave `STAGING_TRAVEL_ATLAS_MODE=disabled` set through
-that first release as well; the later `atlas-v1` checkpoint requires an active
-Travel publication and current cleanup heartbeat.
+Leave the two simulation approval variables unset for `disabled` and
+`coming-soon`. They are mandatory only for `campaign-v1`. Leave
+`STAGING_TRAVEL_ATLAS_MODE=disabled` set through the first infrastructure
+release as well; the later `atlas-v1` checkpoint requires an active Travel
+publication and current cleanup heartbeat.
 
 An integrated Simulation-and-Travel staging database reports
 `0006_public_model_simulation.sql` followed by `0007_travel_atlas.sql` as
@@ -304,7 +308,12 @@ For a `campaign-v1` checkpoint, the live Gateway must be configured and the
 runtime campaign/model settings plus current approval names and digest must
 match the ignored staging plan. A changed or expired approval therefore stops
 the candidate instead of silently changing model context. The initial disabled
-infrastructure release does not require Gateway credentials or approvals.
+infrastructure release does not require Gateway credentials or approvals. A
+`coming-soon` checkpoint requires `/simulation` to return 200 with the global
+staging noindex headers while all `/api/simulation/**` routes return 404; it
+also requires health to report the campaign unconfigured and public visits not
+to change model-call or session state. Existing protected approval rows may
+remain stored, but they are not release evidence or runtime input in this mode.
 Unless a reviewed staging override is added later, the application daily model
 ceiling remains the runtime default of 500 calls.
 

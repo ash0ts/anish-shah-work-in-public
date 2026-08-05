@@ -1,6 +1,22 @@
-import { MathUtils, Vector3 } from "three";
+import { MathUtils, Quaternion, Vector3 } from "three";
 
 export const TRAVEL_GLOBE_DRAG_THRESHOLD_PX = 8;
+export const TRAVEL_GLOBE_COUNTRY_SURFACE_YAW = -Math.PI / 2;
+
+function normalizedLongitude(value: number): number {
+  const wrapped = ((value + 180) % 360 + 360) % 360 - 180;
+  return wrapped === -180 && value > 0 ? 180 : wrapped;
+}
+
+/** Longitude rendered by Three SphereGeometry texture U after surface yaw. */
+export function travelGlobeSurfaceLongitudeFromTextureU(
+  textureU: number,
+): number {
+  const sphereLongitude = textureU * 360 - 90;
+  return normalizedLongitude(
+    sphereLongitude + MathUtils.radToDeg(TRAVEL_GLOBE_COUNTRY_SURFACE_YAW),
+  );
+}
 
 export function latLngToVector3(
   lat: number,
@@ -25,6 +41,17 @@ export function vector3ToLatLng(vector: Vector3): {
     lat: MathUtils.radToDeg(Math.asin(MathUtils.clamp(normalized.y, -1, 1))),
     lng: MathUtils.radToDeg(Math.atan2(normalized.x, normalized.z)),
   };
+}
+
+/** Orient an XY-plane marker so its +Z normal follows the globe surface. */
+export function travelGlobeSurfaceQuaternion(
+  lat: number,
+  lng: number,
+): Quaternion {
+  return new Quaternion().setFromUnitVectors(
+    new Vector3(0, 0, 1),
+    latLngToVector3(lat, lng).normalize(),
+  );
 }
 
 export function crossedTravelGlobeDragThreshold(

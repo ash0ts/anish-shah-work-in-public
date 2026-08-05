@@ -869,7 +869,7 @@ if (action === "plan") {
     }
     const simulationResponse = await authenticatedFetch("/simulation");
     const expectedSimulationStatus =
-      plan.simulation.experienceMode === "campaign-v1" ? 200 : 404;
+      plan.simulation.experienceMode === "disabled" ? 404 : 200;
     if (
       simulationResponse.status !== expectedSimulationStatus ||
       !(simulationResponse.headers.get("x-robots-tag") ?? "").includes(
@@ -880,6 +880,25 @@ if (action === "plan") {
       throw new Error("Staging smoke failed for /simulation.");
     }
     results.push({ pathname: "/simulation", status: simulationResponse.status });
+    const simulationSessionResponse = await authenticatedFetch(
+      "/api/simulation/session",
+    );
+    const expectedSimulationSessionStatus =
+      plan.simulation.experienceMode === "campaign-v1" ? 200 : 404;
+    if (
+      simulationSessionResponse.status !== expectedSimulationSessionStatus ||
+      !(simulationSessionResponse.headers.get("x-robots-tag") ?? "").includes(
+        "noindex",
+      ) ||
+      simulationSessionResponse.headers.get("cache-control") !==
+        "private, no-store"
+    ) {
+      throw new Error("Staging smoke failed for /api/simulation/session.");
+    }
+    results.push({
+      pathname: "/api/simulation/session",
+      status: simulationSessionResponse.status,
+    });
     console.log(JSON.stringify({ status: "passed", results }));
   }
 }

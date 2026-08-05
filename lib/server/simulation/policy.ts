@@ -1,7 +1,12 @@
 import manifestJson from "../../../content/presentation/simulation.v1.json" with {
   type: "json",
 };
-import { runtimeValue } from "../runtime-env";
+export {
+  simulationExperienceEnabled,
+  simulationExperienceMode,
+  simulationExperienceVisible,
+  type SimulationExperienceMode,
+} from "./mode";
 import {
   SIMULATION_RESPONSE_MODES,
   SIMULATION_VISITOR_SIGNALS,
@@ -292,22 +297,6 @@ function parseManifest(value: unknown): SimulationManifest {
 }
 
 export const simulationManifest = parseManifest(manifestJson);
-
-export type SimulationExperienceMode = "disabled" | "campaign-v1";
-
-export function simulationExperienceMode(): SimulationExperienceMode {
-  const configured = runtimeValue("SIMULATION_EXPERIENCE_MODE");
-  if (configured === "campaign-v1") return "campaign-v1";
-  if (configured === "disabled") return "disabled";
-  const localDevelopment =
-    runtimeValue("NODE_ENV") === "development" &&
-    runtimeValue("DEPLOYMENT_TIER") === undefined;
-  return localDevelopment ? "campaign-v1" : "disabled";
-}
-
-export function simulationExperienceEnabled(): boolean {
-  return simulationExperienceMode() === "campaign-v1";
-}
 
 const factsById = new Map(
   simulationManifest.facts.map((fact) => [fact.id, fact]),

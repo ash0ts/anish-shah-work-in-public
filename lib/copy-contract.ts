@@ -172,6 +172,7 @@ export const COPY_PAGE_DEFINITIONS = {
   simulation: [
     field("simulation", "seo-title", "editorial", 70),
     field("simulation", "seo-description", "editorial", 160),
+    field("simulation", "coming-soon-seo-description", "editorial", 160),
     field("simulation", "ingress-label", "editorial", 100),
     field("simulation", "ingress-cta", "editorial", 48),
     field("simulation", "transition-eyebrow", "editorial", 60),
@@ -180,6 +181,14 @@ export const COPY_PAGE_DEFINITIONS = {
       allowParagraphs: true,
     }),
     field("simulation", "transition-cancel-cta", "editorial", 48),
+    field("simulation", "coming-soon-eyebrow", "editorial", 80),
+    field("simulation", "coming-soon-title", "editorial", 140),
+    field("simulation", "coming-soon-summary", "editorial", 320, {
+      allowParagraphs: true,
+    }),
+    field("simulation", "coming-soon-status", "editorial", 80),
+    field("simulation", "coming-soon-room-cta", "editorial", 48),
+    field("simulation", "coming-soon-work-cta", "editorial", 48),
     field("simulation", "boot-eyebrow", "editorial", 80),
     field("simulation", "boot-title", "editorial", 120),
     field("simulation", "boot-summary", "editorial", 320, {
