@@ -173,12 +173,15 @@ test("repository setup reuses the exact baked release-runner toolchain", async (
 });
 
 test("release browser evidence reuses the exact Validate artifact", async () => {
-  const [validate, browser, soak, runner, playwrightConfig] = await Promise.all([
+  const [validate, browser, soak, runner, playwrightConfig, webkitConfig] = await Promise.all([
     text(".github/workflows/ci.yml"),
     text(".github/workflows/browser-quality.yml"),
     text(".github/workflows/browser-stability.yml"),
     text("scripts/run-browser-quality.mjs"),
     text("playwright.config.mjs"),
+    import(new URL("../playwright.spotify-webkit.config.mjs", import.meta.url)).then(
+      ({ default: configuration }) => configuration,
+    ),
   ]);
   assert.match(validate, /name: validated-dist-\$\{\{ env\.VALIDATE_SOURCE_SHA \}\}/u);
   assert.match(validate, /npm run deployable:attest:write/u);
@@ -211,6 +214,11 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(runner, /timeoutMs: 5 \* 60_000/u);
   assert.match(playwrightConfig, /const inspectorPort = port \+ 5_000/u);
   assert.match(playwrightConfig, /--inspector-port \$\{inspectorPort\}/u);
+  assert.equal(
+    webkitConfig.use.launchOptions,
+    undefined,
+    "WebKit must not inherit Chromium-only launch flags",
+  );
   for (const workflow of [validate, browser, soak]) {
     assert.match(workflow, /fetch-depth: 0/u);
     assert.match(
