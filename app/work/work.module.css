@@ -619,8 +619,27 @@
   }
 
   .filterToolbar:has(.mobileFilters[data-ready="true"]) .filterActions {
+    display: contents;
+  }
+
+  .filterToolbar:has(.mobileFilters[data-ready="true"])
+    .filterActions
+    > button {
+    min-width: 0;
     grid-column: 2;
     grid-row: 3;
+    overflow-wrap: normal;
+    white-space: nowrap;
+    word-break: normal;
+  }
+
+  .filterToolbar:has(.mobileFilters[data-ready="true"])
+    .filterActions
+    > .clear {
+    min-height: 2.75rem;
+    grid-column: 1 / -1;
+    grid-row: 4;
+    justify-self: end;
   }
 
   .mobileFilterTrigger {

@@ -10,11 +10,11 @@ import {
 } from "react";
 import styles from "./SiteHeader.module.css";
 
-type NavigationKey = "work" | "play";
+type NavigationKey = "home" | "work" | "play";
 
 type PrimaryNavigationItem = readonly [
   label: string,
-  href: `/${NavigationKey}`,
+  href: "/work" | "/play",
 ];
 
 type IndicatorMotion = {
@@ -24,6 +24,7 @@ type IndicatorMotion = {
 };
 
 function navigationKeyForPath(pathname: string): NavigationKey | null {
+  if (pathname === "/") return "home";
   if (pathname === "/work" || pathname.startsWith("/work/")) return "work";
   if (
     pathname === "/play" ||
@@ -37,13 +38,16 @@ function navigationKeyForPath(pathname: string): NavigationKey | null {
 }
 
 export function PrimaryNavigation({
+  homeLabel,
   items,
 }: {
+  homeLabel: string;
   items: readonly PrimaryNavigationItem[];
 }) {
   const pathname = usePathname();
   const activeKey = navigationKeyForPath(pathname);
   const activeKeyRef = useRef(activeKey);
+  const visualKeyRef = useRef(activeKey);
   const initializedRef = useRef(false);
   const indicatorRef = useRef<HTMLSpanElement>(null);
   const indicatorCoreRef = useRef<HTMLSpanElement>(null);
@@ -68,9 +72,10 @@ export function PrimaryNavigation({
       const navigation = navigationRef.current;
       const indicator = indicatorRef.current;
       const key =
-        keyOverride === undefined ? activeKeyRef.current : keyOverride;
+        keyOverride === undefined ? visualKeyRef.current : keyOverride;
       if (!navigation || !indicator) return;
 
+      visualKeyRef.current = key;
       navigation.dataset.visualActive = key ?? "none";
 
       const target = key ? linkRefs.current[key] : null;
@@ -100,11 +105,14 @@ export function PrimaryNavigation({
         return;
       }
 
+      const travel = Math.abs(next.x - motionState.current.x);
+      const duration = Math.min(440, 260 + travel * 0.16);
+
       motionRef.current = animate(motionState.current, {
         opacity: next.opacity,
         width: next.width,
         x: next.x,
-        duration: 260,
+        duration,
         ease: "out(4)",
         onUpdate: renderIndicator,
         onComplete: renderIndicator,
@@ -115,7 +123,7 @@ export function PrimaryNavigation({
         shapeMotionRef.current = animate(core, {
           scaleX: [1, 1.14, 1],
           scaleY: [1, 0.88, 1],
-          duration: 260,
+          duration,
           ease: "inOut(3)",
         });
       }
@@ -125,6 +133,7 @@ export function PrimaryNavigation({
 
   useLayoutEffect(() => {
     activeKeyRef.current = activeKey;
+    visualKeyRef.current = activeKey;
     if (optimisticResetRef.current !== null) {
       window.clearTimeout(optimisticResetRef.current);
       optimisticResetRef.current = null;
@@ -179,36 +188,65 @@ export function PrimaryNavigation({
       >
         <span ref={indicatorCoreRef} />
       </span>
-      {items.map(([label, href]) => {
-        const key = href.slice(1) as NavigationKey;
-        const current = activeKey === key;
-        return (
-          <Link
-            aria-current={current ? "page" : undefined}
-            data-navigation-key={key}
-            href={href}
-            key={href}
-            onNavigate={() => {
-              if (current) return;
-              if (optimisticResetRef.current !== null) {
-                window.clearTimeout(optimisticResetRef.current);
-              }
-              positionIndicator(true, key);
-              optimisticResetRef.current = window.setTimeout(() => {
-                optimisticResetRef.current = null;
-                positionIndicator(true);
-              }, 4_000);
-            }}
-            prefetch={false}
-            ref={(node) => {
-              if (node) linkRefs.current[key] = node;
-              else delete linkRefs.current[key];
-            }}
-          >
-            {label}
-          </Link>
-        );
-      })}
+      <Link
+        aria-current={activeKey === "home" ? "page" : undefined}
+        aria-label={`${homeLabel}, home`}
+        className={styles.wordmark}
+        data-navigation-key="home"
+        href="/"
+        onNavigate={() => {
+          if (activeKey === "home") return;
+          if (optimisticResetRef.current !== null) {
+            window.clearTimeout(optimisticResetRef.current);
+          }
+          positionIndicator(true, "home");
+          optimisticResetRef.current = window.setTimeout(() => {
+            optimisticResetRef.current = null;
+            visualKeyRef.current = activeKeyRef.current;
+            positionIndicator(true);
+          }, 4_000);
+        }}
+        prefetch={false}
+        ref={(node) => {
+          if (node) linkRefs.current.home = node;
+          else delete linkRefs.current.home;
+        }}
+      >
+        {homeLabel}
+      </Link>
+      <span className={styles.navigationDestinations}>
+        {items.map(([label, href]) => {
+          const key = href.slice(1) as Exclude<NavigationKey, "home">;
+          const current = activeKey === key;
+          return (
+            <Link
+              aria-current={current ? "page" : undefined}
+              data-navigation-key={key}
+              href={href}
+              key={href}
+              onNavigate={() => {
+                if (current) return;
+                if (optimisticResetRef.current !== null) {
+                  window.clearTimeout(optimisticResetRef.current);
+                }
+                positionIndicator(true, key);
+                optimisticResetRef.current = window.setTimeout(() => {
+                  optimisticResetRef.current = null;
+                  visualKeyRef.current = activeKeyRef.current;
+                  positionIndicator(true);
+                }, 4_000);
+              }}
+              prefetch={false}
+              ref={(node) => {
+                if (node) linkRefs.current[key] = node;
+                else delete linkRefs.current[key];
+              }}
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </span>
     </nav>
   );
 }
