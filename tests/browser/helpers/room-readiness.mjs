@@ -97,11 +97,10 @@ export async function expectRoomReady(
       timeout: Math.max(1, deadline - Date.now()),
     });
 
-    const tier = await room.getAttribute("data-room-presentation-tier");
     await expect(
       room.locator("[data-room-boot-status]"),
       "The visible boot status should agree with the runtime readiness state.",
-    ).toHaveText(tier === "pocket" ? "Ready" : "Room ready", {
+    ).toHaveText("Room ready", {
       timeout: Math.max(1, deadline - Date.now()),
     });
   } catch (error) {

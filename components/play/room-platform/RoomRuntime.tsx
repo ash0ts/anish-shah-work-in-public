@@ -14,6 +14,7 @@ import {
   useState,
 } from "react";
 import { ExperienceAudioControl } from "@/components/experience-audio/ExperienceAudioProvider";
+import { SITE_COPY } from "@/lib/copy";
 import { useRoomCapability } from "../room-3d/Room3DGate";
 import type { RoomCapabilityResult } from "../room-3d/room-capability";
 import { adjacentPocketRoomRotation } from "../room-3d/room-math";
@@ -103,13 +104,13 @@ const CAPABILITY_MESSAGES: Record<string, string> = {
 
 function capabilityDetail(capability: RoomCapabilityResult | null) {
   if (!capability || capability.reasons.length === 0) {
-    return "Every collection remains available through the object directory.";
+    return SITE_COPY.play["room-fallback-body"];
   }
   return capability.reasons
     .map(
       (reason) =>
         CAPABILITY_MESSAGES[reason] ??
-        "Every collection remains available through the object directory.",
+        SITE_COPY.play["room-fallback-body"],
     )
     .join(" ");
 }
@@ -221,15 +222,15 @@ export function RoomRuntime() {
   const pocketAtLast = room.rotation.y >= 12;
   const bootStatus = pocket
     ? pocketEntryPhase === "opening"
-      ? "Opening room"
+      ? SITE_COPY.play["pocket-stage-opening"]
       : pocketEntryPhase === "placing"
-        ? "Placing objects"
-        : "Ready"
+        ? SITE_COPY.play["pocket-stage-placing"]
+        : SITE_COPY.play["pocket-stage-ready"]
     : ready
-      ? "Room ready"
+      ? SITE_COPY.play["pocket-stage-ready"]
       : capability.reasons.includes("checking")
-        ? "Opening room"
-        : "Preparing room";
+        ? SITE_COPY.play["room-opening-status"]
+        : SITE_COPY.play["pocket-stage-placing"];
 
   const containFocus = (event: React.KeyboardEvent<HTMLElement>) => {
     if (event.key !== "Tab" || presenting) return;
@@ -382,8 +383,8 @@ export function RoomRuntime() {
             </Suspense>
             {!ready ? (
               <RoomPosterFallback
-                detail="The object links are ready below."
-                title="Setting out the room…"
+                detail={SITE_COPY.play["room-fallback-body"]}
+                title={SITE_COPY.play["pocket-stage-placing"]}
               />
             ) : null}
           </RoomRuntimeBoundary>

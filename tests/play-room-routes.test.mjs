@@ -227,7 +227,7 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
   assert.match(provider, /Opened \$\{object\.label\}: \$\{object\.title\}\./);
   assert.match(provider, /Returned to the room/);
   assert.match(provider, /data-room-return-status/);
-  assert.match(provider, /Rewinding to My Room/);
+  assert.match(provider, /Returning to the room/);
   assert.match(provider, /requestAnimationFrame\(navigate\)/);
   assert.match(runtime, /const presenting = room\.objectRouteActive && !returning/);
   assert.match(runtime, /data-room-ready=\{ready \? "true" : "false"\}/);

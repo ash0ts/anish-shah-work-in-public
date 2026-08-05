@@ -14,7 +14,9 @@ export function WorkBodyBehavior() {
     const desktop = window.matchMedia("(min-width: 761px)");
     const syncDefaults = () => {
       if (!desktop.matches) {
-        for (const body of bodies) body.open = false;
+        for (const [index, body] of bodies.entries()) {
+          body.open = index === 0;
+        }
         return;
       }
 

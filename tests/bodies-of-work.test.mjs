@@ -19,6 +19,7 @@ const [
   workPageSource,
   timelineSource,
   impactSource,
+  impactEvidenceSource,
   packageJson,
 ] =
   await Promise.all([
@@ -45,6 +46,10 @@ const [
     "utf8",
   ),
   readFile(path.join(projectRoot, "lib/home-impact.ts"), "utf8"),
+  readFile(
+    path.join(projectRoot, "components/ImpactEvidence.tsx"),
+    "utf8",
+  ),
   readFile(path.join(projectRoot, "package.json"), "utf8").then(JSON.parse),
 ]);
 const copyDeck = await buildCopyDeck(projectRoot);
@@ -233,6 +238,21 @@ test("Home proof statements resolve the three required qualified metric IDs", ()
   assert.match(impactSource, /missing, unpublished, or assigned to the wrong theme/);
   assert.match(impactSource, /must be public and include its limit/);
   assert.match(impactSource, /SITE_COPY\.home\["proof-1-statement"\]/);
+  for (const key of [
+    "impact-eyebrow",
+    "impact-heading",
+    "impact-summary",
+    "impact-source-cta",
+  ]) {
+    assert.match(
+      impactEvidenceSource,
+      new RegExp(`SITE_COPY\\.home\\["${key}"\\]`),
+    );
+  }
+  assert.doesNotMatch(
+    impactEvidenceSource,
+    /What happened after the work shipped|Three independent measures/i,
+  );
 });
 
 test("the superseded chapter-stack and Three.js implementation is gone", () => {

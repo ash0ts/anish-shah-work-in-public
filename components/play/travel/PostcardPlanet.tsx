@@ -368,7 +368,11 @@ export function PostcardPlanet({
                   </Suspense>
                 ) : (
                   <div className={styles.staticMap} data-travel-static-atlas>
-                    <span>{geography ? "Globe unavailable" : "Loading map index"}</span>
+                    <span>
+                      {geography
+                        ? "Globe unavailable"
+                        : SITE_COPY.play["travel-loading-map"]}
+                    </span>
                     <i aria-hidden="true" />
                     <p>Choose a country, region, or place from the directory.</p>
                   </div>

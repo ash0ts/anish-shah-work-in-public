@@ -129,6 +129,50 @@ test("skip navigation reaches the main content", async ({ page }) => {
   await expect(page.locator("#main")).toBeVisible();
 });
 
+test("the primary navigation signal lens follows the active route", async ({
+  page,
+}) => {
+  await page.goto("/work", { waitUntil: "networkidle" });
+  const navigation = page.getByRole("navigation", {
+    name: "Primary navigation",
+  });
+  const work = navigation.getByRole("link", { name: "Work" });
+  const play = navigation.getByRole("link", { name: "Play" });
+  const indicator = navigation.locator("[data-primary-navigation-indicator]");
+
+  await expect(navigation).toHaveAttribute("data-enhanced", "true");
+  await expect(navigation).toHaveAttribute("data-active-key", "work");
+  await expect(work).toHaveAttribute("aria-current", "page");
+  await expect(play).not.toHaveAttribute("aria-current", "page");
+  await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
+
+  await play.click();
+  await expect(page).toHaveURL(/\/play$/);
+  await expect(navigation).toHaveAttribute("data-active-key", "play");
+  await expect(play).toHaveAttribute("aria-current", "page");
+  await expect(work).not.toHaveAttribute("aria-current", "page");
+  await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
+  await expect(indicator).toBeVisible();
+});
+
+async function signalLensAlignment(navigation) {
+  return navigation.evaluate((element) => {
+    const active = element.querySelector('[aria-current="page"]');
+    const indicator = element.querySelector(
+      "[data-primary-navigation-indicator]",
+    );
+    if (!(active instanceof HTMLElement) || !(indicator instanceof HTMLElement)) {
+      return Number.POSITIVE_INFINITY;
+    }
+    const activeBounds = active.getBoundingClientRect();
+    const indicatorBounds = indicator.getBoundingClientRect();
+    return Math.max(
+      Math.abs(activeBounds.left - indicatorBounds.left),
+      Math.abs(activeBounds.width - indicatorBounds.width),
+    );
+  });
+}
+
 test("mobile Work keeps search, calendar years, and filter-sheet focus synchronized", async ({
   page,
 }) => {
@@ -136,7 +180,7 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
   await page.goto("/work", { waitUntil: "networkidle" });
 
   const search = page.getByRole("searchbox", {
-    name: "Search projects, talks, and code",
+    name: "Search the work",
   });
   const calendar = page.getByRole("region", {
     name: /Work timeline table/,
@@ -198,10 +242,25 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
   await expect(filters).toBeFocused();
 
   await expect(page.locator("details[data-work-body][open]")).toHaveCount(0);
+  await expect(page.locator("li[data-work-id]")).toHaveCount(0);
+  await expect(page.locator("#work-index")).toHaveCount(0);
+
+  await calendar
+    .getByRole("link", {
+      name: /projects in Agent systems & open source, 2024/,
+    })
+    .click();
+  await expect(page).toHaveURL(
+    /\/work\?bucket=products-open-source&year=2024#work-index$/,
+  );
+  await expect(page.locator("li[data-work-id]").first()).toBeVisible();
+  await expect(page.locator("#work-index-title")).toBeFocused();
+
+  await page.goto("/work?year=2024", { waitUntil: "networkidle" });
   await expect(page.locator("li[data-work-id]")).toHaveCount(24);
   await page.getByRole("link", { name: "Page 2" }).click();
-  await expect(page).toHaveURL(/\/work\?page=2#work-index$/);
-  await expect(page.locator("li[data-work-id]")).toHaveCount(24);
+  await expect(page).toHaveURL(/\/work\?year=2024&page=2#work-index$/);
+  await expect(page.locator("li[data-work-id]").first()).toBeVisible();
   await expect(page.locator("#work-index-title")).toBeFocused();
 
   const overflow = await pageOverflow(page);
@@ -364,7 +423,7 @@ test("Discogs remains lazy until the Record crate route is selected", async ({ p
     page.getByRole("region", { name: "Discogs physical catalog" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Inside the crate." }),
+    page.getByRole("heading", { name: "Crate Archive" }),
   ).toBeVisible();
   expect(connectorRequests).toHaveLength(0);
 });

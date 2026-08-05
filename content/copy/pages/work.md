@@ -7,37 +7,37 @@ Work
 Browse my agent systems, courses, implementations, open-source contributions, talks, and workshops.
 
 ## masthead-eyebrow
-Applied AI · 2021—now
+Work · 2021—now
 
 ## masthead-title
 What I’ve built, taught, and tested.
 
 ## masthead-summary
-Each project stays with the talks, recordings, translations, and code around it, so you can follow the idea instead of counting every appearance.
+One project stays one record—even when it became a talk, recording, or code release.
 
 ## search-label
-Search projects, talks, and code
+Search the work
 
 ## search-placeholder
 MCP, evaluation, agents, LangChain
 
 ## filter-submit
-Apply filters
+Show projects
 
 ## index-default-heading
-Project index
+Selected projects
 
 ## index-filtered-heading
-Filtered projects
+Projects matching this view
 
 ## no-results
-Nothing here matches those filters.
+No projects match this view.
 
 ## clear-search
-Reset filters
+Clear filters
 
 ## detail-back
-All projects
+Back to work
 
 ## detail-role
 My role
@@ -67,16 +67,16 @@ Talks, recordings, and code
 Related context
 
 ## timeline-eyebrow
-Timeline
+Calendar
 
 ## timeline-title
-Projects by year.
+Choose a year and line.
 
 ## timeline-summary
-Color marks the line; a darker cell means more projects. Select a cell to filter the list.
+Color marks the line. Darker cells contain more projects.
 
 ## timeline-caption
-Project counts by line and year
+Projects by line and year
 
 ## bucket-1-title
 Agent systems & open source

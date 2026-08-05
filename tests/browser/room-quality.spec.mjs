@@ -50,7 +50,7 @@ const objects = [
     id: "travel",
     label: "Travel",
     provider: null,
-    foundation: "Postcard Planet · Approximate public geography",
+    foundation: "Travel log · Approximate public geography",
     title: "Postcard Planet",
   },
 ];
@@ -1312,12 +1312,19 @@ test.describe("My Room 2001 browser quality", () => {
         ).toBeLessThanOrEqual(1 / 18);
       }
     }
-    const collect = resizedPoints.get("collect");
-    if (!collect) throw new Error("The record crate has no pointer hit region.");
-    await page.mouse.move(collect.x, collect.y);
+    const collectBeforeDrag = resizedPoints.get("collect");
+    if (!collectBeforeDrag) {
+      throw new Error("The record crate has no pointer hit region.");
+    }
+    await page.mouse.move(collectBeforeDrag.x, collectBeforeDrag.y);
     await page.mouse.down();
     await page.mouse.move(resizedBounds.x - 20, resizedBounds.y - 20);
     await page.mouse.up();
+    const pointsAfterDrag = await findAllInteractiveRoomPoints(page);
+    const collect = pointsAfterDrag.get("collect");
+    if (!collect) {
+      throw new Error("The record crate lost its pointer hit region after drag.");
+    }
     await page.mouse.move(collect.x, collect.y);
     await expect(stage).toHaveAttribute("data-room-hovered-object", "collect");
     await page.mouse.down();
@@ -1411,7 +1418,7 @@ test.describe("My Room 2001 browser quality", () => {
     await page.getByRole("link", { name: "Back to room" }).click();
     const status = page.locator("[data-room-return-status]");
     await expect(status).toBeVisible();
-    await expect(status).toContainText("Rewinding to My Room");
+    await expect(status).toContainText("Back to the room");
     room = page.locator("[data-room-runtime]");
     await expect(room).toBeVisible();
     await expect(room).toHaveAttribute("data-room-transition-phase", "returning");
@@ -1994,9 +2001,9 @@ test.describe("My Room 2001 browser quality", () => {
       expectedTier: "pocket",
     });
     const bootStates = await page.evaluate(() => window.__pocketBootStates);
-    expect(bootStates).toContain("Opening room");
-    expect(bootStates).toContain("Placing objects");
-    expect(bootStates.at(-1)).toBe("Ready");
+    expect(bootStates).toContain("Opening the room");
+    expect(bootStates).toContain("Folding out the objects");
+    expect(bootStates.at(-1)).toBe("Room ready");
 
     await context.close();
   });

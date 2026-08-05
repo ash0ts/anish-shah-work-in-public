@@ -24,6 +24,18 @@ Lines of work
 ## selected-heading
 Four ways I put AI systems into the world.
 
+## impact-eyebrow
+Selected outcomes
+
+## impact-heading
+Use, learning, and program reach.
+
+## impact-summary
+Three separate measures. Each keeps its scope and limit.
+
+## impact-source-cta
+How I count
+
 ## proof-1-label
 Agents in use
 
