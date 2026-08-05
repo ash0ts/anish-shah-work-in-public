@@ -16,6 +16,26 @@ case "$(uname -m)" in
   *) echo "Unsupported runner architecture." >&2; exit 64 ;;
 esac
 
+runner_uid="$(id -u)"
+test "$runner_uid" != "0"
+runner_record="$(getent passwd "$runner_uid")"
+IFS=: read -r _ _ _ _ _ runner_home _ <<< "$runner_record"
+test -n "$runner_home"
+[[ "$runner_home" = /* ]]
+test "$runner_home" != "/"
+test "$HOME" = "$runner_home"
+test -d "$runner_home"
+test ! -L "$runner_home"
+test -O "$runner_home"
+runner_work="${runner_home%/}/_work"
+if [ -e "$runner_work" ] || [ -L "$runner_work" ]; then
+  test -d "$runner_work"
+  test ! -L "$runner_work"
+  test -O "$runner_work"
+else
+  mkdir -m 0700 "$runner_work"
+fi
+
 runtime_ca=/run/anish-corporate-ca/root.crt
 if [ -e "$runtime_ca" ]; then
   test -f "$runtime_ca"
@@ -35,7 +55,7 @@ export ACTIONS_RUNNER_HOOK_JOB_STARTED=/opt/anish-runner/job-started-hook.sh
   --url "$repository" \
   --token "$token" \
   --name "${label}-${instance_id}-${architecture_label}" \
-  --work /home/runner/_work \
+  --work "$runner_work" \
   --labels "self-hosted,linux,${architecture_label},${label}" \
   --no-default-labels \
   --ephemeral \

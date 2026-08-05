@@ -365,6 +365,16 @@ test("documented placeholders and synthetic negative fixtures are accepted", () 
   );
 });
 
+test("runner work paths derived from the authenticated account home are accepted", () => {
+  assert.deepEqual(
+    scanSensitiveContent(
+      "scripts/runner/entrypoint.sh",
+      'runner_work="${runner_home%/}/_work"\n--work "$runner_work"\n',
+    ),
+    [],
+  );
+});
+
 test("literal high-entropy credential assignments are rejected", () => {
   const credential = ["8f39", "A7c2", "91bd", "EE43", "0a7f", "6C11"].join("");
   const findings = scanSensitiveContent(
