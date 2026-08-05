@@ -480,7 +480,9 @@ test("Work source renders a paginated four-line index and semantic color calenda
     "Format should open server-side when that filter is active",
   );
   assert.doesNotMatch(source, /WorkFilterBehavior/);
-  assert.match(bodyBehavior, /body\.open = false/);
+  assert.match(bodyBehavior, /body\.open = index === 0/);
+  assert.match(bodyBehavior, /body\.dataset\.defaultOpen === "true"/);
+  assert.match(bodyBehavior, /body\.open = defaults\.includes\(body\)/);
   assert.match(bodyBehavior, /min-width:\s*761px/);
   assert.match(css, /@media\s*\(max-width:\s*760px\)/);
   assert.match(
