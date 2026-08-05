@@ -266,9 +266,14 @@ The browser gate builds once, then reuses the same `dist` for:
 - Axe serious/critical checks;
 - Lighthouse mobile budgets of at least 0.90 with CLS no greater than 0.1.
 
-The release gate runs at most two isolated Chromium processes, uses no test
-retries, cancels remaining work on the first failure, reuses one Worker and
-browser for all Lighthouse routes, and targets completion within 15 minutes.
+The release gate first runs Simulation's no-JavaScript and room-reveal fallback
+foundations in one short isolated process, then runs at most two Chromium
+processes for the normal and WebGL-heavy coverage. It uses no test retries,
+cancels remaining work on the first failure, reuses one Worker and browser for
+all Lighthouse routes, and gives its child processes a combined 15-minute hard
+budget. This prevents a SwiftShader-heavy room process from starving a newly
+created no-JavaScript Chromium renderer on a bounded release runner without
+weakening or retrying the assertion.
 Twenty-fold click/drag loops, all-object Pocket stress, performance-downgrade
 stress, and room-review captures belong to the separate manual stability soak.
 

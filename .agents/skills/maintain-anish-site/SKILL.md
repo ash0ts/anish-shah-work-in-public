@@ -78,7 +78,9 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 
 - `--plan` classifies paths and enforces guardrails without application checks.
 - `--run` executes affected-surface checks. `--full` runs `validate` and the
-  bounded fail-fast release browser gate. Exhaustive 20-fold interaction stress
+  bounded fail-fast release browser gate. The gate isolates Simulation fallback
+  foundations before parallel WebGL-heavy coverage, without retries.
+  Exhaustive 20-fold interaction stress
   and visual capture belong to the separate manual stability workflow.
 - `--base <ref>` includes committed changes from that merge base through `HEAD`; use it for PR and freelancer review.
 - Owner write, Access/auth, and OAuth code require matching security/connector regression tests. Connector changes must prove public reads and cron make zero provider data-API calls, one Studio Refresh makes at most one attempt, and every failed attempt preserves the active snapshot.

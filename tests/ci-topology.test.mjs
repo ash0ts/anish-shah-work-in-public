@@ -200,10 +200,14 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(runner, /Spotify rank navigation and consent remain keyboard-first/u);
   assert.match(runner, /--retries=0/u);
   assert.match(runner, /--max-failures=1/u);
+  assert.match(runner, /segment: "release-simulation-fallbacks"/u);
+  assert.match(runner, /const simulationFallbackPattern = "without JavaScript\|room reveal"/u);
+  assert.match(runner, /label: "Simulation fallback foundations"/u);
+  assert.match(runner, /timeoutMs: 75_000/u);
   assert.match(runner, /spawnSync\("ps", \["-axo", "pid=,ppid=,pgid="\]/u);
   assert.match(runner, /process\.kill\(-groupId, name\)/u);
   assert.match(runner, /detached: usesProcessGroups/u);
-  assert.match(runner, /timeoutMs: 9 \* 60_000/u);
+  assert.match(runner, /timeoutMs: 525_000/u);
   assert.match(runner, /timeoutMs: 5 \* 60_000/u);
   assert.match(playwrightConfig, /const inspectorPort = port \+ 5_000/u);
   assert.match(playwrightConfig, /--inspector-port \$\{inspectorPort\}/u);

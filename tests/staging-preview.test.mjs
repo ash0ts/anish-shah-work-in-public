@@ -1688,6 +1688,8 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.match(runner, /BROWSER_QUALITY_SCOPE/);
   assert.match(runner, /BROWSER_QUALITY_SHARD/);
   assert.match(runner, /ROOM_CAPTURE_VISUALS: "0"/);
+  assert.match(runner, /segment: "release-simulation-fallbacks"/);
+  assert.match(runner, /const simulationFallbackPattern = "without JavaScript\|room reveal"/);
   assert.match(runner, /remaining release checks were cancelled/);
   assert.match(config, /process\.env\.BROWSER_QUALITY_PORT/);
   assert.match(config, /process\.env\.BROWSER_QUALITY_SEGMENT/);

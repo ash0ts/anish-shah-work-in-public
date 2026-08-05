@@ -224,7 +224,30 @@ const releaseStressPattern = [
   "sustained slow completed fisheye frames",
 ].join("|");
 
+// Simulation's fallback contexts are intentionally isolated from the
+// WebGL-heavy Room and Travel checks. On constrained release runners Chromium
+// can otherwise starve a new no-JavaScript renderer while the parallel room
+// process is compiling SwiftShader shaders. Running these two foundations first
+// keeps the assertions real without adding retries or serializing the rest of
+// the release gate.
+const simulationFallbackPattern = "without JavaScript|room reveal";
+
 async function runReleaseBrowserGate() {
+  await runConcurrentReleaseCommands(
+    [
+      releasePlaywrightCommand({
+        port: 4172,
+        segment: "release-simulation-fallbacks",
+        arguments_: [
+          "tests/browser/simulation-quality.spec.mjs",
+          "--grep",
+          simulationFallbackPattern,
+        ],
+      }),
+    ],
+    { label: "Simulation fallback foundations", timeoutMs: 75_000 },
+  );
+
   await runConcurrentReleaseCommands(
     [
       releasePlaywrightCommand({
@@ -233,6 +256,8 @@ async function runReleaseBrowserGate() {
         arguments_: [
           "tests/browser/public-quality.spec.mjs",
           "tests/browser/simulation-quality.spec.mjs",
+          "--grep-invert",
+          simulationFallbackPattern,
         ],
       }),
       releasePlaywrightCommand({
@@ -246,7 +271,7 @@ async function runReleaseBrowserGate() {
         ],
       }),
     ],
-    { label: "Critical Chromium coverage", timeoutMs: 9 * 60_000 },
+    { label: "Critical Chromium coverage", timeoutMs: 525_000 },
   );
 
   await runConcurrentReleaseCommands(
