@@ -144,7 +144,11 @@ test("ordinary pull requests use one stable path-classified PR Gate", async () =
   assert.match(codeql, /tests\/ci-topology\.test\.mjs/u);
   assert.match(codeql, /tests\/backend-security\.test\.mjs/u);
   assert.match(codeql, /tests\/content-discogs-oauth\.test\.mjs/u);
-  assert.match(codeql, /if: env\.ANISH_RELEASE_RUNNER != '1'/u);
+  assert.match(
+    codeql,
+    /if: github\.event_name != 'workflow_dispatch' \|\| inputs\.runner_target != 'owner-amd64'/u,
+  );
+  assert.doesNotMatch(codeql, /if: env\.ANISH_RELEASE_RUNNER != '1'/u);
   assert.match(codeql, /Verify the CodeQL runtime/u);
   for (const workflow of [validate, gitleaks, codeql]) {
     assert.match(workflow, /push:\n    branches: \[main\]/u);
