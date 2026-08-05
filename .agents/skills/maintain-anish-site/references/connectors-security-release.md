@@ -38,6 +38,22 @@ public read never performs a remote health request.
 
 Local promotion may transfer only reviewed, explicitly portable provider setup over HTTPS. It never transfers snapshots, encryption keys, OAuth-provider credentials/tokens, or publication approvals. No staging/production transfer exists.
 
+## Canonical Runbooks
+
+- `docs/operations/bootstrap.md` owns one-time Cloudflare resources, durable
+  secrets, and initial schema activation.
+- `docs/operations/staging.md` owns repeatable candidate planning,
+  checkpointing, acceptance, and RC tagging.
+- `docs/operations/previews.md` owns synthetic preview isolation, deployment,
+  review evidence, and cleanup.
+- `docs/operations/release.md` owns the repeatable exact-SHA production train
+  and immutable attestation.
+- `docs/operations/rollback.md` and `docs/operations/incidents.md` own recovery
+  and containment. Never reconstruct those procedures from this compact
+  policy reference.
+- `docs/play-connections.md` owns provider setup, manual refresh, publication,
+  and provider-specific recovery.
+
 ## Publication, Retention, and Disconnect
 
 - D1 commits validated publication state; versioned `PUBLICATION_CACHE` KV advances only after D1 succeeds. If both are unavailable/invalid in production, return a noindexed `503`, never the checked-in bundle.

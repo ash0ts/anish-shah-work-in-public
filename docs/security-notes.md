@@ -1,5 +1,10 @@
 # Security maintenance notes
 
+> Checked-in dependency and workflow state in this document was last reviewed
+> on **2026-08-05**. GitHub billing, feature availability, and live repository
+> settings are mutable account state; recheck them in GitHub before relying on
+> them for a release or collaborator-access decision.
+
 - Public responses receive a request-specific nonce CSP, HSTS on HTTPS,
   anti-framing, MIME sniffing protection, a strict referrer policy, and a
   restrictive Permissions Policy.

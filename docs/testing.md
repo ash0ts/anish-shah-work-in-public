@@ -16,10 +16,11 @@ npm run setup:local
 ```
 
 `setup:local` is safe to rerun. It creates `.env.local` from `.env.example`
-when absent, fills only missing or blank `CONNECTOR_ENCRYPTION_KEY` and
-`RATE_LIMIT_SALT` values with independent random 32-byte values, writes
-atomically, and applies mode `0600`. It never prints or replaces a value. It
-refuses CI, hosted origins, non-loopback configuration, and duplicate keys.
+when absent, fills only missing or blank `CONNECTOR_ENCRYPTION_KEY`,
+`RATE_LIMIT_SALT`, and `SIMULATION_SESSION_HMAC_KEY` values with independent
+random 32-byte values, writes atomically, and applies mode `0600`. It never
+prints or replaces a value. It refuses CI, hosted origins, non-loopback
+configuration, and duplicate keys.
 
 After bootstrap, set `OWNER_EMAILS` and `LOCAL_OWNER_EMAIL` to the same owner
 address. `SITE_URL` must remain an exact loopback origin and
@@ -148,101 +149,16 @@ workflows with the same full 40-character commit SHA before release. The
 checkout step rejects a different commit. Browser stability is a separate,
 optional exhaustive interaction soak and is not release-plan evidence.
 
-## Temporary owner runner
+## Disposable exact-SHA owner runner
 
 Ordinary PRs use the path-classified `PR Gate`; full exact-SHA release evidence
-is owner-dispatched. When hosted minutes are unavailable, use the checked-in
-disposable runner image documented in [`.github/runner/README.md`](../.github/runner/README.md).
+is owner-dispatched. When hosted minutes are unavailable, follow the sole
+[disposable runner guide](../.github/runner/README.md) for image construction,
+one-job registration, corporate-CA handling, all workflow dispatch commands,
+the optional two-worker soak, and cleanup. Self-hosting does not waive any
+assertion, artifact, browser, security, or release-plan check.
 
-The image pins Ubuntu 24.04 by architecture-specific digest, Node 24.18.0, npm
-11.6.2, Playwright 1.62.1, and GitHub runner 2.336.0. Downloaded Node and runner
-archives are SHA-256 verified. Build native ARM64 for Validate, Gitleaks, and
-Browser Quality; use the AMD64 image only for CodeQL. This avoids repeated x64
-emulation while preserving CodeQL compatibility.
-
-Each evidence run uses an unpredictable label matching
-`anish-release-<12 lowercase hex>` and one or two ephemeral repository runners.
-A baked job-start hook rejects non-owner dispatches, PR events, unapproved
-workflow names, foreign repositories, and refs outside `main` or an exact
-`release/<semver>` branch. The workflow also proves that the requested commit is
-the current head of that trusted ref before running repository scripts. The
-container runs non-root, mounts no host directory or Docker socket, is
-CPU/memory/PID bounded, and receives no application or hosted environment
-secrets. Its short-lived repository registration token is the only credential
-required to register and is unset before the job starts.
-
-If the network requires an owner corporate CA, pass it during image creation as
-`OWNER_CA_FILE` and during execution as `RUNNER_CORPORATE_CA_PATH`. The build
-secret is removed before image layers are committed. At runtime exactly one CA
-file is mounted read-only, combined with the system bundle in ephemeral `/tmp`,
-and exposed through `NODE_EXTRA_CA_CERTS`, `GIT_SSL_CAINFO`, and `SSL_CERT_FILE`.
-Never copy the CA into the image, repository, or a GitHub secret, and never
-disable TLS verification.
-
-GitHub does not bill self-hosted runner minutes. The owner still pays for the
-local machine's compute and network use, so keep concurrency at one evidence
-job or two optional soak workers and destroy every container after its single
-job.
-
-Dispatch the four release-evidence workflows from a trusted owner-controlled
-workflow branch, checking out one already-pushed commit. Use `main` for an
-ordinary merged release or the active `release/*` branch while validating a
-release candidate; never use an unreviewed feature branch as `WORKFLOW_REF`:
-
-```bash
-export VALIDATED_SHA='<full 40-character pushed commit SHA>'
-export RELEASE_LINE="$(node -p "require('./package.json').version.split('-')[0]")"
-export WORKFLOW_REF="release/$RELEASE_LINE" # use main only for an authorized final release
-
-export VALIDATE_LABEL="anish-release-$(openssl rand -hex 6)"
-export GITLEAKS_LABEL="anish-release-$(openssl rand -hex 6)"
-export CODEQL_LABEL="anish-release-$(openssl rand -hex 6)"
-
-gh workflow run ci.yml --ref "$WORKFLOW_REF" \
-  -f commit_sha="$VALIDATED_SHA" -f runner_target=owner-arm64 -f jit_label="$VALIDATE_LABEL"
-gh workflow run gitleaks.yml --ref "$WORKFLOW_REF" \
-  -f commit_sha="$VALIDATED_SHA" -f runner_target=owner-arm64 -f jit_label="$GITLEAKS_LABEL"
-gh workflow run codeql.yml --ref "$WORKFLOW_REF" \
-  -f commit_sha="$VALIDATED_SHA" -f runner_target=owner-amd64 -f jit_label="$CODEQL_LABEL"
-```
-
-Start one matching ephemeral container for each label after dispatch, using a
-fresh `RUNNER_INSTANCE_ID=instance-<12 lowercase hex>` and piping exactly one
-short-lived registration-token line as documented in the runner README. The
-selected SHA must equal the pushed head of `WORKFLOW_REF`; ancestors, arbitrary
-feature commits, and other SHAs are rejected.
-
-Wait for Validate to finish and record its numeric run ID. Browser Quality
-downloads and verifies that run's immutable `dist`; it never rebuilds. The
-bounded release-smoke suite stays on Chromium except for one Spotify Ranked Groove interaction
-in WebKit. That check complements rather than replaces the manual Safari staging
-acceptance in the staging runbook:
-
-```bash
-export VALIDATE_RUN_ID='<successful Validate run ID>'
-export BROWSER_LABEL="anish-release-$(openssl rand -hex 6)"
-gh workflow run browser-quality.yml --ref "$WORKFLOW_REF" \
-  -f commit_sha="$VALIDATED_SHA" -f validate_run_id="$VALIDATE_RUN_ID" \
-  -f runner_target=owner-arm64 -f jit_label="$BROWSER_LABEL"
-```
-
-Run the optional stability soak only after Room, Travel input, or browser-harness
-changes require exhaustive repeated-interaction and visual evidence:
-
-```bash
-export SOAK_LABEL="anish-release-$(openssl rand -hex 6)"
-gh workflow run browser-stability.yml --ref "$WORKFLOW_REF" \
-  -f commit_sha="$VALIDATED_SHA" -f validate_run_id="$VALIDATE_RUN_ID" \
-  -f runner_target=owner-arm64 -f jit_label="$SOAK_LABEL"
-```
-
-For the soak only, create one fresh `SOAK_LABEL` and start exactly two ephemeral
-ARM64 containers with that same label but distinct `RUNNER_INSTANCE_ID` values.
-This lets both matrix jobs claim a runner without a Docker/GitHub runner-name
-collision and prevents fan-out beyond the intended capacity.
-
-Use the resulting Actions run URLs normally. A self-hosted run does not waive
-or replace any assertion, artifact, browser, security, or release-plan check.
+## Private-source regeneration
 
 Private-source regeneration is an owner operation because CI does not possess
 the immutable CSV/Markdown inputs. After a deliberate regeneration:

@@ -2,6 +2,11 @@
 
 Paths are relative to the repository root.
 
+This reference is the agent-facing ownership and risk map. The demonstrative,
+human-readable architecture narrative lives in
+`docs/architecture/codebase-tour.md`; update both when a subsystem boundary,
+request path, durable store, or progressive-enhancement boundary changes.
+
 ## Runtime Ownership
 
 - `app/`: Next/Vinext public routes and server-rendered foundations.
@@ -22,6 +27,13 @@ Paths are relative to the repository root.
 - `worker/**`: host/tier enforcement, Cloudflare Access, CSP, headers, throttling, request correlation, and retention/cleanup maintenance. Cron must never synchronize provider collections.
 - `drizzle/**`: ordered immutable D1 migrations.
 - `tests/**`: content, copy, backend/security, rendered, environment, and browser acceptance.
+- `docs/README.md`: documentation authority map. Every canonical documentation
+  authority is listed there exactly once; support policy files are still
+  scanned by `docs:check` without becoming competing authorities.
+- `docs/operations/bootstrap.md`, `staging.md`, `previews.md`, and `release.md`:
+  distinct hosted-operation authorities for one-time provisioning, live
+  candidate validation, synthetic review environments, and production
+  promotion respectively. Do not merge their procedures back together.
 
 ## Content and Copy Ownership
 

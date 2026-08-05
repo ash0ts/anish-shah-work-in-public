@@ -11,7 +11,6 @@ import {
   githubRepositoryFromRemoteUrl,
   parseRemoteReleaseMarker,
   RELEASE_MARKER_QUERY,
-  requiredPlaySmokeTests,
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
 import {
@@ -25,20 +24,10 @@ import {
   TRIGGER_RECEIPT_PATH,
 } from "./lib/release-trigger-contract.mjs";
 import { buildCopyDeck } from "./lib/copy-deck.mjs";
+import { requiredReleaseSmokeTests } from "./lib/release-smoke-contract.mjs";
 import { readPackageReleaseVersion } from "./lib/release-version.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const BASE_SMOKE_TESTS = [
-  "public_routes",
-  "studio_access",
-  "non_owner_denial",
-  "connector_galleries",
-  "oauth_callbacks",
-  "security_headers",
-  "owner_health",
-  "simulation_experience",
-  ...DOMAIN_CUTOVER_SMOKE_TESTS,
-];
 
 function required(name) {
   const value = process.env[name]?.trim();
@@ -222,8 +211,8 @@ const simulation = assertSimulationReleaseRecord(plan.simulation, {
   config: releaseConfig,
   campaignVersion: simulationManifest.campaignVersion,
 });
-const REQUIRED_SMOKE_TESTS = requiredPlaySmokeTests(BASE_SMOKE_TESTS, {
-  travelEnabled: plan.travelAtlasMode === "atlas-v1",
+const REQUIRED_SMOKE_TESTS = requiredReleaseSmokeTests({
+  travelAtlasMode: plan.travelAtlasMode,
 });
 if (
   smokeResults.length !== REQUIRED_SMOKE_TESTS.length ||

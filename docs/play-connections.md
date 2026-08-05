@@ -4,6 +4,11 @@ This is the provider setup, freshness, publication, and recovery authority for
 Play. The protected Studio connects six personal streams without putting credentials
 in source code, deployment artifacts, public APIs, or browser storage.
 
+> External provider documentation and mutable account-policy facts were last
+> verified on **2026-08-05**. Recheck the linked official provider pages before
+> creating or replacing an application; the repository's validated runtime
+> contracts remain authoritative for what the site stores and publishes.
+
 Collection synchronization is manual-only. MyAnimeList, Hardcover, Spotify,
 Discogs, and Steam call their provider data APIs only after the owner selects
 **Refresh now** in Studio. Public connector reads, OAuth callbacks, credential
@@ -47,83 +52,43 @@ For every API-backed stream, the verification sequence is **Connect or
 authorize → Refresh now → confirm Current**. Saving a credential alone does not
 prove that the provider accepted it and never starts a collection refresh.
 
-## Environment isolation
+## Shared connector setup
 
-Local, staging, and production are isolated on purpose. PR previews contain
-synthetic fixtures and cannot connect to providers.
+Every provider uses the same owner-controlled sequence: prepare the target tier,
+create a tier-specific application where OAuth is required, enter credentials
+only in that tier's Studio, connect or authorize, select **Refresh now** for an
+API-backed stream, confirm **Current**, and complete any explicit publication
+review. Saving credentials alone never fetches or publishes a collection.
 
-| | Local Studio | Staging Studio | Production Studio |
-| --- | --- | --- | --- |
-| Address | `http://localhost:3000/studio` | `https://staging.anish-shah-is.online/studio` | `https://anish-shah-is.online/studio` |
-| Identity | Loopback-only development owner | Dedicated Access audience + owner allowlist | Production Access + owner allowlist |
-| State | Project-local D1 and local key | Dedicated staging D1/KV/key | Production D1/KV/key |
-| OAuth | Local registration | Staging registration | Production registration |
-| Transfer | May stage only the portable production subset | No transfers | Owner reviews a payload staged from local |
+Use the canonical environment guides instead of duplicating their procedures:
 
-### Start the local Studio
+- [Testing](./testing.md) owns fresh-clone setup, local secrets, owner fields,
+  `doctor`, and the local Studio server.
+- [Hosted infrastructure bootstrap](./operations/bootstrap.md) owns one-time
+  staging and production resources, durable secrets, Access, and provider-tier
+  provisioning.
+- [Staging releases](./operations/staging.md) owns live staging preparation,
+  isolated acceptance, and noindex/Access verification.
+- [Production release](./operations/release.md) owns guarded production code,
+  migration, checkpoint, and smoke promotion.
 
-Run:
-
-```bash
-cd "/path/to/anish-site"
-npm install --global npm@11.6.2 --ignore-scripts
-npm ci
-npm run setup:local
-```
-
-The bootstrap creates independent encryption and rate-limit values without
-printing them and applies owner-only file permissions. Open `.env.local` and
-set the two owner fields to the same address. Confirm these non-secret values:
-
-```dotenv
-OWNER_EMAILS=your-owner-email@example.com
-LOCAL_OWNER_EMAIL=your-owner-email@example.com
-CONNECTOR_ENCRYPTION_KEY=<the newly generated local-only value>
-RATE_LIMIT_SALT=<the separately generated local-only value>
-STEAM_DATA_STORAGE_COUNTRIES=United States
-SITE_URL=http://localhost:3000
-PRODUCTION_SITE_URL=https://anish-shah-is.online
-```
-
-`LOCAL_OWNER_EMAIL` must exactly match an address in `OWNER_EMAILS`. Never add
-`LOCAL_OWNER_EMAIL` to production, and never replace the production encryption
-key with either local value. Full local setup and troubleshooting are owned by
-[Testing](./testing.md).
-
-After replacing both email placeholders, verify the local environment:
-
-```bash
-npm run doctor
-```
+Local, staging, and production keep separate D1 state, encryption material,
+Access identity, and OAuth registrations. PR previews are synthetic and cannot
+connect providers. Staging cannot issue, stage, accept, or apply a production
+promotion code. No credential, snapshot, D1 row, KV value, publication
+approval, or encryption key moves between hosted tiers.
 
 Provider credentials and profile URLs are intentionally not loaded from
 `.env` or `.env.local`. Variables such as `MAL_CLIENT_ID`,
 `MAL_CLIENT_SECRET`, `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`,
 `DISCOGS_CONSUMER_KEY`, `DISCOGS_CONSUMER_SECRET`,
 `HARDCOVER_API_KEY`, `STEAM_API_KEY`, provider profile URLs, and
-`NEXT_PUBLIC_STRAVA_EMBED_URL` do not connect a stream. Enter those
-values through Studio instead; the API-backed credentials are encrypted in D1,
-profile links are derived from the authenticated provider identity, and Strava
-stores only its validated athlete and generated embed URLs.
+`NEXT_PUBLIC_STRAVA_EMBED_URL` do not connect a stream. Enter those values
+through Studio; API credentials are encrypted in D1, provider profile links are
+derived from authenticated identities, and Strava stores only validated athlete
+and generated embed URLs.
 
-Start the strict localhost server:
-
-```bash
-npm run dev:studio
-```
-
-Open [http://localhost:3000/studio](http://localhost:3000/studio). Stop another
-process already using port 3000 rather than accepting a different port:
-
-```bash
-lsof -nP -iTCP:3000 -sTCP:LISTEN
-```
-
-The page must say **Local sandbox** before you enter anything. Local provider
-calls reach the real provider, but credentials, snapshots, and audit history
-stay in the local D1 sandbox.
-
-### Promote safely
+### Bounded local-to-production promotion
 
 1. Validate locally with `npm run validate` and inspect all affected Play routes.
 2. Deploy code, migrations, and intentional non-secret settings.
@@ -148,31 +113,14 @@ stay in the local D1 sandbox.
 The transfer never includes MyAnimeList, Spotify, or Discogs app credentials or
 OAuth tokens; Spotify or Discogs snapshots and publication approval; any other
 provider snapshots; audit history; `.wrangler/state`; or the local encryption
-key. A
-staged payload expires after thirty minutes. Production does not publish it
-until the allowlisted owner applies it.
+key. A staged payload expires after thirty minutes. Production does not publish
+it until the allowlisted owner applies it.
 
 The server-to-server import endpoint is intentionally outside the Studio Access
 cookie path so a loopback server can reach it. It rejects browser origins and
 cookies, is body-bounded and throttled, and authenticates the exact production
 origin and encrypted transaction with the high-entropy, single-use transfer
 code. Listing and applying a staged payload remain Access- and owner-protected.
-
-### Live staging callbacks
-
-Stable staging uses separate provider applications and these exact callbacks:
-
-```text
-https://staging.anish-shah-is.online/api/connectors/myanimelist/oauth/callback
-https://staging.anish-shah-is.online/api/connectors/spotify/oauth/callback
-https://staging.anish-shah-is.online/api/connectors/discogs/oauth/callback
-```
-
-Enter all staging credentials through staging Studio. Staging cannot issue,
-stage, or accept production promotion codes. Verify OAuth, refresh, publication
-acknowledgement, expiry/recovery, and Safari behavior there without copying any
-production credential, snapshot, D1 row, KV value, or encryption key. See the
-[staging runbook](./operations/staging-and-previews.md).
 
 ## MyAnimeList
 
@@ -196,6 +144,20 @@ Use separate MyAnimeList API clients for local, staging, and production.
    returns to Studio; no token should appear in the URL or interface.
 6. Select **Refresh now**, confirm **Current**, and inspect Watch on the local
    Play page.
+
+### Staging client
+
+1. Create a separate staging application in the MyAnimeList developer portal.
+2. Register this exact callback:
+
+   ```text
+   https://staging.anish-shah-is.online/api/connectors/myanimelist/oauth/callback
+   ```
+
+3. Enter that application’s client ID and client secret only in staging Studio,
+   complete owner approval, then select **Refresh now** and confirm **Current**.
+4. Exercise denial, expiry, reauthorization, and Safari callback behavior as
+   part of the isolated [staging acceptance](./operations/staging.md).
 
 ### Production client
 
@@ -231,6 +193,9 @@ profile link derived from the authorized MyAnimeList identity.
 
 ## Hardcover
 
+The token lifetime and rate-limit statements in this section were last verified
+against the linked Hardcover documentation on **2026-08-05**.
+
 1. Read the [official Hardcover API setup guide](https://docs.hardcover.app/api/getting-started/)
    and copy the token from [Hardcover account → API](https://hardcover.app/account/api).
 2. In the Read panel, paste either the bare token or `Bearer <token>`.
@@ -249,10 +214,17 @@ retrying—the last successful snapshot remains live.
 ## Spotify
 
 Use separate Spotify applications for local and production. Live staging uses
-a third application bound only to staging. Spotify does not
-accept `localhost` as an OAuth redirect host; the local callback must use the
-explicit loopback address `127.0.0.1` even when Studio itself is already open
-at `localhost`.
+a third application bound only to staging. Spotify's
+[redirect-URI requirements](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri)
+do not accept `localhost` as an OAuth redirect host; the local callback must
+use the explicit loopback address `127.0.0.1` even when Studio itself is
+already open at `localhost`.
+
+The Premium/development-mode eligibility and refresh-token lifetime statements
+in this section were last verified against Spotify's official
+[development-mode migration guide](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide)
+and [refresh-token guide](https://developer.spotify.com/documentation/web-api/tutorials/refreshing-tokens)
+on **2026-08-05**.
 
 ### Local application
 
@@ -276,6 +248,21 @@ at `localhost`.
    Play page.
 7. Optionally add an official Spotify track, album, or playlist URL as the
    fallback. Leave **Publish Top Tracks publicly** off during initial testing.
+
+### Staging application
+
+1. Create a separate Spotify application for staging.
+2. Register this exact redirect URI:
+
+   ```text
+   https://staging.anish-shah-is.online/api/connectors/spotify/oauth/callback
+   ```
+
+3. Enter its client ID and secret only in staging Studio, authorize the staging
+   owner account, then select **Refresh now** and confirm **Current**.
+4. Test publication acknowledgement, consent-gated playback, expiry,
+   reauthorization, and Safari behavior through the
+   [staging runbook](./operations/staging.md).
 
 ### Production application and publication review
 
@@ -347,6 +334,20 @@ calls the two application values a consumer key and consumer secret.
 5. Select **Refresh now**, confirm **Current**, and inspect Pattern and Gallery
    on the local Play page. Leave public publication off while testing.
 
+### Staging application
+
+1. Create a separate Discogs application for staging.
+2. Register this exact callback:
+
+   ```text
+   https://staging.anish-shah-is.online/api/connectors/discogs/oauth/callback
+   ```
+
+3. Enter its consumer key and consumer secret only in staging Studio, authorize
+   the owner account, then select **Refresh now** and confirm **Current**.
+4. Test publication acknowledgement, expiry, reauthorization, stale behavior,
+   and Safari callbacks through the [staging runbook](./operations/staging.md).
+
 ### Production application and publication review
 
 1. Create or select the production application and register:
@@ -377,8 +378,11 @@ Studio-displayed provider retry time before selecting **Refresh now** again.
 The server does not retry a 429 automatically, and any failure leaves the
 accepted snapshot unchanged.
 
-The standard publication policy makes the public catalog unavailable six hours
-after its last successful refresh. If the owner has a separate provider
+The standard publication policy, which applies the repository's conservative
+interpretation of the
+[Discogs API Terms](https://support.discogs.com/hc/en-us/articles/360009334593-API-Terms-of-Use),
+makes the public catalog unavailable six hours after its last successful
+refresh. If the owner has a separate provider
 permission for longer display, Studio may record its private reference,
 approval date, optional expiry, and enabled state. Only while that protected
 record is current may the site keep serving the older catalog, visibly marked
@@ -414,6 +418,8 @@ later rather than repeatedly refreshing.
 ## Strava
 
 Strava uses neither an API credential nor a custom API visualization.
+The supported embed instructions and generated-path expectations were last
+verified against Strava's official documentation on **2026-08-05**.
 
 1. Follow Strava’s [official embed instructions](https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed).
 2. In Studio’s Move panel, enter the public athlete URL, such as

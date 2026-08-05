@@ -5,12 +5,31 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  EXPECTED_REPOSITORY_SKILLS,
   validateRepositorySkills,
   validateSkillDirectory,
 } from "../scripts/validate-repository-skills.mjs";
 
 test("both repository skills satisfy the structural contract", () => {
+  assert.deepEqual(EXPECTED_REPOSITORY_SKILLS, [
+    "maintain-anish-site",
+    "edit-anish-site-copy",
+  ]);
   assert.deepEqual(validateRepositorySkills(), []);
+});
+
+test("repository validation rejects any third skill", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "anish-skill-validator-"));
+  for (const name of EXPECTED_REPOSITORY_SKILLS) {
+    mkdirSync(path.join(root, `.agents/skills/${name}`), { recursive: true });
+  }
+  mkdirSync(path.join(root, ".agents/skills/unexpected-skill"), {
+    recursive: true,
+  });
+
+  const errors = validateRepositorySkills(root);
+  assert.match(errors.join("\n"), /unexpected repository skill/u);
+  rmSync(root, { recursive: true, force: true });
 });
 
 test("skill validation rejects unsafe metadata, implicit policy, and broken links", () => {

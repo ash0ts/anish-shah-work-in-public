@@ -83,6 +83,25 @@ test("CI classifier selects bounded validation and browser lanes", () => {
   assert.equal(full.requiresBuild, true);
   assert.deepEqual(full.browserScopes, []);
 
+  assert.equal(classifyCiChanges(["releases/README.md"]).lane, "docs");
+  assert.equal(
+    classifyCiChanges(["releases/2026-08-05-example.json"]).lane,
+    "full",
+  );
+  for (const pathname of [
+    "worker/index.ts",
+    "lib/server/cloudflare-access.ts",
+    "lib/server/request-security.ts",
+    "app/chatgpt-auth.ts",
+    "app/api/connectors/spotify/oauth/callback/route.ts",
+    "app/api/studio/publication/route.ts",
+  ]) {
+    const security = classifyCiChanges([pathname]);
+    assert.equal(security.lane, "full", pathname);
+    assert.equal(security.requiresBuild, true, pathname);
+    assert.equal(security.requiresCodeql, true, pathname);
+  }
+
   for (const plan of [docs, copy, connector, ui, room, simulation, travel, full]) {
     assert.ok(plan.browserScopes.length <= 2);
   }
@@ -108,12 +127,22 @@ test("CI classifier selects bounded validation and browser lanes", () => {
 });
 
 test("ordinary pull requests use one stable path-classified PR Gate", async () => {
-  const [gate, validate, browser, gitleaks, codeql] = await Promise.all([
+  const [
+    gate,
+    validate,
+    browser,
+    gitleaks,
+    codeql,
+    packageSource,
+    pullRequest,
+  ] = await Promise.all([
     text(".github/workflows/pr-gate.yml"),
     text(".github/workflows/ci.yml"),
     text(".github/workflows/browser-quality.yml"),
     text(".github/workflows/gitleaks.yml"),
     text(".github/workflows/codeql.yml"),
+    text("package.json"),
+    text(".github/pull_request_template.md"),
   ]);
   assert.match(gate, /^name: PR Gate$/mu);
   assert.match(gate, /name: Check out trusted base-branch tooling/u);
@@ -136,6 +165,13 @@ test("ordinary pull requests use one stable path-classified PR Gate", async () =
   assert.ok(
     (gate.match(/needs\.classify\.outputs\.lane == 'backend'/gu) ?? []).length >= 3,
   );
+  assert.match(gate, /full\)\s+npm run validate/u);
+  const scripts = JSON.parse(packageSource).scripts;
+  assert.match(scripts.validate, /npm run security:audit/u);
+  assert.match(scripts.test, /npm run build/u);
+  assert.match(scripts.test, /npm run bundle:scan/u);
+  assert.doesNotMatch(pullRequest, /npm run db:local:migrate/u);
+  assert.doesNotMatch(pullRequest, /^- \[ \].*Migration/imu);
   assert.doesNotMatch(validate, /pull_request:/u);
   assert.doesNotMatch(browser, /pull_request:/u);
   assert.match(gitleaks, /pull_request:/u);

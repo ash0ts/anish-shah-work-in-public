@@ -86,6 +86,7 @@ envelopes, encryption keys, and publication approval do not. The private OpenAI
 Sites deployment is a separate reference/recovery environment, not one of the
 four promotion tiers and not a public rollback.
 
-See [Staging and previews](../operations/staging-and-previews.md),
+See [Staging releases](../operations/staging.md),
+[PR previews](../operations/previews.md),
 [Production release](../operations/release.md), and
 [Incidents](../operations/incidents.md).

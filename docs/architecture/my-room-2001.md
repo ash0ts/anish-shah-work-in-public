@@ -115,5 +115,5 @@ reflow, screenshots, and Lighthouse budgets. The shared readiness helper waits
 for semantic room state with a 15-second SLO and captures diagnostics on failure.
 
 Use [Testing](../testing.md) for local commands and
-[Staging and previews](../operations/staging-and-previews.md) for live provider
+[Staging releases](../operations/staging.md) for live provider
 and Safari acceptance.

@@ -32,6 +32,12 @@ repository registration token for each evidence job. Start exactly one
 container per workflow job. The optional two-worker soak uses one shared
 scheduling label and two different instance IDs.
 
+Obtain the short-lived repository registration token from GitHub repository
+**Settings → Actions → Runners → New self-hosted runner**. Copy only the token
+shown after `--token` in GitHub's generated configuration command; do not run
+that command, save it, or paste it into shell history. The hidden prompt below
+is where that token goes:
+
 ```bash
 export RUNNER_JIT_LABEL="anish-release-$(openssl rand -hex 6)"
 export RUNNER_INSTANCE_ID="instance-$(openssl rand -hex 6)"
@@ -39,11 +45,25 @@ export RUNNER_CORPORATE_CA_PATH='/absolute/path/to/corporate-root.crt' # optiona
 export RUNNER_MAX_MINUTES=75 # optional; accepted range 1-120
 
 unset RUNNER_TOKEN RUNNER_REGISTRATION_TOKEN
+printf 'Paste the short-lived repository runner token: '
 IFS= read -r -s RUNNER_TOKEN
 printf '\n'
 printf '%s\n' "$RUNNER_TOKEN" | scripts/runner/run-ephemeral.sh arm64
 unset RUNNER_TOKEN
 ```
+
+An owner with repository-administration access may instead keep the token out
+of the terminal entirely by piping the GitHub CLI response directly into the
+launcher:
+
+```bash
+gh api --method POST \
+  repos/ash0ts/anish-shah-work-in-public/actions/runners/registration-token \
+  --jq .token | scripts/runner/run-ephemeral.sh arm64
+```
+
+In either path, create one token for one ephemeral registration and never
+print, persist, reuse, or place it in a GitHub secret.
 
 The runner is ephemeral, runs non-root, mounts no host directories or Docker
 socket, drops every Linux capability, enables `no-new-privileges`, is resource-
@@ -66,3 +86,70 @@ Actions runner list briefly. After any timeout or interrupted launch, the owner
 must remove that exact `${RUNNER_JIT_LABEL}-${RUNNER_INSTANCE_ID}-*` entry in
 repository Settings → Actions → Runners and must not reuse either identifier. No
 long-lived administration token is passed into the container for cleanup.
+
+GitHub does not bill self-hosted runner minutes. The owner still pays for the
+local machine's compute and network use, so keep concurrency at one evidence
+job or two optional soak workers and destroy every container after its single
+job.
+
+## Dispatch exact-SHA evidence
+
+Dispatch the four release-evidence workflows from a trusted owner-controlled
+workflow branch, checking out one already-pushed commit. Use `main` for an
+ordinary merged release or the active `release/*` branch while validating a
+release candidate; never use an unreviewed feature branch as `WORKFLOW_REF`:
+
+```bash
+export VALIDATED_SHA='<full 40-character pushed commit SHA>'
+export RELEASE_LINE="$(node -p "require('./package.json').version.split('-')[0]")"
+export WORKFLOW_REF="release/$RELEASE_LINE" # use main only for an authorized final release
+
+export VALIDATE_LABEL="anish-release-$(openssl rand -hex 6)"
+export GITLEAKS_LABEL="anish-release-$(openssl rand -hex 6)"
+export CODEQL_LABEL="anish-release-$(openssl rand -hex 6)"
+
+gh workflow run ci.yml --ref "$WORKFLOW_REF" \
+  -f commit_sha="$VALIDATED_SHA" -f runner_target=owner-arm64 -f jit_label="$VALIDATE_LABEL"
+gh workflow run gitleaks.yml --ref "$WORKFLOW_REF" \
+  -f commit_sha="$VALIDATED_SHA" -f runner_target=owner-arm64 -f jit_label="$GITLEAKS_LABEL"
+gh workflow run codeql.yml --ref "$WORKFLOW_REF" \
+  -f commit_sha="$VALIDATED_SHA" -f runner_target=owner-amd64 -f jit_label="$CODEQL_LABEL"
+```
+
+Start one matching ephemeral container for each label after dispatch, using a
+fresh `RUNNER_INSTANCE_ID=instance-<12 lowercase hex>` and piping exactly one
+short-lived registration-token line as documented in the runner README. The
+selected SHA must equal the pushed head of `WORKFLOW_REF`; ancestors, arbitrary
+feature commits, and other SHAs are rejected.
+
+Wait for Validate to finish and record its numeric run ID. Browser Quality
+downloads and verifies that run's immutable `dist`; it never rebuilds. The
+bounded release-smoke suite stays on Chromium except for one Spotify Ranked Groove interaction
+in WebKit. That check complements rather than replaces the manual Safari staging
+acceptance in the staging runbook:
+
+```bash
+export VALIDATE_RUN_ID='<successful Validate run ID>'
+export BROWSER_LABEL="anish-release-$(openssl rand -hex 6)"
+gh workflow run browser-quality.yml --ref "$WORKFLOW_REF" \
+  -f commit_sha="$VALIDATED_SHA" -f validate_run_id="$VALIDATE_RUN_ID" \
+  -f runner_target=owner-arm64 -f jit_label="$BROWSER_LABEL"
+```
+
+Run the optional stability soak only after Room, Travel input, or browser-harness
+changes require exhaustive repeated-interaction and visual evidence:
+
+```bash
+export SOAK_LABEL="anish-release-$(openssl rand -hex 6)"
+gh workflow run browser-stability.yml --ref "$WORKFLOW_REF" \
+  -f commit_sha="$VALIDATED_SHA" -f validate_run_id="$VALIDATE_RUN_ID" \
+  -f runner_target=owner-arm64 -f jit_label="$SOAK_LABEL"
+```
+
+For the soak only, create one fresh `SOAK_LABEL` and start exactly two ephemeral
+ARM64 containers with that same label but distinct `RUNNER_INSTANCE_ID` values.
+This lets both matrix jobs claim a runner without a Docker/GitHub runner-name
+collision and prevents fan-out beyond the intended capacity.
+
+Use the resulting Actions run URLs normally. A self-hosted run does not waive
+or replace any assertion, artifact, browser, security, or release-plan check.
