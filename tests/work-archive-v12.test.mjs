@@ -523,6 +523,6 @@ test("robots and sitemap source exclude owner and API surfaces", async () => {
   assert.match(robotsSource, /"\/studio"/);
   assert.match(robotsSource, /"\/api\/"/);
   assert.doesNotMatch(sitemapSource, /`\$\{baseUrl\}\/(?:studio|api)/);
-  assert.doesNotMatch(sitemapSource, /`\$\{baseUrl\}\/about/);
+  assert.match(sitemapSource, /`\$\{baseUrl\}\/about/);
   assert.match(sitemapSource, /workArchiveRecordsFrom\(bundle\)/);
 });

@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-const routes = ["/", "/work", "/play", "/sources", "/privacy"];
+const routes = ["/", "/about", "/work", "/play", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
 
 async function pageOverflow(page) {
@@ -54,6 +54,40 @@ function circularAngleDistance(left, right) {
   const distance = Math.abs(normalized(left) - normalized(right));
   return Math.min(distance, 360 - distance);
 }
+
+test("About and Work load only approved first-party brand artwork", async ({
+  baseURL,
+  page,
+}) => {
+  const firstPartyOrigin = new URL(baseURL).origin;
+  const remoteImageRequests = [];
+  page.on("request", (request) => {
+    if (request.resourceType() !== "image") return;
+    const url = new URL(request.url());
+    if (url.origin !== firstPartyOrigin) {
+      remoteImageRequests.push(request.url());
+    }
+  });
+
+  for (const [route, expectedCount] of [
+    ["/about", 1],
+    ["/work", 5],
+  ]) {
+    await page.goto(route, { waitUntil: "networkidle" });
+    const artwork = page.locator('img[src^="/assets/organizations/"]');
+    await expect(artwork).toHaveCount(expectedCount);
+    for (const src of await artwork.evaluateAll((images) =>
+      images.map((image) => image.getAttribute("src")),
+    )) {
+      expect(src).toMatch(/^\/assets\/organizations\/[a-z0-9.-]+\.(?:svg|png)$/u);
+    }
+  }
+
+  const openAiFallback = page.getByRole("link", { name: /^OpenAI:/u });
+  await expect(openAiFallback.getByText("OpenAI", { exact: true })).toBeVisible();
+  await expect(openAiFallback.locator("img")).toHaveCount(0);
+  expect(remoteImageRequests).toEqual([]);
+});
 
 for (const width of widths) {
   test(`public routes fit a ${width}px viewport`, async ({ page }) => {
@@ -137,6 +171,7 @@ test("the primary navigation signal lens follows the active route", async ({
     name: "Primary navigation",
   });
   const home = navigation.getByRole("link", { name: "Anish Shah, home" });
+  const about = navigation.getByRole("link", { name: "About" });
   const work = navigation.getByRole("link", { name: "Work" });
   const play = navigation.getByRole("link", { name: "Play" });
   const indicator = navigation.locator("[data-primary-navigation-indicator]");
@@ -148,6 +183,16 @@ test("the primary navigation signal lens follows the active route", async ({
   await expect(navigation).toHaveAttribute("data-enhanced", "true");
   await expect(navigation).toHaveAttribute("data-active-key", "home");
   await expect(home).toHaveAttribute("aria-current", "page");
+  await expect(about).not.toHaveAttribute("aria-current", "page");
+  await expect(work).not.toHaveAttribute("aria-current", "page");
+  await expect(play).not.toHaveAttribute("aria-current", "page");
+  await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
+
+  await about.click();
+  await expect(page).toHaveURL(/\/about$/);
+  await expect(navigation).toHaveAttribute("data-active-key", "about");
+  await expect(about).toHaveAttribute("aria-current", "page");
+  await expect(home).not.toHaveAttribute("aria-current", "page");
   await expect(work).not.toHaveAttribute("aria-current", "page");
   await expect(play).not.toHaveAttribute("aria-current", "page");
   await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
@@ -156,6 +201,7 @@ test("the primary navigation signal lens follows the active route", async ({
   await expect(page).toHaveURL(/\/work$/);
   await expect(navigation).toHaveAttribute("data-active-key", "work");
   await expect(work).toHaveAttribute("aria-current", "page");
+  await expect(about).not.toHaveAttribute("aria-current", "page");
   await expect(home).not.toHaveAttribute("aria-current", "page");
   await expect(play).not.toHaveAttribute("aria-current", "page");
   await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
@@ -164,6 +210,7 @@ test("the primary navigation signal lens follows the active route", async ({
   await expect(page).toHaveURL(/\/play$/);
   await expect(navigation).toHaveAttribute("data-active-key", "play");
   await expect(play).toHaveAttribute("aria-current", "page");
+  await expect(about).not.toHaveAttribute("aria-current", "page");
   await expect(home).not.toHaveAttribute("aria-current", "page");
   await expect(work).not.toHaveAttribute("aria-current", "page");
   await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
@@ -194,9 +241,9 @@ test("reduced motion positions the primary navigation lens without a transition"
     name: "Primary navigation",
   });
 
-  await navigation.getByRole("link", { name: "Work" }).click();
-  await expect(page).toHaveURL(/\/work$/);
-  await expect(navigation).toHaveAttribute("data-active-key", "work");
+  await navigation.getByRole("link", { name: "About" }).click();
+  await expect(page).toHaveURL(/\/about$/);
+  await expect(navigation).toHaveAttribute("data-active-key", "about");
   await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
 });
 
@@ -305,6 +352,25 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
   await expect(page.locator("details[data-work-body][open]")).toHaveCount(0);
   await expect(page.locator("li[data-work-id]")).toHaveCount(0);
   await expect(page.locator("#work-index")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", {
+      name: "The work crosses companies, projects, and technical communities.",
+    }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: /Google Cloud:/ }).click();
+  await expect(page).toHaveURL(
+    /\/work\?organization=google-cloud#work-index$/,
+  );
+  await expect(page.locator("#work-index-title")).toHaveText(
+    "Google Cloud projects",
+  );
+  await expect(page.locator("#work-index-title")).toBeFocused();
+  await expect(page.locator("li[data-work-id]")).toHaveCount(7);
+
+  await page.goto("/work", { waitUntil: "networkidle" });
+  await expect(page.locator("#work-index")).toHaveCount(0);
+  await page.locator('[data-work-year="2024"]').click();
 
   await calendar
     .getByRole("link", {

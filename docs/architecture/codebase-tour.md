@@ -206,10 +206,18 @@ There is no alternate Classic mode; only bounded legacy query redirects remain.
 | `scripts/**` | Generation, validation, environment plans, release controls | Plans may inspect; hosted mutation stays explicit and exact-SHA guarded |
 | `tests/**` | Content, backend/security, rendered, environment, and browser contracts | Test public purity and failure behavior, not just success paths |
 
-The main public route groups are deliberately conventional: Home, Work and its
-detail pages, Sources, Privacy, Play and its objects, Travel trip pages, and the
-gated Simulation. The legacy `/about` route redirects to Home's profile section.
-Studio is a separate owner plane, even though it ships in the same application.
+The main public route groups are deliberately conventional: Home, About, Work
+and its detail pages, Sources, Privacy, Play and its objects, Travel trip pages,
+and the gated Simulation. About is a short, Git-owned professional chronology;
+Home remains the canonical `Person` identity and About references that identity
+through `ProfilePage` structured data. Studio is a separate owner plane, even
+though it ships in the same application.
+
+Work's organization index is a reviewed presentation layer, not a relationship
+inference engine. Its manifest maps a normalized mark to exact public
+organization and WorkGroup IDs, and runtime resolution drops hidden or empty
+groups before counts and links are rendered. A typographic fallback is used
+when an official first-party brand asset cannot be safely checked in.
 
 ## Connector boundary
 

@@ -37,6 +37,46 @@
       "path": "content/presentation/metric-groups.v1.json",
       "bytes": 1700,
       "sha256": "9f1d59591325c53883164b8a47a1ef1b3ac4918e15a31cd0f64fe0694473acd8"
+    },
+    {
+      "path": "content/presentation/career.v1.json",
+      "bytes": 1068,
+      "sha256": "bbbf542279785aa37a15254fa2edb424c4d63af2f278c9659e70d2644bb306ff"
+    },
+    {
+      "path": "content/presentation/work-organizations.v1.json",
+      "bytes": 10775,
+      "sha256": "aca7c47925fcf347bd68657e5000ddf5aa9cba5a2701485f5011e0347b356406"
+    },
+    {
+      "path": "content/presentation/brand-assets.v1.json",
+      "bytes": 3495,
+      "sha256": "29baf2dc55dd3b452ce1a2287d7cd858c86e56c46bda200b90debc0e81880d5f"
+    },
+    {
+      "path": "public/assets/organizations/ai-tinkerers.438086e46304.svg",
+      "bytes": 6801,
+      "sha256": "438086e46304f36e99fc4aec7bd4eb2f979b18d95dba0a2056a01e006dc33ce3"
+    },
+    {
+      "path": "public/assets/organizations/datatalksclub.a0b53a1793ed.png",
+      "bytes": 86330,
+      "sha256": "a0b53a1793ed2484da8179ec40f5879da5de17f3b76910d76c100c9980ac4c06"
+    },
+    {
+      "path": "public/assets/organizations/hugging-face.fc95837e1bac.svg",
+      "bytes": 46913,
+      "sha256": "fc95837e1bacb9b2cdbff9ae5d681ed8f20233b8fc72a65cdb38321ea9ddc015"
+    },
+    {
+      "path": "public/assets/organizations/mlops-world.a81136b42faa.svg",
+      "bytes": 11109,
+      "sha256": "a81136b42faaf2ca1b4e58cca192f426138c4bf367d19e26e7a83e882bf65236"
+    },
+    {
+      "path": "public/assets/organizations/weights-biases.46998c0eeb8e.png",
+      "bytes": 65477,
+      "sha256": "46998c0eeb8e2e7009a851b81c02982d0aec9a31846df11cd5e012dcf4da37d5"
     }
   ],
   "generator": {

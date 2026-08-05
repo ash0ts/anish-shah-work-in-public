@@ -14,6 +14,7 @@ import { effectiveCopyRisk } from "../../lib/copy-voice-contract.ts";
 export const COPY_PAGE_FILES = {
   site: "content/copy/pages/site.md",
   home: "content/copy/pages/home.md",
+  about: "content/copy/pages/about.md",
   work: "content/copy/pages/work.md",
   play: "content/copy/pages/play.md",
   sources: "content/copy/pages/sources.md",

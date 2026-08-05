@@ -10,6 +10,7 @@ request path, durable store, or progressive-enhancement boundary changes.
 ## Runtime Ownership
 
 - `app/`: Next/Vinext public routes and server-rendered foundations.
+- `app/about/**`: Git-owned professional chronology referencing the sanitized profile identity and reviewed career presentation manifest.
 - `app/play/**`: My Room overview plus seven semantic object routes.
 - `components/play/**`: object-screen shell and provider-specific Play UI.
 - `components/play/room-3d/**`: intent-gated Room and Pocket Room R3F runtime.
@@ -38,6 +39,7 @@ request path, durable store, or progressive-enhancement boundary changes.
 ## Content and Copy Ownership
 
 - `content/curation/**` and `content/presentation/**`: reviewed canonical grouping and metric presentation inputs.
+- Career and Work-organization presentation manifests may map only to validated public IDs; they never add canonical facts or infer affiliation from organization names.
 - `content/public/**`: generated, sanitized deployable artifacts; never hand-edit.
 - `content/copy/pages/**`: Git-owned page presentation prose.
 - `content/copy/work-groups/**`: Git-owned WorkGroup display/short titles, summaries, and role summaries, each bound to a stable sanitized ID.

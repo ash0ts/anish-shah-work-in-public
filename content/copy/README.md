@@ -5,6 +5,9 @@ It cannot change facts, IDs, routes, URLs, metrics, evidence, relationships,
 visibility, ordering, connector policy, privacy language, or application
 behavior.
 
+`pages/about.md` owns the About biography and chronology summaries. Those
+fields require owner fact-checking; the periods, organization structure, and
+brand provenance remain in the reviewed career presentation manifest.
 `pages/play.md` owns only room, object, and Travel presentation framing.
 `pages/simulation.md` owns only the Simulation invitation, instructions,
 nonfactual encounter flavor, and metadata fields declared by the typed

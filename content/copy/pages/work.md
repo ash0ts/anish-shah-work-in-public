@@ -15,6 +15,12 @@ What I’ve built, taught, and tested.
 ## masthead-summary
 One project stays one record—even when it became a talk, recording, or code release.
 
+## section-nav-calendar
+Calendar
+
+## section-nav-organizations
+Organizations
+
 ## search-label
 Search the work
 
@@ -77,6 +83,24 @@ Color marks the line. Darker cells contain more projects.
 
 ## timeline-caption
 Projects by line and year
+
+## organizations-eyebrow
+Organizations & platforms
+
+## organizations-title
+The work crosses companies, projects, and technical communities.
+
+## organizations-summary
+Built at, contributed to, or presented with. Every mark opens the projects that document the connection.
+
+## organizations-built-at
+Built at
+
+## organizations-contributed-to
+Contributed to
+
+## organizations-presented-with
+Presented with or at
 
 ## bucket-1-title
 Agent systems & open source

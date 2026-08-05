@@ -33,6 +33,7 @@ export type CopyFieldDefinition = {
 export type CopyPageId =
   | "site"
   | "home"
+  | "about"
   | "work"
   | "play"
   | "sources"

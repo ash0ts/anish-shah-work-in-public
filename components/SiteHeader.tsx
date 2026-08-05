@@ -3,6 +3,7 @@ import { PrimaryNavigation } from "./PrimaryNavigation";
 import styles from "./SiteHeader.module.css";
 
 const navigation = [
+  [SITE_COPY.site["header-about"], "/about"],
   [SITE_COPY.site["header-work"], "/work"],
   [SITE_COPY.site["header-play"], "/play"],
 ] as const;

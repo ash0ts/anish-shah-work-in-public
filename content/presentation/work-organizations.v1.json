@@ -1,0 +1,360 @@
+{
+  "schemaVersion": "1.0",
+  "marks": [
+    {
+      "id": "weights-biases",
+      "name": "Weights & Biases",
+      "group": "built-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": [
+        "org:weights-and-biases",
+        "org:weights-and-biases-github"
+      ],
+      "workGroupIds": [
+        "group:products:wandb-mcp",
+        "group:products:evalforge",
+        "group:standalone:wk-fp-0163",
+        "group:courses:ai-curriculum",
+        "group:courses:agentic-llm-series",
+        "group:writing:wandbot",
+        "group:writing:prompt-engineering-langchain",
+        "group:writing:automated-pdf-summarization",
+        "group:standalone:wk-fp-0099",
+        "group:standalone:wk-fp-0098",
+        "group:standalone:wk-fp-0063",
+        "group:standalone:wk-fp-0062",
+        "group:standalone:wk-fp-0097",
+        "group:standalone:wk-fp-0096",
+        "group:standalone:wk-fp-0095",
+        "group:standalone:wk-fp-0060",
+        "group:standalone:wk-fp-0059",
+        "group:standalone:wk-fp-0058",
+        "group:standalone:wk-fp-0057",
+        "group:standalone:wk-fp-0056",
+        "group:standalone:wk-fp-0054",
+        "group:standalone:wk-fp-0052",
+        "group:standalone:wk-fp-0051",
+        "group:standalone:wk-fp-0050",
+        "group:standalone:wk-fp-0094",
+        "group:standalone:wk-fp-0093",
+        "group:standalone:wk-fp-0091",
+        "group:standalone:oc-fp-0043",
+        "group:standalone:oc-fp-0040",
+        "group:standalone:oc-fp-0022",
+        "group:standalone:oc-fp-0019",
+        "group:standalone:oc-fp-0011",
+        "group:standalone:oc-fp-0005",
+        "group:standalone:oc-fp-0069",
+        "group:talks:gradient-dissent"
+      ],
+      "featuredOrder": 1,
+      "brandAssetId": "weights-biases"
+    },
+    {
+      "id": "google-cloud",
+      "name": "Google Cloud",
+      "group": "contributed-to",
+      "secondaryGroups": ["presented-with-or-at"],
+      "sourceOrganizationIds": [
+        "org:google-cloud-github",
+        "org:google-cloud-w-and-b",
+        "org:google-w-and-b",
+        "org:w-and-b-google",
+        "org:odsc-google-cloud",
+        "org:odsc-google-cloud-actualtech-media"
+      ],
+      "workGroupIds": [
+        "group:standalone:ar-fp-0183",
+        "group:courses:startup-school",
+        "group:talks:architecting-agents",
+        "group:standalone:oc-fp-0048",
+        "group:standalone:oc-fp-0034",
+        "group:standalone:oc-fp-0029",
+        "group:standalone:oc-fp-0024"
+      ],
+      "featuredOrder": 2,
+      "brandAssetId": null
+    },
+    {
+      "id": "nvidia",
+      "name": "NVIDIA",
+      "group": "contributed-to",
+      "secondaryGroups": ["presented-with-or-at"],
+      "sourceOrganizationIds": [
+        "org:nvidia",
+        "org:nvidia-github",
+        "org:nvidia-gtc",
+        "org:nvidia-gtc-2024",
+        "org:nvidia-gtc-w-and-b",
+        "org:microsoft-nvidia-gtc"
+      ],
+      "workGroupIds": [
+        "group:standalone:wk-0004",
+        "group:talks:llm-agent-fine-tuning",
+        "group:standalone:oc-fp-0038",
+        "group:talks:model-customization"
+      ],
+      "featuredOrder": 3,
+      "brandAssetId": null
+    },
+    {
+      "id": "hugging-face",
+      "name": "Hugging Face",
+      "group": "contributed-to",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": [
+        "org:hugging-face",
+        "org:hugging-face-github"
+      ],
+      "workGroupIds": ["group:products:diffusers-wandb"],
+      "featuredOrder": 4,
+      "brandAssetId": "hugging-face"
+    },
+    {
+      "id": "langchain",
+      "name": "LangChain",
+      "group": "contributed-to",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:langchain-github"],
+      "workGroupIds": ["group:products:langchain-integrations"],
+      "featuredOrder": 5,
+      "brandAssetId": null
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "group": "contributed-to",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:openai-github"],
+      "workGroupIds": ["group:products:openai-cookbook"],
+      "featuredOrder": 6,
+      "brandAssetId": null
+    },
+    {
+      "id": "lightning-ai",
+      "name": "Lightning AI",
+      "group": "contributed-to",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:lightning-ai-github"],
+      "workGroupIds": ["group:products:lightning-fabric"],
+      "featuredOrder": 7,
+      "brandAssetId": null
+    },
+    {
+      "id": "gpt-engineer",
+      "name": "GPT Engineer",
+      "group": "contributed-to",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:gpt-engineer-github"],
+      "workGroupIds": ["group:products:gpt-engineer"],
+      "featuredOrder": 8,
+      "brandAssetId": null
+    },
+    {
+      "id": "open-interpreter",
+      "name": "Open Interpreter",
+      "group": "contributed-to",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:open-interpreter-github"],
+      "workGroupIds": ["group:standalone:ar-fp-0178"],
+      "featuredOrder": 9,
+      "brandAssetId": null
+    },
+    {
+      "id": "microsoft",
+      "name": "Microsoft",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": [
+        "org:microsoft-nvidia-gtc",
+        "org:microsoft-azure-w-and-b",
+        "org:w-and-b-microsoft-azure",
+        "org:microsoft-ignite",
+        "org:microsoft-reactor",
+        "org:microsoft-reactor-bay-area-ai",
+        "org:weights-and-biases-microsoft-ignite"
+      ],
+      "workGroupIds": [
+        "group:talks:model-customization",
+        "group:standalone:oc-fp-0031",
+        "group:standalone:oc-fp-0030",
+        "group:standalone:oc-fp-0026",
+        "group:standalone:oc-fp-0015",
+        "group:standalone:oc-fp-0013",
+        "group:standalone:oc-fp-0008"
+      ],
+      "featuredOrder": 10,
+      "brandAssetId": null
+    },
+    {
+      "id": "anyscale-ray-summit",
+      "name": "Anyscale / Ray Summit",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": [
+        "org:anyscale",
+        "org:ray-summit-anyscale",
+        "org:w-and-b-anyscale"
+      ],
+      "workGroupIds": [
+        "group:standalone:oc-fp-0049",
+        "group:standalone:oc-fp-0007",
+        "group:standalone:oc-fp-0003"
+      ],
+      "featuredOrder": 11,
+      "brandAssetId": null
+    },
+    {
+      "id": "coreweave",
+      "name": "CoreWeave",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:w-and-b-coreweave"],
+      "workGroupIds": ["group:talks:architecting-agents"],
+      "featuredOrder": 12,
+      "brandAssetId": null
+    },
+    {
+      "id": "pinecone",
+      "name": "Pinecone",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:pinecone-w-and-b"],
+      "workGroupIds": ["group:standalone:oc-fp-0032"],
+      "featuredOrder": 13,
+      "brandAssetId": null
+    },
+    {
+      "id": "snowflake",
+      "name": "Snowflake",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:snowflake-developers"],
+      "workGroupIds": ["group:standalone:oc-fp-0005"],
+      "featuredOrder": 14,
+      "brandAssetId": null
+    },
+    {
+      "id": "mlops-world",
+      "name": "MLOps World",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": [
+        "org:mlops-world",
+        "org:mlops-world-generative-ai-summit",
+        "org:mlops-world-generative-ai-world"
+      ],
+      "workGroupIds": [
+        "group:talks:architecting-agents",
+        "group:talks:building-evaluating-agents",
+        "group:standalone:oc-fp-0028",
+        "group:standalone:oc-fp-0027"
+      ],
+      "featuredOrder": 15,
+      "brandAssetId": "mlops-world"
+    },
+    {
+      "id": "mlops-community",
+      "name": "MLOps Community",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:mlops-community"],
+      "workGroupIds": ["group:standalone:oc-fp-0076"],
+      "featuredOrder": 16,
+      "brandAssetId": null
+    },
+    {
+      "id": "datatalksclub",
+      "name": "DataTalksClub",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:datatalksclub"],
+      "workGroupIds": ["group:standalone:oc-fp-0009"],
+      "featuredOrder": 17,
+      "brandAssetId": "datatalksclub"
+    },
+    {
+      "id": "ai-tinkerers",
+      "name": "AI Tinkerers",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": [
+        "org:ai-tinkerers-nyc",
+        "org:ai-tinkerers-toronto-w-and-b"
+      ],
+      "workGroupIds": [
+        "group:standalone:oc-fp-0033",
+        "group:standalone:oc-fp-0025"
+      ],
+      "featuredOrder": 18,
+      "brandAssetId": "ai-tinkerers"
+    },
+    {
+      "id": "odsc",
+      "name": "ODSC",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": [
+        "org:odsc",
+        "org:odsc-east",
+        "org:odsc-google-cloud"
+      ],
+      "workGroupIds": [
+        "group:standalone:oc-fp-0029",
+        "group:standalone:oc-fp-0002"
+      ],
+      "featuredOrder": 19,
+      "brandAssetId": null
+    },
+    {
+      "id": "fourthbrain",
+      "name": "FourthBrain",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:fourthbrain"],
+      "workGroupIds": ["group:standalone:oc-fp-0001"],
+      "featuredOrder": 20,
+      "brandAssetId": null
+    },
+    {
+      "id": "ai-stac",
+      "name": "AI STAC",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:ai-stac-dev"],
+      "workGroupIds": ["group:standalone:oc-fp-0023"],
+      "featuredOrder": 21,
+      "brandAssetId": null
+    },
+    {
+      "id": "bay-area-ai",
+      "name": "Bay Area AI",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:microsoft-reactor-bay-area-ai"],
+      "workGroupIds": ["group:standalone:oc-fp-0008"],
+      "featuredOrder": 22,
+      "brandAssetId": null
+    },
+    {
+      "id": "genai-innovators",
+      "name": "GenAI Innovators",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:genai-innovators-w-and-b"],
+      "workGroupIds": ["group:standalone:oc-fp-0020"],
+      "featuredOrder": 23,
+      "brandAssetId": null
+    },
+    {
+      "id": "mdli-ops",
+      "name": "MDLI Ops",
+      "group": "presented-with-or-at",
+      "secondaryGroups": [],
+      "sourceOrganizationIds": ["org:mdli-ops"],
+      "workGroupIds": ["group:standalone:oc-fp-0004"],
+      "featuredOrder": 24,
+      "brandAssetId": null
+    }
+  ]
+}

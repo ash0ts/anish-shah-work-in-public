@@ -15,6 +15,9 @@ Agent systems, evaluation, open source, and technical education—with sources a
 ## header-wordmark
 Anish Shah
 
+## header-about
+About
+
 ## header-work
 Work
 

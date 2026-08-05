@@ -3,12 +3,17 @@ import Link from "next/link";
 import { permanentRedirect } from "next/navigation";
 import { FilteredResultFocus } from "@/components/FilteredResultFocus";
 import {
+  WorkOrganizations,
+  type WorkOrganizationSectionView,
+} from "@/components/WorkOrganizations";
+import {
   filterWorkArchiveRecords,
   legacyMapRedirectPath,
   matchingChildForQuery,
   paginateWorkArchiveRecords,
   parseWorkArchiveQuery,
   workArchiveHref,
+  workOrganizationFilterLabel,
   type WorkSearchParams,
 } from "@/lib/work-archive-query";
 import {
@@ -18,6 +23,7 @@ import {
 } from "@/lib/work-facets";
 import { workBuckets } from "@/lib/work-groups";
 import { workArchiveRecordsFrom, type WorkArchiveRecord } from "@/lib/work-index";
+import { workOrganizationSectionsFrom } from "@/lib/work-organizations";
 import { getPublicContentView } from "@/lib/server/public-content";
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
 import { WorkBodyBehavior } from "./WorkBodyBehavior";
@@ -67,6 +73,30 @@ export default async function WorkPage({
       (right.year ?? -1) - (left.year ?? -1) ||
       collator.compare(left.title, right.title),
   );
+  const organizationSections: WorkOrganizationSectionView[] =
+    workOrganizationSectionsFrom(bundle).map((section) => ({
+      id: section.id,
+      label:
+        section.id === "built-at"
+          ? SITE_COPY.work["organizations-built-at"]
+          : section.id === "contributed-to"
+            ? SITE_COPY.work["organizations-contributed-to"]
+            : SITE_COPY.work["organizations-presented-with"],
+      marks: section.marks.map((mark) => ({
+        id: mark.id,
+        name: mark.name,
+        relationship: mark.group,
+        secondaryRelationships: mark.secondaryGroups,
+        projectCount: mark.projectCount,
+        logo: mark.logo
+          ? {
+              src: mark.logo.assetPath,
+              width: mark.logo.width,
+              height: mark.logo.height,
+            }
+          : null,
+      })),
+    }));
   const filtered = filterWorkArchiveRecords(allWorks, query);
   const page = paginateWorkArchiveRecords(filtered, query.page);
   const timelineRecords = filterWorkArchiveRecords(allWorks, {
@@ -102,6 +132,10 @@ export default async function WorkPage({
   const selectedBucket = workBuckets.find(
     (bucket) => bucket.id === query.bucket,
   );
+  const selectedOrganizationName = query.organization
+    ? (bundle.organizations.find(({ id }) => id === query.organization)?.name ??
+      workOrganizationFilterLabel(query.organization))
+    : null;
   const resultLabel = filtered.length
     ? page.totalPages > 1
       ? `Showing ${page.rangeStart}—${page.rangeEnd} of ${filtered.length} projects`
@@ -109,6 +143,8 @@ export default async function WorkPage({
     : "No projects found";
   const explorerHeading = query.query
     ? `Results for “${query.query}”`
+    : selectedOrganizationName
+      ? `${selectedOrganizationName} projects`
     : selectedBucket && query.year
       ? `${selectedBucket.title} · ${query.year}`
       : selectedBucket
@@ -130,6 +166,14 @@ export default async function WorkPage({
           <p>{SITE_COPY.work["masthead-summary"]}</p>
         </div>
       </header>
+
+      <nav aria-label="Work sections" className={styles.sectionNav}>
+        <a href="#work-calendar">{SITE_COPY.work["section-nav-calendar"]}</a>
+        <span aria-hidden="true">·</span>
+        <a href="#work-organizations">
+          {SITE_COPY.work["section-nav-organizations"]}
+        </a>
+      </nav>
 
       <section className={styles.tools} aria-labelledby="work-search-title">
         <div className={styles.filterToolbar}>
@@ -222,6 +266,14 @@ export default async function WorkPage({
       </section>
 
       <WorkTimeline query={query} records={timelineRecords} />
+
+      <WorkOrganizations
+        eyebrow={SITE_COPY.work["organizations-eyebrow"]}
+        sections={organizationSections}
+        selectedOrganizationId={query.organization || null}
+        summary={SITE_COPY.work["organizations-summary"]}
+        title={SITE_COPY.work["organizations-title"]}
+      />
 
       {hasScopedResults ? (
         <section
