@@ -56,6 +56,21 @@ type AnthropicConfiguration =
       model: string;
     };
 
+export function simulationTransportRequestHeaders(
+  transport: AnthropicConfiguration["transport"],
+  source: HeadersInit | undefined,
+): Headers {
+  const headers = new Headers(source);
+  if (transport === "gateway") {
+    // Cloudflare supplies the stored Anthropic credential selected by the BYOK
+    // alias. Forwarding an SDK placeholder (or any provider credential) would
+    // violate that boundary and can cause the Gateway request to be rejected.
+    headers.delete("x-api-key");
+    headers.delete("authorization");
+  }
+  return headers;
+}
+
 function anthropicConfiguration(): AnthropicConfiguration | null {
   const runtime = simulationRuntimeConfiguration();
   if (!runtime.configured || runtime.aiMode !== "live") return null;
@@ -162,7 +177,14 @@ export class CloudflareAnthropicSimulationProvider
       apiKey,
       headers: transportHeaders,
       fetch: async (url, init) => {
-        const response = await fetch(url, { ...init, redirect: "manual" });
+        const response = await fetch(url, {
+          ...init,
+          headers: simulationTransportRequestHeaders(
+            configuration.transport,
+            init?.headers,
+          ),
+          redirect: "manual",
+        });
         if (response.status >= 300 && response.status < 400) {
           throw new Error("simulation_provider_redirect_rejected");
         }

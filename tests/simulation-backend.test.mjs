@@ -12,6 +12,7 @@ const [
   healthModule,
   maintenanceModule,
   policyModule,
+  providerModule,
   repositoryModule,
   runtimeModule,
   serviceModule,
@@ -23,6 +24,7 @@ const [
   import("../lib/server/simulation/health.ts"),
   import("../lib/server/maintenance.ts"),
   import("../lib/server/simulation/policy.ts"),
+  import("../lib/server/simulation/provider.ts"),
   import("../lib/server/simulation/repository.ts"),
   import("../lib/server/simulation/runtime.ts"),
   import("../lib/server/simulation/service.ts"),
@@ -48,6 +50,7 @@ const {
   simulationManifest,
   trustedActions,
 } = policyModule;
+const { simulationTransportRequestHeaders } = providerModule;
 const {
   claimSimulationDailyBudget,
   createSimulationSession,
@@ -812,6 +815,35 @@ test("provider source enforces Gateway privacy headers and rejects hosted raw-ke
   assert.doesNotMatch(source, /temperature\s*:/);
   assert.doesNotMatch(source, /topP\s*:/);
   assert.doesNotMatch(source, /topK\s*:/);
+});
+
+test("Gateway BYOK removes provider credentials while direct local keeps them", () => {
+  const providerAuthorization = ["Bearer", "provider-placeholder"].join(" ");
+  const gatewayAuthorization = ["Bearer", "staging-gateway-token"].join(" ");
+  const source = {
+    "x-api-key": "sdk-placeholder",
+    authorization: providerAuthorization,
+    "cf-aig-authorization": gatewayAuthorization,
+    "cf-aig-byok-alias": "staging-anthropic",
+    "content-type": "application/json",
+  };
+
+  const gateway = simulationTransportRequestHeaders("gateway", source);
+  assert.equal(gateway.has("x-api-key"), false);
+  assert.equal(gateway.has("authorization"), false);
+  assert.equal(
+    gateway.get("cf-aig-authorization"),
+    gatewayAuthorization,
+  );
+  assert.equal(gateway.get("cf-aig-byok-alias"), "staging-anthropic");
+  assert.equal(gateway.get("content-type"), "application/json");
+
+  const directLocal = simulationTransportRequestHeaders("direct-local", source);
+  assert.equal(directLocal.get("x-api-key"), "sdk-placeholder");
+  assert.equal(
+    directLocal.get("authorization"),
+    providerAuthorization,
+  );
 });
 
 test("local live-model launcher isolates shared env values from the app process", () => {
