@@ -2,9 +2,17 @@ import { PUBLIC_SITE_ORIGIN } from "../site-constants";
 import {
   expectedHostedOrigin,
   hostedEnvironmentConfigured,
+  validReleaseVersion,
 } from "../deployment-environment";
 import { runtimeDatabase, runtimeValue } from "./runtime-env";
 import { RETENTION_MAINTENANCE_KEY } from "./maintenance-state";
+import { COPY_VERSION } from "../copy";
+import {
+  getSimulationHealthSummary,
+  simulationProviderApprovalDigest,
+  type SimulationHealthSummary,
+} from "./simulation/health";
+import { getTravelHealth, type TravelHealth } from "./travel";
 export {
   PUBLICATION_MAINTENANCE_KEY,
   recordMaintenanceState,
@@ -41,7 +49,9 @@ export type StudioHealth = {
   status: "healthy" | "degraded" | "setup_required";
   checkedAt: string;
   releaseSha: string | null;
+  releaseVersion: string | null;
   contentVersion: string | null;
+  copyVersion: string;
   canonicalOrigin: {
     status: "ready" | "setup_required" | "not_applicable";
     expected: string;
@@ -59,7 +69,19 @@ export type StudioHealth = {
     status: "current" | "stale" | "error" | "unavailable";
     lastSuccessfulAt: string | null;
   }>;
+  simulation: SimulationHealthSummary & {
+    providerApprovalDigest: string | null;
+  };
+  travel: TravelHealth & {
+    mode: "disabled" | "atlas-v1";
+  };
 };
+
+function travelMode(): "disabled" | "atlas-v1" {
+  return runtimeValue("TRAVEL_ATLAS_MODE") === "atlas-v1"
+    ? "atlas-v1"
+    : "disabled";
+}
 
 function canonicalOriginState(): StudioHealth["canonicalOrigin"] {
   if (runtimeValue("AUTH_MODE") !== "cloudflare_access") {
@@ -71,6 +93,7 @@ function canonicalOriginState(): StudioHealth["canonicalOrigin"] {
     SITE_URL: runtimeValue("SITE_URL"),
     PRODUCTION_SITE_URL: runtimeValue("PRODUCTION_SITE_URL"),
     PUBLIC_CONTENT_MODE: runtimeValue("PUBLIC_CONTENT_MODE"),
+    RELEASE_VERSION: runtimeValue("RELEASE_VERSION"),
   };
   return {
     status: hostedEnvironmentConfigured(values) ? "ready" : "setup_required",
@@ -81,6 +104,11 @@ function canonicalOriginState(): StudioHealth["canonicalOrigin"] {
 function deployedValue(name: "RELEASE_SHA" | "CONTENT_VERSION", pattern: RegExp) {
   const value = runtimeValue(name)?.toLowerCase() ?? null;
   return value && pattern.test(value) ? value : null;
+}
+
+function deployedReleaseVersion(): string | null {
+  const value = runtimeValue("RELEASE_VERSION") ?? null;
+  return validReleaseVersion(value ?? undefined) ? value : null;
 }
 
 function retentionState(row: MaintenanceRow | null) {
@@ -143,15 +171,30 @@ function stravaState(
 export async function getStudioHealth(): Promise<StudioHealth> {
   const checkedAt = new Date().toISOString();
   const releaseSha = deployedValue("RELEASE_SHA", /^[a-f0-9]{40}$/);
+  const releaseVersion = deployedReleaseVersion();
   const contentVersion = deployedValue("CONTENT_VERSION", /^[a-f0-9]{16}$/);
   const canonicalOrigin = canonicalOriginState();
+  const travel = {
+    ...(await getTravelHealth()),
+    mode: travelMode(),
+  } satisfies StudioHealth["travel"];
   const database = runtimeDatabase();
+  const [simulationSummary, providerApprovalDigest] = await Promise.all([
+    getSimulationHealthSummary(new Date(checkedAt), database),
+    simulationProviderApprovalDigest(database),
+  ]);
+  const simulation = {
+    ...simulationSummary,
+    providerApprovalDigest,
+  };
   if (!database) {
     return {
       status: "setup_required",
       checkedAt,
       releaseSha,
+      releaseVersion,
       contentVersion,
+      copyVersion: COPY_VERSION,
       canonicalOrigin,
       migration: { status: "setup_required", latestApplied: null },
       retentionHeartbeat: { status: "never_run", lastRunAt: null },
@@ -160,6 +203,8 @@ export async function getStudioHealth(): Promise<StudioHealth> {
         status: "unavailable",
         lastSuccessfulAt: null,
       })),
+      simulation,
+      travel,
     };
   }
 
@@ -218,17 +263,24 @@ export async function getStudioHealth(): Promise<StudioHealth> {
     ];
     const setupRequired =
       !releaseSha ||
+      !releaseVersion ||
       !contentVersion ||
       !safeMigrationName ||
-      canonicalOrigin.status === "setup_required";
+      canonicalOrigin.status === "setup_required" ||
+      (travel.mode === "atlas-v1" &&
+        (!travel.configured || !travel.activePublication));
     const degraded =
       retentionHeartbeat.status !== "current" ||
-      connectors.some((connector) => connector.status === "error");
+      connectors.some((connector) => connector.status === "error") ||
+      (travel.mode === "atlas-v1" &&
+        travel.cleanupHeartbeat.status !== "current");
     return {
       status: setupRequired ? "setup_required" : degraded ? "degraded" : "healthy",
       checkedAt,
       releaseSha,
+      releaseVersion,
       contentVersion,
+      copyVersion: COPY_VERSION,
       canonicalOrigin,
       migration: {
         status: safeMigrationName ? "ready" : "setup_required",
@@ -236,13 +288,17 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       },
       retentionHeartbeat,
       connectors,
+      simulation,
+      travel,
     };
   } catch {
     return {
       status: "setup_required",
       checkedAt,
       releaseSha,
+      releaseVersion,
       contentVersion,
+      copyVersion: COPY_VERSION,
       canonicalOrigin,
       migration: { status: "setup_required", latestApplied: null },
       retentionHeartbeat: { status: "error", lastRunAt: null },
@@ -251,6 +307,8 @@ export async function getStudioHealth(): Promise<StudioHealth> {
         status: "unavailable",
         lastSuccessfulAt: null,
       })),
+      simulation,
+      travel,
     };
   }
 }

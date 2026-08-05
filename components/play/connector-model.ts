@@ -1,3 +1,5 @@
+import { SITE_COPY } from "@/lib/copy";
+
 export type StatusCount = { label: string; count: number };
 export type GalleryFilter = StatusCount & { id: string };
 export type GallerySort = { id: string; label: string };
@@ -174,30 +176,6 @@ export type ConnectorState<T> =
   | { status: "unavailable"; message: string }
   | { status: "ready"; payload: T; fetchedAt: string; stale: boolean };
 
-export type StreamId =
-  | "watch"
-  | "read"
-  | "listen"
-  | "collect"
-  | "play"
-  | "move";
-
-export const streamIds = [
-  "watch",
-  "read",
-  "listen",
-  "collect",
-  "play",
-  "move",
-] as const satisfies readonly StreamId[];
-
-export function streamIdFromValue(value: unknown): StreamId {
-  const candidate = Array.isArray(value) ? value[0] : value;
-  return typeof candidate === "string" &&
-    streamIds.includes(candidate as StreamId)
-    ? (candidate as StreamId)
-    : "watch";
-}
 export type CollectionProvider = "myanimelist" | "hardcover" | "steam";
 export type ConnectorProvider = CollectionProvider | "discogs" | "strava";
 export type CollectionView = "pattern" | "gallery";
@@ -247,30 +225,10 @@ export const DEFAULT_DISCOGS_QUERY: DiscogsQueryState = {
 };
 
 export const providerTitles: Record<CollectionProvider, string> = {
-  myanimelist: "Watch states, not a ranking.",
-  hardcover: "A shelf in motion.",
-  steam: "A public library snapshot.",
+  myanimelist: SITE_COPY.play["watch-collection-title"],
+  hardcover: SITE_COPY.play["read-collection-title"],
+  steam: SITE_COPY.play["play-collection-title"],
 };
-
-export function syncLabel(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Sync date unavailable";
-  return `Synced ${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date)}`;
-}
-
-export function publishedLabel(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Publish date unavailable";
-  return `Published ${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date)}`;
-}
 
 export async function loadConnector<T>(
   provider: ConnectorProvider,
@@ -295,7 +253,7 @@ export async function loadConnector<T>(
         status: "unavailable",
         message:
           body.message ??
-          "This stream has not been published from the owner studio yet.",
+          SITE_COPY.play["collection-unavailable"],
       };
     }
     return {
@@ -308,7 +266,7 @@ export async function loadConnector<T>(
     if (signal?.aborted) throw error;
     return {
       status: "unavailable",
-      message: "The last public snapshot is temporarily unavailable.",
+      message: "This collection is temporarily unavailable.",
     };
   }
 }

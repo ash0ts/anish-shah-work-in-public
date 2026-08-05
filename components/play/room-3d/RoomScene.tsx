@@ -14,6 +14,7 @@ import { RoomInteractionController } from "./RoomInteractionController";
 import {
   BeigeComputer,
   CardioTelevision,
+  PostcardGlobe,
   PocketPlayer,
   ReadingShelf,
   RecordCrate,
@@ -31,6 +32,7 @@ const ROOM_SCENE_OBJECT_BY_ID = {
   collect: RecordCrate,
   play: BeigeComputer,
   move: CardioTelevision,
+  travel: PostcardGlobe,
 } as const satisfies Record<
   RoomObjectId,
   typeof WatchTelevision
@@ -40,9 +42,12 @@ export type RoomSceneProps = {
   approachPoseId: RoomApproachPoseId | null;
   focusedId?: RoomObjectId | null;
   onHoverChange?: (id: RoomObjectId | null) => void;
+  onInteractionActiveChange?: (active: boolean) => void;
   onSettled?: () => void;
+  objectIds?: readonly RoomObjectId[];
   onRotationChange: (rotation: RoomRotation) => void;
   onSelect: (id: RoomObjectId) => void;
+  presentation?: "desktop" | "pocket";
   rotation: RoomRotation;
   selectedId: RoomObjectId | null;
 };
@@ -51,9 +56,12 @@ export function RoomScene({
   approachPoseId,
   focusedId = null,
   onHoverChange,
+  onInteractionActiveChange,
   onSettled,
+  objectIds = ROOM_OBJECT_IDS,
   onRotationChange,
   onSelect,
+  presentation = "desktop",
   rotation,
   selectedId,
 }: RoomSceneProps) {
@@ -111,10 +119,11 @@ export function RoomScene({
         rotation={rotation}
       >
         <group
-          position={[0, -0.55, 0]}
+          position={presentation === "pocket" ? [0, -0.8, 0] : [0, -0.55, 0]}
+          scale={presentation === "pocket" ? 0.92 : 1}
         >
           <RoomShell registerOccluder={registerOccluder} />
-          {ROOM_OBJECT_IDS.map((id) => {
+          {objectIds.map((id) => {
             const SceneObject = ROOM_SCENE_OBJECT_BY_ID[id];
             return (
               <SceneObject
@@ -129,9 +138,11 @@ export function RoomScene({
             hitTargets={hitTargets}
             occluders={occluders}
             onHoverChange={setHovered}
+            onInteractionActiveChange={onInteractionActiveChange}
             onRotationCommit={onRotationChange}
             onRotationPreview={previewRotation}
             onSelect={onSelect}
+            presentation={presentation}
             rotation={rotation}
           />
         </group>

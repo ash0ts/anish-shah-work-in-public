@@ -10,7 +10,9 @@ const {
   filterWorkArchiveRecords,
   legacyMapRedirectPath,
   matchingChildForQuery,
+  paginateWorkArchiveRecords,
   parseWorkArchiveQuery,
+  WORK_ARCHIVE_PAGE_SIZE,
   workArchiveHref,
 } = await tsImport("../lib/work-archive-query.ts", import.meta.url);
 const { workArchiveRecordsFrom } = await tsImport(
@@ -262,41 +264,33 @@ test("generated archive links never reintroduce the removed view parameter", () 
   assert.equal(url.searchParams.has("view"), false);
 });
 
+test("the archive paginates exactly 24 canonical works while preserving order", () => {
+  assert.equal(WORK_ARCHIVE_PAGE_SIZE, 24);
+  const first = paginateWorkArchiveRecords(records, 1);
+  const second = paginateWorkArchiveRecords(records, 2);
+  const last = paginateWorkArchiveRecords(records, 999);
+
+  assert.equal(first.items.length, 24);
+  assert.equal(second.items.length, 24);
+  assert.equal(first.rangeStart, 1);
+  assert.equal(first.rangeEnd, 24);
+  assert.equal(second.rangeStart, 25);
+  assert.equal(second.rangeEnd, 48);
+  assert.deepEqual(
+    [...first.items, ...second.items].map((record) => record.id),
+    records.slice(0, 48).map((record) => record.id),
+  );
+  assert.equal(last.currentPage, Math.ceil(records.length / 24));
+  assert.equal(last.rangeEnd, records.length);
+});
+
 test("the color calendar has four semantic rows, six years, and exact archive counts", () => {
   const years = [2021, 2022, 2023, 2024, 2025, 2026];
   const expected = {
-    "products-open-source": [
-      [0, 0],
-      [1, 2],
-      [4, 7],
-      [4, 6],
-      [2, 2],
-      [3, 4],
-    ],
-    "courses-learning": [
-      [0, 0],
-      [0, 0],
-      [0, 0],
-      [2, 10],
-      [2, 10],
-      [0, 0],
-    ],
-    "writing-research": [
-      [1, 1],
-      [4, 6],
-      [9, 14],
-      [7, 14],
-      [0, 0],
-      [1, 1],
-    ],
-    "talks-programs": [
-      [1, 2],
-      [2, 10],
-      [10, 20],
-      [19, 37],
-      [11, 23],
-      [1, 1],
-    ],
+    "products-open-source": [0, 1, 4, 4, 2, 3],
+    "courses-learning": [0, 0, 0, 2, 2, 0],
+    "writing-research": [1, 4, 9, 7, 0, 1],
+    "talks-programs": [1, 2, 10, 19, 11, 1],
   };
 
   assert.equal(workBuckets.length, 4);
@@ -309,10 +303,7 @@ test("the color calendar has four semantic rows, six years, and exact archive co
           const works = records
             .filter((record) => record.bucket === bucket.id)
             .filter((record) => activeInYear(record, year));
-          return [
-            works.length,
-            works.reduce((count, work) => count + work.formCount, 0),
-          ];
+          return works.length;
         }),
       ]),
     ),
@@ -321,7 +312,7 @@ test("the color calendar has four semantic rows, six years, and exact archive co
 
   const maximum = Math.max(
     ...Object.values(expected).flatMap((row) =>
-      row.map(([workCount]) => workCount),
+      row,
     ),
   );
   assert.equal(maximum, 19);
@@ -329,7 +320,7 @@ test("the color calendar has four semantic rows, six years, and exact archive co
     Object.fromEntries(
       Object.entries(expected).map(([bucket, row]) => [
         bucket,
-        row.map(([workCount]) => densityLevel(workCount, maximum)),
+        row.map((workCount) => densityLevel(workCount, maximum)),
       ]),
     ),
     {
@@ -370,15 +361,38 @@ test("timeline cell links preserve active query filters while selecting body and
   assert.equal(url.searchParams.has("page"), false);
 });
 
-test("Work source renders four body folds and a semantic server-rendered color calendar", async () => {
-  const [source, timeline, behavior, css, packageJson] = await Promise.all([
+test("Work source renders a paginated four-line index and semantic color calendar", async () => {
+  const [
+    source,
+    timeline,
+    timelineControls,
+    mobileFilters,
+    bodyBehavior,
+    css,
+    timelineCss,
+    detailSource,
+    packageJson,
+  ] = await Promise.all([
     readFile(new URL("../app/work/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/work/WorkTimeline.tsx", import.meta.url), "utf8"),
     readFile(
-      new URL("../app/work/WorkFilterBehavior.tsx", import.meta.url),
+      new URL("../app/work/WorkTimelineControls.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/work/WorkMobileFilters.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/work/WorkBodyBehavior.tsx", import.meta.url),
       "utf8",
     ),
     readFile(new URL("../app/work/work.module.css", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/work/WorkTimeline.module.css", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../app/work/[slug]/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8").then(
       JSON.parse,
     ),
@@ -388,26 +402,34 @@ test("Work source renders four body folds and a semantic server-rendered color c
   assert.match(source, /<WorkTimeline query=\{query\} records=\{timelineRecords\}/);
   assert.match(source, /countWorkFacetOptions\(allWorks, "theme"\)/);
   assert.match(source, /countWorkFacetOptions\(allWorks, "media"\)/);
-  assert.match(source, /countWorkFacetOptions\(allWorks, "ecosystem"\)/);
-  assert.match(source, /countWorkFacetOptions\(allWorks, "contribution"\)/);
+  assert.doesNotMatch(source, /countWorkFacetOptions\(allWorks, "ecosystem"\)/);
+  assert.doesNotMatch(source, /countWorkFacetOptions\(allWorks, "contribution"\)/);
   assert.doesNotMatch(
     source,
-    /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot|const perPage|pagination/i,
+    /StoryTimeMatrix|WorkArchiveExplorer|WorkPlot/i,
   );
+  assert.match(source, /paginateWorkArchiveRecords\(filtered, query\.page\)/);
+  assert.match(source, /page\.items\.filter/);
+  assert.match(source, /<WorkPagination/);
+  assert.match(source, /workArchiveHref\(query, \{ page:/);
   assert.doesNotMatch(
     source,
     /from\s+["'](?:three|@react-three\/)|import\(["'](?:three|@react-three\/)/,
   );
-  for (const name of [
-    "bucket",
-    "topic",
-    "year",
-    "format",
-    "organization",
-    "role",
-  ]) {
-    assert.match(source, new RegExp(`name="${name}"`));
+  for (const name of ["bucket", "topic", "year", "format"]) {
+    assert.match(source, new RegExp(`<FilterSelect[\\s\\S]{0,240}name="${name}"`));
   }
+  assert.doesNotMatch(
+    source,
+    /<FilterSelect[\s\S]{0,240}name="(?:organization|role)"/,
+  );
+  assert.match(source, /<input name="organization" type="hidden"/);
+  assert.match(source, /<input name="role" type="hidden"/);
+  assert.match(
+    source,
+    /<details[\s\S]{0,180}className=\{styles\.moreFilters\}[\s\S]{0,180}id="work-more-filters"[\s\S]*?name="format"/,
+  );
+  assert.equal(WORK_ARCHIVE_PAGE_SIZE, 24);
   assert.doesNotMatch(source, /name="view"/);
 
   assert.match(
@@ -422,22 +444,45 @@ test("Work source renders four body folds and a semantic server-rendered color c
   assert.match(timeline, /data-bucket=\{bucket\.id\}/);
   assert.match(timeline, /data-year=\{year\}/);
   assert.match(timeline, /data-density=\{density \|\| undefined\}/);
+  assert.match(timeline, /data-timeline-year=\{year\}/);
+  assert.match(timeline, /<WorkTimelineControls/);
+  assert.match(timeline, /availableYears\.at\(-1\)/);
   assert.match(timeline, /workArchiveHref\(query,/);
   assert.match(timeline, /\}\#work-index`/);
   assert.match(timeline, /works\.length/);
-  assert.match(timeline, /formCount/);
+  assert.doesNotMatch(timeline, /formCount/);
   assert.match(timeline, /densityLevel\(/);
   assert.match(timeline, /Math\.ceil\(Math\.sqrt\(count \/ maximum\) \* 5\)/);
   assert.doesNotMatch(timeline, /@observablehq|canvas|three|webgl/i);
   assert.equal(packageJson.dependencies["@observablehq/plot"], undefined);
 
-  assert.doesNotMatch(
+  assert.match(timelineControls, /scrollToYear/);
+  assert.match(timelineControls, /prefers-reduced-motion: reduce/);
+  assert.match(timelineControls, /aria-pressed=\{selectedYear === year\}/);
+  assert.match(timelineCss, /scroll-snap-type:\s*inline mandatory/);
+  assert.match(timelineCss, /width:\s*calc\(100vw - 7\.25rem\)/);
+
+  assert.match(mobileFilters, /HTMLDialogElement\.prototype\.showModal/);
+  assert.match(mobileFilters, /<dialog/);
+  assert.match(mobileFilters, /action="\/work#work-index"/);
+  assert.match(mobileFilters, /triggerRef\.current\?\.focus\(\)/);
+  assert.doesNotMatch(mobileFilters, /name="(?:bucket|topic|year)"[\s\S]{0,120}<select/);
+  assert.match(source, /allLabel="All lines"[\s\S]*label="Line of work"[\s\S]*name="bucket"/);
+  assert.match(source, /allLabel="All years"[\s\S]*label="Year"[\s\S]*name="year"/);
+  assert.match(source, /allLabel="All topics"[\s\S]*label="Topic"[\s\S]*name="topic"/);
+  assert.match(css, /\.mobileFilterDialog::backdrop/);
+  assert.match(detailSource, /<dl className=\{styles\.facts\}/);
+  assert.match(detailSource, /<dt>\{label\}<\/dt>/);
+
+  assert.match(
     source,
-    /id="work-(?:more-)?filters"[\s\S]{0,80}\bopen\b/,
-    "Filter disclosures must not SSR open and collapse after paint",
+    /id="work-more-filters"[\s\S]{0,100}open=\{Boolean\(query\.format\)\}/,
+    "Format should open server-side when that filter is active",
   );
-  assert.match(behavior, /min-width:\s*1101px/);
-  assert.match(css, /@media\s*\(max-width:\s*1100px\)/);
+  assert.doesNotMatch(source, /WorkFilterBehavior/);
+  assert.match(bodyBehavior, /body\.open = false/);
+  assert.match(bodyBehavior, /min-width:\s*761px/);
+  assert.match(css, /@media\s*\(max-width:\s*760px\)/);
   assert.match(
     css,
     /\.moreFilters:not\(\[open\]\)\s*>\s*\.secondaryFilters\s*\{[\s\S]*?display:\s*none/,

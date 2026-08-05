@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import { matchingReleaseVersion } from "./release-version.mjs";
 
 export const PUBLIC_SITE_ORIGIN = "https://anish-shah-is.online";
 export const PUBLIC_CLOUDFLARE_ACCOUNT_ID =
   "690e6286eb53a6df1bd0080633caf91f";
+export const PRODUCTION_TRAVEL_MEDIA_BUCKET = "anish-shah-travel-media";
 
 export const PRODUCTION_RESOURCE_FINGERPRINTS = Object.freeze({
   databaseIdSha256:
@@ -18,8 +20,34 @@ export const PRODUCTION_RATE_LIMITS = Object.freeze([
   ["ARTWORK_RATE_LIMITER", { namespaceId: "88001002", limit: 120 }],
   ["PROMOTION_RATE_LIMITER", { namespaceId: "88001003", limit: 6 }],
   ["OAUTH_CALLBACK_RATE_LIMITER", { namespaceId: "88001004", limit: 20 }],
+  ["SIMULATION_RATE_LIMITER", { namespaceId: "88001005", limit: 12 }],
+  ["TRAVEL_MEDIA_RATE_LIMITER", { namespaceId: "88001006", limit: 180 }],
 ]);
 const RATE_LIMITS = new Map(PRODUCTION_RATE_LIMITS);
+const PUBLIC_CONFIG_KEYS = Object.freeze([
+  "account_id",
+  "assets",
+  "compatibility_date",
+  "compatibility_flags",
+  "d1_databases",
+  "images",
+  "jsx_factory",
+  "jsx_fragment",
+  "kv_namespaces",
+  "main",
+  "name",
+  "no_bundle",
+  "observability",
+  "preview_urls",
+  "r2_buckets",
+  "ratelimits",
+  "routes",
+  "rules",
+  "topLevelName",
+  "triggers",
+  "vars",
+  "workers_dev",
+]);
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -72,7 +100,11 @@ function exactHttpsOrigin(value, name) {
   return url.origin;
 }
 
-export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
+export function expectedPublicReleaseConfig(env, { head, contentVersion, packageVersion }) {
+  const releaseVersion = matchingReleaseVersion(
+    required(env, "RELEASE_VERSION"),
+    packageVersion,
+  );
   const siteUrl = exactHttpsOrigin(required(env, "PUBLIC_SITE_URL"), "PUBLIC_SITE_URL");
   if (siteUrl !== PUBLIC_SITE_ORIGIN) {
     throw new Error("PUBLIC_SITE_URL must be the repository's pinned canonical origin.");
@@ -124,18 +156,51 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(databaseName)) {
     throw new Error("CLOUDFLARE_D1_DATABASE_NAME is invalid.");
   }
-  const playExperienceMode =
-    env.PLAY_EXPERIENCE_MODE?.trim() || "classic";
+  const simulationExperienceMode =
+    env.SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
   if (
-    playExperienceMode !== "classic" &&
-    playExperienceMode !== "my-room-2001"
+    simulationExperienceMode !== "disabled" &&
+    simulationExperienceMode !== "coming-soon" &&
+    simulationExperienceMode !== "campaign-v1"
   ) {
     throw new Error(
-      "PLAY_EXPERIENCE_MODE must be classic or my-room-2001.",
+      "SIMULATION_EXPERIENCE_MODE must be disabled, coming-soon, or campaign-v1.",
     );
+  }
+  const simulationAiMode =
+    env.SIMULATION_AI_MODE?.trim() ||
+    (simulationExperienceMode === "campaign-v1" ? "live" : "authored-only");
+  if (
+    simulationAiMode !== "live" &&
+    simulationAiMode !== "authored-only"
+  ) {
+    throw new Error(
+      "Production SIMULATION_AI_MODE must be live or authored-only.",
+    );
+  }
+  if (
+    simulationExperienceMode === "campaign-v1" &&
+    simulationAiMode !== "live"
+  ) {
+    throw new Error(
+      "An enabled production simulation must use live AI with authored fallback.",
+    );
+  }
+  if (
+    simulationExperienceMode !== "campaign-v1" &&
+    simulationAiMode !== "authored-only"
+  ) {
+    throw new Error(
+      "A disabled or coming-soon production simulation must use authored-only mode.",
+    );
+  }
+  const travelAtlasMode = env.TRAVEL_ATLAS_MODE?.trim() || "disabled";
+  if (travelAtlasMode !== "disabled" && travelAtlasMode !== "atlas-v1") {
+    throw new Error("TRAVEL_ATLAS_MODE must be disabled or atlas-v1.");
   }
   return {
     head,
+    releaseVersion,
     contentVersion,
     siteUrl,
     teamDomain,
@@ -144,7 +209,9 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion }) {
     databaseId,
     databaseName,
     publicationCacheId,
-    playExperienceMode,
+    simulationExperienceMode,
+    simulationAiMode,
+    travelAtlasMode,
     accountId: PUBLIC_CLOUDFLARE_ACCOUNT_ID,
   };
 }
@@ -161,10 +228,15 @@ export function assertPublicReleaseConfig(config, expected) {
     SITE_URL: expected.siteUrl,
     STEAM_DATA_STORAGE_COUNTRIES: "United States",
     RELEASE_SHA: expected.head,
+    RELEASE_VERSION: expected.releaseVersion,
     CONTENT_VERSION: expected.contentVersion,
     PUBLIC_CONTENT_MODE: "d1_kv_required",
     DEPLOYMENT_TIER: "production",
-    PLAY_EXPERIENCE_MODE: expected.playExperienceMode,
+    SIMULATION_EXPERIENCE_MODE: expected.simulationExperienceMode,
+    SIMULATION_AI_MODE: expected.simulationAiMode,
+    SIMULATION_PROVIDER: "anthropic",
+    SIMULATION_MODEL: "claude-sonnet-5",
+    TRAVEL_ATLAS_MODE: expected.travelAtlasMode,
   };
   const exactVars =
     JSON.stringify(Object.keys(vars).sort()) ===
@@ -172,6 +244,8 @@ export function assertPublicReleaseConfig(config, expected) {
     Object.entries(expectedVars).every(([name, value]) => vars[name] === value);
   const database = config?.d1_databases?.[0];
   const publicationCache = config?.kv_namespaces?.[0];
+  const travelMedia = config?.r2_buckets?.[0];
+  const images = config?.images;
   const rateLimits = new Map(
     Array.isArray(config?.ratelimits)
       ? config.ratelimits.map((binding) => [binding?.name, binding])
@@ -187,7 +261,26 @@ export function assertPublicReleaseConfig(config, expected) {
         actual?.simple?.period === 60
       );
     });
+  const exactTopLevelKeys =
+    config &&
+    !Array.isArray(config) &&
+    JSON.stringify(Object.keys(config).sort()) ===
+      JSON.stringify([...PUBLIC_CONFIG_KEYS].sort());
+  const exactInertBuildBase =
+    config?.main === "index.js" &&
+    typeof config?.compatibility_date === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(config.compatibility_date) &&
+    JSON.stringify(config?.compatibility_flags) ===
+      JSON.stringify(["nodejs_compat"]) &&
+    config?.jsx_factory === "React.createElement" &&
+    config?.jsx_fragment === "React.Fragment" &&
+    config?.no_bundle === true &&
+    JSON.stringify(config?.rules) ===
+      JSON.stringify([{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }]) &&
+    JSON.stringify(config?.assets) === JSON.stringify({ directory: "../client" });
   if (
+    !exactTopLevelKeys ||
+    !exactInertBuildBase ||
     config?.name !== "anish-shah-work-in-public" ||
     config?.topLevelName !== "anish-shah-work-in-public" ||
     config?.account_id !== expected.accountId ||
@@ -203,6 +296,11 @@ export function assertPublicReleaseConfig(config, expected) {
     config?.kv_namespaces?.length !== 1 ||
     publicationCache?.binding !== "PUBLICATION_CACHE" ||
     publicationCache?.id !== expected.publicationCacheId ||
+    config?.r2_buckets?.length !== 1 ||
+    travelMedia?.binding !== "TRAVEL_MEDIA" ||
+    travelMedia?.bucket_name !== PRODUCTION_TRAVEL_MEDIA_BUCKET ||
+    images?.binding !== "IMAGES" ||
+    Object.keys(images).length !== 1 ||
     !exactRateLimits ||
     !exactVars ||
     config?.observability?.enabled !== true ||

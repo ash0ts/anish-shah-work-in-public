@@ -1,0 +1,838 @@
+.atlas {
+  --travel-night: #08111f;
+  --travel-screen: #101f32;
+  --travel-line: #4f6075;
+  --travel-paper: #fff8eb;
+  --travel-mint: #45d7b1;
+  --travel-violet: #c8b8ff;
+  --travel-coral: #ff6847;
+  --travel-amber: #f6c85e;
+  min-width: 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.console {
+  min-width: 0;
+  border: 1px solid #718299;
+  color: var(--travel-paper);
+  background: var(--travel-night);
+  box-shadow: 0 1rem 0 #050a12;
+}
+
+.console::before {
+  display: block;
+  height: 0.35rem;
+  background: linear-gradient(
+    90deg,
+    var(--travel-coral) 0 18%,
+    var(--travel-amber) 18% 35%,
+    var(--travel-mint) 35% 68%,
+    var(--travel-violet) 68%
+  );
+  content: "";
+}
+
+.consoleHeader {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.5rem;
+  align-items: end;
+  padding: clamp(1rem, 2.5vw, 2rem);
+  border-bottom: 1px solid var(--travel-line);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgb(200 184 255 / 3%) 3px 4px),
+    #0c1828;
+}
+
+.consoleHeader p,
+.consoleHeader h2,
+.consoleHeader dl,
+.consoleHeader dd,
+.consoleHeader dt {
+  margin: 0;
+}
+
+.consoleHeader p,
+.consoleHeader dt {
+  color: var(--travel-mint);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.consoleHeader h2 {
+  margin-top: 0.35rem;
+  font-size: clamp(2.4rem, 6vw, 5.8rem);
+  font-variation-settings: "CASL" 0.25, "wght" 740;
+  letter-spacing: -0.065em;
+  line-height: 0.88;
+}
+
+.consoleHeader dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(5.4rem, auto));
+  border: 1px solid var(--travel-line);
+}
+
+.consoleHeader dl > div {
+  padding: 0.65rem 0.8rem;
+}
+
+.consoleHeader dl > div + div {
+  border-left: 1px solid var(--travel-line);
+}
+
+.consoleHeader dd {
+  margin-top: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 720;
+}
+
+.mapLayout {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1.55fr) minmax(19rem, 0.62fr);
+}
+
+.globePanel {
+  min-width: 0;
+  padding: clamp(0.75rem, 2vw, 1.4rem);
+  border-right: 1px solid var(--travel-line);
+}
+
+.globeFrame {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 16 / 10;
+  border: 1px solid #6d7f99;
+  border-radius: clamp(1.1rem, 3vw, 2.8rem);
+  background:
+    radial-gradient(circle at 50% 48%, rgb(116 105 232 / 20%), transparent 42%),
+    var(--travel-night);
+  box-shadow:
+    inset 0 0 3.6rem rgb(52 124 255 / 10%),
+    inset 0 0 0 0.45rem #0b1523;
+  overflow: clip;
+}
+
+.globeFrame::after {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 3px,
+    rgb(200 184 255 / 4%) 3px 4px
+  );
+  content: "";
+  pointer-events: none;
+}
+
+.globeFrame[data-globe-ready]::before {
+  position: absolute;
+  z-index: 3;
+  top: 0.8rem;
+  left: 1rem;
+  color: var(--travel-mint);
+  content: "GLOBE ONLINE";
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  pointer-events: none;
+}
+
+.staticMap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  min-width: 0;
+  place-content: center;
+  place-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.staticMap span,
+.staticMap p {
+  margin: 0;
+}
+
+.staticMap span {
+  color: var(--travel-mint);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.staticMap i {
+  display: block;
+  width: clamp(7rem, 24vw, 12rem);
+  aspect-ratio: 1;
+  border: 1px solid var(--travel-violet);
+  border-radius: 50%;
+  background:
+    linear-gradient(90deg, transparent 48%, var(--travel-violet) 49% 51%, transparent 52%),
+    linear-gradient(transparent 48%, var(--travel-violet) 49% 51%, transparent 52%),
+    radial-gradient(circle, #4b448f 0 62%, transparent 63%);
+  opacity: 0.72;
+}
+
+.staticMap p {
+  max-width: 30rem;
+  color: #c1c9d4;
+  font-size: 0.88rem;
+}
+
+.zoomControls {
+  position: absolute;
+  z-index: 4;
+  right: 0.8rem;
+  bottom: 0.8rem;
+  display: flex;
+  border: 1px solid var(--travel-line);
+  background: rgb(8 17 31 / 90%);
+}
+
+.zoomControls button {
+  width: 44px;
+  min-height: 44px;
+  border: 0;
+  color: var(--travel-paper);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+}
+
+.zoomControls button + button {
+  border-left: 1px solid var(--travel-line);
+}
+
+.zoomControls button:hover:not(:disabled),
+.zoomControls button:focus-visible {
+  color: var(--travel-night);
+  background: var(--travel-mint);
+}
+
+.zoomControls button:disabled {
+  opacity: 0.35;
+}
+
+.legend {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend i {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 1px solid #c5cfda;
+  background: #56617f;
+}
+
+.legend span[data-count="1"] i { background: var(--travel-mint); }
+.legend span[data-count="2"] i { background: var(--travel-amber); }
+.legend span[data-count="3+"] i { background: var(--travel-coral); }
+
+.globeHint {
+  margin: 0.75rem 0 0;
+  color: #aeb9c7;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+}
+
+.mapCredit {
+  margin: 0.45rem 0 0;
+  color: #aeb9c7;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+}
+
+.mapCredit a {
+  color: #d8e1ea;
+}
+
+.directory {
+  min-width: 0;
+  min-height: 34rem;
+  background: #101c2b;
+}
+
+.breadcrumbs {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--travel-line);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.breadcrumbs button {
+  min-height: 44px;
+  padding: 0.25rem 0.4rem;
+  border: 0;
+  color: var(--travel-mint);
+  background: transparent;
+  font: inherit;
+}
+
+.breadcrumbs .backButton {
+  padding-inline: 0.65rem;
+  border: 1px solid var(--travel-line);
+  color: var(--travel-paper);
+}
+
+.breadcrumbs .backButton:hover:not(:disabled),
+.breadcrumbs .backButton:focus-visible {
+  color: var(--travel-night);
+  background: var(--travel-mint);
+}
+
+.breadcrumbs .backButton:disabled {
+  opacity: 0.42;
+}
+
+.breadcrumbs b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.countryIndex,
+.placeIndex {
+  min-width: 0;
+  padding: 1rem;
+}
+
+.countryIndex label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--travel-violet);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.countryIndex input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--travel-line);
+  border-radius: 0;
+  color: var(--travel-paper);
+  background: var(--travel-night);
+  font: inherit;
+}
+
+.searchStatus {
+  margin: 0.55rem 0 0;
+  color: #aeb9c7;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+}
+
+.noSearchResults {
+  margin: 1rem 0 0;
+  padding-block: 1rem;
+  border-block: 1px solid var(--travel-line);
+  color: #c8d0da;
+  line-height: 1.45;
+}
+
+.countryIndex ol,
+.placeIndex ol {
+  display: grid;
+  max-height: 29rem;
+  padding: 0;
+  margin: 1rem 0 0;
+  list-style: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.countryIndex li,
+.placeIndex li {
+  border-top: 1px solid var(--travel-line);
+}
+
+.countryIndex li:last-child,
+.placeIndex li:last-child {
+  border-bottom: 1px solid var(--travel-line);
+}
+
+.countryIndex li button,
+.placeIndex li button {
+  display: grid;
+  width: 100%;
+  min-height: 54px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.7rem 0.35rem;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.countryIndex li button:hover,
+.countryIndex li button:focus-visible,
+.placeIndex li button:hover,
+.placeIndex li button:focus-visible,
+.placeIndex li button[aria-pressed="true"] {
+  color: var(--travel-night);
+  background: var(--travel-mint);
+}
+
+.countryIndex li span,
+.placeIndex li span,
+.countryIndex li small,
+.placeIndex li small {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+}
+
+.countryIndex li strong,
+.placeIndex li strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.placeIndex nav {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.placeIndex nav button {
+  min-height: 36px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--travel-line);
+  color: var(--travel-paper);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+}
+
+.placeIndex nav button[aria-pressed="true"],
+.placeIndex nav button:hover,
+.placeIndex nav button:focus-visible {
+  color: var(--travel-night);
+  background: var(--travel-amber);
+}
+
+.noPlaces {
+  margin: 1.5rem 0;
+  color: #b4bfcc;
+  line-height: 1.5;
+}
+
+.placeInspector {
+  min-width: 0;
+  margin: 0 1rem 1rem;
+  padding: 1rem;
+  border: 1px solid var(--travel-mint);
+  background: var(--travel-night);
+}
+
+.placeInspector > p,
+.placeInspector h3,
+.placeInspector dl,
+.placeInspector dd,
+.placeInspector ul {
+  margin: 0;
+}
+
+.placeInspector > p,
+.placeInspector dt {
+  color: var(--travel-mint);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.placeInspector h3 {
+  margin-top: 0.35rem;
+  font-size: clamp(1.6rem, 3vw, 2.5rem);
+  line-height: 0.95;
+  overflow-wrap: anywhere;
+}
+
+.placeInspector dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.9rem;
+  border-block: 1px solid var(--travel-line);
+}
+
+.placeInspector dl > div {
+  padding: 0.65rem 0;
+}
+
+.placeInspector dl > div + div {
+  padding-left: 0.65rem;
+  border-left: 1px solid var(--travel-line);
+}
+
+.placeInspector dd {
+  margin-top: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+}
+
+.placeInspector ul {
+  padding: 0;
+  list-style: none;
+}
+
+.placeInspector li + li {
+  border-top: 1px solid var(--travel-line);
+}
+
+.placeInspector a {
+  display: flex;
+  min-height: 44px;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  color: var(--travel-paper);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.tripIndex {
+  min-width: 0;
+  padding: clamp(3rem, 7vw, 7rem) 0 0;
+}
+
+.tripIndex > header {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr);
+  gap: 1rem 3rem;
+  align-items: end;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid currentColor;
+}
+
+.tripIndex > header p,
+.tripIndex > header h2 {
+  margin: 0;
+}
+
+.tripIndex > header p {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tripIndex > header h2 {
+  font-size: clamp(2rem, 5vw, 4.8rem);
+  font-variation-settings: "CASL" 0.35, "wght" 720;
+  letter-spacing: -0.055em;
+  line-height: 0.92;
+}
+
+.tripGrid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid currentColor;
+  border-left: 1px solid currentColor;
+}
+
+.tripCard {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(8rem, 0.45fr) minmax(0, 1fr);
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+}
+
+.tripCard picture,
+.tripFallback {
+  min-width: 0;
+  min-height: 18rem;
+  border-right: 1px solid currentColor;
+  background: var(--travel-night);
+  overflow: hidden;
+}
+
+.tripCard img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tripFallback {
+  position: relative;
+  display: grid;
+  place-content: center;
+  color: var(--travel-paper);
+  text-align: center;
+}
+
+.tripFallback span {
+  font-family: var(--font-mono);
+  font-size: clamp(1.2rem, 3vw, 2.2rem);
+  letter-spacing: 0.12em;
+}
+
+.tripFallback i {
+  position: absolute;
+  inset: 18% 15%;
+  border: 1px solid var(--travel-mint);
+  border-radius: 50%;
+}
+
+.tripFallback i + i {
+  inset: 35% 8%;
+}
+
+.tripCard > div {
+  min-width: 0;
+  padding: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+.tripCard > div > p:first-child {
+  display: flex;
+  min-width: 0;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin: 0 0 1.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+
+.tripCard h3 {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2.8rem);
+  font-variation-settings: "CASL" 0.3, "wght" 710;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+}
+
+.tripCard h3 + p {
+  margin: 0.8rem 0 1rem;
+  line-height: 1.5;
+}
+
+.tripCard ul {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.6rem;
+  padding: 0;
+  margin: 0 0 1.35rem;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+
+.tripCard li + li::before {
+  margin-right: 0.6rem;
+  content: "·";
+}
+
+.tripCard a,
+.unavailable a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: currentColor;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 720;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.worldReset {
+  min-height: 44px;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid currentColor;
+  color: currentColor;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.unavailable {
+  min-width: 0;
+  padding: clamp(2rem, 6vw, 6rem);
+  border: 1px solid currentColor;
+  background:
+    linear-gradient(90deg, transparent 49.8%, currentColor 50%, transparent 50.2%),
+    linear-gradient(transparent 49.8%, currentColor 50%, transparent 50.2%);
+  background-size: 5rem 5rem;
+}
+
+.unavailable p,
+.unavailable span {
+  font-family: var(--font-mono);
+}
+
+.unavailable p {
+  margin: 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.unavailable h2 {
+  max-width: 10ch;
+  margin: 0.8rem 0;
+  font-size: clamp(3rem, 8vw, 7rem);
+  letter-spacing: -0.07em;
+  line-height: 0.85;
+}
+
+.unavailable span {
+  display: block;
+  max-width: 44rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 1050px) {
+  .mapLayout,
+  .tripGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .globePanel {
+    border-right: 0;
+    border-bottom: 1px solid var(--travel-line);
+  }
+
+  .directory {
+    min-height: 0;
+  }
+
+  .countryIndex ol,
+  .placeIndex ol {
+    max-height: 22rem;
+  }
+
+  .tripCard {
+    grid-template-columns: minmax(9rem, 0.35fr) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .consoleHeader,
+  .tripIndex > header {
+    grid-template-columns: 1fr;
+  }
+
+  .consoleHeader dl {
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .consoleHeader dl > div {
+    min-width: 0;
+    padding-inline: 0.5rem;
+  }
+
+  .globeFrame {
+    aspect-ratio: 1 / 1;
+  }
+
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tripCard {
+    grid-template-columns: 1fr;
+  }
+
+  .tripCard picture,
+  .tripFallback {
+    min-height: 14rem;
+    border-right: 0;
+    border-bottom: 1px solid currentColor;
+  }
+}
+
+@media (max-width: 360px) {
+  .consoleHeader dl {
+    grid-template-columns: 1fr;
+  }
+
+  .consoleHeader dl > div + div {
+    border-top: 1px solid var(--travel-line);
+    border-left: 0;
+  }
+
+  .legend {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .globeHint {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .console,
+  .consoleHeader,
+  .directory,
+  .unavailable,
+  .tripFallback {
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .globeFrame::after,
+  .console::before {
+    display: none;
+  }
+
+  .legend i {
+    background: Canvas;
+  }
+}

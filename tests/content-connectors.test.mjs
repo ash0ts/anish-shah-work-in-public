@@ -1391,6 +1391,20 @@ async function encryptedHardcoverCredential(key) {
   );
 }
 
+async function encryptedDiscogsCredential(key) {
+  return encryptCredential(
+    {
+      kind: "oauth1",
+      consumerKey: "repository-consumer-key",
+      consumerSecret: "repository-consumer-secret",
+      accessToken: "repository-access-token",
+      accessTokenSecret: "repository-access-secret",
+    },
+    key,
+    "discogs",
+  );
+}
+
 async function encryptedMyAnimeListOAuthCredential(
   key,
   overrides = {},
@@ -1572,7 +1586,7 @@ test("public snapshot rejects storage when no safe row exists", async () => {
   });
 });
 
-test("automatic refresh is throttled within the twelve-hour window", async () => {
+test("retired automatic refresh triggers cannot issue provider requests", async () => {
   const database = new FakeD1({
     runs: [
       {
@@ -1592,6 +1606,16 @@ test("automatic refresh is throttled within the twelve-hour window", async () =>
     }, () => refreshConnector("myanimelist", "stale_revalidate", null)),
   );
   assert.deepEqual(result, { status: "not_due", provider: "myanimelist" });
+  const schemaUpgrade = await withRuntimeBindings({ DB: database }, () =>
+    withFetch(async () => {
+      fetchCalls += 1;
+      return jsonResponse({ data: [] });
+    }, () => refreshConnector("myanimelist", "schema_upgrade", null)),
+  );
+  assert.deepEqual(schemaUpgrade, {
+    status: "not_due",
+    provider: "myanimelist",
+  });
   assert.equal(fetchCalls, 0);
 });
 
@@ -1938,6 +1962,76 @@ test("Hardcover provider failures preserve the last public snapshot", async (con
       );
     });
   }
+});
+
+test("Discogs rate limiting preserves the last accepted catalog row", async () => {
+  const key = Buffer.alloc(32, 43).toString("base64");
+  const credential = await encryptedDiscogsCredential(key);
+  const fetchedAt = new Date(
+    Date.now() - 24 * 60 * 60 * 1_000,
+  ).toISOString();
+  const freshUntil = new Date(
+    Date.parse(fetchedAt) + 4 * 60 * 60 * 1_000,
+  ).toISOString();
+  const priorSnapshot = {
+    id: "discogs-last-known-good",
+    provider: "discogs",
+    status: "ready",
+    publicPayloadJson: JSON.stringify({
+      provider: "discogs",
+      snapshotVersion: 1,
+      profileUrl: "https://www.discogs.com/user/example/collection",
+      coverage: "Physical releases returned from the public Discogs collection",
+      totals: { physicalItems: 0, distinctReleases: 0 },
+      formats: [
+        { label: "Box set", count: 0 },
+        { label: "Vinyl", count: 0 },
+        { label: "CD", count: 0 },
+        { label: "Cassette", count: 0 },
+        { label: "Other", count: 0 },
+      ],
+      decades: [],
+      formatDecadeMatrix: [],
+      library: [],
+      syncedAt: fetchedAt,
+      freshUntil,
+    }),
+    fetchedAt,
+    freshUntil,
+    itemCount: 0,
+  };
+  const database = new FakeD1({
+    credentials: { discogs: credential },
+    snapshots: [priorSnapshot],
+  });
+
+  await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(
+        async () =>
+          jsonResponse(
+            { message: "rate limited" },
+            { status: 429, headers: { "retry-after": "120" } },
+          ),
+        async () => {
+          const refresh = await refreshConnector(
+            "discogs",
+            "manual",
+            "anish@example.com",
+          );
+          assert.equal(refresh.status, "failed");
+          assert.equal(refresh.code, "rate_limited");
+          assert.equal(database.snapshots.length, 1);
+          assert.equal(database.snapshots[0].id, priorSnapshot.id);
+          assert(
+            !database.statementLog.some(({ sql }) =>
+              sql.includes("INSERT INTO connector_snapshots"),
+            ),
+          );
+        },
+      ),
+  );
 });
 
 test("MyAnimeList refreshes once after API 401 and retries with the new token", async () => {

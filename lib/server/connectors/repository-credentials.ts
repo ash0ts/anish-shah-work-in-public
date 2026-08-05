@@ -5,7 +5,10 @@ import {
   type EncryptedCredential,
 } from "../credential-crypto";
 import { normalizeHardcoverAuthorization } from "./hardcover";
-import { DISCOGS_PRESENTATION_SETTING_KEY } from "./discogs-presentation";
+import {
+  DISCOGS_EXTENDED_DISPLAY_APPROVAL_SETTING_KEY,
+  DISCOGS_PRESENTATION_SETTING_KEY,
+} from "./discogs-presentation";
 import { DISCOGS_RETRY_MAINTENANCE_KEY } from "./discogs-retry";
 import { normalizeMyAnimeListAccessToken } from "./myanimelist";
 import { databaseOrNull } from "./repository-primitives";
@@ -163,6 +166,13 @@ export async function deleteConnectorCredential(
                 ? SPOTIFY_PRESENTATION_SETTING_KEY
                 : DISCOGS_PRESENTATION_SETTING_KEY,
             ),
+        ]
+      : []),
+    ...(provider === "discogs"
+      ? [
+          database
+            .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
+            .bind(DISCOGS_EXTENDED_DISPLAY_APPROVAL_SETTING_KEY),
         ]
       : []),
     ...(provider === "discogs"

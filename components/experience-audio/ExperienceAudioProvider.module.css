@@ -1,0 +1,89 @@
+.control {
+  z-index: 1180;
+  display: grid;
+  min-width: 0;
+  gap: 0.3rem;
+  justify-items: end;
+}
+
+.globalControl {
+  position: fixed;
+  right: max(0.75rem, env(safe-area-inset-right));
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.embeddedControl {
+  position: static;
+  z-index: auto;
+}
+
+.control button {
+  min-width: 6.8rem;
+  min-height: 44px;
+  padding: 0.62rem 0.8rem;
+  border: 1px solid #55e4d0;
+  color: #eee4cf;
+  background: rgb(5 9 18 / 94%);
+  box-shadow: 0 0 0 0.2rem rgb(5 9 18 / 64%);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.control button:hover,
+.control button:focus-visible,
+.control button[aria-pressed="true"] {
+  color: #07101b;
+  background: #55e4d0;
+}
+
+.control button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.shortLabel {
+  display: none;
+}
+
+.status {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .control button,
+  .control button[aria-pressed="true"] {
+    border-color: ButtonText;
+    color: ButtonText;
+    background: ButtonFace;
+    forced-color-adjust: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .control button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .longLabel {
+    display: none;
+  }
+
+  .shortLabel {
+    display: inline;
+  }
+}

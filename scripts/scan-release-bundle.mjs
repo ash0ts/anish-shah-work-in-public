@@ -34,7 +34,7 @@ const forbidden = [
   { label: "private key material", pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
   {
     label: "literal connector secret assignment",
-    pattern: /(?:CONNECTOR_ENCRYPTION_KEY|MAL_CLIENT_SECRET|STEAM_API_KEY|HARDCOVER_API_KEY)\s*=\s*[^\s"']+/i,
+    pattern: /(?:CONNECTOR_ENCRYPTION_KEY|MAL_CLIENT_SECRET|STEAM_API_KEY|HARDCOVER_API_KEY|SIMULATION_SESSION_HMAC_KEY|SIMULATION_GATEWAY_TOKEN|SIMULATION_ANTHROPIC_API_KEY|SIMULATION_LOCAL_ANTHROPIC_API_KEY)\s*=\s*[^\s"']+/i,
   },
 ];
 

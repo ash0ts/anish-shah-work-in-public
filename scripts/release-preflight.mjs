@@ -7,6 +7,7 @@ import {
   expectedPublicReleaseConfig,
 } from "./lib/release-config-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
+import { readPackageReleaseVersion } from "./lib/release-version.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -55,6 +56,7 @@ if (contentCheck.status !== 0) {
 }
 
 const configPath = path.join(root, "dist/server/wrangler.public.json");
+const packageVersion = await readPackageReleaseVersion(root);
 const config = JSON.parse(await readFile(configPath, "utf8"));
 const bundle = JSON.parse(
   await readFile(
@@ -67,6 +69,7 @@ assertPublicReleaseConfig(
   expectedPublicReleaseConfig(process.env, {
     head,
     contentVersion: bundle.contentVersion,
+    packageVersion,
   }),
 );
 const { manifest: deployableArtifacts } =
@@ -79,6 +82,7 @@ console.log(
       commitSha: head,
       branch,
       contentVersion: bundle.contentVersion,
+      releaseVersion: packageVersion,
       workerName: config.name,
       databaseName: config.d1_databases?.[0]?.database_name ?? null,
       deployableArtifactSetSha256: deployableArtifacts.artifactSetSha256,

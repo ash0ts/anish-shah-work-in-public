@@ -2,6 +2,8 @@
 
 import { animate } from "animejs";
 import { usePathname, useRouter } from "next/navigation";
+import { useExperienceAudio } from "@/components/experience-audio/ExperienceAudioProvider";
+import { SITE_COPY } from "@/lib/copy";
 import {
   Component,
   createContext,
@@ -16,7 +18,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { isRoomObjectId, ROOM_OBJECT_BY_ID } from "./room-registry";
+import {
+  isRoomObjectId,
+  ROOM_OBJECT_BY_ID,
+  ROOM_OBJECTS,
+} from "./room-registry";
 import {
   previewFixtureFromSearch,
   routeWithPreviewFixture,
@@ -33,6 +39,7 @@ import type {
 } from "./room-types";
 
 type RoomExperienceContextValue = RoomExperienceState & {
+  cancelSimulationReveal(): void;
   enterRoom(): void;
   exitRoom(): void;
   focusObject(id: RoomObjectId | null): void;
@@ -43,12 +50,18 @@ type RoomExperienceContextValue = RoomExperienceState & {
   selectObject(id: RoomObjectId): void;
   notifyRuntimeMounted(): void;
   objectRouteActive: boolean;
+  enabledObjectIds: readonly RoomObjectId[];
+  revealSimulation(): void;
+  simulationEnabled: boolean;
+  simulationTransitioning: boolean;
   statusMessage: string;
 };
 
 type ObjectRouteOrigin = "direct" | "room";
 
 const ROOM_HISTORY_ORIGIN_KEY = "__anishRoomOrigin";
+const ROOM_HISTORY_DEPTH_KEY = "__anishRoomDepth";
+const ROOM_HISTORY_PATH_KEY = "__anishRoomPath";
 
 const RoomExperienceContext = createContext<RoomExperienceContextValue | null>(
   null,
@@ -106,19 +119,19 @@ function LazyRoomFallback({ onLeave }: { onLeave: () => void }) {
     >
       <picture>
         <source
-          srcSet="/assets/play/my-room-2001-neutral.50f82f186444.avif"
+          srcSet="/assets/play/my-room-2001-neutral.01c6f825bbc1.avif"
           type="image/avif"
         />
         <img
           alt=""
           decoding="async"
           height="1000"
-          src="/assets/play/my-room-2001-neutral.af662c65ec99.webp"
+          src="/assets/play/my-room-2001-neutral.00d2bc80d8dc.webp"
           width="1600"
         />
       </picture>
       <div>
-        <p role="status">Opening the room…</p>
+        <p role="status">{SITE_COPY.play["room-opening-status"]}</p>
         <button onClick={onLeave} ref={leaveRef} type="button">
           Leave room
         </button>
@@ -151,9 +164,11 @@ function ReturnSignal({ objectId }: { objectId: RoomObjectId }) {
           <i />
         </div>
         <div className={styles.returnSignalCopy}>
-          <p>Return channel · {object.object}</p>
-          <h2>Rewinding to My Room…</h2>
-          <span>{object.label} stays selected while the room signal returns.</span>
+          <p>
+            {object.object} · {SITE_COPY.play["room-return-eyebrow"]}
+          </p>
+          <h2>{SITE_COPY.play["room-return-title"]}</h2>
+          <span>{SITE_COPY.play["room-return-summary"]}</span>
         </div>
         <div aria-hidden="true" className={styles.returnSignalTrack}>
           <i />
@@ -163,7 +178,73 @@ function ReturnSignal({ objectId }: { objectId: RoomObjectId }) {
   );
 }
 
+function SimulationRevealSignal({
+  onCancel,
+  reducedMotion,
+}: {
+  onCancel: () => void;
+  reducedMotion: boolean;
+}) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      cancelRef.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const containFocus = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Tab") return;
+    event.preventDefault();
+    cancelRef.current?.focus({ preventScroll: true });
+  };
+
+  return (
+    <section
+      aria-label="Revealing the Anish simulation"
+      aria-modal="true"
+      className={styles.simulationReveal}
+      data-reduced-motion={reducedMotion || undefined}
+      data-simulation-reveal-overlay
+      onKeyDown={containFocus}
+      role="dialog"
+    >
+      <div aria-hidden="true" className={styles.simulationField}>
+        <div className={styles.memoryWafer} data-simulation-memory-wafer>
+          <i />
+          <i />
+          <i />
+          <i />
+          <span>ROOM / MEMORY</span>
+        </div>
+        <div className={styles.simulationRobot} data-simulation-robot>
+          <i className={styles.robotAntenna} />
+          <div className={styles.robotHead}>
+            <i />
+            <i />
+            <span />
+          </div>
+          <div className={styles.robotBody}>
+            <b>ME</b>
+            <span>SIM</span>
+          </div>
+        </div>
+      </div>
+      <div className={styles.simulationCopy}>
+        <p>{SITE_COPY.simulation["transition-eyebrow"]}</p>
+        <h2>{SITE_COPY.simulation["transition-title"]}</h2>
+        <span role="status">{SITE_COPY.simulation["transition-summary"]}</span>
+        <button onClick={onCancel} ref={cancelRef} type="button">
+          {SITE_COPY.simulation["transition-cancel-cta"]}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function routeObject(pathname: string): RoomObjectId | null {
+  if (/^\/play\/travel\/trips\/[^/]+\/?$/.test(pathname)) return "travel";
   const match = /^\/play\/([^/]+)\/?$/.exec(pathname);
   return match && isRoomObjectId(match[1]) ? match[1] : null;
 }
@@ -173,13 +254,28 @@ function historyRoomObject(): RoomObjectId | null {
   return typeof value === "string" && isRoomObjectId(value) ? value : null;
 }
 
-function markRoomHistoryEntry(id: RoomObjectId) {
+function historyRoomDepth(): number | null {
+  const value = window.history.state?.[ROOM_HISTORY_DEPTH_KEY];
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function historyRoomPath(): string | null {
+  const value = window.history.state?.[ROOM_HISTORY_PATH_KEY];
+  return typeof value === "string" ? value : null;
+}
+
+function markRoomHistoryEntry(id: RoomObjectId, depth = 1) {
   const currentState =
     window.history.state && typeof window.history.state === "object"
       ? window.history.state
       : {};
   window.history.replaceState(
-    { ...currentState, [ROOM_HISTORY_ORIGIN_KEY]: id },
+    {
+      ...currentState,
+      [ROOM_HISTORY_ORIGIN_KEY]: id,
+      [ROOM_HISTORY_DEPTH_KEY]: depth,
+      [ROOM_HISTORY_PATH_KEY]: window.location.pathname,
+    },
     "",
     window.location.href,
   );
@@ -191,15 +287,28 @@ function clearRoomHistoryEntry() {
   if (!(ROOM_HISTORY_ORIGIN_KEY in currentState)) return;
   const nextState = { ...currentState };
   delete nextState[ROOM_HISTORY_ORIGIN_KEY];
+  delete nextState[ROOM_HISTORY_DEPTH_KEY];
+  delete nextState[ROOM_HISTORY_PATH_KEY];
   window.history.replaceState(nextState, "", window.location.href);
 }
 
-export function RoomExperienceProvider({ children }: { children: ReactNode }) {
+export function RoomExperienceProvider({
+  children,
+  simulationEnabled,
+  travelEnabled = false,
+}: {
+  children: ReactNode;
+  simulationEnabled: boolean;
+  travelEnabled?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
+  const { playCue } = useExperienceAudio();
   const objectRouteActive = routeObject(pathname) !== null;
   const [state, dispatch] = useReducer(roomExperienceReducer, INITIAL_ROOM_STATE);
   const [statusMessage, setStatusMessage] = useState("");
+  const [simulationTransitioning, setSimulationTransitioning] = useState(false);
+  const [simulationReducedMotion, setSimulationReducedMotion] = useState(false);
   const transitionEpoch = useRef(0);
   const transitionAnimations = useRef<Array<ReturnType<typeof animate>>>([]);
   const transitionFrame = useRef<number | null>(null);
@@ -207,11 +316,19 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
   const pendingFocus = useRef<RoomObjectId | null>(null);
   const pendingRoomNavigation = useRef<RoomObjectId | null>(null);
   const activeObjectRouteOrigin = useRef<ObjectRouteOrigin | null>(null);
+  const activeObjectRouteDepth = useRef(0);
   const previousRouteObject = useRef<RoomObjectId | null>(routeObject(pathname));
   const focusRequestEpoch = useRef(0);
   const focusRequestCleanup = useRef<() => void>(() => undefined);
   const announcementEpoch = useRef(0);
   const roomEntered = useRef(state.entered);
+  const enabledObjectIds = useMemo<readonly RoomObjectId[]>(
+    () =>
+      travelEnabled
+        ? ROOM_OBJECTS.map(({ id }) => id)
+        : ROOM_OBJECTS.filter(({ id }) => id !== "travel").map(({ id }) => id),
+    [travelEnabled],
+  );
 
   const announce = useCallback((message: string) => {
     const epoch = ++announcementEpoch.current;
@@ -233,6 +350,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       cancelled = true;
       if (frame !== null) cancelAnimationFrame(frame);
+      window.removeEventListener("focusin", cancelForFocusChange, true);
       window.removeEventListener("keydown", cancelForUserInput, true);
       window.removeEventListener("pointerdown", cancelForUserInput, true);
       if (focusRequestCleanup.current === cleanup) {
@@ -241,7 +359,18 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     };
 
     const cancelForUserInput = () => cleanup();
+    const cancelForFocusChange = (event: FocusEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        candidates.some((selector) => target.matches(selector))
+      ) {
+        return;
+      }
+      cleanup();
+    };
     focusRequestCleanup.current = cleanup;
+    window.addEventListener("focusin", cancelForFocusChange, true);
     window.addEventListener("keydown", cancelForUserInput, true);
     window.addEventListener("pointerdown", cancelForUserInput, true);
 
@@ -298,6 +427,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       "[data-room-stage-shell]",
       "[data-room-screen]",
       "[data-room-object-control]",
+      "[data-room-static-stage]",
     ]) {
       for (const element of document.querySelectorAll<HTMLElement>(selector)) {
         element.style.removeProperty("opacity");
@@ -375,11 +505,29 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     if (activeRouteObject) {
       const pendingRoomEntry =
         pendingRoomNavigation.current === activeRouteObject;
+      const continuingRoomObject =
+        priorRouteObject === activeRouteObject &&
+        activeObjectRouteOrigin.current === "room";
       const enteredFromRoom =
         pendingRoomEntry ||
+        continuingRoomObject ||
         (roomEntered.current && historyRoomObject() === activeRouteObject);
-      if (pendingRoomEntry) markRoomHistoryEntry(activeRouteObject);
-      else if (!enteredFromRoom) clearRoomHistoryEntry();
+      if (enteredFromRoom) {
+        const storedDepth = historyRoomDepth();
+        const storedPathMatches = historyRoomPath() === pathname;
+        const depth = pendingRoomEntry
+          ? 1
+          : storedPathMatches && storedDepth
+            ? storedDepth
+            : Math.max(1, activeObjectRouteDepth.current + 1);
+        activeObjectRouteDepth.current = depth;
+        if (pendingRoomEntry || !storedPathMatches) {
+          markRoomHistoryEntry(activeRouteObject, depth);
+        }
+      } else {
+        activeObjectRouteDepth.current = 0;
+        clearRoomHistoryEntry();
+      }
       activeObjectRouteOrigin.current = enteredFromRoom ? "room" : "direct";
       pendingRoomNavigation.current = null;
       const object = ROOM_OBJECT_BY_ID[activeRouteObject];
@@ -389,6 +537,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     }
 
     activeObjectRouteOrigin.current = null;
+    activeObjectRouteDepth.current = 0;
     if (pathname === "/play" || pathname === "/play/") {
       const target = pendingFocus.current ?? lastInvoker.current;
       if (!target) return;
@@ -441,6 +590,33 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     };
   }, [pathname, state.entered, state.fallbackReason]);
 
+  useEffect(() => {
+    if (!simulationTransitioning) return;
+    const obscured = document.querySelectorAll<HTMLElement>(
+      "[data-room-overview], body > .skip-link, body > header, body > .site-frame > footer",
+    );
+    const previousAttributes = [...obscured].map((element) => ({
+      element,
+      inert: element.hasAttribute("inert"),
+      ariaHidden: element.getAttribute("aria-hidden"),
+    }));
+    const previousOverflow = document.documentElement.style.overflow;
+    for (const element of obscured) {
+      element.setAttribute("inert", "");
+      element.setAttribute("aria-hidden", "true");
+    }
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = previousOverflow;
+      for (const { element, inert, ariaHidden } of previousAttributes) {
+        if (inert) element.setAttribute("inert", "");
+        else element.removeAttribute("inert");
+        if (ariaHidden === null) element.removeAttribute("aria-hidden");
+        else element.setAttribute("aria-hidden", ariaHidden);
+      }
+    };
+  }, [simulationTransitioning]);
+
   useEffect(() => cancelTransition, [cancelTransition]);
 
   const selectObject = useCallback(
@@ -451,9 +627,8 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       lastInvoker.current = id;
       pendingRoomNavigation.current = id;
       const object = ROOM_OBJECT_BY_ID[id];
-      announce(
-        `Selected ${object.label}. Moving toward the ${object.object.toLowerCase()}.`,
-      );
+      playCue("interface-confirm");
+      announce(`Opening ${object.label} in the ${object.object.toLowerCase()}.`);
       dispatch({ type: "select", id });
       const reduced = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
@@ -527,6 +702,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       announce,
       cancelTransition,
       guaranteeTransitionCompletion,
+      playCue,
       router,
       trackAnimation,
     ],
@@ -539,17 +715,21 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     const target = activeRouteObject ?? lastInvoker.current ?? state.focusedId;
     if (target) pendingFocus.current = target;
     const returnWithBrowserHistory = activeObjectRouteOrigin.current === "room";
+    const roomHistoryDepth = activeObjectRouteDepth.current;
     announce(
       target
-        ? `Rewinding to My Room. ${ROOM_OBJECT_BY_ID[target].label} will remain selected.`
-        : "Rewinding to My Room.",
+        ? `Returning to the room. ${ROOM_OBJECT_BY_ID[target].label} remains selected.`
+        : "Returning to the room.",
     );
+    playCue("interface-return");
     dispatch({ type: "return" });
     let navigated = false;
     const navigate = () => {
       if (epoch !== transitionEpoch.current || navigated) return;
       navigated = true;
-      if (returnWithBrowserHistory) router.back();
+      if (returnWithBrowserHistory && roomHistoryDepth > 1) {
+        window.history.go(-roomHistoryDepth);
+      } else if (returnWithBrowserHistory) router.back();
       else {
         router.push(
           routeWithPreviewFixture(
@@ -567,6 +747,7 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     cancelTransition,
     focusAfterPaint,
     pathname,
+    playCue,
     router,
     state.focusedId,
   ]);
@@ -577,14 +758,14 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       cancelTransition();
       dispatch({ type: "fallback", reason });
       announce(
-        "The interactive room is unavailable. The six collection links remain available.",
+        `The interactive room is unavailable. The ${enabledObjectIds.length} object links remain available.`,
       );
       const target = lastInvoker.current ?? state.focusedId ?? "watch";
       focusAfterPaint(
         `[data-room-overview] [data-room-object-link="${target}"]`,
       );
     },
-    [announce, cancelTransition, focusAfterPaint, state.focusedId],
+    [announce, cancelTransition, enabledObjectIds.length, focusAfterPaint, state.focusedId],
   );
 
   const notifyRuntimeMounted = useCallback(() => {
@@ -594,9 +775,120 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
 
   const enterRoom = useCallback(() => {
     if (sessionRoomFailure) return;
+    playCue("room-enter");
     announce("Opening the interactive room.");
     dispatch({ type: "enter" });
-  }, [announce]);
+  }, [announce, playCue]);
+
+  const cancelSimulationReveal = useCallback(() => {
+    if (!simulationTransitioning) return;
+    cancelTransition();
+    setSimulationTransitioning(false);
+    announce("Simulation reveal cancelled. The room is ready.");
+    focusAfterPaint([
+      "[data-room-runtime] [data-reveal-simulation]",
+      "[data-room-overview] [data-reveal-simulation]",
+    ]);
+  }, [
+    announce,
+    cancelTransition,
+    focusAfterPaint,
+    simulationTransitioning,
+  ]);
+
+  const revealSimulation = useCallback(() => {
+    if (!simulationEnabled || simulationTransitioning) return;
+    cancelTransition();
+    const epoch = transitionEpoch.current;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setSimulationReducedMotion(reduced);
+    setSimulationTransitioning(true);
+    announce(
+      "Revealing the Anish simulation. Compressing the room into a memory wafer.",
+    );
+    playCue("simulation-reveal");
+    router.prefetch("/simulation");
+
+    let navigated = false;
+    const navigate = () => {
+      if (epoch !== transitionEpoch.current || navigated) return;
+      navigated = true;
+      router.push("/simulation", { scroll: false });
+    };
+
+    requestAnimationFrame(() => {
+      if (epoch !== transitionEpoch.current) return;
+      if (reduced) {
+        guaranteeTransitionCompletion(240, epoch, navigate);
+        return;
+      }
+      const surface = document.querySelector<HTMLElement>(
+        state.entered
+          ? "[data-room-stage-shell]"
+          : "[data-room-static-stage]",
+      );
+      const overlay = document.querySelector<HTMLElement>(
+        "[data-simulation-reveal-overlay]",
+      );
+      const robot = document.querySelector<HTMLElement>(
+        "[data-simulation-robot]",
+      );
+      const wafer = document.querySelector<HTMLElement>(
+        "[data-simulation-memory-wafer]",
+      );
+      if (!surface || !overlay || !robot || !wafer) {
+        navigate();
+        return;
+      }
+
+      trackAnimation(
+        animate(overlay, {
+          opacity: [0, 1],
+          duration: 180,
+          ease: "out(3)",
+        }),
+      );
+      trackAnimation(
+        animate(robot, {
+          scale: [0.72, 1],
+          translateY: [36, 0],
+          duration: 440,
+          ease: "out(4)",
+        }),
+      );
+      trackAnimation(
+        animate(surface, {
+          scaleX: [1, 0.76, 0.18],
+          scaleY: [1, 1.08, 0.045],
+          rotate: [0, -2, 7],
+          translateY: [0, -12, 42],
+          opacity: [1, 0.96, 0],
+          duration: 760,
+          ease: "inOut(4)",
+        }),
+      );
+      trackAnimation(
+        animate(wafer, {
+          opacity: [0, 1, 1, 0],
+          scale: [0.2, 1.08, 0.72, 0.12],
+          translateX: [-90, -22, 48, 112],
+          duration: 880,
+          ease: "inOut(3)",
+        }),
+      );
+      guaranteeTransitionCompletion(940, epoch, navigate);
+    });
+  }, [
+    announce,
+    cancelTransition,
+    guaranteeTransitionCompletion,
+    playCue,
+    router,
+    simulationEnabled,
+    simulationTransitioning,
+    state.entered,
+    trackAnimation,
+  ]);
 
   const focusObject = useCallback((id: RoomObjectId | null) => {
     dispatch({ type: "focus", id });
@@ -620,6 +912,11 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      if (simulationTransitioning) {
+        event.preventDefault();
+        cancelSimulationReveal();
+        return;
+      }
       if (routeObject(pathname)) {
         event.preventDefault();
         returnToRoom();
@@ -630,33 +927,50 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [exitRoom, pathname, returnToRoom, state.entered]);
+  }, [
+    cancelSimulationReveal,
+    exitRoom,
+    pathname,
+    returnToRoom,
+    simulationTransitioning,
+    state.entered,
+  ]);
 
   const value = useMemo<RoomExperienceContextValue>(
     () => ({
       ...state,
+      cancelSimulationReveal,
       enterRoom,
       exitRoom,
       focusObject,
       notifyRuntimeMounted,
       objectRouteActive,
+      enabledObjectIds,
+      revealSimulation,
       resetView,
       returnToRoom,
       rotate,
       setFallback,
       selectObject,
+      simulationEnabled,
+      simulationTransitioning,
       statusMessage,
     }),
     [
+      cancelSimulationReveal,
       enterRoom,
       exitRoom,
       focusObject,
       notifyRuntimeMounted,
       objectRouteActive,
+      enabledObjectIds,
+      revealSimulation,
       resetView,
       returnToRoom,
       rotate,
       selectObject,
+      simulationEnabled,
+      simulationTransitioning,
       setFallback,
       state,
       statusMessage,
@@ -690,6 +1004,12 @@ export function RoomExperienceProvider({ children }: { children: ReactNode }) {
       {state.phase === "returning" && objectRouteActive ? (
         <ReturnSignal
           objectId={routeObject(pathname) ?? state.focusedId ?? "watch"}
+        />
+      ) : null}
+      {simulationTransitioning ? (
+        <SimulationRevealSignal
+          onCancel={cancelSimulationReveal}
+          reducedMotion={simulationReducedMotion}
         />
       ) : null}
       {children}

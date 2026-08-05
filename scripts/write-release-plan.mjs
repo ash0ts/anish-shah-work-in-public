@@ -4,12 +4,21 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  assertActiveActionsWorkflow,
   assertRequiredValidationRuns,
   assertVerifiedActionsRun,
   githubRepositoryFromRemoteUrl,
   publicationCheckpointForPlan,
+  REQUIRED_VALIDATION_RUNS,
+  simulationReleaseRecord,
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
+import {
+  RELEASE_BUILD_CHECKPOINT_PATH,
+  verifyReleaseBuildCheckpoint,
+} from "./lib/release-build-checkpoint.mjs";
+import { buildCopyDeck } from "./lib/copy-deck.mjs";
+import { readPackageReleaseVersion } from "./lib/release-version.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -98,12 +107,28 @@ const d1Bookmark = required("RELEASE_D1_BOOKMARK");
 if (!/^[A-Za-z0-9._~+/=-]{8,512}$/.test(d1Bookmark)) {
   throw new Error("RELEASE_D1_BOOKMARK contains unexpected characters.");
 }
-const validationRequirements = [
-  { kind: "validate", env: "RELEASE_VALIDATION_URL", name: "Validate" },
-  { kind: "gitleaks", env: "RELEASE_GITLEAKS_URL", name: "Gitleaks" },
-  { kind: "codeql", env: "RELEASE_CODEQL_URL", name: "CodeQL" },
-];
-const validationRuns = validationRequirements.map(({ kind, env, name }) => {
+const validationEnvironmentNames = new Map([
+  ["validate", "RELEASE_VALIDATION_URL"],
+  ["gitleaks", "RELEASE_GITLEAKS_URL"],
+  ["codeql", "RELEASE_CODEQL_URL"],
+  ["browser", "RELEASE_BROWSER_URL"],
+]);
+const validationRequirements = REQUIRED_VALIDATION_RUNS.map(({
+  kind,
+  name,
+  workflowPath,
+}) => ({
+  kind,
+  name,
+  workflowPath,
+  env: validationEnvironmentNames.get(kind),
+}));
+const validationRuns = validationRequirements.map(({
+  kind,
+  env,
+  name,
+  workflowPath,
+}) => {
   const url = new URL(required(env));
   if (
     url.protocol !== "https:" ||
@@ -125,7 +150,7 @@ const validationRuns = validationRequirements.map(({ kind, env, name }) => {
       "--repo",
       `${repositoryOwner}/${repositoryName}`,
       "--json",
-      "headSha,conclusion,url,name",
+      "headSha,conclusion,url,name,event,workflowDatabaseId",
     ],
     { cwd: root, encoding: "utf8" },
   );
@@ -143,12 +168,42 @@ const validationRuns = validationRequirements.map(({ kind, env, name }) => {
     url: url.toString(),
     name,
   });
+  if (
+    !Number.isSafeInteger(evidence.workflowDatabaseId) ||
+    evidence.workflowDatabaseId < 1
+  ) {
+    throw new Error(`${name} evidence has no valid workflow identity.`);
+  }
+  const workflowResult = spawnSync(
+    "gh",
+    [
+      "api",
+      `repos/${repositoryOwner}/${repositoryName}/actions/workflows/${evidence.workflowDatabaseId}`,
+    ],
+    { cwd: root, encoding: "utf8" },
+  );
+  if (workflowResult.error || workflowResult.status !== 0) {
+    throw new Error(`${name} workflow identity could not be verified.`);
+  }
+  let workflow;
+  try {
+    workflow = JSON.parse(workflowResult.stdout);
+  } catch {
+    throw new Error(`${name} workflow identity was unreadable.`);
+  }
+  const workflowIdentity = assertActiveActionsWorkflow(workflow, {
+    workflowDatabaseId: evidence.workflowDatabaseId,
+    name,
+    workflowPath,
+  });
   return {
     kind,
     name,
     headSha: evidence.headSha,
     conclusion: evidence.conclusion,
     url: evidence.url,
+    event: evidence.event,
+    ...workflowIdentity,
   };
 });
 assertRequiredValidationRuns(validationRuns, head, repository);
@@ -172,20 +227,40 @@ if (
 const [
   contentAttestationBytes,
   releaseConfigBytes,
+  simulationManifestBytes,
   deployableArtifactResult,
+  releaseBuildCheckpoint,
+  releaseBuildCheckpointBytes,
   ...migrationBytes
 ] = await Promise.all([
   readFile(path.join(root, "content/public/anish-content.public.v1.attestation.json")),
   readFile(path.join(root, "dist/server/wrangler.public.json")),
+  readFile(path.join(root, "content/presentation/simulation.v1.json")),
   readVerifiedDeployableArtifactManifest(root),
+  verifyReleaseBuildCheckpoint(root),
+  readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
   ...migrationList.map((name) => readFile(path.join(root, "drizzle", name))),
 ]);
 const contentAttestation = JSON.parse(contentAttestationBytes.toString("utf8"));
+const releaseConfig = JSON.parse(releaseConfigBytes.toString("utf8"));
+const simulationManifest = JSON.parse(simulationManifestBytes.toString("utf8"));
+const travelAtlasMode = releaseConfig.vars?.TRAVEL_ATLAS_MODE;
+if (travelAtlasMode !== "disabled" && travelAtlasMode !== "atlas-v1") {
+  throw new Error("The prepared hosted Worker config has no supported Travel mode.");
+}
 const publicContent = contentAttestation.artifacts?.find(
   (artifact) => artifact.path === "content/public/anish-content.public.v1.json",
 );
 if (!publicContent || !/^[a-f0-9]{64}$/.test(publicContent.sha256)) {
   throw new Error("The public-content attestation does not contain a valid bundle hash.");
+}
+if (
+  releaseBuildCheckpoint.artifactSetSha256 !==
+    deployableArtifactResult.manifest.artifactSetSha256 ||
+  releaseBuildCheckpoint.deployableManifestSha256 !==
+    sha256(deployableArtifactResult.bytes)
+) {
+  throw new Error("The tested release-build checkpoint does not match this deployable artifact set.");
 }
 
 const publicationCheckpoint = publicationCheckpointForPlan({
@@ -196,13 +271,30 @@ const publicationCheckpoint = publicationCheckpointForPlan({
   bootstrapPlanned: process.env.RELEASE_PREDEPLOY_BOOTSTRAP === "1",
   previousVersion,
 });
+const { copyVersion } = await buildCopyDeck(root);
+const releaseVersion = await readPackageReleaseVersion(root);
+if (releaseConfig.vars?.RELEASE_VERSION !== releaseVersion) {
+  throw new Error("The prepared Worker release version does not match package.json.");
+}
+const simulation = simulationReleaseRecord({
+  campaignVersion: simulationManifest.campaignVersion,
+  experienceMode: releaseConfig.vars?.SIMULATION_EXPERIENCE_MODE,
+  aiMode: releaseConfig.vars?.SIMULATION_AI_MODE,
+  provider: releaseConfig.vars?.SIMULATION_PROVIDER,
+  model: releaseConfig.vars?.SIMULATION_MODEL,
+  approvedProviders: process.env.RELEASE_SIMULATION_APPROVED_PROVIDERS,
+  approvalStateDigest: process.env.RELEASE_SIMULATION_APPROVAL_DIGEST,
+});
 
 const record = {
-  schemaVersion: "1.0",
+  schemaVersion: "1.3",
   preparedAt: isoDate(new Date().toISOString(), "preparedAt"),
   commitSha: head,
   repository,
+  releaseVersion,
   contentVersion: contentAttestation.contentVersion,
+  travelAtlasMode,
+  copyVersion,
   publicContentSha256: publicContent.sha256,
   deployableArtifacts: {
     artifactSetSha256:
@@ -210,7 +302,14 @@ const record = {
     fileCount: deployableArtifactResult.manifest.fileCount,
     totalBytes: deployableArtifactResult.manifest.totalBytes,
   },
+  releaseBuildCheckpoint: {
+    sha256: sha256(releaseBuildCheckpointBytes),
+    artifactSetSha256: releaseBuildCheckpoint.artifactSetSha256,
+    deployableManifestSha256:
+      releaseBuildCheckpoint.deployableManifestSha256,
+  },
   publicationCheckpoint,
+  simulation,
   validationRuns,
   previousWorkerVersion: previousVersion,
   d1: {
@@ -223,9 +322,11 @@ const record = {
   checksums: {
     publicContentAttestationSha256: sha256(contentAttestationBytes),
     preparedWorkerConfigSha256: sha256(releaseConfigBytes),
+    simulationCampaignManifestSha256: sha256(simulationManifestBytes),
     deployableArtifactManifestSha256: sha256(
       deployableArtifactResult.bytes,
     ),
+    releaseBuildCheckpointSha256: sha256(releaseBuildCheckpointBytes),
   },
 };
 

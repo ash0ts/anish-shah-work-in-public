@@ -1,59 +1,64 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { expectRoomReady } from "./helpers/room-readiness.mjs";
+import { Object3D, PerspectiveCamera, Vector3 } from "three";
 
-const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 const objects = [
   {
     id: "watch",
     label: "Watch",
     provider: "myanimelist",
-    foundation: "MyAnimeList public signal",
+    foundation: "Channel 11 · MyAnimeList",
     title: "Midnight Broadcast",
   },
   {
     id: "read",
     label: "Read",
     provider: "hardcover",
-    foundation: "Hardcover · Personal circulation desk",
-    title: "Borrowed Shelf",
+    foundation: "Shelf light on · Hardcover",
+    title: "Bedside Shelf",
   },
   {
     id: "listen",
     label: "Listen",
     provider: "spotify",
-    foundation: "Spotify · One returned order at a time",
+    foundation: "Top Tracks · Spotify",
     title: "Pocket Player",
   },
   {
     id: "collect",
     label: "Collect",
     provider: "discogs",
-    foundation: "Discogs · Physical collection",
+    foundation: "Crate 01 · Discogs",
     title: "Crate Archive",
   },
   {
     id: "play",
-    label: "Play",
+    label: "Games",
     provider: "steam",
-    foundation: "Steam · Public library snapshot",
+    foundation: "Desktop 01 · Steam",
     title: "Desktop Library",
   },
   {
     id: "move",
     label: "Move",
     provider: "strava",
-    foundation: "Strava · Consent-gated public feed",
+    foundation: "Cardio feed · Strava",
     title: "Cardio Television",
+  },
+  {
+    id: "travel",
+    label: "Travel",
+    provider: null,
+    foundation: "Travel log · Approximate public geography",
+    title: "Postcard Planet",
   },
 ];
 const directRoutes = objects.map(({ id }) => `/play/${id}`);
 const widths = [320, 390, 768, 1024, 1440, 1920];
-const roomReadyTimeout = 15_000;
 
-async function expectRoomReady(page) {
-  await expect(page.getByText("Room ready", { exact: true })).toBeVisible({
-    timeout: roomReadyTimeout,
-  });
+async function expectPlayOverview(page, options = {}) {
+  await expect(page).toHaveURL((url) => url.pathname === "/play", options);
 }
 
 function runtimeChunkRequests(page) {
@@ -311,25 +316,112 @@ async function settlePaint(page) {
   });
 }
 
+const ROOM_OBJECT_ANCHORS = {
+  watch: { wide: [0.465, 0.35], compact: [0.46, 0.31] },
+  read: { wide: [0.58, 0.37], compact: [0.6, 0.39] },
+  listen: { wide: [0.36, 0.4], compact: [0.36, 0.36] },
+  collect: { wide: [0.22, 0.6], compact: [0.24, 0.6] },
+  play: { wide: [0.52, 0.7], compact: [0.58, 0.69] },
+  move: { wide: [0.86, 0.61], compact: [0.91, 0.58] },
+  travel: { wide: [0.64, 0.48], compact: [0.78, 0.49] },
+};
+const ROOM_ANCHOR_OFFSETS = [
+  [0, 0],
+  [-0.025, 0],
+  [0.025, 0],
+  [0, -0.035],
+  [0, 0.035],
+];
+const ROOM_POINTER_SEARCH_DEADLINE_MS = 12_000;
+
+async function nextAnimationFrame(page) {
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(resolve)),
+  );
+}
+
+function roomPoint(bounds, normalizedX, normalizedY) {
+  return {
+    x: bounds.x + bounds.width * Math.min(0.98, Math.max(0.02, normalizedX)),
+    y: bounds.y + bounds.height * Math.min(0.98, Math.max(0.02, normalizedY)),
+  };
+}
+
+async function stableRoomHit(page, stage, point, expectedId = null) {
+  await page.mouse.move(point.x, point.y);
+  // One frame is enough for each coarse probe. A possible match receives a
+  // second rendered frame before it is accepted, preserving real R3F raycast
+  // coverage without paying two frames for every empty grid coordinate.
+  await nextAnimationFrame(page);
+  const first = await stage.getAttribute("data-room-hovered-object");
+  if (!first || (expectedId && first !== expectedId)) return null;
+  await nextAnimationFrame(page);
+  const second = await stage.getAttribute("data-room-hovered-object");
+  return second === first ? { id: first, ...point } : null;
+}
+
+function likelyRoomPoints(bounds, id) {
+  const anchorSet = ROOM_OBJECT_ANCHORS[id];
+  // The room camera switches to its tighter composition well before the
+  // semantic page becomes mobile-sized. Treat the 1200px regression viewport
+  // as compact so probes follow the projected props after the resize.
+  const anchor = anchorSet?.[bounds.width < 1300 ? "compact" : "wide"];
+  if (!anchor) return [];
+  return ROOM_ANCHOR_OFFSETS.map(([x, y]) =>
+    roomPoint(bounds, anchor[0] + x, anchor[1] + y),
+  );
+}
+
+async function primeRoomPointerSearch(page, bounds) {
+  const viewport = page.viewportSize();
+  const candidates = [
+    { x: 1, y: 1 },
+    { x: Math.max(1, (viewport?.width ?? 2) - 2), y: 1 },
+    { x: 1, y: Math.max(1, (viewport?.height ?? 2) - 2) },
+  ];
+  const outside = candidates.find(
+    ({ x, y }) =>
+      x < bounds.x ||
+      x > bounds.x + bounds.width ||
+      y < bounds.y ||
+      y > bounds.y + bounds.height,
+  );
+  await page.mouse.move(outside?.x ?? 1, outside?.y ?? 1);
+  await nextAnimationFrame(page);
+}
+
+function coarseRoomPoints(bounds) {
+  const points = [];
+  // This bounded fallback covers the authored object band without scanning
+  // the empty ceiling and floor margins of the fisheye stage.
+  for (let row = 0; row < 7; row += 1) {
+    for (let column = 0; column < 12; column += 1) {
+      points.push(
+        roomPoint(bounds, 0.08 + column * 0.076, 0.24 + row * 0.085),
+      );
+    }
+  }
+  return points;
+}
+
 async function findInteractiveRoomPoint(page) {
   const stage = page.locator("[data-room-poster-stage]");
   const bounds = await stage.boundingBox();
   if (!bounds) throw new Error("The interactive room has no visible stage.");
 
-  for (let row = 2; row <= 9; row += 1) {
-    for (let column = 1; column <= 15; column += 1) {
-      const x = bounds.x + (bounds.width * column) / 16;
-      const y = bounds.y + (bounds.height * row) / 11;
-      await page.mouse.move(x, y);
-      await page.evaluate(
-        () =>
-          new Promise((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(resolve)),
-          ),
-      );
-      const id = await stage.getAttribute("data-room-hovered-object");
-      if (id) return { id, x, y };
+  await primeRoomPointerSearch(page, bounds);
+  const deadline = Date.now() + ROOM_POINTER_SEARCH_DEADLINE_MS;
+  for (const { id } of objects) {
+    for (const point of likelyRoomPoints(bounds, id)) {
+      if (Date.now() >= deadline) break;
+      const hit = await stableRoomHit(page, stage, point, id);
+      if (hit) return hit;
     }
+  }
+  for (const point of coarseRoomPoints(bounds)) {
+    if (Date.now() >= deadline) break;
+    const hit = await stableRoomHit(page, stage, point);
+    if (hit) return hit;
   }
 
   throw new Error("No procedural room object responded to a real pointer ray.");
@@ -341,23 +433,229 @@ async function findAllInteractiveRoomPoints(page) {
   if (!bounds) throw new Error("The interactive room has no visible stage.");
 
   const points = new Map();
-  for (let row = 1; row <= 17 && points.size < objects.length; row += 1) {
-    for (let column = 1; column <= 27 && points.size < objects.length; column += 1) {
-      const x = bounds.x + (bounds.width * column) / 28;
-      const y = bounds.y + (bounds.height * row) / 18;
-      await page.mouse.move(x, y);
-      await page.evaluate(
-        () =>
-          new Promise((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(resolve)),
-          ),
-      );
-      const id = await stage.getAttribute("data-room-hovered-object");
-      if (id && !points.has(id)) points.set(id, { id, x, y });
+  await primeRoomPointerSearch(page, bounds);
+  const deadline = Date.now() + ROOM_POINTER_SEARCH_DEADLINE_MS;
+
+  for (const { id } of objects) {
+    for (const point of likelyRoomPoints(bounds, id)) {
+      if (Date.now() >= deadline) break;
+      const hit = await stableRoomHit(page, stage, point, id);
+      if (hit) {
+        points.set(id, hit);
+        break;
+      }
+    }
+  }
+
+  if (points.size < objects.length) {
+    for (const point of coarseRoomPoints(bounds)) {
+      if (points.size === objects.length || Date.now() >= deadline) break;
+      const hit = await stableRoomHit(page, stage, point);
+      if (hit && !points.has(hit.id)) points.set(hit.id, hit);
     }
   }
 
   return points;
+}
+
+const POCKET_HIT_TARGET_GEOMETRY = {
+  watch: {
+    hit: [0, 1.12, 0],
+    position: [-3.22, 0.56, -2.82],
+    rotationY: 0.18,
+    scale: 1.12,
+  },
+  read: {
+    hit: [0, 1.5, 0],
+    position: [-0.35, 0, -2.94],
+    rotationY: 0,
+    scale: 1.06,
+  },
+  listen: {
+    hit: [0, 1.05, 0],
+    position: [-1.28, 0, -0.42],
+    rotationY: 0.16,
+    scale: 1.2,
+  },
+  collect: {
+    hit: [0, 0.68, 0],
+    position: [-2.82, 0, 1.54],
+    rotationY: 0.12,
+    scale: 1.08,
+  },
+  play: {
+    hit: [-0.04, 1.48, 0],
+    position: [1.48, 0, 1.12],
+    rotationY: 0.22,
+    scale: 0.92,
+  },
+  move: {
+    hit: [0, 1.12, -0.34],
+    position: [3.48, 0, -1.95],
+    rotationY: 0.12,
+    scale: 1.12,
+  },
+  travel: {
+    hit: [0, 1.45, 0],
+    position: [1.48, 0, -2.75],
+    rotationY: -0.08,
+    scale: 0.94,
+  },
+};
+
+async function projectedPocketRoomPoints(page) {
+  const stage = page.locator("[data-room-poster-stage]");
+  const bounds = await stage.boundingBox();
+  if (!bounds) throw new Error("The Pocket Room has no visible stage.");
+
+  const camera = new PerspectiveCamera(
+    44,
+    bounds.width / bounds.height,
+    0.1,
+    60,
+  );
+  camera.position.set(8.2, 7.1, 10.4);
+  camera.lookAt(0, 1.05, -0.4);
+  camera.updateProjectionMatrix();
+  camera.updateMatrixWorld();
+
+  const points = new Map();
+  expect(Object.keys(POCKET_HIT_TARGET_GEOMETRY).sort()).toEqual(
+    objects.map(({ id }) => id).sort(),
+  );
+  for (const object of objects) {
+    const geometry = POCKET_HIT_TARGET_GEOMETRY[object.id];
+    const overview = new Object3D();
+    const room = new Object3D();
+    room.position.set(0, -0.8, 0);
+    room.scale.setScalar(0.92);
+    overview.add(room);
+    const objectRoot = new Object3D();
+    objectRoot.position.fromArray(geometry.position);
+    objectRoot.rotation.y = geometry.rotationY;
+    objectRoot.scale.setScalar(geometry.scale);
+    room.add(objectRoot);
+    const hit = new Object3D();
+    hit.position.fromArray(geometry.hit);
+    objectRoot.add(hit);
+    overview.updateMatrixWorld(true);
+
+    const projected = new Vector3();
+    hit.getWorldPosition(projected).project(camera);
+    points.set(object.id, {
+      id: object.id,
+      x: Math.min(
+        bounds.x + bounds.width - 8,
+        Math.max(bounds.x + 8, bounds.x + ((projected.x + 1) * bounds.width) / 2),
+      ),
+      y: Math.min(
+        bounds.y + bounds.height - 8,
+        Math.max(bounds.y + 8, bounds.y + ((1 - projected.y) * bounds.height) / 2),
+      ),
+    });
+  }
+
+  return points;
+}
+
+async function resolveProjectedPocketRoomPoint(page, stage, expectedId, point) {
+  const bounds = await stage.boundingBox();
+  if (!bounds) throw new Error("The Pocket Room has no visible stage.");
+  const offsets = [
+    [0, 0],
+    [-18, 0],
+    [18, 0],
+    [-36, 0],
+    [36, 0],
+    [0, -24],
+    [0, 24],
+    [-36, -24],
+    [-36, 24],
+    [-60, 0],
+    [-60, -32],
+    [-60, 32],
+  ];
+
+  for (const [offsetX, offsetY] of offsets) {
+    const candidate = {
+      id: expectedId,
+      x: Math.min(
+        bounds.x + bounds.width - 8,
+        Math.max(bounds.x + 8, point.x + offsetX),
+      ),
+      y: Math.min(
+        bounds.y + bounds.height - 8,
+        Math.max(bounds.y + 8, point.y + offsetY),
+      ),
+    };
+    await page.mouse.move(candidate.x, candidate.y);
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    if ((await stage.getAttribute("data-room-hovered-object")) === expectedId) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`${expectedId} did not resolve near its projected hit target.`);
+}
+
+async function dispatchTouch(client, type, points = []) {
+  await client.send("Input.dispatchTouchEvent", {
+    type,
+    touchPoints: points.map(({ id = 1, x, y }) => ({
+      force: 1,
+      id: typeof id === "number" ? id : 1,
+      radiusX: 2,
+      radiusY: 2,
+      x: Math.round(x),
+      y: Math.round(y),
+    })),
+  });
+}
+
+async function touchTap(client, point) {
+  await dispatchTouch(client, "touchStart", [point]);
+  await dispatchTouch(client, "touchEnd");
+}
+
+async function touchSwipe(client, point, deltaX) {
+  await dispatchTouch(client, "touchStart", [point]);
+  await dispatchTouch(client, "touchMove", [
+    { ...point, x: point.x + deltaX / 2 },
+  ]);
+  await dispatchTouch(client, "touchMove", [
+    { ...point, x: point.x + deltaX },
+  ]);
+  await dispatchTouch(client, "touchEnd");
+}
+
+async function touchSwipeAcrossRenderedFrames(client, page, point, deltaX) {
+  await dispatchTouch(client, "touchStart", [point]);
+  for (let step = 1; step <= 6; step += 1) {
+    await dispatchTouch(client, "touchMove", [
+      { ...point, x: point.x + (deltaX * step) / 6 },
+    ]);
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(resolve)),
+    );
+  }
+  await dispatchTouch(client, "touchEnd");
+}
+
+async function selectPocketView(room, view) {
+  await room.getByRole("button", { name: "Reset view" }).click();
+  await expect(room.getByText("View 2 of 3", { exact: true })).toBeVisible();
+  if (view === 1) {
+    await room.getByRole("button", { name: "Previous view" }).click();
+  } else if (view === 3) {
+    await room.getByRole("button", { name: "Next view" }).click();
+  }
+  await expect(room.getByText(`View ${view} of 3`, { exact: true })).toBeVisible();
+  await new Promise((resolve) => setTimeout(resolve, 360));
 }
 
 async function activeElementReport(page) {
@@ -381,8 +679,6 @@ async function activeElementReport(page) {
 }
 
 test.describe("My Room 2001 browser quality", () => {
-  test.skip(!roomMode, "The room suite runs against its dedicated Worker mode.");
-
   test("the overview is provider-free and defers the room runtime until intent", async ({
     page,
   }) => {
@@ -396,8 +692,10 @@ test.describe("My Room 2001 browser quality", () => {
 
     const response = await page.goto("/play", { waitUntil: "networkidle" });
     expect(response?.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: "Come in. Pick something up." })).toBeVisible();
-    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(6);
+    await expect(
+      page.getByRole("heading", { name: "The room behind the résumé." }),
+    ).toBeVisible();
+    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
     await expect(page.locator("canvas")).toHaveCount(0);
     expect(connectors).toEqual([]);
     expect(runtimeScripts).toEqual([]);
@@ -459,6 +757,19 @@ test.describe("My Room 2001 browser quality", () => {
       page.locator('[data-room-runtime] img[src*="my-room-2001-neutral"]'),
     ).toBeVisible();
     expect(stageIntercepted).toBe(true);
+    const stalledReadiness = await expectRoomReady(page, {
+      context: "the intentionally stalled room stage",
+      timeout: 100,
+    }).then(
+      () => null,
+      (error) => error,
+    );
+    expect(stalledReadiness).toBeInstanceOf(Error);
+    expect(stalledReadiness.message).toContain(
+      "Interactive room readiness exceeded 100ms",
+    );
+    expect(stalledReadiness.message).toContain('"ready": "false"');
+    expect(stalledReadiness.message).toContain('"phase": "idle"');
     releaseRoomStage();
     await expectRoomReady(page);
     await expect(
@@ -475,7 +786,7 @@ test.describe("My Room 2001 browser quality", () => {
 
     for (const object of objects) {
       requests.length = 0;
-      await page.goto(`/play/${object.id}`, { waitUntil: "networkidle" });
+      await page.goto(`/play/${object.id}`, { waitUntil: "domcontentloaded" });
       await expect(page.getByRole("heading", { name: object.title })).toBeVisible();
       await expect(page.getByText(object.foundation, { exact: false })).toBeVisible();
       expect(requests).toEqual([]);
@@ -494,7 +805,9 @@ test.describe("My Room 2001 browser quality", () => {
     );
 
     await page.getByRole("button", { name: "Enter the room" }).click();
-    const room = page.getByRole("dialog", { name: "Interactive room" });
+    const room = await expectRoomReady(page, {
+      context: "selecting the long-title preview object",
+    });
     await room.locator('[data-room-object-control="read"]').click();
     await expect(page).toHaveURL(/\/play\/read\?fixture=long-title$/);
     await page.getByRole("searchbox", { name: "Find a title" }).fill("記憶");
@@ -509,7 +822,7 @@ test.describe("My Room 2001 browser quality", () => {
       "/play/collect?fixture=maximum-density&pageSize=12",
       { waitUntil: "domcontentloaded" },
     );
-    await page.getByRole("button", { name: "Flip through" }).click();
+    await page.getByRole("button", { name: "Browse all" }).click();
     await expect(page.locator('input[name="fixture"]')).toHaveValue(
       "maximum-density",
     );
@@ -543,6 +856,66 @@ test.describe("My Room 2001 browser quality", () => {
     ).toEqual([]);
   });
 
+  for (const viewport of [
+    { height: 900, label: "desktop", width: 1440 },
+    { height: 844, label: "Pocket Room", width: 390 },
+  ]) {
+    test(`the sound control never covers ${viewport.label} room controls`, async ({
+      browser,
+    }) => {
+      const context = await browser.newContext({
+        hasTouch: viewport.width === 390,
+        viewport: { width: viewport.width, height: viewport.height },
+      });
+      const page = await context.newPage();
+      await page.goto("/play", { waitUntil: "networkidle" });
+      await page
+        .getByRole("button", {
+          name: viewport.width === 390 ? "Open the pocket room" : "Enter the room",
+        })
+        .click();
+      await expectRoomReady(page, {
+        context: `checking the ${viewport.label} audio placement`,
+        expectedTier: viewport.width === 390 ? "pocket" : undefined,
+      });
+
+      const placement = page.locator(
+        '[data-experience-audio-control][data-experience-audio-placement="embedded"]',
+      );
+      await expect(placement).toHaveCount(1);
+      const intersections = await page.evaluate(() => {
+        const audio = document
+          .querySelector("[data-experience-audio-control]")
+          ?.getBoundingClientRect();
+        if (!audio) return ["missing audio control"];
+        return [
+          ...document.querySelectorAll(
+            "[data-room-view-controls] button, [data-room-object-control]",
+          ),
+        ]
+          .filter((element) => {
+            const target = element.getBoundingClientRect();
+            return !(
+              audio.right <= target.left ||
+              audio.left >= target.right ||
+              audio.bottom <= target.top ||
+              audio.top >= target.bottom
+            );
+          })
+          .map((element) =>
+            element.getAttribute("data-room-object-control") ??
+            element.textContent?.trim() ??
+            element.tagName,
+          );
+      });
+      expect(intersections).toEqual([]);
+      await expect(
+        page.getByRole("button", { name: "Sound on" }),
+      ).toBeVisible();
+      await context.close();
+    });
+  }
+
   test("Enter traps focus and Leave restores the invoking control", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play", { waitUntil: "networkidle" });
@@ -555,8 +928,9 @@ test.describe("My Room 2001 browser quality", () => {
 
     const room = page.getByRole("dialog", { name: "Interactive room" });
     const leave = room.getByRole("button", { name: "Leave room" });
-    const lastObject = room.locator('[data-room-object-control="move"]');
+    const lastObject = room.locator('[data-room-object-control="travel"]');
     await expect(room).toBeVisible();
+    await expectRoomReady(page, { context: "testing the room focus trap" });
     await expect(leave).toBeFocused();
     await expect(room.locator("canvas")).toHaveAttribute("aria-hidden", "true");
     await expect(room.locator("canvas")).toHaveAttribute("tabindex", "-1");
@@ -577,6 +951,14 @@ test.describe("My Room 2001 browser quality", () => {
       "Interactive room opened.",
     );
     await leave.press("Tab");
+    const revealSimulation = room.getByRole("link", {
+      name: "REVEAL THE SIMULATION",
+    });
+    await expect(revealSimulation).toBeFocused();
+    await revealSimulation.press("Tab");
+    const sound = room.getByRole("button", { name: "Sound on" });
+    await expect(sound).toBeFocused();
+    await sound.press("Tab");
     const firstViewControl = room.getByRole("button", { name: "Turn left" });
     await expect(firstViewControl).toBeFocused();
     await page.waitForTimeout(300);
@@ -589,8 +971,12 @@ test.describe("My Room 2001 browser quality", () => {
     expect(roomBounds.height).toBeGreaterThanOrEqual(899);
 
     await lastObject.focus();
-    await expect(room.locator("[data-room-object-cue]")).toContainText(
-      "Cardio televisionMove",
+    const objectCue = room.locator("[data-room-object-cue]");
+    await expect(objectCue.locator("span")).toHaveText(
+      await lastObject.locator("span").innerText(),
+    );
+    await expect(objectCue.locator("strong")).toHaveText(
+      await lastObject.locator("strong").innerText(),
     );
     await expect(lastObject).toHaveAttribute("data-focused", "true");
     await lastObject.press("Tab");
@@ -825,7 +1211,7 @@ test.describe("My Room 2001 browser quality", () => {
       await page.mouse.down();
       await page.mouse.move(point.x + 12, point.y + (index % 2 ? 2 : -2));
       await page.mouse.up();
-      await expect(page).toHaveURL(/\/play$/);
+      await expectPlayOverview(page);
       await room.getByRole("button", { name: "Reset view" }).click();
       await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
     }
@@ -856,7 +1242,7 @@ test.describe("My Room 2001 browser quality", () => {
         timeout: 10_000,
       });
       await page.keyboard.press("Escape");
-      await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+      await expectPlayOverview(page, { timeout: 10_000 });
       await expect(room).toBeVisible();
       await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
       await expect(
@@ -890,7 +1276,7 @@ test.describe("My Room 2001 browser quality", () => {
     await page.mouse.up();
     await expect(page).toHaveURL(/\/play\/watch$/, { timeout: 10_000 });
     await page.keyboard.press("Escape");
-    await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+    await expectPlayOverview(page, { timeout: 10_000 });
     await expect(
       page.getByRole("dialog", { name: "Interactive room" }),
     ).toHaveAttribute("data-room-transition-phase", "idle");
@@ -926,12 +1312,19 @@ test.describe("My Room 2001 browser quality", () => {
         ).toBeLessThanOrEqual(1 / 18);
       }
     }
-    const collect = resizedPoints.get("collect");
-    if (!collect) throw new Error("The record crate has no pointer hit region.");
-    await page.mouse.move(collect.x, collect.y);
+    const collectBeforeDrag = resizedPoints.get("collect");
+    if (!collectBeforeDrag) {
+      throw new Error("The record crate has no pointer hit region.");
+    }
+    await page.mouse.move(collectBeforeDrag.x, collectBeforeDrag.y);
     await page.mouse.down();
     await page.mouse.move(resizedBounds.x - 20, resizedBounds.y - 20);
     await page.mouse.up();
+    const pointsAfterDrag = await findAllInteractiveRoomPoints(page);
+    const collect = pointsAfterDrag.get("collect");
+    if (!collect) {
+      throw new Error("The record crate lost its pointer hit region after drag.");
+    }
     await page.mouse.move(collect.x, collect.y);
     await expect(stage).toHaveAttribute("data-room-hovered-object", "collect");
     await page.mouse.down();
@@ -946,19 +1339,22 @@ test.describe("My Room 2001 browser quality", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
-    let room = page.getByRole("dialog", { name: "Interactive room" });
+    let room = await expectRoomReady(page, {
+      context: "opening the first room object",
+    });
     await room.locator('[data-room-object-control="watch"]').click();
     await expect(page).toHaveURL(/\/play\/watch$/);
     await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
     await expect(page.locator("[data-room-announcer]")).toContainText(
-      "Opened Watch: Midnight Broadcast.",
+      `Opened ${objects[0].label}: ${objects[0].title}.`,
     );
 
     await page.getByRole("link", { name: "Back to room" }).click();
-    await expect(page).toHaveURL(/\/play$/);
+    await expectPlayOverview(page);
     room = page.getByRole("dialog", { name: "Interactive room" });
     await expect(room).toBeVisible();
     await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
+    await expectRoomReady(page, { context: "using the returned room" });
     await expect(
       room.locator('[data-room-object-control="watch"]'),
       JSON.stringify(await activeElementReport(page)),
@@ -975,6 +1371,7 @@ test.describe("My Room 2001 browser quality", () => {
     room = page.getByRole("dialog", { name: "Interactive room" });
     await expect(room).toBeVisible();
     await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
+    await expectRoomReady(page, { context: "using browser history in the room" });
     await expect(room.locator('[data-room-object-control="watch"]')).toBeFocused();
 
     for (const object of objects.filter(({ id }) => id !== "watch")) {
@@ -984,10 +1381,13 @@ test.describe("My Room 2001 browser quality", () => {
       });
       await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
       await page.keyboard.press("Escape");
-      await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+      await expectPlayOverview(page, { timeout: 10_000 });
       room = page.getByRole("dialog", { name: "Interactive room" });
       await expect(room).toBeVisible();
       await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
+      await expectRoomReady(page, {
+        context: `returning from the ${object.id} object`,
+      });
       await expect(
         room.locator(`[data-room-object-control="${object.id}"]`),
       ).toBeFocused();
@@ -1000,7 +1400,9 @@ test.describe("My Room 2001 browser quality", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play?fixture=ready", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Enter the room" }).click();
-    let room = page.getByRole("dialog", { name: "Interactive room" });
+    let room = await expectRoomReady(page, {
+      context: "starting the slow-return scenario",
+    });
     await room.locator('[data-room-object-control="collect"]').click();
     await expect(page).toHaveURL(/\/play\/collect\?fixture=ready$/);
 
@@ -1016,7 +1418,7 @@ test.describe("My Room 2001 browser quality", () => {
     await page.getByRole("link", { name: "Back to room" }).click();
     const status = page.locator("[data-room-return-status]");
     await expect(status).toBeVisible();
-    await expect(status).toContainText("Rewinding to My Room");
+    await expect(status).toContainText("Back to the room");
     room = page.locator("[data-room-runtime]");
     await expect(room).toBeVisible();
     await expect(room).toHaveAttribute("data-room-transition-phase", "returning");
@@ -1025,6 +1427,7 @@ test.describe("My Room 2001 browser quality", () => {
     releaseReturn();
     await expect(page).toHaveURL(/\/play\?fixture=ready$/, { timeout: 10_000 });
     await expect(status).toHaveCount(0);
+    await expectRoomReady(page, { context: "completing the slow room return" });
     await expect(
       page.locator('[data-room-object-control="collect"]'),
     ).toBeFocused();
@@ -1042,7 +1445,7 @@ test.describe("My Room 2001 browser quality", () => {
         `Opened ${object.label}: ${object.title}.`,
       );
       await page.keyboard.press("Escape");
-      await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+      await expectPlayOverview(page, { timeout: 10_000 });
       const semanticLink = page.locator(
         `[data-room-overview] [data-room-object-link="${object.id}"]`,
       );
@@ -1050,7 +1453,9 @@ test.describe("My Room 2001 browser quality", () => {
 
       if (object.id === "watch") {
         await page.getByRole("button", { name: "Enter the room" }).click();
-        const room = page.getByRole("dialog", { name: "Interactive room" });
+        const room = await expectRoomReady(page, {
+          context: "checking the direct-route return path",
+        });
         await expect(room).toBeVisible();
         await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
         await room.getByRole("button", { name: "Leave room" }).click();
@@ -1068,7 +1473,7 @@ test.describe("My Room 2001 browser quality", () => {
     page,
   }) => {
     await page.goto("/play/read", { waitUntil: "networkidle" });
-    await expect(page.getByRole("heading", { name: "Borrowed Shelf" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Bedside Shelf" })).toBeVisible();
     await expect(page.locator("main[data-room-screen]")).toHaveCount(1);
     await expect(page.getByRole("dialog", { name: "Interactive room" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Back to room" })).toBeVisible();
@@ -1109,7 +1514,10 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(page.getByRole("heading", { name: "Desktop Library" })).toBeVisible();
     await expect(page.locator("[data-room-screen-entry-focus]")).toBeFocused();
     await page.getByRole("link", { name: "Back to room" }).click();
-    await expect(page).toHaveURL(/\/play$/, { timeout: 10_000 });
+    await expectPlayOverview(page, { timeout: 10_000 });
+    await expectRoomReady(page, {
+      context: "returning after a superseded object selection",
+    });
     await expect(
       page.locator('[data-room-object-control="play"]'),
     ).toBeFocused();
@@ -1239,7 +1647,7 @@ test.describe("My Room 2001 browser quality", () => {
     });
   }
 
-  test("all six object foundations remain available without JavaScript", async ({ browser }) => {
+  test("all seven object foundations remain available without JavaScript", async ({ browser }) => {
     const context = await browser.newContext({
       javaScriptEnabled: false,
       viewport: { width: 390, height: 844 },
@@ -1300,8 +1708,6 @@ test.describe("My Room 2001 browser quality", () => {
   });
 
   for (const capability of [
-    "mobile",
-    "coarse-pointer",
     "reduced-motion",
     "forced-colors",
     "save-data",
@@ -1313,10 +1719,7 @@ test.describe("My Room 2001 browser quality", () => {
       browser,
     }) => {
       const context = await browser.newContext({
-        viewport:
-          capability === "mobile"
-            ? { width: 390, height: 844 }
-            : { width: 1440, height: 900 },
+        viewport: { width: 1440, height: 900 },
         reducedMotion: capability === "reduced-motion" ? "reduce" : "no-preference",
         forcedColors: capability === "forced-colors" ? "active" : "none",
       });
@@ -1326,24 +1729,6 @@ test.describe("My Room 2001 browser quality", () => {
             configurable: true,
             value: { saveData: true },
           });
-        });
-      }
-      if (capability === "coarse-pointer") {
-        await context.addInitScript(() => {
-          const nativeMatchMedia = window.matchMedia.bind(window);
-          window.matchMedia = (query) => {
-            if (query !== "(pointer: fine)") return nativeMatchMedia(query);
-            return {
-              matches: false,
-              media: query,
-              onchange: null,
-              addEventListener() {},
-              addListener() {},
-              dispatchEvent: () => true,
-              removeEventListener() {},
-              removeListener() {},
-            };
-          };
         });
       }
       if (capability === "zoom-200" || capability === "zoom-400") {
@@ -1367,11 +1752,352 @@ test.describe("My Room 2001 browser quality", () => {
       const page = await context.newPage();
       const runtimeScripts = runtimeChunkRequests(page);
       await page.goto("/play", { waitUntil: "networkidle" });
-      await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(6);
+      await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
       await expect(page.getByRole("button", { name: "Enter the room" })).toHaveCount(0);
       await expect(page.locator("canvas")).toHaveCount(0);
       expect(runtimeScripts).toEqual([]);
       await context.close();
     });
   }
+
+  for (const capability of ["mobile", "coarse-pointer"]) {
+    test(`${capability} opens the touch-native Pocket Room only after intent`, async ({
+      browser,
+    }) => {
+      const context = await browser.newContext({
+        hasTouch: capability === "mobile",
+        viewport:
+          capability === "mobile"
+            ? { width: 390, height: 844 }
+            : { width: 1024, height: 768 },
+      });
+      if (capability === "coarse-pointer") {
+        await context.addInitScript(() => {
+          const nativeMatchMedia = window.matchMedia.bind(window);
+          window.matchMedia = (query) => {
+            if (query !== "(pointer: fine)") return nativeMatchMedia(query);
+            return {
+              matches: false,
+              media: query,
+              onchange: null,
+              addEventListener() {},
+              addListener() {},
+              dispatchEvent: () => true,
+              removeEventListener() {},
+              removeListener() {},
+            };
+          };
+        });
+      }
+
+      const page = await context.newPage();
+      const runtimeScripts = runtimeChunkRequests(page);
+      await page.goto("/play", { waitUntil: "networkidle" });
+      await expect(page.locator("canvas")).toHaveCount(0);
+      expect(runtimeScripts).toEqual([]);
+
+      await page
+        .getByRole("button", { name: "Open the pocket room" })
+        .click();
+      const room = await expectRoomReady(page, {
+        context: `opening the ${capability} Pocket Room`,
+        expectedTier: "pocket",
+      });
+      await expect(page.locator('[data-projection="pocket-perspective"]')).toBeVisible();
+      await expect(room.getByRole("button", { name: "Previous view" })).toBeVisible();
+      await expect(room.getByRole("button", { name: "Next view" })).toBeVisible();
+      await expect(room.locator('[data-room-object-control="watch"]')).toBeVisible();
+      expect(runtimeScripts.length).toBeGreaterThan(0);
+      expect(
+        runtimeScripts.some((url) => /assets\/RoomStage-[^/]+\.js/.test(url)),
+      ).toBe(false);
+      await context.close();
+    });
+  }
+
+  test("Pocket Room rejects twenty 3D swipe activations per object", async ({
+    browser,
+  }) => {
+    test.setTimeout(240_000);
+    const context = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 390, height: 844 },
+    });
+    await context.addInitScript(() => {
+      const nativeNow = performance.now.bind(performance);
+      let lastReal = nativeNow();
+      let virtualNow = lastReal;
+      Object.defineProperty(performance, "now", {
+        configurable: true,
+        value: () => {
+          const currentReal = nativeNow();
+          virtualNow += Math.min(16, Math.max(0, currentReal - lastReal));
+          lastReal = currentReal;
+          return virtualNow;
+        },
+      });
+    });
+
+    const page = await context.newPage();
+    await page.goto("/play", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open the pocket room" }).click();
+    const room = await expectRoomReady(page, {
+      context: "testing Pocket Room swipe rejection",
+      expectedTier: "pocket",
+    });
+
+    const client = await context.newCDPSession(page);
+    await selectPocketView(room, 2);
+    const objectTouchTargets = await projectedPocketRoomPoints(page);
+    const stage = page.locator("[data-room-poster-stage]");
+    for (const object of objects) {
+      const point = objectTouchTargets.get(object.id);
+      if (!point) throw new Error(`${object.id} has no projected touch target.`);
+      objectTouchTargets.set(
+        object.id,
+        await resolveProjectedPocketRoomPoint(
+          page,
+          stage,
+          object.id,
+          point,
+        ),
+      );
+    }
+
+    for (const object of objects) {
+      const target = objectTouchTargets.get(object.id);
+      if (!target) throw new Error(`${object.id} has no 3D touch target.`);
+      for (let index = 0; index < 20; index += 1) {
+        await selectPocketView(room, 2);
+        await touchSwipe(
+          client,
+          target,
+          index % 2 === 0 ? 48 : -48,
+        );
+        await expectPlayOverview(page);
+      }
+    }
+
+    await context.close();
+  });
+
+  test("Pocket Room activates every object and resets readiness after resize", async ({
+    browser,
+  }) => {
+    test.setTimeout(720_000);
+    const context = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 390, height: 844 },
+    });
+    await context.addInitScript(() => {
+      // This case isolates pointer policy from the separately tested
+      // performance downgrade. SwiftShader can report synthetic >33ms deltas
+      // during repeated route transitions even when gesture handling is sound.
+      const nativeNow = performance.now.bind(performance);
+      let lastReal = nativeNow();
+      let virtualNow = lastReal;
+      Object.defineProperty(performance, "now", {
+        configurable: true,
+        value: () => {
+          const currentReal = nativeNow();
+          virtualNow += Math.min(16, Math.max(0, currentReal - lastReal));
+          lastReal = currentReal;
+          return virtualNow;
+        },
+      });
+    });
+    const page = await context.newPage();
+    await page.goto("/play", { waitUntil: "networkidle" });
+    await page.evaluate(() => {
+      const states = [];
+      Object.defineProperty(window, "__pocketBootStates", {
+        configurable: true,
+        value: states,
+      });
+      const record = () => {
+        const value = document
+          .querySelector("[data-room-boot-status]")
+          ?.textContent?.trim();
+        if (value && states.at(-1) !== value) states.push(value);
+      };
+      new MutationObserver(record).observe(document.body, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+      record();
+    });
+    await page.getByRole("button", { name: "Open the pocket room" }).click();
+    let room = await expectRoomReady(page, {
+      context: "testing Pocket Room activation",
+      expectedTier: "pocket",
+    });
+
+    const client = await context.newCDPSession(page);
+
+    for (const object of objects) {
+      for (let index = 0; index < 20; index += 1) {
+        const control = room.locator(
+          `[data-room-object-control="${object.id}"]`,
+        );
+        await control.tap();
+        await expect(page).toHaveURL(new RegExp(`/play/${object.id}$`), {
+          timeout: 10_000,
+        });
+        await page.keyboard.press("Escape");
+        await expectPlayOverview(page, { timeout: 10_000 });
+        room = page.getByRole("dialog", { name: "Interactive room" });
+        await expect(room).toHaveAttribute("data-room-transition-phase", "idle");
+        await expect(
+          room.locator(`[data-room-object-control="${object.id}"]`),
+        ).toBeFocused();
+      }
+    }
+
+    const stage = page.locator("[data-room-poster-stage]");
+    const stageBounds = await stage.boundingBox();
+    if (!stageBounds) throw new Error("The Pocket Room has no visible stage.");
+    const stagePoint = {
+      x: stageBounds.x + stageBounds.width / 2,
+      y: stageBounds.y + stageBounds.height / 2,
+    };
+    await touchSwipe(client, stagePoint, 48);
+    await expect(room.getByText(/View [13] of 3/)).toBeVisible();
+    await room.getByRole("button", { name: "Reset view" }).click();
+
+    const directPoint = await findInteractiveRoomPoint(page);
+    await touchTap(client, directPoint);
+    await expect(page).toHaveURL(new RegExp(`/play/${directPoint.id}$`), {
+      timeout: 10_000,
+    });
+    await page.keyboard.press("Escape");
+    await expectPlayOverview(page, { timeout: 10_000 });
+    room = page.getByRole("dialog", { name: "Interactive room" });
+
+    await dispatchTouch(client, "touchStart", [directPoint]);
+    await dispatchTouch(client, "touchCancel");
+    await expectPlayOverview(page);
+
+    await dispatchTouch(client, "touchStart", [directPoint]);
+    await dispatchTouch(client, "touchMove", [
+      directPoint,
+      { id: 2, x: directPoint.x + 18, y: directPoint.y + 4 },
+    ]);
+    await dispatchTouch(client, "touchEnd");
+    await expectPlayOverview(page);
+
+    await selectPocketView(room, 2);
+    await dispatchTouch(client, "touchStart", [directPoint]);
+    await page.setViewportSize({ width: 844, height: 500 });
+    await dispatchTouch(client, "touchEnd");
+    await expect(room).toHaveAttribute("data-room-presentation-tier", "static");
+    await expect(room).toHaveAttribute("data-room-ready", "false");
+    await expect(page.locator("canvas")).toHaveCount(0);
+    await expect(page.locator("[data-room-runtime] img")).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    room = await expectRoomReady(page, {
+      context: "restoring Pocket Room after resize",
+      expectedTier: "pocket",
+    });
+    const bootStates = await page.evaluate(() => window.__pocketBootStates);
+    expect(bootStates).toContain("Opening the room");
+    expect(bootStates).toContain("Folding out the objects");
+    expect(bootStates.at(-1)).toBe("Room ready");
+
+    await context.close();
+  });
+
+  test("Pocket Room ignores idle gaps and downgrades after sustained slow frames", async ({
+    browser,
+  }) => {
+    test.setTimeout(90_000);
+    const context = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 390, height: 844 },
+    });
+    await context.addInitScript(() => {
+      window.__pocketForceSlowFrame = false;
+      let animationFrame = 0;
+      let delayedAnimationFrame = -1;
+      const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (callback) =>
+        nativeRequestAnimationFrame((time) => {
+          animationFrame += 1;
+          callback(time);
+        });
+
+      for (const Context of [
+        window.WebGL2RenderingContext,
+        window.WebGLRenderingContext,
+      ].filter(Boolean)) {
+        for (const method of [
+          "drawArrays",
+          "drawElements",
+          "drawArraysInstanced",
+          "drawElementsInstanced",
+        ]) {
+          const original = Context.prototype[method];
+          if (typeof original !== "function") continue;
+          Context.prototype[method] = function (...args) {
+            if (
+              window.__pocketForceSlowFrame &&
+              delayedAnimationFrame !== animationFrame
+            ) {
+              delayedAnimationFrame = animationFrame;
+              const startedAt = performance.now();
+              while (performance.now() - startedAt < 55) {
+                // Test-only simulation of a completed Pocket frame missing budget.
+              }
+            }
+            return original.apply(this, args);
+          };
+        }
+      }
+    });
+
+    const page = await context.newPage();
+    await page.goto("/play", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Open the pocket room" }).click();
+    const room = await expectRoomReady(page, {
+      context: "measuring Pocket Room interaction frames",
+      expectedTier: "pocket",
+    });
+
+    await page.waitForTimeout(1_200);
+    await room.getByRole("button", { name: "Next view" }).click();
+    await expect(room).toBeVisible();
+    await room.getByRole("button", { name: "Reset view" }).click();
+
+    const client = await context.newCDPSession(page);
+    const stage = page.locator("[data-room-poster-stage]");
+    const stageBounds = await stage.boundingBox();
+    if (!stageBounds) throw new Error("The Pocket Room has no visible stage.");
+    const stagePoint = {
+      x: stageBounds.x + stageBounds.width / 2,
+      y: stageBounds.y + stageBounds.height / 2,
+    };
+
+    await page.evaluate(() => {
+      window.__pocketForceSlowFrame = true;
+    });
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      if (!(await stage.isVisible().catch(() => false))) break;
+      await touchSwipeAcrossRenderedFrames(
+        client,
+        page,
+        stagePoint,
+        attempt % 2 === 0 ? 72 : -72,
+      );
+    }
+
+    await expect(room).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.locator("[data-room-overview]")).toBeVisible();
+    await expect(page.locator("canvas")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Open the pocket room" })).toHaveCount(0);
+    await expect(page.locator("[data-room-announcer]")).toContainText(
+      "interactive room is unavailable",
+    );
+    await context.close();
+  });
 });

@@ -9,7 +9,8 @@ import {
   useRef,
   useState,
 } from "react";
-import styles from "../PersonalStreams.module.css";
+import styles from "./StreamPresentation.module.css";
+import { GalleryFilterDisclosure } from "./CollectionGallery";
 import {
   type ConnectorState,
   type DiscogsFormat,
@@ -22,6 +23,7 @@ import {
   loadConnector,
 } from "./connector-model";
 import { PanelHeading, StreamEmpty, StreamStatus } from "./StreamChrome";
+import { SITE_COPY } from "@/lib/copy";
 
 type DiscogsView = "pattern" | "gallery";
 type PageSize = 12 | 24 | 36;
@@ -175,8 +177,6 @@ export function DiscogsStream({
       <header className={styles.collectionHeader}>
         {presentation === "crate" ? (
           <div className={styles.cratePanelHeading}>
-            <span>Public collection · Discogs</span>
-            <h2>The physical catalog.</h2>
             <p>{payload.coverage}</p>
           </div>
         ) : (
@@ -198,7 +198,7 @@ export function DiscogsStream({
             }}
             type="button"
           >
-            {presentation === "crate" ? "Inventory" : "Pattern"}
+            {SITE_COPY.play["view-overview"]}
           </button>
           <button
             aria-pressed={view === "gallery"}
@@ -208,7 +208,7 @@ export function DiscogsStream({
             }}
             type="button"
           >
-            {presentation === "crate" ? "Flip through" : "Gallery"}
+            {SITE_COPY.play["view-browse-all"]}
           </button>
         </div>
       </header>
@@ -270,13 +270,13 @@ export function DiscogsStream({
           />
         ) : (
           <div className={styles.galleryUnavailable} aria-live="polite">
-            <strong>The physical catalog is preparing its first index.</strong>
+            <strong>{SITE_COPY.play["collection-unavailable"]}</strong>
             <p>
-              The searchable shelf is not available yet. The pattern view
+              The searchable shelf is not available yet. The overview
               remains available.
             </p>
             <button onClick={() => setView("pattern")} type="button">
-              Return to pattern
+              {SITE_COPY.play["return-overview"]}
             </button>
           </div>
         )}
@@ -292,6 +292,7 @@ export function DiscogsStream({
         Discogs page.
       </p>
       <StreamStatus
+        profileLabel={SITE_COPY.play["profile-discogs"]}
         profileUrl={payload.profileUrl}
         stale={state.stale}
         syncedAt={payload.syncedAt || state.fetchedAt}
@@ -519,65 +520,67 @@ function DiscogsGallery({
               maxLength={80}
               name="q"
               onChange={(event) => onDraftQuery(event.target.value)}
-              placeholder="Search the record shelf"
+              placeholder={SITE_COPY.play["collect-search-placeholder"]}
               type="search"
               value={draftQuery}
             />
             <button type="submit">Search</button>
           </span>
         </div>
-        <DiscogsSelect
-          label="Format"
-          name="format"
-          onChange={onFormat}
-          options={gallery.formats.map((entry) => ({
-            value: entry.id,
-            label: entry.label + " · " + entry.count,
-          }))}
-          value={format}
-        />
-        <DiscogsSelect
-          label="Decade"
-          name="decade"
-          onChange={onDecade}
-          options={gallery.decades.map((entry) => ({
-            value: entry.id,
-            label: entry.label + " · " + entry.count,
-          }))}
-          value={decade}
-        />
-        <DiscogsSelect
-          label="Sort"
-          name="sort"
-          onChange={onSort}
-          options={gallery.sorts.map((entry) => ({
-            value: entry.id,
-            label:
-              entry.id === "artist"
-                ? "Artist · A–Z"
-                : entry.id === "title"
-                  ? "Title · A–Z"
-                  : "Year · newest",
-          }))}
-          value={sort}
-        />
-        <DiscogsSelect
-          label="Per page"
-          name="pageSize"
-          onChange={(value) => onPageSize(Number(value) as PageSize)}
-          options={[12, 24, 36].map((value) => ({
-            value: String(value),
-            label: String(value),
-          }))}
-          value={String(pageSize)}
-        />
+        <GalleryFilterDisclosure>
+            <DiscogsSelect
+              label="Format"
+              name="format"
+              onChange={onFormat}
+              options={gallery.formats.map((entry) => ({
+                value: entry.id,
+                label: entry.label + " · " + entry.count,
+              }))}
+              value={format}
+            />
+            <DiscogsSelect
+              label="Decade"
+              name="decade"
+              onChange={onDecade}
+              options={gallery.decades.map((entry) => ({
+                value: entry.id,
+                label: entry.label + " · " + entry.count,
+              }))}
+              value={decade}
+            />
+            <DiscogsSelect
+              label="Sort"
+              name="sort"
+              onChange={onSort}
+              options={gallery.sorts.map((entry) => ({
+                value: entry.id,
+                label:
+                  entry.id === "artist"
+                    ? "Artist · A–Z"
+                    : entry.id === "title"
+                      ? "Title · A–Z"
+                      : "Year · newest",
+              }))}
+              value={sort}
+            />
+            <DiscogsSelect
+              label="Per page"
+              name="pageSize"
+              onChange={(value) => onPageSize(Number(value) as PageSize)}
+              options={[12, 24, 36].map((value) => ({
+                value: String(value),
+                label: String(value),
+              }))}
+              value={String(pageSize)}
+            />
+        </GalleryFilterDisclosure>
       </form>
 
       {routePath ? (
         <noscript>
           <p className={styles.noScriptViewLink}>
             <a href={discogsViewUrl(routePath, "pattern", fixture)}>
-              Return to the collection pattern
+              {SITE_COPY.play["return-overview"]}
             </a>
           </p>
         </noscript>
@@ -587,7 +590,7 @@ function DiscogsGallery({
         <span>
           {start}—{end} of {gallery.totalItems.toLocaleString()} releases
         </span>
-        <span>{busy ? "Updating shelf…" : "Public physical-media snapshot"}</span>
+        <span>{busy ? "Updating shelf…" : SITE_COPY.play["view-browse-all"]}</span>
       </div>
 
       {gallery.items.length ? (
@@ -602,8 +605,8 @@ function DiscogsGallery({
         </ol>
       ) : (
         <div className={styles.noResults} data-stream-item>
-          <strong>No releases match this view.</strong>
-          <p>Change the title, artist, format, or decade to widen the shelf.</p>
+          <strong>{SITE_COPY.play["collect-no-results-title"]}</strong>
+          <p>{SITE_COPY.play["collect-no-results-body"]}</p>
         </div>
       )}
 

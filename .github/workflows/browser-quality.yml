@@ -1,125 +1,137 @@
 name: Browser Quality
 
 on:
-  pull_request:
   workflow_dispatch:
     inputs:
       commit_sha:
-        description: Full 40-character commit SHA to test
+        description: Full 40-character release-candidate SHA
         required: true
+        type: string
+      validate_run_id:
+        description: Successful Validate workflow run that produced this SHA's build
+        required: true
+        type: string
+      runner_target:
+        description: Hosted runner or disposable owner ARM64 runner
+        required: true
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - owner-arm64
+      jit_label:
+        description: One-time opaque runner label; required for owner-arm64
+        required: false
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
-  group: browser-quality-${{ github.ref }}
+  group: browser-quality-${{ inputs.commit_sha }}
   cancel-in-progress: true
 
+env:
+  BROWSER_SOURCE_SHA: ${{ inputs.commit_sha }}
+
 jobs:
-  browser_tests:
-    name: browser tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+  browser:
+    name: browser
+    runs-on: ${{ fromJSON(inputs.runner_target == 'owner-arm64' && format('["self-hosted","linux","arm64","{0}"]', inputs.jit_label) || '["ubuntu-latest"]') }}
+    timeout-minutes: 20
     steps:
-      - name: Check out source
+      - name: Validate owner exact-SHA dispatch
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+          VALIDATE_RUN_ID: ${{ inputs.validate_run_id }}
+          RUNNER_TARGET: ${{ inputs.runner_target }}
+          JIT_LABEL: ${{ inputs.jit_label }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTOR" = "$GITHUB_REPOSITORY_OWNER"
+          [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$VALIDATE_RUN_ID" =~ ^[1-9][0-9]{0,19}$ ]]
+          case "$RUNNER_TARGET" in
+            github-hosted) test -z "$JIT_LABEL" ;;
+            owner-arm64) [[ "$JIT_LABEL" =~ ^anish-release-[a-f0-9]{12}$ ]] ;;
+            *) exit 1 ;;
+          esac
+      - name: Verify the producing Validate workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_SHA: ${{ inputs.commit_sha }}
+          VALIDATE_RUN_ID: ${{ inputs.validate_run_id }}
+        run: |
+          set -euo pipefail
+          run="$(curl --fail --silent --show-error --location \
+            --proto '=https' --tlsv1.2 \
+            --header 'Accept: application/vnd.github+json' \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${VALIDATE_RUN_ID}")"
+          test "$(jq -r '.path' <<<"$run")" = ".github/workflows/ci.yml"
+          test "$(jq -r '.head_sha' <<<"$run")" = "$EXPECTED_SHA"
+          test "$(jq -r '.conclusion' <<<"$run")" = success
+          case "$(jq -r '.event' <<<"$run")" in
+            workflow_dispatch|push) ;;
+            *) exit 1 ;;
+          esac
+      - name: Check out exact source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
+          ref: ${{ env.BROWSER_SOURCE_SHA }}
+          fetch-depth: 0
           persist-credentials: false
       - name: Confirm exact commit
         env:
-          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
+          EXPECTED_SHA: ${{ env.BROWSER_SOURCE_SHA }}
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "${#EXPECTED_SHA}" -eq 40
-      - name: Use Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24.18.0
-          cache: npm
-      - name: Use pinned npm
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "${#GITHUB_SHA}" -eq 40
+      - name: Require the candidate SHA to belong to the trusted release ref
+        env:
+          EXPECTED_SHA: ${{ env.BROWSER_SOURCE_SHA }}
         run: |
-          npm install --global npm@11.6.2 --ignore-scripts
-          hash -r
-          test "$(npm --version)" = "11.6.2"
-      - name: Install locked dependencies
-        run: npm ci --ignore-scripts
-      - name: Install Chromium
-        run: npx --no-install playwright install --with-deps chromium
-      - name: Run browser and Lighthouse gates
-        run: npm run validate:browser
+          set -euo pipefail
+          [[ "$GITHUB_REF" =~ ^refs/heads/(main|release/[0-9]+\.[0-9]+\.[0-9]+)$ ]]
+          branch="${GITHUB_REF#refs/heads/}"
+          trusted_ref="$(git rev-parse "refs/remotes/origin/${branch}")"
+          test "$EXPECTED_SHA" = "$trusted_ref"
+      - name: Set up repository toolchain
+        uses: ./.github/actions/setup-repository
+      - name: Download the exact Validate build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: validated-dist-${{ env.BROWSER_SOURCE_SHA }}
+          path: dist
+          run-id: ${{ inputs.validate_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify immutable build bytes and hidden evidence
+        run: |
+          test -s dist/client/.vite/manifest.json
+          npm run deployable:attest
+          npm run bundle:scan
+      - name: Install Chromium on GitHub-hosted runners
+        if: inputs.runner_target == 'github-hosted'
+        run: npx --no-install playwright install --with-deps chromium webkit
+      - name: Verify baked Chromium and WebKit on the disposable runner
+        if: inputs.runner_target == 'owner-arm64'
+        run: npx --no-install playwright install --dry-run chromium webkit
+      - name: Run bounded release browser, accessibility, WebKit, and Lighthouse coverage
+        run: npm run browser:release:existing
       - name: Upload browser failure evidence
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: browser-quality-failure-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
-          if-no-files-found: warn
-          retention-days: 14
+          name: browser-quality-failure-${{ env.BROWSER_SOURCE_SHA }}
           path: |
             .playwright/results-*
             .playwright/report-*
             .wrangler/browser-quality-*.log
-
-  room_review:
-    name: room review
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
-          persist-credentials: false
-      - name: Confirm exact commit
-        env:
-          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
-        run: |
-          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "${#EXPECTED_SHA}" -eq 40
-      - name: Use Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24.18.0
-          cache: npm
-      - name: Use pinned npm
-        run: |
-          npm install --global npm@11.6.2 --ignore-scripts
-          hash -r
-          test "$(npm --version)" = "11.6.2"
-      - name: Install locked dependencies
-        run: npm ci --ignore-scripts
-      - name: Install Chromium
-        run: npx --no-install playwright install --with-deps chromium
-      - name: Build room review candidate
-        run: npm run build
-      - name: Capture room review evidence
-        run: npm run capture:room-review
-      - name: Upload browser review evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: room-browser-review-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
+            .wrangler/lighthouse-quality*
+            .lighthouse
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14
-          path: |
-            .playwright/room-review
-            .playwright/results-room-review
-            .playwright/report-room-review
-            .wrangler/browser-quality-room-review.log
-
-  browser:
-    name: browser
-    if: always()
-    needs:
-      - browser_tests
-      - room_review
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require browser tests and room review
-        env:
-          BROWSER_TESTS_RESULT: ${{ needs.browser_tests.result }}
-          ROOM_REVIEW_RESULT: ${{ needs.room_review.result }}
-        run: |
-          test "$BROWSER_TESTS_RESULT" = "success"
-          test "$ROOM_REVIEW_RESULT" = "success"

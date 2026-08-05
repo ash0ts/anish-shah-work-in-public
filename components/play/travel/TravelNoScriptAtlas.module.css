@@ -1,0 +1,65 @@
+.atlas {
+  display: grid;
+  max-width: 78rem;
+  margin: 0 auto 4rem;
+  padding: clamp(1rem, 4vw, 3rem);
+  border: 1px solid #65728a;
+  color: #f4f7f8;
+  background: #08111f;
+  gap: 2rem;
+}
+
+.atlas header,
+.atlas section,
+.atlas li {
+  min-width: 0;
+}
+
+.atlas header p,
+.atlas header span,
+.atlas section > p,
+.atlas li > span {
+  overflow-wrap: anywhere;
+}
+
+.atlas nav ul {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  list-style: none;
+}
+
+.atlas a {
+  color: #a9c2ff;
+  text-underline-offset: 0.2em;
+}
+
+.countries {
+  display: grid;
+  gap: 2.5rem;
+}
+
+.countries > section {
+  display: grid;
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid #65728a;
+  gap: 1rem;
+}
+
+.countries section section {
+  padding-inline-start: clamp(0.75rem, 3vw, 2rem);
+  border-inline-start: 3px solid #347cff;
+}
+
+.countries ul {
+  display: grid;
+  padding-inline-start: 1.25rem;
+  gap: 0.75rem;
+}
+
+.countries li > strong,
+.countries li > span {
+  display: block;
+}

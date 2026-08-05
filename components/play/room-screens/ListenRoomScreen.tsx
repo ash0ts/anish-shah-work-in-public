@@ -18,9 +18,9 @@ export default function ListenRoomScreen({
     <main data-room-screen id="main" className={`${styles.page} ${styles.listenPage}`} tabIndex={-1}>
       <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.listenHeader}>
-        <p>Spotify · One returned order at a time</p>
+        <p>{object.screenEyebrow}</p>
         <h1>{object.title}</h1>
-        <span>Top Tracks are Spotify-calculated affinity—not play counts or listening history.</span>
+        <span>{object.description}</span>
       </header>
       <section className={styles.pocketPlayer} aria-label="Spotify Top Tracks">
         <div className={styles.playerTop} aria-hidden="true">

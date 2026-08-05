@@ -5,50 +5,41 @@ import test from "node:test";
 const source = (path) =>
   readFile(new URL("../" + path, import.meta.url), "utf8");
 
-test("Collect is a sixth lazy Play stream with a complete semantic fallback", async () => {
-  const [streams, discogs, page, classic] = await Promise.all([
-    source("components/PersonalStreams.tsx"),
+test("Collect is a lazy direct room route with a complete semantic fallback", async () => {
+  const [screen, screens, discogs, page, direct] = await Promise.all([
+    source("components/play/room-screens/CollectRoomScreen.tsx"),
+    source("components/play/room-platform/room-screen-registry.ts"),
     source("components/play/DiscogsStream.tsx"),
     source("app/play/page.tsx"),
-    source("components/play/ClassicPlayExperience.tsx"),
+    source("app/play/[objectSlug]/page.tsx"),
   ]);
 
-  const order = ["watch", "read", "listen", "collect", "play", "move"].map(
-    (id) => streams.indexOf('id: "' + id + '"'),
-  );
-  assert(order.every((position) => position >= 0));
-  assert.deepEqual([...order].sort((left, right) => left - right), order);
-  assert.match(
-    streams,
-    /active === "collect" \? <DiscogsStream fixture=\{fixture\} \/> : null/,
-    "Discogs must not mount before Collect is active",
-  );
-  assert.match(
-    streams,
-    /interactive shelf loads only after Collect is selected/i,
-  );
+  assert.match(screens, /collect: \(\) => import\("\.\.\/room-screens\/CollectRoomScreen"\)/);
+  assert.match(screen, /<DiscogsStream/);
+  assert.match(screen, /routePath="\/play\/collect"/);
   assert.match(discogs, /loadConnector<DiscogsPublicSnapshot>\([\s\S]*?"discogs"/);
   assert.match(discogs, /new URLSearchParams\([\s\S]*?pageSize/);
-  assert.match(page, /streamIdFromValue\(query\.stream\)/);
-  assert.match(page, /initialStream=\{streamIdFromValue\(query\.stream\)\}/);
-  assert.match(classic, /six optional public streams/);
-  assert.match(classic, /initialStream=\{initialStream\}/);
-  assert.match(streams, /window\.history\.replaceState/);
-  assert.match(streams, /url\.searchParams\.set\("stream", stream\)/);
-  assert.match(page, /roomExperienceEnabled\(\)/);
-  assert.match(page, /<RoomOverview fixture=\{fixture\}/);
+  assert.match(direct, /collect: async \(query\)/);
+  assert.match(direct, /ROOM_PROVIDER_ADAPTERS\.collect\(query\)/);
+  assert.match(page, /permanentRedirect\(legacyObject\.route\)/);
+  assert.match(
+    page,
+    /<RoomOverview[\s\S]*?fixture=\{fixture\}[\s\S]*?travelEnabled=\{travelAtlasEnabled\(\)\}/,
+  );
 });
 
 test("Discogs uses a ruled shelf and an accessible pressing matrix", async () => {
   const [discogs, css] = await Promise.all([
     source("components/play/DiscogsStream.tsx"),
-    source("components/PersonalStreams.module.css"),
+    source("components/play/StreamPresentation.module.css"),
   ]);
 
   assert.match(discogs, /Pressings and releases, kept distinct/);
   assert.match(discogs, /presentation === "crate"/);
-  assert.match(discogs, /The physical catalog/);
-  assert.match(discogs, /Flip through/);
+  assert.match(discogs, /className=\{styles\.cratePanelHeading\}/);
+  assert.doesNotMatch(discogs, /Inside the crate|In the crate/);
+  assert.match(discogs, /SITE_COPY\.play\["view-overview"\]/);
+  assert.match(discogs, /SITE_COPY\.play\["view-browse-all"\]/);
   assert.match(discogs, /physical items/);
   assert.match(discogs, /distinct releases/);
   assert.match(
@@ -71,15 +62,6 @@ test("Discogs uses a ruled shelf and an accessible pressing matrix", async () =>
     /<Image\b|<img\b|<canvas\b|<svg\b|from\s+["']three["']|autoplay|release\.(?:url|uri|image)/i,
   );
 
-  assert.match(css, /\.tabs\s*\{[\s\S]*?repeat\(6, minmax\(0, 1fr\)\)/);
-  assert.match(
-    css,
-    /@media \(max-width: 1100px\)[\s\S]*?\.tabs\s*\{[\s\S]*?repeat\(3, minmax\(0, 1fr\)\)/,
-  );
-  assert.match(
-    css,
-    /@media \(max-width: 760px\)[\s\S]*?\.tabs\s*\{[\s\S]*?repeat\(2, minmax\(0, 1fr\)\)/,
-  );
   assert.match(css, /\.discogsShelf\s*\{/);
   assert.match(css, /\.discogsMatrixScroll\s*\{[\s\S]*?overflow-x: auto/);
 });
@@ -102,7 +84,7 @@ test("Studio exposes Discogs OAuth1 and an explicit publication gate", async () 
   assert.match(panel, /acknowledgeNoncommercial/);
   assert.match(panel, /personal, noncommercial catalog/);
   assert.match(panel, /excluded from the production handoff/);
-  assert.match(panel, /href="\/play\?stream=collect"/);
+  assert.match(panel, /href="\/play\/collect"/);
   assert.match(
     sharedPanel,
     /\[oauthCredentialShape\.requestKeys\.id\]: credentialId\.trim\(\)/,
@@ -117,7 +99,7 @@ test("Studio exposes Discogs OAuth1 and an explicit publication gate", async () 
   assert.match(controls, /case "discogs"/);
   assert.match(page, /resolveDiscogsCallbackUrl/);
   assert.match(page, /discogsCallbackUrl=\{discogsCallbackUrl\}/);
-  assert.match(privacy, /Six deliberately different connections/);
+  assert.match(privacy, /Six connections and one owner-authored atlas/);
   assert.match(privacy, /Discogs · Collect/);
   assert.match(privacy, /unavailable six hours/i);
   assert.match(privacy, /Discogs API Terms of Use/);

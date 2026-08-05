@@ -14,6 +14,7 @@ type StravaState =
       profileUrl: string;
       embedUrl: string | null;
       embedStatus: "available" | "unavailable";
+      checkedAt: string | null;
       updatedAt: string | null;
     };
 
@@ -26,7 +27,9 @@ export function StravaConnectorControls({
   const [profileUrl, setProfileUrl] = useState("");
   const [embed, setEmbed] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [pending, setPending] = useState<"save" | "disconnect" | null>(null);
+  const [pending, setPending] = useState<
+    "save" | "verify" | "disconnect" | null
+  >(null);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,6 +41,7 @@ export function StravaConnectorControls({
             profileUrl?: string;
             embedUrl?: string | null;
             embedStatus?: "available" | "unavailable";
+            checkedAt?: string | null;
             updatedAt?: string;
           };
         };
@@ -48,6 +52,7 @@ export function StravaConnectorControls({
             profileUrl: result.payload.profileUrl,
             embedUrl: result.payload.embedUrl ?? null,
             embedStatus: result.payload.embedStatus ?? "unavailable",
+            checkedAt: result.payload.checkedAt ?? null,
             updatedAt: result.payload.updatedAt ?? null,
           });
           setProfileUrl(result.payload.profileUrl);
@@ -111,6 +116,7 @@ export function StravaConnectorControls({
           typeof result.embedUrl === "string" ? result.embedUrl : null,
         embedStatus:
           result.embedStatus === "available" ? "available" : "unavailable",
+        checkedAt: result.checkedAt ?? null,
         updatedAt: result.updatedAt ?? null,
       });
       setEmbed(typeof result.embedUrl === "string" ? result.embedUrl : "");
@@ -122,6 +128,55 @@ export function StravaConnectorControls({
       );
     } catch {
       setMessage("The Strava embed could not be saved. Try again.");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function verify(): Promise<void> {
+    if (state.phase !== "ready" || !state.embedUrl) {
+      setMessage("Save an official Strava embed before verifying it.");
+      return;
+    }
+    setPending("verify");
+    setMessage(null);
+    try {
+      const response = await fetch("/api/studio/connectors/strava/verify", {
+        method: "POST",
+      });
+      const result = await responseJson(response);
+      if (
+        !response.ok ||
+        result.status !== "verified" ||
+        !result.checkedAt
+      ) {
+        setMessage(
+          result.error ??
+            "The Strava feed could not be verified. The saved profile fallback remains unchanged.",
+        );
+        return;
+      }
+      setState((current) =>
+        current.phase === "ready"
+          ? {
+              ...current,
+              embedStatus:
+                result.embedStatus === "available"
+                  ? "available"
+                  : "unavailable",
+              checkedAt: result.checkedAt ?? null,
+            }
+          : current,
+      );
+      setMessage(
+        result.embedStatus === "available"
+          ? "The cumulative feed passed the manual anonymous frame check."
+          : "The cumulative feed did not pass the manual frame check. Visitors continue to receive the profile link.",
+      );
+    } catch {
+      setMessage(
+        "The Strava feed could not be verified. The saved profile fallback remains unchanged.",
+      );
     } finally {
       setPending(null);
     }
@@ -230,6 +285,14 @@ export function StravaConnectorControls({
             <dt>Visitor loading</dt>
             <dd>Consent required</dd>
           </div>
+          <div>
+            <dt>Last manual feed check</dt>
+            <dd>
+              {state.phase === "ready"
+                ? formatTimestamp(state.checkedAt)
+                : "Not verified"}
+            </dd>
+          </div>
         </dl>
 
         {state.phase === "ready" && state.embedStatus === "available" ? (
@@ -318,6 +381,16 @@ export function StravaConnectorControls({
           </form>
         ) : state.phase === "ready" ? (
           <div className={styles.actionRow}>
+            {state.embedUrl ? (
+              <button
+                className={styles.quietButton}
+                type="button"
+                disabled={pending !== null}
+                onClick={() => void verify()}
+              >
+                {pending === "verify" ? "Verifying…" : "Verify feed now"}
+              </button>
+            ) : null}
             <button
               className={styles.quietButton}
               type="button"
@@ -346,8 +419,8 @@ export function StravaConnectorControls({
           <strong>Use only Strava-generated values</strong>
           Copy the athlete profile URL. If Strava offers a recent-activity feed
           or weekly-summary embed, paste the complete iframe too. Studio stores
-          the exact tokenized widget URL, checks it anonymously without following
-          redirects, and publishes it only when framing is allowed. A failed
+          the exact tokenized widget URL, checks it anonymously only when you save
+          or select Verify feed now, and publishes it only when framing is allowed. A failed
           widget stays available for owner recovery while visitors receive the
           profile link. Private-share parameters, credentials, and unrelated
           hosts are rejected.

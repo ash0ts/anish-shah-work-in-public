@@ -33,8 +33,12 @@ export {
   type SpotifyPresentationConfig,
 } from "./spotify-presentation";
 export {
+  discogsExtendedDisplayApprovalIsActive,
+  getDiscogsExtendedDisplayApproval,
   getDiscogsPresentationConfig,
+  saveDiscogsExtendedDisplayApproval,
   saveDiscogsPresentationConfig,
+  type DiscogsExtendedDisplayApproval,
   type DiscogsPresentationConfig,
 } from "./discogs-presentation";
 export {

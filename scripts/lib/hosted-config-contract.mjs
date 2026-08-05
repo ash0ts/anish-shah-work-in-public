@@ -2,9 +2,11 @@ import { createHash } from "node:crypto";
 import {
   PUBLIC_CLOUDFLARE_ACCOUNT_ID,
   PUBLIC_SITE_ORIGIN,
+  PRODUCTION_TRAVEL_MEDIA_BUCKET,
   PRODUCTION_RATE_LIMITS,
   PRODUCTION_RESOURCE_FINGERPRINTS,
 } from "./release-config-contract.mjs";
+import { matchingReleaseVersion } from "./release-version.mjs";
 
 export const STAGING_SITE_ORIGIN = "https://staging.anish-shah-is.online";
 export const STAGING_WORKER_NAME = "anish-shah-work-in-public-staging";
@@ -18,6 +20,7 @@ const FORBIDDEN_GENERATED_BINDINGS = [
   "services",
   "queues",
   "r2_buckets",
+  "images",
   "kv_namespaces",
   "vectorize",
   "ai_search_namespaces",
@@ -171,7 +174,7 @@ function kvId(value, name) {
   return value.toLowerCase();
 }
 
-function releaseMetadata(environment, contentVersion) {
+function releaseMetadata(environment, contentVersion, packageVersion) {
   const releaseSha = required(environment, "RELEASE_VALIDATED_SHA").toLowerCase();
   if (!/^[a-f0-9]{40}$/.test(releaseSha)) {
     throw new Error("RELEASE_VALIDATED_SHA must be an exact commit SHA.");
@@ -179,11 +182,35 @@ function releaseMetadata(environment, contentVersion) {
   if (!/^[a-f0-9]{16}$/.test(contentVersion)) {
     throw new Error("The public bundle content version is invalid.");
   }
-  return { releaseSha, contentVersion };
+  const releaseVersion = matchingReleaseVersion(
+    required(environment, "RELEASE_VERSION"),
+    packageVersion,
+  );
+  return { releaseSha, releaseVersion, contentVersion };
 }
 
-export function expectedStagingCoordinates(environment, contentVersion) {
-  const metadata = releaseMetadata(environment, contentVersion);
+export function expectedStagingCoordinates(environment, contentVersion, packageVersion) {
+  const metadata = releaseMetadata(environment, contentVersion, packageVersion);
+  const simulationExperienceMode =
+    environment.STAGING_SIMULATION_EXPERIENCE_MODE?.trim() || "campaign-v1";
+  if (
+    !new Set(["disabled", "coming-soon", "campaign-v1"]).has(
+      simulationExperienceMode,
+    )
+  ) {
+    throw new Error(
+      "STAGING_SIMULATION_EXPERIENCE_MODE must be disabled, coming-soon, or campaign-v1.",
+    );
+  }
+  const simulationAiMode =
+    simulationExperienceMode === "campaign-v1" ? "live" : "authored-only";
+  const travelAtlasMode =
+    environment.STAGING_TRAVEL_ATLAS_MODE?.trim() || "atlas-v1";
+  if (!new Set(["disabled", "atlas-v1"]).has(travelAtlasMode)) {
+    throw new Error(
+      "STAGING_TRAVEL_ATLAS_MODE must be disabled or atlas-v1.",
+    );
+  }
   const databaseId = uuid(
     required(environment, "STAGING_CLOUDFLARE_D1_DATABASE_ID"),
     "STAGING_CLOUDFLARE_D1_DATABASE_ID",
@@ -192,6 +219,18 @@ export function expectedStagingCoordinates(environment, contentVersion) {
     required(environment, "STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID"),
     "STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID",
   );
+  const travelMediaBucket = required(
+    environment,
+    "STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET",
+  );
+  if (
+    !/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(travelMediaBucket) ||
+    travelMediaBucket === PRODUCTION_TRAVEL_MEDIA_BUCKET
+  ) {
+    throw new Error(
+      "STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET must be a valid non-production R2 bucket name.",
+    );
+  }
   const accessAudience = audiences(
     required(environment, "STAGING_CF_ACCESS_AUD"),
     "STAGING_CF_ACCESS_AUD",
@@ -221,6 +260,8 @@ export function expectedStagingCoordinates(environment, contentVersion) {
     ["ARTWORK_RATE_LIMITER", "STAGING_ARTWORK_RATE_LIMIT_NAMESPACE_ID", 120],
     ["PROMOTION_RATE_LIMITER", "STAGING_PROMOTION_RATE_LIMIT_NAMESPACE_ID", 6],
     ["OAUTH_CALLBACK_RATE_LIMITER", "STAGING_OAUTH_CALLBACK_RATE_LIMIT_NAMESPACE_ID", 20],
+    ["SIMULATION_RATE_LIMITER", "STAGING_SIMULATION_RATE_LIMIT_NAMESPACE_ID", 12],
+    ["TRAVEL_MEDIA_RATE_LIMITER", "STAGING_TRAVEL_MEDIA_RATE_LIMIT_NAMESPACE_ID", 180],
   ].map(([name, environmentName, limit]) => {
     const namespaceId = required(environment, environmentName);
     if (!/^[0-9]{6,32}$/.test(namespaceId) || PRODUCTION_RATE_LIMIT_NAMESPACES.has(namespaceId)) {
@@ -247,11 +288,15 @@ export function expectedStagingCoordinates(environment, contentVersion) {
     teamDomain: accessTeamDomain(required(environment, "CF_ACCESS_TEAM_DOMAIN")),
     ownerEmails: emails(required(environment, "OWNER_EMAILS")),
     rateLimits,
+    simulationExperienceMode,
+    simulationAiMode,
+    travelAtlasMode,
+    travelMediaBucket,
   };
 }
 
-export function expectedPreviewCoordinates(environment, contentVersion) {
-  const metadata = releaseMetadata(environment, contentVersion);
+export function expectedPreviewCoordinates(environment, contentVersion, packageVersion) {
+  const metadata = releaseMetadata(environment, contentVersion, packageVersion);
   const prNumber = required(environment, "PREVIEW_PR_NUMBER");
   if (!/^[1-9][0-9]{0,6}$/.test(prNumber)) {
     throw new Error("PREVIEW_PR_NUMBER must be a positive GitHub PR number.");
@@ -287,6 +332,8 @@ export function stagingConfiguration(base, expected) {
       migrations_dir: "../../drizzle",
     }],
     kv_namespaces: [{ binding: "PUBLICATION_CACHE", id: expected.publicationCacheId }],
+    r2_buckets: [{ binding: "TRAVEL_MEDIA", bucket_name: expected.travelMediaBucket }],
+    images: { binding: "IMAGES" },
     ratelimits: expected.rateLimits.map(({ name, namespaceId, limit }) => ({
       name,
       namespace_id: namespaceId,
@@ -302,10 +349,15 @@ export function stagingConfiguration(base, expected) {
       SITE_URL: expected.siteUrl,
       STEAM_DATA_STORAGE_COUNTRIES: "United States",
       RELEASE_SHA: expected.releaseSha,
+      RELEASE_VERSION: expected.releaseVersion,
       CONTENT_VERSION: expected.contentVersion,
       PUBLIC_CONTENT_MODE: "d1_kv_required",
       DEPLOYMENT_TIER: "staging",
-      PLAY_EXPERIENCE_MODE: "my-room-2001",
+      SIMULATION_EXPERIENCE_MODE: expected.simulationExperienceMode,
+      SIMULATION_AI_MODE: expected.simulationAiMode,
+      SIMULATION_PROVIDER: "anthropic",
+      SIMULATION_MODEL: "claude-sonnet-5",
+      TRAVEL_ATLAS_MODE: expected.travelAtlasMode,
     },
     observability: {
       enabled: true,
@@ -336,11 +388,16 @@ export function previewConfiguration(base, expected) {
       PRODUCTION_SITE_URL: expected.productionSiteUrl,
       SITE_URL: expected.siteUrl,
       RELEASE_SHA: expected.releaseSha,
+      RELEASE_VERSION: expected.releaseVersion,
       CONTENT_VERSION: expected.contentVersion,
       PUBLIC_CONTENT_MODE: "static_preview",
       DEPLOYMENT_TIER: "preview",
       PREVIEW_PR_NUMBER: expected.prNumber,
-      PLAY_EXPERIENCE_MODE: "my-room-2001",
+      SIMULATION_EXPERIENCE_MODE: "campaign-v1",
+      SIMULATION_AI_MODE: "fixture",
+      SIMULATION_PROVIDER: "fixture",
+      SIMULATION_MODEL: "authored-fixture-v1",
+      TRAVEL_ATLAS_MODE: "atlas-v1",
     },
     observability: {
       enabled: true,
@@ -359,7 +416,7 @@ export function assertStagingConfiguration(config, expected) {
   }
   for (const key of [
     "name", "topLevelName", "account_id", "workers_dev", "preview_urls",
-    "routes", "d1_databases", "kv_namespaces", "ratelimits", "vars",
+    "routes", "d1_databases", "kv_namespaces", "r2_buckets", "images", "ratelimits", "vars",
     "observability", "triggers",
   ]) {
     if (JSON.stringify(config[key]) !== JSON.stringify(canonical[key])) {

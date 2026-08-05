@@ -6,11 +6,12 @@ import path from "node:path";
 import { verifyAttestedArtifacts } from "./content-attestation-policy.mjs";
 import { scanSensitiveContent } from "./sensitive-content.mjs";
 
-const HELP = `Usage: node check-change.mjs [--plan | --run | --full] [--path <repo-relative-path>]...
+const HELP = `Usage: node check-change.mjs [--plan | --run | --full] [--base <git-ref>] [--path <repo-relative-path>]...
 
   --plan   Print guardrails and selected checks (default).
   --run    Run checks selected from changed paths.
   --full   Run the complete repository validation gate.
+  --base   Include committed changes from the merge-base with this ref through HEAD.
   --path   Classify an explicit safe fixture path instead of reading git state.
 `;
 
@@ -22,6 +23,7 @@ function fail(message) {
 let mode = "plan";
 let explicitMode = false;
 const fixturePaths = [];
+let baseRef = null;
 const argumentsList = process.argv.slice(2);
 for (let index = 0; index < argumentsList.length; index += 1) {
   const argument = argumentsList[index];
@@ -42,6 +44,17 @@ for (let index = 0; index < argumentsList.length; index += 1) {
     index += 1;
     continue;
   }
+  if (argument === "--base") {
+    const value = argumentsList[index + 1];
+    if (!value || value.startsWith("--")) fail("--base requires a Git ref.");
+    if (baseRef !== null) fail("Provide --base only once.");
+    if (/^[\s-]|[\u0000-\u001f\u007f]/u.test(value)) {
+      fail("--base must be a safe Git ref, not an option or control string.");
+    }
+    baseRef = value;
+    index += 1;
+    continue;
+  }
   fail(`Unknown argument: ${argument}`);
 }
 
@@ -58,6 +71,19 @@ function runGit(args, { allowFailure = false } = {}) {
 
 const root = runGit(["rev-parse", "--show-toplevel"]).stdout.trim();
 if (!root) fail("Run this helper inside the anish-site Git repository.");
+if (baseRef !== null && fixturePaths.length > 0) {
+  fail("Use either --base or --path fixtures, not both.");
+}
+
+const baseCommit =
+  baseRef === null
+    ? null
+    : runGit([
+        "rev-parse",
+        "--verify",
+        "--end-of-options",
+        `${baseRef}^{commit}`,
+      ]).stdout.trim();
 
 function normalizeRelativePath(value) {
   const normalized = path.posix.normalize(value.replaceAll("\\", "/"));
@@ -83,6 +109,16 @@ function lines(result) {
 function changedPaths() {
   if (fixturePaths.length) return fixturePaths.map(normalizeRelativePath);
   const values = [
+    ...(baseCommit
+      ? lines(
+          runGit([
+            "diff",
+            "--name-only",
+            "--diff-filter=ACMRD",
+            `${baseCommit}...HEAD`,
+          ]),
+        )
+      : []),
     ...lines(runGit(["diff", "--name-only", "--diff-filter=ACMRD"])),
     ...lines(runGit(["diff", "--cached", "--name-only", "--diff-filter=ACMRD"])),
     ...lines(runGit(["ls-files", "--others", "--exclude-standard"])),
@@ -94,6 +130,16 @@ function deletedPaths() {
   if (fixturePaths.length) return new Set();
   return new Set(
     [
+      ...(baseCommit
+        ? lines(
+            runGit([
+              "diff",
+              "--name-only",
+              "--diff-filter=D",
+              `${baseCommit}...HEAD`,
+            ]),
+          )
+        : []),
       ...lines(runGit(["diff", "--name-only", "--diff-filter=D"])),
       ...lines(runGit(["diff", "--cached", "--name-only", "--diff-filter=D"])),
     ].map(normalizeRelativePath),
@@ -115,6 +161,15 @@ function existsInHead(value) {
   return (
     runGit(["cat-file", "-e", `HEAD:${value}`], { allowFailure: true }).status ===
     0
+  );
+}
+
+function existedBeforeChange(value) {
+  if (baseCommit === null) return existsInHead(value);
+  return (
+    runGit(["cat-file", "-e", `${baseCommit}:${value}`], {
+      allowFailure: true,
+    }).status === 0
   );
 }
 
@@ -168,7 +223,11 @@ for (const value of paths) {
   if (isSensitivePath(value) && !deleted.has(value)) {
     violations.push(`${value}: sensitive or machine-local path must not be changed or staged.`);
   }
-  if (/^drizzle\/\d+_[^/]+\.sql$/.test(value) && existsInHead(value)) {
+  if (
+    (/^drizzle\/\d+_[^/]+\.sql$/.test(value) ||
+      /^drizzle\/meta\/\d+_snapshot\.json$/.test(value)) &&
+    existedBeforeChange(value)
+  ) {
     violations.push(`${value}: applied migrations are immutable; add the next migration instead.`);
   }
 }
@@ -243,12 +302,12 @@ const authOrOAuthChanged = paths.some((value) =>
 const securityTestChanged = paths.some(
   (value) =>
     !deleted.has(value) &&
-    /^tests\/(?:backend|security|cloudflare|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
+    /^tests\/(?:backend|security|cloudflare|travel-(?:backend|security)|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
 );
 const securityTestsDeleted = paths.filter(
   (value) =>
     deleted.has(value) &&
-    /^tests\/(?:backend|security|cloudflare|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
+    /^tests\/(?:backend|security|cloudflare|travel-(?:backend|security)|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
 );
 if (securityTestsDeleted.length > 0 && !securityTestChanged) {
   violations.push(
@@ -260,6 +319,7 @@ if ((ownerRouteChanged || authOrOAuthChanged) && !securityTestChanged) {
 }
 
 const checks = [];
+const domains = new Set();
 function addCheck(command) {
   if (!checks.includes(command)) checks.push(command);
 }
@@ -273,6 +333,50 @@ const contentChanged = paths.some((value) =>
     /^types\/content/,
   ]),
 );
+const copyChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^content\/copy\//,
+    /^lib\/(?:copy|copy-contract|copy-ownership|copy-voice-contract)\.ts$/,
+    /^lib\/server\/(?:copy-ownership|root-metadata)\.ts$/,
+    /^scripts\/(?:generate-copy-deck|copy-deck-diff|copy-only-lane|copy-voice-check|capture-copy-preview)\.mjs$/,
+    /^scripts\/lib\/(?:copy-deck|copy-only-lane|copy-voice)\.mjs$/,
+    /^tests\/copy-(?:deck|only-lane|voice)\.test\.mjs$/,
+    /^types\/copy\.ts$/,
+    /^\.agents\/skills\/edit-anish-site-copy\//,
+  ]),
+);
+const docsChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^README\.md$/,
+    /^CONTRIBUTING\.md$/,
+    /^SECURITY\.md$/,
+    /^docs\//,
+    /^content\/README\.md$/,
+  ]),
+);
+const localDxChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^\.env\.example$/,
+    /^scripts\/(?:setup-local|doctor)\.mjs$/,
+    /^scripts\/lib\/local-dx\.mjs$/,
+    /^tests\/local-dx\.test\.mjs$/,
+  ]),
+);
+const docsToolingChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^scripts\/check-docs\.mjs$/,
+    /^scripts\/lib\/docs-check\.mjs$/,
+    /^tests\/docs-check\.test\.mjs$/,
+  ]),
+);
+const skillToolingChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^scripts\/validate-repository-skills\.mjs$/,
+    /^tests\/repository-skills\.test\.mjs$/,
+  ]),
+);
+const developerExperienceChanged =
+  localDxChanged || docsToolingChanged || skillToolingChanged;
 const uiChanged = paths.some((value) =>
   matchesAny(value, [
     /^app\/(?!api\/)/,
@@ -285,7 +389,7 @@ const connectorChanged = paths.some((value) =>
   matchesAny(value, [
     /^app\/api\/(?:studio\/)?connectors\//,
     /^app\/studio\/(?:ConnectorControls|connectors\/)/,
-    /^components\/(?:PersonalStreams|SpotifyStream|play\/|spotify\/)/,
+    /^components\/(?:SpotifyStream|play\/|spotify\/)/,
     /^lib\/server\/(?:connectors|http\/(?:connector|myanimelist|spotify|discogs)|strava-config|play-promotion)/,
     /^drizzle\//,
   ]),
@@ -299,6 +403,77 @@ const backendChanged = paths.some((value) =>
   ]),
 );
 const migrationChanged = paths.some((value) => /^drizzle\//.test(value));
+const travelChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^app\/(?:api\/studio\/travel|api\/travel(?:-media)?|studio\/travel|play\/travel)\//,
+    /^components\/play\/travel\//,
+    /^lib\/(?:server\/)?travel\//,
+    /^public\/assets\/travel\//,
+    /^scripts\/travel\//,
+    /^types\/travel\.ts$/,
+  ]),
+);
+const simulationChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^app\/(?:api\/simulation|api\/studio\/simulation|simulation)\//,
+    /^components\/simulation\//,
+    /^content\/presentation\/simulation(?:\.|\/)/,
+    /^lib\/(?:server\/)?simulation\//,
+    /^scripts\/(?:run-local-simulation-live|simulation-)/,
+    /^tests\/simulation(?:-|\/)/,
+    /^types\/simulation\.ts$/,
+  ]),
+);
+const simulationSensitiveChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^app\/api\/(?:simulation|studio\/simulation)\//,
+    /^lib\/server\/simulation\//,
+  ]),
+);
+const simulationRegressionChanged = paths.some(
+  (value) =>
+    !deleted.has(value) &&
+    /^tests\/simulation-(?:backend|migrations|play-grounding)\.test\.mjs$/.test(
+      value,
+    ),
+);
+if (simulationSensitiveChanged && !simulationRegressionChanged) {
+  violations.push(
+    "Simulation API, session, Gateway, or privacy code changed without a Simulation backend/security regression test in the same change.",
+  );
+}
+
+const travelMediaSensitiveChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^app\/api\/(?:studio\/travel\/(?:photos|uploads)|travel-media)\//,
+    /^lib\/server\/travel\/(?:repository\/)?(?:media|photos|uploads-media|publication)(?:\.|\/)/,
+  ]),
+);
+const travelRegressionChanged = paths.some(
+  (value) =>
+    !deleted.has(value) &&
+    /^tests\/travel-(?:backend|security)\.test\.mjs$/.test(value),
+);
+if (travelMediaSensitiveChanged && !travelRegressionChanged) {
+  violations.push(
+    "Travel upload, media, photo, or publication code changed without a Travel backend/security regression test in the same change.",
+  );
+}
+
+const roomRegistryChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^app\/play\/\[objectSlug\]\//,
+    /^components\/play\/room-platform\/(?:room-object-contract|room-registry|room-types)\.ts$/,
+  ]),
+);
+const roomRegistryRegressionChanged = paths.some(
+  (value) => !deleted.has(value) && value === "tests/play-room-routes.test.mjs",
+);
+if (roomRegistryChanged && !roomRegistryRegressionChanged) {
+  violations.push(
+    "The closed room registry or direct-route dispatch changed without a registry-parity regression test in the same change.",
+  );
+}
 const securityOrReleaseChanged = paths.some((value) =>
   matchesAny(value, [
     /^worker\//,
@@ -314,13 +489,22 @@ const securityOrReleaseChanged = paths.some((value) =>
 const dependencyChanged = paths.some((value) =>
   /^(?:package\.json|package-lock\.json|vite\.config\.|tsconfig\.|next\.config\.)/.test(value),
 );
-const skillChanged = paths.some(
-  (value) => value === "AGENTS.md" || value.startsWith(".agents/skills/"),
-);
+const skillChanged =
+  skillToolingChanged ||
+  paths.some(
+    (value) => value === "AGENTS.md" || value.startsWith(".agents/skills/"),
+  );
 const responsivePlayChanged = paths.some((value) =>
   matchesAny(value, [
-    /^components\/(?:PersonalStreams|SpotifyStream|spotify\/|play\/)/,
+    /^components\/(?:SpotifyStream|spotify\/|play\/)/,
     /^app\/play\//,
+  ]),
+);
+const roomRuntimeChanged = paths.some((value) =>
+  matchesAny(value, [
+    /^components\/play\/(?:room-3d|room-platform|pocket-room)\//,
+    /^app\/play\/(?:page|layout)\.tsx$/,
+    /^tests\/browser\/room-(?:quality|review)\.spec\.mjs$/,
   ]),
 );
 const releaseChanged = paths.some((value) =>
@@ -330,9 +514,22 @@ const releaseChanged = paths.some((value) =>
     /^scripts\/deployable-artifact-manifest\.mjs$/,
     /^scripts\/lib\/release(?:-[a-z0-9]+)*-contract\.mjs$/,
     /^scripts\/lib\/deployable-artifact-contract\.mjs$/,
-    /^docs\/operations\/release\.md$/,
   ]),
 );
+
+if (contentChanged) domains.add("canonical-content");
+if (copyChanged) domains.add("copy-deck");
+if (docsChanged) domains.add("documentation");
+if (uiChanged) domains.add("public-ui");
+if (connectorChanged) domains.add("connectors");
+if (backendChanged) domains.add("backend-storage");
+if (migrationChanged) domains.add("migration");
+if (travelChanged) domains.add("travel");
+if (simulationChanged) domains.add("simulation");
+if (securityOrReleaseChanged) domains.add("security-release");
+if (dependencyChanged) domains.add("dependencies-build");
+if (skillChanged) domains.add("agent-maintenance");
+if (developerExperienceChanged) domains.add("developer-experience");
 
 const deletedReleaseGuard = paths.find(
   (value) =>
@@ -354,6 +551,40 @@ if (contentChanged) {
   addCheck("npm run test:content");
   addCheck("npm run typecheck");
 }
+if (copyChanged) {
+  addCheck("npm run copy:check");
+  addCheck("npm run copy:voice");
+  addCheck("npm run copy:test");
+  addCheck(
+    baseRef === null
+      ? "npm run copy:diff"
+      : `npm run copy:diff -- --base ${baseCommit}`,
+  );
+  addCheck(
+    baseRef === null
+      ? "npm run copy:audit"
+      : `npm run copy:audit -- --base ${baseCommit}`,
+  );
+  addCheck("npm run typecheck");
+  addCheck("npm run build");
+  addCheck("npm run test:rendered");
+  addCheck("npm run browser:public:existing");
+  notes.push(
+    "Review copy:audit against the intended base and owner-check every FACT-CHECK field before merge.",
+  );
+}
+if (docsChanged) {
+  addCheck("npm run docs:check");
+}
+if (localDxChanged) {
+  addCheck("npm run test:local-dx");
+  addCheck("npm run lint");
+}
+if (docsToolingChanged) {
+  addCheck("npm run docs:check");
+  addCheck("npm run test:local-dx");
+  addCheck("npm run lint");
+}
 if (uiChanged) {
   addCheck("npm run typecheck");
   addCheck("npm run lint");
@@ -372,6 +603,25 @@ if (backendChanged) {
 if (migrationChanged) {
   addCheck("npm run db:local:migrate:clean");
 }
+if (travelChanged) {
+  addCheck("npm run travel:geography:check");
+  addCheck("npm run test:backend");
+  addCheck("npm run test:rendered");
+  addCheck("npm run db:local:migrate:clean");
+  addCheck("npm run build");
+  addCheck("npm run browser:travel:existing");
+}
+if (simulationChanged) {
+  addCheck("npm run typecheck");
+  addCheck("npm run test:backend");
+  addCheck("npm run test:rendered");
+  addCheck("npm run build");
+  addCheck("npm run bundle:scan");
+  addCheck("npm run browser:simulation:existing");
+  notes.push(
+    "For Simulation incidents, verify AI Gateway prompt/response logging and caching are disabled before changing hosted configuration; preserve only sanitized incident evidence and follow the owner-authorized deletion/containment runbook.",
+  );
+}
 if (securityOrReleaseChanged) {
   addCheck("npm run typecheck");
   addCheck("npm run test:backend");
@@ -381,33 +631,67 @@ if (securityOrReleaseChanged) {
 }
 if (dependencyChanged) {
   checks.length = 0;
-  addCheck("npm run lint");
-  addCheck("npm test");
-  addCheck("npm run security:audit");
+  addCheck("npm run validate");
+  if (copyChanged) {
+    addCheck(
+      baseRef === null
+        ? "npm run copy:diff"
+        : `npm run copy:diff -- --base ${baseCommit}`,
+    );
+    addCheck("npm run browser:public:existing");
+  } else if (responsivePlayChanged) {
+    addCheck("npm run browser:public:existing");
+    if (roomRuntimeChanged) addCheck("npm run browser:room:existing");
+  }
 }
 if (skillChanged) {
   notes.push("Validate changed skills with skill-creator's quick_validate.py before handoff.");
+  addCheck("npm run skill:validate");
   addCheck("npm run test:maintenance-skill");
 }
 if (responsivePlayChanged) {
-  addCheck("npm run validate:browser");
+  addCheck("npm run browser:public:existing");
+  if (roomRuntimeChanged) addCheck("npm run browser:room:existing");
 }
 if (releaseChanged) {
   checks.length = 0;
-  addCheck("npm run validate:release");
-  notes.push("Release validation never deploys, migrates production, rotates credentials, or mutates Git.");
+  addCheck("npm run validate");
+  if (copyChanged) {
+    addCheck(
+      baseRef === null
+        ? "npm run copy:diff"
+        : `npm run copy:diff -- --base ${baseCommit}`,
+    );
+    addCheck("npm run browser:public:existing");
+  } else if (responsivePlayChanged) {
+    addCheck("npm run browser:public:existing");
+    if (roomRuntimeChanged) addCheck("npm run browser:room:existing");
+  }
+  notes.push(
+    "This validates release-code changes only. Run validate:release separately only for a clean, pushed, explicitly approved production candidate with exact-SHA workflow evidence.",
+  );
+  notes.push(
+    "The maintenance helper never deploys, migrates a hosted database, rotates credentials, or mutates Git.",
+  );
 }
 
 if (mode === "full") {
   checks.length = 0;
   addCheck("npm run validate");
-  addCheck("npm run validate:browser");
+  addCheck("npm run browser:release:existing");
 }
 
 console.log("Maintenance change plan");
 console.log(`Repository: ${root}`);
 console.log(`Paths: ${paths.length}`);
 for (const value of paths) console.log(`  - ${value}`);
+console.log(`Base: ${baseRef === null ? "working tree" : `${baseRef} (${baseCommit})`}`);
+console.log("Domains:");
+if (domains.size) {
+  for (const domain of [...domains].sort()) console.log(`  - ${domain}`);
+} else {
+  console.log("  - none");
+}
 
 if (violations.length) {
   console.error("\nGuardrail violations:");

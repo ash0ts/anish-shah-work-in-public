@@ -80,6 +80,53 @@
   line-height: 1.45;
 }
 
+.simulationIngress {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid #3b526f;
+}
+
+.simulationIngress p {
+  flex: 1 1 12rem;
+  margin: 0;
+  color: #a9a1bf;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.simulationIngress a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0.68rem 0.85rem;
+  border: 1px solid #c8b8ff;
+  color: #eee4cf;
+  background: #252b45;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.simulationIngress a:hover,
+.simulationIngress a:focus-visible {
+  border-color: #ff6a2a;
+  color: #07101b;
+  background: #ff6a2a;
+}
+
+.simulationIngress a[aria-disabled="true"] {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .poster {
   display: grid;
   min-width: 0;
@@ -210,6 +257,107 @@
   color: #55e4d0;
 }
 
+@media (max-width: 1099px) {
+  .page {
+    padding-top: clamp(1.25rem, 3vw, 2rem);
+    padding-bottom: 2rem;
+  }
+
+  .intro {
+    gap: 0.45rem clamp(1.25rem, 4vw, 3rem);
+    margin-bottom: 1rem;
+  }
+
+  .intro h1 {
+    max-width: 10ch;
+    font-size: clamp(3.25rem, 8vw, 5.75rem);
+    line-height: 0.82;
+  }
+
+  .intro > div {
+    gap: 0.8rem;
+  }
+
+  .intro > div > p {
+    display: none;
+  }
+
+  .entryControl {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.55rem 0.75rem;
+    align-items: center;
+  }
+
+  .entryControl button {
+    min-height: 48px;
+    padding: 0.7rem 0.85rem;
+  }
+
+  .posterField {
+    min-height: clamp(15rem, 44svh, 24rem);
+  }
+
+  .posterField img {
+    object-position: 50% 53%;
+  }
+
+  .posterField > p {
+    right: 0.65rem;
+    bottom: 0.65rem;
+    left: 0.65rem;
+    max-width: none;
+    font-size: 0.58rem;
+  }
+
+  .directory {
+    padding: 0.8rem;
+  }
+
+  .directory header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+    margin-bottom: 0.65rem;
+  }
+
+  .directory header p {
+    margin: 0;
+    font-size: 0.6rem;
+  }
+
+  .directory h2 {
+    max-width: none;
+    font-size: 1rem;
+  }
+
+  .directory ol {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .directory li:nth-child(odd) {
+    border-right: 1px solid rgb(59 82 111 / 70%);
+  }
+
+  .directory a {
+    min-height: 64px;
+    grid-template-columns: 1.25rem minmax(0, 1fr);
+    gap: 0.15rem 0.4rem;
+    align-content: center;
+    padding: 0.55rem;
+  }
+
+  .directory a > strong {
+    font-size: 0.9rem;
+  }
+
+  .directory a > small,
+  .directory a > b {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
   .intro,
   .poster {
@@ -221,19 +369,55 @@
   }
 
   .posterField {
-    min-height: clamp(27rem, 88vw, 42rem);
     border-right: 0;
     border-bottom: 1px solid #3b526f;
   }
 }
 
 @media (max-width: 520px) {
-  .page { padding-top: 3rem; }
-  .intro h1 { font-size: clamp(3.7rem, 18vw, 6rem); }
-  .poster { display: block; }
-  .posterField { min-height: 25rem; }
-  .directory { padding: 1rem; }
-  .directory a { grid-template-columns: 1.6rem minmax(0, 1fr) auto; }
+  .page {
+    padding-top: 1.25rem;
+    padding-bottom: 2rem;
+  }
+
+  .intro {
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+  }
+
+  .intro > p {
+    font-size: 0.65rem;
+  }
+
+  .intro h1 {
+    max-width: 9ch;
+    font-size: clamp(3rem, 15.5vw, 4.25rem);
+    line-height: 0.83;
+  }
+
+  .intro > div > p {
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+
+  .entryControl span {
+    font-size: 0.68rem;
+  }
+
+  .poster {
+    display: block;
+  }
+
+}
+
+@media (max-width: 350px) {
+  .entryControl {
+    grid-template-columns: 1fr;
+  }
+
+  .entryControl button {
+    width: 100%;
+  }
 }
 
 @media (forced-colors: active) {
@@ -245,7 +429,8 @@
   }
 
   .posterField > p,
-  .entryControl button {
+  .entryControl button,
+  .simulationIngress a {
     color: ButtonText;
     background: ButtonFace;
     forced-color-adjust: auto;

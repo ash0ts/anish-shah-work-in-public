@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { publicBundle } from "@/lib/content";
+import { SITE_COPY } from "@/lib/copy";
 import styles from "./SiteFooter.module.css";
 
 export function SiteFooter() {
@@ -15,27 +16,31 @@ export function SiteFooter() {
 
   return (
     <footer className={styles.footer}>
-      <span className={styles.copyright}>© 2026 Anish Shah</span>
+      <span className={styles.copyright}>{SITE_COPY.site["footer-copyright"]}</span>
       <nav className={styles.links} aria-label="Public profiles">
         {linkedin ? (
           <a href={linkedin.href} rel="noreferrer" target="_blank">
-            LinkedIn
+            {SITE_COPY.site["footer-linkedin"]}
           </a>
         ) : null}
         {github ? (
           <a href={github.href} rel="noreferrer" target="_blank">
-            GitHub
+            {SITE_COPY.site["footer-github"]}
           </a>
         ) : null}
         {wandb ? (
           <a href={wandb.href} rel="noreferrer" target="_blank">
-            W&amp;B
+            {SITE_COPY.site["footer-wandb"]}
           </a>
         ) : null}
       </nav>
       <nav className={styles.links} aria-label="Site information">
-        <Link href="/sources">Sources</Link>
-        <Link href="/privacy">Privacy</Link>
+        <Link href="/sources" prefetch={false}>
+          {SITE_COPY.site["footer-sources"]}
+        </Link>
+        <Link href="/privacy" prefetch={false}>
+          {SITE_COPY.site["footer-privacy"]}
+        </Link>
       </nav>
     </footer>
   );

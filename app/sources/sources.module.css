@@ -7,7 +7,7 @@
 
 .eyebrow {
   margin: 0;
-  color: var(--muted, #667084);
+  color: var(--work-blue, #295dff);
   font-family: var(--font-mono, "IBM Plex Mono", monospace);
   font-size: 0.75rem;
   font-weight: 560;
@@ -19,403 +19,104 @@
 .intro {
   display: grid;
   max-width: 62rem;
-  gap: 1rem;
-  padding-block: clamp(2.75rem, 5vw, 4.5rem) clamp(2.25rem, 3.5vw, 3.25rem);
+  gap: 0.85rem;
+  padding-block: clamp(2.5rem, 5vw, 4.25rem) clamp(1.75rem, 3vw, 2.75rem);
 }
-
 .intro h1 {
-  max-width: 12ch;
+  max-width: 13ch;
   margin: 0;
-  font-family: var(--font-display, "Recursive", sans-serif);
-  font-size: clamp(2.8rem, 6vw, 5.7rem);
-  font-variation-settings: "CASL" 0.3, "wght" 720;
+  font-size: clamp(2.75rem, 6vw, 5.6rem);
   letter-spacing: -0.065em;
-  line-height: 0.87;
+  line-height: 0.9;
   text-wrap: balance;
 }
-
 .intro > p {
-  max-width: 48rem;
+  max-width: 44rem;
   margin: 0;
-  color: var(--muted, #5f6878);
-  font-size: clamp(1rem, 1.35vw, 1.16rem);
-  line-height: 1.6;
+  color: var(--ink-muted, #5f6878);
+  font-size: clamp(1rem, 1.3vw, 1.14rem);
+  line-height: 1.55;
 }
-
 .intro small {
-  color: var(--muted, #667084);
-  font-family: var(--font-mono, "IBM Plex Mono", monospace);
+  color: var(--ink-muted, #667084);
+  font-family: var(--font-mono, monospace);
   font-size: 0.75rem;
-  overflow-wrap: anywhere;
 }
 
-.accounting,
-.rules {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: minmax(13rem, 0.45fr) minmax(0, 1.55fr);
-  gap: clamp(2rem, 8vw, 9rem);
-}
-
-.accounting {
-  padding-block: clamp(2.1rem, 3.5vw, 3rem);
-  border-top: 1px solid var(--line, #d5dbe4);
-}
-
-.accounting > header,
-.rules > header {
-  display: grid;
-  align-content: start;
-  gap: 0.65rem;
-}
-
-.accounting > header > p:not(.eyebrow) {
-  max-width: 25rem;
-  margin: 0.15rem 0 0;
-  color: var(--muted, #5f6878);
-  font-size: 0.82rem;
-  line-height: 1.5;
-}
-
-.accounting h2,
-.nonClaims h2,
-.rules h2,
-.claims > header h2 {
+.claims { padding-block: clamp(2.25rem, 4vw, 3.75rem); border-top: 1px solid var(--hairline); }
+.claims > header { display: grid; gap: 0.6rem; margin-bottom: clamp(1.5rem, 3vw, 2.5rem); }
+.claims > header h2,
+.rules h2 {
+  max-width: 20ch;
   margin: 0;
-  font-family: var(--font-display, "Recursive", sans-serif);
-  font-size: clamp(1.7rem, 2.8vw, 3rem);
-  font-variation-settings: "CASL" 0.3, "wght" 660;
+  font-size: clamp(1.8rem, 3.2vw, 3.2rem);
   letter-spacing: -0.045em;
   line-height: 1;
   text-wrap: balance;
 }
 
-.accountingFlows {
-  display: grid;
-  min-width: 0;
-  gap: 1.5rem;
-}
-
-.accountingFlows > section {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: minmax(7rem, 0.25fr) minmax(0, 1.75fr);
-  border-top: 1px solid var(--ink, #17223b);
-}
-
-.accountingFlows h3 {
-  margin: 0;
-  padding: 0.85rem 1rem 0.85rem 0;
-  color: var(--muted, #667084);
-  font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.055em;
-  line-height: 1.35;
-  text-transform: uppercase;
-}
-
-.accountingFlows ol {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.accountingFlows > section:last-child ol {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.accountingFlows li {
-  display: grid;
-  min-width: 0;
-  min-height: 5.75rem;
-  align-content: space-between;
-  gap: 0.8rem;
-  padding: 0.8rem;
-  border-right: 1px solid var(--line, #d5dbe4);
-  border-bottom: 1px solid var(--ink, #17223b);
-}
-
-.accountingFlows li:first-child {
-  border-left: 1px solid var(--line, #d5dbe4);
-}
-
-.accountingFlows li strong {
-  color: var(--blue, #295dff);
-  font-family: var(--font-display, "Recursive", sans-serif);
-  font-size: clamp(1.8rem, 3vw, 3rem);
-  font-variation-settings: "CASL" 0.15, "wght" 720;
-  letter-spacing: -0.065em;
-  line-height: 0.9;
-}
-
-.accountingFlows li span {
-  max-width: 16ch;
-  color: var(--muted, #667084);
-  font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  line-height: 1.4;
-  text-transform: uppercase;
-}
-
-.nonClaims {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: minmax(13rem, 0.45fr) minmax(0, 1.55fr);
-  gap: clamp(2rem, 8vw, 9rem);
-  padding-block: clamp(2.1rem, 3.5vw, 3rem);
-  border-top: 1px solid var(--line, #d5dbe4);
-}
-
-.nonClaims > header {
-  display: grid;
-  align-content: start;
-  gap: 0.65rem;
-}
-
-.nonClaims ul {
-  margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--ink, #17223b);
-  list-style: none;
-}
-
-.nonClaims li {
-  padding: 0.8rem 0;
-  border-bottom: 1px solid var(--line, #d5dbe4);
-  color: var(--muted, #5f6878);
-  font-size: 0.85rem;
-  line-height: 1.45;
-}
-
-.nonClaims li::before {
-  margin-right: 0.65rem;
-  color: var(--blue, #295dff);
-  content: "Not";
-  font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.rules {
-  padding-block: clamp(2.25rem, 4vw, 3.5rem);
-  border-block: 1px solid var(--line, #d5dbe4);
-}
-
-.rules ol {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--ink, #17223b);
-  list-style: none;
-}
-
-.rules li {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: 2.4rem minmax(0, 1fr);
-  gap: 1rem;
-  padding-block: 1rem;
-  border-bottom: 1px solid var(--line, #d5dbe4);
-}
-
-.rules li > span {
-  color: var(--blue, #295dff);
-  font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.75rem;
-}
-
-.rules li > div {
-  min-width: 0;
-}
-
-.rules h3 {
-  margin: 0 0 0.35rem;
-  font-family: var(--font-body, "Hanken Grotesk", sans-serif);
-  font-size: 0.95rem;
-  font-weight: 680;
-  letter-spacing: -0.015em;
-  line-height: 1.25;
-}
-
-.rules li p {
-  max-width: 50rem;
-  margin: 0;
-  color: var(--muted, #5f6878);
-  font-size: 0.85rem;
-  line-height: 1.55;
-}
-
-.claims {
-  padding-block: clamp(3rem, 5vw, 4.75rem);
-}
-
-.claims > header {
-  display: grid;
-  max-width: 56rem;
-  gap: 0.8rem;
-  margin-bottom: clamp(2.25rem, 3.5vw, 3.25rem);
-}
-
-.themeGroups {
-  display: grid;
-  min-width: 0;
-  gap: clamp(2.5rem, 4vw, 4rem);
-}
-
+.themeGroups { display: grid; min-width: 0; gap: clamp(2rem, 3.5vw, 3.25rem); }
 .themeGroups > section {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(12rem, 0.42fr) minmax(0, 1.58fr);
-  gap: clamp(2rem, 5vw, 5.5rem);
+  grid-template-columns: minmax(11rem, 0.38fr) minmax(0, 1.62fr);
+  gap: clamp(1.5rem, 4vw, 4.5rem);
 }
-
-.themeGroups > section > header h3 {
-  margin: 0 0 0.55rem;
-  font-family: var(--font-display, "Recursive", sans-serif);
-  font-size: clamp(1.25rem, 2vw, 1.75rem);
-  font-variation-settings: "CASL" 0.2, "wght" 660;
-  letter-spacing: -0.035em;
-}
-
-.themeGroups > section > header p {
-  max-width: 24rem;
-  margin: 0;
-  color: var(--muted, #5f6878);
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-
+.themeGroups > section > header h3 { margin: 0 0 0.4rem; font-size: clamp(1.15rem, 1.8vw, 1.55rem); }
+.themeGroups > section > header p { max-width: 23rem; margin: 0; color: var(--ink-muted); font-size: 0.82rem; line-height: 1.5; }
 .themeGroups article {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(8rem, 0.45fr) minmax(0, 1fr);
+  grid-template-columns: minmax(7rem, 0.4fr) minmax(0, 1fr);
   gap: clamp(1rem, 3vw, 3rem);
-  padding: 0.95rem 0;
-  border-top: 1px solid var(--line, #d5dbe4);
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--hairline);
 }
-
 .themeGroups article > strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: var(--blue, #295dff);
-  font-family: var(--font-display, "Recursive", sans-serif);
-  font-size: clamp(1.45rem, 2.5vw, 2.25rem);
-  font-variation-settings: "CASL" 0, "wght" 720;
-  letter-spacing: -0.045em;
+  color: var(--work-blue);
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.7vw, 2.4rem);
+  letter-spacing: -0.05em;
   line-height: 1;
+  overflow-wrap: anywhere;
 }
-
-.themeGroups h4 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 650;
-}
-
-.themeGroups article p {
-  margin: 0.45rem 0 0;
-  color: var(--muted, #5f6878);
-  font-size: 0.84rem;
-  line-height: 1.5;
-}
-
+.themeGroups h4 { margin: 0; font-size: 0.95rem; }
+.themeGroups article p { margin: 0.35rem 0 0; color: var(--ink-muted); font-size: 0.82rem; line-height: 1.48; }
 .metricContext {
   display: grid;
-  min-width: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem 1.25rem;
-  margin: 0.75rem 0 0;
+  gap: 0.4rem 1rem;
+  margin: 0.65rem 0 0;
 }
+.metricContext > div { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.4rem; }
+.metricContext dt,
+.metricContext dd { min-width: 0; margin: 0; font-family: var(--font-mono); font-size: 0.75rem; line-height: 1.4; overflow-wrap: anywhere; }
+.metricContext dt { color: var(--ink-muted); text-transform: uppercase; }
+.metricEvidence { display: flex; flex-wrap: wrap; gap: 0.35rem 0.7rem; margin-top: 0.6rem; font-size: 0.75rem; }
+.metricEvidence span { color: var(--ink-muted); font-family: var(--font-mono); text-transform: uppercase; }
+.metricEvidence a { min-width: 0; color: inherit; overflow-wrap: anywhere; }
 
-.metricContext > div {
+.rules {
   display: grid;
   min-width: 0;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.45rem;
+  grid-template-columns: minmax(13rem, 0.44fr) minmax(0, 1.56fr);
+  gap: clamp(1.5rem, 5vw, 5.5rem);
+  padding-block: clamp(2.25rem, 4vw, 3.5rem);
+  border-block: 1px solid var(--hairline);
 }
-
-.metricContext dt,
-.metricContext dd {
-  min-width: 0;
-  margin: 0;
-  overflow-wrap: anywhere;
-  font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.75rem;
-  line-height: 1.4;
-}
-
-.metricContext dt {
-  color: var(--muted, #667084);
-  text-transform: uppercase;
-}
-
-.metricContext dd {
-  color: var(--ink, #17223b);
-}
-
-.metricEvidence {
-  display: flex;
-  min-width: 0;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.7rem;
-  align-items: baseline;
-  margin-top: 0.7rem;
-  font-size: 0.75rem;
-}
-
-.metricEvidence span {
-  color: var(--muted, #667084);
-  font-family: var(--font-mono, "IBM Plex Mono", monospace);
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.metricEvidence a {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: var(--ink, #17223b);
-  text-underline-offset: 0.2em;
-}
+.rules > header { display: grid; align-content: start; gap: 0.6rem; }
+.rules > header > p:last-child { max-width: 28rem; margin: 0; color: var(--ink-muted); font-size: 0.82rem; line-height: 1.5; }
+.rules ol { margin: 0; padding: 0; border-top: 1px solid var(--blueprint-ink); list-style: none; }
+.rules li { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: 1rem; padding-block: 0.9rem; border-bottom: 1px solid var(--hairline); }
+.rules li > span { color: var(--work-blue); font-family: var(--font-mono); font-size: 0.75rem; }
+.rules h3 { margin: 0 0 0.3rem; font-size: 0.95rem; }
+.rules li p { max-width: 48rem; margin: 0; color: var(--ink-muted); font-size: 0.82rem; line-height: 1.5; }
 
 @media (max-width: 800px) {
-  .accounting,
-  .nonClaims,
-  .rules,
-  .themeGroups > section {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-
-  .accountingFlows > section {
-    grid-template-columns: 1fr;
-  }
-
-  .accountingFlows h3 {
-    padding-bottom: 0.6rem;
-  }
-
-  .accountingFlows ol {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .accountingFlows li:nth-child(odd) {
-    border-left: 1px solid var(--line, #d5dbe4);
-  }
-
-  .metricContext {
-    grid-template-columns: 1fr;
-  }
+  .themeGroups > section,
+  .rules { grid-template-columns: 1fr; gap: 1.25rem; }
+  .metricContext { grid-template-columns: 1fr; }
 }
-
 @media (max-width: 520px) {
-  .themeGroups article {
-    grid-template-columns: 1fr;
-    gap: 0.7rem;
-  }
+  .themeGroups article { grid-template-columns: 1fr; gap: 0.6rem; }
 }

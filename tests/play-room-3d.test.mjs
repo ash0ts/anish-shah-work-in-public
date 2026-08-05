@@ -13,13 +13,19 @@ import {
 
 import {
   evaluateRoomCapability,
+  POCKET_ROOM_MINIMUM_VIEWPORT_HEIGHT,
+  POCKET_ROOM_MINIMUM_VIEWPORT_WIDTH,
   ROOM_MINIMUM_VIEWPORT_WIDTH,
 } from "../components/play/room-3d/room-capability.ts";
 import {
+  adjacentPocketRoomRotation,
   clampRoomRotation,
   crossedRoomDragThreshold,
+  POCKET_ROOM_DRAG_THRESHOLD_PX,
+  rotationFromPocketPointerDelta,
   ROOM_DRAG_THRESHOLD_PX,
   rotationFromPointerDelta,
+  snapPocketRoomRotation,
 } from "../components/play/room-3d/room-math.ts";
 import {
   FISHEYE_FRAME_RENDER_BUDGET,
@@ -36,9 +42,26 @@ import {
   isRoomInteractivePointer,
 } from "../components/play/room-3d/room-pointer-policy.ts";
 import { resolveRoomRayHit } from "../components/play/room-3d/room-hit-resolution.ts";
+import {
+  conservativeTravelZoomScale,
+  evaluateTravelGlobeCapability,
+} from "../components/play/travel/travel-globe-capability.ts";
+import {
+  countryTexturePixel,
+  crossedTravelGlobeDragThreshold,
+  latLngToVector3,
+  resolveTravelGlobeGesture,
+  TRAVEL_GLOBE_COUNTRY_SURFACE_YAW,
+  travelGlobeSurfaceLongitudeFromTextureU,
+  travelGlobeSurfaceQuaternion,
+  travelRegionTripCounts,
+  TRAVEL_GLOBE_DRAG_THRESHOLD_PX,
+  vector3ToLatLng,
+} from "../components/play/travel/travel-globe-math.ts";
 
 const capableEnvironment = {
   viewportWidth: ROOM_MINIMUM_VIEWPORT_WIDTH,
+  viewportHeight: 900,
   finePointer: true,
   reducedMotion: false,
   forcedColors: false,
@@ -53,12 +76,16 @@ const ROOM_RENDERER_GZIP_HARD_CEILING_BYTES = 325 * 1024;
 test("room capability fails closed for every ineligible environment", () => {
   assert.deepEqual(evaluateRoomCapability(capableEnvironment), {
     eligible: true,
+    tier: "desktop-fisheye",
     reasons: [],
   });
 
   const cases = [
-    ["viewportWidth", ROOM_MINIMUM_VIEWPORT_WIDTH - 1, "narrow-viewport"],
-    ["finePointer", false, "coarse-pointer"],
+    [
+      "viewportWidth",
+      POCKET_ROOM_MINIMUM_VIEWPORT_WIDTH - 1,
+      "narrow-viewport",
+    ],
     ["reducedMotion", true, "reduced-motion"],
     ["forcedColors", true, "forced-colors"],
     ["zoomScale", 2, "zoomed"],
@@ -73,8 +100,43 @@ test("room capability fails closed for every ineligible environment", () => {
       [key]: value,
     });
     assert.equal(result.eligible, false);
+    assert.equal(result.tier, "static");
     assert.deepEqual(result.reasons, [reason]);
   }
+
+  assert.deepEqual(
+    evaluateRoomCapability({
+      ...capableEnvironment,
+      viewportWidth: 390,
+      viewportHeight: 844,
+      finePointer: false,
+    }),
+    { eligible: true, tier: "pocket", reasons: [] },
+  );
+
+  assert.deepEqual(
+    evaluateRoomCapability({ ...capableEnvironment, finePointer: false }),
+    { eligible: true, tier: "pocket", reasons: [] },
+  );
+
+  assert.deepEqual(
+    evaluateRoomCapability({
+      ...capableEnvironment,
+      viewportWidth: 390,
+      viewportHeight: POCKET_ROOM_MINIMUM_VIEWPORT_HEIGHT - 1,
+      finePointer: false,
+    }),
+    { eligible: false, tier: "static", reasons: ["narrow-viewport"] },
+  );
+
+  assert.deepEqual(
+    evaluateRoomCapability({
+      ...capableEnvironment,
+      viewportHeight: POCKET_ROOM_MINIMUM_VIEWPORT_HEIGHT - 1,
+    }),
+    { eligible: true, tier: "desktop-fisheye", reasons: [] },
+    "A short desktop window keeps the existing desktop room",
+  );
 });
 
 test("room pointer math preserves the eight-pixel click dead zone", () => {
@@ -88,10 +150,247 @@ test("room pointer math preserves the eight-pixel click dead zone", () => {
   );
 });
 
+test("pocket room gestures use a larger dead zone and three authored stops", () => {
+  assert.equal(
+    crossedRoomDragThreshold(
+      [0, 0],
+      [POCKET_ROOM_DRAG_THRESHOLD_PX, 0],
+      POCKET_ROOM_DRAG_THRESHOLD_PX,
+    ),
+    false,
+  );
+  assert.deepEqual(rotationFromPocketPointerDelta({ x: 4, y: 0 }, 80), {
+    x: 0,
+    y: 12,
+  });
+  assert.deepEqual(snapPocketRoomRotation({ x: 3, y: -7 }), {
+    x: 0,
+    y: -12,
+  });
+  assert.deepEqual(adjacentPocketRoomRotation({ x: 0, y: 0 }, -1), {
+    x: 0,
+    y: -12,
+  });
+  assert.deepEqual(adjacentPocketRoomRotation({ x: 0, y: 12 }, 1), {
+    x: 0,
+    y: 12,
+  });
+});
+
+test("travel globe math preserves geography and the eight-pixel drag threshold", () => {
+  for (const [lat, lng] of [
+    [0, 0],
+    [40.7, -74],
+    [-33.9, 151.2],
+    [64.1, -21.9],
+  ]) {
+    const roundTrip = vector3ToLatLng(latLngToVector3(lat, lng));
+    assert.ok(Math.abs(roundTrip.lat - lat) < 0.000_001);
+    assert.ok(Math.abs(roundTrip.lng - lng) < 0.000_001);
+  }
+  assert.equal(
+    crossedTravelGlobeDragThreshold(
+      [0, 0],
+      [TRAVEL_GLOBE_DRAG_THRESHOLD_PX, 0],
+    ),
+    false,
+  );
+  assert.equal(
+    crossedTravelGlobeDragThreshold(
+      [0, 0],
+      [TRAVEL_GLOBE_DRAG_THRESHOLD_PX + 0.01, 0],
+    ),
+    true,
+  );
+  for (let index = 0; index < 20; index += 1) {
+    assert.deepEqual(
+      resolveTravelGlobeGesture(
+        false,
+        [index, index * 2],
+        [index + TRAVEL_GLOBE_DRAG_THRESHOLD_PX + 1, index * 2],
+      ),
+      { dragged: true, suppressSelection: true },
+      `pin-origin drag ${index + 1} must cross the shared selection guard`,
+    );
+  }
+  assert.deepEqual(countryTexturePixel(90, -180, 1024, 512), [0, 0]);
+  assert.deepEqual(countryTexturePixel(-90, 179.999, 1024, 512), [1023, 511]);
+});
+
+test("travel globe country surface aligns the rendered map with pins and click decoding", () => {
+  // Three SphereGeometry places the texture's prime meridian 90 degrees east
+  // of the geographic +Z meridian used by pins and CPU click sampling. Rotate
+  // only that UV-bearing surface so every equirectangular longitude lands on
+  // its matching geographic point.
+  assert.equal(TRAVEL_GLOBE_COUNTRY_SURFACE_YAW, -Math.PI / 2);
+  for (const longitude of [-180, 0, -74.006, 139.6917, 179.999, 180]) {
+    const textureU = (longitude + 180) / 360;
+    const rendered = travelGlobeSurfaceLongitudeFromTextureU(textureU);
+    assert.ok(Math.abs(rendered - longitude) < 0.000_001);
+  }
+
+  const tokyo = latLngToVector3(35.6762, 139.6503).normalize();
+  const haloNormal = new Vector3(0, 0, 1).applyQuaternion(
+    travelGlobeSurfaceQuaternion(35.6762, 139.6503),
+  );
+  assert.ok(haloNormal.distanceTo(tokyo) < 0.000_001);
+});
+
+test("travel region counts remain scoped to the selected country", () => {
+  const counts = travelRegionTripCounts(
+    [
+      {
+        places: [
+          { countryCode: "US", admin1Code: "13" },
+          { countryCode: "US", admin1Code: "13" },
+        ],
+      },
+      { places: [{ countryCode: "JP", admin1Code: "13" }] },
+      { places: [{ countryCode: "US", admin1Code: "CA" }] },
+    ],
+    "US",
+  );
+  assert.deepEqual([...counts], [["13", 1], ["CA", 1]]);
+});
+
+test("travel globe capability keeps complete accessibility fallbacks", () => {
+  const capable = {
+    reducedMotion: false,
+    forcedColors: false,
+    saveData: false,
+    zoomScale: 1,
+    webgl2Available: true,
+  };
+  assert.deepEqual(evaluateTravelGlobeCapability(capable), {
+    eligible: true,
+    reasons: [],
+  });
+  for (const [key, value, reason] of [
+    ["reducedMotion", true, "reduced-motion"],
+    ["forcedColors", true, "forced-colors"],
+    ["saveData", true, "save-data"],
+    ["zoomScale", 2, "high-zoom"],
+    ["webgl2Available", false, "webgl2-unavailable"],
+  ]) {
+    assert.deepEqual(evaluateTravelGlobeCapability({ ...capable, [key]: value }), {
+      eligible: false,
+      reasons: [reason],
+    });
+  }
+  assert.equal(
+    conservativeTravelZoomScale({
+      visualScale: 1,
+      outerWidth: 1440,
+      innerWidth: 720,
+      coarsePrimaryPointer: false,
+    }),
+    2,
+  );
+  assert.equal(
+    conservativeTravelZoomScale({
+      visualScale: 1,
+      outerWidth: 780,
+      innerWidth: 390,
+      coarsePrimaryPointer: true,
+    }),
+    1,
+  );
+  assert.equal(
+    conservativeTravelZoomScale({
+      visualScale: 2.5,
+      outerWidth: 780,
+      innerWidth: 390,
+      coarsePrimaryPointer: true,
+    }),
+    2.5,
+  );
+});
+
+test("Postcard Planet is demand-driven, pixel-bordered, and semantically navigable", async () => {
+  const [planet, stage, gate, noScriptAtlas] = await Promise.all([
+    readFile(
+      new URL("../components/play/travel/PostcardPlanet.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/play/travel/TravelGlobeStage.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/play/travel/TravelGlobeGate.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/play/travel/TravelNoScriptAtlas.tsx", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(stage, /frameloop="demand"/);
+  assert.match(stage, /dpr=\{\[1, 1\.5\]\}/);
+  assert.match(stage, /idTexel/);
+  assert.match(stage, /countryEdge = step\(0\.5 \/ 255\.0, neighborDelta\)/);
+  assert.match(stage, /mix\(shaded, borderInk, countryEdge \* 0\.82\)/);
+  assert.match(stage, /resolveTravelGlobeGesture/);
+  assert.match(stage, /webglcontextlost/);
+  assert.match(stage, /lostpointercapture/);
+  assert.match(stage, /visibilitychange/);
+  assert.match(stage, /if \(material && sampler && readyFrames\.current < 2\)/);
+  assert.match(stage, /onTextureFailure/);
+  assert.match(stage, /const PIN_HIT_RADIUS = 0\.1;/);
+  assert.match(stage, /const PIN_VISUAL_RADIUS = 0\.035;/);
+  assert.match(
+    stage,
+    /const PIN_VISUAL_SCALE = PIN_VISUAL_RADIUS \/ PIN_HIT_RADIUS;/,
+  );
+  assert.match(stage, /position \* \$\{PIN_VISUAL_SCALE\.toFixed\(2\)\}/);
+  assert.match(stage, /<sphereGeometry args=\{\[PIN_HIT_RADIUS, 8, 6\]\}/);
+  assert.match(
+    stage,
+    /rotation=\{\[0, TRAVEL_GLOBE_COUNTRY_SURFACE_YAW, 0\]\}/,
+  );
+  assert.match(stage, /quaternion=\{selectedPlaceMarker\.quaternion\}/);
+  assert.match(stage, /data-travel-globe-hovered-place/);
+  assert.match(stage, /if \(pinching\.current\) \{[\s\S]*?cancelGesture\(\)/);
+  assert.match(
+    stage,
+    /<group[\s\S]*?onPointerCancel=\{cancelDrag\}[\s\S]*?onPointerDown=\{startDrag\}[\s\S]*?onPointerMove=\{drag\}[\s\S]*?onPointerUp=\{endDrag\}/,
+  );
+  assert.equal((stage.match(/if \(consumeSelectionSuppression\(\)\)/g) ?? []).length, 1);
+  assert.match(stage, /pressedPlaceId\.current === place\.id/);
+  assert.doesNotMatch(stage, /hoveredPlaceId\.current === place\.id/);
+  assert.match(stage, /pointer-up ray intersects[\s\S]*?recorded pointer-down identity/);
+  assert.match(stage, /if \(shouldSelect\) onSelectPlace\(place\.id\)/);
+  assert.match(stage, /boundaryLayers\(admin1, atlas, selectedRegionCode\)/);
+  assert.match(stage, /"selected", SELECTED_REGION/);
+  assert.match(stage, /count >= 3[\s\S]*?"3\+"/);
+  assert.doesNotMatch(stage, /onWheel|wheel|OrbitControls|autoRotate/);
+  assert.doesNotMatch(stage, /wireframe/);
+  assert.match(planet, /data-travel-atlas-back/);
+  assert.match(planet, /data-travel-place-inspector/);
+  assert.match(planet, /geography\.countries\.map/);
+  assert.match(planet, /tripCount: 0/);
+  assert.match(planet, />World<\/button>/);
+  assert.match(planet, /aria-label="Reset globe view"/);
+  assert.match(planet, /Map boundaries from/);
+  assert.match(planet, /Natural Earth/);
+  assert.match(planet, /handleGlobeFailure/);
+  assert.match(planet, /restoreDirectoryFocus/);
+  assert.match(planet, /<img/);
+  assert.doesNotMatch(planet, /Canvas|TextureLoader|from "three"/);
+  assert.match(gate, /requestAnimationFrame/);
+  assert.doesNotMatch(gate, /innerWidth\s*(?:<|>)|pointer: fine|hover: hover/);
+  assert.match(noScriptAtlas, /<noscript>/);
+  assert.match(noScriptAtlas, /Published travel countries/);
+  assert.match(noScriptAtlas, /const pathname = `\/play\/travel\/trips\/\$\{slug\}`/);
+  assert.match(noScriptAtlas, /href=\{tripHref\(trip\.slug, previewFixture\)\}/);
+});
+
 test("room pointer policy reserves WebGL gestures for one mouse or pen", () => {
   assert.equal(isRoomInteractivePointer("mouse"), true);
   assert.equal(isRoomInteractivePointer("pen"), true);
   assert.equal(isRoomInteractivePointer("touch"), false);
+  assert.equal(isRoomInteractivePointer("touch", true), true);
   assert.equal(isRoomInteractivePointer(""), false);
   assert.equal(isCompetingRoomPointer(null, 2), false);
   assert.equal(isCompetingRoomPointer(2, 2), false);
@@ -187,6 +486,7 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
     "move",
     "play",
     "read",
+    "travel",
     "watch",
   ]);
   assert.match(controller, /crossedRoomDragThreshold/);
@@ -196,7 +496,8 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
   assert.match(controller, /onLostPointerCapture/);
   assert.match(controller, /target instanceof Element/);
   assert.match(controller, /onRotationPreview\(nextView\)/);
-  assert.match(controller, /onRotationCommit\(current\.latestView\)/);
+  assert.match(controller, /snapPocketRoomRotation\(current\.latestView\)/);
+  assert.match(controller, /: current\.latestView/);
   assert.match(controller, /resumeHoverFromRelease/);
   assert.match(controller, /usePathname/);
   assert.match(controller, /resolveRoomRayHit/);
@@ -210,6 +511,61 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
     FISHEYE_FRAME_RENDER_BUDGET.actualDrawCalls >
       PROCEDURAL_ROOM_RENDER_BUDGET.visibleDrawCalls,
   );
+});
+
+test("pocket renderer is a separate intent-loaded perspective stage", async () => {
+  const [runtime, runtimeStyles, overviewStyles, pocket, desktop] = await Promise.all([
+    readFile(
+      new URL(
+        "../components/play/room-platform/RoomRuntime.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../components/play/room-platform/RoomRuntime.module.css",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../components/play/room-platform/RoomOverview.module.css",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/play/room-3d/PocketRoomStage.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/play/room-3d/RoomStage.tsx", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(runtime, /import\("\.\.\/room-3d\/PocketRoomStage"\)/);
+  assert.match(runtime, /import\("\.\.\/room-3d\/RoomStage"\)/);
+  assert.match(runtime, /capability\.tier === "pocket"/);
+  assert.match(runtime, /type PocketEntryPhase = "opening" \| "placing" \| "ready"/);
+  assert.match(runtime, /duration: 520/);
+  assert.match(runtime, /data-pocket-entry-phase/);
+  assert.match(runtimeStyles, /pocket-frame-fold 520ms/);
+  assert.match(runtimeStyles, /pocket-dock-rise 130ms/);
+  assert.match(overviewStyles, /@media \(max-width: 1099px\)/);
+  assert.match(overviewStyles, /clamp\(15rem, 44svh, 24rem\)/);
+  assert.match(pocket, /data-projection="pocket-perspective"/);
+  assert.match(pocket, /dpr=\{\[1, 1\.15\]\}/);
+  assert.match(pocket, /frameloop="demand"/);
+  assert.match(pocket, /presentation="pocket"/);
+  assert.match(pocket, /failIfMajorPerformanceCaveat: true/);
+  assert.match(pocket, /duration > 33/);
+  assert.match(pocket, /}, 450\)/);
+  assert.match(pocket, /}, 520\)/);
+  assert.doesNotMatch(pocket, /Fisheye|postprocessing|OrbitControls/);
+  assert.match(desktop, /<ResponsiveFisheye>/);
 });
 
 test("fisheye health ignores warmup and downgrades only after sustained misses", () => {
@@ -245,8 +601,8 @@ test("fisheye health ignores warmup and downgrades only after sustained misses",
 
 test("the static room poster is first-party, content-hashed, and bounded", async () => {
   const posterFiles = [
-    "my-room-2001-neutral.50f82f186444.avif",
-    "my-room-2001-neutral.af662c65ec99.webp",
+    "my-room-2001-neutral.01c6f825bbc1.avif",
+    "my-room-2001-neutral.00d2bc80d8dc.webp",
   ];
   const [overview, runtime] = await Promise.all([
     readFile(
@@ -385,12 +741,13 @@ test("procedural scene stays inside reviewed draw and material budgets", async (
     PROCEDURAL_ROOM_RENDER_METRICS.visibleTriangleUpperBound <=
       PROCEDURAL_ROOM_RENDER_BUDGET.visibleTriangles,
   );
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleDrawCallUpperBound, 52);
+  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleDrawCallUpperBound, 66);
   assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.materialSlots, 24);
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleTriangleUpperBound, 28_000);
+  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleTriangleUpperBound, 31_000);
   assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.roundedBoxCount, 33);
   assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.instancedDrawCalls, 11);
   assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.repeatedMeshesCollapsed, 56);
+  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.hitProxyCount, 7);
 
   const objects = await readFile(
     new URL(
@@ -411,6 +768,7 @@ test("every registered object has one authored approach pose", () => {
     "move-approach",
     "play-approach",
     "read-approach",
+    "travel-approach",
     "watch-approach",
   ]);
   for (const pose of Object.values(ROOM_APPROACH_POSES)) {

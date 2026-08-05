@@ -83,6 +83,13 @@ async function render(pathname = "/") {
   });
 }
 
+async function renderWithoutFollowingRedirect(pathname) {
+  return fetch(`${BASE_URL}${pathname}`, {
+    headers: { accept: "text/html" },
+    redirect: "manual",
+  });
+}
+
 async function renderHtml(pathname) {
   const response = await render(pathname);
   assert.equal(response.status, 200, `${pathname} did not render`);
@@ -133,52 +140,62 @@ function visibleText(html) {
     .trim();
 }
 
-test("homepage renders four technical-work bodies and three qualified impact stories", async () => {
+test("homepage renders four lines of work and three qualified proof statements", async () => {
   const html = await renderHtml("/");
   const markup = documentMarkup(html);
   const text = visibleText(html);
 
-  assert.match(html, /<title>Applied AI, in public — Anish Shah<\/title>/i);
+  assert.match(
+    html,
+    /<title>Applied AI systems that hold up after the demo — Anish Shah<\/title>/i,
+  );
   assert.match(markup, />Anish</);
   assert.match(markup, />Shah</);
-  assert.match(html, /applied AI builder, educator, and technical storyteller/i);
   assert.match(
     text,
-    /How agents discover tools, use context, and leave evidence teams can trust/i,
+    /I build the systems that make AI agents useful after the demo/i,
   );
-  for (const stage of [
-    "Operational ML",
-    "Generative systems",
-    "Evaluation & adoption",
-    "Agent-native product",
+  assert.match(text, /evaluation, observability, and tool interfaces/i);
+  for (const line of [
+    "Agent systems & open source",
+    "Technical education",
+    "Research, writing & implementations",
+    "Talks, workshops & programs",
   ]) {
-    assert.match(text, new RegExp(stage.replace("&", "&(?:amp;)?"), "i"));
+    assert.match(text, new RegExp(line.replaceAll("&", "&(?:amp;)?"), "i"));
   }
-  assert.match(html, /Explore my work/i);
-  assert.match(html, /Selected technical work/i);
-  assert.equal((markup.match(/<details\b/g) ?? []).length, 4);
+  assert.match(html, /See the work/i);
+  assert.match(html, /Lines of work/i);
+  assert.equal((markup.match(/data-work-line=/g) ?? []).length, 4);
   assert.equal(
     (markup.match(/<a\b[^>]*href="\/work\/[^"]+"/g) ?? []).length,
-      12,
+    4,
   );
-  for (const value of [
-    "200K+",
-    "More than two-thirds",
-    "7K+",
-    "About half",
-    "$4M+",
-  ]) {
+  for (const value of ["200K+", "7K+", "$4M+"]) {
     assert.match(
       text,
       new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
     );
   }
+  assert.match(text, /Use, learning, and program reach\./i);
+  assert.match(
+    text,
+    /Three separate measures\. Each keeps its scope and limit\./i,
+  );
+  assert.match(text, /How I count/i);
+  assert.doesNotMatch(text, /What happened after the work shipped/i);
   assert.equal((markup.match(/data-impact-track=/g) ?? []).length, 3);
-  assert.match(markup, /Use\. Return\. Act\./i);
   assert.match(html, /Internal analytics/i);
-  assert.match(html, /checkpoint Jul 29, 2026/i);
-  assert.match(html, /association is not conversion/i);
-  assert.match(html, /not revenue, ARR, or personal causality/i);
+  assert.match(html, /July 29 internal analytics checkpoint/i);
+  assert.match(html, /Enrollments, not unique learners/i);
+  assert.match(html, /not revenue, closed ARR, or personal attribution/i);
+  assert.doesNotMatch(text, /More than two-thirds|About half/i);
+  const main = markup.match(/<main\b[\s\S]*?<\/main>/i)?.[0] ?? "";
+  const mainWordCount = visibleText(main).match(/[\p{L}\p{N}$+]+/gu)?.length ?? 0;
+  assert(
+    mainWordCount <= 220,
+    `homepage main content exceeds 220 visible words (${mainWordCount})`,
+  );
   assert.match(html, /property="og:image" content="[^"]*\/og\.jpg"/i);
   assert.match(html, /href="[^"]*\/favicon\.png"/i);
   assert.match(html, /href="#main"[^>]*>Skip to content/i);
@@ -190,48 +207,48 @@ test("all public routes expose useful server-rendered content", async () => {
     {
       path: "/work",
       required: [
-        /One body of work\. Every public form attached\./i,
-        /Four lines, six years\./i,
-        /All work, inside four bodies\./i,
-        /Search work and public forms/i,
+        /What I(?:’|&#x27;|')ve built, taught, and tested\./i,
+        /Choose a year and line\./i,
+        /One project stays one record—even when it became a talk, recording, or code release\./i,
+        /Search the work/i,
         /name="bucket"/i,
         /name="topic"/i,
         /name="year"/i,
         /name="format"/i,
-        /name="organization"/i,
-        /name="role"/i,
-        /Systems &amp; Open Source/i,
-        /Curricula &amp; Workshops/i,
-        /Technical Writing &amp; Implementations/i,
-        /Technical Talks &amp; Programs/i,
+        /Agent systems &amp; open source/i,
+        /Technical education/i,
+        /Research, writing &amp; implementations/i,
+        /Talks, workshops &amp; programs/i,
       ],
     },
     {
       path: "/work/wandb-mcp-server",
-      required: [/W&amp;B MCP Server/i, /Direct outcomes/i, /Public evidence/i],
+      required: [/W&amp;B MCP Server/i, /Documented results/i, /Sources/i],
     },
     {
       path: "/play",
       required: [
-        /Outside the work\./i,
-        /MyAnimeList/i,
-        /Hardcover/i,
-        /Spotify/i,
-        /Discogs/i,
-        /Steam/i,
-        /Strava/i,
-        /<noscript\b/i,
+        /The room behind the résumé\./i,
+        /The objects tell the rest/i,
+        />TV · Watch</i,
+        />Bookshelf · Read</i,
+        />Music player · Listen</i,
+        />Record crate · Collect</i,
+        />Computer · Games</i,
+        />Treadmill · Move</i,
+        /data-room-static-stage="true"/i,
+        /aria-labelledby="room-directory-title"/i,
       ],
     },
     {
       path: "/sources",
       required: [
-        /Sources/i,
+        /What the numbers mean/i,
         /id="public-footprint"/i,
         /id="internal-analytics"/i,
-        /13(?:\s|<!--.*?-->)*measures in four contexts/i,
-        /What this site does not claim/i,
-        /public bibliography/i,
+        /13(?:\s|<!--.*?-->)*claims, each with its limit/i,
+        /I count one underlying project once/i,
+        /id="bibliography"/i,
       ],
     },
     {
@@ -245,8 +262,11 @@ test("all public routes expose useful server-rendered content", async () => {
     for (const pattern of route.required) {
       assert.match(html, pattern, `${route.path} is missing ${pattern}`);
     }
-    assert.match(html, /<main id="main"/i);
+    assert.match(html, /<main\b[^>]*\bid="main"[^>]*>/i);
   }
+  const workHtml = await renderHtml("/work");
+  assert.doesNotMatch(workHtml, /name="organization"/i);
+  assert.doesNotMatch(workHtml, /name="role"/i);
 });
 
 test("legacy About requests permanently redirect to the homepage profile", async () => {
@@ -262,22 +282,20 @@ test("Sources paginates the complete searchable bibliography 24 rows at a time",
   const compactMarkup = documentMarkup(compactHtml);
   const sourceText = visibleText(compactHtml);
   for (const value of [
-    "Public archive",
     "184",
     "82",
-    "186",
     "198",
-    "Impact ledger",
-    "85",
     "13",
-    "What this site does not claim",
+    "Claims",
+    "How I count",
+    "Sources",
   ]) {
     assert.match(sourceText, new RegExp(value.replace("+", "\\+"), "i"));
   }
   assert.doesNotMatch(sourceText, /184 footprint \+ 85 impact/i);
   assert.doesNotMatch(sourceText, /\b269\b/);
   assert.doesNotMatch(sourceText, /approved public claim/i);
-  assert.match(sourceText, /Scope work/i);
+  assert.match(sourceText, /Scope/i);
   assert.match(
     compactMarkup,
     /href="\/sources\?association=claim(?:&amp;|&)q=[^"]+#evidence:[^"]+"/i,
@@ -317,7 +335,7 @@ test("Sources paginates the complete searchable bibliography 24 rows at a time",
   assert.doesNotMatch(secondIndex, /Browse all|Show the first/i);
 
   const searchHtml = await renderHtml("/sources?q=MCP");
-  assert.match(searchHtml, /matching public sources/i);
+  assert.match(searchHtml, /matching sources/i);
   assert.match(searchHtml, /MCP/i);
 
   const claimHtml = await renderHtml("/sources?association=claim");
@@ -325,7 +343,7 @@ test("Sources paginates the complete searchable bibliography 24 rows at a time",
     documentMarkup(claimHtml).match(
       /<section\b[^>]*id="bibliography"[^>]*>[\s\S]*?<\/section>/i,
     )?.[0] ?? "";
-  assert.match(claimIndex, /2 matching public sources/i);
+  assert.match(claimIndex, /2 matching sources/i);
   assert.equal((claimIndex.match(/<li\b/g) ?? []).length, 2);
   assert.match(claimIndex, /value="claim" selected/i);
 
@@ -355,6 +373,14 @@ test("legacy map URLs redirect to the two-dimensional Work index", async () => {
   assert.equal(location.searchParams.get("page"), "2");
 });
 
+test("page-only Work URLs canonicalize to the calendar", async () => {
+  const response = await renderWithoutFollowingRedirect("/work?page=2");
+  assert.equal(response.status, 308);
+  const location = new URL(response.headers.get("location"), BASE_URL);
+  assert.equal(location.pathname, "/work");
+  assert.equal(location.search, "");
+});
+
 test("legacy context routes land on a real nested anchor or a useful search", async () => {
   const related = await fetch(
     `${BASE_URL}/work/7-top-machine-learning-operations-startups-and-the-problem-they-solve`,
@@ -371,7 +397,7 @@ test("legacy context routes land on a real nested anchor or a useful search", as
     `${relatedLocation.pathname}${relatedLocation.hash}`,
   );
   assert.match(relatedHtml, /id="item:fp-0100"/i);
-  assert.match(relatedHtml, /Related public context/i);
+  assert.match(relatedHtml, /Related context/i);
 
   const unassociated = await fetch(
     `${BASE_URL}/work/fourthbrain-graduate-testimonial`,
@@ -398,6 +424,8 @@ test("the public shell has the exact compact navigation and footer contract", as
   for (const label of ["Work", "Play"]) {
     assert.match(header, new RegExp(`>${label}<`));
   }
+  assert.match(header, /data-primary-navigation/i);
+  assert.match(header, /data-primary-navigation-indicator/i);
   assert.doesNotMatch(header, />About</);
   assert.doesNotMatch(header, />Sources</);
   for (const label of ["LinkedIn", "GitHub", "W&amp;B", "Sources", "Privacy"]) {
@@ -557,7 +585,7 @@ test("filtered variants are noindexed and the custom 404 is accessible", async (
   assert.equal(response.status, 404);
   const html = await response.text();
   assert.match(html, /<main id="main"/i);
-  assert.match(html, /This path stops here/i);
+  assert.match(html, /That page isn’t here/i);
   assert.match(
     html,
     /<meta\b(?=[^>]*\bname="robots")(?=[^>]*\bcontent="[^"]*noindex)[^>]*>/i,

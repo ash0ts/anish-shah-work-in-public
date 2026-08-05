@@ -1,30 +1,42 @@
 import type { Metadata } from "next";
 import { canonicalMetadataOrigin } from "../deployment-environment";
 import { runtimeHostedDeploymentPresentation } from "./deployment-presentation";
+import { SITE_COPY } from "../copy";
+import {
+  sitePresentationIdentity,
+  socialArtworkAlt,
+} from "../seo";
 
 export function runtimeRootMetadata(): Metadata {
   const { titlePrefix, nonProductionHosted } =
     runtimeHostedDeploymentPresentation();
+  const identity = sitePresentationIdentity();
   return {
     metadataBase: new URL(canonicalMetadataOrigin()),
     title: {
-      default: `${titlePrefix}Anish Shah — Applied AI, in public`,
-      template: `${titlePrefix}%s — Anish Shah`,
+      default: `${titlePrefix}${SITE_COPY.site["default-title"]}`,
+      template: `${titlePrefix}${SITE_COPY.site["title-template"]}`,
     },
     description:
-      "An inspectable archive of Anish Shah’s work across applied AI, education, products, and technical communities.",
+      SITE_COPY.site["root-description"],
     openGraph: {
-      title: `${titlePrefix}Anish Shah — Applied AI, in public`,
-      description:
-        "Products, education, open source, and technical communities—with the public work attached.",
+      title: `${titlePrefix}${SITE_COPY.site["default-title"]}`,
+      description: SITE_COPY.site["social-description"],
       type: "website",
-      images: [{ url: "/og.jpg", width: 1200, height: 630 }],
+      siteName: identity.siteName,
+      images: [
+        {
+          url: "/og.jpg",
+          width: 1200,
+          height: 630,
+          alt: socialArtworkAlt(identity),
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${titlePrefix}Anish Shah — Applied AI, in public`,
-      description:
-        "Products, education, open source, and technical communities—with the public work attached.",
+      title: `${titlePrefix}${SITE_COPY.site["default-title"]}`,
+      description: SITE_COPY.site["social-description"],
       images: ["/og.jpg"],
     },
     robots: nonProductionHosted

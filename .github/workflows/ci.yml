@@ -2,70 +2,90 @@ name: Validate
 
 on:
   push:
-    branches: [main, "codex/**"]
-  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       commit_sha:
         description: Full 40-character commit SHA to validate
         required: true
         type: string
+      runner_target:
+        description: Hosted runner or disposable owner ARM64 runner
+        required: true
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - owner-arm64
+      jit_label:
+        description: One-time opaque runner label; required for owner-arm64
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: validate-${{ github.ref }}
+  group: validate-${{ github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.ref }}
   cancel-in-progress: true
+
+env:
+  VALIDATE_SOURCE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha }}
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.runner_target == 'owner-arm64' && format('["self-hosted","linux","arm64","{0}"]', inputs.jit_label) || '["ubuntu-latest"]') }}
+    timeout-minutes: 35
     steps:
-      - name: Check out source
+      - name: Validate owner exact-SHA dispatch
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+          RUNNER_TARGET: ${{ inputs.runner_target }}
+          JIT_LABEL: ${{ inputs.jit_label }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTOR" = "$GITHUB_REPOSITORY_OWNER"
+          [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          case "$RUNNER_TARGET" in
+            github-hosted) test -z "$JIT_LABEL" ;;
+            owner-arm64) [[ "$JIT_LABEL" =~ ^anish-release-[a-f0-9]{12}$ ]] ;;
+            *) exit 1 ;;
+          esac
+      - name: Check out exact source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
+          ref: ${{ env.VALIDATE_SOURCE_SHA }}
+          fetch-depth: 0
           persist-credentials: false
       - name: Confirm exact commit
         env:
-          EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
+          EXPECTED_SHA: ${{ env.VALIDATE_SOURCE_SHA }}
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "${#EXPECTED_SHA}" -eq 40
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "${#GITHUB_SHA}" -eq 40
-      - name: Use Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24.18.0
-          cache: npm
-      - name: Use pinned npm
+      - name: Require the dispatched SHA to belong to the trusted release ref
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_SHA: ${{ env.VALIDATE_SOURCE_SHA }}
         run: |
-          npm install --global npm@11.6.2 --ignore-scripts
-          hash -r
-          test "$(npm --version)" = "11.6.2"
-      - name: Install locked dependencies
-        run: npm ci --ignore-scripts
-      - name: Verify deployable content attestation
-        run: npm run content:attest
-      - name: Apply all migrations to clean local D1
-        run: npm run db:local:migrate:clean
+          set -euo pipefail
+          [[ "$GITHUB_REF" =~ ^refs/heads/(main|release/[0-9]+\.[0-9]+\.[0-9]+)$ ]]
+          branch="${GITHUB_REF#refs/heads/}"
+          trusted_ref="$(git rev-parse "refs/remotes/origin/${branch}")"
+          test "$EXPECTED_SHA" = "$trusted_ref"
+      - name: Set up repository toolchain
+        uses: ./.github/actions/setup-repository
       - name: Validate exact commit
         run: npm run validate
-      - name: Write synthetic preview metadata
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          PREVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
-          PREVIEW_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
-          PREVIEW_WORKFLOW_SHA: ${{ github.sha }}
-        run: npm run preview:metadata
-      - name: Upload immutable preview build
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - name: Write immutable build manifest
+        run: npm run deployable:attest:write
+      - name: Upload exact validated build for release evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          # The artifact is keyed to the exact source SHA checked out and validated.
-          name: preview-build-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          name: validated-dist-${{ env.VALIDATE_SOURCE_SHA }}
           path: dist
+          include-hidden-files: true
           if-no-files-found: error
-          retention-days: 3
+          retention-days: 7

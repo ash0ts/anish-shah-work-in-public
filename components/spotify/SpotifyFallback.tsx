@@ -2,8 +2,13 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import {
+  useExperienceAudio,
+  useExperienceAudioHandoff,
+} from "@/components/experience-audio/ExperienceAudioProvider";
 import styles from "../SpotifyStream.module.css";
 import { spotifyEmbedUrl, type SpotifyEmbedReference } from "./model";
+import { SITE_COPY } from "@/lib/copy";
 
 export function SpotifyFallback({
   message,
@@ -14,9 +19,18 @@ export function SpotifyFallback({
   profileUrl: string | null;
   embed: SpotifyEmbedReference | null;
 }) {
+  const {
+    enabled: experienceAudioEnabled,
+    playCue,
+  } = useExperienceAudio();
   const [showEmbed, setShowEmbed] = useState(false);
   const loadButton = useRef<HTMLButtonElement | null>(null);
   const embedRegion = useRef<HTMLElement | null>(null);
+  useExperienceAudioHandoff("spotify", showEmbed);
+
+  useEffect(() => {
+    if (experienceAudioEnabled) playCue("listen-boot");
+  }, [experienceAudioEnabled, playCue]);
 
   useEffect(() => {
     if (showEmbed) requestAnimationFrame(() => embedRegion.current?.focus());
@@ -50,6 +64,7 @@ export function SpotifyFallback({
               </span>
               <button
                 onClick={() => {
+                  playCue("listen-open-close");
                   setShowEmbed(false);
                   requestAnimationFrame(() => loadButton.current?.focus());
                 }}
@@ -73,7 +88,10 @@ export function SpotifyFallback({
               <small>Loading shares the usual request information with Spotify.</small>
             </span>
             <button
-              onClick={() => setShowEmbed(true)}
+              onClick={() => {
+                playCue("listen-open-close");
+                setShowEmbed(true);
+              }}
               ref={loadButton}
               type="button"
             >
@@ -97,7 +115,7 @@ export function SpotifyFallback({
         <div className={styles.status}>
           <span>Profile-link fallback</span>
           <a href={profileUrl} rel="noreferrer" target="_blank">
-            Open Spotify profile
+            {SITE_COPY.play["profile-spotify"]}
           </a>
         </div>
       ) : null}

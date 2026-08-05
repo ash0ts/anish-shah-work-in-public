@@ -1,18 +1,30 @@
 # Play connections: owner setup
 
-The protected Studio connects six personal streams without putting credentials
+This is the provider setup, freshness, publication, and recovery authority for
+Play. The protected Studio connects six personal streams without putting credentials
 in source code, deployment artifacts, public APIs, or browser storage.
+
+Collection synchronization is manual-only. MyAnimeList, Hardcover, Spotify,
+Discogs, and Steam call their provider data APIs only after the owner selects
+**Refresh now** in Studio. Public connector reads, OAuth callbacks, credential
+saves, and scheduled maintenance never fetch or publish new collection data.
+Replacing a credential may unpublish the prior account's snapshot, but only a
+successful owner-triggered refresh can publish its replacement. A connection
+therefore enters **Connected · Refresh required** until that refresh succeeds.
+
+My Room, 2001 is the public presentation. `/play` reads no connector data; each
+direct route reads only the provider shown below:
 
 ## Credential map
 
-| Stream | Provider | Obtain from provider | Enter in Studio | Verification |
-| --- | --- | --- | --- | --- |
-| Watch | MyAnimeList | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current** |
-| Read | Hardcover | Personal API token | Token, with or without `Bearer` | **Refresh now → Current** |
-| Listen | Spotify | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
-| Collect | Discogs | Consumer key and consumer secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
-| Play | Steam | Web API key and 17-digit SteamID64 | Both values | **Refresh now → Current** |
-| Move | Strava | Public athlete URL and optional cumulative feed | Athlete URL + complete generated profile-feed/summary iframe | Save; Play uses the checked feed or profile-link fallback |
+| Route | Stream | Provider | Obtain from provider | Enter in Studio | Verification |
+| --- | --- | --- | --- | --- | --- |
+| `/play/watch` | Watch | MyAnimeList | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current** |
+| `/play/read` | Read | Hardcover | Personal API token | Token, with or without `Bearer` | **Refresh now → Current** |
+| `/play/listen` | Listen | Spotify | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
+| `/play/collect` | Collect | Discogs | Consumer key and consumer secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
+| `/play/play` | Play | Steam | Web API key and 17-digit SteamID64 | Both values | **Refresh now → Current** |
+| `/play/move` | Move | Strava | Public athlete URL and optional cumulative feed | Athlete URL + complete generated profile-feed/summary iframe | Save; Play uses the checked feed or profile-link fallback |
 
 MyAnimeList is the important distinction: its developer portal correctly gives
 you a **client ID** and **client secret**. Those identify the application.
@@ -33,20 +45,20 @@ catalog and explicitly enables publication.
 
 For every API-backed stream, the verification sequence is **Connect or
 authorize → Refresh now → confirm Current**. Saving a credential alone does not
-prove that the provider accepted it.
+prove that the provider accepted it and never starts a collection refresh.
 
-## Local Studio and production Studio
+## Environment isolation
 
-Local and production are isolated on purpose:
+Local, staging, and production are isolated on purpose. PR previews contain
+synthetic fixtures and cannot connect to providers.
 
-| | Local Studio | Production Studio |
-| --- | --- | --- |
-| Address | `http://localhost:3000/studio` | `${PRODUCTION_SITE_URL}/studio` on the public Worker |
-| Identity | Loopback-only development owner | Cloudflare Access + exact owner allowlist |
-| Database | Project-local D1 in `.wrangler/state` | Owner-controlled Cloudflare D1 |
-| Encryption | Local-only key | Existing production key; do not rotate |
-| Credentials | Test credentials or a separate local registration | Re-encrypted after explicit production review |
-| Propagation | One-time server-to-server handoff | Validation publishes a sanitized snapshot |
+| | Local Studio | Staging Studio | Production Studio |
+| --- | --- | --- | --- |
+| Address | `http://localhost:3000/studio` | `https://staging.anish-shah-is.online/studio` | `https://anish-shah-is.online/studio` |
+| Identity | Loopback-only development owner | Dedicated Access audience + owner allowlist | Production Access + owner allowlist |
+| State | Project-local D1 and local key | Dedicated staging D1/KV/key | Production D1/KV/key |
+| OAuth | Local registration | Staging registration | Production registration |
+| Transfer | May stage only the portable production subset | No transfers | Owner reviews a payload staged from local |
 
 ### Start the local Studio
 
@@ -56,16 +68,18 @@ Run:
 cd "/path/to/anish-site"
 npm install --global npm@11.6.2 --ignore-scripts
 npm ci
-test -f .env.local || cp .env.example .env.local
-openssl rand -base64 32
+npm run setup:local
 ```
 
-Open `.env.local` and set:
+The bootstrap creates independent encryption and rate-limit values without
+printing them and applies owner-only file permissions. Open `.env.local` and
+set the two owner fields to the same address. Confirm these non-secret values:
 
 ```dotenv
 OWNER_EMAILS=your-owner-email@example.com
 LOCAL_OWNER_EMAIL=your-owner-email@example.com
 CONNECTOR_ENCRYPTION_KEY=<the newly generated local-only value>
+RATE_LIMIT_SALT=<the separately generated local-only value>
 STEAM_DATA_STORAGE_COUNTRIES=United States
 SITE_URL=http://localhost:3000
 PRODUCTION_SITE_URL=https://anish-shah-is.online
@@ -73,7 +87,14 @@ PRODUCTION_SITE_URL=https://anish-shah-is.online
 
 `LOCAL_OWNER_EMAIL` must exactly match an address in `OWNER_EMAILS`. Never add
 `LOCAL_OWNER_EMAIL` to production, and never replace the production encryption
-key with this local key.
+key with either local value. Full local setup and troubleshooting are owned by
+[Testing](./testing.md).
+
+After replacing both email placeholders, verify the local environment:
+
+```bash
+npm run doctor
+```
 
 Provider credentials and profile URLs are intentionally not loaded from
 `.env` or `.env.local`. Variables such as `MAL_CLIENT_ID`,
@@ -104,7 +125,7 @@ stay in the local D1 sandbox.
 
 ### Promote safely
 
-1. Validate locally with `npm run lint && npm test`.
+1. Validate locally with `npm run validate` and inspect all affected Play routes.
 2. Deploy code, migrations, and intentional non-secret settings.
 3. Open the Access-protected production Studio and select **Create one-time
    transfer code**. The code expires after ten minutes and works once.
@@ -113,12 +134,16 @@ stay in the local D1 sandbox.
    Hardcover, Steam, and Strava settings and sends them to the exact
    `PRODUCTION_SITE_URL` over HTTPS.
 5. Return to production Studio. Review the provider names, then select
-   **Validate and apply**. Production calls each provider before replacing its
-   current credential or snapshot, encrypts accepted credentials with the
-   production key, and leaves existing production state unchanged for a
-   provider that fails validation.
+   **Review and import**. Production validates the portable shape and encrypts
+   it with the production key without fetching a provider collection. An
+   unchanged credential keeps its accepted snapshot. Replacing a credential
+   removes that provider's old snapshots so data from a different account
+   cannot remain public; Studio then reports **Connected · Refresh required**.
+   A changed Strava widget remains on its profile fallback until **Verify feed
+   now** is selected.
 6. Authorize MyAnimeList, Spotify, and Discogs separately with their production
-   applications, then inspect all six streams on `/play`.
+   applications. Select **Refresh now** once for each configured API provider,
+   then inspect all six connector-backed object routes.
 
 The transfer never includes MyAnimeList, Spotify, or Discogs app credentials or
 OAuth tokens; Spotify or Discogs snapshots and publication approval; any other
@@ -127,9 +152,31 @@ key. A
 staged payload expires after thirty minutes. Production does not publish it
 until the allowlisted owner applies it.
 
+The server-to-server import endpoint is intentionally outside the Studio Access
+cookie path so a loopback server can reach it. It rejects browser origins and
+cookies, is body-bounded and throttled, and authenticates the exact production
+origin and encrypted transaction with the high-entropy, single-use transfer
+code. Listing and applying a staged payload remain Access- and owner-protected.
+
+### Live staging callbacks
+
+Stable staging uses separate provider applications and these exact callbacks:
+
+```text
+https://staging.anish-shah-is.online/api/connectors/myanimelist/oauth/callback
+https://staging.anish-shah-is.online/api/connectors/spotify/oauth/callback
+https://staging.anish-shah-is.online/api/connectors/discogs/oauth/callback
+```
+
+Enter all staging credentials through staging Studio. Staging cannot issue,
+stage, or accept production promotion codes. Verify OAuth, refresh, publication
+acknowledgement, expiry/recovery, and Safari behavior there without copying any
+production credential, snapshot, D1 row, KV value, or encryption key. See the
+[staging runbook](./operations/staging-and-previews.md).
+
 ## MyAnimeList
 
-Use separate MyAnimeList API clients for local and production.
+Use separate MyAnimeList API clients for local, staging, and production.
 
 ### Local client
 
@@ -163,10 +210,12 @@ Use separate MyAnimeList API clients for local and production.
    HTTPS Studio and complete approval.
 4. Select **Refresh now** and confirm **Current**.
 
-Studio encrypts the client secret, access token, and refresh token. It refreshes
-access shortly before expiry, persists rotated refresh tokens, and retries once
-after an authorization failure. If MyAnimeList revokes access or rejects the
-refresh token, Studio reports **Reauthorization required**:
+Studio encrypts the client secret, access token, and refresh token. During an
+owner-triggered synchronization it refreshes access shortly before expiry,
+persists rotated refresh tokens, and retries once after an authorization
+failure. This token maintenance never initiates a background collection
+refresh. If MyAnimeList revokes access or rejects the refresh token, Studio
+reports **Reauthorization required**:
 
 - Choose **Authorize again** to reuse the stored application registration.
 - Choose **Replace app credentials** only if the client ID or secret changed.
@@ -199,7 +248,8 @@ retrying—the last successful snapshot remains live.
 
 ## Spotify
 
-Use separate Spotify applications for local and production. Spotify does not
+Use separate Spotify applications for local and production. Live staging uses
+a third application bound only to staging. Spotify does not
 accept `localhost` as an OAuth redirect host; the local callback must use the
 explicit loopback address `127.0.0.1` even when Studio itself is already open
 at `localhost`.
@@ -276,7 +326,7 @@ application in production Studio.
 
 ## Discogs
 
-Use separate Discogs applications for local testing and production. Discogs
+Use separate Discogs applications for local, staging, and production. Discogs
 calls the two application values a consumer key and consumer secret.
 
 ### Local application
@@ -320,13 +370,22 @@ reconciled distributions, and constructed Discogs links. It excludes cover
 images, folders, conditions, ratings, notes, acquisition dates, marketplace
 data, pricing, wantlists, account identifiers, and raw provider responses.
 
-Discogs becomes eligible for refresh after four hours. The hourly Worker job
-retries a due failed synchronization, but the public catalog becomes
-unavailable six hours after its last successful refresh. A 401 requires
-reauthorization; for a 429, wait for the provider retry interval. Disconnect
-deletes the application credentials, OAuth state, collection snapshot, sync
-history, and publication approval. Discogs is deliberately excluded from the
-local-to-production transfer.
+Discogs becomes eligible for another owner-triggered refresh after four hours.
+Neither public traffic nor the hourly maintenance cron retries a due or failed
+synchronization. A 401 requires reauthorization; for a 429, wait until the
+Studio-displayed provider retry time before selecting **Refresh now** again.
+The server does not retry a 429 automatically, and any failure leaves the
+accepted snapshot unchanged.
+
+The standard publication policy makes the public catalog unavailable six hours
+after its last successful refresh. If the owner has a separate provider
+permission for longer display, Studio may record its private reference,
+approval date, optional expiry, and enabled state. Only while that protected
+record is current may the site keep serving the older catalog, visibly marked
+stale with its actual update time. Permission details never enter public JSON.
+Disconnect deletes the application credentials, OAuth state, collection
+snapshot, sync history, publication approval, and extended-display approval.
+Discogs is deliberately excluded from the local-to-production transfer.
 
 ## Steam
 
@@ -363,6 +422,7 @@ Strava uses neither an API credential nor a custom API visualization.
    generated iframe. Keep the tokenized URL exactly as Strava generated it.
 4. Select **Save Strava settings**. Studio makes one anonymous, no-redirect
    health check and records whether the iframe is currently frameable.
+   **Verify now** repeats that check only when the owner explicitly requests it.
 5. Open Move on `/play`. If the check passed, choose to load third-party
    content; otherwise verify the prominent athlete-profile link.
 Studio never executes pasted markup. It recognizes only exact generated
@@ -374,7 +434,8 @@ blocks framing, the widget remains visible only to the owner for recovery and
 Play uses the public profile-link fallback. Replacing it requires no deployment.
 
 The public site does not fetch, copy, aggregate, or custom-visualize Strava API
-data. The official iframe remains the only Strava display surface.
+data. Reading the public Strava configuration never performs a remote health
+check. The official iframe remains the only Strava display surface.
 
 ## Routes, retention, and recovery
 
@@ -395,13 +456,14 @@ data. The official iframe remains the only Strava display surface.
 | Refresh an API stream | `POST /api/studio/connectors/[provider]/refresh` | No body |
 | Read a public API stream | `GET /api/connectors/[provider]` | No owner credential |
 | Save/replace Strava | `PUT /api/studio/connectors/strava/config` | `{ "profileUrl": "…", "embed": "optional iframe" }` |
+| Verify saved Strava embed | `POST /api/studio/connectors/strava/verify` | No body |
 | Read public Strava config | `GET /api/connectors/strava` | No owner credential |
 | Disconnect API stream | `DELETE /api/studio/connectors/[provider]/credentials` | No body |
 | Disconnect Strava | `DELETE /api/studio/connectors/strava/config` | No body |
 | Issue one-time promotion code | `POST /api/studio/play-promotion/start` | No body; production only |
 | Stage local provider settings | `POST /api/studio/play-promotion/send` | `{ "transferCode": "…" }`; loopback only |
 | Review promotion queue | `GET /api/studio/play-promotion` | No body; production only |
-| Validate and apply promotion | `POST /api/studio/play-promotion/[id]/apply` | No body; production only |
+| Review and import promotion | `POST /api/studio/play-promotion/[id]/apply` | No body; production only; never fetches provider collections |
 
 Every production write requires same-origin access, a verified Cloudflare Access
 session, and an exact email allowlist match. Local development uses only the
@@ -412,7 +474,19 @@ Promotion codes also expire after ten minutes. A staged encrypted payload has
 a 30-minute review window, is cleared on the next hourly retention pass after
 expiry, and its transaction row is deleted within 24 hours of creation.
 
-A transient provider failure preserves the latest known-good eligible snapshot.
+One explicit owner refresh starts at most one synchronization. Studio reports
+the result precisely: **Complete** publishes a newly accepted snapshot;
+**Already running** means the existing attempt remains authoritative; **Not
+due** means no provider request occurred; and **Rate limited**, **Failed**, or
+**Public payload rejected** means no new snapshot was published. It must show
+the next safe retry time when available and must not label **Not due** as a
+successful sync.
+
+A transient provider failure preserves the latest known-good stored snapshot
+and active pointer. Public display still observes provider-specific age and
+privacy rules: MyAnimeList and Hardcover may remain visibly stale, Spotify and
+Steam keep their existing public-age gates, and Discogs uses its standard
+six-hour cutoff unless the protected extended-display approval is active.
 Disconnect is different: it deletes that provider’s credentials, snapshots,
 pending OAuth state, sync history, and provider-specific audit history, then
 unpublishes the stream.

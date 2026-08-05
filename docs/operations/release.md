@@ -1,6 +1,8 @@
 # Production release
 
-This runbook releases the owner-controlled Cloudflare Worker. The private Sites
+This is the sole authority for production planning, mutation, checkpointing,
+smoke testing, and attestation. It releases the owner-controlled Cloudflare
+Worker. The private Sites
 deployment remains a recovery/reference environment; it is not a public
 rollback target.
 
@@ -52,53 +54,97 @@ Record its namespace ID in the private infrastructure inventory. Reuse that
 namespace across releases; do not delete or recreate it for an ordinary
 deployment.
 
+Postcard Planet adds one private production media bucket. Create it once and
+keep its name exactly `anish-shah-travel-media`:
+
+```bash
+export CLOUDFLARE_ACCOUNT_ID='690e6286eb53a6df1bd0080633caf91f'
+npx --no-install wrangler whoami
+npx --no-install wrangler r2 bucket list
+npx --no-install wrangler r2 bucket create anish-shah-travel-media
+```
+
+Require `whoami` to show that exact account. The list command must succeed
+before the create command. Cloudflare error
+`10042` means R2 is not enabled for the owning account; enable it in the
+Cloudflare dashboard and repeat the read-only check. Do not bypass the failure
+or substitute a staging bucket.
+
+The generated production configuration binds that bucket as `TRAVEL_MEDIA`,
+Cloudflare Images as `IMAGES`, and the Travel media rate limiter as
+`TRAVEL_MEDIA_RATE_LIMITER` with the reviewed production namespace
+`88001006`. Treat the bucket and namespace as durable production coordinates.
+They must never equal their staging counterparts, and PR preview receives none
+of these bindings. Cloudflare Images must be enabled for the owning account
+before accepting an upload; the Worker fails closed when either media binding
+is unavailable.
+
 Set durable secrets interactively only during initial provisioning or an
 explicitly approved rotation:
 
 ```bash
 npx --no-install wrangler secret put CONNECTOR_ENCRYPTION_KEY --config dist/server/wrangler.public.json
 npx --no-install wrangler secret put RATE_LIMIT_SALT --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put SIMULATION_SESSION_HMAC_KEY --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_ACCOUNT_ID --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_ID --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_TOKEN --config dist/server/wrangler.public.json
+npx --no-install wrangler secret put SIMULATION_GATEWAY_BYOK_ALIAS --config dist/server/wrangler.public.json
 ```
 
 Never rotate `CONNECTOR_ENCRYPTION_KEY` during an ordinary release. Bootstrap
 changes need their own recovery notes and are not covered by the release plan
 below.
 
-### One-time apex cutover
+Create a production-only Cloudflare AI Gateway and store the Anthropic key
+there under the configured BYOK alias. The Worker must never receive the
+Anthropic key directly. In the Gateway dashboard:
 
-Before the first apex release, configure the existing Cloudflare Access
-application with both `anish-shah-is.online/studio*` and
-`anish-shah-is.online/api/studio/*`, preserving its audience and exact-email
-Allow policy. Public pages and `/api/connectors/**` must remain outside Access.
+- disable prompt/response logging and payload collection;
+- disable response caching;
+- configure DLP to block likely secrets and sensitive values;
+- configure content Guardrails for visitor and model text;
+- set a hard spend limit consistent with the application daily-call ceiling;
+  and
+- confirm the Gateway token is scoped only to the production Gateway.
 
-Attach `anish-shah-is.online` as the existing Worker's Custom Domain before
-zero-traffic staging. The generated release configuration declares only that
-apex route; it does not declare `www`. Configure a proxied `www` placeholder
-and a permanent Cloudflare `www`-to-apex redirect separately.
+The Worker also requests no payload logging, no cache, one Gateway attempt, and
+a bounded timeout on every model call. Those request flags do not replace the
+Gateway-wide controls. Staging uses a different Gateway, token, BYOK alias,
+provider key, budget, and session key.
 
-Register these production OAuth callbacks before checking the staged release:
+### Two-release simulation bootstrap
 
-```text
-https://anish-shah-is.online/api/connectors/myanimelist/oauth/callback
-https://anish-shah-is.online/api/connectors/spotify/oauth/callback
-https://anish-shah-is.online/api/connectors/discogs/oauth/callback
-```
+The first production deployment that introduces simulation persistence must
+keep `SIMULATION_EXPERIENCE_MODE=disabled` and apply the reviewed additive
+`0006_public_model_simulation.sql` migration. After that disabled release is
+healthy, enter provider approvals through owner-only Studio. Only then prepare
+a second, no-migration activation release with `campaign-v1` and live AI. This
+ordering prevents a release plan from claiming approvals before their protected
+table exists.
 
-Cancel or let any pending authorization transaction expire before replacing a
-provider callback. Existing accepted tokens remain authoritative unless Studio
-explicitly requests reauthorization. After the apex release passes logged-out,
-owner, connector, metadata, and security-header checks, disable the legacy
-`workers.dev` hostname and remove its old Access destinations. Do not add an
-application redirect for it.
+A no-migration `coming-soon` release may follow the infrastructure release
+before campaign approval. It exposes the semantic doorway and server-rendered
+placeholder while keeping every Simulation API unavailable. It must use
+`SIMULATION_AI_MODE=authored-only`, carry no approval variables, stay noindexed,
+and remain absent from the sitemap.
 
-## 1. Validate the exact commit
+## 1. Validate the exact commit and bytes
 
-Merge through a reviewed PR, then manually dispatch Validate, Gitleaks, and
-CodeQL with the same full commit SHA. All three must succeed. On the release
-machine:
+Merge through a reviewed PR, then manually dispatch Validate, Gitleaks, CodeQL,
+and Browser Quality with the same full commit SHA. All four workflow identities
+and successful conclusions must be valid. The temporary owner-runner option in
+[Testing and release gates](../testing.md) keeps those active workflow
+identities and gates intact when hosted Actions capacity is unavailable. On the
+release machine:
+
+For a release candidate, validate the pushed `release/<semver>` branch and keep
+the `release/* → main` pull request draft. A production release validates the
+exact merged `main` SHA. Tags are immutable: fixes after `v2.0.0-rc.1` produce
+`v2.0.0-rc.2`; never move an RC tag.
 
 ```bash
-git switch main
+git switch release/2.0.0 # use main only for an authorized final release
 git pull --ff-only
 git status --short
 export RELEASE_VALIDATED_SHA="$(git rev-parse HEAD)"
@@ -117,24 +163,66 @@ export CLOUDFLARE_D1_DATABASE_ID='<production D1 UUID>'
 export CLOUDFLARE_D1_DATABASE_NAME='anish-shah-work-in-public'
 export CLOUDFLARE_PUBLICATION_CACHE_ID='<production KV namespace ID>'
 export PUBLIC_SITE_URL='https://anish-shah-is.online'
+export RELEASE_VERSION="$(node -p "require('./package.json').version")"
 export OWNER_EMAILS='<exact owner email>'
 export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
 export CF_ACCESS_AUD='<Access application audience>'
+export SIMULATION_EXPERIENCE_MODE='disabled'
+export SIMULATION_AI_MODE='authored-only'
+export TRAVEL_ATLAS_MODE='disabled'
 npm run validate:release
 ```
 
-`validate:release` validates source, runs browser quality, produces the final
-build and reviewed non-secret Worker configuration, reruns the bundle/privacy
-scan, and writes a deterministic ignored manifest over every regular file in
-`dist/client` and `dist/server`. Install the pinned Playwright Chromium build before running it; do
-not bypass the browser gate while claiming the corresponding accessibility or
-performance results.
+`RELEASE_VERSION` must be exact SemVer and must exactly equal the checked-in
+`package.json` version. Release candidates therefore use the matching package
+version such as `2.0.0-rc.1`; a missing, prefixed (`v2.0.0`), or mismatched
+value fails configuration generation before any hosted command can run. Keep
+the draft release branch on its RC version. Bump both package files to `2.0.0`
+only in the separately authorized final-production change after the release PR
+is approved.
+
+Download the exact `validated-dist-<SHA>` artifact produced by the successful
+Validate run before `validate:release`. The command verifies that attestation,
+adds only the reviewed non-secret Worker configuration, writes an immutable
+release-build checkpoint, runs candidate scans and rendered tests, and checks
+the four exact-SHA evidence URLs during release preflight. It does not rebuild
+or repeat Browser Quality and Lighthouse; their successful workflow already
+exercised the same Validate artifact. The final checkpoint fails if any
+deployable file changes.
+
+My Room, 2001 and its seven semantic object routes are the only Play runtime.
+There is no hosted Classic flag or fallback. The release plan records
+`RELEASE_VERSION` and also computes `COPY_VERSION` from the copy deck and parser
+contract. `COPY_VERSION` is distinct from canonical-data `CONTENT_VERSION`.
+
+For the later activation release, use
+`SIMULATION_EXPERIENCE_MODE=campaign-v1` and `SIMULATION_AI_MODE=live` before
+building. Hosted production rejects fixture mode and rejects an enabled
+campaign that is not live. These non-secret values are embedded in the exact
+Worker configuration and cannot be changed after validation without rebuilding
+and replanning the release.
+
+For a public placeholder release instead, use:
+
+```bash
+export SIMULATION_EXPERIENCE_MODE='coming-soon'
+export SIMULATION_AI_MODE='authored-only'
+```
+
+Do not set provider-approval variables for that mode.
+
+Keep `TRAVEL_ATLAS_MODE=disabled` for the first code deployment. Preparing
+private trips in production Studio does not publish `/play/travel`. A later
+guarded release may select `atlas-v1` only with an owner-reviewed active Travel
+snapshot and explicit visual acceptance. The integrated schema adds Simulation
+as `0006_public_model_simulation.sql` and Travel as `0007_travel_atlas.sql`; list
+only migrations still pending on the target database.
 
 ## 2. Capture read-only production coordinates
 
 Before changing production, collect the current Worker version, a D1 Time
-Travel bookmark, the remote migration state, and the three successful GitHub
-validation, Gitleaks, and CodeQL run URLs:
+Travel bookmark, the remote migration state, and the four exact-SHA successful
+GitHub Validate, Gitleaks, CodeQL, and Browser Quality run URLs:
 
 ```bash
 npx --no-install wrangler versions list --config dist/server/wrangler.public.json
@@ -161,6 +249,21 @@ contracts. If the currently deployed version does not expose this endpoint, use
 `none`, `none`, and `0` for the three publication inputs below and explicitly
 plan the application-mediated bootstrap.
 
+For an enabled simulation candidate, also read owner-only
+`GET /api/studio/health` from production before planning. Copy only:
+
+```text
+simulation.approvedProviders
+simulation.providerApprovalDigest
+```
+
+The provider list contains only currently enabled, unexpired approvals with
+both `game_display` and `llm_context`. The digest is a one-way hash of the safe
+approval projection. Do not copy approval references, timestamps, contacts,
+notes, Studio responses, or provider data into a shell, plan, or issue. If the
+list is empty or the digest is unavailable, leave production disabled and fix
+the protected approval state first.
+
 ## 3. Write the pre-release plan
 
 Set the release coordinates without applying a migration or deploying:
@@ -171,30 +274,56 @@ export RELEASE_D1_BOOKMARK='<literal pre-migration Time Travel bookmark>'
 export RELEASE_VALIDATION_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export RELEASE_GITLEAKS_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export RELEASE_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
-export RELEASE_MIGRATION_LIST='0005_steady_publication_guard.sql'
+export RELEASE_BROWSER_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+export RELEASE_MIGRATION_LIST=''
 export RELEASE_PUBLICATION_HASH='<publication checkpoint contentHash, or none>'
 export RELEASE_PUBLICATION_CONTENT_VERSION='<checkpoint contentVersion, or none>'
 export RELEASE_PUBLICATION_KV_MATCH='<1 only when checkpoint says true; otherwise 0>'
 npm run release:plan
 ```
 
+For the activation release only, set these before `release:plan`:
+
+```bash
+export RELEASE_SIMULATION_APPROVED_PROVIDERS='<comma-separated simulation.approvedProviders>'
+export RELEASE_SIMULATION_APPROVAL_DIGEST='<simulation.providerApprovalDigest>'
+```
+
+Leave both unset while Simulation is `disabled` or `coming-soon`.
+
 `RELEASE_PREVIOUS_WORKER_VERSION` is mandatory. Every release needs an existing
 version to hold 100% of traffic while the candidate is verified at 0%. If no
 prior version is available, abort this release and establish a separate
 protected bootstrap environment first. `RELEASE_MIGRATION_LIST` is a
 comma-separated list of the reviewed, checked-in SQL migrations planned for
-this release; do not include an unapplied or unreviewed file.
+this release. Leave it empty when the remote migration inventory shows no
+reviewed pending migration. Replace the empty value only with exact
+remote-pending filenames; do not include an already-applied, absent-from-Git,
+or unreviewed file.
+
+Use `0006_public_model_simulation.sql` only for the disabled infrastructure
+release and only when Wrangler reports it pending. Subsequent `coming-soon` or
+campaign activation releases set `RELEASE_MIGRATION_LIST=''`. A `campaign-v1`
+release plan requires at least one allowlisted provider name and a 64-character
+approval digest. Disabled and coming-soon plans reject stale approval
+variables. The plan records only campaign version, experience/AI mode,
+provider/model, sorted provider names, and the digest; it has no field for
+approval references or secrets.
 
 `release:plan` refuses a dirty worktree or a SHA mismatch. It also asks the
-authenticated GitHub CLI to verify that all three distinct Actions runs
-concluded successfully for the exact `HEAD` and expected workflow names; the
-URLs alone are not trusted. It records:
+authenticated GitHub CLI to verify that all four distinct Actions runs belong
+to this repository, use the expected active workflow names and paths, target
+exact `HEAD`, and concluded successfully. Browser Quality must be a
+`workflow_dispatch` run. URLs alone are not trusted. The plan records:
 
-- the validated commit SHA and all three GitHub Actions run URLs;
+- the validated commit SHA and all four GitHub Actions identities and URLs;
+- explicit `RELEASE_VERSION`, `CONTENT_VERSION`, and `COPY_VERSION`;
 - the public content version and exact sanitized bundle SHA-256;
 - the deployable artifact-set hash, file count, byte count, and manifest hash;
 - the prior Worker version;
 - the pre-migration D1 Time Travel bookmark and migration list; and
+- the exact simulation campaign/model settings plus sanitized approval names
+  and one-way approval-state digest; and
 - checksums for the content attestation and prepared Worker configuration.
 
 It also verifies that `HEAD` is pushed to the branch's configured upstream and
@@ -293,10 +422,14 @@ npm run cloudflare:checkpoint:snippet
 
 Sign in to the production Studio through Access, open the browser developer
 console on that same origin, and paste the printed self-contained snippet. It
-contains version/content identifiers but no Access token, identity, credential,
-or provider data. Through `Cloudflare-Workers-Version-Overrides`, the snippet:
+contains version/content identifiers plus the sanitized approved-provider names
+and one-way digest, but no Access token, identity, credential, approval
+reference, or provider collection data. Through
+`Cloudflare-Workers-Version-Overrides`, the snippet:
 
-1. verifies `/api/studio/health` reached the candidate SHA and content version;
+1. verifies `/api/studio/health` reached the candidate SHA/content version and
+   that campaign version, experience/AI mode, provider/model, Gateway readiness,
+   approved provider names, and approval digest exactly match the plan;
 2. calls the audited, empty-body Publish route only when the plan recorded
    `predeploy_bootstrap_required`;
 3. gets `/api/studio/publication-checkpoint` and requires a `ready` D1/KV
@@ -329,7 +462,7 @@ Wrangler deployment commands, or activate static fallback content.
 
 ## 8. Run the exact smoke checklist
 
-Record each of these thirteen checks as pass only after observing it in
+Record each of these fourteen checks as pass only after observing it in
 production:
 
 1. `public_routes`: logged-out `/`, `/work`, `/play`, `/sources`, `/privacy`,
@@ -348,44 +481,76 @@ production:
    permissions headers are present on representative public and protected
    responses.
 7. `owner_health`: owner-only `GET /api/studio/health` reports the validated
-   release SHA and content version, expected latest migration, non-stale
-   retention heartbeat, and sanitized connector status.
-8. `canonical_apex`: the apex is the sole content-serving production origin and
+   release SHA, content version, `COPY_VERSION`, expected latest migration, non-stale
+   retention heartbeat, sanitized connector status, and the planned simulation
+   contract. For an enabled campaign, Gateway readiness, provider names, and
+   approval digest match the plan.
+8. `simulation_experience`: when disabled, the ingress is absent and route/APIs
+   return their documented unavailable behavior. When coming soon, the ingress
+   and noindexed server-rendered route are public, the sitemap omits it, every
+   Simulation API is unavailable, and no dossier, session, model, Phaser, or
+   Tone code loads. With `campaign-v1`, `/simulation` and the sitemap entry are
+   public, Action and Tactical both complete, exactly two optional text moments
+   are enforced, AI outage completes through authored fallback, and no
+   prompt/response or visitor text appears in logs or storage.
+9. `canonical_apex`: the apex is the sole content-serving production origin and
    public HTML, metadata, sitemap, robots, and structured data use it.
-9. `www_redirect`: representative `www` paths and queries permanently redirect
+10. `www_redirect`: representative `www` paths and queries permanently redirect
    to the equivalent apex URL without dropping either component.
-10. `workers_dev_disabled`: the former `workers.dev` hostname no longer serves
+11. `workers_dev_disabled`: the former `workers.dev` hostname no longer serves
     the application.
-11. `preview_urls_disabled`: the candidate version has no reachable Worker
+12. `preview_urls_disabled`: the candidate version has no reachable Worker
     preview URL.
-12. `request_id_header`: representative dynamic public, protected, error, and
+13. `request_id_header`: representative dynamic public, protected, error, and
     host-rejection responses include a fresh `x-request-id`; custom logs remain
     limited to the documented redacted fields.
-13. `access_destinations`: both `anish-shah-is.online/studio*` and
-    `anish-shah-is.online/api/studio/*` require Access, the owner succeeds, and
-    a non-owner remains denied.
+14. `access_destinations`: both `anish-shah-is.online/studio*` and
+   `anish-shah-is.online/api/studio/*` require Access, the owner succeeds, and
+   a non-owner remains denied.
+
+My Room is the only Play runtime, so the attestation always requires its six
+connector-backed direct-route checks:
+
+15. `play_watch`: `/play/watch` renders Watch and reads only MyAnimeList.
+16. `play_read`: `/play/read` renders Read and reads only Hardcover.
+17. `play_listen`: `/play/listen` renders Listen and keeps Spotify playback consent-gated.
+18. `play_collect`: `/play/collect` renders Collect and the eligible Discogs public state.
+19. `play_play`: `/play/play` renders Play and reads only Steam.
+20. `play_move`: `/play/move` renders Move and keeps the Strava frame consent-gated.
+
+When Travel is enabled, the attestation additionally requires:
+
+21. `play_travel`: `/play/travel` renders the semantic atlas, loads no
+    connector, and serves only media authorized by the active Travel snapshot.
+
+Also verify that `/play` itself performs no connector read before object
+selection, the semantic directory works without WebGL, and no inactive provider
+or iframe is prefetched. These behaviors are part of the route checks above,
+not substitutes for them.
 
 Write down the canonical ISO time at which this checklist completed and the
 deployed Worker version ID.
 
 ## 9. Write the immutable final attestation
 
-After all thirteen checks pass:
+After all checks required by the recorded Play and simulation modes pass:
 
 ```bash
 export RELEASE_WORKER_VERSION='<deployed version id>'
 export RELEASE_SMOKE_TESTED_AT='2026-08-03T18:00:00.000Z'
-export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health,canonical_apex,www_redirect,workers_dev_disabled,preview_urls_disabled,request_id_header,access_destinations'
+export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health,simulation_experience,canonical_apex,www_redirect,workers_dev_disabled,preview_urls_disabled,request_id_header,access_destinations,play_watch,play_read,play_listen,play_collect,play_play,play_move,play_travel'
 npm run release:attest
 ```
 
 `release:attest` rechecks the clean commit and `RELEASE_VALIDATED_SHA`, verifies
 that the ignored release plan still matches the content attestation and Worker
 configuration, verifies the guarded non-versioned-trigger receipt, and requires
-exactly the thirteen smoke identifiers above. It then
+exactly the base, Simulation, connector-route, and enabled Travel smoke
+identifiers selected by the release plan. It then
 writes a new immutable `releases/<date>-<sha>.json` containing the prior and
-current Worker versions, content hash, D1 recovery coordinates, validation URLs,
-trigger reconciliation, domain-cutover evidence, and smoke results.
+current Worker versions, content and copy versions, D1 recovery coordinates,
+four validation URLs, trigger reconciliation, domain-cutover evidence, and
+simulation settings, sanitized approval digest, and smoke results.
 
 Review and commit the new release record. Never edit or overwrite an earlier
 record. If any check fails, do not write a successful attestation; follow the

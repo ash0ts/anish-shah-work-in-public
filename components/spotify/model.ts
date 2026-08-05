@@ -1,3 +1,6 @@
+import type { PreviewFixtureScenario } from "../play/connector-model";
+import { grooveAngleForIndex } from "./groove-motion.ts";
+
 export type SpotifyTimeRange = "short_term" | "medium_term" | "long_term";
 
 export type PublicArtwork = {
@@ -121,7 +124,7 @@ async function loadSpotifyUrl(
     if (signal.aborted) throw error;
     return {
       status: "unavailable",
-      message: "The last public Spotify snapshot is temporarily unavailable.",
+      message: "Spotify is temporarily unavailable.",
     };
   }
 }
@@ -141,7 +144,7 @@ export function loadSpotifyFixture(
 }
 
 export function groovePoint(index: number, total: number) {
-  const angle = total ? (index / total) * Math.PI * 2 : 0;
+  const angle = (grooveAngleForIndex(index, total) * Math.PI) / 180;
   return {
     x: grooveCenter + Math.sin(angle) * grooveRadius,
     y: grooveCenter - Math.cos(angle) * grooveRadius,
@@ -169,14 +172,3 @@ export function spotifyEmbedUrl(
 ) {
   return `https://open.spotify.com/embed/${kind}/${encodeURIComponent(id)}`;
 }
-
-export function syncLabel(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Sync date unavailable";
-  return `Synced ${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date)}`;
-}
-import type { PreviewFixtureScenario } from "../play/connector-model";

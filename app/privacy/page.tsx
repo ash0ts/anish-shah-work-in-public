@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { steamStorageCountries } from "@/lib/server/connectors/steam-policy";
+import { simulationExperienceMode } from "@/lib/server/simulation/mode";
 import { publicPageMetadata } from "@/lib/seo";
 import styles from "./privacy.module.css";
 
@@ -8,12 +9,13 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = publicPageMetadata({
   title: "Privacy and personal streams",
   description:
-    "Learn what Anish Shah’s media and activity connectors retrieve, publish, retain, and delete, plus how to report an issue.",
+    "Learn what Anish Shah’s connectors and optional Meet Me simulation process, publish, retain, and delete, plus how to report an issue.",
   path: "/privacy",
 });
 
 export default function PrivacyPage() {
   const storageCountries = steamStorageCountries();
+  const simulationMode = simulationExperienceMode();
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
@@ -30,7 +32,7 @@ export default function PrivacyPage() {
 
       <article className={styles.policy}>
         <section>
-          <h2>Six deliberately different connections</h2>
+          <h2>Six connections and one owner-authored atlas</h2>
           <p>
             Each provider has a narrow input, a bounded public output, and an
             explicit deletion path.
@@ -122,28 +124,60 @@ export default function PrivacyPage() {
                 remains blocked until a visitor explicitly chooses to load it.
               </dd>
             </div>
+            <div>
+              <dt>Postcard Planet · Travel</dt>
+              <dd>
+                Anish uploads his own historical travel photos through the
+                protected owner Studio. Accepted images are reoriented,
+                stripped of embedded metadata, and stored as metadata-free
+                WebP masters in a private media bucket. The public atlas stores
+                only reviewed trip copy, required alt text, optional captions
+                and tags, and owner-approved geography. Approximate-city pins
+                are rounded to 0.1 degrees; exact GPS, original filenames,
+                camera identifiers, and raw uploads are never stored as public
+                data. Planned and current trips expose only country or region,
+                month-level dates, and no photos.
+              </dd>
+            </div>
           </dl>
         </section>
 
         <section>
           <h2>Storage and retention</h2>
           <p>
-            MyAnimeList, Hardcover, Spotify, and Steam refresh no more than
-            once every 12 hours unless the protected owner Studio requests a
-            refresh. Discogs becomes refreshable after four hours and its
-            catalog becomes unavailable six hours after the last successful
-            synchronization. D1 retains at most the latest two complete
+            MyAnimeList, Hardcover, Spotify, Discogs, and Steam synchronize only
+            when the protected owner selects Refresh now in Studio. Public page
+            reads and scheduled maintenance never request new collection data.
+            Strava checks its saved public widget only when the owner saves it or
+            selects Verify feed now. D1 retains at most the latest two complete
             sanitized snapshots for the other API providers and one current
-            Discogs snapshot. Transient failures preserve only snapshots still
-            inside their documented public window. Steam’s public fallback and
-            Spotify’s API-derived display expire after 72 hours; expired
-            Spotify metadata is deleted after 30 days.
+            Discogs snapshot. A failed request never replaces the last accepted
+            snapshot. Steam’s public fallback and Spotify’s API-derived display
+            still expire after 72 hours; expired Spotify metadata is deleted
+            after 30 days.
+          </p>
+          <p>
+            Discogs is normally unavailable six hours after its last successful
+            synchronization. When the owner has separately documented a
+            provider-granted exception in protected Studio settings, the last
+            accepted catalog may remain visible beyond that window and is marked
+            stale with its actual update time. The permission reference is never
+            part of the public site or connector response.
           </p>
           <p>
             Raw provider responses are processed in memory and discarded.
             Operational history is limited to provider, result, timestamps,
             safe error codes, and item counts; it never contains credentials,
             OAuth codes, or raw payloads.
+          </p>
+          <p>
+            A raw Travel upload remains only while its protected upload
+            transaction is processed and is deleted after successful
+            conversion. Failed and abandoned temporary uploads are removed
+            within 24 hours. Processed photo masters remain private while the
+            owner keeps the trip; public variants are served only while their
+            exact photo and digest belong to the active publication. Photo
+            responses ask search engines not to index the images.
           </p>
           <p>
             {storageCountries
@@ -169,6 +203,13 @@ export default function PrivacyPage() {
             visibility marker. Private games are never reconstructed or
             inferred.
           </p>
+          <p>
+            Unpublishing a Travel trip immediately removes the trip and all of
+            its places and photos from the active public atlas. Deleting the
+            trip also schedules its private processed media for removal. There
+            is no per-photo public visibility switch: a reviewed trip publishes
+            or unpublishes as one unit.
+          </p>
         </section>
 
         <section>
@@ -183,6 +224,13 @@ export default function PrivacyPage() {
             configuration, but no request reaches Strava until the visitor
             grants consent. The site does not collect a visitor’s account data
             from any of these providers.
+          </p>
+          <p>
+            Opening Travel requests this site’s published atlas and, when a
+            visitor chooses a photo, a same-origin processed image. It does not
+            request map tiles, contact a geocoder, expose an original upload,
+            or collect a visitor location. The interactive globe and the
+            semantic atlas show the same reviewed public places.
           </p>
           <p>
             Spotify content is attributed to Spotify and links back to the
@@ -231,6 +279,55 @@ export default function PrivacyPage() {
             damages arising from use of the Steam Web API or Steam data.
           </p>
         </section>
+
+        {simulationMode === "campaign-v1" ? (
+          <section>
+            <h2>Meet Me simulation and optional AI processing</h2>
+            <p>
+              <strong>4N1SH is a generated game character assembled from Anish
+              Shah’s public work and approved public collection snapshots. It is
+              not Anish, does not speak for Anish or W&amp;B, and can be wrong.</strong>{" "}
+              The campaign remains fully completable with authored dialogue when
+              its model service is unavailable or when a visitor chooses not to
+              write anything.
+            </p>
+            <p>
+              The campaign contains exactly two optional text prompts, each
+              limited to 280 characters. If used, the message is sent to
+              Anthropic through Cloudflare AI Gateway to generate a short,
+              schema-bounded character response. The application processes that
+              text in memory and converts any useful result into a small fixed set
+              of game signals. It does not write the visitor message, the model
+              prompt, or the raw provider response to D1, KV, application logs,
+              analytics, or browser persistence. To make a retried turn
+              idempotent, D1 may retain the validated, length-bounded character
+              line and its allowlisted game IDs with the short-lived session; that
+              safe projection is removed with the session no later than two hours
+              after expiry. Cloudflare and Anthropic still process the request
+              under their own applicable terms and policies. Do not enter
+              confidential, sensitive, or personal information.
+            </p>
+            <p>
+              A one-hour opaque session cookie coordinates revision-safe game
+              turns. D1 stores only its one-way hash, safe scene and action IDs,
+              fixed visitor-signal enums, bounded counters, and expiry. Campaign
+              progress kept in session storage stays in the current browser tab.
+              Completion, reset, or explicit exit deletes the active session;
+              abandoned session rows are removed no later than two hours after
+              expiry. There is no account, transcript, leaderboard, durable
+              visitor profile, or cross-session behavioral history.
+            </p>
+          </section>
+        ) : (
+          <section>
+            <h2>Meet Me simulation is not running</h2>
+            <p>
+              {simulationMode === "coming-soon"
+                ? "The coming-soon page is a static preview. It creates no simulation session, loads no Work or Play collection dossier, sends no visitor text to a model, and stores no campaign progress."
+                : "Meet Me is disabled. Its public route, campaign session, model processing, and visitor-text prompts are unavailable."}
+            </p>
+          </section>
+        )}
 
         <section aria-labelledby="accessibility-contact-title">
           <h2 id="accessibility-contact-title">

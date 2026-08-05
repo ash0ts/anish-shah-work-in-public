@@ -3,6 +3,7 @@ import { FilteredResultFocus } from "@/components/FilteredResultFocus";
 import { isKnownUnavailablePublicUrl } from "@/lib/public-url-health";
 import type { EvidenceSource } from "@/types/content";
 import styles from "./SourcesIndex.module.css";
+import { SITE_COPY } from "@/lib/copy";
 
 type LinkedContext = {
   id: string;
@@ -15,6 +16,18 @@ type SourceIndexEntry = {
   linkedWork: LinkedContext[];
   linkedClaims: LinkedContext[];
 };
+
+const sourceKindLabels: Record<string, string> = {
+  web_page: SITE_COPY.sources["source-kind-web"],
+  video: SITE_COPY.sources["source-kind-video"],
+  repository: SITE_COPY.sources["source-kind-code"],
+  profile: SITE_COPY.sources["source-kind-profile"],
+  methodology: SITE_COPY.sources["source-kind-method"],
+};
+
+function sourceKindLabel(kind: string) {
+  return sourceKindLabels[kind] ?? kind.replaceAll("_", " ");
+}
 
 export function SourcesIndex({
   entries,
@@ -72,9 +85,9 @@ export function SourcesIndex({
     >
       <div className={styles.heading}>
         <div>
-          <p className={styles.eyebrow}>Public bibliography</p>
+          <p className={styles.eyebrow}>{SITE_COPY.sources["bibliography-eyebrow"]}</p>
           <h2 id="source-index-title" tabIndex={-1}>
-            {entries.length} sources, open to inspect.
+            {entries.length} sources.
           </h2>
         </div>
         <form
@@ -83,31 +96,31 @@ export function SourcesIndex({
           method="get"
         >
           <label>
-            <span>Search sources</span>
+            <span>{SITE_COPY.sources["bibliography-search-label"]}</span>
             <input
               defaultValue={query}
               name="q"
               type="search"
-              placeholder="Work, claim, publisher, title…"
+              placeholder={SITE_COPY.sources["bibliography-search-placeholder"]}
             />
           </label>
           <label>
-            <span>Evidence type</span>
+            <span>{SITE_COPY.sources["source-type-label"]}</span>
             <select defaultValue={selectedKind} name="kind">
-              <option value="all">All evidence</option>
+              <option value="all">All source types</option>
               {kinds.map((value) => (
                 <option key={value} value={value}>
-                  {value.replaceAll("_", " ")}
+                  {sourceKindLabel(value)}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            <span>Association</span>
+            <span>{SITE_COPY.sources["source-connected-label"]}</span>
             <select defaultValue={selectedAssociation} name="association">
-              <option value="all">All associations</option>
-              <option value="work">Linked to work</option>
-              <option value="claim">Linked to a claim</option>
+              <option value="all">All connections</option>
+              <option value="work">Projects</option>
+              <option value="claim">Claims</option>
             </select>
           </label>
           <button type="submit">Search</button>
@@ -134,8 +147,8 @@ export function SourcesIndex({
       >
         <span>
           {isFiltering
-            ? `${filtered.length} matching public sources`
-            : `${filtered.length} public sources`}
+            ? `${filtered.length} matching sources`
+            : `${filtered.length} sources`}
         </span>
         <span>
           {filtered.length
@@ -220,12 +233,12 @@ function SourceRows({
             <div>
               <strong>{source.title}</strong>
               <small>
-                {source.kind.replaceAll("_", " ")}
+                {sourceKindLabel(source.kind)}
                 {source.publisher ? ` · ${source.publisher}` : ""}
               </small>
               {context.length ? (
                 <small className={styles.context}>
-                  Supports{" "}
+                  {SITE_COPY.sources["source-connected-label"]}{" "}
                   {context.slice(0, 2).map((entry, contextIndex) => (
                     <span key={entry.id}>
                       {contextIndex ? " · " : ""}
@@ -240,10 +253,10 @@ function SourceRows({
             </div>
             {source.url && !isKnownUnavailablePublicUrl(source.url) ? (
               <a href={source.url} rel="noreferrer" target="_blank">
-                Open ↗
+                {SITE_COPY.sources["source-link-label"]} ↗
               </a>
             ) : source.url ? (
-              <i>Indexed · host unavailable</i>
+              <i>Source unavailable</i>
             ) : (
               <i>Method note</i>
             )}

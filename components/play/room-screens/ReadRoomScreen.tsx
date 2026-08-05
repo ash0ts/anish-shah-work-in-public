@@ -24,9 +24,9 @@ export default function ReadRoomScreen({
     <main data-room-screen id="main" className={`${styles.page} ${styles.readPage}`} tabIndex={-1}>
       <ScreenNavigation fixture={fixture} object={object} />
       <header className={styles.readHeader} id="read-desk-note">
-        <p>Hardcover · Personal circulation desk</p>
+        <p>{object.screenEyebrow}</p>
         <h1>{object.title}</h1>
-        <span>What is open, what is finished, and what is waiting on the shelf.</span>
+        <span>{object.description}</span>
       </header>
       <section className={styles.bookshelf} aria-label="Hardcover collection">
         <div className={styles.shelfCrown} aria-hidden="true">
@@ -36,7 +36,7 @@ export default function ReadRoomScreen({
         <div className={styles.shelfComposition}>
           <aside className={styles.circulationCard} aria-label="Shelf directory">
             <p>Circulation file</p>
-            <nav aria-label="Borrowed Shelf sections">
+            <nav aria-label={`${object.title} sections`}>
               <a href="#read-desk-note">Desk note</a>
               <a href="#read-library">Browse the shelf</a>
             </nav>
@@ -47,7 +47,7 @@ export default function ReadRoomScreen({
               </div>
               <div>
                 <dt>Collection</dt>
-                <dd>Public shelf</dd>
+                <dd>My shelf</dd>
               </div>
             </dl>
           </aside>

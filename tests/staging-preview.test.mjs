@@ -23,6 +23,23 @@ import {
   previewPrFromWorkerName,
   previewResourceCoordinates,
 } from "../scripts/lib/preview-resource-contract.mjs";
+import {
+  fetchWithTimeout,
+  stagingSmokePaths,
+  waitForReadOnlyStagingReadiness,
+} from "../scripts/lib/staging-http-contract.mjs";
+import {
+  assertStagingDeployment,
+  assertStagingCandidateHealth,
+  assertStagingCheckpointReceipt,
+  assertFreshStagingPromotionCheckpoint,
+  assertStagingPublication,
+  assertStagingTriggerReceipt,
+  createStagingCheckpointReceipt,
+  createStagingTriggerReceipt,
+  stagingActionRequiresCleanMigrations,
+  waitForStagingDeploymentState,
+} from "../scripts/lib/staging-release-state.mjs";
 
 register("./content-connector-loader.mjs", import.meta.url);
 
@@ -36,6 +53,10 @@ const { previewConnectorSnapshot, previewStravaSnapshot } = await import(
 const { projectConnectorSnapshotForPublic } = await import(
   "../lib/server/connectors/public-gallery.ts"
 );
+const { previewTravelAtlas } = await import("../lib/server/travel/preview.ts");
+const { snapshotContainsPhoto } = await import(
+  "../lib/server/travel/projector.ts"
+);
 const {
   getCollectionScreenFoundation,
   getDiscogsScreenFoundation,
@@ -46,6 +67,9 @@ const {
 
 const contentVersion = "b".repeat(16);
 const releaseSha = "a".repeat(40);
+const releaseVersion = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 const productionD1Id = [
   "b9dbe711", "1cb2", "4d9d", "b8a9", "e8c9817a8284",
 ].join("-");
@@ -80,21 +104,25 @@ function stagingEnvironment() {
   return {
     STAGING_VALIDATED_SHA: releaseSha,
     RELEASE_VALIDATED_SHA: releaseSha,
+    RELEASE_VERSION: releaseVersion,
     STAGING_CLOUDFLARE_D1_DATABASE_ID: "11111111-1111-4111-8111-111111111111",
     STAGING_CLOUDFLARE_D1_DATABASE_NAME: "anish-shah-work-in-public-staging",
     STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID: "1".repeat(32),
+    STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET: "anish-shah-travel-media-staging",
     STAGING_CF_ACCESS_AUD: "staging-access-audience",
     STAGING_OWNER_RATE_LIMIT_NAMESPACE_ID: "99001001",
     STAGING_ARTWORK_RATE_LIMIT_NAMESPACE_ID: "99001002",
     STAGING_PROMOTION_RATE_LIMIT_NAMESPACE_ID: "99001003",
     STAGING_OAUTH_CALLBACK_RATE_LIMIT_NAMESPACE_ID: "99001004",
+    STAGING_SIMULATION_RATE_LIMIT_NAMESPACE_ID: "99001005",
+    STAGING_TRAVEL_MEDIA_RATE_LIMIT_NAMESPACE_ID: "99001006",
     OWNER_EMAILS: "owner@example.com",
     CF_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
   };
 }
 
 test("staging config uses only isolated resources and exact noindex-ready boundaries", () => {
-  const expected = expectedStagingCoordinates(stagingEnvironment(), contentVersion);
+  const expected = expectedStagingCoordinates(stagingEnvironment(), contentVersion, releaseVersion);
   const config = stagingConfiguration(generatedBase(), expected);
   assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
   assert.equal(config.name, "anish-shah-work-in-public-staging");
@@ -103,7 +131,16 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
   ]);
   assert.equal(config.vars.DEPLOYMENT_TIER, "staging");
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "d1_kv_required");
-  assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
+  assert.equal(config.vars.RELEASE_VERSION, releaseVersion);
+  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "campaign-v1");
+  assert.equal(config.vars.SIMULATION_AI_MODE, "live");
+  assert.equal(config.vars.SIMULATION_MODEL, "claude-sonnet-5");
+  assert.equal(config.compatibility_date, "2026-07-30");
+  assert.equal(config.vars.TRAVEL_ATLAS_MODE, "atlas-v1");
+  assert.deepEqual(config.r2_buckets, [
+    { binding: "TRAVEL_MEDIA", bucket_name: "anish-shah-travel-media-staging" },
+  ]);
+  assert.deepEqual(config.images, { binding: "IMAGES" });
   assert.equal(config.vars.PRODUCTION_SITE_URL, "https://anish-shah-is.online");
   assert.equal(config.observability.logs.invocation_logs, false);
   assert.deepEqual(config.triggers.crons, ["47 * * * *"]);
@@ -112,49 +149,717 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_CLOUDFLARE_D1_DATABASE_ID: productionD1Id,
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /must differ/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_CLOUDFLARE_PUBLICATION_CACHE_ID: productionKvId,
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /must differ/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
+      STAGING_CLOUDFLARE_TRAVEL_MEDIA_BUCKET: "anish-shah-travel-media",
+    }, contentVersion, releaseVersion),
+    /non-production R2 bucket/,
+  );
+  assert.throws(
+    () => expectedStagingCoordinates({
+      ...stagingEnvironment(),
       STAGING_CF_ACCESS_AUD: productionAccessAudience,
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /must differ/,
   );
   assert.throws(
     () => expectedStagingCoordinates({
       ...stagingEnvironment(),
       STAGING_OWNER_RATE_LIMIT_NAMESPACE_ID: "88001001",
-    }, contentVersion),
+    }, contentVersion, releaseVersion),
     /non-production/,
   );
+});
+
+test("staging can apply simulation persistence with the campaign disabled first", () => {
+  const environment = {
+    ...stagingEnvironment(),
+    STAGING_SIMULATION_EXPERIENCE_MODE: "disabled",
+  };
+  const expected = expectedStagingCoordinates(environment, contentVersion, releaseVersion);
+  const config = stagingConfiguration(generatedBase(), expected);
+  assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
+  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "disabled");
+  assert.equal(config.vars.SIMULATION_AI_MODE, "authored-only");
+  assert.throws(
+    () =>
+      expectedStagingCoordinates(
+        {
+          ...stagingEnvironment(),
+          STAGING_SIMULATION_EXPERIENCE_MODE: "fixture",
+        },
+        contentVersion,
+        releaseVersion,
+      ),
+    /disabled, coming-soon, or campaign-v1/,
+  );
+});
+
+test("staging can publish the simulation doorway without enabling the campaign", () => {
+  const environment = {
+    ...stagingEnvironment(),
+    STAGING_SIMULATION_EXPERIENCE_MODE: "coming-soon",
+  };
+  const expected = expectedStagingCoordinates(
+    environment,
+    contentVersion,
+    releaseVersion,
+  );
+  const config = stagingConfiguration(generatedBase(), expected);
+  assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
+  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "coming-soon");
+  assert.equal(config.vars.SIMULATION_AI_MODE, "authored-only");
+  assert.equal(config.vars.TRAVEL_ATLAS_MODE, "atlas-v1");
+});
+
+test("staging can bootstrap Travel privately before atlas activation", () => {
+  const environment = {
+    ...stagingEnvironment(),
+    STAGING_TRAVEL_ATLAS_MODE: "disabled",
+  };
+  const expected = expectedStagingCoordinates(
+    environment,
+    contentVersion,
+    releaseVersion,
+  );
+  const config = stagingConfiguration(generatedBase(), expected);
+  assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
+  assert.equal(config.vars.TRAVEL_ATLAS_MODE, "disabled");
+  assert.throws(
+    () =>
+      expectedStagingCoordinates(
+        {
+          ...stagingEnvironment(),
+          STAGING_TRAVEL_ATLAS_MODE: "fixture",
+        },
+        contentVersion,
+        releaseVersion,
+      ),
+    /disabled or atlas-v1/,
+  );
+});
+
+test("staging candidate receipts bind health, copy, Simulation, Travel, and publication state", () => {
+  const candidateVersion = "candidate-version-1234";
+  const priorVersion = "prior-version-5678";
+  const plan = {
+    preparedAt: "2026-08-04T10:00:00.000Z",
+    releaseVersion,
+    contentVersion,
+    copyVersion: "c".repeat(16),
+    previousWorkerVersion: priorVersion,
+    travelAtlasMode: "atlas-v1",
+    simulation: {
+      campaignVersion: "meet-me-4n1sh-v1",
+      experienceMode: "campaign-v1",
+      aiMode: "live",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      approvedProviders: ["hardcover"],
+      approvalStateDigest: "d".repeat(64),
+    },
+  };
+  const health = {
+    status: "healthy",
+    releaseSha,
+    releaseVersion,
+    contentVersion,
+    copyVersion: plan.copyVersion,
+    simulation: {
+      campaignVersion: plan.simulation.campaignVersion,
+      experienceMode: "campaign-v1",
+      aiMode: "live",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      configured: true,
+      approvedProviders: ["hardcover"],
+      providerApprovalDigest: plan.simulation.approvalStateDigest,
+    },
+    travel: {
+      mode: "atlas-v1",
+      configured: true,
+      activePublication: { contentHash: "e".repeat(64) },
+      cleanupHeartbeat: { status: "current" },
+    },
+  };
+  const publication = {
+    status: "ready",
+    contentVersion,
+    contentHash: "f".repeat(64),
+    kvPointerMatches: true,
+  };
+  const deployment = {
+    id: "deployment-12345678",
+    strategy: "percentage",
+    versions: [
+      { version_id: priorVersion, percentage: 100 },
+      { version_id: candidateVersion, percentage: 0 },
+    ],
+  };
+  assert.doesNotThrow(() =>
+    assertStagingCandidateHealth(health, { head: releaseSha, plan }),
+  );
+  assert.doesNotThrow(() => assertStagingPublication(publication, plan));
+
+  const receipt = createStagingCheckpointReceipt({
+    head: releaseSha,
+    workerVersion: candidateVersion,
+    planSha256: "1".repeat(64),
+    plan,
+    health,
+    publication,
+    deployment,
+    checkedAt: "2026-08-04T10:01:00.000Z",
+  });
+  assert.doesNotThrow(() =>
+    assertStagingCheckpointReceipt(receipt, {
+      head: releaseSha,
+      workerVersion: candidateVersion,
+      planSha256: "1".repeat(64),
+      plan,
+      health,
+      publication,
+      deployment,
+      notBefore: plan.preparedAt,
+    }),
+  );
+  assert.throws(
+    () =>
+      assertStagingCheckpointReceipt(receipt, {
+        head: releaseSha,
+        workerVersion: candidateVersion,
+        planSha256: "1".repeat(64),
+        plan,
+        health: {
+          ...health,
+          travel: {
+            ...health.travel,
+            activePublication: { contentHash: "2".repeat(64) },
+          },
+        },
+        publication,
+        deployment,
+        notBefore: plan.preparedAt,
+      }),
+    /does not match current state/,
+  );
+  assert.throws(
+    () =>
+      assertStagingCheckpointReceipt(receipt, {
+        head: releaseSha,
+        workerVersion: candidateVersion,
+        planSha256: "1".repeat(64),
+        plan,
+        health,
+        publication,
+        deployment: { ...deployment, id: "deployment-raced-9999" },
+        notBefore: plan.preparedAt,
+      }),
+    /does not match current state/,
+  );
+  assert.throws(
+    () =>
+      assertStagingCandidateHealth(
+        { ...health, copyVersion: "3".repeat(16) },
+        { head: releaseSha, plan },
+      ),
+    /does not match the planned SHA and versions/,
+  );
+  assert.throws(
+    () =>
+      assertStagingCandidateHealth(
+        {
+          ...health,
+          travel: {
+            ...health.travel,
+            cleanupHeartbeat: { status: "never_run" },
+          },
+        },
+        { head: releaseSha, plan },
+      ),
+    /not configured, published, and current/,
+  );
+});
+
+test("staging health accepts coming-soon without AI or provider approvals", () => {
+  const plan = {
+    releaseVersion,
+    contentVersion,
+    copyVersion: "c".repeat(16),
+    travelAtlasMode: "atlas-v1",
+    simulation: {
+      campaignVersion: "meet-me-4n1sh-v1",
+      experienceMode: "coming-soon",
+      aiMode: "authored-only",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      approvedProviders: [],
+      approvalStateDigest: null,
+    },
+  };
+  const health = {
+    status: "healthy",
+    releaseSha,
+    releaseVersion,
+    contentVersion,
+    copyVersion: plan.copyVersion,
+    simulation: {
+      campaignVersion: plan.simulation.campaignVersion,
+      experienceMode: "coming-soon",
+      aiMode: "authored-only",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      configured: false,
+      approvedProviders: [],
+      providerApprovalDigest: null,
+    },
+    travel: {
+      mode: "atlas-v1",
+      configured: true,
+      activePublication: { contentHash: "e".repeat(64) },
+      cleanupHeartbeat: { status: "current" },
+    },
+  };
+
+  assert.deepEqual(
+    assertStagingCandidateHealth(health, { head: releaseSha, plan }).simulation,
+    { approvedProviders: [], approvalStateDigest: null },
+  );
+  assert.throws(
+    () =>
+      assertStagingCandidateHealth(
+        {
+          ...health,
+          simulation: {
+            ...health.simulation,
+            experienceMode: "campaign-v1",
+            aiMode: "live",
+            configured: true,
+          },
+        },
+        { head: releaseSha, plan },
+      ),
+    /Simulation configuration or provider approvals do not match/,
+  );
+});
+
+test("staging deployment guards enforce exact 0/100 and promoted traffic", () => {
+  const candidateVersion = "candidate-version-1234";
+  const priorVersion = "prior-version-5678";
+  const staged = {
+    id: "deployment-12345678",
+    strategy: "percentage",
+    versions: [
+      { version_id: priorVersion, percentage: 100 },
+      { version_id: candidateVersion, percentage: 0 },
+    ],
+  };
+  const promoted = {
+    id: "deployment-87654321",
+    strategy: "percentage",
+    versions: [{ version_id: candidateVersion, percentage: 100 }],
+  };
+  assert.deepEqual(
+    assertStagingDeployment(staged, {
+      candidateVersion,
+      priorVersion,
+      phase: "staged",
+    }).traffic,
+    [
+      { versionId: candidateVersion, percentage: 0 },
+      { versionId: priorVersion, percentage: 100 },
+    ].sort((left, right) => left.versionId.localeCompare(right.versionId)),
+  );
+  assert.doesNotThrow(() =>
+    assertStagingDeployment(promoted, {
+      candidateVersion,
+      phase: "deployed",
+    }),
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        {
+          ...staged,
+          versions: [
+            { version_id: priorVersion, percentage: 90 },
+            { version_id: candidateVersion, percentage: 10 },
+          ],
+        },
+        { candidateVersion, priorVersion, phase: "staged" },
+      ),
+    /not isolated at 0%/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        {
+          ...promoted,
+          versions: [
+            ...promoted.versions,
+            { version_id: priorVersion, percentage: 0 },
+          ],
+        },
+        { candidateVersion, phase: "deployed" },
+      ),
+    /not the sole 100%/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        { ...staged, strategy: "unknown" },
+        { candidateVersion, priorVersion, phase: "staged" },
+      ),
+    /status is malformed/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        {
+          ...staged,
+          versions: [
+            { version_id: candidateVersion, percentage: "0" },
+            { version_id: priorVersion, percentage: 100 },
+          ],
+        },
+        { candidateVersion, priorVersion, phase: "staged" },
+      ),
+    /allocation is malformed/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        {
+          ...staged,
+          versions: [
+            { version_id: candidateVersion, percentage: 0 },
+            { version_id: candidateVersion, percentage: 100 },
+          ],
+        },
+        { candidateVersion, priorVersion, phase: "staged" },
+      ),
+    /allocation is ambiguous/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(
+        {
+          ...staged,
+          versions: [
+            { version_id: candidateVersion, percentage: 0 },
+            { version_id: priorVersion, percentage: 99 },
+          ],
+        },
+        { candidateVersion, priorVersion, phase: "staged" },
+      ),
+    /allocation is ambiguous/,
+  );
+  assert.throws(
+    () =>
+      assertStagingDeployment(staged, {
+        candidateVersion,
+        priorVersion: candidateVersion,
+        phase: "staged",
+      }),
+    /expected staging Worker deployment is invalid/,
+  );
+});
+
+test("staging promotion rejects candidate state changed after checkpoint", async () => {
+  const candidateVersion = "candidate-version-1234";
+  const priorVersion = "prior-version-5678";
+  const plan = {
+    preparedAt: "2026-08-04T10:00:00.000Z",
+    previousWorkerVersion: priorVersion,
+    releaseVersion,
+    contentVersion,
+    copyVersion: "c".repeat(16),
+    travelAtlasMode: "atlas-v1",
+    simulation: {
+      campaignVersion: "campaign-v1",
+      experienceMode: "campaign-v1",
+      aiMode: "live",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      approvedProviders: ["hardcover"],
+      approvalStateDigest: "d".repeat(64),
+    },
+  };
+  const checkpointHealth = {
+    status: "healthy",
+    releaseSha,
+    releaseVersion,
+    contentVersion,
+    copyVersion: plan.copyVersion,
+    simulation: {
+      campaignVersion: plan.simulation.campaignVersion,
+      experienceMode: plan.simulation.experienceMode,
+      aiMode: plan.simulation.aiMode,
+      provider: plan.simulation.provider,
+      model: plan.simulation.model,
+      configured: true,
+      approvedProviders: plan.simulation.approvedProviders,
+      providerApprovalDigest: plan.simulation.approvalStateDigest,
+    },
+    travel: {
+      mode: "atlas-v1",
+      configured: true,
+      activePublication: { contentHash: "e".repeat(64) },
+      cleanupHeartbeat: { status: "current" },
+    },
+  };
+  const publication = {
+    status: "ready",
+    contentVersion,
+    contentHash: "f".repeat(64),
+    kvPointerMatches: true,
+  };
+  const deployment = {
+    id: "deployment-12345678",
+    strategy: "percentage",
+    versions: [
+      { version_id: priorVersion, percentage: 100 },
+      { version_id: candidateVersion, percentage: 0 },
+    ],
+  };
+  const checkpointReceipt = createStagingCheckpointReceipt({
+    head: releaseSha,
+    workerVersion: candidateVersion,
+    planSha256: "1".repeat(64),
+    plan,
+    health: checkpointHealth,
+    publication,
+    deployment,
+    checkedAt: "2026-08-04T10:01:00.000Z",
+  });
+  let candidateReads = 0;
+  await assert.rejects(
+    assertFreshStagingPromotionCheckpoint({
+      readDeployment: async () => deployment,
+      readCandidateState: async () => {
+        candidateReads += 1;
+        return {
+          health: {
+            ...checkpointHealth,
+            travel: {
+              ...checkpointHealth.travel,
+              activePublication: { contentHash: "2".repeat(64) },
+            },
+          },
+          publication,
+        };
+      },
+      checkpointReceipt,
+      expected: {
+        head: releaseSha,
+        workerVersion: candidateVersion,
+        planSha256: "1".repeat(64),
+        plan,
+        notBefore: plan.preparedAt,
+      },
+    }),
+    /does not match current state/,
+  );
+  assert.equal(candidateReads, 1);
+});
+
+test("staging deployment polling converges without repeating a write", async () => {
+  const candidateVersion = "candidate-version-1234";
+  const priorVersion = "prior-version-5678";
+  const deployments = [
+    {
+      id: "deployment-old-1234",
+      strategy: "percentage",
+      versions: [{ version_id: priorVersion, percentage: 100 }],
+    },
+    {
+      id: "deployment-new-5678",
+      strategy: "percentage",
+      versions: [
+        { version_id: candidateVersion, percentage: 0 },
+        { version_id: priorVersion, percentage: 100 },
+      ],
+    },
+  ];
+  let reads = 0;
+  let writes = 0;
+  writes += 1;
+  const accepted = await waitForStagingDeploymentState({
+    readDeployment: async () => deployments[Math.min(reads++, 1)],
+    waitForReadiness: async ({ check }) => {
+      assert.equal(await check(), false);
+      assert.equal(await check(), true);
+    },
+    candidateVersion,
+    priorVersion,
+    phase: "staged",
+  });
+  assert.equal(accepted.state.deploymentId, "deployment-new-5678");
+  assert.equal(reads, 2);
+  assert.equal(writes, 1);
+
+  await assert.rejects(
+    waitForStagingDeploymentState({
+      readDeployment: async () => deployments[0],
+      waitForReadiness: async ({ check }) => {
+        assert.equal(await check(), false);
+      },
+      candidateVersion,
+      priorVersion,
+      phase: "staged",
+    }),
+    /did not converge/,
+  );
+});
+
+test("staging trigger receipts and migration gates protect every post-upload action", () => {
+  const receipt = createStagingTriggerReceipt({
+    head: releaseSha,
+    configSha256: "4".repeat(64),
+    appliedAt: "2026-08-04T10:01:00.000Z",
+  });
+  assert.doesNotThrow(() =>
+    assertStagingTriggerReceipt(receipt, {
+      head: releaseSha,
+      configSha256: "4".repeat(64),
+      notBefore: "2026-08-04T10:00:00.000Z",
+    }),
+  );
+  assert.throws(
+    () =>
+      assertStagingTriggerReceipt(receipt, {
+        head: releaseSha,
+        configSha256: "5".repeat(64),
+        notBefore: "2026-08-04T10:00:00.000Z",
+      }),
+    /does not match this release/,
+  );
+  for (const action of [
+    "stage",
+    "bootstrap",
+    "checkpoint",
+    "deploy",
+    "smoke",
+  ]) {
+    assert.equal(stagingActionRequiresCleanMigrations(action), true);
+  }
+  for (const action of ["plan", "migrate", "upload", "rollback"]) {
+    assert.equal(stagingActionRequiresCleanMigrations(action), false);
+  }
+});
+
+test("staging smoke derives every enabled direct object route", () => {
+  const paths = stagingSmokePaths();
+  assert.deepEqual(
+    paths.filter((pathname) => pathname.startsWith("/play/")),
+    [
+      "/play/watch",
+      "/play/read",
+      "/play/listen",
+      "/play/collect",
+      "/play/play",
+      "/play/move",
+    ],
+  );
+  assert.deepEqual(
+    stagingSmokePaths({ travelEnabled: true }).filter((pathname) =>
+      pathname.startsWith("/play/"),
+    ),
+    [...paths.filter((pathname) => pathname.startsWith("/play/")), "/play/travel"],
+  );
+  assert.throws(() => stagingSmokePaths({ travelEnabled: "yes" }), /switch/);
+});
+
+test("staging fetches have a hard timeout and readiness retries only reads", async () => {
+  await assert.rejects(
+    () => fetchWithTimeout(
+      (_input, init) => new Promise((_resolve, reject) => {
+        init.signal.addEventListener("abort", () => reject(new Error("aborted")));
+      }),
+      "https://staging.anish-shah-is.online/api/studio/health",
+      { method: "GET" },
+      5,
+    ),
+    /exceeded 5ms/,
+  );
+  await assert.rejects(
+    () => fetchWithTimeout(
+      (_input, init) => Promise.resolve({
+        json: () => new Promise((_resolve, reject) => {
+          init.signal.addEventListener("abort", () => reject(new Error("aborted body")));
+        }),
+      }),
+      "https://staging.anish-shah-is.online/api/studio/health",
+      { method: "GET" },
+      5,
+      (response) => response.json(),
+    ),
+    /exceeded 5ms/,
+  );
+
+  let attempts = 0;
+  const result = await waitForReadOnlyStagingReadiness({
+    timeoutMs: 100,
+    intervalMs: 1,
+    check: async () => {
+      attempts += 1;
+      return attempts === 3;
+    },
+  });
+  assert.equal(result.attempts, 3);
+  assert.equal(attempts, 3);
+
+  let failures = 0;
+  await assert.rejects(
+    () => waitForReadOnlyStagingReadiness({
+      timeoutMs: 8,
+      intervalMs: 1,
+      check: async () => {
+        failures += 1;
+        throw new Error("provider details must not escape");
+      },
+    }),
+    /did not become ready within 8ms/,
+  );
+  assert.ok(failures >= 1);
 });
 
 test("preview config has no durable, secret, cron, Studio, or OAuth capability", () => {
   const expected = expectedPreviewCoordinates({
     RELEASE_VALIDATED_SHA: releaseSha,
+    RELEASE_VERSION: releaseVersion,
     PREVIEW_PR_NUMBER: "42",
     PREVIEW_CF_ACCESS_AUD: "preview-access-audience",
     CF_ACCESS_TEAM_DOMAIN: "https://example.cloudflareaccess.com",
-  }, contentVersion);
+  }, contentVersion, releaseVersion);
   const config = previewConfiguration(generatedBase(), expected);
   assert.doesNotThrow(() => assertPreviewConfiguration(config, expected));
   assert.equal(config.name, "anish-shah-work-in-public-pr-42");
   assert.deepEqual(config.d1_databases, []);
   assert.deepEqual(config.kv_namespaces, []);
+  assert.equal("r2_buckets" in config, false);
+  assert.equal("images" in config, false);
   assert.deepEqual(config.ratelimits, []);
   assert.equal(config.triggers, undefined);
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "static_preview");
+  assert.equal(config.vars.RELEASE_VERSION, releaseVersion);
   assert.equal(config.vars.DEPLOYMENT_TIER, "preview");
-  assert.equal(config.vars.PLAY_EXPERIENCE_MODE, "my-room-2001");
+  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "campaign-v1");
+  assert.equal(config.vars.SIMULATION_AI_MODE, "fixture");
+  assert.equal(config.vars.SIMULATION_PROVIDER, "fixture");
+  assert.equal(config.compatibility_date, "2026-07-30");
+  assert.equal(config.vars.TRAVEL_ATLAS_MODE, "atlas-v1");
   assert.equal("OWNER_EMAILS" in config.vars, false);
   assert.equal("CONNECTOR_ENCRYPTION_KEY" in config.vars, false);
   assert.doesNotThrow(() =>
@@ -177,6 +882,38 @@ test("preview config has no durable, secret, cron, Studio, or OAuth capability",
   }
 });
 
+test("preview middleware serves bounded fixtures without hosted rate-limit secrets", async () => {
+  const workerSource = await readFile(
+    new URL("../worker/index.ts", import.meta.url),
+    "utf8",
+  );
+  const previewBoundary = workerSource.indexOf(
+    "const boundaryFailure = hostedDeploymentBoundaryResponse",
+  );
+  const rateLimitBoundary = workerSource.indexOf(
+    'const enforceRequestRateLimits = deploymentTier !== "preview"',
+  );
+  const setupGuard = workerSource.indexOf(
+    "enforceRequestRateLimits &&\n        requiresConfiguredRateLimit",
+  );
+  const applicationRoute = workerSource.indexOf(
+    "await routeApplicationRequest(appRequest, env, ctx, pathname)",
+  );
+
+  assert.ok(previewBoundary >= 0);
+  assert.ok(rateLimitBoundary > previewBoundary);
+  assert.ok(setupGuard > rateLimitBoundary);
+  assert.ok(applicationRoute > setupGuard);
+  assert.match(
+    workerSource,
+    /const discogsReadLimited = enforceRequestRateLimits[\s\S]*?throttleDiscogsPublicRead/,
+  );
+  assert.match(
+    workerSource,
+    /const travelMediaLimited = enforceRequestRateLimits[\s\S]*?throttleTravelMedia/,
+  );
+});
+
 test("host routing accepts only the exact origin for each declared tier", () => {
   const options = { development: false, sitesRuntime: false };
   const production = {
@@ -184,12 +921,14 @@ test("host routing accepts only the exact origin for each declared tier", () => 
     SITE_URL: "https://anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "d1_kv_required",
+    RELEASE_VERSION: releaseVersion,
   };
   const staging = {
     DEPLOYMENT_TIER: "staging",
     SITE_URL: "https://staging.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "d1_kv_required",
+    RELEASE_VERSION: releaseVersion,
   };
   const preview = {
     DEPLOYMENT_TIER: "preview",
@@ -197,6 +936,7 @@ test("host routing accepts only the exact origin for each declared tier", () => 
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
+    RELEASE_VERSION: releaseVersion,
   };
   assert.equal(productionOriginResponse(
     new Request("https://anish-shah-is.online/work"), production, options,
@@ -217,6 +957,22 @@ test("host routing accepts only the exact origin for each declared tier", () => 
     new Request("https://staging.anish-shah-is.online/work"),
     { ...staging, PUBLIC_CONTENT_MODE: "static_preview" }, options,
   )?.status, 503);
+  assert.equal(productionOriginResponse(
+    new Request("https://anish-shah-is.online/work"),
+    { ...production, RELEASE_VERSION: undefined }, options,
+  )?.status, 503);
+  assert.equal(productionOriginResponse(
+    new Request("https://anish-shah-is.online/work"),
+    { ...production, RELEASE_VERSION: "v2.0.0" }, options,
+  )?.status, 503);
+  assert.equal(
+    productionOriginResponse(
+      new Request("https://pr-42.anish-shah-is.online/play"),
+      preview,
+      options,
+    ),
+    null,
+  );
 });
 
 test("staging callbacks alone bypass identity while preview remains fully gated", () => {
@@ -264,26 +1020,15 @@ test("staging callbacks alone bypass identity while preview remains fully gated"
   );
 });
 
-test("sitemap publishes room routes only for the production-facing room mode", async () => {
+test("sitemap always publishes enabled room routes and never exposes disabled Travel", async () => {
   const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
   const sitemap = (await import("../app/sitemap.ts")).default;
   try {
-    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
-      PLAY_EXPERIENCE_MODE: "classic",
-    };
-    const classic = await sitemap();
-    assert.equal(
-      classic.filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move)$/.test(url)).length,
-      0,
-    );
-
-    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
-      PLAY_EXPERIENCE_MODE: "my-room-2001",
-    };
-    const room = await sitemap();
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {};
+    const withoutTravel = await sitemap();
     assert.deepEqual(
-      room
-        .filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move)$/.test(url))
+      withoutTravel
+        .filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move|travel)$/.test(url))
         .map(({ url }) => new URL(url).pathname)
         .sort(),
       [
@@ -297,15 +1042,134 @@ test("sitemap publishes room routes only for the production-facing room mode", a
     );
 
     globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      TRAVEL_ATLAS_MODE: "atlas-v1",
+    };
+    const room = await sitemap();
+    assert.deepEqual(
+      room
+        .filter(({ url }) => /\/play\/(?:watch|read|listen|collect|play|move|travel)$/.test(url))
+        .map(({ url }) => new URL(url).pathname)
+        .sort(),
+      [
+        "/play/collect",
+        "/play/listen",
+        "/play/move",
+        "/play/play",
+        "/play/read",
+        "/play/travel",
+        "/play/watch",
+      ],
+    );
+
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
       DEPLOYMENT_TIER: "staging",
       SITE_URL: "https://staging.anish-shah-is.online",
       PRODUCTION_SITE_URL: "https://anish-shah-is.online",
       PUBLIC_CONTENT_MODE: "d1_kv_required",
-      PLAY_EXPERIENCE_MODE: "my-room-2001",
+      RELEASE_VERSION: releaseVersion,
+      TRAVEL_ATLAS_MODE: "atlas-v1",
     };
     assert.deepEqual(await sitemap(), []);
   } finally {
     globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
+  }
+});
+
+test("production sitemap publishes only ready active Travel trip URLs", async () => {
+  const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+  const sitemap = (await import("../app/sitemap.ts")).default;
+  const snapshot = await previewTravelAtlas();
+  const production = {
+    DEPLOYMENT_TIER: "production",
+    SITE_URL: "https://anish-shah-is.online",
+    PRODUCTION_SITE_URL: "https://anish-shah-is.online",
+    TRAVEL_ATLAS_MODE: "atlas-v1",
+  };
+  const databaseFor = (activeSnapshot) => ({
+    prepare(query) {
+      return {
+        async first() {
+          if (!query.includes("FROM travel_publication_state")) return null;
+          return activeSnapshot
+            ? {
+                snapshotJson: JSON.stringify(activeSnapshot),
+                contentHash: activeSnapshot.contentHash,
+              }
+            : null;
+        },
+      };
+    },
+  });
+  const tripUrlsFrom = (entries) =>
+    entries
+      .map(({ url }) => url)
+      .filter((url) => new URL(url).pathname.startsWith("/play/travel/trips/"))
+      .sort();
+  const tripEntriesFrom = (entries) =>
+    entries.filter(({ url }) =>
+      new URL(url).pathname.startsWith("/play/travel/trips/"),
+    );
+
+  try {
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      ...production,
+      DB: databaseFor(snapshot),
+    };
+    const published = await sitemap();
+    assert.deepEqual(
+      tripUrlsFrom(published),
+      snapshot.trips
+        .map(
+          ({ slug }) =>
+            `https://anish-shah-is.online/play/travel/trips/${encodeURIComponent(slug)}`,
+        )
+        .sort(),
+    );
+    assert.ok(
+      tripEntriesFrom(published).every(
+        ({ lastModified }) =>
+          lastModified?.toISOString() === snapshot.publishedAt,
+      ),
+    );
+
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      ...production,
+      TRAVEL_ATLAS_MODE: "disabled",
+      DB: databaseFor(snapshot),
+    };
+    assert.deepEqual(tripUrlsFrom(await sitemap()), []);
+
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      ...production,
+      DB: databaseFor(null),
+    };
+    assert.deepEqual(tripUrlsFrom(await sitemap()), []);
+
+    for (const environment of [
+      {
+        DEPLOYMENT_TIER: "staging",
+        SITE_URL: "https://staging.anish-shah-is.online",
+        PUBLIC_CONTENT_MODE: "d1_kv_required",
+        RELEASE_VERSION: releaseVersion,
+      },
+      {
+        DEPLOYMENT_TIER: "preview",
+        PREVIEW_PR_NUMBER: "42",
+        SITE_URL: "https://pr-42.anish-shah-is.online",
+        PUBLIC_CONTENT_MODE: "static_preview",
+        RELEASE_VERSION: releaseVersion,
+      },
+    ]) {
+      globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+        ...production,
+        ...environment,
+        DB: databaseFor(snapshot),
+      };
+      assert.deepEqual(await sitemap(), [], environment.DEPLOYMENT_TIER);
+    }
+  } finally {
+    if (previous === undefined) delete globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+    else globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
   }
 });
 
@@ -335,6 +1199,7 @@ test("RSC presentation reads hosted tier from Cloudflare runtime bindings", asyn
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
+    RELEASE_VERSION: releaseVersion,
   };
   try {
     const [{ runtimeRootMetadata }, { PreviewEnvironmentNotice }, robotsModule, sitemapModule] =
@@ -347,7 +1212,7 @@ test("RSC presentation reads hosted tier from Cloudflare runtime bindings", asyn
     const metadata = runtimeRootMetadata();
     assert.equal(
       metadata.title.default,
-      "[PR #42] Anish Shah — Applied AI, in public",
+      "[PR #42] Anish Shah — Applied AI systems",
     );
     assert.deepEqual(metadata.robots, {
       index: false,
@@ -401,6 +1266,88 @@ test("preview blocks provider frames and serves only neutral artwork", async () 
     await artwork?.text(),
     /open\.spotify\.com|i\.scdn\.co|myanimelist|hardcover|steam|strava/i,
   );
+});
+
+test("preview Travel media is read-only and closed to the exact synthetic fixture", async () => {
+  const origin = "https://pr-42.anish-shah-is.online";
+  const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+  globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+    DEPLOYMENT_TIER: "preview",
+    PREVIEW_PR_NUMBER: "42",
+    SITE_URL: origin,
+    PRODUCTION_SITE_URL: "https://anish-shah-is.online",
+    PUBLIC_CONTENT_MODE: "static_preview",
+    RELEASE_VERSION: releaseVersion,
+    TRAVEL_ATLAS_MODE: "atlas-v1",
+  };
+  try {
+    const fixture = await previewTravelAtlas();
+    const photo = fixture.trips.flatMap((trip) => trip.photos)[0];
+    assert.ok(photo, "preview fixture must contain a photo");
+    const pathname =
+      `/api/travel-media/${photo.id}/480/${photo.mediaDigest}`;
+    const request = new Request(`${origin}${pathname}`);
+
+    assert.equal(
+      hostedDeploymentBoundaryResponse(request, "preview"),
+      null,
+      "the route projector, not a blanket Worker response, authorizes Travel media",
+    );
+    assert.equal(
+      hostedDeploymentBoundaryResponse(
+        new Request(`${origin}${pathname}`, { method: "HEAD" }),
+        "preview",
+      ),
+      null,
+    );
+    for (const method of ["POST", "PUT", "DELETE"]) {
+      const blocked = hostedDeploymentBoundaryResponse(
+        new Request(`${origin}${pathname}`, { method }),
+        "preview",
+      );
+      assert.equal(blocked?.status, 405, method);
+      assert.equal(blocked?.headers.get("allow"), "GET, HEAD", method);
+    }
+
+    assert.equal(
+      snapshotContainsPhoto(fixture, photo.id, photo.mediaDigest),
+      true,
+    );
+    assert.equal(
+      snapshotContainsPhoto(
+        fixture,
+        "photo_not_in_fixture",
+        photo.mediaDigest,
+      ),
+      false,
+    );
+    assert.equal(
+      snapshotContainsPhoto(fixture, photo.id, "f".repeat(64)),
+      false,
+    );
+
+    const [routeSource, httpSource, mediaSource] = await Promise.all([
+      readFile(
+        new URL(
+          "../app/api/travel-media/[photoId]/[variant]/[digest]/route.ts",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+      readFile(new URL("../lib/server/travel/http.ts", import.meta.url), "utf8"),
+      readFile(new URL("../lib/server/travel/media.ts", import.meta.url), "utf8"),
+    ]);
+    assert.match(routeSource, /export async function GET/);
+    assert.match(routeSource, /export async function HEAD/);
+    assert.match(httpSource, /variant === "480"[\s\S]*variant === "960"[\s\S]*variant === "1920"/);
+    assert.match(httpSource, /\^\[a-f0-9\]\{64\}\$/);
+    assert.match(
+      mediaSource,
+      /snapshotContainsPhoto\(fixture, input\.photoId, input\.digest\)/,
+    );
+  } finally {
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
+  }
 });
 
 test("preview cleanup can detach only its exact domain and Worker pair", () => {
@@ -475,6 +1422,7 @@ test("preview fixtures activate only under an exact preview runtime", () => {
     "SITE_URL",
     "PRODUCTION_SITE_URL",
     "PUBLIC_CONTENT_MODE",
+    "RELEASE_VERSION",
   ];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   Object.assign(process.env, {
@@ -483,6 +1431,7 @@ test("preview fixtures activate only under an exact preview runtime", () => {
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
+    RELEASE_VERSION: releaseVersion,
   });
   try {
     const ready = previewConnectorSnapshot(
@@ -535,7 +1484,7 @@ test("preview fixtures activate only under an exact preview runtime", () => {
   }
 });
 
-test("all six direct room foundations use projected preview data without durable state", async () => {
+test("all six connector-backed room foundations use projected preview data without durable state", async () => {
   const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
   globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
     DEPLOYMENT_TIER: "preview",
@@ -543,6 +1492,7 @@ test("all six direct room foundations use projected preview data without durable
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
+    RELEASE_VERSION: releaseVersion,
   };
   try {
     const [watch, read, collect, play, listen, move, stale] = await Promise.all([
@@ -602,6 +1552,7 @@ test("preview Discogs fixtures preserve format and decade variation", () => {
     "SITE_URL",
     "PRODUCTION_SITE_URL",
     "PUBLIC_CONTENT_MODE",
+    "RELEASE_VERSION",
   ];
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   Object.assign(process.env, {
@@ -610,6 +1561,7 @@ test("preview Discogs fixtures preserve format and decade variation", () => {
     SITE_URL: "https://pr-42.anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "static_preview",
+    RELEASE_VERSION: releaseVersion,
   });
   try {
     const snapshot = previewConnectorSnapshot(
@@ -636,10 +1588,11 @@ test("preview Discogs fixtures preserve format and decade variation", () => {
   }
 });
 
-test("preview workflows use trusted workflow_run deployment and never pull_request_target", async () => {
-  const [deploy, cleanup, validate, browserQuality, gitleaks, codeql, metadata, prepare, cleanupScript] = await Promise.all([
+test("preview workflows deploy only requested immutable PR Gate builds from trusted code", async () => {
+  const [deploy, cleanup, prGate, validate, browserQuality, gitleaks, codeql, metadata, prepare, cleanupScript, readiness] = await Promise.all([
     readFile(new URL("../.github/workflows/preview-deploy.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/preview-cleanup.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/pr-gate.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/browser-quality.yml", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/gitleaks.yml", import.meta.url), "utf8"),
@@ -647,11 +1600,13 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
     readFile(new URL("../scripts/write-preview-metadata.mjs", import.meta.url), "utf8"),
     readFile(new URL("../scripts/prepare-hosted-environment.mjs", import.meta.url), "utf8"),
     readFile(new URL("../scripts/preview-cleanup.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/preview-readiness.mjs", import.meta.url), "utf8"),
   ]);
   assert.match(deploy, /workflow_run:/);
+  assert.match(deploy, /workflows: \[PR Gate\]/);
   assert.match(
     deploy,
-    /group: preview-\$\{\{ github\.event\.workflow_run\.event \}\}-\$\{\{ github\.event\.workflow_run\.pull_requests\[0\]\.number \|\| github\.event\.workflow_run\.id \}\}/,
+    /group: preview-\$\{\{ github\.event\.workflow_run\.event == 'pull_request' && format\('pr-\{0\}', github\.event\.workflow_run\.pull_requests\[0\]\.number\) \|\| format\('run-\{0\}', github\.event\.workflow_run\.id\) \}\}/,
   );
   assert.match(deploy, /ref: \$\{\{ github\.workflow_sha \}\}/);
   assert.match(
@@ -661,11 +1616,16 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
   assert.match(deploy, /Revalidate the open PR and exact current head/);
   assert.match(deploy, /gh api "\$endpoint" --jq '\[\.state, \.head\.sha, \.head\.repo\.full_name\] \| @tsv'/);
   assert.match(deploy, /Recheck the PR immediately before privileged deployment/);
-  assert.match(deploy, /--connect-timeout 5 --max-time 20 --proto '=https'/);
-  assert.match(deploy, /for attempt in \$\(seq 1 18\)/);
-  assert.match(deploy, /if \[ "\$attempt" -lt 18 \]; then sleep 5; fi/);
-  assert.match(deploy, /DNS-, TLS-, Access-, and application-ready within 90 seconds/);
-  assert.doesNotMatch(deploy, /curl[^\n]*--location/);
+  assert.match(deploy, /PREVIEW_READINESS_TIMEOUT_MS: "90000"/);
+  assert.match(deploy, /run: node scripts\/preview-readiness\.mjs/);
+  assert.doesNotMatch(deploy, /for attempt in \$\(seq/);
+  assert.doesNotMatch(deploy, /curl/);
+  assert.match(readiness, /const deadline = startedAt \+ boundedTimeout/);
+  assert.match(readiness, /redirect: "manual"/);
+  assert.match(readiness, /AbortSignal\.timeout\(requestTimeout\)/);
+  assert.match(readiness, /x-anish-release-sha/);
+  assert.match(readiness, /response\.headers\.get\(releaseMarkerHeader\) === expectedMarker/);
+  assert.match(deploy, /EXPECTED_RELEASE_SHA: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/);
   assert.match(deploy, /printf '%s\\nPreview: %s\\n\\nValidated SHA:/);
   assert.match(deploy, /CLOUDFLARE_PREVIEW_API_TOKEN/);
   assert.match(deploy, /preview-production-guard\.mjs capture/);
@@ -675,21 +1635,22 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
     deploy,
     /if: \$\{\{ always\(\) && steps\.production_guard_capture\.outcome == 'success' \}\}/,
   );
-  assert.match(validate, /Upload immutable preview build/);
-  assert.match(validate, /github\.event\.pull_request\.head\.sha/);
+  assert.match(prGate, /name: Upload the one immutable PR build/);
+  assert.match(prGate, /include-hidden-files: true/);
+  assert.match(prGate, /github\.event\.pull_request\.head\.sha/);
+  assert.match(prGate, /contains\(github\.event\.pull_request\.labels\.\*\.name, 'preview'\)/);
   assert.match(
     browserQuality,
-    /ref: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+    /BROWSER_SOURCE_SHA: \$\{\{ inputs\.commit_sha \}\}/,
   );
   assert.match(
     browserQuality,
-    /EXPECTED_SHA: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
+    /EXPECTED_SHA: \$\{\{ env\.BROWSER_SOURCE_SHA \}\}/,
   );
-  assert.match(
-    browserQuality,
-    /name: room-browser-review-\$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.head\.sha/,
-  );
-  assert.doesNotMatch(browserQuality, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
+  assert.doesNotMatch(browserQuality, /room-browser-review/);
+  assert.match(browserQuality, /Download the exact Validate build/);
+  assert.match(browserQuality, /run-id: \$\{\{ inputs\.validate_run_id \}\}/);
+  assert.doesNotMatch(browserQuality, /npm run build/);
   for (const workflow of [gitleaks, codeql]) {
     assert.match(
       workflow,
@@ -701,54 +1662,179 @@ test("preview workflows use trusted workflow_run deployment and never pull_reque
     );
     assert.doesNotMatch(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
   }
-  assert.match(validate, /PREVIEW_WORKFLOW_SHA/);
+  assert.match(prGate, /PREVIEW_WORKFLOW_SHA/);
   assert.match(
-    validate,
-    /preview-build-\$\{\{ github\.event\.pull_request\.number \}\}-\$\{\{ github\.event\.pull_request\.head\.sha \}\}/,
+    prGate,
+    /pr-build-\$\{\{ env\.PR_SOURCE_SHA \}\}/,
   );
   assert.match(metadata, /process\.env\.PREVIEW_SOURCE_SHA/);
   assert.match(metadata, /sourceSha: releaseSha/);
+  assert.match(metadata, /schemaVersion: "1\.2"/);
+  assert.match(metadata, /releaseVersion/);
   assert.match(metadata, /workflowSha/);
   assert.match(prepare, /bundle\.sourceSha !== bundle\.releaseSha/);
   assert.match(cleanup, /preview-cleanup\.mjs cleanup --apply/);
-  assert.match(cleanup, /group: preview-/);
+  assert.match(cleanup, /group: preview-\$\{\{ github\.event_name == 'pull_request' && format\('pr-\{0\}', github\.event\.pull_request\.number\) \|\| 'janitor' \}\}/);
   assert.match(cleanup, /github\.workflow_sha/);
+  assert.match(cleanup, /cron: "41 6 \* \* 1"/);
+  assert.match(cleanup, /node scripts\/preview-cleanup\.mjs janitor --apply/);
+  assert.doesNotMatch(cleanup, /setup-repository|npm ci/);
+  assert.match(deploy, /Mark the current preview SHA as failed/);
+  assert.match(deploy, /Mark the current preview SHA as not deployable/);
+  assert.match(deploy, /validation failed for this SHA/);
+  assert.match(deploy, /A newer head or closed PR superseded this validation result/);
+  assert.match(deploy, /A newer head or closed PR superseded this deployment failure/);
+  assert.match(deploy, /The URL may still serve an older build/);
+  for (const workflow of [deploy, prGate, validate, browserQuality]) {
+    assert.match(workflow, /uses: \.\/\.github\/actions\/setup-repository/);
+  }
   assert.match(cleanupScript, /hostname: coordinates\.hostname/);
   assert.match(cleanupScript, /service: coordinates\.workerName/);
   assert.match(cleanupScript, /domains\.length > 1/);
-  assert.doesNotMatch(`${deploy}\n${cleanup}\n${validate}`, /pull_request_target/);
+  assert.doesNotMatch(`${deploy}\n${cleanup}\n${prGate}\n${validate}`, /pull_request_target/);
 });
 
-test("browser quality bounds workerd lifecycles without weakening review evidence", async () => {
-  const [workflow, runner, config, packageJson] = await Promise.all([
+test("CI shares the repository toolchain and reuses hidden immutable build evidence", async () => {
+  const [action, prGate, validate, browser, preview, dependabot] = await Promise.all([
+    readFile(
+      new URL("../.github/actions/setup-repository/action.yml", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../.github/workflows/pr-gate.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8"),
+    readFile(
+      new URL("../.github/workflows/browser-quality.yml", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../.github/workflows/preview-deploy.yml", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../.github/dependabot.yml", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(
+    action,
+    /node-version-file: \$\{\{ inputs\.working-directory \}\}\/\.node-version/,
+  );
+  assert.match(action, /default: "\."/);
+  assert.match(action, /require\('\.\/package\.json'\)\.packageManager/);
+  assert.match(action, /npm ci --ignore-scripts --prefix/);
+  for (const workflow of [prGate, validate, browser, preview]) {
+    assert.match(workflow, /uses: \.\/\.github\/actions\/setup-repository/);
+  }
+  assert.doesNotMatch(validate, /name: Verify deployable content attestation/);
+  assert.doesNotMatch(validate, /name: Apply all migrations to clean local D1/);
+  assert.match(
+    validate,
+    /name: Upload exact validated build for release evidence[\s\S]*include-hidden-files: true[\s\S]*if-no-files-found: error/,
+  );
+  assert.match(
+    prGate,
+    /name: Upload the one immutable PR build[\s\S]*include-hidden-files: true[\s\S]*if-no-files-found: error/,
+  );
+  assert.match(
+    preview,
+    /name: Download the validated PR artifact[\s\S]*name: Scan and prepare the read-only preview[\s\S]*npm run bundle:scan/,
+  );
+  assert.match(browser, /name: Download the exact Validate build/);
+  assert.match(browser, /npm run deployable:attest/);
+  assert.doesNotMatch(browser, /npm run build/);
+  assert.match(dependabot, /dependency-name: typescript[\s\S]*version-update:semver-major/);
+  assert.match(dependabot, /dependency-name: "@types\/node"[\s\S]*version-update:semver-major/);
+});
+
+test("browser quality isolates workerd lifecycles without weakening review evidence", async () => {
+  const [workflow, stability, runner, config, lighthouse, packageJson] = await Promise.all([
     readFile(new URL("../.github/workflows/browser-quality.yml", import.meta.url), "utf8"),
+    readFile(new URL("../.github/workflows/browser-stability.yml", import.meta.url), "utf8"),
     readFile(new URL("../scripts/run-browser-quality.mjs", import.meta.url), "utf8"),
     readFile(new URL("../playwright.config.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/run-lighthouse-quality.mjs", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8").then(JSON.parse),
   ]);
 
   assert.match(runner, /segment: "public"/);
   assert.match(runner, /"tests\/browser\/public-quality\.spec\.mjs"/);
-  assert.match(runner, /const roomShardCount = 5;/);
+  assert.match(runner, /runReleaseBrowserGate/);
   assert.match(runner, /"tests\/browser\/room-quality\.spec\.mjs"/);
-  assert.match(runner, /"--fully-parallel"/);
-  assert.match(runner, /`--shard=\$\{shard\}\/\$\{roomShardCount\}`/);
+  assert.match(runner, /"tests\/browser\/travel-atlas\.spec\.mjs"/);
+  assert.match(runner, /releaseStressPattern/);
+  assert.match(runner, /"--retries=0"/);
+  assert.match(runner, /"--max-failures=1"/);
   assert.match(runner, /BROWSER_QUALITY_PORT: String\(port\)/);
   assert.match(runner, /BROWSER_QUALITY_SEGMENT: segment/);
+  assert.match(runner, /BROWSER_QUALITY_SCOPE/);
+  assert.match(runner, /BROWSER_QUALITY_SHARD/);
   assert.match(runner, /ROOM_CAPTURE_VISUALS: "0"/);
-  assert.match(runner, /continueOnFailure: true/);
+  assert.match(runner, /segment: "release-simulation-fallbacks"/);
+  assert.match(runner, /const simulationFallbackPattern = "without JavaScript\|room reveal"/);
+  assert.match(runner, /remaining release checks were cancelled/);
   assert.match(config, /process\.env\.BROWSER_QUALITY_PORT/);
   assert.match(config, /process\.env\.BROWSER_QUALITY_SEGMENT/);
-  assert.match(workflow, /^  room_review:/m);
-  assert.match(workflow, /name: room review/);
-  assert.match(workflow, /^  browser:\n    name: browser\n    if: always\(\)/m);
-  assert.match(workflow, /BROWSER_TESTS_RESULT: \$\{\{ needs\.browser_tests\.result \}\}/);
-  assert.match(workflow, /ROOM_REVIEW_RESULT: \$\{\{ needs\.room_review\.result \}\}/);
+  assert.match(config, /node_modules\/wrangler-e2e\/bin\/wrangler\.js/);
+  assert.match(config, /const e2eCompatibilityDate = "2026-07-28"/);
+  assert.match(config, /--compatibility-date \$\{e2eCompatibilityDate\}/);
+  assert.match(lighthouse, /node_modules\/wrangler-e2e\/bin\/wrangler\.js/);
+  assert.match(lighthouse, /const lighthouseRunsPerRoute = 3/);
+  assert.match(lighthouse, /selectMedianLighthouseResult\(samples\)/);
+  assert.match(lighthouse, /const e2eCompatibilityDate = "2026-07-28"/);
+  assert.match(lighthouse, /"--compatibility-date",\n\s+e2eCompatibilityDate/);
+  assert.doesNotMatch(
+    lighthouse,
+    /DEPLOYMENT_TIER:preview|PUBLIC_CONTENT_MODE:static_preview/,
+    "Lighthouse must evaluate production-like indexability, not the intentionally noindexed preview tier.",
+  );
+  const hostedConfiguration = await readFile(
+    new URL("../scripts/lib/hosted-config-contract.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(hostedConfiguration, /2026-07-28/);
+  assert.equal(
+    packageJson.devDependencies["wrangler-e2e"],
+    "npm:wrangler@4.113.0",
+  );
+  assert.equal(
+    packageJson.scripts["validate:release"],
+    "npm run deployable:attest && npm run cloudflare:prepare:existing && node scripts/release-build-checkpoint.mjs --write && npm run validate:release:candidate && node scripts/release-build-checkpoint.mjs --check && node scripts/release-preflight.mjs",
+  );
+  assert.doesNotMatch(packageJson.scripts["validate:release:prebuild"], /build/);
+  assert.doesNotMatch(packageJson.scripts["validate:release:candidate"], /build/);
+  assert.match(
+    packageJson.scripts["validate:release:candidate"],
+    /bundle:scan && npm run test:rendered/,
+  );
+  assert.doesNotMatch(packageJson.scripts["validate:browser:existing"], /build/);
+  assert.doesNotMatch(packageJson.scripts["cloudflare:prepare:existing"], /build/);
+  assert.equal(
+    packageJson.scripts["staging:prepare"],
+    "npm run deployable:attest && npm run staging:prepare:existing && node scripts/release-build-checkpoint.mjs --write && npm run validate:release:candidate && node scripts/release-build-checkpoint.mjs --check",
+  );
+  assert.doesNotMatch(packageJson.scripts["staging:prepare:existing"], /build/);
+  assert.match(
+    packageJson.scripts["staging:prepare:existing"],
+    /prepare-hosted-environment\.mjs staging/,
+  );
+  assert.match(workflow, /^name: Browser Quality$/m);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /pull_request:/);
+  assert.match(workflow, /name: Download the exact Validate build/);
+  assert.match(workflow, /run-id: \$\{\{ inputs\.validate_run_id \}\}/);
+  assert.match(workflow, /test -s dist\/client\/\.vite\/manifest\.json/);
+  assert.match(workflow, /npm run bundle:scan/);
+  assert.match(workflow, /npm run browser:release:existing/);
+  assert.doesNotMatch(workflow, /npm run build/);
   assert.match(workflow, /name: Upload browser failure evidence\n        if: failure\(\)/);
-  assert.match(workflow, /name: Build room review candidate\n        run: npm run build/);
-  assert.match(workflow, /name: Capture room review evidence\n        run: npm run capture:room-review/);
-  assert.match(workflow, /\.playwright\/results-room-review/);
-  assert.match(workflow, /\.playwright\/report-room-review/);
+  assert.doesNotMatch(workflow, /Capture room review evidence/);
+  assert.match(stability, /worker: \[1, 2\]/);
+  assert.match(stability, /max-parallel: 2/);
+  assert.match(stability, /BROWSER_SOAK_LOOPS: "1"/);
+  assert.match(stability, /run: node scripts\/ci\/run-browser-soak\.mjs/);
+  assert.match(stability, /name: browser soak worker \$\{\{ matrix\.worker \}\}/);
+  assert.match(stability, /name: Download the existing validated build/);
+  assert.doesNotMatch(stability, /npm run build/);
+  assert.doesNotMatch(stability, /runs-on: ubuntu-latest/);
+  assert.match(stability, /Capture non-blocking visual review evidence/);
   assert.match(packageJson.scripts["capture:room-review"], /BROWSER_QUALITY_PORT=4180/);
   assert.match(packageJson.scripts["capture:room-review"], /BROWSER_QUALITY_SEGMENT=review/);
 
@@ -761,7 +1847,6 @@ test("browser quality bounds workerd lifecycles without weakening review evidenc
         encoding: "utf8",
         env: {
           ...process.env,
-          BROWSER_PLAY_MODE: "room",
           BROWSER_QUALITY_PORT: "4190",
           BROWSER_QUALITY_SEGMENT: "partition-check",
           BROWSER_QUALITY_STATE_DIR: ".wrangler/browser-quality-partition-check",
@@ -786,17 +1871,80 @@ test("browser quality bounds workerd lifecycles without weakening review evidenc
       ]),
     );
   }
-  assert.equal(complete.length, 40);
+  assert.ok(complete.length >= 44);
   assert.equal(partitioned.length, complete.length);
   assert.equal(new Set(partitioned).size, partitioned.length);
   assert.deepEqual([...partitioned].sort(), [...complete].sort());
 });
 
-test("Play propagates a preview fixture through every active stream", async () => {
+test("browser docs-only classification sees both sides of a source-to-docs rename", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "anish-browser-rename-"));
+  const runGit = (...arguments_) => {
+    const result = spawnSync("git", arguments_, {
+      cwd: directory,
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    return result.stdout.trim();
+  };
+
+  try {
+    runGit("init", "--quiet");
+    runGit("config", "user.name", "Synthetic CI");
+    runGit("config", "user.email", "ci@example.invalid");
+    mkdirSync(path.join(directory, "components"));
+    writeFileSync(
+      path.join(directory, "components", "interactive.tsx"),
+      "export const interactive = true;\n",
+    );
+    runGit("add", "components/interactive.tsx");
+    runGit("commit", "--quiet", "-m", "add source fixture");
+    const baseSha = runGit("rev-parse", "HEAD");
+
+    mkdirSync(path.join(directory, "docs"));
+    runGit("mv", "components/interactive.tsx", "docs/interactive.md");
+    runGit("commit", "--quiet", "-m", "move source fixture to docs");
+    const headSha = runGit("rev-parse", "HEAD");
+
+    const diff = spawnSync(
+      "git",
+      [
+        "diff",
+        "--name-only",
+        "--no-renames",
+        "--no-ext-diff",
+        "--no-textconv",
+        "-z",
+        baseSha,
+        headSha,
+        "--",
+      ],
+      { cwd: directory },
+    );
+    assert.equal(diff.status, 0, diff.stderr?.toString("utf8"));
+    const changedPaths = diff.stdout
+      .toString("utf8")
+      .split("\0")
+      .filter(Boolean);
+    assert.deepEqual(changedPaths, [
+      "components/interactive.tsx",
+      "docs/interactive.md",
+    ]);
+    assert.equal(
+      changedPaths.every((changedPath) => changedPath.startsWith("docs/")),
+      false,
+      "the deleted source path must keep Browser Quality enabled",
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("Play propagates a preview fixture through every connector-backed room route", async () => {
   const [
     page,
-    classic,
-    streams,
+    direct,
+    foundation,
     collection,
     gallery,
     discogs,
@@ -804,8 +1952,8 @@ test("Play propagates a preview fixture through every active stream", async () =
     movement,
   ] = await Promise.all([
     readFile(new URL("../app/play/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../components/play/ClassicPlayExperience.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../components/PersonalStreams.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/play/[objectSlug]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/play-screen-foundation.ts", import.meta.url), "utf8"),
     readFile(new URL("../components/play/CollectionStream.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/CollectionGallery.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/play/DiscogsStream.tsx", import.meta.url), "utf8"),
@@ -813,16 +1961,9 @@ test("Play propagates a preview fixture through every active stream", async () =
     readFile(new URL("../components/play/MovementStream.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(page, /activePreviewFixtureRuntime\(\)/);
-  assert.match(
-    page,
-    /<ClassicPlayExperience[\s\S]*fixture=\{fixture\}[\s\S]*initialStream=\{streamIdFromValue\(query\.stream\)\}/,
-  );
-  assert.match(classic, /<PersonalStreams[\s\S]*fixture=\{fixture\}/);
-  assert.match(classic, /initialStream=\{initialStream\}/);
-  assert.match(streams, /CollectionStream provider="myanimelist" fixture=\{fixture\}/);
-  assert.match(streams, /DiscogsStream fixture=\{fixture\}/);
-  assert.match(streams, /SpotifyStream[\s\S]*fixture=\{fixture\}/);
-  assert.match(streams, /MovementStream[\s\S]*fixture=\{fixture\}/);
+  assert.match(page, /<RoomOverview[\s\S]*fixture=\{fixture\}/);
+  assert.match(direct, /previewFixtureForPlayRoute\(query\)/);
+  assert.match(foundation, /previewFixtureForPlayRoute/);
   assert.match(collection, /parameters\.set\("fixture", fixture\)/);
   assert.match(discogs, /parameters\.set\("fixture", fixture\)/);
   assert.match(spotify, /loadSpotifyFixture\(controller\.signal, fixture\)/);
@@ -904,11 +2045,75 @@ test("staging release bootstraps and verifies its isolated D1/KV publication", a
     packageJson.scripts["staging:bootstrap"],
     "node scripts/staging-release.mjs bootstrap",
   );
+  assert.equal(
+    packageJson.scripts["staging:stage"],
+    "node scripts/staging-release.mjs stage",
+  );
+  assert.equal(
+    packageJson.scripts["staging:deploy"],
+    "node scripts/staging-release.mjs deploy",
+  );
   assert.match(script, /action === "bootstrap"/);
+  assert.match(script, /action === "stage"/);
   assert.match(script, /\/api\/studio\/publish/);
   assert.match(script, /\/api\/studio\/publication-checkpoint/);
-  assert.match(script, /kvPointerMatches !== true/);
+  assert.match(script, /\/api\/studio\/release-checkpoint/);
   assert.match(script, /STAGING_SITE_ORIGIN/);
+  assert.match(script, /STAGING_BROWSER_URL/);
+  assert.match(script, /event,workflowDatabaseId/);
+  assert.match(script, /assertActiveActionsWorkflow/);
+  assert.match(script, /workflowIdentity/);
+  assert.match(script, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(script, /releaseBuildCheckpointSha256/);
+  assert.match(script, /waitForCandidateReadiness/);
+  assert.match(script, /stagingSmokePaths\(\{[\s\S]*travelEnabled:/);
+  assert.match(script, /Cloudflare-Workers-Version-Overrides/);
+  assert.match(script, /assertStagingCandidateHealth/);
+  assert.match(script, /assertStagingCheckpointReceipt/);
+  assert.match(script, /requireNoPendingMigrations/);
+  assert.match(script, /requireStagingTriggerReceipt/);
+  assert.match(script, /deployments",\s*"status"/);
+  assert.match(script, /\/api\/studio\/maintenance\/bootstrap/);
+  assert.match(script, /requireStagedCandidate/);
+  assert.match(script, /waitForStagingDeploymentState/);
+  assert.match(
+    script,
+    /expectedSimulationStatus\s*=\s*\n?\s*plan\.simulation\.experienceMode === "disabled" \? 404 : 200/,
+  );
+  assert.match(script, /authenticatedFetch\(\s*"\/api\/simulation\/session"/);
+  assert.match(
+    script,
+    /expectedSimulationSessionStatus\s*=\s*\n?\s*plan\.simulation\.experienceMode === "campaign-v1" \? 200 : 404/,
+  );
+
+  const stageStart = script.indexOf('if (action === "stage")');
+  const stageEnd = script.indexOf("} else {", stageStart);
+  const deployStart = script.indexOf('} else if (action === "deploy")', stageStart);
+  const smokeStart = script.indexOf('} else if (action === "smoke")', deployStart);
+  assert.notEqual(stageStart, -1);
+  assert.notEqual(stageEnd, -1);
+  assert.notEqual(deployStart, -1);
+  assert.notEqual(smokeStart, -1);
+  const stage = script.slice(stageStart, stageEnd);
+  const deploy = script.slice(deployStart, smokeStart);
+  assert.match(stage, /`\$\{requested\}@0%`/);
+  assert.match(stage, /`\$\{plan\.previousWorkerVersion\}@100%`/);
+  assert.match(stage, /waitForStagingDeployment\(plan, \{ phase: "staged" \}\)/);
+  assert.doesNotMatch(stage, /`\$\{requested\}@100%`/);
+  assert.equal(
+    deploy.indexOf("assertStagingCheckpointReceipt") <
+      deploy.indexOf("assertReleaseMarker(remoteReleaseMarker()") &&
+      deploy.indexOf("assertReleaseMarker(remoteReleaseMarker()") <
+        deploy.indexOf('`${workerVersion}@100%`'),
+    true,
+  );
+  assert.equal(
+    deploy.indexOf("requireStagedCandidate(plan)") <
+      deploy.indexOf("assertStagingCheckpointReceipt") &&
+      deploy.indexOf('`${workerVersion}@100%`') <
+        deploy.indexOf('phase: "deployed"'),
+    true,
+  );
 });
 
 test("staging Studio renders an explicit non-promotable boundary", async () => {

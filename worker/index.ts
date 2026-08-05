@@ -5,8 +5,9 @@ import {
   DEFAULT_IMAGE_SIZES,
 } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
-import { refreshDiscogsWhenDue } from "../lib/server/connectors/discogs-scheduled";
 import { pruneConnectorRetention } from "../lib/server/connectors/repository";
+import { pruneSimulationRetention } from "../lib/server/simulation/repository";
+import { pruneTravelRetention } from "../lib/server/travel";
 import { authenticateRequest, isSitesRuntime } from "./access";
 import { publicationAvailabilityResponse } from "./publication-fallback";
 import {
@@ -17,6 +18,8 @@ import {
   throttleOwnerWrite,
   throttlePromotionImport,
   throttleOAuthCallback,
+  throttleSimulationApi,
+  throttleTravelMedia,
 } from "./rate-limiting";
 import {
   beginRequestObservation,
@@ -94,6 +97,7 @@ const worker = {
           development,
           pathname ?? "/invalid-path",
           deploymentTier,
+          env.RELEASE_SHA,
         ),
         observation,
       );
@@ -135,7 +139,16 @@ const worker = {
       );
       if (boundaryFailure) return finalize(boundaryFailure);
 
+      // Visual previews are Access-protected, read-only, and serve only
+      // checked-in synthetic fixtures. They deliberately have no rate-limit
+      // bindings or salt. The preview boundary above rejects every write,
+      // Studio route, OAuth route, and promotion import before this point, so
+      // applying hosted throttles here would make fixture pagination and
+      // synthetic Travel media unavailable without improving protection.
+      const enforceRequestRateLimits = deploymentTier !== "preview";
+
       if (
+        enforceRequestRateLimits &&
         requiresConfiguredRateLimit(
           env,
           pathname,
@@ -156,12 +169,14 @@ const worker = {
         headers: authentication.headers,
       });
 
-      const discogsReadLimited = await throttleDiscogsPublicRead(
-        env,
-        appRequest,
-        development,
-        pathname,
-      );
+      const discogsReadLimited = enforceRequestRateLimits
+        ? await throttleDiscogsPublicRead(
+            env,
+            appRequest,
+            development,
+            pathname,
+          )
+        : null;
       if (discogsReadLimited && (directProduction || development)) {
         return finalize(discogsReadLimited);
       }
@@ -174,49 +189,81 @@ const worker = {
       );
       if (unavailable) return finalize(unavailable);
 
-      const oauthCallbackLimited = await throttleOAuthCallback(
-        env,
-        appRequest,
-        development,
-        pathname,
-      );
+      const oauthCallbackLimited = enforceRequestRateLimits
+        ? await throttleOAuthCallback(
+            env,
+            appRequest,
+            development,
+            pathname,
+          )
+        : null;
       if (oauthCallbackLimited && (directProduction || development)) {
         return finalize(oauthCallbackLimited);
       }
 
-      const promotionLimited = await throttlePromotionImport(
-        env,
-        appRequest,
-        development,
-        pathname,
-      );
+      const promotionLimited = enforceRequestRateLimits
+        ? await throttlePromotionImport(
+            env,
+            appRequest,
+            development,
+            pathname,
+          )
+        : null;
       if (promotionLimited && (directProduction || development)) {
         return finalize(promotionLimited);
+      }
+
+      const simulationLimited = enforceRequestRateLimits
+        ? await throttleSimulationApi(
+            env,
+            appRequest,
+            development,
+            pathname,
+          )
+        : null;
+      if (simulationLimited && (directProduction || development)) {
+        return finalize(simulationLimited);
       }
 
       const bounded = await boundedApiWrite(appRequest, pathname);
       if (bounded instanceof Response) return finalize(bounded);
       appRequest = bounded;
 
-      const ownerLimited = await throttleOwnerWrite(
-        env,
-        appRequest,
-        authentication.identity,
-        development,
-        pathname,
-      );
+      const ownerLimited = enforceRequestRateLimits
+        ? await throttleOwnerWrite(
+            env,
+            appRequest,
+            authentication.identity,
+            development,
+            pathname,
+          )
+        : null;
       if (ownerLimited && (directProduction || development)) {
         return finalize(ownerLimited);
       }
 
-      const artworkLimited = await throttleArtwork(
-        env,
-        appRequest,
-        development,
-        pathname,
-      );
+      const artworkLimited = enforceRequestRateLimits
+        ? await throttleArtwork(
+            env,
+            appRequest,
+            development,
+            pathname,
+          )
+        : null;
       if (artworkLimited && (directProduction || development)) {
         return finalize(artworkLimited);
+      }
+
+      const travelMediaLimited = enforceRequestRateLimits
+        ? await throttleTravelMedia(
+            env,
+            appRequest,
+            development,
+            pathname,
+          )
+        : null;
+      if (travelMediaLimited && (directProduction || development)) {
+        return finalize(travelMediaLimited);
       }
 
       return finalize(
@@ -248,7 +295,8 @@ const worker = {
       (async () => {
         const scheduledAt = new Date(controller.scheduledTime);
         await pruneConnectorRetention(db, scheduledAt);
-        await refreshDiscogsWhenDue(db, scheduledAt);
+        await pruneSimulationRetention(db, scheduledAt);
+        await pruneTravelRetention(db, scheduledAt);
       })().catch(() => observeScheduledFailure(env.RELEASE_SHA)),
     );
   },

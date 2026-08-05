@@ -8,13 +8,12 @@ export function RoomEntryControl() {
   const room = useRoomExperience();
   const capability = useRoomCapability();
   const checking = capability.reasons.includes("checking");
-
   if (room.fallbackReason) {
     return (
       <div className={styles.entryControl}>
         <span aria-live="polite">
-          The interactive room is staying still for this visit. Choose any of
-          the six objects below.
+          The room is staying still on this device. Every labeled object below
+          still opens.
         </span>
       </div>
     );
@@ -25,26 +24,32 @@ export function RoomEntryControl() {
       <div className={styles.entryControl}>
         <span aria-live="polite">
           {checking
-            ? "Checking whether this device supports the interactive room. The six links are ready now."
-            : "This device is using the still room. Choose any of the six objects below."}
+            ? "Checking whether this device can open the 3D room. Every labeled object below is ready now."
+            : "The room is staying still on this device. Every labeled object below still opens."}
         </span>
       </div>
     );
   }
 
   return (
-    <div className={styles.entryControl}>
+    <div className={styles.entryControl} data-room-entry-tier={capability.tier}>
       <button
         data-room-enter-control
         onClick={room.enterRoom}
         type="button"
       >
-        Enter the room
+        {capability.tier === "pocket"
+          ? "Open the pocket room"
+          : "Enter the room"}
       </button>
       <span aria-live="polite">
         {room.entered
-          ? "Interactive room requested. Use the labeled objects or room controls."
-          : "Optional on capable desktop browsers. The six links always work."}
+          ? capability.tier === "pocket"
+            ? "The Pocket Room is opening. The labeled objects and room controls are ready."
+            : "The 3D room is opening. The labeled objects and room controls are ready."
+          : capability.tier === "pocket"
+            ? "Optional touch-sized 3D room. Every object also opens as a regular page."
+            : "Optional 3D view on supported desktops. Every object also opens as a regular page."}
       </span>
     </div>
   );

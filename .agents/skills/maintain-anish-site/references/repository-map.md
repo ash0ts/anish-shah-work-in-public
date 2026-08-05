@@ -1,49 +1,74 @@
 # Repository Map
 
-Use paths below relative to the repository root.
+Paths are relative to the repository root.
 
-## Runtime and Route Ownership
+## Runtime Ownership
 
-- `app/`: Next/Vinext routes and server-rendered public pages.
-- `components/`: interactive public UI. Keep meaningful content in semantic HTML before enhancement.
-- `app/studio/`: owner interface. It is operational UI, not a public design playground.
+- `app/`: Next/Vinext public routes and server-rendered foundations.
+- `app/play/**`: My Room overview plus seven semantic object routes.
+- `components/play/**`: object-screen shell and provider-specific Play UI.
+- `components/play/room-3d/**`: intent-gated Room and Pocket Room R3F runtime.
+- `components/play/travel/**`: Postcard Planet semantic atlas and the only full-globe R3F boundary.
+- `app/simulation/**` and `components/simulation/**`: semantic campaign shell, Tactical mode, and the narrowly scoped Action Canvas bridge.
+- `app/studio/**`: owner-only operational interface. Git-owned copy is shown read-only here.
 - `app/api/studio/**`: canonical owner read/write APIs.
-- `app/api/connectors/**`: public connector reads, OAuth callbacks, and retained 308 compatibility shims. Do not add owner mutations here.
-- `lib/server/http/`: reusable authenticated request handlers. Prefer thin route files that delegate here.
-- `lib/server/connectors/`: provider clients, credentials, snapshots, OAuth, public projections, and repository orchestration.
-- `lib/server/strava-config.ts`: Strava's separate embed/configuration path; it is not a generic API-backed connector.
-- `worker/index.ts`: Cloudflare Access verification, throttling, CSP, secure response headers, and scheduled retention.
-- `drizzle/`: ordered D1 migrations. Existing migrations are immutable.
-- `tests/`: content, backend/security, and rendered acceptance suites.
+- `app/api/connectors/**`: public reads, exact OAuth callbacks, and retained compatibility redirects—not new owner mutations.
+- `lib/server/http/**`: thin, reusable authenticated request handlers.
+- `lib/server/connectors/**`: provider contracts, clients, credentials, OAuth, refresh locks, public projectors, snapshots, audit, and retention.
+- `lib/server/strava-config.ts`: separate official-embed configuration, not the generic connector repository.
+- `lib/server/travel/**`: Postcard Planet drafts, policy, public projection, versioned publication, retention, uploads, and media authorization. Public atlas and paginated trip projectors stay narrower than stored publication records.
+- `app/studio/travel/**` and `app/api/studio/travel/**`: owner-only Travel Desk and writes. Exact GPS and original filenames remain browser-local intake suggestions and never enter public state.
+- `lib/server/simulation/**`: bounded session, budget, approval, grounding, and model-gateway contracts.
+- `worker/**`: host/tier enforcement, Cloudflare Access, CSP, headers, throttling, request correlation, and retention/cleanup maintenance. Cron must never synchronize provider collections.
+- `drizzle/**`: ordered immutable D1 migrations.
+- `tests/**`: content, copy, backend/security, rendered, environment, and browser acceptance.
 
-## Public Content Resolution
+## Content and Copy Ownership
 
-The checked-in sanitized bundle is the static base. At runtime, `lib/server/public-content.ts` may merge an allowlisted published D1 editorial snapshot through `lib/server/public-content-selector.ts`. Editorial overrides may change only approved ordering, wording, caveats, and visibility; they do not own IDs, relations, metric subjects, or raw HTML.
+- `content/curation/**` and `content/presentation/**`: reviewed canonical grouping and metric presentation inputs.
+- `content/public/**`: generated, sanitized deployable artifacts; never hand-edit.
+- `content/copy/pages/**`: Git-owned page presentation prose.
+- `content/copy/work-groups/**`: Git-owned WorkGroup display/short titles, summaries, and role summaries, each bound to a stable sanitized ID.
+- `scripts/lib/copy-deck.mjs`: strict plain-text parser and generator.
+- `lib/copy.ts`, `lib/copy-contract.ts`, `lib/copy-ownership.ts`, `lib/copy-voice-contract.ts`: typed registry, runtime ownership, and deterministic public-voice policy.
+- `scripts/copy-voice-check.mjs` and `scripts/lib/copy-voice.mjs`: copy voice and claim-qualification audit tooling.
+- Generated copy modules are ignored build products. Copywriters commit only the source Markdown deck.
 
-## UI Contract
+Runtime precedence is: sanitized canonical facts and structure, then published D1 visibility/order/caveats/metric wording, then declared Git-owned copy fields. D1 values shadowed by the deck are reported for owner review rather than silently becoming authoritative.
 
-- Use `frontend-design` as the only creative/design skill.
-- Keep Work as one ruled, typographic Bodies of Work index with four editorial buckets and a semantic year calendar.
-- Keep archive navigation two-dimensional and server rendered. Do not add Three.js, WebGL, a duplicate map, or a second archive.
-- Preserve no-JavaScript content, keyboard operation, visible focus, reduced-motion final states, forced-colors behavior, and narrow-screen wrapping.
-- Use Anime.js only for brief, cancellable enhancement of non-essential transitions. Do not animate LCP content or hide required information in motion.
-- Keep third-party frames and provider artwork deferred until the relevant Play stream or consent step is activated.
+## Public UI and Language Contract
 
-## Known High-Risk Seams
+- `frontend-design` is the only creative skill and is required when public-language work changes layout, interaction, or hierarchy.
+- Work stays a two-dimensional, server-rendered semantic color calendar; copy changes do not authorize a second archive or WebGL navigation.
+- Public copy uses a first-person technical voice and the sequence outcome → mechanism → proof → meaning. Keep one claim per sentence and its qualifier adjacent.
+- The copy deck owns only allowlisted presentation prose. Sanitized canonical facts and D1 publication state remain authoritative for identity, metrics, evidence, visibility, ordering, and caveats.
+- Keep motion brief, interruptible, and nonessential. Do not use copy or presentation work to introduce film, autoplay, or scroll capture.
 
-- `scripts/build-content.mjs` is a thin facade; generator ownership lives in `scripts/content/*`. Content changes must identify the normalization, grouping, metrics, evidence, privacy, reporting, and output modules they affect and must refresh the checked-in attestation.
-- `lib/server/connectors/repository.ts` is a public facade over the `repository-*` modules. Follow provider changes through contracts, credentials/OAuth, refresh locks, snapshots/public projectors, audit, and retention rather than adding behavior to the facade.
-- Studio provider ownership lives in `app/studio/connectors/*`; the shared shell remains in `app/studio/ConnectorControls.tsx`. Play stream ownership lives in `components/play/*`, while Spotify groove, inspector, consent, and gallery behavior lives in `components/spotify/*`.
-- Discogs uses a bespoke text-first Play stream and OAuth 1.0a flow. Do not pass it through the artwork-based generic collection gallery or assume an unknown provider is Steam.
-- Cross-module changes to provider state must keep Studio, public Play, exact runtime projectors, D1 persistence, privacy scans, and connector tests in sync.
-- Status/date formatting and provider-state presentation are duplicated across public Play and Studio. Reuse an existing formatter where possible; do not create a third vocabulary.
-- Several tests assert source structure with regular expressions. Retain those backstops, but add response- or behavior-level coverage before structural refactors.
-- Worker middleware owns production security behavior. A successful local Vinext page alone is not release evidence.
+## My Room Contract
+
+- `/play` performs zero connector or Travel reads and offers a semantic seven-object directory.
+- `/play/watch`, `/play/read`, `/play/listen`, `/play/collect`, `/play/play`, and
+  `/play/move` load only their associated provider; `/play/travel` loads only
+  the sanitized Travel publication.
+- Canvas is decorative and `aria-hidden`; semantic controls, direct routes, browser Back, Escape, and focus restoration are authoritative.
+- Do not import Three/R3F into Worker, Studio, Home, Work, Sources, initial Play, connector modules, or Simulation.
+- Preserve poster/static fallback for narrow screens, coarse pointers, reduced motion, forced colors, Save-Data, zoom, WebGL failure, and context loss.
+
+## High-Risk Seams
+
+- `scripts/build-content.mjs` orchestrates `scripts/content/**`; refresh the public attestation whenever generator, curation, or output changes.
+- Connector repository facades span credentials/OAuth, public projectors, snapshots, locks, audit, retention, Studio, Play, and privacy tests. Change the whole contract, not one facade.
+- Every connector collection refresh is an explicit owner Studio action. Public reads, callbacks, credential saves, and cron never call provider data APIs; a failed refresh preserves the active last-known-good snapshot.
+- Discogs uses OAuth 1.0a, bounded sequential pagination, a standard six-hour public cutoff, and no provider artwork. Older stale display is allowed only by a current owner-only recorded provider permission.
+- Travel is not a connector. It uses isolated D1/KV/R2 state, whole-trip atomic publication, publication-aware media delivery, and the `TRAVEL_ATLAS_MODE` gate. Preview uses synthetic fixtures and never receives R2.
+- Simulation keeps model prose separate from trusted fact cards, never stores free text or model prompts/responses, and must retain an authored fallback when AI is unavailable.
+- Hosted tier configuration is exact and mutually exclusive. Fixture mode is preview-only; staging and production must fail closed on missing or inconsistent bindings.
+- Worker middleware—not a successful local page—owns production security behavior.
 
 ## Editing Discipline
 
-- Inspect the full affected data flow before editing a high-risk seam.
-- Keep route files thin and validation centralized.
-- Avoid direct `process.env` reads in runtime code; use `lib/server/runtime-env.ts` so Cloudflare bindings and local development remain consistent.
-- Preserve legacy redirects unless the task explicitly includes a measured compatibility removal.
-- Split large files only as a deliberate, tested refactor—not as incidental cleanup.
+- Keep route files thin, runtime validation centralized, and public projectors exact.
+- Use `lib/server/runtime-env.ts` instead of direct runtime `process.env` access.
+- Preserve semantic HTML, visible focus, no-JavaScript content, reduced-motion final states, forced-colors support, and long-copy wrapping.
+- Preserve redirects unless measured compatibility removal is explicitly in scope.
+- Split large files only as a deliberate tested refactor, not incidental cleanup.

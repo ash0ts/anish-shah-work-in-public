@@ -8,6 +8,7 @@ import { resolveDiscogsCallbackUrl } from "@/lib/server/connectors/discogs-oauth
 import { resolveMyAnimeListCallbackUrl } from "@/lib/server/connectors/myanimelist-oauth";
 import { resolveSpotifyCallbackUrl } from "@/lib/server/connectors/spotify-oauth";
 import { getStudioOverview } from "@/lib/server/connectors";
+import { getCopyOwnershipReport } from "@/lib/server/copy-ownership";
 import { listEditorialRecords } from "@/lib/server/editorial";
 import { ownerAuthorizationForEmail } from "@/lib/server/owner-auth";
 import { ensureSanitizedPublicRecords } from "@/lib/server/public-record-seed";
@@ -16,8 +17,11 @@ import {
   ConnectorControls,
   StravaConnectorControls,
 } from "./ConnectorControls";
+import { CopyOwnershipSummary } from "./CopyOwnershipSummary";
 import { EditorialRecords } from "./EditorialRecords";
 import { PlayPromotionControls } from "./PlayPromotionControls";
+import { SimulationProviderApprovals } from "./SimulationProviderApprovals";
+import { TravelDeskEntry } from "./travel/TravelDeskEntry";
 import styles from "./studio.module.css";
 
 export const dynamic = "force-dynamic";
@@ -124,10 +128,13 @@ export default async function StudioPage() {
   }
   const overview = await getStudioOverview(user.email);
   const connectors = overview.connectors;
-  const initialEditorialRecords =
+  const [initialEditorialRecords, copyOwnershipReport] =
     overview.status === "ready"
-      ? await listEditorialRecords({ limit: 50, offset: 0 })
-      : null;
+      ? await Promise.all([
+          listEditorialRecords({ limit: 50, offset: 0 }),
+          getCopyOwnershipReport().catch(() => null),
+        ])
+      : [null, null];
 
   return (
     <main className={styles.shell} id="main">
@@ -214,6 +221,8 @@ export default async function StudioPage() {
         }
       />
 
+      <TravelDeskEntry atlasMode={runtimeValue("TRAVEL_ATLAS_MODE") ?? null} />
+
       <section className={styles.section} aria-labelledby="connectors-title">
         <div className={styles.sectionIntro}>
           <p className={styles.eyebrow}>Connector health</p>
@@ -280,6 +289,10 @@ export default async function StudioPage() {
         </div>
       </section>
 
+      {overview.status !== "database_setup_required" ? (
+        <SimulationProviderApprovals />
+      ) : null}
+
       {overview.status === "database_setup_required" ? (
         <SetupNotice title="The site database is not ready.">
           {overview.reason === "binding_unavailable"
@@ -324,10 +337,12 @@ export default async function StudioPage() {
                 : "No publication snapshot yet"}
             </strong>
           </div>
+          <CopyOwnershipSummary report={copyOwnershipReport} />
           {initialEditorialRecords ? (
             <EditorialRecords
               initial={initialEditorialRecords}
               isLocalSandbox={isLocalStudio}
+              copyOwnershipReport={copyOwnershipReport}
             />
           ) : null}
         </section>

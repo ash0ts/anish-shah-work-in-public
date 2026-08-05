@@ -4,11 +4,22 @@ import { animate } from "animejs";
 import {
   type CSSProperties,
   type ReactNode,
+  useEffect,
   useLayoutEffect,
   useRef,
 } from "react";
 
+import { useExperienceAudio } from "@/components/experience-audio/ExperienceAudioProvider";
 import type { RoomObjectId } from "../room-platform/room-types";
+
+const ENTRY_CUE_BY_OBJECT = {
+  watch: "watch-power",
+  read: "read-page",
+  collect: "collect-crate",
+  play: "play-computer-boot",
+  move: "move-tv",
+  travel: "travel-globe",
+} as const satisfies Partial<Record<RoomObjectId, string>>;
 
 type EntrancePreset = {
   initial: CSSProperties;
@@ -73,6 +84,15 @@ const ENTRANCE_PRESETS: Record<RoomObjectId, EntrancePreset> = {
       ease: "out(3)",
     },
   },
+  travel: {
+    initial: { opacity: 0, transform: "scale(0.12)" },
+    animation: {
+      opacity: [0, 1],
+      scale: [0.12, 1],
+      duration: 520,
+      ease: "out(4)",
+    },
+  },
 };
 
 export function MatchCutSurface({
@@ -88,6 +108,12 @@ export function MatchCutSurface({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const preset = ENTRANCE_PRESETS[objectId];
+  const { enabled: audioEnabled, playCue } = useExperienceAudio();
+
+  useEffect(() => {
+    if (!audioEnabled || objectId === "listen") return;
+    playCue(ENTRY_CUE_BY_OBJECT[objectId]);
+  }, [audioEnabled, objectId, playCue]);
 
   useLayoutEffect(() => {
     const element = ref.current;

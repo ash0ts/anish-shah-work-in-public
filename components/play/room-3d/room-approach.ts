@@ -24,4 +24,5 @@ export const ROOM_APPROACH_POSES: Record<
   "collect-approach": { position: [1.55, 0.18, 0.92], scale: 1.27, yawDeg: 4 },
   "play-approach": { position: [-1.18, -0.08, 0.82], scale: 1.2, yawDeg: -3 },
   "move-approach": { position: [-1.85, -0.12, 0.68], scale: 1.18, yawDeg: -5 },
+  "travel-approach": { position: [-1.08, -0.18, 1.08], scale: 1.34, yawDeg: -2 },
 });

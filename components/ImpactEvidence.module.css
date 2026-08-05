@@ -1,366 +1,132 @@
 .section {
   min-width: 0;
-  padding: clamp(2.75rem, 5vw, 4.75rem) var(--gutter)
-    clamp(3.25rem, 6vw, 5.5rem);
-  color: var(--paper);
-  background: var(--blueprint-ink);
+  padding: clamp(2.75rem, 5vw, 4.5rem) var(--gutter)
+    clamp(3rem, 6vw, 5rem);
+  border-top: 1px solid var(--blueprint-ink);
+  color: var(--blueprint-ink);
+  background: var(--trace-white);
 }
 
 .heading {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.55fr);
-  gap: clamp(1.5rem, 6vw, 6rem);
+  grid-template-columns: minmax(0, 1.2fr) minmax(15rem, 0.8fr);
+  gap: clamp(1.5rem, 5vw, 5rem);
   align-items: end;
-  margin-bottom: clamp(2rem, 4vw, 3.25rem);
+  margin-bottom: clamp(1.75rem, 3vw, 2.75rem);
 }
 
 .heading p,
-.heading h2 {
-  margin: 0;
-}
-
+.heading h2 { margin: 0; }
 .heading > div > p {
   margin-bottom: 0.5rem;
-  color: #b9c8ff;
+  color: var(--work-blue);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   letter-spacing: 0.075em;
   text-transform: uppercase;
 }
-
 .heading h2 {
-  max-width: 11ch;
-  font-size: clamp(2.4rem, 5.2vw, 5.25rem);
+  max-width: 27ch;
+  font-size: clamp(1.85rem, 2.8vw, 2.8rem);
   font-variation-settings: "CASL" 0.78, "MONO" 0.02, "wght" 720;
+  text-wrap: balance;
 }
-
 .heading > p {
-  max-width: 28rem;
-  color: #c6ccd7;
-  font-size: 0.85rem;
+  max-width: 30rem;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
   line-height: 1.5;
 }
-
 .heading a {
-  color: var(--paper);
-  text-decoration-color: var(--motion-mint);
+  color: var(--blueprint-ink);
+  text-decoration-color: var(--work-blue);
 }
 
-.trackList,
-.trackList ol {
+.proofs {
   min-width: 0;
   margin: 0;
   padding: 0;
+  border-top: 1px solid var(--blueprint-ink);
   list-style: none;
 }
 
-.trackList {
-  border-top: 1px solid rgba(255, 255, 255, 0.52);
-}
-
-.track {
-  --track-accent: #8faaff;
-  --track-text: #b9c8ff;
+.proofs li {
+  --proof-accent: var(--work-blue);
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(10rem, 0.4fr) minmax(0, 1.35fr);
-  gap: clamp(1.5rem, 5vw, 5rem);
-  padding: clamp(1.35rem, 2.6vw, 2.25rem) 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.26);
+  grid-template-columns: minmax(8rem, 0.32fr) minmax(9rem, 0.4fr) minmax(0, 1.28fr);
+  gap: clamp(1rem, 3vw, 3.5rem);
+  align-items: center;
+  padding: clamp(1rem, 1.5vw, 1.35rem) 0;
+  border-bottom: 1px solid var(--blueprint-ink);
 }
+.proofs li[data-impact-track="taught"] { --proof-accent: #7a4c00; }
+.proofs li[data-impact-track="programs"] { --proof-accent: #08715e; }
 
-.track[data-impact-track="taught"] {
-  --track-accent: var(--reading-amber);
-  --track-text: #f4c879;
-}
-
-.track[data-impact-track="programs"] {
-  --track-accent: var(--motion-mint);
-  --track-text: #73dcc5;
-}
-
-.track > header {
-  display: grid;
-  min-width: 0;
-  align-content: start;
-  gap: 0.45rem;
-}
-
-.track > header > span,
-.track > header > small {
+.proofs li > span {
+  color: var(--proof-accent);
   font-family: var(--font-mono);
   font-size: 0.75rem;
-  letter-spacing: 0.065em;
-  line-height: 1.45;
-  text-transform: uppercase;
-}
-
-.track > header > span {
-  color: var(--track-text);
-}
-
-.track > header > small {
-  color: #b4bcc9;
-}
-
-.track h3 {
-  max-width: 21rem;
-  margin: 0.1rem 0 0;
-  font-family: var(--font-body);
-  font-size: clamp(0.96rem, 1.35vw, 1.15rem);
-  font-weight: 670;
-  letter-spacing: -0.025em;
-  line-height: 1.18;
-}
-
-.plot {
-  position: relative;
-  min-width: 0;
-  padding-top: 1.2rem;
-}
-
-.signalLine {
-  position: absolute;
-  top: 1.48rem;
-  right: 0;
-  left: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    var(--track-accent),
-    rgba(255, 255, 255, 0.24)
-  );
-  transform-origin: left center;
-}
-
-.plot > ol {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(0.75rem, 3vw, 2.5rem);
-}
-
-.track[data-impact-track="programs"] .plot > ol {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.plot > ol > li {
-  min-width: 0;
-}
-
-.plot > ol > li::before {
-  display: block;
-  width: 0.56rem;
-  height: 0.56rem;
-  margin-bottom: 0.95rem;
-  border: 2px solid var(--blueprint-ink);
-  border-radius: 50%;
-  background: var(--track-accent);
-  box-shadow: 0 0 0 1px var(--track-accent);
-  content: "";
-}
-
-.plot a {
-  display: grid;
-  min-width: 0;
-  width: fit-content;
-  gap: 0.18rem;
-  text-decoration: none;
-}
-
-.plot a strong {
-  min-width: 0;
-  color: var(--paper);
-  font-family: var(--font-display);
-  font-size: clamp(1.65rem, 3.3vw, 3.55rem);
-  font-variation-settings: "CASL" 0.68, "MONO" 0.01, "wght" 735;
-  font-weight: 735;
-  letter-spacing: -0.07em;
-  line-height: 0.92;
-  overflow-wrap: anywhere;
-  text-wrap: balance;
-}
-
-.plot a > span {
-  color: #e0e4ea;
-  font-size: 0.78rem;
-  font-weight: 650;
-  line-height: 1.3;
-}
-
-.plot a > small {
-  color: #b4bcc9;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.035em;
+  letter-spacing: 0.055em;
   line-height: 1.4;
   text-transform: uppercase;
 }
 
-.plot a:hover strong,
-.plot a:focus-visible strong {
-  color: var(--track-text);
-}
-
-.returnMark,
-.associationMark,
-.programSpan {
-  margin-top: 1.25rem;
-}
-
-.returnMark {
+.proofs a {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.22rem;
+  min-width: 0;
+  width: fit-content;
+  gap: 0.2rem;
+  color: var(--blueprint-ink);
+  text-decoration: none;
 }
-
-.returnMark i,
-.associationMark i {
-  display: block;
-  height: 0.26rem;
-  background: var(--track-accent);
+.proofs a strong {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3vw, 3.2rem);
+  font-variation-settings: "CASL" 0.68, "MONO" 0.01, "wght" 735;
+  letter-spacing: -0.07em;
+  line-height: 0.9;
+  overflow-wrap: anywhere;
 }
+.proofs a small { color: var(--ink-muted); font-size: 0.78rem; }
+.proofs a:hover strong,
+.proofs a:focus-visible strong { color: var(--proof-accent); }
 
-.returnMark i:last-child {
-  background: rgba(255, 255, 255, 0.18);
+.proofs h3 {
+  max-width: 36rem;
+  margin: 0;
+  font-size: clamp(0.95rem, 1.3vw, 1.15rem);
+  line-height: 1.25;
 }
-
-.associationMark {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.22rem;
-}
-
-.associationMark i:last-child {
-  background: rgba(255, 255, 255, 0.18);
-}
-
-.programSpan {
-  display: grid;
-  grid-template-columns: auto minmax(1rem, 1fr) auto;
-  gap: 0.6rem;
-  align-items: center;
-  color: #bdc4cf;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-}
-
-.programSpan i {
-  height: 0.26rem;
-  background: var(--track-accent);
-}
-
-.qualifier {
-  grid-column: 2;
-  max-width: 54rem;
-  margin: -0.45rem 0 0;
-  color: #bdc4cf;
+.proofs li > div > p {
+  max-width: 50rem;
+  margin: 0.35rem 0;
+  color: var(--ink-muted);
   font-size: 0.78rem;
   line-height: 1.45;
 }
 
-.qualifier span {
-  margin-right: 0.4rem;
-  color: var(--track-text);
+.proofs li > div > small {
+  color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  letter-spacing: 0.045em;
+  line-height: 1.4;
   text-transform: uppercase;
 }
 
 @media (max-width: 800px) {
-  .heading,
-  .track {
-    grid-template-columns: 1fr;
+  .heading { grid-template-columns: 1fr; }
+  .heading { gap: 1rem; }
+  .proofs li {
+    grid-template-columns: minmax(7rem, 0.4fr) minmax(0, 1fr);
+    gap: 0.65rem 1rem;
   }
-
-  .heading {
-    gap: 1rem;
-  }
-
-  .track {
-    gap: 1.1rem;
-  }
-
-  .track h3 {
-    max-width: 34rem;
-  }
-
-  .qualifier {
-    grid-column: 1;
-    margin-top: 0;
-  }
+  .proofs li > div { grid-column: 1 / -1; }
 }
 
-@media (max-width: 600px) {
-  .plot {
-    padding-top: 0;
-  }
-
-  .signalLine {
-    display: none;
-  }
-
-  .plot > ol,
-  .track[data-impact-track="programs"] .plot > ol {
-    grid-template-columns: 1fr;
-    gap: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.28);
-  }
-
-  .plot > ol > li::before {
-    display: none;
-  }
-
-  .plot a {
-    width: 100%;
-    grid-template-columns: minmax(5.25rem, 34vw) minmax(0, 1fr);
-    gap: 0.35rem 1rem;
-    align-items: baseline;
-    padding: 0.65rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-  }
-
-  .plot a strong {
-    font-size: clamp(1.55rem, 9vw, 2.65rem);
-  }
-
-  .plot a > small {
-    grid-column: 2;
-  }
-
-  .returnMark,
-  .associationMark,
-  .programSpan {
-    margin-top: 0.8rem;
-  }
-}
-
-@media (max-width: 360px) {
-  .plot a {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.18rem;
-    align-items: start;
-  }
-
-  .plot a > small {
-    grid-column: 1;
-  }
-}
-
-@media (forced-colors: active) {
-  .signalLine,
-  .returnMark i,
-  .associationMark i,
-  .programSpan i {
-    background: CanvasText;
-  }
-
-  .plot > ol > li::before {
-    border-color: Canvas;
-    background: CanvasText;
-    box-shadow: 0 0 0 1px CanvasText;
-  }
+@media (max-width: 440px) {
+  .proofs li { grid-template-columns: 1fr; }
+  .proofs li > div { grid-column: auto; }
 }

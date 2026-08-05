@@ -13,6 +13,18 @@ const {
   INITIAL_ROOM_STATE,
   roomExperienceReducer,
 } = await import("../components/play/room-platform/room-reducer.ts");
+const {
+  ROOM_OBJECT_CONTRACT,
+  ROOM_OBJECT_IDS,
+  ROOM_OBJECT_ROUTES,
+  isRoomObjectId,
+  roomObjectContract,
+} = await import(
+  "../components/play/room-platform/room-object-contract.ts"
+);
+const { updatedDateLabel } = await import(
+  "../components/play/updated-date-label.ts"
+);
 
 const source = async (path) =>
   readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -33,6 +45,15 @@ const contrastRatio = (foreground, background) => {
   return (Math.max(...values) + 0.05) / (Math.min(...values) + 0.05);
 };
 
+test("Play screens share one deterministic updated-date formatter", () => {
+  assert.equal(updatedDateLabel("2026-08-04T12:00:00.000Z"), "Updated Aug 4, 2026");
+  assert.equal(updatedDateLabel("not-a-date"), "Sync date unavailable");
+  assert.equal(
+    updatedDateLabel("not-a-date", "Publish date unavailable"),
+    "Publish date unavailable",
+  );
+});
+
 const roomRegistryKeys = (text, name) => {
   const match = text.match(
     new RegExp(
@@ -40,20 +61,24 @@ const roomRegistryKeys = (text, name) => {
     ),
   );
   assert.ok(match, `Expected a satisfies-checked literal ${name} registry`);
-  return [...match[1].matchAll(/^  (watch|read|listen|collect|play|move):/gm)].map(
+  return [...match[1].matchAll(/^  (watch|read|listen|collect|play|move|travel):/gm)].map(
     ([, id]) => id,
   );
 };
 
-test("the room registry is closed, unique, and maps six routes to six providers", async () => {
-  const [types, registry] = await Promise.all([
-    source("components/play/room-platform/room-types.ts"),
+test("the dependency-free room contract closes seven routes and content sources", async () => {
+  const [contract, registry] = await Promise.all([
+    source("components/play/room-platform/room-object-contract.ts"),
     source("components/play/room-platform/room-registry.ts"),
   ]);
-  assert.match(
-    types,
-    /ROOM_OBJECT_IDS\s*=\s*\[\s*"watch",\s*"read",\s*"listen",\s*"collect",\s*"play",\s*"move",?\s*\]/,
+  const expectedIds = ["watch", "read", "listen", "collect", "play", "move", "travel"];
+  assert.deepEqual(ROOM_OBJECT_IDS, expectedIds);
+  assert.deepEqual(
+    ROOM_OBJECT_ROUTES,
+    expectedIds.map((id) => `/play/${id}`),
   );
+  assert.equal(new Set(ROOM_OBJECT_CONTRACT.map(({ focusTarget }) => focusTarget)).size, 7);
+  assert.equal(new Set(ROOM_OBJECT_CONTRACT.map(({ smokeTest }) => smokeTest)).size, 7);
   for (const [id, provider] of [
     ["watch", "myanimelist"],
     ["read", "hardcover"],
@@ -62,43 +87,46 @@ test("the room registry is closed, unique, and maps six routes to six providers"
     ["play", "steam"],
     ["move", "strava"],
   ]) {
-    assert.match(
-      registry,
-      new RegExp(
-        `${id}: \\{[\\s\\S]*?id: "${id}"[\\s\\S]*?route: "/play/${id}"[\\s\\S]*?provider: "${provider}"[\\s\\S]*?meshRoot: "OBJ__${id}"`,
-      ),
-    );
-    assert.match(
-      registry,
-      new RegExp(`${id}: '\\[data-room-object-link="${id}"\\]'`),
-    );
+    const object = roomObjectContract(id);
+    assert.equal(object.contentSource.kind, "connector");
+    assert.equal(object.contentSource.provider, provider);
+    assert.equal(object.meshRoot, `OBJ__${id}`);
   }
-  assert.match(registry, /satisfies RoomObjectRegistry/);
-  assert.match(registry, /satisfies RoomFocusTargetRegistry/);
+  assert.deepEqual(roomObjectContract("travel").contentSource, { kind: "travel-log" });
+  assert.equal(isRoomObjectId("travel"), true);
+  assert.equal(isRoomObjectId("unknown"), false);
+  assert.equal(roomObjectContract("unknown"), null);
+  assert.doesNotMatch(contract, /roomLabel:|label:/);
+  assert.match(registry, /ROOM_OBJECT_CONTRACT\.map/);
+  assert.match(registry, /ROOM_OBJECT_PRESENTATION_BY_ID/);
+  assert.match(registry, /ROOM_OBJECT_CONTRACT\.map\(\(\{ id, focusTarget \}\)/);
+  assert.match(registry, /as RoomFocusTargetRegistry/);
   assert.match(registry, /Record<RoomObjectId, RoomObjectDefinition>/);
-  assert.match(registry, /isRoomObjectId\(value: unknown\)/);
-  assert.match(registry, /Object\.hasOwn\(ROOM_OBJECT_BY_ID, value\)/);
   assert.match(registry, /return isRoomObjectId\(value\) \? ROOM_OBJECT_BY_ID\[value\] : null/);
-  assert.doesNotMatch(registry, /Object\.fromEntries|as Record|includes\(value as/);
 });
 
-test("route, screen, provider, object, and focus registries have identical closed keys", async () => {
-  const [registry, screens, foundation, route] = await Promise.all([
+test("room registries derive seven objects while connector dispatch excludes Travel", async () => {
+  const [registry, screens, foundation, route, travelRoute] = await Promise.all([
     source("components/play/room-platform/room-registry.ts"),
     source("components/play/room-platform/room-screen-registry.ts"),
     source("lib/server/play-screen-foundation.ts"),
     source("app/play/[objectSlug]/page.tsx"),
+    source("app/play/travel/page.tsx"),
   ]);
-  const expected = ["watch", "read", "listen", "collect", "play", "move"];
-  for (const [text, name] of [
-    [registry, "ROOM_OBJECT_BY_ID"],
-    [registry, "ROOM_FOCUS_TARGET_BY_ID"],
-    [screens, "ROOM_SCREEN_LOADERS"],
-    [foundation, "ROOM_PROVIDER_ADAPTERS"],
-    [route, "ROOM_ROUTE_FOUNDATIONS"],
-  ]) {
-    assert.deepEqual(roomRegistryKeys(text, name), expected, name);
-  }
+  const expected = ["watch", "read", "listen", "collect", "play", "move", "travel"];
+  assert.deepEqual(roomRegistryKeys(screens, "ROOM_SCREEN_LOADERS"), expected);
+  assert.deepEqual(
+    roomRegistryKeys(route, "ROOM_ROUTE_FOUNDATIONS"),
+    expected.filter((id) => id !== "travel"),
+  );
+  assert.deepEqual(
+    roomRegistryKeys(foundation, "ROOM_PROVIDER_ADAPTERS"),
+    expected.filter((id) => id !== "travel"),
+    "ROOM_PROVIDER_ADAPTERS",
+  );
+  assert.match(registry, /ROOM_OBJECT_CONTRACT\.map\(\(structural\)/);
+  assert.match(registry, /ROOM_OBJECT_CONTRACT\.map\(\(\{ id, focusTarget \}\)/);
+  assert.match(travelRoute, /ROOM_SCREEN_LOADERS\.travel\(\)/);
 });
 
 test("the room reducer clamps rotation and ignores stale transitions", async () => {
@@ -142,10 +170,21 @@ test("room hover and rotation actions are idempotent", () => {
 });
 
 test("room transitions are cancellable, phased, and restore semantic focus", async () => {
-  const [provider, runtime, entry, screens] = await Promise.all([
+  const [
+    provider,
+    runtime,
+    entry,
+    readiness,
+    roomQuality,
+    roomReview,
+    screens,
+  ] = await Promise.all([
     source("components/play/room-platform/RoomExperienceProvider.tsx"),
     source("components/play/room-platform/RoomRuntime.tsx"),
     source("components/play/room-platform/RoomEntryControl.tsx"),
+    source("tests/browser/helpers/room-readiness.mjs"),
+    source("tests/browser/room-quality.spec.mjs"),
+    source("tests/browser/room-review.spec.mjs"),
     Promise.all(
       [
         "WatchRoomScreen.tsx",
@@ -154,6 +193,7 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
         "CollectRoomScreen.tsx",
         "PlayRoomScreen.tsx",
         "MoveRoomScreen.tsx",
+        "TravelRoomScreen.tsx",
       ].map((name) => source(`components/play/room-screens/${name}`)),
     ),
   ]);
@@ -167,6 +207,15 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
   assert.match(provider, /data-room-object-link/);
   assert.match(provider, /pendingRoomNavigation\.current = id/);
   assert.match(provider, /activeObjectRouteOrigin\.current === "room"/);
+  assert.match(
+    provider,
+    /priorRouteObject === activeRouteObject &&[\s\S]*activeObjectRouteOrigin\.current === "room"/,
+  );
+  assert.ok(
+    provider.includes(
+      'if (/^\\/play\\/travel\\/trips\\/[^/]+\\/?$/.test(pathname))',
+    ),
+  );
   assert.match(provider, /if \(returnWithBrowserHistory\) router\.back\(\)/);
   assert.match(provider, /else \{[\s\S]*routeWithPreviewFixture\([\s\S]*"\/play"/);
   assert.match(provider, /previewFixtureFromSearch\(window\.location\.search\)/);
@@ -178,9 +227,10 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
   assert.match(provider, /Opened \$\{object\.label\}: \$\{object\.title\}\./);
   assert.match(provider, /Returned to the room/);
   assert.match(provider, /data-room-return-status/);
-  assert.match(provider, /Rewinding to My Room/);
+  assert.match(provider, /Returning to the room/);
   assert.match(provider, /requestAnimationFrame\(navigate\)/);
   assert.match(runtime, /const presenting = room\.objectRouteActive && !returning/);
+  assert.match(runtime, /data-room-ready=\{ready \? "true" : "false"\}/);
   assert.match(runtime, /data-returning=\{returning \|\| undefined\}/);
   assert.match(runtime, /const atLeftBound = room\.rotation\.y <= -12/);
   assert.match(runtime, /const atRightBound = room\.rotation\.y >= 12/);
@@ -192,16 +242,39 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
     4,
   );
   assert.match(entry, /if \(room\.fallbackReason\)/);
+  assert.match(readiness, /ROOM_READY_TIMEOUT_MS = 15_000/);
+  assert.match(readiness, /data-room-ready", "true"/);
+  assert.match(readiness, /roomReadinessDiagnostics/);
+  assert.match(readiness, /data-room-transition-phase/);
+  assert.match(
+    roomQuality,
+    /import \{ expectRoomReady \} from "\.\/helpers\/room-readiness\.mjs"/,
+  );
+  assert.match(roomQuality, /context: "starting the slow-return scenario"/);
+  assert.match(roomQuality, /context: "completing the slow room return"/);
+  assert.match(
+    roomReview,
+    /import \{ expectRoomReady \} from "\.\/helpers\/room-readiness\.mjs"/,
+  );
+  assert.match(roomReview, /context: "capturing room review evidence"/);
   for (const screen of screens) assert.match(screen, /data-room-screen/);
 });
 
-test("classic is the fail-safe Play mode", async () => {
-  const mode = await source("lib/server/play-experience.ts");
-  assert.match(
-    mode,
-    /return value === "my-room-2001" \? "my-room-2001" : "classic"/,
-  );
-  assert.match(mode, /runtimeValue\("PLAY_EXPERIENCE_MODE"\)/);
+test("My Room is authoritative and legacy stream links redirect permanently", async () => {
+  const [mode, page, layout] = await Promise.all([
+    source("lib/server/travel/runtime.ts"),
+    source("app/play/page.tsx"),
+    source("app/play/layout.tsx"),
+  ]);
+  assert.doesNotMatch(mode, /PLAY_EXPERIENCE_MODE/);
+  assert.match(mode, /travelAtlasMode\(\) === "atlas-v1"/);
+  assert.match(page, /permanentRedirect\(legacyObject\.route\)/);
+  assert.match(page, /legacyObject\?\.contentSource\.kind === "connector"/);
+  assert.match(page, /legacyStream === legacyObject\.id/);
+  assert.match(page, /<RoomOverview/);
+  assert.doesNotMatch(page, /ClassicPlayExperience|PersonalStreams/);
+  assert.match(layout, /<RoomExperienceProvider/);
+  assert.doesNotMatch(layout, /roomExperienceEnabled|return children/);
 });
 
 test("direct collection parameters are bounded and provider-allowlisted", () => {
@@ -350,16 +423,21 @@ test("Play overview is provider-free while validated direct routes use closed di
   ]);
   assert.doesNotMatch(page, /getPublicConnectorSnapshot|getStravaPublicConfig/);
   assert.doesNotMatch(overview, /api\/connectors|getPublicConnector|fetch\(/);
-  assert.match(page, /roomExperienceEnabled\(\)/);
-  assert.match(page, /ClassicPlayExperience/);
+  assert.match(page, /<RoomOverview/);
+  assert.match(page, /permanentRedirect\(legacyObject\.route\)/);
+  assert.doesNotMatch(page, /ClassicPlayExperience|roomExperienceEnabled/);
   for (const provider of ["myanimelist", "hardcover", "steam"]) {
     assert.match(
       foundation,
       new RegExp(`getCollectionScreenFoundation\\("${provider}"`),
     );
   }
-  assert.match(foundation, /satisfies Record<RoomObjectId, RoomProviderAdapter>/);
-  assert.match(direct, /satisfies Record<RoomObjectId, RoomRouteFoundation>/);
+  assert.match(foundation, /satisfies Record<RoomConnectorObjectId, RoomProviderAdapter>/);
+  assert.match(direct, /satisfies Record<RoomConnectorObjectId, RoomRouteFoundation>/);
+  assert.match(
+    direct,
+    /object\.contentSource\.kind === "travel-log" && !travelAtlasEnabled\(\)/,
+  );
   assert.match(direct, /return ROOM_ROUTE_FOUNDATIONS\[object\.id\]\(query\)/);
   assert.match(screens, /satisfies Record<RoomObjectId, RoomScreenLoader>/);
   for (const screen of [
@@ -369,10 +447,12 @@ test("Play overview is provider-free while validated direct routes use closed di
     "CollectRoomScreen",
     "PlayRoomScreen",
     "MoveRoomScreen",
+    "TravelRoomScreen",
   ]) {
     assert.match(screens, new RegExp(`import\\("\\.\\./room-screens/${screen}"\\)`));
   }
-  assert.doesNotMatch(direct, /object\.id ===|import\(/);
+  assert.match(direct, /if \(object\.id === "travel"\) notFound\(\)/);
+  assert.doesNotMatch(direct, /travel: async|import\(/);
   assert.doesNotMatch(screens, /import\(`|import\([^"']/);
   assert.doesNotMatch(direct, /object\.(provider|meshRoot).*ROOM_/);
 });
@@ -386,6 +466,7 @@ test("all direct Play routes are no-store publication-backed paths", () => {
     "/play/collect",
     "/play/play",
     "/play/move",
+    "/play/travel",
   ]) {
     assert.equal(isPlayPath(pathname), true);
   }
@@ -393,16 +474,18 @@ test("all direct Play routes are no-store publication-backed paths", () => {
   assert.equal(isPlayPath("/playlist"), false);
 });
 
-test("six authored screens preserve provider and consent boundaries", async () => {
-  const [registry, ...screens] = await Promise.all(
+test("seven authored screens preserve provider, travel, and consent boundaries", async () => {
+  const [registry, copy, ...screens] = await Promise.all(
     [
       "../room-platform/room-registry.ts",
+      "../../../content/copy/pages/play.md",
       "WatchRoomScreen.tsx",
       "ReadRoomScreen.tsx",
       "ListenRoomScreen.tsx",
       "CollectRoomScreen.tsx",
       "PlayRoomScreen.tsx",
       "MoveRoomScreen.tsx",
+      "TravelRoomScreen.tsx",
     ].map((name) =>
       source(
         name.startsWith("../")
@@ -412,16 +495,44 @@ test("six authored screens preserve provider and consent boundaries", async () =
     ),
   );
   const combined = screens.join("\n");
-  for (const title of [
-    "Midnight Broadcast",
-    "Borrowed Shelf",
-    "Pocket Player",
-    "Crate Archive",
-    "Desktop Library",
-    "Cardio Television",
+  for (const [id, objectTitle, screenEyebrow, providerId, providerLabel, screenTitle] of [
+    ["watch", "TV", "Channel 11", "myanimelist", "MyAnimeList", "Midnight Broadcast"],
+    ["read", "Bookshelf", "Shelf light on", "hardcover", "Hardcover", "Bedside Shelf"],
+    ["listen", "Music player", "Top Tracks", "spotify", "Spotify", "Pocket Player"],
+    ["collect", "Record crate", "Crate 01", "discogs", "Discogs", "Crate Archive"],
+    ["play", "Computer", "Desktop 01", "steam", "Steam", "Desktop Library"],
+    ["move", "Treadmill", "Cardio feed", "strava", "Strava", "Cardio Television"],
   ]) {
-    assert.match(registry, new RegExp(title));
+    const structural = roomObjectContract(id);
+    assert.equal(structural?.contentSource.kind, "connector");
+    assert.equal(structural?.contentSource.provider, providerId);
+    assert.match(
+      registry,
+      new RegExp(
+        `${id}: \\{[\\s\\S]*?object: SITE_COPY\\.play\\["${id}-title"\\][\\s\\S]*?screenEyebrow: [^\\n]*SITE_COPY\\.play\\["${id}-screen-eyebrow"\\][^\\n]*${providerLabel}[\\s\\S]*?title: SITE_COPY\\.play\\["${id}-screen-title"\\]`,
+      ),
+    );
+    assert.match(copy, new RegExp(`## ${id}-title\\n${objectTitle}`));
+    assert.match(
+      copy,
+      new RegExp(`## ${id}-screen-eyebrow\\n${screenEyebrow}`),
+    );
+    assert.match(copy, new RegExp(`## ${id}-screen-title\\n${screenTitle}`));
+    assert.notEqual(screenTitle, objectTitle);
   }
+  assert.equal(
+    screens.reduce(
+      (count, screen) => count + (screen.match(/<p>\{object\.screenEyebrow\}<\/p>/g)?.length ?? 0),
+      0,
+    ),
+    7,
+  );
+  assert.match(copy, /## travel-title\nGlobe/);
+  assert.match(copy, /## travel-screen-title\nPostcard Planet/);
+  const travel = roomObjectContract("travel");
+  assert.deepEqual(travel?.contentSource, { kind: "travel-log" });
+  assert.equal(travel?.approachPoseId, "travel-approach");
+  assert.equal(travel?.meshRoot, "OBJ__travel");
   assert.match(combined, /provider="myanimelist"/);
   assert.match(combined, /provider="hardcover"/);
   assert.match(combined, /provider="steam"/);
@@ -429,6 +540,7 @@ test("six authored screens preserve provider and consent boundaries", async () =
   assert.match(combined, /<DiscogsStream/);
   assert.match(combined, /presentation="crate"/);
   assert.match(combined, /routePath="\/play\/collect"/);
+  assert.match(combined, /<PostcardPlanet/);
   assert.doesNotMatch(combined, /from\s+["']three["']|<canvas\b|autoplay/i);
 });
 
@@ -440,18 +552,18 @@ test("Watch, Read, and Play have provider-specific semantic appliances", async (
     source("components/play/room-screens/RoomScreens.module.css"),
   ]);
 
-  assert.match(watch, /aria-label="Midnight Broadcast sections"/);
+  assert.match(watch, /aria-label=\{`\$\{object\.title\} sections`\}/);
   assert.match(watch, /href="#watch-program-note"/);
   assert.match(watch, /href="#watch-library"/);
   assert.match(watch, /data-room-collection-presentation="broadcast-guide"/);
 
-  assert.match(read, /aria-label="Borrowed Shelf sections"/);
+  assert.match(read, /aria-label=\{`\$\{object\.title\} sections`\}/);
   assert.match(read, /href="#read-desk-note"/);
   assert.match(read, /href="#read-library"/);
   assert.match(read, /data-room-collection-presentation="circulation-shelf"/);
   assert.match(read, /<dl>/);
 
-  assert.match(play, /aria-label="Desktop Library shortcuts"/);
+  assert.match(play, /aria-label=\{`\$\{object\.title\} shortcuts`\}/);
   assert.match(play, /href="#play-system-note"/);
   assert.match(play, /href="#play-library"/);
   assert.match(play, /data-room-collection-presentation="desktop-library"/);
@@ -475,7 +587,7 @@ test("each object screen has a distinct cancellable match-cut enhancement", asyn
   const matchCut = await source(
     "components/play/room-screens/MatchCutSurface.tsx",
   );
-  for (const id of ["watch", "read", "listen", "collect", "play", "move"]) {
+  for (const id of ["watch", "read", "listen", "collect", "play", "move", "travel"]) {
     assert.match(matchCut, new RegExp(`^  ${id}: \\{`, "m"));
   }
   assert.match(matchCut, /import \{ animate \} from "animejs"/);
@@ -504,4 +616,20 @@ test("Collect defines readable ink directly against its recessed catalog", async
     );
   }
   assert.match(css, /\.crateWell\s*\{[\s\S]*var\(--paper\)/);
+});
+
+test("Travel trip pages expose bounded semantic page-size controls", async () => {
+  const [trip, route] = await Promise.all([
+    source("components/play/travel/TravelTripLog.tsx"),
+    source("app/play/travel/trips/[slug]/page.tsx"),
+  ]);
+  assert.match(trip, /const PAGE_SIZES = \[12, 24, 36\] as const/);
+  assert.match(trip, /aria-label="Photos per page"/);
+  assert.match(trip, /firstVisibleIndex/);
+  assert.match(trip, /Math\.min\(requestedPage, maximumPage\)/);
+  assert.match(route, /noindex: hasPublicQuery\(query\)/);
+  assert.match(route, /\^\[1-9\]\\d\*\$/);
+  assert.match(route, /raw === "24"/);
+  assert.match(route, /raw === "36"/);
+  assert.doesNotMatch(route, /parseInt/);
 });

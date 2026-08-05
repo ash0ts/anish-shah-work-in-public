@@ -38,7 +38,11 @@ const { pruneConnectorRetention } = await tsImport(
   "../lib/server/connectors/repository-retention.ts",
   import.meta.url,
 );
-const { securedResponse } = await tsImport(
+const { bootstrapStagingRetention } = await tsImport(
+  "../lib/server/staging-maintenance.ts",
+  import.meta.url,
+);
+const { RELEASE_MARKER_HEADER, securedResponse } = await tsImport(
   "../worker/security-headers.ts",
   import.meta.url,
 );
@@ -386,6 +390,39 @@ test("extracted Worker throttling and response hardening keep exact boundaries",
   assert.equal(secured.headers.get("strict-transport-security"), "max-age=31536000");
   assert.equal(secured.headers.get("cache-control"), "private, no-store");
   assert.match(secured.headers.get("content-security-policy"), /strict-dynamic/);
+
+  const previewRelease = "a".repeat(40);
+  const preview = securedResponse(
+    new Response(null, {
+      headers: { [RELEASE_MARKER_HEADER]: "untrusted-upstream-value" },
+    }),
+    new Request("https://pr-26.anish-shah-is.online/play"),
+    "B".repeat(24),
+    false,
+    "/play",
+    "preview",
+    previewRelease,
+  );
+  assert.equal(preview.headers.get(RELEASE_MARKER_HEADER), previewRelease);
+
+  for (const [tier, value] of [
+    ["preview", "A".repeat(40)],
+    ["preview", "not-a-sha"],
+    ["production", previewRelease],
+  ]) {
+    const response = securedResponse(
+      new Response(null, {
+        headers: { [RELEASE_MARKER_HEADER]: "untrusted-upstream-value" },
+      }),
+      new Request("https://anish-shah-is.online/play"),
+      "C".repeat(24),
+      false,
+      "/play",
+      tier,
+      value,
+    );
+    assert.equal(response.headers.get(RELEASE_MARKER_HEADER), null);
+  }
 });
 
 test("redacted Worker events correlate every dynamic response without request material", () => {
@@ -478,6 +515,7 @@ test("direct production accepts only the configured canonical apex", () => {
     SITE_URL: "https://anish-shah-is.online",
     PRODUCTION_SITE_URL: "https://anish-shah-is.online",
     PUBLIC_CONTENT_MODE: "d1_kv_required",
+    RELEASE_VERSION: "2.0.0-rc.1",
   };
   const production = { development: false, sitesRuntime: false };
   assert.equal(
@@ -651,7 +689,7 @@ test("provider OAuth callbacks are one-way throttled before application routing"
     readFile(new URL("../worker/rate-limiting.ts", import.meta.url), "utf8"),
   ]);
   const callbackStart = worker.indexOf(
-    "const oauthCallbackLimited = await throttleOAuthCallback",
+    "const oauthCallbackLimited = enforceRequestRateLimits",
   );
   const applicationRoute = worker.indexOf(
     "routeApplicationRequest(appRequest",
@@ -676,7 +714,7 @@ test("anonymous Discogs reads are one-way throttled before publication storage i
     readFile(new URL("../worker/rate-limiting.ts", import.meta.url), "utf8"),
   ]);
   const throttleStart = worker.indexOf(
-    "const discogsReadLimited = await throttleDiscogsPublicRead",
+    "const discogsReadLimited = enforceRequestRateLimits",
   );
   const publicationRead = worker.indexOf(
     "const unavailable = await publicationAvailabilityResponse",
@@ -766,13 +804,68 @@ test("hourly retention clears expired promotion ciphertext and deletes old hando
   assert.equal(details.deletedPromotionTransactions, 6);
 });
 
+test("the owner-only staging bootstrap initializes a fresh retention heartbeat", async () => {
+  const statements = [];
+  const database = {
+    prepare(sql) {
+      const statement = {
+        sql,
+        values: [],
+        bind(...values) {
+          this.values = values;
+          return this;
+        },
+        async run() {
+          return { success: true };
+        },
+      };
+      statements.push(statement);
+      return statement;
+    },
+    async batch(batchStatements) {
+      return batchStatements.map(() => ({ meta: { changes: 0 } }));
+    },
+  };
+  const now = new Date("2026-08-04T12:00:00.000Z");
+  assert.deepEqual(
+    await bootstrapStagingRetention(database, "staging", now),
+    { ok: true, checkedAt: now.toISOString() },
+  );
+  assert(
+    statements.some((statement) =>
+      statement.sql.includes("INSERT INTO maintenance_state"),
+    ),
+  );
+  assert.deepEqual(
+    await bootstrapStagingRetention(database, "production", now),
+    { ok: false, code: "not_staging" },
+  );
+  assert.deepEqual(
+    await bootstrapStagingRetention(null, "staging", now),
+    { ok: false, code: "binding_unavailable" },
+  );
+
+  const route = await readFile(
+    new URL(
+      "../app/api/studio/maintenance/bootstrap/route.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(route, /rejectCrossOriginWrite/);
+  assert.match(route, /authorizeOwnerApi/);
+  assert.match(route, /runtimeValue\("DEPLOYMENT_TIER"\)/);
+  assert.match(route, /accepts no request fields/);
+  assert.match(route, /private, no-store/);
+});
+
 test("the public promotion import is rate-limited before its body is read", async () => {
   const [worker, rateLimit] = await Promise.all([
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../worker/rate-limiting.ts", import.meta.url), "utf8"),
   ]);
   const promotionStart = worker.indexOf(
-    "const promotionLimited = await throttlePromotionImport",
+    "const promotionLimited = enforceRequestRateLimits",
   );
   const bodyRead = worker.indexOf(
     "const bounded = await boundedApiWrite",
@@ -839,16 +932,20 @@ test("public Cloudflare release config is generated without embedding secrets", 
   assert.match(prepare, /migrations_dir:\s*"\.\.\/\.\.\/drizzle"/);
   assert.match(prepare, /CLOUDFLARE_PUBLICATION_CACHE_ID/);
   assert.match(prepare, /binding:\s*"PUBLICATION_CACHE"/);
+  assert.match(prepare, /binding:\s*"TRAVEL_MEDIA"/);
   for (const binding of [
     "OWNER_RATE_LIMITER",
     "ARTWORK_RATE_LIMITER",
     "PROMOTION_RATE_LIMITER",
     "OAUTH_CALLBACK_RATE_LIMITER",
+    "SIMULATION_RATE_LIMITER",
+    "TRAVEL_MEDIA_RATE_LIMITER",
   ]) {
     assert.match(prepare, new RegExp(`name:\\s*"${binding}"`));
   }
   assert.match(prepare, /invocation_logs:\s*false/);
   assert.match(prepare, /RELEASE_SHA:\s*releaseSha/);
+  assert.match(prepare, /RELEASE_VERSION:\s*releaseVersion/);
   assert.match(prepare, /CONTENT_VERSION:\s*publicBundle\.contentVersion/);
   assert.match(prepare, /PUBLIC_CONTENT_MODE:\s*"d1_kv_required"/);
   assert.match(prepare, /config\.account_id\s*=\s*PUBLIC_CLOUDFLARE_ACCOUNT_ID/);
@@ -874,21 +971,81 @@ test("public Cloudflare release config is generated without embedding secrets", 
 });
 
 test("release workflows bind PR evidence to the exact source head", async () => {
-  const [ci, ...releaseWorkflows] = await Promise.all(
-    ["ci.yml", "gitleaks.yml", "codeql.yml"].map((name) =>
+  const [prGate, ci, gitleaks, codeql, browser] = await Promise.all(
+    ["pr-gate.yml", "ci.yml", "gitleaks.yml", "codeql.yml", "browser-quality.yml"].map((name) =>
       readFile(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8"),
     ),
   );
-  assert.match(ci, /github\.event\.pull_request\.head\.sha/);
-  assert.match(ci, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/);
-  assert.match(ci, /PREVIEW_SOURCE_SHA/);
-  assert.match(ci, /PREVIEW_WORKFLOW_SHA/);
-  for (const workflow of releaseWorkflows) {
-    assert.match(workflow, /github\.event\.pull_request\.head\.sha/);
+  assert.match(prGate, /PR_SOURCE_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
+  assert.match(prGate, /ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/);
+  assert.match(prGate, /--changes-file "\$\{RUNNER_TEMP\}\/pr-files\.json"/);
+  assert.match(prGate, /check-docs\.mjs --root/);
+  assert.match(prGate, /name: pr-build-\$\{\{ env\.PR_SOURCE_SHA \}\}/);
+  assert.match(gitleaks, /github\.event\.pull_request\.head\.sha/);
+  assert.match(codeql, /github\.event\.pull_request\.head\.sha/);
+  for (const workflow of [ci, gitleaks, codeql, browser]) {
     assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/);
+    assert.match(workflow, /\[\[ "\$EXPECTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
     assert.match(workflow, /test "\$\{#GITHUB_SHA\}" -eq 40/);
-    assert.doesNotMatch(workflow, /test "\$EXPECTED_SHA" = "\$GITHUB_SHA"/);
+    assert.match(workflow, /fetch-depth: 0/);
+    assert.match(workflow, /test "\$EXPECTED_SHA" = "\$trusted_ref"/);
+    assert.doesNotMatch(workflow, /git merge-base --is-ancestor "\$EXPECTED_SHA"/);
   }
+  assert.match(browser, /run-id: \$\{\{ inputs\.validate_run_id \}\}/);
+  assert.match(browser, /test "\$\(jq -r '\.head_sha' <<<"\$run"\)" = "\$EXPECTED_SHA"/);
+});
+
+test("owner-dispatched exact-SHA checks may use only the temporary release runner", async () => {
+  const workflowNames = [
+    "ci.yml",
+    "gitleaks.yml",
+    "codeql.yml",
+    "browser-quality.yml",
+    "browser-stability.yml",
+  ];
+  const workflows = await Promise.all(
+    workflowNames.map((name) =>
+      readFile(new URL(`../.github/workflows/${name}`, import.meta.url), "utf8"),
+    ),
+  );
+  for (const [index, workflow] of workflows.entries()) {
+    assert.match(workflow, /runner_target:\n\s+description:/, workflowNames[index]);
+    assert.match(workflow, /jit_label:\n\s+description:/, workflowNames[index]);
+    assert.match(workflow, /default: github-hosted/, workflowNames[index]);
+    assert.match(
+      workflow,
+      /test "\$GITHUB_ACTOR" = "\$GITHUB_REPOSITORY_OWNER"/,
+      workflowNames[index],
+    );
+    assert.match(
+      workflow,
+      /\[\[ "\$REQUESTED_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/,
+      workflowNames[index],
+    );
+    const runTargets = [...workflow.matchAll(/^\s+runs-on:\s+(.+)$/gm)].map(
+      (match) => match[1],
+    );
+    assert.ok(runTargets.length > 0, workflowNames[index]);
+    const expectedArchitecture = workflowNames[index] === "codeql.yml" ? "x64" : "arm64";
+    const expectedTarget = workflowNames[index] === "codeql.yml" ? "owner-amd64" : "owner-arm64";
+    assert.match(workflow, new RegExp(`- ${expectedTarget}`), workflowNames[index]);
+    assert.ok(runTargets.some((target) => target.includes('"self-hosted"')), workflowNames[index]);
+    assert.ok(runTargets.some((target) => target.includes(`"${expectedArchitecture}"`)), workflowNames[index]);
+    assert.ok(runTargets.some((target) => target.includes("inputs.jit_label")), workflowNames[index]);
+    assert.match(workflow, /\^anish-release-\[a-f0-9\]\{12\}\$/, workflowNames[index]);
+    assert.match(workflow, /test "\$EXPECTED_SHA" = "\$trusted_ref"/, workflowNames[index]);
+    assert.doesNotMatch(workflow, /^\s+environment:/m, workflowNames[index]);
+    assert.doesNotMatch(workflow, /secrets:\s+inherit/, workflowNames[index]);
+    const nonEphemeralSecrets = [
+      ...workflow.matchAll(/\$\{\{\s*secrets\.([A-Z0-9_]+)\s*\}\}/g),
+    ]
+      .map((match) => match[1])
+      .filter((name) => name !== "GITHUB_TOKEN");
+    assert.deepEqual(nonEphemeralSecrets, [], workflowNames[index]);
+  }
+
+  assert.match(workflows[0], /push:\n\s+branches: \[main\]/);
+  assert.doesNotMatch(workflows[0], /codex\/\*\*/);
 });
 
 test("release promotion requires a protected current-publication marker", async () => {
@@ -913,8 +1070,22 @@ test("release promotion requires a protected current-publication marker", async 
     "RELEASE_VALIDATION_URL",
     "RELEASE_GITLEAKS_URL",
     "RELEASE_CODEQL_URL",
+    "RELEASE_BROWSER_URL",
   ]) {
     assert.match(plan, new RegExp(variable));
+  }
+  assert.match(plan, /event,workflowDatabaseId/);
+  assert.match(plan, /actions\/workflows\/\$\{evidence\.workflowDatabaseId\}/);
+  assert.match(plan, /assertActiveActionsWorkflow/);
+  assert.match(plan, /workflowIdentity/);
+  assert.match(contract, /workflowState: "active"/);
+  for (const workflowPath of [
+    ".github/workflows/ci.yml",
+    ".github/workflows/gitleaks.yml",
+    ".github/workflows/codeql.yml",
+    ".github/workflows/browser-quality.yml",
+  ]) {
+    assert.match(contract, new RegExp(workflowPath.replaceAll(".", "\\.")));
   }
 });
 
@@ -966,6 +1137,16 @@ test("publication failover and maintenance health fail closed", async () => {
   );
   assert.match(maintenance, /expectedHostedOrigin/);
   assert.match(maintenance, /hostedEnvironmentConfigured/);
+  assert.match(maintenance, /releaseVersion/);
+  assert.match(maintenance, /!releaseVersion/);
+  assert.match(
+    maintenance,
+    /travel\.mode === "atlas-v1"[\s\S]*?!travel\.configured \|\| !travel\.activePublication/,
+  );
+  assert.match(
+    maintenance,
+    /travel\.mode === "atlas-v1"[\s\S]*?travel\.cleanupHeartbeat\.status !== "current"/,
+  );
 });
 
 test("custom Worker observability never records raw request identifiers", async () => {
@@ -1004,7 +1185,7 @@ test("dependency audit treats missing or malformed audit metadata as failure", a
 });
 
 test("release evidence binds a pushed commit, migrations, and exact smoke checks", async () => {
-  const [plan, attestation, command, contract, triggerContract, packageJson] =
+  const [plan, attestation, command, checkpointSnippet, contract, triggerContract, packageJson] =
     await Promise.all([
       readFile(
         new URL("../scripts/write-release-plan.mjs", import.meta.url),
@@ -1015,6 +1196,10 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
         "utf8",
       ),
       readFile(new URL("../scripts/release-command.mjs", import.meta.url), "utf8"),
+      readFile(
+        new URL("../scripts/publication-bootstrap-snippet.mjs", import.meta.url),
+        "utf8",
+      ),
       readFile(
         new URL("../scripts/lib/release-contract.mjs", import.meta.url),
         "utf8",
@@ -1041,6 +1226,7 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
     "oauth_callbacks",
     "security_headers",
     "owner_health",
+    "simulation_experience",
   ]) {
     assert.match(attestation, new RegExp(`"${check}"`));
   }
@@ -1058,6 +1244,17 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
   assert.match(attestation, /releasePlanSha256/);
   assert.match(attestation, /readVerifiedDeployableArtifactManifest/);
   assert.match(attestation, /deployableArtifacts/);
+  assert.match(plan, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(plan, /releaseBuildCheckpointSha256/);
+  assert.match(command, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(command, /releaseBuildCheckpointSha256/);
+  assert.match(checkpointSnippet, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(checkpointSnippet, /releaseBuildCheckpoint\.artifactSetSha256/);
+  assert.match(attestation, /verifyReleaseBuildCheckpoint\(root\)/);
+  assert.match(attestation, /releaseBuildCheckpoint: plan\.releaseBuildCheckpoint/);
+  assert.match(command, /assertRequiredValidationRuns\(plan\.validationRuns/);
+  assert.match(attestation, /assertRequiredValidationRuns\(plan\.validationRuns/);
+  assert.match(attestation, /validationRuns: plan\.validationRuns/);
   assert.match(contract, /Remote pending migrations/);
   assert.match(contract, /do not exactly match the release plan/);
   assert.match(command, /Migration \$\{migration\.name\} changed after release planning/);
@@ -1066,6 +1263,10 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
   assert.match(command, /requireCurrentTriggerReceipt/);
   assert.match(attestation, /triggerDeploymentReceiptSha256/);
   assert.match(attestation, /domainCutover/);
+  assert.match(attestation, /simulation/);
+  assert.match(plan, /RELEASE_SIMULATION_APPROVED_PROVIDERS/);
+  assert.match(plan, /RELEASE_SIMULATION_APPROVAL_DIGEST/);
+  assert.match(contract, /sanitized approval-state digest/);
   assert.match(attestation, /permanent_path_query_preserving/);
   assert.match(attestation, /x-request-id/);
   assert.match(command, /readVerifiedDeployableArtifactManifest/);

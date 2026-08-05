@@ -1,20 +1,16 @@
 import { decryptCredential, encryptCredential } from "./credential-crypto";
 import { runtimeDatabase, runtimeValue } from "./runtime-env";
+import { normalizeHardcoverAuthorization } from "./connectors/hardcover";
 import {
-  fetchHardcoverSnapshot,
-  normalizeHardcoverAuthorization,
-} from "./connectors/hardcover";
+  loadCredential,
+  saveConnectorCredential,
+} from "./connectors/repository-credentials";
 import {
-  validateConnectorPublicPayload,
-} from "./connectors/public-payload-policy";
-import {
-  fetchSteamSnapshot,
   normalizeSteamApiKey,
   normalizeSteamId,
 } from "./connectors/steam";
 import { steamStorageCountries } from "./connectors/steam-policy";
 import type {
-  ConnectorFetchResult,
   HardcoverCredential,
   SteamCredential,
 } from "./connectors/types";
@@ -74,7 +70,6 @@ export type PromotionSummary = {
 export type PromotionProviderOutcome = {
   provider: "hardcover" | "steam" | "strava";
   status: "applied" | "failed";
-  itemCount?: number;
   code?: string;
 };
 
@@ -586,7 +581,21 @@ export async function sendLocalPlayPromotion(input: {
   }
 }
 
-async function validateAndApplyApiProvider(
+function samePortableApiCredential(
+  provider: "hardcover" | "steam",
+  current: HardcoverCredential | SteamCredential,
+  next: HardcoverCredential | SteamCredential,
+): boolean {
+  return provider === "hardcover"
+    ? (current as HardcoverCredential).authorization ===
+        (next as HardcoverCredential).authorization
+    : (current as SteamCredential).apiKey ===
+        (next as SteamCredential).apiKey &&
+        (current as SteamCredential).steamId ===
+          (next as SteamCredential).steamId;
+}
+
+async function importPortableApiCredential(
   provider: "hardcover" | "steam",
   credential: HardcoverCredential | SteamCredential,
   actorEmail: string,
@@ -601,7 +610,6 @@ async function validateAndApplyApiProvider(
   }
 
   let normalized: HardcoverCredential | SteamCredential;
-  let result: ConnectorFetchResult;
   try {
     if (provider === "hardcover") {
       const authorization = normalizeHardcoverAuthorization(
@@ -609,107 +617,55 @@ async function validateAndApplyApiProvider(
       );
       if (!authorization) throw new Error("invalid credential");
       normalized = { authorization };
-      result = await fetchHardcoverSnapshot(normalized);
     } else {
       const candidate = credential as SteamCredential;
       const apiKey = normalizeSteamApiKey(candidate.apiKey);
       const steamId = normalizeSteamId(candidate.steamId);
       if (!apiKey || !steamId) throw new Error("invalid credential");
       normalized = { apiKey, steamId };
-      result = await fetchSteamSnapshot(normalized);
     }
-  } catch (error) {
-    const code =
-      typeof error === "object" && error !== null && "code" in error &&
-      typeof error.code === "string"
-        ? error.code
-        : "provider_validation_failed";
-    return { provider, status: "failed", code };
+  } catch {
+    return { provider, status: "failed", code: "invalid_credential" };
   }
 
-  const fetchedAt = new Date().toISOString();
-  const freshUntil = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
-  const publicPayload = { ...result.publicPayload, syncedAt: fetchedAt, freshUntil };
-  if (!validateConnectorPublicPayload(provider, publicPayload)) {
-    return { provider, status: "failed", code: "public_payload_rejected" };
+  try {
+    const current = await loadCredential(database, provider);
+    if (
+      current &&
+      samePortableApiCredential(
+        provider,
+        current.credential as HardcoverCredential | SteamCredential,
+        normalized,
+      )
+    ) {
+      return { provider, status: "applied" };
+    }
+  } catch {
+    return { provider, status: "failed", code: "credential_unavailable" };
   }
-  const encrypted = await encryptCredential(
-    normalized,
-    encryptionKey,
+
+  // This import intentionally stores no provider data. The credential helper
+  // increments the generation and removes snapshots from the prior account so
+  // they cannot remain public under a replacement credential. Studio's
+  // explicit Refresh action is the only operation that may publish a new
+  // collection snapshot.
+  const saved = await saveConnectorCredential(
     provider,
-  );
-  const snapshotId = crypto.randomUUID();
-  const auditId = crypto.randomUUID();
-  const label =
     provider === "hardcover"
-      ? "Owner API authorization token"
-      : "Owner Web API key and SteamID64";
-  await database.batch([
-    database
-      .prepare(
-        `INSERT INTO connector_credentials (
-           provider, ciphertext, iv, key_version, credential_label,
-           scopes_json, expires_at, generation, created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, '[]', NULL, 1, ?, ?)
-         ON CONFLICT(provider) DO UPDATE SET
-           ciphertext = excluded.ciphertext,
-           iv = excluded.iv,
-           key_version = excluded.key_version,
-           credential_label = excluded.credential_label,
-           scopes_json = excluded.scopes_json,
-           expires_at = NULL,
-           generation = connector_credentials.generation + 1,
-           updated_at = excluded.updated_at`,
-      )
-      .bind(
+      ? (normalized as HardcoverCredential).authorization
+      : (normalized as SteamCredential),
+    actorEmail,
+  );
+  return saved.status === "saved"
+    ? { provider, status: "applied" }
+    : {
         provider,
-        encrypted.ciphertext,
-        encrypted.iv,
-        encrypted.keyVersion,
-        label,
-        fetchedAt,
-        fetchedAt,
-      ),
-    database
-      .prepare(
-        `INSERT INTO connector_snapshots (
-           id, provider, status, public_payload_json, fetched_at, fresh_until,
-           etag, item_count
-         ) VALUES (?, ?, 'ready', ?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        snapshotId,
-        provider,
-        JSON.stringify(publicPayload),
-        fetchedAt,
-        freshUntil,
-        result.etag ?? null,
-        result.itemCount,
-      ),
-    database
-      .prepare(
-        `DELETE FROM connector_snapshots
-         WHERE provider = ? AND id NOT IN (
-           SELECT id FROM connector_snapshots WHERE provider = ?
-           ORDER BY fetched_at DESC, id DESC LIMIT 2
-         )`,
-      )
-      .bind(provider, provider),
-    database
-      .prepare(
-        `INSERT INTO audit_log (
-           id, actor_email, action, entity_type, entity_id, details_json, created_at
-         ) VALUES (?, ?, 'connector.promotion_applied', 'connector', ?, ?, ?)`,
-      )
-      .bind(
-        auditId,
-        actorEmail,
-        provider,
-        JSON.stringify({ itemCount: result.itemCount }),
-        fetchedAt,
-      ),
-  ]);
-  return { provider, status: "applied", itemCount: result.itemCount };
+        status: "failed",
+        code:
+          saved.status === "invalid"
+            ? "invalid_credential"
+            : saved.reason,
+      };
 }
 
 export async function applyPlayPromotion(input: {
@@ -759,7 +715,7 @@ export async function applyPlayPromotion(input: {
     const outcomes: PromotionProviderOutcome[] = [];
     if (payload.providers.hardcover) {
       outcomes.push(
-        await validateAndApplyApiProvider(
+        await importPortableApiCredential(
           "hardcover",
           payload.providers.hardcover,
           input.ownerEmail,
@@ -768,7 +724,7 @@ export async function applyPlayPromotion(input: {
     }
     if (payload.providers.steam) {
       outcomes.push(
-        await validateAndApplyApiProvider(
+        await importPortableApiCredential(
           "steam",
           payload.providers.steam,
           input.ownerEmail,
@@ -809,10 +765,9 @@ export async function applyPlayPromotion(input: {
           input.ownerEmail,
           row.id,
           JSON.stringify({
-            outcomes: outcomes.map(({ provider, status, itemCount, code }) => ({
+            outcomes: outcomes.map(({ provider, status, code }) => ({
               provider,
               status,
-              ...(itemCount === undefined ? {} : { itemCount }),
               ...(code === undefined ? {} : { code }),
             })),
           }),

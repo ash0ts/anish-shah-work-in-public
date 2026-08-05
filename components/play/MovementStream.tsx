@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import styles from "../PersonalStreams.module.css";
+import styles from "./StreamPresentation.module.css";
 import {
   loadConnector,
-  publishedLabel,
   type ConnectorState,
   type PreviewFixtureScenario,
   type StravaPayload,
 } from "./connector-model";
+import { updatedDateLabel } from "./updated-date-label";
 import { PanelHeading, StreamEmpty } from "./StreamChrome";
+import { SITE_COPY } from "@/lib/copy";
 
 export function MovementStream({
   show,
@@ -56,8 +57,8 @@ export function MovementStream({
         <div className={styles.empty} aria-live="polite">
           <span aria-hidden="true">○</span>
           <p>
-            {state.message} The public activity embed may be unpublished or
-            being replaced. No third-party content was loaded.
+            {state.message} The activity feed may be unavailable or changing.
+            No third-party content was loaded.
           </p>
         </div>
       );
@@ -66,11 +67,13 @@ export function MovementStream({
   }
 
   return (
-    <>
-      <PanelHeading
-        title="Outside, on purpose."
-        description="A cumulative public movement feed when Strava permits anonymous embedding, with the athlete profile always available."
-      />
+    <div className={styles.movementStream}>
+      <div className={styles.movementIntro}>
+        <PanelHeading
+          title="Outside, on purpose."
+          description="A cumulative public movement feed when Strava permits anonymous embedding, with the athlete profile always available."
+        />
+      </div>
       {show && state.payload.embed ? (
         <div className={styles.embed} ref={embedRef} tabIndex={-1}>
           <iframe
@@ -116,11 +119,11 @@ export function MovementStream({
             ? "Loads only after interaction"
             : "Profile-link fallback"}
         </span>
-        <span>{publishedLabel(state.payload.updatedAt)}</span>
+        <span>{updatedDateLabel(state.payload.updatedAt, "Publish date unavailable")}</span>
         <a href={state.payload.profileUrl} rel="noreferrer" target="_blank">
-          Open Strava profile
+          {SITE_COPY.play["profile-strava"]}
         </a>
       </div>
-    </>
+    </div>
   );
 }

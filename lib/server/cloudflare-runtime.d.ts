@@ -48,9 +48,39 @@ interface RateLimitBinding {
   limit(options: { key: string }): Promise<{ success: boolean }>;
 }
 
+interface R2ObjectBody {
+  body: ReadableStream;
+  size: number;
+  httpEtag: string;
+  writeHttpMetadata(headers: Headers): void;
+}
+
+interface R2Bucket {
+  get(key: string): Promise<R2ObjectBody | null>;
+  put(
+    key: string,
+    value: ReadableStream | ArrayBuffer | ArrayBufferView | string,
+    options?: { httpMetadata?: { contentType?: string }; customMetadata?: Record<string, string> },
+  ): Promise<{ key: string; size: number; httpEtag: string }>;
+  delete(key: string | string[]): Promise<void>;
+}
+
+interface ImagesBinding {
+  input(stream: ReadableStream): {
+    transform(options: Record<string, unknown>): {
+      output(options: {
+        format: string;
+        quality: number;
+      }): Promise<{ response(): Response }>;
+    };
+  };
+}
+
 interface CloudflareRuntimeEnv {
   DB?: D1Database;
   PUBLICATION_CACHE?: KVNamespace;
+  TRAVEL_MEDIA?: R2Bucket;
+  IMAGES?: ImagesBinding;
   [key: string]: unknown;
 }
 

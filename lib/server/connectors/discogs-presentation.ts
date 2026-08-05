@@ -3,6 +3,8 @@ import { parseStoredConnectorPublicPayload } from "./public-payload-policy";
 
 export const DISCOGS_PRESENTATION_SETTING_KEY =
   "connector.discogs.presentation";
+export const DISCOGS_EXTENDED_DISPLAY_APPROVAL_SETTING_KEY =
+  "connector.discogs.extended_display_approval";
 
 export type DiscogsPresentationConfig = {
   publishCollection: boolean;
@@ -10,7 +12,19 @@ export type DiscogsPresentationConfig = {
   updatedAt: string | null;
 };
 
+export type DiscogsExtendedDisplayApproval = {
+  provider: "discogs";
+  reference: string;
+  approvedAt: string;
+  expiresAt: string | null;
+  enabled: boolean;
+  updatedAt: string;
+};
+
 const CONFIG_VERSION = 1;
+const APPROVAL_VERSION = 1;
+const MAX_APPROVAL_REFERENCE_LENGTH = 512;
+const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 
 type StoredDiscogsPresentationConfig = DiscogsPresentationConfig & {
   credentialGeneration: number | null;
@@ -83,6 +97,74 @@ function parseStoredConfig(
   };
 }
 
+function parseStoredApproval(
+  valueJson: string,
+  updatedAt: string,
+): DiscogsExtendedDisplayApproval | null {
+  let value: unknown;
+  try {
+    value = JSON.parse(valueJson) as unknown;
+  } catch {
+    return null;
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (
+    keys.length !== 6 ||
+    !keys.every((key) =>
+      [
+        "schemaVersion",
+        "provider",
+        "reference",
+        "approvedAt",
+        "expiresAt",
+        "enabled",
+      ].includes(key),
+    ) ||
+    record.schemaVersion !== APPROVAL_VERSION ||
+    record.provider !== "discogs" ||
+    typeof record.reference !== "string" ||
+    record.reference.trim() !== record.reference ||
+    record.reference.length < 1 ||
+    record.reference.length > MAX_APPROVAL_REFERENCE_LENGTH ||
+    CONTROL_CHARACTER.test(record.reference) ||
+    !canonicalIsoTimestamp(record.approvedAt) ||
+    !(
+      record.expiresAt === null ||
+      canonicalIsoTimestamp(record.expiresAt)
+    ) ||
+    (typeof record.expiresAt === "string" &&
+      Date.parse(record.expiresAt) <= Date.parse(record.approvedAt)) ||
+    typeof record.enabled !== "boolean" ||
+    !canonicalIsoTimestamp(updatedAt)
+  ) {
+    return null;
+  }
+  return {
+    provider: "discogs",
+    reference: record.reference,
+    approvedAt: record.approvedAt,
+    expiresAt: record.expiresAt as string | null,
+    enabled: record.enabled,
+    updatedAt,
+  };
+}
+
+export function discogsExtendedDisplayApprovalIsActive(
+  approval: DiscogsExtendedDisplayApproval | null,
+  now = Date.now(),
+): boolean {
+  if (!approval?.enabled) return false;
+  const approvedAt = Date.parse(approval.approvedAt);
+  if (!Number.isFinite(approvedAt) || approvedAt > now) return false;
+  if (approval.expiresAt === null) return true;
+  const expiresAt = Date.parse(approval.expiresAt);
+  return Number.isFinite(expiresAt) && expiresAt > now;
+}
+
 async function currentCredentialGeneration(
   database: D1Database,
 ): Promise<number | null> {
@@ -103,6 +185,7 @@ async function currentCredentialGeneration(
 async function hasCurrentValidatedSnapshot(
   database: D1Database,
   now: number,
+  allowStale: boolean,
 ): Promise<boolean> {
   const row = await database
     .prepare(
@@ -124,7 +207,7 @@ async function hasCurrentValidatedSnapshot(
     row.status !== "ready" ||
     !canonicalIsoTimestamp(row.fetchedAt) ||
     !canonicalIsoTimestamp(row.freshUntil) ||
-    Date.parse(row.freshUntil) <= now
+    (!allowStale && Date.parse(row.freshUntil) <= now)
   ) {
     return false;
   }
@@ -137,6 +220,122 @@ async function hasCurrentValidatedSnapshot(
       payload.syncedAt === row.fetchedAt &&
       payload.freshUntil === row.freshUntil,
   );
+}
+
+export async function getDiscogsExtendedDisplayApproval(
+  database: D1Database | null = runtimeDatabase(),
+): Promise<
+  | { status: "ready"; approval: DiscogsExtendedDisplayApproval | null }
+  | { status: "setup_required" }
+> {
+  if (!database) return { status: "setup_required" };
+  try {
+    const row = await database
+      .prepare(
+        `SELECT value_json AS valueJson, updated_at AS updatedAt
+         FROM editorial_settings
+         WHERE key = ?
+         LIMIT 1`,
+      )
+      .bind(DISCOGS_EXTENDED_DISPLAY_APPROVAL_SETTING_KEY)
+      .first<{ valueJson: string; updatedAt: string }>();
+    if (!row) return { status: "ready", approval: null };
+    const approval = parseStoredApproval(row.valueJson, row.updatedAt);
+    return approval
+      ? { status: "ready", approval }
+      : { status: "setup_required" };
+  } catch {
+    return { status: "setup_required" };
+  }
+}
+
+export async function saveDiscogsExtendedDisplayApproval(input: {
+  provider: "discogs";
+  reference: string;
+  approvedAt: string;
+  expiresAt: string | null;
+  enabled: boolean;
+  actorEmail: string;
+}): Promise<
+  | { status: "saved"; approval: DiscogsExtendedDisplayApproval }
+  | { status: "invalid"; reason: "approval" }
+  | { status: "setup_required" }
+> {
+  const reference = input.reference.trim();
+  if (
+    input.provider !== "discogs" ||
+    reference !== input.reference ||
+    reference.length < 1 ||
+    reference.length > MAX_APPROVAL_REFERENCE_LENGTH ||
+    CONTROL_CHARACTER.test(reference) ||
+    !canonicalIsoTimestamp(input.approvedAt) ||
+    !(input.expiresAt === null || canonicalIsoTimestamp(input.expiresAt)) ||
+    (input.expiresAt !== null &&
+      Date.parse(input.expiresAt) <= Date.parse(input.approvedAt))
+  ) {
+    return { status: "invalid", reason: "approval" };
+  }
+  const database = runtimeDatabase();
+  if (!database) return { status: "setup_required" };
+  const updatedAt = new Date().toISOString();
+  const stored = {
+    schemaVersion: APPROVAL_VERSION,
+    provider: "discogs" as const,
+    reference,
+    approvedAt: input.approvedAt,
+    expiresAt: input.expiresAt,
+    enabled: input.enabled,
+  };
+  try {
+    await database.batch([
+      database
+        .prepare(
+          `INSERT INTO editorial_settings (
+             key, value_json, updated_by_email, updated_at
+           ) VALUES (?, ?, ?, ?)
+           ON CONFLICT(key) DO UPDATE SET
+             value_json = excluded.value_json,
+             updated_by_email = excluded.updated_by_email,
+             updated_at = excluded.updated_at`,
+        )
+        .bind(
+          DISCOGS_EXTENDED_DISPLAY_APPROVAL_SETTING_KEY,
+          JSON.stringify(stored),
+          input.actorEmail,
+          updatedAt,
+        ),
+      database
+        .prepare(
+          `INSERT INTO audit_log (
+             id, actor_email, action, entity_type, entity_id,
+             details_json, created_at
+           ) VALUES (?, ?, 'connector.extended_display_approval_saved',
+                     'connector', 'discogs', ?, ?)`,
+        )
+        .bind(
+          crypto.randomUUID(),
+          input.actorEmail,
+          JSON.stringify({
+            enabled: input.enabled,
+            hasExpiry: input.expiresAt !== null,
+          }),
+          updatedAt,
+        ),
+    ]);
+  } catch {
+    return { status: "setup_required" };
+  }
+  return {
+    status: "saved",
+    approval: {
+      provider: "discogs",
+      reference,
+      approvedAt: input.approvedAt,
+      expiresAt: input.expiresAt,
+      enabled: input.enabled,
+      updatedAt,
+    },
+  };
 }
 
 export async function getDiscogsPresentationConfig(
@@ -204,10 +403,18 @@ export async function saveDiscogsPresentationConfig(input: {
   let credentialGeneration: number | null = null;
   if (input.publishCollection) {
     try {
+      const approvalResult = await getDiscogsExtendedDisplayApproval(database);
+      const allowStale =
+        approvalResult.status === "ready" &&
+        discogsExtendedDisplayApprovalIsActive(approvalResult.approval);
       credentialGeneration = await currentCredentialGeneration(database);
       if (
         credentialGeneration === null ||
-        !(await hasCurrentValidatedSnapshot(database, Date.parse(now)))
+        !(await hasCurrentValidatedSnapshot(
+          database,
+          Date.parse(now),
+          allowStale,
+        ))
       ) {
         return { status: "invalid", reason: "snapshot" };
       }

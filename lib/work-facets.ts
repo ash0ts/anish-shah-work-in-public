@@ -108,7 +108,7 @@ const mediaByCanonicalFormat: Record<string, MediaFacetId | null> = {
   open_source_repo: "software",
   open_source_pr: "software",
   course: "course",
-  // These are representations of another public form, not useful media
+  // These are representations of an artifact, not useful media
   // categories of their own. They remain searchable in the canonical data.
   translation: null,
   mirror: null,

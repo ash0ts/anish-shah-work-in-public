@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import {
   ROOM_OBJECTS,
   roomObject,
 } from "@/components/play/room-platform/room-registry";
 import { ROOM_SCREEN_LOADERS } from "@/components/play/room-platform/room-screen-registry";
-import type { RoomObjectId } from "@/components/play/room-platform/room-types";
-import { roomExperienceEnabled } from "@/lib/server/play-experience";
+import type { RoomConnectorObjectId } from "@/components/play/room-platform/room-types";
+import { travelAtlasEnabled } from "@/lib/server/travel";
 import {
   ROOM_PROVIDER_ADAPTERS,
   previewFixtureForPlayRoute,
@@ -107,10 +107,12 @@ export const ROOM_ROUTE_FOUNDATIONS = {
       />
     );
   },
-} satisfies Record<RoomObjectId, RoomRouteFoundation>;
+} satisfies Record<RoomConnectorObjectId, RoomRouteFoundation>;
 
 export function generateStaticParams() {
-  return ROOM_OBJECTS.map((object) => ({ objectSlug: object.slug }));
+  return ROOM_OBJECTS.filter(
+    (object) => object.contentSource.kind === "connector",
+  ).map((object) => ({ objectSlug: object.slug }));
 }
 
 export async function generateMetadata({
@@ -123,14 +125,22 @@ export async function generateMetadata({
     return publicPageMetadata({
       title: "Collection not found",
       description:
-        "This collection is not part of Anish Shah’s public room archive. Return to Play to choose one of the six available objects.",
+        "That object isn’t in My Room, 2001. Return to Play and choose one from the room.",
+      path: "/play",
+      noindex: true,
+    });
+  }
+  if (object.contentSource.kind === "travel-log" && !travelAtlasEnabled()) {
+    return publicPageMetadata({
+      title: "Travel atlas not found",
+      description: "This travel atlas is not currently public.",
       path: "/play",
       noindex: true,
     });
   }
   return publicPageMetadata({
     title: `${object.label} · ${object.title}`,
-    description: `${object.description} Browse the current public snapshot and provider attribution.`,
+    description: `${object.description} Browse it through ${object.title}.`,
     path: object.route,
     noindex: hasPublicQuery(query),
   });
@@ -143,6 +153,9 @@ export default async function PlayObjectPage({
   const [{ objectSlug }, query] = await Promise.all([params, searchParams]);
   const object = roomObject(objectSlug);
   if (!object) notFound();
-  if (!roomExperienceEnabled()) redirect("/play");
+  // Travel owns a concrete route because its atlas has distinct query,
+  // preview-fixture, and metadata contracts. The dynamic route is only the
+  // closed connector dispatch surface.
+  if (object.id === "travel") notFound();
   return ROOM_ROUTE_FOUNDATIONS[object.id](query);
 }

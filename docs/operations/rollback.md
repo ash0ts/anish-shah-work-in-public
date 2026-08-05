@@ -12,6 +12,20 @@
 
 The private Sites environment is not a public rollback target.
 
+For an incident limited to Meet Me, prefer the smallest presentation rollback:
+promote the recorded prior Worker version when it had the simulation disabled,
+or prepare a new guarded release with
+`SIMULATION_EXPERIENCE_MODE=disabled` and
+`SIMULATION_AI_MODE=authored-only`. Disabled mode removes the ingress and
+simulation route/API surface. Do not edit hosted variables in place because
+that would bypass the exact-config, staged-checkpoint, and attestation contract.
+Neither option requires a D1 restore, provider disconnect, approval deletion,
+Gateway-key rotation, or Play snapshot change.
+
+`coming-soon` is a planned presentation state, not incident containment. It may
+keep the doorway visible while the campaign is withheld, but a security or
+session-boundary incident should use `disabled` or the recorded prior Worker.
+
 ## Worker rollback
 
 Use the previous version recorded in the checked-in release record. During an
@@ -30,6 +44,9 @@ npx --no-install wrangler rollback '<previous-version-id>' \
 ```
 
 Immediately repeat logged-out public checks and owner/non-owner Access checks.
+For a simulation rollback, also confirm `/simulation` is unavailable, its
+sitemap entry is absent, existing Play routes still work, and owner health
+reports the disabled/authored-only contract.
 Record the rollback time, reason, resulting version, and validation evidence.
 An unused or stale release-checkpoint marker does not authorize a later deploy:
 the guarded release flow also binds it to the exact SHA, content version,

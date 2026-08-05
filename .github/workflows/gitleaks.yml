@@ -10,16 +10,47 @@ on:
         description: Full 40-character commit SHA to scan
         required: true
         type: string
+      runner_target:
+        description: Hosted runner or disposable owner ARM64 runner
+        required: true
+        default: github-hosted
+        type: choice
+        options:
+          - github-hosted
+          - owner-arm64
+      jit_label:
+        description: One-time opaque runner label; required for owner-arm64
+        required: false
+        type: string
 
 permissions:
   contents: read
   pull-requests: read
 
+concurrency:
+  group: gitleaks-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.ref) }}
+  cancel-in-progress: true
+
 jobs:
   scan:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.runner_target == 'owner-arm64' && format('["self-hosted","linux","arm64","{0}"]', inputs.jit_label) || '["ubuntu-latest"]') }}
     timeout-minutes: 10
     steps:
+      - name: Validate owner dispatch
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+          RUNNER_TARGET: ${{ inputs.runner_target }}
+          JIT_LABEL: ${{ inputs.jit_label }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTOR" = "$GITHUB_REPOSITORY_OWNER"
+          [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          case "$RUNNER_TARGET" in
+            github-hosted) test -z "$JIT_LABEL" ;;
+            owner-arm64) [[ "$JIT_LABEL" =~ ^anish-release-[a-f0-9]{12}$ ]] ;;
+            *) exit 1 ;;
+          esac
       - name: Check out full history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -31,9 +62,19 @@ jobs:
           EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_dispatch' && inputs.commit_sha || github.sha) }}
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          test "${#EXPECTED_SHA}" -eq 40
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "${#GITHUB_SHA}" -eq 40
+      - name: Require the dispatched SHA to belong to the trusted release ref
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" =~ ^refs/heads/(main|release/[0-9]+\.[0-9]+\.[0-9]+)$ ]]
+          branch="${GITHUB_REF#refs/heads/}"
+          trusted_ref="$(git rev-parse "refs/remotes/origin/${branch}")"
+          test "$EXPECTED_SHA" = "$trusted_ref"
       - name: Scan for credentials
-        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

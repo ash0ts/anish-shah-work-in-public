@@ -338,10 +338,26 @@ test("provider normalizers reduce artwork to host-free references", async () => 
   }
 });
 
-test("Play fetches a personal-data provider only after its stream is active", async () => {
-  const [source, collection, movement, spotify, discogs] = await Promise.all([
+test("direct Play routes isolate personal-data providers behind literal adapters", async () => {
+  const [page, direct, travel, screens, foundation, collection, movement, spotify, discogs] = await Promise.all([
     readFile(
-      new URL("../components/PersonalStreams.tsx", import.meta.url),
+      new URL("../app/play/page.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/play/[objectSlug]/page.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../app/play/travel/page.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/play/room-platform/room-screen-registry.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../lib/server/play-screen-foundation.ts", import.meta.url),
       "utf8",
     ),
     readFile(
@@ -362,30 +378,16 @@ test("Play fetches a personal-data provider only after its stream is active", as
     ),
   ]);
 
-  assert.match(
-    source,
-    /active === "watch"[\s\S]*?<CollectionStream provider="myanimelist"/,
-  );
-  assert.match(
-    source,
-    /active === "read"[\s\S]*?<CollectionStream provider="hardcover"/,
-  );
-  assert.match(
-    source,
-    /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/,
-  );
-  assert.match(
-    source,
-    /active === "collect"[\s\S]*?<DiscogsStream/,
-  );
-  assert.match(
-    source,
-    /active === "play"[\s\S]*?<CollectionStream provider="steam"/,
-  );
-  assert.match(
-    source,
-    /active === "move"[\s\S]*?<MovementStream/,
-  );
+  assert.doesNotMatch(page, /getPublicConnectorSnapshot|getStravaPublicConfig|fetch\(/);
+  for (const id of ["watch", "read", "listen", "collect", "play", "move", "travel"]) {
+    assert.match(screens, new RegExp(`${id}: \\(\\) => import\\(`));
+  }
+  for (const id of ["watch", "read", "listen", "collect", "play", "move"]) {
+    assert.match(direct, new RegExp(`${id}: async`));
+    assert.match(foundation, new RegExp(`^  ${id}:`, "m"));
+  }
+  assert.doesNotMatch(direct, /travel: async/);
+  assert.match(travel, /ROOM_SCREEN_LOADERS\.travel\(\)/);
   assert.match(
     collection,
     /function CollectionStream[\s\S]*?loadConnector<CollectionPayload>\(\s*provider,/,
@@ -402,10 +404,7 @@ test("Play fetches a personal-data provider only after its stream is active", as
     discogs,
     /function DiscogsStream[\s\S]*?loadConnector<DiscogsPublicSnapshot>\([\s\S]*?"discogs"/,
   );
-  assert.doesNotMatch(source, /Promise\.all\([^)]*loadConnector/);
-  assert.match(source, /show=\{showStrava\}/);
-  assert.match(source, /onShow=\{\(\) => setShowStrava\(true\)\}/);
-  assert.doesNotMatch(source, /NEXT_PUBLIC_STRAVA_EMBED_URL/);
+  assert.doesNotMatch(page, /NEXT_PUBLIC_STRAVA_EMBED_URL/);
   assert.match(movement, /src=\{state\.payload\.embed\.embedUrl\}/);
 });
 
@@ -480,7 +479,7 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(guide, /Reauthorization required/);
   assert.match(guide, /one year/i);
   assert.match(guide, /January\s+1/i);
-  assert.match(guide, /npm run lint && npm test/);
+  assert.match(guide, /npm run validate/);
   assert.doesNotMatch(guide, /Renewal is manual/);
   assert.match(guide, /strava-embeds\.com/);
   assert.match(guide, /www\.strava\.com\/athletes/);
@@ -537,7 +536,7 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
   assert.doesNotMatch(failedResponse[1], /router\.refresh/);
   assert.match(
     panel,
-    /\} catch \{\n      setMessage\("The request could not be completed\. Try again\."\);\n    \} finally/,
+    /action === "refresh"[\s\S]*?The refresh request could not be completed\. No new snapshot was published; any previously accepted snapshot remains unchanged\.[\s\S]*?The request could not be completed\. Try again\./,
   );
   assert.match(
     panel,
@@ -561,10 +560,23 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
     /disabled=\{pending !== null \|\| connectorBlocked \|\| retryBlocked\}/,
   );
   assert.match(refreshControl[0], /Refreshing…/);
+  assert.match(
+    panel,
+    /connector\.provider === "discogs"[\s\S]*?"Manual refresh available"[\s\S]*?: "Fresh through"/,
+  );
   assert.match(panel, /className=\{styles\.formMessage\} role="status"/);
   assert.match(
     helpers,
     /A refresh is already running\. Check this panel again in a moment/,
+  );
+  assert.match(helpers, /Connected · Refresh required/);
+  assert.match(
+    panel,
+    /connectorMutationShouldReconcile\(action, result\.status\)[\s\S]*?router\.refresh\(\)/,
+  );
+  assert.doesNotMatch(
+    panel,
+    /result\.status === "withheld"[\s\S]{0,120}router\.refresh\(\)/,
   );
   assert.match(
     helpers,
@@ -592,6 +604,34 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
     /import \{ connectorRefreshResponse \} from "\.\/connector-refresh-response"/,
   );
   assert.match(refreshHandler, /return connectorRefreshResponse\(result\)/);
+});
+
+test("Studio reconciles only accepted or already-running refresh outcomes", async () => {
+  const { connectorMutationShouldReconcile } = await import(
+    "../app/studio/connectors/mutation-policy.ts"
+  );
+
+  assert.equal(connectorMutationShouldReconcile("save", "saved"), true);
+  assert.equal(connectorMutationShouldReconcile("disconnect", "deleted"), true);
+  assert.equal(connectorMutationShouldReconcile("refresh", "complete"), true);
+  assert.equal(
+    connectorMutationShouldReconcile("refresh", "already_running"),
+    true,
+  );
+  for (const status of [
+    "not_due",
+    "rate_limited",
+    "failed",
+    "public_payload_rejected",
+    "withheld",
+    undefined,
+  ]) {
+    assert.equal(
+      connectorMutationShouldReconcile("refresh", status),
+      false,
+      `refresh status ${String(status)} must preserve the current panel state`,
+    );
+  }
 });
 
 test("Discogs rate-limit responses expose a standard retry contract", async () => {

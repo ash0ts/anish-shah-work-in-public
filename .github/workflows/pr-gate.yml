@@ -1,0 +1,243 @@
+name: PR Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: pr-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  PR_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  classify:
+    name: classify changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      lane: ${{ steps.classify.outputs.lane }}
+      requires_build: ${{ steps.classify.outputs.requires_build }}
+      browser_scopes: ${{ steps.classify.outputs.browser_scopes }}
+    steps:
+      - name: Check out trusted base-branch tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - name: Collect the current pull-request file list
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" \
+            --jq '.[] | {filename, previous_filename, status}' \
+            | jq -s '.' > "${RUNNER_TEMP}/pr-files.json"
+      - name: Classify with dependency-free base-branch code
+        id: classify
+        run: >-
+          node scripts/ci/classify-changes.mjs
+          --changes-file "${RUNNER_TEMP}/pr-files.json"
+          --output "${RUNNER_TEMP}/ci-change-plan.json"
+          --github-output "$GITHUB_OUTPUT"
+      - name: Publish the validation plan
+        run: cat "${RUNNER_TEMP}/ci-change-plan.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Check out candidate documentation without executing it
+        if: steps.classify.outputs.lane == 'docs'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.PR_SOURCE_SHA }}
+          path: candidate
+          persist-credentials: false
+      - name: Validate candidate docs with trusted base-branch tooling
+        if: steps.classify.outputs.lane == 'docs'
+        run: |
+          node scripts/check-docs.mjs --root "$GITHUB_WORKSPACE/candidate"
+          node scripts/validate-repository-skills.mjs --root "$GITHUB_WORKSPACE/candidate"
+
+  validate:
+    name: targeted ${{ needs.classify.outputs.lane }} validation
+    if: needs.classify.outputs.lane != 'docs'
+    needs: classify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.PR_SOURCE_SHA }}
+          persist-credentials: false
+      - name: Set up repository toolchain
+        uses: ./.github/actions/setup-repository
+      - name: Run the path-selected checks
+        env:
+          CI_LANE: ${{ needs.classify.outputs.lane }}
+        run: |
+          set -euo pipefail
+          case "$CI_LANE" in
+            copy)
+              npm run copy:check
+              npm run copy:test
+              npm run typecheck
+              ;;
+            backend)
+              npm run docs:check
+              npm run copy:check
+              npm run typecheck
+              npm run test:content
+              npm run test:backend
+              ;;
+            ui|room)
+              npm run copy:check
+              npm run lint
+              npm run typecheck
+              npm run build
+              npm run bundle:scan
+              npm run test:rendered
+              ;;
+            simulation)
+              npm run copy:check
+              npm run lint
+              npm run typecheck
+              node --test tests/simulation-backend.test.mjs tests/simulation-migrations.test.mjs tests/simulation-play-grounding.test.mjs tests/simulation-ui.test.mjs
+              npm run build
+              npm run bundle:scan
+              npm run test:rendered
+              ;;
+            travel)
+              npm run copy:check
+              npm run travel:geography:check
+              npm run lint
+              npm run typecheck
+              node --test tests/travel-backend.test.mjs tests/travel-migrations.test.mjs tests/travel-security.test.mjs tests/travel-studio-ui.test.mjs
+              npm run build
+              npm run bundle:scan
+              npm run test:rendered
+              ;;
+            full)
+              npm run validate
+              ;;
+            *)
+              echo "Unknown CI lane: $CI_LANE" >&2
+              exit 1
+              ;;
+          esac
+      - name: Record the required trusted copy-preview evidence
+        if: needs.classify.outputs.lane == 'copy'
+        run: >-
+          echo 'PR Gate validates the copy contract. The separate trusted copy-preview
+          workflow is the required affected-route render and focused screenshot evidence;
+          it builds base-branch code with only validated plain-text copy.'
+          >> "$GITHUB_STEP_SUMMARY"
+      - name: Build an explicitly requested backend preview once
+        if: >-
+          needs.classify.outputs.lane == 'backend' &&
+          contains(github.event.pull_request.labels.*.name, 'preview')
+        run: |
+          npm run build
+          npm run bundle:scan
+      - name: Write immutable build manifest
+        if: >-
+          needs.classify.outputs.requires_build == 'true' ||
+          (needs.classify.outputs.lane == 'backend' &&
+          contains(github.event.pull_request.labels.*.name, 'preview'))
+        run: npm run deployable:attest:write
+      - name: Write preview metadata for an explicitly requested code preview
+        if: >-
+          (needs.classify.outputs.requires_build == 'true' ||
+          (needs.classify.outputs.lane == 'backend' &&
+          contains(github.event.pull_request.labels.*.name, 'preview'))) &&
+          contains(github.event.pull_request.labels.*.name, 'preview')
+        env:
+          PREVIEW_PR_NUMBER: ${{ github.event.pull_request.number }}
+          PREVIEW_SOURCE_SHA: ${{ env.PR_SOURCE_SHA }}
+          PREVIEW_WORKFLOW_SHA: ${{ github.sha }}
+        run: npm run preview:metadata
+      - name: Upload the one immutable PR build
+        if: >-
+          needs.classify.outputs.requires_build == 'true' ||
+          (needs.classify.outputs.lane == 'backend' &&
+          contains(github.event.pull_request.labels.*.name, 'preview'))
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-build-${{ env.PR_SOURCE_SHA }}
+          path: dist
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+
+  browser:
+    name: targeted browser coverage
+    if: needs.classify.outputs.browser_scopes != '[]'
+    needs: [classify, validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.PR_SOURCE_SHA }}
+          persist-credentials: false
+      - name: Set up repository toolchain
+        uses: ./.github/actions/setup-repository
+      - name: Download the validated PR build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pr-build-${{ env.PR_SOURCE_SHA }}
+          path: dist
+      - name: Verify exact build bytes and hidden Vite manifest
+        run: |
+          test -s dist/client/.vite/manifest.json
+          npm run deployable:attest
+          npm run bundle:scan
+      - name: Install the pinned Chromium build
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Run only affected browser surfaces
+        env:
+          CI_BROWSER_SCOPES: ${{ needs.classify.outputs.browser_scopes }}
+        run: node scripts/ci/run-browser-scopes.mjs
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-browser-failure-${{ env.PR_SOURCE_SHA }}
+          path: |
+            .playwright/results-*
+            .playwright/report-*
+            .wrangler/browser-quality-*.log
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  pr_gate:
+    name: PR Gate
+    if: always()
+    needs: [classify, validate, browser]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every selected lane
+        env:
+          CLASSIFY: ${{ needs.classify.result }}
+          LANE: ${{ needs.classify.outputs.lane }}
+          VALIDATE: ${{ needs.validate.result }}
+          BROWSER: ${{ needs.browser.result }}
+          BROWSER_SCOPES: ${{ needs.classify.outputs.browser_scopes }}
+        run: |
+          set -euo pipefail
+          test "$CLASSIFY" = success
+          if [ "$LANE" = docs ]; then
+            test "$VALIDATE" = skipped
+          else
+            test "$VALIDATE" = success
+          fi
+          if [ "$BROWSER_SCOPES" = '[]' ]; then
+            test "$BROWSER" = skipped
+          else
+            test "$BROWSER" = success
+          fi

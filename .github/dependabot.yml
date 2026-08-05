@@ -11,6 +11,15 @@ updates:
         applies-to: security-updates
         patterns:
           - "*"
+    ignore:
+      # Runtime and framework compatibility are reviewed deliberately instead
+      # of accepting automated major-version branches.
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
   - package-ecosystem: github-actions
     directory: /
     schedule:

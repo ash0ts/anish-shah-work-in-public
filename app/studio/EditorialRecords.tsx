@@ -9,6 +9,7 @@ import type {
   EditorialRecordPatch,
   EditorialVisibility,
 } from "@/lib/server/editorial-policy";
+import type { CopyOwnershipReport } from "@/lib/copy-ownership";
 import styles from "./studio.module.css";
 
 type ListResponse = {
@@ -26,9 +27,11 @@ function displayVisibility(value: EditorialVisibility): string {
 export function EditorialRecords({
   initial,
   isLocalSandbox,
+  copyOwnershipReport,
 }: {
   initial: EditorialRecordList;
   isLocalSandbox: boolean;
+  copyOwnershipReport: CopyOwnershipReport | null;
 }) {
   const [records, setRecords] = useState<EditorialRecord[]>(initial.records);
   const [draft, setDraft] = useState<EditorialRecord | null>(
@@ -86,13 +89,21 @@ export function EditorialRecords({
     () => records.find((record) => record.id === draft?.id) ?? null,
     [draft?.id, records],
   );
+  const copyOwnershipRecord = useMemo(
+    () =>
+      copyOwnershipReport?.records.find((record) => record.id === draft?.id) ??
+      null,
+    [copyOwnershipReport, draft?.id],
+  );
+  const copyOwnedWording = draft?.recordType === "work_group";
   const changed = Boolean(
     draft &&
       sourceRecord &&
       (draft.featured !== sourceRecord.featured ||
         draft.sortOrder !== sourceRecord.sortOrder ||
-        draft.approvedPublicWording !==
-          sourceRecord.approvedPublicWording ||
+        (!copyOwnedWording &&
+          draft.approvedPublicWording !==
+            sourceRecord.approvedPublicWording) ||
         draft.caveat !== sourceRecord.caveat ||
         draft.visibility !== sourceRecord.visibility),
   );
@@ -107,6 +118,7 @@ export function EditorialRecords({
       patch.sortOrder = draft.sortOrder;
     }
     if (
+      !copyOwnedWording &&
       draft.approvedPublicWording !== sourceRecord.approvedPublicWording
     ) {
       patch.approvedPublicWording = draft.approvedPublicWording;
@@ -389,21 +401,83 @@ export function EditorialRecords({
                 Feature this record
               </label>
 
-              <label className={styles.textField}>
-                Public wording
-                <textarea
-                  rows={5}
-                  maxLength={600}
-                  value={draft.approvedPublicWording}
-                  onChange={(event) =>
-                    setDraft({
-                      ...draft,
-                      approvedPublicWording: event.target.value,
-                    })
-                  }
-                  placeholder="Optional reviewed wording; plain text only"
-                />
-              </label>
+              {copyOwnedWording ? (
+                <section
+                  className={styles.copyDeckRecord}
+                  aria-labelledby="copy-deck-record-title"
+                >
+                  <span>Git-owned wording · read only</span>
+                  <h5 id="copy-deck-record-title">Current copy deck values</h5>
+                  <p>
+                    Edit these values in the copy deck and publish a reviewed
+                    pull request. Studio cannot overwrite them.
+                  </p>
+                  {copyOwnershipRecord ? (
+                    <>
+                      <dl className={styles.copyDeckFields}>
+                        <div>
+                          <dt>Display title</dt>
+                          <dd>{copyOwnershipRecord.gitCopy.displayTitle}</dd>
+                        </div>
+                        <div>
+                          <dt>Short title</dt>
+                          <dd>{copyOwnershipRecord.gitCopy.shortTitle}</dd>
+                        </div>
+                        <div>
+                          <dt>Summary</dt>
+                          <dd>{copyOwnershipRecord.gitCopy.summary}</dd>
+                        </div>
+                        <div>
+                          <dt>Role summary</dt>
+                          <dd>{copyOwnershipRecord.gitCopy.roleSummary}</dd>
+                        </div>
+                        <div>
+                          <dt>Home title</dt>
+                          <dd>
+                            {copyOwnershipRecord.gitCopy.homeTitle ?? (
+                              <span className={styles.copyDeckEmpty}>
+                                Not set
+                              </span>
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Home role</dt>
+                          <dd>
+                            {copyOwnershipRecord.gitCopy.homeRole ?? (
+                              <span className={styles.copyDeckEmpty}>
+                                Not set
+                              </span>
+                            )}
+                          </dd>
+                        </div>
+                      </dl>
+                      <code>{copyOwnershipRecord.deckPath}</code>
+                    </>
+                  ) : (
+                    <p role="status">
+                      Current copy values are unavailable. The Git deck remains
+                      authoritative at content/copy/work-groups/{draft.slug}.md.
+                    </p>
+                  )}
+                </section>
+              ) : (
+                <label className={styles.textField}>
+                  Public wording
+                  <textarea
+                    rows={5}
+                    maxLength={600}
+                    value={draft.approvedPublicWording}
+                    onChange={(event) =>
+                      setDraft({
+                        ...draft,
+                        approvedPublicWording: event.target.value,
+                      })
+                    }
+                    placeholder="Optional reviewed wording; plain text only"
+                  />
+                </label>
+              )}
 
               <label className={styles.textField}>
                 Public caveat

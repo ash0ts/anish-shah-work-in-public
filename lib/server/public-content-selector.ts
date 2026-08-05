@@ -306,7 +306,10 @@ export function mergePublishedEditorialSnapshot(
           featuredOrder: record.featured ? record.sortOrder : null,
           summary:
             withCaveat(
-              record.approvedPublicWording || group.summary,
+              // WorkGroup presentation wording is Git-owned. Retained D1
+              // wording is intentionally ignored, while the owner-controlled
+              // caveat remains part of the public presentation contract.
+              group.summary,
               record.caveat,
             ) ?? group.summary,
         },

@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0",
-  "contentVersion": "1f95080f1833343b",
+  "contentVersion": "9ec1fdd9a3ff0a5b",
   "generatedAt": "2026-07-30T00:00:00.000Z",
   "artifacts": [
     {
       "path": "content/public/anish-content.public.v1.json",
-      "bytes": 673389,
-      "sha256": "b7d0a4c5d195af8cc880b689bdbd46c88e652ebcedf0915a1650c1f1a935bd34"
+      "bytes": 673050,
+      "sha256": "06833d6f0fae7c539120d025d93ff1e3453ba27ceb14252006e7e52bc7073729"
     },
     {
       "path": "content/schema/anish-content.schema.json",
@@ -41,7 +41,7 @@
   ],
   "generator": {
     "moduleCount": 12,
-    "sha256": "78a57e6ec6d9617a7fe48566b11659afb0bf4120abba1de91c8ed9bf8864b8c3"
+    "sha256": "51b28c467c07cabf7d909e5046269dbf3dd0a6d04ce264d56441350da052dc21"
   },
   "counts": {
     "items": 186,
@@ -52,7 +52,7 @@
     "evidence": 198,
     "relations": 64,
     "collections": 9,
-    "narratives": 6,
+    "narratives": 5,
     "sourceSnapshots": 2
   },
   "sourceSummary": {

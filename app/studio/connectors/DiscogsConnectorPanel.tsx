@@ -5,6 +5,7 @@ import styles from "../studio.module.css";
 import { ApiConnectorPanel } from "./ApiConnectorPanel";
 import { formatTimestamp, responseJson } from "./helpers";
 import type {
+  DiscogsExtendedDisplayApproval,
   DiscogsPresentationConfig,
   Environment,
   ProviderMeta,
@@ -32,7 +33,7 @@ const meta: ProviderMeta = {
   summary:
     "Authorize the owner collection, synchronize physical releases, then make a separate decision about public display. Copies and distinct releases remain separate.",
   recovery:
-    "If Discogs denies authorization, start again from this panel. A 401 requires reauthorization; a rate limit should be retried only after its wait period. The public catalog expires six hours after its last successful synchronization.",
+    "If Discogs denies authorization, start again from this panel. A 401 requires reauthorization; a rate limit should be retried only after its wait period. Failed manual refreshes never replace the last accepted catalog.",
 };
 
 type Props = ProviderPanelProps & {
@@ -77,7 +78,11 @@ export function DiscogsConnectorPanel({ callbackUrl, ...props }: Props) {
 type ConfigState =
   | { phase: "loading" }
   | { phase: "error"; message: string }
-  | { phase: "ready"; config: DiscogsPresentationConfig };
+  | {
+      phase: "ready";
+      config: DiscogsPresentationConfig;
+      approval: DiscogsExtendedDisplayApproval | null;
+    };
 
 function DiscogsPresentationControls({
   configured,
@@ -91,7 +96,13 @@ function DiscogsPresentationControls({
   const [state, setState] = useState<ConfigState>({ phase: "loading" });
   const [publishCollection, setPublishCollection] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [approvalEnabled, setApprovalEnabled] = useState(false);
+  const [approvalReference, setApprovalReference] = useState("");
+  const [approvalExpiresAt, setApprovalExpiresAt] = useState("");
+  const [approvalAcknowledged, setApprovalAcknowledged] = useState(false);
+  const [pending, setPending] = useState<"presentation" | "approval" | null>(
+    null,
+  );
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -105,8 +116,12 @@ function DiscogsPresentationControls({
           result.config &&
           "publishCollection" in result.config
         ) {
-          setState({ phase: "ready", config: result.config });
+          const approval = result.extendedDisplayApproval ?? null;
+          setState({ phase: "ready", config: result.config, approval });
           setPublishCollection(result.config.publishCollection);
+          setApprovalEnabled(approval?.enabled ?? false);
+          setApprovalReference(approval?.reference ?? "");
+          setApprovalExpiresAt(toDateTimeLocal(approval?.expiresAt ?? null));
           return;
         }
         setState({
@@ -141,7 +156,7 @@ function DiscogsPresentationControls({
       );
       return;
     }
-    setPending(true);
+    setPending("presentation");
     setMessage(null);
     try {
       const response = await fetch("/api/studio/connectors/discogs/config", {
@@ -164,7 +179,11 @@ function DiscogsPresentationControls({
         );
         return;
       }
-      setState({ phase: "ready", config: result.config });
+      setState((current) => ({
+        phase: "ready",
+        config: result.config as DiscogsPresentationConfig,
+        approval: current.phase === "ready" ? current.approval : null,
+      }));
       setPublishCollection(result.config.publishCollection);
       setAcknowledged(false);
       setMessage(
@@ -177,11 +196,94 @@ function DiscogsPresentationControls({
     } catch {
       setMessage("Discogs display settings could not be saved. Try again.");
     } finally {
-      setPending(false);
+      setPending(null);
+    }
+  }
+
+  async function saveApproval(): Promise<void> {
+    const currentApproval = state.phase === "ready" ? state.approval : null;
+    if (!approvalEnabled && currentApproval === null) {
+      setMessage("No extended-display permission is currently recorded.");
+      return;
+    }
+    if (approvalEnabled && !approvalReference.trim()) {
+      setMessage("Enter the owner-only reference for the extended-display permission.");
+      return;
+    }
+    if (approvalEnabled && !approvalAcknowledged) {
+      setMessage(
+        "Confirm that the recorded permission covers display beyond Discogs' standard six-hour window.",
+      );
+      return;
+    }
+    const expiryTimestamp = approvalExpiresAt
+      ? Date.parse(approvalExpiresAt)
+      : Number.NaN;
+    if (approvalExpiresAt && !Number.isFinite(expiryTimestamp)) {
+      setMessage("Choose a valid permission expiry.");
+      return;
+    }
+    const expiresAt = Number.isFinite(expiryTimestamp)
+      ? new Date(expiryTimestamp).toISOString()
+      : null;
+    if (
+      expiresAt !== null &&
+      (!Number.isFinite(Date.parse(expiresAt)) ||
+        Date.parse(expiresAt) <=
+          Date.parse(currentApproval?.approvedAt ?? new Date().toISOString()))
+    ) {
+      setMessage("Choose an expiry later than the permission approval time.");
+      return;
+    }
+    setPending("approval");
+    setMessage(null);
+    try {
+      const response = await fetch("/api/studio/connectors/discogs/config", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          extendedDisplayApproval: {
+            provider: "discogs",
+            reference:
+              approvalReference.trim() || currentApproval?.reference || "disabled",
+            approvedAt: currentApproval?.approvedAt ?? new Date().toISOString(),
+            expiresAt,
+            enabled: approvalEnabled,
+          },
+        }),
+      });
+      const result = await responseJson(response);
+      if (!response.ok || !result.approval) {
+        setMessage(
+          result.error ??
+            "The extended-display permission could not be saved. Review the reference and dates.",
+        );
+        return;
+      }
+      setState((current) =>
+        current.phase === "ready"
+          ? { ...current, approval: result.approval ?? null }
+          : current,
+      );
+      setApprovalEnabled(result.approval.enabled);
+      setApprovalReference(result.approval.reference);
+      setApprovalExpiresAt(toDateTimeLocal(result.approval.expiresAt));
+      setApprovalAcknowledged(false);
+      setMessage(
+        result.approval.enabled
+          ? "Extended Discogs display permission recorded. Older accepted catalogs may remain public and will be marked stale."
+          : "Extended Discogs display permission disabled. The standard six-hour cutoff applies.",
+      );
+    } catch {
+      setMessage("The extended-display permission could not be saved. Try again.");
+    } finally {
+      setPending(null);
     }
   }
 
   const config = state.phase === "ready" ? state.config : null;
+  const approval = state.phase === "ready" ? state.approval : null;
+  const approvalIsActive = discogsApprovalIsActive(approval);
 
   return (
     <section
@@ -208,8 +310,18 @@ function DiscogsPresentationControls({
               </dd>
             </div>
             <div>
-              <dt>Public cutoff</dt>
+              <dt>Standard public cutoff</dt>
               <dd>{formatTimestamp(discogsPublicCutoff(lastSyncedAt))}</dd>
+            </div>
+            <div>
+              <dt>Extended display</dt>
+              <dd>
+                {approvalIsActive
+                  ? "Active"
+                  : approval
+                    ? "Inactive"
+                    : "Not recorded"}
+              </dd>
             </div>
           </dl>
         ) : null}
@@ -235,7 +347,7 @@ function DiscogsPresentationControls({
             <input
               type="checkbox"
               checked={publishCollection}
-              disabled={pending}
+              disabled={pending !== null}
               onChange={(event) => {
                 setPublishCollection(event.target.checked);
                 setAcknowledged(false);
@@ -256,7 +368,7 @@ function DiscogsPresentationControls({
               <input
                 type="checkbox"
                 checked={acknowledged}
-                disabled={pending}
+                disabled={pending !== null}
                 onChange={(event) => setAcknowledged(event.target.checked)}
               />
               <span>
@@ -267,12 +379,99 @@ function DiscogsPresentationControls({
           ) : null}
 
           <div className={styles.formActions}>
-            <button type="submit" disabled={pending}>
-              {pending ? "Saving…" : "Save Discogs display"}
+            <button type="submit" disabled={pending !== null}>
+              {pending === "presentation" ? "Saving…" : "Save Discogs display"}
             </button>
           </div>
         </form>
       )}
+
+      {state.phase === "ready" ? (
+        <form
+          className={styles.spotifyPublicationForm}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void saveApproval();
+          }}
+        >
+          <p className={styles.spotifyPublicationLabel}>
+            Owner-only provider permission
+          </p>
+          <label className={styles.publicationSwitch}>
+            <input
+              type="checkbox"
+              checked={approvalEnabled}
+              disabled={pending !== null}
+              onChange={(event) => {
+                setApprovalEnabled(event.target.checked);
+                setApprovalAcknowledged(false);
+              }}
+            />
+            <span>
+              <strong>Keep the last accepted catalog beyond six hours</strong>
+              <small>
+                Enable this only when a provider-granted exception covers the
+                older public display. Visitors see the actual update time and a
+                stale state; the private reference never leaves Studio.
+              </small>
+            </span>
+          </label>
+
+          {approvalEnabled || approval ? (
+            <>
+              <label className={styles.formField} htmlFor="discogs-approval-reference">
+                <span>Permission reference · owner-only</span>
+                <input
+                  id="discogs-approval-reference"
+                  type="text"
+                  value={approvalReference}
+                  minLength={1}
+                  maxLength={512}
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={pending !== null}
+                  onChange={(event) => setApprovalReference(event.target.value)}
+                  placeholder="Agreement, case, or correspondence reference"
+                  required
+                />
+              </label>
+              <label className={styles.formField} htmlFor="discogs-approval-expiry">
+                <span>Permission expiry · optional</span>
+                <input
+                  id="discogs-approval-expiry"
+                  type="datetime-local"
+                  value={approvalExpiresAt}
+                  disabled={pending !== null}
+                  onChange={(event) => setApprovalExpiresAt(event.target.value)}
+                />
+              </label>
+            </>
+          ) : null}
+
+          {approvalEnabled ? (
+            <label className={styles.publicationAcknowledgement}>
+              <input
+                type="checkbox"
+                checked={approvalAcknowledged}
+                disabled={pending !== null}
+                onChange={(event) =>
+                  setApprovalAcknowledged(event.target.checked)
+                }
+              />
+              <span>
+                I confirm this permission covers public display beyond the
+                standard six-hour window.
+              </span>
+            </label>
+          ) : null}
+
+          <div className={styles.formActions}>
+            <button type="submit" disabled={pending !== null}>
+              {pending === "approval" ? "Saving…" : "Save permission record"}
+            </button>
+          </div>
+        </form>
+      ) : null}
 
       {message ? (
         <p className={styles.formMessage} role="status">
@@ -281,7 +480,7 @@ function DiscogsPresentationControls({
       ) : null}
       {config?.publishCollection ? (
         <p className={styles.publicStreamLink}>
-          <a href="/play?stream=collect" rel="noreferrer" target="_blank">
+          <a href="/play/collect" rel="noreferrer" target="_blank">
             View the published Collect stream
           </a>
         </p>
@@ -301,4 +500,21 @@ function discogsPublicCutoff(value: string | null): string | null {
   return Number.isFinite(timestamp)
     ? new Date(timestamp + 6 * 60 * 60 * 1000).toISOString()
     : null;
+}
+
+function discogsApprovalIsActive(
+  approval: DiscogsExtendedDisplayApproval | null,
+): boolean {
+  if (!approval?.enabled) return false;
+  const approvedAt = Date.parse(approval.approvedAt);
+  if (!Number.isFinite(approvedAt) || approvedAt > Date.now()) return false;
+  return approval.expiresAt === null || Date.parse(approval.expiresAt) > Date.now();
+}
+
+function toDateTimeLocal(value: string | null): string {
+  if (!value) return "";
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return "";
+  const local = new Date(timestamp - new Date(timestamp).getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
 }

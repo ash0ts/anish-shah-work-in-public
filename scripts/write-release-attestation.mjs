@@ -7,20 +7,28 @@ import {
   assertReleaseMarker,
   assertRequiredValidationRuns,
   assertProductionDeployment,
+  assertSimulationReleaseRecord,
   githubRepositoryFromRemoteUrl,
   parseRemoteReleaseMarker,
   RELEASE_MARKER_QUERY,
+  requiredPlaySmokeTests,
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
+import {
+  RELEASE_BUILD_CHECKPOINT_PATH,
+  verifyReleaseBuildCheckpoint,
+} from "./lib/release-build-checkpoint.mjs";
 import {
   assertTriggerDeploymentReceipt,
   DOMAIN_ACCESS_DESTINATIONS,
   DOMAIN_CUTOVER_SMOKE_TESTS,
   TRIGGER_RECEIPT_PATH,
 } from "./lib/release-trigger-contract.mjs";
+import { buildCopyDeck } from "./lib/copy-deck.mjs";
+import { readPackageReleaseVersion } from "./lib/release-version.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const REQUIRED_SMOKE_TESTS = [
+const BASE_SMOKE_TESTS = [
   "public_routes",
   "studio_access",
   "non_owner_denial",
@@ -28,6 +36,7 @@ const REQUIRED_SMOKE_TESTS = [
   "oauth_callbacks",
   "security_headers",
   "owner_health",
+  "simulation_experience",
   ...DOMAIN_CUTOVER_SMOKE_TESTS,
 ];
 
@@ -143,6 +152,79 @@ const smokeResults = required("RELEASE_SMOKE_RESULTS")
   .split(",")
   .map((value) => value.trim())
   .filter(Boolean);
+
+const [
+  planBytes,
+  contentAttestationBytes,
+  releaseConfigBytes,
+  simulationManifestBytes,
+  deployableArtifactResult,
+  releaseBuildCheckpoint,
+  releaseBuildCheckpointBytes,
+  triggerReceiptBytes,
+] = await Promise.all([
+  readFile(path.join(root, "dist/release-plan.json")),
+  readFile(path.join(root, "content/public/anish-content.public.v1.attestation.json")),
+  readFile(path.join(root, "dist/server/wrangler.public.json")),
+  readFile(path.join(root, "content/presentation/simulation.v1.json")),
+  readVerifiedDeployableArtifactManifest(root),
+  verifyReleaseBuildCheckpoint(root),
+  readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
+  readFile(path.join(root, TRIGGER_RECEIPT_PATH)),
+]);
+const plan = JSON.parse(planBytes.toString("utf8"));
+const contentAttestation = JSON.parse(contentAttestationBytes.toString("utf8"));
+const releaseConfig = JSON.parse(releaseConfigBytes.toString("utf8"));
+const simulationManifest = JSON.parse(simulationManifestBytes.toString("utf8"));
+const triggerReceipt = JSON.parse(triggerReceiptBytes.toString("utf8"));
+const { copyVersion } = await buildCopyDeck(root);
+const releaseVersion = await readPackageReleaseVersion(root);
+if (
+  plan.schemaVersion !== "1.3" ||
+  plan.commitSha !== head ||
+  plan.contentVersion !== contentAttestation.contentVersion ||
+  plan.copyVersion !== copyVersion ||
+  plan.releaseVersion !== releaseVersion ||
+  releaseConfig.vars?.RELEASE_VERSION !== releaseVersion ||
+  !["compatible", "predeploy_bootstrap_required"].includes(
+    plan.publicationCheckpoint?.status,
+  ) ||
+  plan.checksums?.publicContentAttestationSha256 !== sha256(contentAttestationBytes) ||
+  plan.checksums?.preparedWorkerConfigSha256 !== sha256(releaseConfigBytes) ||
+  plan.checksums?.simulationCampaignManifestSha256 !==
+    sha256(simulationManifestBytes) ||
+  plan.checksums?.deployableArtifactManifestSha256 !==
+    sha256(deployableArtifactResult.bytes) ||
+  plan.deployableArtifacts?.artifactSetSha256 !==
+    deployableArtifactResult.manifest.artifactSetSha256 ||
+  plan.deployableArtifacts?.fileCount !==
+    deployableArtifactResult.manifest.fileCount ||
+  plan.deployableArtifacts?.totalBytes !==
+    deployableArtifactResult.manifest.totalBytes ||
+  plan.releaseBuildCheckpoint?.sha256 !==
+    sha256(releaseBuildCheckpointBytes) ||
+  plan.releaseBuildCheckpoint?.artifactSetSha256 !==
+    releaseBuildCheckpoint.artifactSetSha256 ||
+  plan.releaseBuildCheckpoint?.deployableManifestSha256 !==
+    releaseBuildCheckpoint.deployableManifestSha256 ||
+  plan.checksums?.releaseBuildCheckpointSha256 !==
+    sha256(releaseBuildCheckpointBytes) ||
+  releaseBuildCheckpoint.artifactSetSha256 !==
+    deployableArtifactResult.manifest.artifactSetSha256 ||
+  releaseBuildCheckpoint.deployableManifestSha256 !==
+    sha256(deployableArtifactResult.bytes) ||
+  releaseConfig.vars?.TRAVEL_ATLAS_MODE !== plan.travelAtlasMode ||
+  !["disabled", "atlas-v1"].includes(plan.travelAtlasMode)
+) {
+  throw new Error("The pre-release plan is missing, stale, or does not match this build.");
+}
+const simulation = assertSimulationReleaseRecord(plan.simulation, {
+  config: releaseConfig,
+  campaignVersion: simulationManifest.campaignVersion,
+});
+const REQUIRED_SMOKE_TESTS = requiredPlaySmokeTests(BASE_SMOKE_TESTS, {
+  travelEnabled: plan.travelAtlasMode === "atlas-v1",
+});
 if (
   smokeResults.length !== REQUIRED_SMOKE_TESTS.length ||
   REQUIRED_SMOKE_TESTS.some((name) => !smokeResults.includes(name)) ||
@@ -151,44 +233,6 @@ if (
   throw new Error(
     `RELEASE_SMOKE_RESULTS must contain exactly: ${REQUIRED_SMOKE_TESTS.join(",")}`,
   );
-}
-
-const [
-  planBytes,
-  contentAttestationBytes,
-  releaseConfigBytes,
-  deployableArtifactResult,
-  triggerReceiptBytes,
-] = await Promise.all([
-  readFile(path.join(root, "dist/release-plan.json")),
-  readFile(path.join(root, "content/public/anish-content.public.v1.attestation.json")),
-  readFile(path.join(root, "dist/server/wrangler.public.json")),
-  readVerifiedDeployableArtifactManifest(root),
-  readFile(path.join(root, TRIGGER_RECEIPT_PATH)),
-]);
-const plan = JSON.parse(planBytes.toString("utf8"));
-const contentAttestation = JSON.parse(contentAttestationBytes.toString("utf8"));
-const releaseConfig = JSON.parse(releaseConfigBytes.toString("utf8"));
-const triggerReceipt = JSON.parse(triggerReceiptBytes.toString("utf8"));
-if (
-  plan.schemaVersion !== "1.0" ||
-  plan.commitSha !== head ||
-  plan.contentVersion !== contentAttestation.contentVersion ||
-  !["compatible", "predeploy_bootstrap_required"].includes(
-    plan.publicationCheckpoint?.status,
-  ) ||
-  plan.checksums?.publicContentAttestationSha256 !== sha256(contentAttestationBytes) ||
-  plan.checksums?.preparedWorkerConfigSha256 !== sha256(releaseConfigBytes) ||
-  plan.checksums?.deployableArtifactManifestSha256 !==
-    sha256(deployableArtifactResult.bytes) ||
-  plan.deployableArtifacts?.artifactSetSha256 !==
-    deployableArtifactResult.manifest.artifactSetSha256 ||
-  plan.deployableArtifacts?.fileCount !==
-    deployableArtifactResult.manifest.fileCount ||
-  plan.deployableArtifacts?.totalBytes !==
-    deployableArtifactResult.manifest.totalBytes
-) {
-  throw new Error("The pre-release plan is missing, stale, or does not match this build.");
 }
 const verifiedTriggerReceipt = assertTriggerDeploymentReceipt(triggerReceipt, {
   head,
@@ -236,23 +280,30 @@ if (plan.previousWorkerVersion === currentVersion) {
 const finalPublication = remoteReleaseMarker();
 assertReleaseMarker(finalPublication, {
   head,
+  releaseVersion,
   contentVersion: plan.contentVersion,
   preparedAt: plan.preparedAt,
 });
 const finalDeployment = productionDeployment(currentVersion);
 
 const record = {
-  schemaVersion: "1.2",
+  schemaVersion: "1.5",
   releasedAt,
   smokeTestedAt,
   commitSha: head,
+  releaseVersion,
   contentVersion: plan.contentVersion,
+  travelAtlasMode: plan.travelAtlasMode,
+  copyVersion: plan.copyVersion,
   publicContentSha256: plan.publicContentSha256,
   deployableArtifacts: plan.deployableArtifacts,
+  releaseBuildCheckpoint: plan.releaseBuildCheckpoint,
   publicationCheckpoint: plan.publicationCheckpoint,
+  simulation,
   releasePublication: {
     status: finalPublication.status,
     releaseSha: finalPublication.details.releaseSha,
+    releaseVersion: finalPublication.details.releaseVersion,
     contentVersion: finalPublication.details.contentVersion,
     contentHash: finalPublication.details.contentHash,
     verifiedAt: finalPublication.checkedAt,
@@ -264,6 +315,7 @@ const record = {
     currentVersion,
     deploymentId: finalDeployment.deploymentId,
     trafficPercentage: finalDeployment.percentage,
+    travelAtlasMode: plan.travelAtlasMode,
   },
   nonVersionedTriggers: verifiedTriggerReceipt,
   domainCutover: {

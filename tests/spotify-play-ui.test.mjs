@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import {
+  grooveAngleForIndex,
+  grooveNavigationIntent,
+  normalizeGrooveAngle,
+  resolveGrooveTargetAngle,
+} from "../components/spotify/groove-motion.ts";
+import {
+  grooveCenter,
+  groovePoint,
+} from "../components/spotify/model.ts";
 
 const spotifySourceUrls = [
   "../components/SpotifyStream.tsx",
@@ -13,12 +23,8 @@ const spotifyCssUrl = new URL(
   "../components/SpotifyStream.module.css",
   import.meta.url,
 );
-const streamsSourceUrl = new URL(
-  "../components/PersonalStreams.tsx",
-  import.meta.url,
-);
 const playPageUrl = new URL(
-  "../components/play/ClassicPlayExperience.tsx",
+  "../components/play/room-screens/ListenRoomScreen.tsx",
   import.meta.url,
 );
 
@@ -28,16 +34,52 @@ async function spotifySource() {
   );
 }
 
-test("Spotify stays lazy and uses only ordinal Top Tracks fields", async () => {
-  const [spotify, streams] = await Promise.all([
+function circularDistance(left, right) {
+  const distance = Math.abs(
+    normalizeGrooveAngle(left) - normalizeGrooveAngle(right),
+  );
+  return Math.min(distance, 360 - distance);
+}
+
+test("Ranked Groove geometry aligns the needle with every ordinal mark", () => {
+  for (const total of [1, 2, 3, 7, 12]) {
+    for (let index = 0; index < total; index += 1) {
+      const point = groovePoint(index, total);
+      const pointAngle = normalizeGrooveAngle(
+        (Math.atan2(point.x - grooveCenter, grooveCenter - point.y) * 180) /
+          Math.PI,
+      );
+      assert.ok(
+        circularDistance(pointAngle, grooveAngleForIndex(index, total)) < 1e-8,
+        `rank ${index + 1} of ${total} should align with its needle angle`,
+      );
+    }
+  }
+});
+
+test("Ranked Groove target math takes the shortest path and honors half-turn intent", () => {
+  assert.equal(resolveGrooveTargetAngle(350, 10, "forward"), 370);
+  assert.equal(resolveGrooveTargetAngle(10, 350, "backward"), -10);
+  assert.equal(resolveGrooveTargetAngle(0, 180, "forward"), 180);
+  assert.equal(resolveGrooveTargetAngle(0, 180, "backward"), -180);
+  assert.equal(resolveGrooveTargetAngle(330, 150, "forward"), 510);
+  assert.equal(resolveGrooveTargetAngle(330, 150, "backward"), 150);
+  assert.equal(grooveNavigationIntent(0, 6), "forward");
+  assert.equal(grooveNavigationIntent(6, 0), "backward");
+});
+
+test("Spotify stays isolated to its lazy room screen and uses only ordinal Top Tracks fields", async () => {
+  const [spotify, screenRegistry, screen] = await Promise.all([
     spotifySource(),
-    readFile(streamsSourceUrl, "utf8"),
+    readFile(new URL("../components/play/room-platform/room-screen-registry.ts", import.meta.url), "utf8"),
+    readFile(playPageUrl, "utf8"),
   ]);
 
   assert.match(
-    streams,
-    /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/,
+    screenRegistry,
+    /listen: \(\) => import\("\.\.\/room-screens\/ListenRoomScreen"\)/,
   );
+  assert.match(screen, /<SpotifyStream fixture=\{fixture\} initialState=\{initialState\}/);
   assert.match(spotify, /fetch\("\/api\/connectors\/spotify"/);
   for (const range of ["short_term", "medium_term", "long_term"]) {
     assert.match(spotify, new RegExp(`id: "${range}"`));
@@ -60,6 +102,10 @@ test("Ranked Groove has semantic keyboard and mobile equivalents", async () => {
     spotify,
     /<svg[\s\S]*?aria-hidden="true"[\s\S]*?className=\{styles\.groove\}/,
   );
+  assert.match(spotify, /data-spotify-groove-needle/);
+  assert.match(spotify, /transform="rotate\(0 210 210\)"/);
+  assert.match(spotify, /animate\(motionState, \{/);
+  assert.doesNotMatch(spotify, /needleElement\.style\.transform/);
   assert.match(
     spotify,
     /<ol[\s\S]*?className=\{styles\.grooveControls\}[\s\S]*?Spotify Top Tracks in returned order/,
@@ -103,17 +149,14 @@ test("Spotify playback is consent-gated, official, and non-reactive", async () =
 });
 
 test("Play supplies a server-rendered Spotify no-JavaScript list", async () => {
-  const page = await readFile(playPageUrl, "utf8");
-
-  assert.match(page, /getPublicConnectorSnapshot\("spotify"\)/);
-  assert.match(page, /getSpotifyPublicFallback\(\)/);
-  assert.match(page, /spotifyNoScript=\{/);
-  assert.match(page, /<ol>[\s\S]*?open\.spotify\.com\/track/);
-  assert.match(page, /shortTerm\.tracks\.slice\(0, 12\)/);
-  assert.match(page, /Open Spotify profile/);
-  assert.match(page, /six optional public streams/);
-
-  const streams = await readFile(streamsSourceUrl, "utf8");
-  assert.match(streams, /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/);
-  assert.match(streams, /hidden=\{active !== "listen"\}/);
+  const [screen, direct, foundation] = await Promise.all([
+    readFile(playPageUrl, "utf8"),
+    readFile(new URL("../app/play/[objectSlug]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/play-screen-foundation.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(direct, /ROOM_PROVIDER_ADAPTERS\.listen\(query\)/);
+  assert.match(foundation, /getSpotifyScreenFoundation/);
+  assert.match(foundation, /getPublicConnectorSnapshot\("spotify"\)/);
+  assert.match(foundation, /getSpotifyPublicFallback\(\)/);
+  assert.match(screen, /<SpotifyStream fixture=\{fixture\} initialState=\{initialState\}/);
 });

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   assertRequiredValidationRuns,
   assertReleaseMarker,
+  assertSimulationReleaseRecord,
   exactMigrationNames,
   exactVersionIds,
   githubRepositoryFromRemoteUrl,
@@ -16,10 +17,16 @@ import {
 } from "./lib/release-contract.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
 import {
+  RELEASE_BUILD_CHECKPOINT_PATH,
+  verifyReleaseBuildCheckpoint,
+} from "./lib/release-build-checkpoint.mjs";
+import {
   assertTriggerDeploymentReceipt,
   createTriggerDeploymentReceipt,
   TRIGGER_RECEIPT_PATH,
 } from "./lib/release-trigger-contract.mjs";
+import { buildCopyDeck } from "./lib/copy-deck.mjs";
+import { readPackageReleaseVersion } from "./lib/release-version.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const configPath = path.join(root, "dist/server/wrangler.public.json");
@@ -94,22 +101,36 @@ async function verifyPlan() {
     planBytes,
     attestationBytes,
     configBytes,
+    simulationManifestBytes,
     deployableArtifactResult,
+    releaseBuildCheckpoint,
+    releaseBuildCheckpointBytes,
   ] = await Promise.all([
     readFile(planPath),
     readFile(path.join(root, "content/public/anish-content.public.v1.attestation.json")),
     readFile(configPath),
+    readFile(path.join(root, "content/presentation/simulation.v1.json")),
     readVerifiedDeployableArtifactManifest(root),
+    verifyReleaseBuildCheckpoint(root),
+    readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
   ]);
   const plan = JSON.parse(planBytes.toString("utf8"));
   const attestation = JSON.parse(attestationBytes.toString("utf8"));
   const config = JSON.parse(configBytes.toString("utf8"));
+  const simulationManifest = JSON.parse(simulationManifestBytes.toString("utf8"));
+  const { copyVersion } = await buildCopyDeck(root);
+  const releaseVersion = await readPackageReleaseVersion(root);
   if (
-    plan.schemaVersion !== "1.0" ||
+    plan.schemaVersion !== "1.3" ||
     plan.commitSha !== head ||
     plan.contentVersion !== attestation.contentVersion ||
+    plan.copyVersion !== copyVersion ||
+    plan.releaseVersion !== releaseVersion ||
+    config.vars?.RELEASE_VERSION !== releaseVersion ||
     plan.checksums?.publicContentAttestationSha256 !== sha256(attestationBytes) ||
     plan.checksums?.preparedWorkerConfigSha256 !== sha256(configBytes) ||
+    plan.checksums?.simulationCampaignManifestSha256 !==
+      sha256(simulationManifestBytes) ||
     plan.checksums?.deployableArtifactManifestSha256 !==
       sha256(deployableArtifactResult.bytes) ||
     plan.deployableArtifacts?.artifactSetSha256 !==
@@ -118,14 +139,32 @@ async function verifyPlan() {
       deployableArtifactResult.manifest.fileCount ||
     plan.deployableArtifacts?.totalBytes !==
       deployableArtifactResult.manifest.totalBytes ||
+    plan.releaseBuildCheckpoint?.sha256 !==
+      sha256(releaseBuildCheckpointBytes) ||
+    plan.releaseBuildCheckpoint?.artifactSetSha256 !==
+      releaseBuildCheckpoint.artifactSetSha256 ||
+    plan.releaseBuildCheckpoint?.deployableManifestSha256 !==
+      releaseBuildCheckpoint.deployableManifestSha256 ||
+    plan.checksums?.releaseBuildCheckpointSha256 !==
+      sha256(releaseBuildCheckpointBytes) ||
+    releaseBuildCheckpoint.artifactSetSha256 !==
+      deployableArtifactResult.manifest.artifactSetSha256 ||
+    releaseBuildCheckpoint.deployableManifestSha256 !==
+      sha256(deployableArtifactResult.bytes) ||
     config.vars?.RELEASE_SHA !== head ||
     config.vars?.CONTENT_VERSION !== plan.contentVersion ||
+    config.vars?.TRAVEL_ATLAS_MODE !== plan.travelAtlasMode ||
+    !["disabled", "atlas-v1"].includes(plan.travelAtlasMode) ||
     !["compatible", "predeploy_bootstrap_required"].includes(
       plan.publicationCheckpoint?.status,
     )
   ) {
     throw new Error("The ignored release plan is stale or does not match this build.");
   }
+  assertSimulationReleaseRecord(plan.simulation, {
+    config,
+    campaignVersion: simulationManifest.campaignVersion,
+  });
   const repository = configuredGithubRepository();
   if (plan.repository !== repository) {
     throw new Error("The release plan does not match the configured upstream repository.");
@@ -316,6 +355,7 @@ if (action === "migrate") {
     });
     assertReleaseMarker(remoteReleaseMarker(), {
       head,
+      releaseVersion: plan.releaseVersion,
       contentVersion: plan.contentVersion,
       preparedAt: plan.preparedAt,
     });

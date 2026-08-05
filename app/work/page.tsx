@@ -6,7 +6,9 @@ import {
   filterWorkArchiveRecords,
   legacyMapRedirectPath,
   matchingChildForQuery,
+  paginateWorkArchiveRecords,
   parseWorkArchiveQuery,
+  workArchiveHref,
   type WorkSearchParams,
 } from "@/lib/work-archive-query";
 import {
@@ -18,14 +20,15 @@ import { workBuckets } from "@/lib/work-groups";
 import { workArchiveRecordsFrom, type WorkArchiveRecord } from "@/lib/work-index";
 import { getPublicContentView } from "@/lib/server/public-content";
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
-import { WorkFilterBehavior } from "./WorkFilterBehavior";
+import { WorkBodyBehavior } from "./WorkBodyBehavior";
+import { WorkMobileFilters } from "./WorkMobileFilters";
 import { WorkTimeline } from "./WorkTimeline";
+import { SITE_COPY } from "@/lib/copy";
 import styles from "./work.module.css";
 
 export const dynamic = "force-dynamic";
 
-const workDescription =
-  "Browse Anish Shah’s applied AI systems, curricula, technical writing, open-source contributions, and public sessions.";
+const workDescription = SITE_COPY.work["seo-description"];
 
 export async function generateMetadata({
   searchParams,
@@ -34,7 +37,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const params = await searchParams;
   return publicPageMetadata({
-    title: "Work",
+    title: SITE_COPY.work["seo-title"],
     description: workDescription,
     path: "/work",
     noindex: hasPublicQuery(params),
@@ -65,19 +68,12 @@ export default async function WorkPage({
       collator.compare(left.title, right.title),
   );
   const filtered = filterWorkArchiveRecords(allWorks, query);
+  const page = paginateWorkArchiveRecords(filtered, query.page);
   const timelineRecords = filterWorkArchiveRecords(allWorks, {
     ...query,
     bucket: "",
     year: "",
   });
-  const totalForms = allWorks.reduce(
-    (count, work) => count + work.formCount,
-    0,
-  );
-  const filteredForms = filtered.reduce(
-    (count, work) => count + work.formCount,
-    0,
-  );
   const options = {
     buckets: workBuckets.map((bucket) => ({
       value: bucket.id,
@@ -87,8 +83,6 @@ export default async function WorkPage({
     topics: countWorkFacetOptions(allWorks, "theme"),
     years: availableYears(allWorks),
     formats: countWorkFacetOptions(allWorks, "media"),
-    organizations: countWorkFacetOptions(allWorks, "ecosystem"),
-    roles: countWorkFacetOptions(allWorks, "contribution"),
   };
   const activeFilterCount = [
     query.bucket,
@@ -98,146 +92,144 @@ export default async function WorkPage({
     query.organization,
     query.role,
   ].filter(Boolean).length;
-  const secondaryFilterCount = [query.organization, query.role].filter(
-    Boolean,
-  ).length;
+  const secondaryFilterCount = query.format ? 1 : 0;
   const hasScopedResults = Boolean(
     query.query || activeFilterCount || query.practice,
   );
-  const resultLabel = `${filtered.length} ${
-    filtered.length === 1 ? "body of work" : "bodies of work"
-  } · ${filteredForms} public ${filteredForms === 1 ? "form" : "forms"}`;
+  if (query.page > 1 && !hasScopedResults) {
+    permanentRedirect("/work");
+  }
+  const selectedBucket = workBuckets.find(
+    (bucket) => bucket.id === query.bucket,
+  );
+  const resultLabel = filtered.length
+    ? page.totalPages > 1
+      ? `Showing ${page.rangeStart}—${page.rangeEnd} of ${filtered.length} projects`
+      : `${filtered.length} ${filtered.length === 1 ? "project" : "projects"}`
+    : "No projects found";
   const explorerHeading = query.query
     ? `Results for “${query.query}”`
-    : activeFilterCount
-      ? "Filtered work"
-      : "All work, inside four bodies.";
+    : selectedBucket && query.year
+      ? `${selectedBucket.title} · ${query.year}`
+      : selectedBucket
+        ? selectedBucket.title
+        : query.year
+          ? `Projects from ${query.year}`
+          : activeFilterCount
+            ? SITE_COPY.work["index-filtered-heading"]
+            : SITE_COPY.work["index-default-heading"];
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
       <header className={styles.masthead}>
         <p className={styles.eyebrow}>
-          {allWorks.length} bodies of work · {totalForms} public forms ·
-          2021—now
+          {SITE_COPY.work["masthead-eyebrow"]}
         </p>
         <div className={styles.mastheadBody}>
-          <h1>One body of work. Every public form attached.</h1>
-          <p>
-            Systems, curricula, technical writing, and public sessions are the
-            durable units. Recordings, translations, repositories, and
-            appearances remain nested beneath them.
-          </p>
+          <h1>{SITE_COPY.work["masthead-title"]}</h1>
+          <p>{SITE_COPY.work["masthead-summary"]}</p>
         </div>
       </header>
 
       <section className={styles.tools} aria-labelledby="work-search-title">
-        <form
-          action="/work#work-index"
-          method="get"
-          className={styles.filterForm}
-        >
-          {query.practice ? (
-            <input name="practice" type="hidden" value={query.practice} />
-          ) : null}
-          <label className={styles.search}>
-            <span id="work-search-title">Search work and public forms</span>
-            <input
-              defaultValue={query.query}
-              name="q"
-              placeholder="Agents, evaluation, MCP, LangChain…"
-              type="search"
-            />
-          </label>
+        <div className={styles.filterToolbar}>
+          <form
+            action="/work#work-index"
+            method="get"
+            className={styles.filterForm}
+            id="work-search-form"
+          >
+            {query.practice ? (
+              <input name="practice" type="hidden" value={query.practice} />
+            ) : null}
+            {query.organization ? (
+              <input name="organization" type="hidden" value={query.organization} />
+            ) : null}
+            {query.role ? (
+              <input name="role" type="hidden" value={query.role} />
+            ) : null}
+            <label className={styles.search}>
+              <span id="work-search-title">{SITE_COPY.work["search-label"]}</span>
+              <input
+                defaultValue={query.query}
+                name="q"
+                placeholder={SITE_COPY.work["search-placeholder"]}
+                type="search"
+              />
+            </label>
 
-          <details className={styles.filterDisclosure} id="work-filters">
-            <summary>
-              <span>Filters</span>
-              <span>
-                {activeFilterCount
-                  ? `${activeFilterCount} active`
-                  : "Body, theme, year, medium"}
-              </span>
-            </summary>
-            <div className={styles.filterBody}>
-              <div className={styles.primaryFilters}>
+            <div className={styles.primaryFilters}>
+              <FilterSelect
+                allLabel="All lines"
+                label="Line of work"
+                name="bucket"
+                value={query.bucket}
+                options={options.buckets}
+              />
+              <FilterSelect
+                allLabel="All years"
+                label="Year"
+                name="year"
+                value={query.year}
+                options={options.years}
+              />
+              <FilterSelect
+                allLabel="All topics"
+                label="Topic"
+                name="topic"
+                value={query.topic}
+                options={options.topics}
+              />
+            </div>
+
+            <details
+              className={styles.moreFilters}
+              id="work-more-filters"
+              open={Boolean(query.format)}
+            >
+              <summary>
+                More filters
+                {secondaryFilterCount
+                  ? ` · ${secondaryFilterCount} active`
+                  : ""}
+              </summary>
+              <div className={styles.secondaryFilters}>
                 <FilterSelect
-                  allLabel="All bodies"
-                  label="Body"
-                  name="bucket"
-                  value={query.bucket}
-                  options={options.buckets}
-                />
-                <FilterSelect
-                  allLabel="All themes"
-                  label="Theme"
-                  name="topic"
-                  value={query.topic}
-                  options={options.topics}
-                />
-                <FilterSelect
-                  allLabel="All years"
-                  label="Year"
-                  name="year"
-                  value={query.year}
-                  options={options.years}
-                />
-                <FilterSelect
-                  allLabel="All media"
-                  label="Medium"
+                  allLabel="All formats"
+                  label="Format"
                   name="format"
                   value={query.format}
                   options={options.formats}
                 />
               </div>
+            </details>
 
-              <details className={styles.moreFilters} id="work-more-filters">
-                <summary>
-                  More filters
-                  {secondaryFilterCount
-                    ? ` · ${secondaryFilterCount} active`
-                    : ""}
-                </summary>
-                <div className={styles.secondaryFilters}>
-                  <FilterSelect
-                    allLabel="All ecosystems"
-                    label="Ecosystem"
-                    name="organization"
-                    value={query.organization}
-                    options={options.organizations}
-                  />
-                  <FilterSelect
-                    allLabel="All contributions"
-                    label="Contribution"
-                    name="role"
-                    value={query.role}
-                    options={options.roles}
-                  />
-                </div>
-              </details>
-              <WorkFilterBehavior
-                filtersId="work-filters"
-                moreFiltersId="work-more-filters"
-              />
-
-              <button type="submit">Show work</button>
+            <div className={styles.filterActions}>
+              <button type="submit">{SITE_COPY.work["filter-submit"]}</button>
+              <Link className={styles.clear} href="/work" prefetch={false}>
+                {SITE_COPY.work["clear-search"]}
+              </Link>
             </div>
-          </details>
-
-          <Link className={styles.clear} href="/work" prefetch={false}>
-            Clear
-          </Link>
-        </form>
+          </form>
+          <WorkMobileFilters
+            activeFilterCount={secondaryFilterCount}
+            fallbackFiltersId="work-more-filters"
+            formId="work-search-form"
+            options={options}
+            query={query}
+          />
+        </div>
       </section>
 
       <WorkTimeline query={query} records={timelineRecords} />
 
-      <section
-        aria-labelledby="work-index-title"
-        className={styles.index}
-        id="work-index"
-      >
-        <header className={styles.indexHeader}>
-          <div>
+      {hasScopedResults ? (
+        <section
+          aria-labelledby="work-index-title"
+          className={styles.index}
+          id="work-index"
+        >
+          <header className={styles.indexHeader}>
             <p
               aria-atomic="true"
               aria-live="polite"
@@ -249,69 +241,131 @@ export default async function WorkPage({
             <h2 id="work-index-title" tabIndex={-1}>
               {explorerHeading}
             </h2>
-          </div>
-          <p>Open a line to inspect every work and its public forms.</p>
-        </header>
-        <FilteredResultFocus
-          active={hasScopedResults || query.page > 1}
-          targetId="work-index-title"
-        />
+          </header>
+          <FilteredResultFocus
+            active
+            key={workArchiveHref(query)}
+            targetId="work-index-title"
+          />
 
-        <div className={styles.bodyIndex}>
-          {workBuckets.map((bucket, bucketIndex) => {
-            const works = filtered.filter(
-              (work) => work.bucket === bucket.id,
-            );
-            if (!works.length && hasScopedResults) return null;
-            const formCount = works.reduce(
-              (count, work) => count + work.formCount,
-              0,
-            );
-            return (
-              <details
-                className={styles.body}
-                data-work-body={bucket.id}
-                key={bucket.id}
-                open={
-                  hasScopedResults ? works.length > 0 : bucketIndex === 0
-                }
-              >
-                <summary>
-                  <div>
-                    <h3>{bucket.title}</h3>
-                    <p>{bucket.statement}</p>
-                  </div>
-                  <span>
-                    {works.length} {works.length === 1 ? "work" : "works"} ·{" "}
-                    {formCount} {formCount === 1 ? "form" : "forms"}
-                  </span>
-                  <i aria-hidden="true">+</i>
-                </summary>
-                <ol className={styles.workList}>
-                  {works.map((work) => (
-                    <WorkRow
-                      key={work.id}
-                      query={query.query}
-                      work={work}
-                    />
-                  ))}
-                </ol>
-              </details>
-            );
-          })}
-        </div>
-
-        {!filtered.length ? (
-          <div className={styles.empty}>
-            <p>No work matches those filters.</p>
-            <Link href="/work" prefetch={false}>
-              Clear the search
-            </Link>
+          <div className={styles.bodyIndex}>
+            {workBuckets.map((bucket) => {
+              const works = page.items.filter(
+                (work) => work.bucket === bucket.id,
+              );
+              if (!works.length) return null;
+              return (
+                <details
+                  className={styles.body}
+                  data-default-open="true"
+                  data-work-body={bucket.id}
+                  key={bucket.id}
+                  open
+                >
+                  <summary>
+                    <div>
+                      <h3>{bucket.title}</h3>
+                    </div>
+                    <i aria-hidden="true">+</i>
+                  </summary>
+                  <ol className={styles.workList}>
+                    {works.map((work) => (
+                      <WorkRow
+                        key={work.id}
+                        query={query.query}
+                        work={work}
+                      />
+                    ))}
+                  </ol>
+                </details>
+              );
+            })}
           </div>
-        ) : null}
-      </section>
+
+          <WorkBodyBehavior />
+
+          {!filtered.length ? (
+            <div className={styles.empty}>
+              <p>{SITE_COPY.work["no-results"]}</p>
+              <Link href="/work" prefetch={false}>
+                {SITE_COPY.work["clear-search"]}
+              </Link>
+            </div>
+          ) : null}
+
+          {page.totalPages > 1 ? (
+            <WorkPagination page={page.currentPage} query={query} totalPages={page.totalPages} />
+          ) : null}
+        </section>
+      ) : null}
     </main>
   );
+}
+
+function WorkPagination({
+  page,
+  query,
+  totalPages,
+}: {
+  page: number;
+  query: ReturnType<typeof parseWorkArchiveQuery>;
+  totalPages: number;
+}) {
+  const pages = paginationWindow(page, totalPages);
+  return (
+    <nav aria-label="Work result pages" className={styles.pagination}>
+      {page > 1 ? (
+        <Link
+          href={`${workArchiveHref(query, { page: page - 1 })}#work-index`}
+          prefetch={false}
+          rel="prev"
+        >
+          Previous
+        </Link>
+      ) : (
+        <span aria-disabled="true">Previous</span>
+      )}
+      <ol>
+        {pages.map((pageNumber) => (
+          <li key={pageNumber}>
+            {pageNumber === page ? (
+              <span aria-current="page">{pageNumber}</span>
+            ) : (
+              <Link
+                aria-label={`Page ${pageNumber}`}
+                href={`${workArchiveHref(query, { page: pageNumber })}#work-index`}
+                prefetch={false}
+              >
+                {pageNumber}
+              </Link>
+            )}
+          </li>
+        ))}
+      </ol>
+      {page < totalPages ? (
+        <Link
+          href={`${workArchiveHref(query, { page: page + 1 })}#work-index`}
+          prefetch={false}
+          rel="next"
+        >
+          Next
+        </Link>
+      ) : (
+        <span aria-disabled="true">Next</span>
+      )}
+    </nav>
+  );
+}
+
+function paginationWindow(currentPage: number, totalPages: number) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+  const start = Math.min(
+    Math.max(1, currentPage - 2),
+    Math.max(1, totalPages - 4),
+  );
+  return Array.from({ length: 5 }, (_, index) => start + index);
 }
 
 function WorkRow({
@@ -328,6 +382,9 @@ function WorkRow({
     .filter(Boolean)
     .slice(0, 2)
     .join(" · ");
+  const support = matchingChild
+    ? `Matched: ${matchingChild.displayTitle}`
+    : work.role || medium;
 
   return (
     <li data-work-id={work.id}>
@@ -341,16 +398,7 @@ function WorkRow({
         <span className={styles.year}>{periodLabel(work)}</span>
         <span className={styles.workTitle}>
           <strong>{work.title}</strong>
-          {matchingChild ? (
-            <small>Matched public record: {matchingChild.displayTitle}</small>
-          ) : (
-            <small>{work.role}</small>
-          )}
-        </span>
-        <span className={styles.workMeta}>
-          {medium}
-          {medium ? " · " : ""}
-          {work.formCount} {work.formCount === 1 ? "form" : "forms"}
+          {support ? <small>{support}</small> : null}
         </span>
         <i aria-hidden="true">↗</i>
       </Link>

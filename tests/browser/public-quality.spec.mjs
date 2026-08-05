@@ -1,10 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { installDiscogsFixture } from "./fixtures/discogs.mjs";
 
 const routes = ["/", "/work", "/play", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
-const roomMode = process.env.BROWSER_PLAY_MODE === "room";
 
 async function pageOverflow(page) {
   return page.evaluate(() => {
@@ -41,6 +39,20 @@ async function pageOverflow(page) {
       offenders,
     };
   });
+}
+
+function parseNeedleAngle(transform) {
+  const match = /^rotate\((-?\d+(?:\.\d+)?) 210 210\)$/.exec(
+    transform ?? "",
+  );
+  if (!match) throw new Error(`Unexpected Spotify needle transform: ${transform}`);
+  return Number(match[1]);
+}
+
+function circularAngleDistance(left, right) {
+  const normalized = (angle) => ((angle % 360) + 360) % 360;
+  const distance = Math.abs(normalized(left) - normalized(right));
+  return Math.min(distance, 360 - distance);
 }
 
 for (const width of widths) {
@@ -117,62 +129,177 @@ test("skip navigation reaches the main content", async ({ page }) => {
   await expect(page.locator("#main")).toBeVisible();
 });
 
-test("Spotify rank navigation and consent remain keyboard-first", async ({ page }) => {
-  test.skip(roomMode, "Classic Play owns the tabbed Spotify interaction.");
-  const timestamp = "2026-08-02T12:00:00.000Z";
-  const tracks = [
-    {
-      id: "track-one",
-      position: 1,
-      title: "First Track",
-      artists: [{ id: "artist-one", name: "First Artist" }],
-      album: {
-        id: "album-one",
-        title: "First Album",
-        releaseYear: 2025,
-        artwork: null,
-      },
-      durationMs: 181_000,
-      explicit: false,
-    },
-    {
-      id: "track-two",
-      position: 2,
-      title: "Second Track",
-      artists: [{ id: "artist-two", name: "Second Artist" }],
-      album: {
-        id: "album-two",
-        title: "Second Album",
-        releaseYear: 2024,
-        artwork: null,
-      },
-      durationMs: 202_000,
-      explicit: true,
-    },
-  ];
-  await page.route("**/api/connectors/spotify", async (route) => {
-    await route.fulfill({
-      contentType: "application/json",
-      status: 200,
-      body: JSON.stringify({
-        status: "ready",
-        fetchedAt: timestamp,
-        stale: false,
-        payload: {
-          provider: "spotify",
-          profileUrl: "https://open.spotify.com/user/portfolio-owner",
-          coverage: "Spotify-calculated affinity; not play counts",
-          windows: {
-            short_term: { tracks },
-            medium_term: { tracks },
-            long_term: { tracks },
-          },
-          syncedAt: timestamp,
-          freshUntil: "2026-08-03T00:00:00.000Z",
-        },
-      }),
-    });
+test("the primary navigation signal lens follows the active route", async ({
+  page,
+}) => {
+  await page.goto("/work", { waitUntil: "networkidle" });
+  const navigation = page.getByRole("navigation", {
+    name: "Primary navigation",
   });
+  const work = navigation.getByRole("link", { name: "Work" });
+  const play = navigation.getByRole("link", { name: "Play" });
+  const indicator = navigation.locator("[data-primary-navigation-indicator]");
+
+  await expect(navigation).toHaveAttribute("data-enhanced", "true");
+  await expect(navigation).toHaveAttribute("data-active-key", "work");
+  await expect(work).toHaveAttribute("aria-current", "page");
+  await expect(play).not.toHaveAttribute("aria-current", "page");
+  await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
+
+  await play.click();
+  await expect(page).toHaveURL(/\/play$/);
+  await expect(navigation).toHaveAttribute("data-active-key", "play");
+  await expect(play).toHaveAttribute("aria-current", "page");
+  await expect(work).not.toHaveAttribute("aria-current", "page");
+  await expect.poll(() => signalLensAlignment(navigation)).toBeLessThanOrEqual(1);
+  await expect(indicator).toBeVisible();
+});
+
+async function signalLensAlignment(navigation) {
+  return navigation.evaluate((element) => {
+    const active = element.querySelector('[aria-current="page"]');
+    const indicator = element.querySelector(
+      "[data-primary-navigation-indicator]",
+    );
+    if (!(active instanceof HTMLElement) || !(indicator instanceof HTMLElement)) {
+      return Number.POSITIVE_INFINITY;
+    }
+    const activeBounds = active.getBoundingClientRect();
+    const indicatorBounds = indicator.getBoundingClientRect();
+    return Math.max(
+      Math.abs(activeBounds.left - indicatorBounds.left),
+      Math.abs(activeBounds.width - indicatorBounds.width),
+    );
+  });
+}
+
+test("mobile Work keeps search, calendar years, and filter-sheet focus synchronized", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/work", { waitUntil: "networkidle" });
+
+  const search = page.getByRole("searchbox", {
+    name: "Search the work",
+  });
+  const calendar = page.getByRole("region", {
+    name: /Work timeline table/,
+  });
+  await expect(search).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Line of work" }),
+  ).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Year" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Topic" })).toBeVisible();
+  await expect(calendar).toBeVisible();
+  const calendarBounds = await calendar.boundingBox();
+  expect(calendarBounds?.y ?? Infinity).toBeLessThan(844);
+  await expect(page.locator('[data-work-year="2026"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(
+    page.getByRole("group", {
+      name: "Choose a year to view in the work calendar",
+    }),
+  ).toHaveAttribute("data-ready", "true");
+
+  await calendar.evaluate((frame) => {
+    const header = frame.querySelector('[data-timeline-year="2024"]');
+    const sticky = frame.querySelector("thead th:first-child");
+    if (!(header instanceof HTMLElement) || !(sticky instanceof HTMLElement)) {
+      throw new Error("The mobile calendar is missing its 2024 column.");
+    }
+    frame.scrollTo({ left: header.offsetLeft - sticky.offsetWidth });
+  });
+  await expect(page.locator('[data-work-year="2024"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  const railAlignment = await page.locator("[data-year-rail]").evaluate(
+    (rail) => {
+      const selected = rail.querySelector('[data-work-year="2024"]');
+      if (!(selected instanceof HTMLElement)) return Infinity;
+      const railBox = rail.getBoundingClientRect();
+      const buttonBox = selected.getBoundingClientRect();
+      return Math.abs(
+        buttonBox.left + buttonBox.width / 2 -
+          (railBox.left + railBox.width / 2),
+      );
+    },
+  );
+  expect(railAlignment).toBeLessThanOrEqual(2);
+
+  const filters = page.getByRole("button", { name: /^Filters/ });
+  await filters.click();
+  const dialog = page.getByRole("dialog", { name: "Filter the calendar" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("combobox", { name: "Format" })).toBeVisible();
+  await expect(
+    dialog.getByRole("combobox", { name: "Line of work" }),
+  ).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Close filters" }).click();
+  await expect(filters).toBeFocused();
+
+  await expect(page.locator("details[data-work-body][open]")).toHaveCount(0);
+  await expect(page.locator("li[data-work-id]")).toHaveCount(0);
+  await expect(page.locator("#work-index")).toHaveCount(0);
+
+  await calendar
+    .getByRole("link", {
+      name: /projects in Agent systems & open source, 2024/,
+    })
+    .click();
+  await expect(page).toHaveURL(
+    /\/work\?bucket=products-open-source&year=2024#work-index$/,
+  );
+  await expect(page.locator("li[data-work-id]").first()).toBeVisible();
+  await expect(page.locator("#work-index-title")).toBeFocused();
+
+  await page.goto("/work?year=2024", { waitUntil: "networkidle" });
+  await expect(page.locator("li[data-work-id]")).toHaveCount(24);
+  await page.getByRole("link", { name: "Page 2" }).click();
+  await expect(page).toHaveURL(/\/work\?year=2024&page=2#work-index$/);
+  await expect(page.locator("li[data-work-id]").first()).toBeVisible();
+  await expect(page.locator("#work-index-title")).toBeFocused();
+
+  const overflow = await pageOverflow(page);
+  expect(overflow.offenders).toEqual([]);
+  expect(overflow.documentWidth).toBeLessThanOrEqual(391);
+});
+
+test("Work supporting material is mobile-collapsible and fragment-safe", async ({
+  page,
+}) => {
+  const route = "/work/architecting-and-orchestrating-ai-agents-series";
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(route, { waitUntil: "networkidle" });
+  const appearances = page.locator(
+    "details[data-supporting-disclosure]:has(#appearances-title)",
+  );
+  await expect(appearances).not.toHaveAttribute("open", "");
+  await expect(appearances.locator(":scope > ol")).not.toBeVisible();
+  await appearances.locator(":scope > summary").click();
+  await expect(appearances.locator(":scope > ol")).toBeVisible();
+  const firstAnchor = await appearances.locator(":scope > ol > li").first().getAttribute("id");
+  expect(firstAnchor).toBeTruthy();
+
+  await page.goto(`${route}#${firstAnchor}`, { waitUntil: "networkidle" });
+  const anchored = page.locator(
+    "details[data-supporting-disclosure]:has(#appearances-title)",
+  );
+  await expect(anchored).toHaveAttribute("open", "");
+  await expect(page.locator(`[id="${firstAnchor}"]`)).toBeVisible();
+
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.goto(route, { waitUntil: "networkidle" });
+  const desktopAppearances = page.locator(
+    "details[data-supporting-disclosure]:has(#appearances-title)",
+  );
+  await expect(desktopAppearances.locator(":scope > ol")).toBeVisible();
+});
+
+test("Spotify rank navigation and consent remain keyboard-first", async ({ page }) => {
   await page.route("https://open.spotify.com/embed/**", async (route) => {
     await route.fulfill({
       contentType: "text/html",
@@ -181,109 +308,163 @@ test("Spotify rank navigation and consent remain keyboard-first", async ({ page 
     });
   });
 
-  await page.goto("/play", { waitUntil: "networkidle" });
-  await page.getByRole("tab", { name: /Listen.*Spotify/i }).click();
+  await page.goto("/play/listen", { waitUntil: "networkidle" });
   await expect(page.getByRole("heading", { name: "Top Tracks, in returned order." })).toBeVisible();
   await expect(page.locator("iframe")).toHaveCount(0);
 
-  const firstRank = page.getByRole("button", {
-    name: "Rank 1, First Track by First Artist",
+  const rankList = page.getByRole("list", {
+    name: "Spotify Top Tracks in returned order",
   });
-  const secondRank = page.getByRole("button", {
-    name: "Rank 2, Second Track by Second Artist",
-  });
+  const ranks = rankList.getByRole("button");
+  await expect(ranks).toHaveCount(12);
+  const firstRank = ranks.nth(0);
+  const secondRank = ranks.nth(1);
+  await expect(firstRank).toHaveAccessibleName(/^Rank 1, .+ by .+$/);
+  await expect(secondRank).toHaveAccessibleName(/^Rank 2, .+ by .+$/);
   await firstRank.focus();
-  await firstRank.press("End");
+  await firstRank.press("ArrowRight");
   await expect(secondRank).toBeFocused();
+  await expect(secondRank).toHaveAttribute("aria-pressed", "true");
 
   const listenHere = page.getByRole("button", { name: "Listen here" }).first();
   await listenHere.click();
   await expect(page.locator("iframe")).toHaveCount(0);
   await page.getByRole("button", { name: "Load Spotify player" }).click();
-  await expect(page.locator('iframe[title*="Second Track"]')).toHaveCount(1);
+  await expect(page.locator('iframe[title^="Listen to "]')).toHaveCount(1);
   await page.getByRole("button", { name: "Close player" }).click();
   await expect(page.locator("iframe")).toHaveCount(0);
   await expect(listenHere).toBeFocused();
 });
 
-test("Discogs remains lazy and the six Play streams use keyboard selection", async ({ page }) => {
-  test.skip(roomMode, "Classic Play owns the tabbed Discogs interaction.");
-  const requests = [];
-  await installDiscogsFixture(page, requests);
-  await page.goto("/play", { waitUntil: "networkidle" });
+test("Spotify groove needle stays continuous through interrupted selections", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.goto("/play/listen", { waitUntil: "networkidle" });
 
-  const tabs = page.getByRole("tab");
-  await expect(tabs).toHaveCount(6);
-  await expect(tabs).toHaveText([
-    /Watch\s*MyAnimeList/,
-    /Read\s*Hardcover/,
-    /Listen\s*Spotify/,
-    /Collect\s*Discogs/,
-    /Play\s*Steam/,
-    /Move\s*Strava/,
-  ]);
-  expect(requests).toHaveLength(0);
+  const needle = page.locator("[data-spotify-groove-needle]");
+  const controls = page.locator("[data-spotify-groove-controls] button");
+  await expect(controls).toHaveCount(12);
+  await expect(needle).toHaveAttribute("transform", /^rotate\(/);
 
-  const watch = page.getByRole("tab", { name: /Watch.*MyAnimeList/i });
-  const read = page.getByRole("tab", { name: /Read.*Hardcover/i });
-  const listen = page.getByRole("tab", { name: /Listen.*Spotify/i });
-  const collect = page.getByRole("tab", { name: /Collect.*Discogs/i });
-  await watch.focus();
-  await watch.press("ArrowRight");
-  await expect(read).toBeFocused();
-  await read.press("ArrowRight");
-  await expect(listen).toBeFocused();
-  await listen.press("ArrowRight");
-  await expect(collect).toBeFocused();
-  await expect(collect).toHaveAttribute("aria-selected", "true");
-  await expect(
-    page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
-  ).toBeVisible();
-  await expect.poll(() => requests.length).toBe(1);
-  await expect(page).toHaveURL(/\/play\?stream=collect$/);
+  const interruptionJumps = await page.evaluate(async () => {
+    const needleElement = document.querySelector(
+      "[data-spotify-groove-needle]",
+    );
+    const buttons = [
+      ...document.querySelectorAll("[data-spotify-groove-controls] button"),
+    ];
+    if (!(needleElement instanceof SVGGElement) || buttons.length !== 12) {
+      throw new Error("The Spotify groove controls are not ready.");
+    }
+    const angle = () => {
+      const match = /^rotate\((-?\d+(?:\.\d+)?) 210 210\)$/.exec(
+        needleElement.getAttribute("transform") ?? "",
+      );
+      if (!match) throw new Error("The Spotify needle rotation is malformed.");
+      return Number(match[1]);
+    };
+    const distance = (left, right) => {
+      const normalize = (value) => ((value % 360) + 360) % 360;
+      const difference = Math.abs(normalize(left) - normalize(right));
+      return Math.min(difference, 360 - difference);
+    };
+    const sequence = [6, 1, 10, 3, 8, 0, 11, 5, 2, 9, 4];
+    const jumps = [];
+    for (const index of sequence) {
+      const before = angle();
+      buttons[index].click();
+      const after = angle();
+      jumps.push(distance(before, after));
+      await new Promise((resolve) => window.setTimeout(resolve, 12));
+    }
+    return jumps;
+  });
+
+  expect(Math.max(...interruptionJumps)).toBeLessThanOrEqual(1);
+  await expect.poll(async () => {
+    return circularAngleDistance(
+      parseNeedleAngle(await needle.getAttribute("transform")),
+      120,
+    );
+  }).toBeLessThanOrEqual(1);
+  await expect(controls.nth(4)).toHaveAttribute("aria-pressed", "true");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await controls.nth(10).click();
+  expect(
+    circularAngleDistance(
+      parseNeedleAngle(await needle.getAttribute("transform")),
+      300,
+    ),
+  ).toBeLessThanOrEqual(1);
+
+  await page.getByRole("button", { name: "Last approximately 6 months" }).click();
+  expect(
+    circularAngleDistance(
+      parseNeedleAngle(await needle.getAttribute("transform")),
+      0,
+    ),
+  ).toBeLessThanOrEqual(1);
 });
 
-test("Play stream deep links survive reload and reject unknown selections", async ({ page }) => {
-  test.skip(roomMode, "Classic Play owns stream query deep links.");
-  const requests = [];
-  await installDiscogsFixture(page, requests);
+test("Discogs remains lazy until the Record crate route is selected", async ({ page }) => {
+  const connectorRequests = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/connectors/discogs") {
+      connectorRequests.push(request.url());
+    }
+  });
+  await page.goto("/play", { waitUntil: "networkidle" });
+  expect(connectorRequests).toHaveLength(0);
+  await page.locator('[data-room-object-link="collect"]').click();
+  await expect(page).toHaveURL(/\/play\/collect$/);
+  await expect(
+    page.getByRole("region", { name: "Discogs physical catalog" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Crate Archive" }),
+  ).toBeVisible();
+  expect(connectorRequests).toHaveLength(0);
+});
+
+test("legacy Play stream links redirect permanently and reject unknown selections", async ({
+  page,
+  request,
+}) => {
+  const redirect = await request.get("/play?stream=collect", {
+    maxRedirects: 0,
+  });
+  expect(redirect.status()).toBe(308);
+  expect(new URL(redirect.headers().location).pathname).toBe("/play/collect");
 
   await page.goto("/play?stream=collect", { waitUntil: "networkidle" });
-  const collect = page.getByRole("tab", { name: /Collect.*Discogs/i });
-  await expect(collect).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(/\/play\/collect$/);
   await expect(
-    page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
+    page.getByRole("region", { name: "Discogs physical catalog" }),
   ).toBeVisible();
-  await expect.poll(() => requests.length).toBe(1);
 
   await page.reload({ waitUntil: "networkidle" });
-  await expect(collect).toHaveAttribute("aria-selected", "true");
   await expect(
-    page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
+    page.getByRole("region", { name: "Discogs physical catalog" }),
   ).toBeVisible();
-  await expect.poll(() => requests.length).toBe(2);
 
   await page.goto("/play?stream=unknown", { waitUntil: "networkidle" });
-  await expect(
-    page.getByRole("tab", { name: /Watch.*MyAnimeList/i }),
-  ).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(/\/play\?stream=unknown$/);
+  await expect(page.locator("[data-room-overview]")).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
     "noindex, follow",
   );
 });
 
-test("Discogs Pattern and Gallery support filters and pagination", async ({ page }) => {
-  test.skip(roomMode, "Classic Play exercises the shared Discogs presentation with browser fixtures.");
-  const requests = [];
-  await installDiscogsFixture(page, requests);
-  await page.goto("/play", { waitUntil: "networkidle" });
-  await page.getByRole("tab", { name: /Collect.*Discogs/i }).click();
+test("Discogs Overview and Browse all support filters and pagination", async ({ page }) => {
+  await page.goto("/play/collect", { waitUntil: "networkidle" });
 
   const physicalTotal = page.getByText("physical items", { exact: true }).locator("..");
   const releaseTotal = page.getByText("distinct releases", { exact: true }).locator("..");
-  await expect(physicalTotal.getByText("29", { exact: true })).toBeVisible();
-  await expect(releaseTotal.getByText("26", { exact: true })).toBeVisible();
+  await expect(physicalTotal.getByText("16", { exact: true })).toBeVisible();
+  await expect(releaseTotal.getByText("14", { exact: true })).toBeVisible();
   const matrix = page.getByRole("table", {
     name: "Physical item counts by format and release decade",
   });
@@ -299,29 +480,41 @@ test("Discogs Pattern and Gallery support filters and pagination", async ({ page
     JSON.stringify(axe.violations, null, 2),
   ).toEqual([]);
 
-  await page.getByRole("button", { name: "Gallery" }).click();
-  await expect(page.getByText("1—12 of 26 releases")).toBeVisible();
+  await page.getByRole("button", { name: "Browse all" }).click();
+  await expect(page).toHaveURL(
+    (url) => url.searchParams.get("view") === "gallery",
+  );
+  await expect(page.getByText("1—12 of 14 releases")).toBeVisible();
   await expect(page.locator("ol li").filter({ has: page.locator('a[href*="discogs.com/release/"]') })).toHaveCount(12);
 
-  await page.getByRole("button", { name: "Next →" }).click();
-  await expect(page.getByText("13—24 of 26 releases")).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Discogs catalog pages" })
+    .getByRole("link", { name: /^Next/ })
+    .click();
+  await expect(page.getByText("13—14 of 14 releases")).toBeVisible();
   await expect(page.locator("ol[role='list']")).toHaveAttribute("start", "13");
-  await expect.poll(() => requests.at(-1)?.searchParams.get("page")).toBe("2");
+  await expect(page).toHaveURL(/page=2/);
 
   await page.getByRole("combobox", { name: /^Per page/ }).selectOption("24");
-  await expect(page.getByText("1—24 of 26 releases")).toBeVisible();
-  await expect.poll(() => requests.at(-1)?.searchParams.get("pageSize")).toBe("24");
+  await expect(page.getByText("1—14 of 14 releases")).toBeVisible();
+  await expect(page).toHaveURL(/pageSize=24/);
 
   await page.getByRole("combobox", { name: /^Format/ }).selectOption("vinyl");
-  await expect.poll(() => requests.at(-1)?.searchParams.get("format")).toBe("vinyl");
+  await expect(page).toHaveURL(/format=vinyl/);
   await page.getByRole("combobox", { name: /^Sort/ }).selectOption("year");
-  await expect.poll(() => requests.at(-1)?.searchParams.get("sort")).toBe("year");
+  await expect(page).toHaveURL(/sort=year/);
 
-  await page.getByRole("searchbox", { name: /^Find a title or artist/ }).fill("Blue Logic");
+  await page
+    .getByRole("searchbox", { name: /^Find a title or artist/ })
+    .fill("Physical Signal 12");
   await page.getByRole("button", { name: "Search" }).click();
   await expect(page.getByText("1—1 of 1 releases")).toBeVisible();
-  await expect(page.getByRole("link", { name: /Blue Logic.*Arc Lab/i })).toBeVisible();
-  await expect.poll(() => requests.at(-1)?.searchParams.get("q")).toBe("Blue Logic");
+  await expect(
+    page.getByRole("link", {
+      name: /Physical Signal 12.*Synthetic Artist 5/i,
+    }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/q=Physical(?:\+|%20)Signal(?:\+|%20)12/);
 
   axe = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -334,34 +527,39 @@ test("Discogs Pattern and Gallery support filters and pagination", async ({ page
   ).toEqual([]);
 });
 
-test("Discogs Pattern and Gallery fit 320–1920px viewports", async ({ page }) => {
-  test.skip(roomMode, "Room routes receive server-selected connector state; their layout matrix is covered separately.");
-  await installDiscogsFixture(page);
+test("Discogs Overview and Browse all fit 320–1920px viewports", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/play/collect", { waitUntil: "networkidle" });
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
-    await page.goto("/play", { waitUntil: "networkidle" });
-    await page.getByRole("tab", { name: /Collect.*Discogs/i }).click();
     await expect(
-      page.getByRole("heading", { name: "Pressings and releases, kept distinct." }),
+      page.getByRole("region", { name: "Discogs physical catalog" }),
     ).toBeVisible();
 
     let overflow = await pageOverflow(page);
-    expect(overflow, `Pattern @ ${width}px: ${JSON.stringify(overflow.offenders)}`).toMatchObject({
+    expect(overflow, `Overview @ ${width}px: ${JSON.stringify(overflow.offenders)}`).toMatchObject({
       documentWidth: expect.any(Number),
       viewportWidth: width,
       offenders: [],
     });
     expect(overflow.documentWidth).toBeLessThanOrEqual(width + 1);
 
-    await page.getByRole("button", { name: "Gallery" }).click();
-    await expect(page.getByText("1—12 of 26 releases")).toBeVisible();
+    await page.getByRole("button", { name: "Browse all" }).click();
+    await expect(page.getByText("1—12 of 14 releases")).toBeVisible();
     overflow = await pageOverflow(page);
-    expect(overflow, `Gallery @ ${width}px: ${JSON.stringify(overflow.offenders)}`).toMatchObject({
+    expect(overflow, `Browse all @ ${width}px: ${JSON.stringify(overflow.offenders)}`).toMatchObject({
       documentWidth: expect.any(Number),
       viewportWidth: width,
       offenders: [],
     });
     expect(overflow.documentWidth).toBeLessThanOrEqual(width + 1);
+
+    await page.getByRole("button", { name: "Overview" }).click();
+    await expect(
+      page.getByRole("table", {
+        name: "Physical item counts by format and release decade",
+      }),
+    ).toBeVisible();
   }
 });
 
@@ -395,11 +593,7 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
   }
   await page.goto("/play", { waitUntil: "load" });
-  if (roomMode) {
-    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(6);
-  } else {
-    await expect(page.locator("noscript details")).toHaveCount(6);
-  }
+  await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
   await expect(page.locator("iframe")).toHaveCount(0);
   await context.close();
 });

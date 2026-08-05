@@ -50,6 +50,23 @@
   cursor: pointer;
 }
 
+.pocketStage {
+  border-radius: 1.65rem;
+  box-shadow:
+    0 0 0 0.45rem #101a29,
+    0 0 0 0.52rem #3b526f,
+    0 1.2rem 3rem rgb(0 0 0 / 42%);
+}
+
+.pocketStage canvas {
+  cursor: grab;
+  touch-action: none;
+}
+
+.pocketStage canvas:active {
+  cursor: grabbing;
+}
+
 @media (prefers-reduced-motion: reduce), (forced-colors: active) {
   .stage {
     display: none;

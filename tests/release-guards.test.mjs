@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
 import {
+  assertActiveActionsWorkflow,
   assertReleaseMarker,
   assertProductionDeployment,
   assertRequiredValidationRuns,
@@ -14,14 +15,26 @@ import {
   githubRepositoryFromRemoteUrl,
   parseRemoteReleaseMarker,
   publicationCheckpointForPlan,
+  REQUIRED_VALIDATION_RUNS,
   requireExactUploadedVersion,
+  requiredPlaySmokeTests,
+  ROOM_PLAY_SMOKE_TESTS,
+  TRAVEL_PLAY_SMOKE_TEST,
   runGuardedMigration,
+  simulationReleaseRecord,
+  assertSimulationReleaseRecord,
 } from "../scripts/lib/release-contract.mjs";
 import {
   assertPinnedProductionResources,
   assertPublicReleaseConfig,
   expectedPublicReleaseConfig,
 } from "../scripts/lib/release-config-contract.mjs";
+import {
+  assertReleaseBranch,
+  exactReleaseVersion,
+  matchingReleaseVersion,
+  releaseBranchForVersion,
+} from "../scripts/lib/release-version.mjs";
 import {
   assertTriggerDeploymentReceipt,
   createTriggerDeploymentReceipt,
@@ -35,6 +48,9 @@ import {
 function validReleaseConfigFixture() {
   const head = "a".repeat(40);
   const contentVersion = "b".repeat(16);
+  const packageVersion = JSON.parse(
+    readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+  ).version;
   const productionD1Id = [
     "b9dbe711", "1cb2", "4d9d", "b8a9", "e8c9817a8284",
   ].join("-");
@@ -51,16 +67,28 @@ function validReleaseConfigFixture() {
     CLOUDFLARE_D1_DATABASE_ID: productionD1Id,
     CLOUDFLARE_D1_DATABASE_NAME: "anish-shah-work-in-public",
     CLOUDFLARE_PUBLICATION_CACHE_ID: productionKvId,
-    PLAY_EXPERIENCE_MODE: "my-room-2001",
+    SIMULATION_EXPERIENCE_MODE: "disabled",
+    SIMULATION_AI_MODE: "authored-only",
+    TRAVEL_ATLAS_MODE: "disabled",
+    RELEASE_VERSION: packageVersion,
   };
   const expected = expectedPublicReleaseConfig(environment, {
     head,
     contentVersion,
+    packageVersion,
   });
   return {
     environment,
     expected,
     config: {
+      main: "index.js",
+      compatibility_date: "2026-07-31",
+      compatibility_flags: ["nodejs_compat"],
+      jsx_factory: "React.createElement",
+      jsx_fragment: "React.Fragment",
+      no_bundle: true,
+      rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
+      assets: { directory: "../client" },
       name: "anish-shah-work-in-public",
       topLevelName: "anish-shah-work-in-public",
       account_id: expected.accountId,
@@ -78,11 +106,17 @@ function validReleaseConfigFixture() {
       kv_namespaces: [
         { binding: "PUBLICATION_CACHE", id: expected.publicationCacheId },
       ],
+      r2_buckets: [
+        { binding: "TRAVEL_MEDIA", bucket_name: "anish-shah-travel-media" },
+      ],
+      images: { binding: "IMAGES" },
       ratelimits: [
         ["OWNER_RATE_LIMITER", "88001001", 30],
         ["ARTWORK_RATE_LIMITER", "88001002", 120],
         ["PROMOTION_RATE_LIMITER", "88001003", 6],
         ["OAUTH_CALLBACK_RATE_LIMITER", "88001004", 20],
+        ["SIMULATION_RATE_LIMITER", "88001005", 12],
+        ["TRAVEL_MEDIA_RATE_LIMITER", "88001006", 180],
       ].map(([name, namespace_id, limit]) => ({
         name,
         namespace_id,
@@ -98,10 +132,15 @@ function validReleaseConfigFixture() {
         SITE_URL: expected.siteUrl,
         STEAM_DATA_STORAGE_COUNTRIES: "United States",
         RELEASE_SHA: head,
+        RELEASE_VERSION: packageVersion,
         CONTENT_VERSION: contentVersion,
         PUBLIC_CONTENT_MODE: "d1_kv_required",
         DEPLOYMENT_TIER: "production",
-        PLAY_EXPERIENCE_MODE: expected.playExperienceMode,
+        SIMULATION_EXPERIENCE_MODE: expected.simulationExperienceMode,
+        SIMULATION_AI_MODE: expected.simulationAiMode,
+        SIMULATION_PROVIDER: "anthropic",
+        SIMULATION_MODEL: "claude-sonnet-5",
+        TRAVEL_ATLAS_MODE: expected.travelAtlasMode,
       },
       observability: {
         enabled: true,
@@ -142,6 +181,58 @@ test("production release resources must match the pinned deployment contract", (
   );
 });
 
+test("release versions are exact SemVer and must match package.json", () => {
+  assert.equal(exactReleaseVersion("2.0.0-rc.1"), "2.0.0-rc.1");
+  assert.equal(exactReleaseVersion("2.0.0+build.7"), "2.0.0+build.7");
+  for (const invalid of ["v2.0.0", "2.0", "2.0.0-01", " 2.0.0", "2.0.0 "]) {
+    assert.throws(() => exactReleaseVersion(invalid), /exact SemVer/);
+  }
+  assert.throws(
+    () => matchingReleaseVersion("2.0.0-rc.2", "2.0.0-rc.1"),
+    /exactly match package\.json/,
+  );
+  const { environment, expected } = validReleaseConfigFixture();
+  assert.throws(
+    () => expectedPublicReleaseConfig(
+      { ...environment, RELEASE_VERSION: "2.0.0-rc.2" },
+      {
+        head: expected.head,
+        contentVersion: expected.contentVersion,
+        packageVersion: expected.releaseVersion,
+      },
+    ),
+    /exactly match package\.json/,
+  );
+});
+
+test("staging release branches match the stable SemVer line", () => {
+  assert.equal(releaseBranchForVersion("2.0.0-rc.1"), "release/2.0.0");
+  assert.equal(releaseBranchForVersion("2.0.0+build.7"), "release/2.0.0");
+  assert.equal(
+    assertReleaseBranch("release/2.0.0", "2.0.0-rc.1"),
+    "release/2.0.0",
+  );
+  assert.throws(
+    () => assertReleaseBranch("codex/feature", "2.0.0-rc.1"),
+    /require branch release\/2\.0\.0/,
+  );
+});
+
+test("production release configuration rejects unexpected Worker bindings", () => {
+  const { config, expected } = validReleaseConfigFixture();
+  assert.throws(
+    () =>
+      assertPublicReleaseConfig(
+        {
+          ...config,
+          services: [{ binding: "UNREVIEWED", service: "other-worker" }],
+        },
+        expected,
+      ),
+    /exact public-release boundary/,
+  );
+});
+
 test("release parsers return exact migration and Worker version identifiers", () => {
   assert.deepEqual(
     exactMigrationNames("pending 0005_steady_publication_guard.sql; unrelated.sql"),
@@ -158,14 +249,70 @@ test("release parsers return exact migration and Worker version identifiers", ()
 test("release preflight rejects a configuration that weakens production boundaries", () => {
   const { config, environment, expected } = validReleaseConfigFixture();
   assert.doesNotThrow(() => assertPublicReleaseConfig(config, expected));
-  assert.equal(expected.playExperienceMode, "my-room-2001");
+  assert.equal(expected.simulationExperienceMode, "disabled");
+  assert.equal(expected.simulationAiMode, "authored-only");
+  assert.equal(expected.travelAtlasMode, "disabled");
+  assert.equal(
+    expected.releaseVersion,
+    JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version,
+  );
   assert.throws(
     () =>
       expectedPublicReleaseConfig(
-        { ...environment, PLAY_EXPERIENCE_MODE: "experimental" },
-        { head: expected.head, contentVersion: expected.contentVersion },
+        { ...environment, SIMULATION_EXPERIENCE_MODE: "experimental" },
+        { head: expected.head, contentVersion: expected.contentVersion, packageVersion: expected.releaseVersion },
       ),
-    /classic or my-room-2001/,
+    /disabled, coming-soon, or campaign-v1/,
+  );
+  const comingSoon = expectedPublicReleaseConfig(
+    {
+      ...environment,
+      SIMULATION_EXPERIENCE_MODE: "coming-soon",
+      SIMULATION_AI_MODE: "authored-only",
+    },
+    {
+      head: expected.head,
+      contentVersion: expected.contentVersion,
+      packageVersion: expected.releaseVersion,
+    },
+  );
+  assert.equal(comingSoon.simulationExperienceMode, "coming-soon");
+  assert.equal(comingSoon.simulationAiMode, "authored-only");
+  assert.throws(
+    () =>
+      expectedPublicReleaseConfig(
+        {
+          ...environment,
+          SIMULATION_EXPERIENCE_MODE: "coming-soon",
+          SIMULATION_AI_MODE: "live",
+        },
+        {
+          head: expected.head,
+          contentVersion: expected.contentVersion,
+          packageVersion: expected.releaseVersion,
+        },
+      ),
+    /disabled or coming-soon production simulation must use authored-only/,
+  );
+  assert.throws(
+    () =>
+      expectedPublicReleaseConfig(
+        {
+          ...environment,
+          SIMULATION_EXPERIENCE_MODE: "campaign-v1",
+          SIMULATION_AI_MODE: "authored-only",
+        },
+        { head: expected.head, contentVersion: expected.contentVersion, packageVersion: expected.releaseVersion },
+      ),
+    /enabled production simulation must use live AI/,
+  );
+  assert.throws(
+    () =>
+      expectedPublicReleaseConfig(
+        { ...environment, TRAVEL_ATLAS_MODE: "experimental" },
+        { head: expected.head, contentVersion: expected.contentVersion, packageVersion: expected.releaseVersion },
+      ),
+    /disabled or atlas-v1/,
   );
   assert.throws(
     () =>
@@ -217,15 +364,99 @@ test("release preflight rejects a configuration that weakens production boundari
   );
 });
 
-test("production Play mode defaults to classic until explicitly activated", () => {
-  const { environment, expected } = validReleaseConfigFixture();
-  const withoutRoomMode = { ...environment };
-  delete withoutRoomMode.PLAY_EXPERIENCE_MODE;
-  const classic = expectedPublicReleaseConfig(withoutRoomMode, {
-    head: expected.head,
-    contentVersion: expected.contentVersion,
+test("simulation release evidence is sanitized and bound to the hosted model", () => {
+  const enabledConfig = {
+    vars: {
+      SIMULATION_EXPERIENCE_MODE: "campaign-v1",
+      SIMULATION_AI_MODE: "live",
+      SIMULATION_PROVIDER: "anthropic",
+      SIMULATION_MODEL: "claude-sonnet-5",
+    },
+  };
+  const record = simulationReleaseRecord({
+    campaignVersion: "meet-me-4n1sh-v1",
+    experienceMode: "campaign-v1",
+    aiMode: "live",
+    provider: "anthropic",
+    model: "claude-sonnet-5",
+    approvedProviders: "spotify,discogs",
+    approvalStateDigest: "A".repeat(64),
   });
-  assert.equal(classic.playExperienceMode, "classic");
+  assert.deepEqual(record, {
+    campaignVersion: "meet-me-4n1sh-v1",
+    experienceMode: "campaign-v1",
+    aiMode: "live",
+    provider: "anthropic",
+    model: "claude-sonnet-5",
+    approvedProviders: ["discogs", "spotify"],
+    approvalStateDigest: "a".repeat(64),
+  });
+  assert.deepEqual(
+    assertSimulationReleaseRecord(record, {
+      config: enabledConfig,
+      campaignVersion: "meet-me-4n1sh-v1",
+    }),
+    record,
+  );
+  assert.throws(
+    () =>
+      simulationReleaseRecord({
+        ...record,
+        approvedProviders: [],
+      }),
+    /requires approved provider names/,
+  );
+  assert.throws(
+    () =>
+      simulationReleaseRecord({
+        ...record,
+        approvedProviders: ["spotify", "private-provider"],
+      }),
+    /unknown or repeated provider/,
+  );
+  assert.throws(
+    () =>
+      assertSimulationReleaseRecord(
+        { ...record, approvalReference: "owner-only approval note" },
+        {
+          config: enabledConfig,
+          campaignVersion: "meet-me-4n1sh-v1",
+        },
+      ),
+    /malformed/,
+  );
+});
+
+test("non-campaign simulation releases reject stale approval or live-AI evidence", () => {
+  for (const experienceMode of ["disabled", "coming-soon"]) {
+    const record = simulationReleaseRecord({
+      campaignVersion: "meet-me-4n1sh-v1",
+      experienceMode,
+      aiMode: "authored-only",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+    });
+    assert.equal(record.experienceMode, experienceMode);
+    assert.deepEqual(record.approvedProviders, []);
+    assert.equal(record.approvalStateDigest, null);
+    assert.throws(
+      () =>
+        simulationReleaseRecord({
+          ...record,
+          aiMode: "live",
+        }),
+      /cannot carry live AI/,
+    );
+    assert.throws(
+      () =>
+        simulationReleaseRecord({
+          ...record,
+          approvedProviders: ["spotify"],
+          approvalStateDigest: "b".repeat(64),
+        }),
+      /cannot carry live AI or provider-approval evidence/,
+    );
+  }
 });
 
 test("non-versioned trigger reconciliation is bound to the exact cutover release", () => {
@@ -388,29 +619,33 @@ test("GitHub evidence must be successful and bind the exact SHA and URL", () => 
   );
 });
 
-test("release evidence requires three distinct exact-commit security runs", () => {
+test("release evidence requires four distinct exact-commit quality runs", () => {
   const head = "a".repeat(40);
-  const runs = [
-    ["validate", "Validate", "101"],
-    ["gitleaks", "Gitleaks", "102"],
-    ["codeql", "CodeQL", "103"],
-  ].map(([kind, name, id]) => ({
+  const runs = REQUIRED_VALIDATION_RUNS.map(({
+    kind,
+    name,
+    workflowPath,
+  }, index) => ({
     kind,
     name,
     headSha: head,
     conclusion: "success",
-    url: `https://github.com/example/repo/actions/runs/${id}`,
+    url: `https://github.com/example/repo/actions/runs/${101 + index}`,
+    event: kind === "browser" ? "workflow_dispatch" : "pull_request",
+    workflowDatabaseId: 401 + index,
+    workflowPath,
+    workflowState: "active",
   }));
   assert.doesNotThrow(() => assertRequiredValidationRuns(runs, head));
   assert.throws(
-    () => assertRequiredValidationRuns(runs.slice(0, 2), head),
-    /Validate, Gitleaks, and CodeQL/,
+    () => assertRequiredValidationRuns(runs.slice(0, 3), head),
+    /Validate, Gitleaks, CodeQL, and Browser Quality/,
   );
   assert.throws(
     () =>
       assertRequiredValidationRuns(
         runs.map((run, index) =>
-          index === 2 ? { ...run, url: runs[0].url } : run,
+          index === 3 ? { ...run, url: runs[0].url } : run,
         ),
         head,
       ),
@@ -420,6 +655,100 @@ test("release evidence requires three distinct exact-commit security runs", () =
     () => assertRequiredValidationRuns(runs, head, "different/repository"),
     /configured upstream repository/,
   );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "browser" ? { ...run, event: "pull_request" } : run,
+      ),
+      head,
+    ),
+    /manual workflow_dispatch/,
+  );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "validate"
+          ? { ...run, workflowPath: ".github/workflows/browser-quality.yml" }
+          : run,
+      ),
+      head,
+    ),
+    /exact active/,
+  );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "gitleaks"
+          ? { ...run, workflowState: "disabled_manually" }
+          : run,
+      ),
+      head,
+    ),
+    /exact active/,
+  );
+  assert.throws(
+    () => assertRequiredValidationRuns(
+      runs.map((run) =>
+        run.kind === "codeql"
+          ? { ...run, workflowDatabaseId: runs[0].workflowDatabaseId }
+          : run,
+      ),
+      head,
+    ),
+    /exact active/,
+  );
+});
+
+test("workflow evidence resolves to its fixed active workflow identity", () => {
+  const requirement = REQUIRED_VALIDATION_RUNS.find(
+    ({ kind }) => kind === "validate",
+  );
+  const workflow = {
+    id: 401,
+    name: requirement.name,
+    path: requirement.workflowPath,
+    state: "active",
+  };
+  assert.deepEqual(
+    assertActiveActionsWorkflow(workflow, {
+      workflowDatabaseId: 401,
+      name: requirement.name,
+      workflowPath: requirement.workflowPath,
+    }),
+    {
+      workflowDatabaseId: 401,
+      workflowPath: requirement.workflowPath,
+      workflowState: "active",
+    },
+  );
+  for (const invalid of [
+    { ...workflow, id: 402 },
+    { ...workflow, name: "Other" },
+    { ...workflow, path: ".github/workflows/other.yml" },
+    { ...workflow, state: "disabled_manually" },
+  ]) {
+    assert.throws(
+      () => assertActiveActionsWorkflow(invalid, {
+        workflowDatabaseId: 401,
+        name: requirement.name,
+        workflowPath: requirement.workflowPath,
+      }),
+      /exact active/,
+    );
+  }
+});
+
+test("every release requires registry-derived room smoke evidence", () => {
+  const base = ["public_routes", "security_headers"];
+  assert.deepEqual(
+    requiredPlaySmokeTests(base),
+    [...base, ...ROOM_PLAY_SMOKE_TESTS],
+  );
+  assert.deepEqual(
+    requiredPlaySmokeTests(base, { travelEnabled: true }),
+    [...base, ...ROOM_PLAY_SMOKE_TESTS, TRAVEL_PLAY_SMOKE_TEST],
+  );
+  assert.throws(() => requiredPlaySmokeTests(base, { travelEnabled: "yes" }), /switch/);
 });
 
 test("release evidence derives and binds the GitHub upstream repository", () => {
@@ -491,6 +820,7 @@ test("publication compatibility and zero-traffic bootstrap are explicit", () => 
 test("remote release marker binds staged SHA to the current publication", () => {
   const head = "a".repeat(40);
   const contentVersion = "b".repeat(16);
+  const releaseVersion = "2.0.0-rc.1";
   const contentHash = "c".repeat(64);
   const checkedAt = "2026-08-03T12:00:00.000Z";
   const marker = parseRemoteReleaseMarker(
@@ -501,6 +831,7 @@ test("remote release marker binds staged SHA to the current publication", () => 
             status: "ready",
             detailsJson: JSON.stringify({
               releaseSha: head,
+              releaseVersion,
               contentVersion,
               contentHash,
               verifiedAt: checkedAt,
@@ -516,6 +847,7 @@ test("remote release marker binds staged SHA to the current publication", () => 
   assert.doesNotThrow(() =>
     assertReleaseMarker(marker, {
       head,
+      releaseVersion,
       contentVersion,
       preparedAt: "2026-08-03T11:59:00.000Z",
     }),
@@ -526,6 +858,7 @@ test("remote release marker binds staged SHA to the current publication", () => 
         { ...marker, currentContentHash: "d".repeat(64) },
         {
           head,
+          releaseVersion,
           contentVersion,
           preparedAt: "2026-08-03T11:59:00.000Z",
         },
@@ -536,6 +869,7 @@ test("remote release marker binds staged SHA to the current publication", () => 
     () =>
       assertReleaseMarker(marker, {
         head,
+        releaseVersion,
         contentVersion,
         preparedAt: "2026-08-03T12:01:00.000Z",
       }),

@@ -13,8 +13,18 @@ const ARTWORK_RATE_LIMIT = 120;
 const DISCOGS_PUBLIC_READ_RATE_LIMIT = 120;
 const PROMOTION_IMPORT_RATE_LIMIT = 6;
 const OAUTH_CALLBACK_RATE_LIMIT = 20;
+const SIMULATION_API_RATE_LIMIT = 12;
+const TRAVEL_MEDIA_RATE_LIMIT = 180;
 const RATE_WINDOW_MS = 60_000;
 const DISCOGS_PUBLIC_READ_PATH = "/api/connectors/discogs";
+const SIMULATION_API_PREFIX = "/api/simulation/";
+
+function isTravelMediaPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/api/travel-media/") ||
+    /^\/api\/studio\/travel\/uploads\/[^/]+$/.test(pathname)
+  );
+}
 
 const requestBuckets = new Map<
   string,
@@ -132,15 +142,48 @@ export function requiresConfiguredRateLimit(
   const discogsPublicReadMissingConfig =
     pathname === DISCOGS_PUBLIC_READ_PATH &&
     (!rateLimitSaltReady || !env.ARTWORK_RATE_LIMITER);
+  const simulationMissingConfig =
+    env.SIMULATION_EXPERIENCE_MODE === "campaign-v1" &&
+    pathname.startsWith(SIMULATION_API_PREFIX) &&
+    (!rateLimitSaltReady || !env.SIMULATION_RATE_LIMITER);
+  const travelMediaMissingConfig =
+    isTravelMediaPath(pathname) &&
+    (!rateLimitSaltReady || !env.TRAVEL_MEDIA_RATE_LIMITER);
   return Boolean(
     directProduction &&
       accessMode &&
       (discogsPublicReadMissingConfig ||
+        simulationMissingConfig ||
+        travelMediaMissingConfig ||
         (!rateLimitSaltReady &&
           (isProtectedOwnerPath(pathname) ||
             pathname.startsWith("/api/connector-artwork/") ||
             pathname === "/api/play-promotion/import" ||
             OAUTH_CALLBACK_PROVIDERS.has(pathname)))),
+  );
+}
+
+export async function throttleSimulationApi(
+  env: WorkerEnv,
+  request: Request,
+  development: boolean,
+  pathname = new URL(request.url).pathname,
+): Promise<Response | null> {
+  if (
+    env.SIMULATION_EXPERIENCE_MODE !== "campaign-v1" ||
+    !pathname.startsWith(SIMULATION_API_PREFIX)
+  ) {
+    return null;
+  }
+  const key = await oneWayBucketKey(env, request, "simulation-api");
+  return rateLimitResponse(
+    await consumeRateLimit(
+      env.SIMULATION_RATE_LIMITER,
+      key,
+      SIMULATION_API_RATE_LIMIT,
+      development,
+    ),
+    "Simulation requests are temporarily limited.",
   );
 }
 
@@ -243,6 +286,25 @@ export async function throttleArtwork(
       development,
     ),
     "Artwork requests are temporarily limited.",
+  );
+}
+
+export async function throttleTravelMedia(
+  env: WorkerEnv,
+  request: Request,
+  development: boolean,
+  pathname = new URL(request.url).pathname,
+): Promise<Response | null> {
+  if (!isTravelMediaPath(pathname)) return null;
+  const key = await oneWayBucketKey(env, request, "travel-media");
+  return rateLimitResponse(
+    await consumeRateLimit(
+      env.TRAVEL_MEDIA_RATE_LIMITER,
+      key,
+      TRAVEL_MEDIA_RATE_LIMIT,
+      development,
+    ),
+    "Travel media requests are temporarily limited.",
   );
 }
 

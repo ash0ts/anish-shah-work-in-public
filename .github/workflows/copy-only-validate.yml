@@ -1,0 +1,77 @@
+name: Copy-only validation
+
+on:
+  pull_request:
+    paths:
+      - "content/copy/**"
+      - ".github/PULL_REQUEST_TEMPLATE/copy-change.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: copy-only-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate_copy:
+    name: validate plain-text copy
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact base code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          path: base
+          persist-credentials: false
+      - name: Check out exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+      - name: Use Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: base/.node-version
+      - name: Classify and validate copy without secrets
+        id: copy_package
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          tool="base/scripts/copy-only-lane.mjs"
+          if [ ! -f "$tool" ]; then
+            # Bootstrap only: this workflow is unprivileged. Once merged, every
+            # copy PR uses the immutable base-branch validator above.
+            tool="candidate/scripts/copy-only-lane.mjs"
+          fi
+          node "$tool" package \
+            --candidate-root candidate \
+            --base-root base \
+            --base-sha "$BASE_SHA" \
+            --head-sha "$HEAD_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --pr-number "$PR_NUMBER" \
+            --output .copy-preview/package.json \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Upload only validated plain-text copy
+        if: steps.copy_package.outputs.eligible == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: copy-only-deck-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: .copy-preview/package.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+      - name: Record normal-code lane classification
+        if: steps.copy_package.outputs.eligible != 'true'
+        run: >-
+          echo "This PR changed code, configuration, structure, or no declared copy;
+          the trusted copy-preview lane is disabled."
+          >> "$GITHUB_STEP_SUMMARY"

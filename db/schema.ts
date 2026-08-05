@@ -1,7 +1,10 @@
 import { sql } from "drizzle-orm";
 import {
+  check,
   index,
   integer,
+  primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -214,5 +217,261 @@ export const maintenanceState = sqliteTable("maintenance_state", {
   status: text("status").notNull(),
   detailsJson: text("details_json").notNull().default("{}"),
   checkedAt: text("checked_at").notNull(),
+  updatedAt: timestamp("updated_at"),
+});
+
+/**
+ * Short-lived game state only. The JSON column contains allowlisted campaign
+ * IDs, enum signals, score counters, and one exact-validated response projection
+ * used only for idempotent retry. Visitor prose, model prompts, and raw provider
+ * responses must never be written here.
+ */
+export const simulationSessions = sqliteTable(
+  "simulation_sessions",
+  {
+    sessionHash: text("session_hash").primaryKey(),
+    campaignVersion: text("campaign_version").notNull(),
+    status: text("status").notNull().default("active"),
+    revision: integer("revision").notNull().default(0),
+    sceneId: text("scene_id").notNull().default("act-1"),
+    safeStateJson: text("safe_state_json").notNull(),
+    freeTextTurns: integer("free_text_turns").notNull().default(0),
+    generationCalls: integer("generation_calls").notNull().default(0),
+    turnCount: integer("turn_count").notNull().default(0),
+    pendingRequestId: text("pending_request_id"),
+    generationLeaseUntil: text("generation_lease_until"),
+    lastRequestId: text("last_request_id"),
+    lastResponseJson: text("last_response_json"),
+    createdAt: timestamp("created_at"),
+    updatedAt: timestamp("updated_at"),
+    expiresAt: text("expires_at").notNull(),
+  },
+  (table) => [
+    index("simulation_sessions_expiry_idx").on(table.expiresAt),
+    index("simulation_sessions_status_updated_idx").on(
+      table.status,
+      table.updatedAt,
+    ),
+  ],
+);
+
+/** Aggregate counters only; no visitor or prompt content. */
+export const simulationDailyBudget = sqliteTable("simulation_daily_budget", {
+  budgetDate: text("budget_date").primaryKey(),
+  modelCalls: integer("model_calls").notNull().default(0),
+  authoredFallbacks: integer("authored_fallbacks").notNull().default(0),
+  updatedAt: timestamp("updated_at"),
+});
+
+/** Owner-only evidence that a provider may be used by the simulation. */
+export const simulationProviderApprovals = sqliteTable(
+  "simulation_provider_approvals",
+  {
+    provider: text("provider").primaryKey(),
+    scopesJson: text("scopes_json").notNull().default("[]"),
+    reference: text("reference").notNull(),
+    approvedAt: text("approved_at").notNull(),
+    expiresAt: text("expires_at"),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+    updatedAt: timestamp("updated_at"),
+  },
+  (table) => [
+    index("simulation_provider_approvals_enabled_expiry_idx").on(
+      table.enabled,
+      table.expiresAt,
+    ),
+  ],
+);
+export const travelTrips = sqliteTable(
+  "travel_trips",
+  {
+    id: text("id").primaryKey(),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    status: text("status").notNull(),
+    periodStart: text("period_start").notNull(),
+    periodEnd: text("period_end"),
+    periodPrecision: text("period_precision").notNull(),
+    publishedAt: text("published_at"),
+    revision: text("revision").notNull(),
+    createdAt: timestamp("created_at"),
+    updatedAt: timestamp("updated_at"),
+  },
+  (table) => [
+    uniqueIndex("travel_trips_slug_unique").on(table.slug),
+    index("travel_trips_published_period_idx").on(
+      table.publishedAt,
+      table.periodStart,
+    ),
+    check(
+      "travel_trips_status_check",
+      sql`${table.status} IN ('planned', 'current', 'completed')`,
+    ),
+    check(
+      "travel_trips_period_precision_check",
+      sql`${table.periodPrecision} IN ('year', 'month', 'day')`,
+    ),
+  ],
+);
+
+export const travelPlaces = sqliteTable(
+  "travel_places",
+  {
+    id: text("id").primaryKey(),
+    tripId: text("trip_id")
+      .notNull()
+      .references(() => travelTrips.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    countryCode: text("country_code").notNull(),
+    countryName: text("country_name").notNull(),
+    admin1Code: text("admin1_code"),
+    admin1Name: text("admin1_name"),
+    precision: text("precision").notNull(),
+    publicLat: real("public_lat").notNull(),
+    publicLng: real("public_lng").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    revision: text("revision").notNull(),
+    createdAt: timestamp("created_at"),
+    updatedAt: timestamp("updated_at"),
+  },
+  (table) => [
+    index("travel_places_trip_sort_idx").on(table.tripId, table.sortOrder),
+    index("travel_places_country_admin_idx").on(
+      table.countryCode,
+      table.admin1Code,
+    ),
+    check(
+      "travel_places_precision_check",
+      sql`${table.precision} IN ('country', 'region', 'city_approximate')`,
+    ),
+  ],
+);
+
+export const travelPhotos = sqliteTable(
+  "travel_photos",
+  {
+    id: text("id").primaryKey(),
+    tripId: text("trip_id")
+      .notNull()
+      .references(() => travelTrips.id, { onDelete: "cascade" }),
+    placeId: text("place_id").references(() => travelPlaces.id, {
+      onDelete: "set null",
+    }),
+    storageKey: text("storage_key").notNull(),
+    altText: text("alt_text").notNull(),
+    caption: text("caption"),
+    capturedAt: text("captured_at"),
+    capturePrecision: text("capture_precision"),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isCover: integer("is_cover", { mode: "boolean" }).notNull().default(false),
+    revision: text("revision").notNull(),
+    createdAt: timestamp("created_at"),
+    updatedAt: timestamp("updated_at"),
+  },
+  (table) => [
+    uniqueIndex("travel_photos_storage_key_unique").on(table.storageKey),
+    index("travel_photos_trip_sort_idx").on(table.tripId, table.sortOrder),
+    index("travel_photos_place_idx").on(table.placeId),
+    check(
+      "travel_photos_capture_precision_check",
+      sql`${table.capturePrecision} IS NULL OR ${table.capturePrecision} IN ('year', 'month', 'day')`,
+    ),
+  ],
+);
+
+export const travelPhotoTags = sqliteTable(
+  "travel_photo_tags",
+  {
+    photoId: text("photo_id")
+      .notNull()
+      .references(() => travelPhotos.id, { onDelete: "cascade" }),
+    tag: text("tag").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.photoId, table.tag] }),
+    index("travel_photo_tags_tag_idx").on(table.tag),
+  ],
+);
+
+export const travelUploads = sqliteTable(
+  "travel_uploads",
+  {
+    id: text("id").primaryKey(),
+    tripId: text("trip_id")
+      .notNull()
+      .references(() => travelTrips.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    status: text("status").notNull().default("issued"),
+    mediaType: text("media_type").notNull(),
+    declaredBytes: integer("declared_bytes").notNull(),
+    storedBytes: integer("stored_bytes"),
+    processedWidth: integer("processed_width"),
+    processedHeight: integer("processed_height"),
+    storageKey: text("storage_key"),
+    expiresAt: text("expires_at").notNull(),
+    consumedAt: text("consumed_at"),
+    createdAt: timestamp("created_at"),
+    updatedAt: timestamp("updated_at"),
+  },
+  (table) => [
+    index("travel_uploads_trip_status_idx").on(table.tripId, table.status),
+    index("travel_uploads_expiry_idx").on(table.expiresAt),
+    check(
+      "travel_uploads_status_check",
+      sql`${table.status} IN ('issued', 'uploaded', 'consumed', 'failed')`,
+    ),
+  ],
+);
+
+export const travelMediaDeletions = sqliteTable(
+  "travel_media_deletions",
+  {
+    id: text("id").primaryKey(),
+    storageKeysJson: text("storage_keys_json").notNull(),
+    status: text("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    lastErrorCode: text("last_error_code"),
+    completedAt: text("completed_at"),
+    createdAt: timestamp("created_at"),
+    updatedAt: timestamp("updated_at"),
+  },
+  (table) => [
+    index("travel_media_deletions_status_idx").on(
+      table.status,
+      table.updatedAt,
+    ),
+    check(
+      "travel_media_deletions_status_check",
+      sql`${table.status} IN ('pending', 'complete')`,
+    ),
+  ],
+);
+
+export const travelPublicationSnapshots = sqliteTable(
+  "travel_publication_snapshots",
+  {
+    id: text("id").primaryKey(),
+    snapshotJson: text("snapshot_json").notNull(),
+    contentHash: text("content_hash").notNull(),
+    tripCount: integer("trip_count").notNull().default(0),
+    photoCount: integer("photo_count").notNull().default(0),
+    publishedByEmail: text("published_by_email").notNull(),
+    publishedAt: timestamp("published_at"),
+  },
+  (table) => [
+    uniqueIndex("travel_publication_hash_unique").on(table.contentHash),
+    index("travel_publication_published_idx").on(table.publishedAt),
+  ],
+);
+
+export const travelPublicationState = sqliteTable("travel_publication_state", {
+  id: text("id").primaryKey(),
+  snapshotId: text("snapshot_id")
+    .notNull()
+    .references(() => travelPublicationSnapshots.id, { onDelete: "restrict" }),
+  contentHash: text("content_hash").notNull(),
   updatedAt: timestamp("updated_at"),
 });

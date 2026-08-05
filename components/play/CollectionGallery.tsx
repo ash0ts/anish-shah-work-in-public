@@ -1,12 +1,21 @@
+"use client";
+
 import Image from "next/image";
-import type { CSSProperties, FormEvent } from "react";
-import styles from "../PersonalStreams.module.css";
+import {
+  type CSSProperties,
+  type FormEvent,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+} from "react";
+import styles from "./StreamPresentation.module.css";
 import type {
   CollectionProvider,
   GalleryItem,
   PreviewFixtureScenario,
   PublicGallery,
 } from "./connector-model";
+import { SITE_COPY } from "@/lib/copy";
 
 export function GalleryView({
   provider,
@@ -68,50 +77,52 @@ export function GalleryView({
               maxLength={80}
               name="q"
               onChange={(event) => onDraftQuery(event.target.value)}
-              placeholder="Search this collection"
+              placeholder={SITE_COPY.play["collection-search-placeholder"]}
               type="search"
               value={draftQuery}
             />
             <button type="submit">Search</button>
           </span>
         </label>
-        <GallerySelect
-          label="Filter"
-          name="filter"
-          onChange={onFilter}
-          options={gallery.filters.map((entry) => ({
-            value: entry.id,
-            label: `${entry.label} · ${entry.count}`,
-          }))}
-          value={gallery.filter}
-        />
-        <GallerySelect
-          label="Sort"
-          name="sort"
-          onChange={onSort}
-          options={gallery.sorts.map((entry) => ({
-            value: entry.id,
-            label: entry.label,
-          }))}
-          value={gallery.sort}
-        />
-        <GallerySelect
-          label="Per page"
-          name="pageSize"
-          onChange={(value) => onPageSize(Number(value) as 12 | 24 | 36)}
-          options={[12, 24, 36].map((value) => ({
-            value: String(value),
-            label: String(value),
-          }))}
-          value={String(gallery.pageSize)}
-        />
+        <GalleryFilterDisclosure>
+            <GallerySelect
+              label="Filter"
+              name="filter"
+              onChange={onFilter}
+              options={gallery.filters.map((entry) => ({
+                value: entry.id,
+                label: `${entry.label} · ${entry.count}`,
+              }))}
+              value={gallery.filter}
+            />
+            <GallerySelect
+              label="Sort"
+              name="sort"
+              onChange={onSort}
+              options={gallery.sorts.map((entry) => ({
+                value: entry.id,
+                label: entry.label,
+              }))}
+              value={gallery.sort}
+            />
+            <GallerySelect
+              label="Per page"
+              name="pageSize"
+              onChange={(value) => onPageSize(Number(value) as 12 | 24 | 36)}
+              options={[12, 24, 36].map((value) => ({
+                value: String(value),
+                label: String(value),
+              }))}
+              value={String(gallery.pageSize)}
+            />
+        </GalleryFilterDisclosure>
       </form>
 
       <div className={styles.gallerySummary} aria-live="polite">
         <span>
           {start}—{end} of {gallery.totalItems.toLocaleString()}
         </span>
-        <span>{busy ? "Updating view…" : "Public snapshot"}</span>
+        <span>{busy ? "Updating view…" : SITE_COPY.play["view-browse-all"]}</span>
       </div>
 
       {gallery.items.length ? (
@@ -128,8 +139,8 @@ export function GalleryView({
         </ol>
       ) : (
         <div className={styles.noResults} data-stream-item>
-          <strong>No titles match this view.</strong>
-          <p>Change the search or filter to return to the collection.</p>
+          <strong>{SITE_COPY.play["collection-no-results-title"]}</strong>
+          <p>{SITE_COPY.play["collection-no-results-body"]}</p>
         </div>
       )}
 
@@ -199,6 +210,31 @@ export function GalleryView({
         )}
       </nav>
     </div>
+  );
+}
+
+export function GalleryFilterDisclosure({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const disclosure = useRef<HTMLDetailsElement>(null);
+
+  useLayoutEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const applyViewportState = () => {
+      if (disclosure.current) disclosure.current.open = !media.matches;
+    };
+    applyViewportState();
+    media.addEventListener("change", applyViewportState);
+    return () => media.removeEventListener("change", applyViewportState);
+  }, []);
+
+  return (
+    <details className={styles.galleryFilters} open ref={disclosure}>
+      <summary>Filters and sort</summary>
+      <div className={styles.galleryFilterFields}>{children}</div>
+    </details>
   );
 }
 

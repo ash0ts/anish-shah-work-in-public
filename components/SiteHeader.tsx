@@ -1,24 +1,26 @@
 import Link from "next/link";
+import { SITE_COPY } from "@/lib/copy";
+import { PrimaryNavigation } from "./PrimaryNavigation";
 import styles from "./SiteHeader.module.css";
 
 const navigation = [
-  ["Work", "/work"],
-  ["Play", "/play"],
+  [SITE_COPY.site["header-work"], "/work"],
+  [SITE_COPY.site["header-play"], "/play"],
 ] as const;
 
 export function SiteHeader() {
+  const wordmark = SITE_COPY.site["header-wordmark"];
   return (
     <header className={styles.header}>
-      <Link className={styles.wordmark} href="/" aria-label="Anish Shah, home">
-        Anish Shah
+      <Link
+        className={styles.wordmark}
+        href="/"
+        aria-label={`${wordmark}, home`}
+        prefetch={false}
+      >
+        {wordmark}
       </Link>
-      <nav className={styles.navigation} aria-label="Primary navigation">
-        {navigation.map(([label, href]) => (
-          <Link key={href} href={href}>
-            {label}
-          </Link>
-        ))}
-      </nav>
+      <PrimaryNavigation items={navigation} />
     </header>
   );
 }

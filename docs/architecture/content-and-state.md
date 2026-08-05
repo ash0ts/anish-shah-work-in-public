@@ -1,74 +1,93 @@
-# Content and state
+# Content, copy, and runtime state
 
-## Canonical content
+## Canonical public facts
 
 Four private CSV/Markdown files outside the repository are immutable migration
 inputs. `scripts/build-content.mjs` combines them with checked-in public-safe
 curation and emits:
 
-- ignored exact owner data under `content/private/`
-- the deployable public bundle under `content/public/`
-- JSON Schema and the migration-quality report
+- ignored exact owner data under `content/private/`;
+- the deployable sanitized bundle under `content/public/`;
+- the public JSON Schema and migration-quality report; and
+- a checked-in attestation over deployable public artifacts only.
 
-The importer is deterministic, but a clean GitHub checkout intentionally lacks
-the private source files. Full regeneration is therefore an owner operation:
+A clean CI checkout intentionally lacks the private inputs, so full regeneration
+is an owner operation. Normal CI verifies byte identity against the safe
+attestation; it does not claim to rebuild the private source corpus.
 
-```bash
-node scripts/build-content.mjs
-npm run verify:content
-npm run content:attest:write
-npm run content:attest
-```
+Never hand-edit the generated public JSON. Stable IDs, aliases, relations,
+WorkGroups, metric subjects, and evidence are canonical-data concerns, not copy
+deck or Studio concerns.
 
-The checked-in public attestation hashes only deployable public content, schema,
-and public-safe curation. It exposes no private source hash or local path. Normal
-CI verifies this attestation; it does not claim to regenerate private inputs.
+## Copy deck
 
-## D1 state
+`content/copy/` is the only freelancer-facing wording surface. Its fixed-field
+Markdown is parsed as plain text: no Markdown rendering, HTML, JSX, links,
+templates, imports, variables, or executable content. WorkGroup files join
+through immutable stable-ID markers, never filenames or titles.
 
-D1 stores operational state, never the exact owner bundle:
+Generation writes the ignored `.generated/site-copy.ts`. `COPY_VERSION` is a
+deterministic digest of every deck file, the field contract, and the parser and
+generator implementation. It is recorded in preview metadata, owner health,
+staging/production plans, and immutable release attestations. It changes
+presentation wording without changing canonical `CONTENT_VERSION`.
 
-- sanitized public records and editorial publication snapshots
-- encrypted provider credentials
-- at most the bounded connector snapshots allowed by provider policy
-- short-lived OAuth and promotion transactions
-- synchronization and audit history subject to retention
+## Ownership and precedence
 
-Public reads project only sanitized, published records. Editorial overrides may
-change allowlisted presentation fields but not canonical IDs, relations, metric
-subjects, raw HTML, or private fields.
+The three sources have disjoint authority:
 
-## Publication availability
+1. **Canonical sanitized content** supplies facts and structure: IDs, routes,
+   dates, relationships, metrics, evidence, and WorkGroup membership.
+2. **Published D1 state** supplies visibility, ordering, caveats, featured
+   state, owner-approved metric wording, and publication state.
+3. **Git-owned copy deck** supplies only declared page and WorkGroup
+   presentation fields.
 
-Direct production never restores the entire checked-in bundle when D1 fails or
-has no active publication. Publishing follows one ordered transaction boundary:
+For WorkGroup wording moved to Git, retained D1 title/summary values are listed
+for owner review but ignored. A D1 caveat still composes with the Git-owned
+summary. Studio presents Git-owned fields as read-only with their copy-deck
+path; it remains authoritative for metrics, caveats, visibility, and ordering.
+No D1 migration is required for this ownership change.
 
-1. Validate the public projection and stage an immutable, content-addressed
-   snapshot in the `PUBLICATION_CACHE` KV namespace.
-2. Commit the publication snapshot and its active pointer in one D1 batch.
-3. Move the small KV current pointer to the newly staged version.
+## D1 and KV publication
 
-Normal reads use the active D1 publication. A verified KV version is used only
-when D1 cannot provide a valid active publication. If neither store has a valid
-snapshot, content-backed routes return a noindexed `503`; the checked-in bundle
-is limited to local development and the private reference environment.
+D1 stores operational state, never the exact owner bundle. Publishing uses one
+ordered boundary:
 
-## Schema evolution
+1. validate the sanitized projection and stage an immutable, versioned snapshot in KV;
+2. commit the D1 publication snapshot and active pointer in one batch; and
+3. advance the small KV current pointer only after D1 succeeds.
 
-Migrations under `drizzle/` are forward-only. Use expand/backfill/contract:
+Normal hosted reads use the active D1 publication. A cryptographically and
+structurally verified KV version is used only when D1 cannot provide a valid
+active publication. If neither store is valid, production and staging return a
+noindexed `503`. The checked-in bundle is an explicit local, synthetic-preview,
+and private-reference input; it is never an automatic direct-production
+fallback.
 
-1. Add schema that both the current and next Worker can tolerate.
-2. Apply and verify the additive migration.
-3. Deploy code that can read old and new records safely.
-4. Backfill in bounded, observable work.
-5. Remove compatibility only in a later release after its rollback window.
+## Connector state
 
-Before every remote migration, record a D1 Time Travel bookmark. A Worker
-rollback does not revert D1; schema compatibility is what keeps rollback safe.
+Provider responses are untrusted until exact normalization and public
+projection succeed. D1 stores encrypted credentials, bounded sanitized
+snapshots, short-lived OAuth/promotion transactions, sync history, and audit
+state. Public routes expose only allowlisted response contracts and are pure
+reads: they never initiate synchronization. The same is true of OAuth
+callbacks, credential saves, and scheduled maintenance. Only an explicit owner
+Studio Refresh may fetch provider collection data. Disconnect deletes and
+unpublishes according to the connector contract; a failed refresh preserves
+the stored snapshot and active pointer while its provider-specific public-age
+and privacy policy still applies.
 
-## Reconciliation
+See [Play connections](../play-connections.md) for provider-specific freshness,
+publication, and recovery rules.
 
-CI applies migrations to a clean local D1 before validation. A release must also
-record the public content version and prepared Worker checksum. Do not seed or
-copy local D1 into production; production seeding uses only the sanitized
-checked-in projection.
+## Schema evolution and recovery
+
+Migrations under `drizzle/` are forward-only. Use expand/backfill/contract so
+the previous and candidate Workers remain compatible through the rollback
+window. Record a D1 Time Travel bookmark before every remote migration. Worker
+rollback does not restore D1.
+
+CI applies all migrations to a fresh local D1. Never copy local D1 to staging or
+production, and never build publication rows or KV envelopes manually. Use the
+application’s audited publish path and the [release runbook](../operations/release.md).

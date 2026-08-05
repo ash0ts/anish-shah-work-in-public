@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { type MouseEvent, type RefObject, useState } from "react";
+import { useExperienceAudioHandoff } from "@/components/experience-audio/ExperienceAudioProvider";
 import styles from "../SpotifyStream.module.css";
 import {
   artistLabel,
@@ -102,7 +103,7 @@ export function CoverGallery({
         Album artwork is shown as supplied. “Listen here” opens a consent step
         for one official Spotify player.
       </p>
-      <ol aria-label="Spotify Top Tracks cover gallery">
+      <ol aria-label="Spotify Top Tracks, browse all">
         {tracks.map((track) => (
           <li key={`${track.id}:${track.position}`}>
             <article>
@@ -206,6 +207,8 @@ export function SpotifyPlayer({
   playerRef: RefObject<HTMLElement | null>;
   onClose: () => void;
 }) {
+  useExperienceAudioHandoff("spotify", true);
+
   return (
     <section
       aria-label={`Spotify player for ${track.title}`}

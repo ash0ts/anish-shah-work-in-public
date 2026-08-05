@@ -59,6 +59,40 @@ function deletedPathPlan(relativePath, content = "fixture\n") {
   return result;
 }
 
+function committedBasePlan() {
+  const directory = mkdtempSync(path.join(tmpdir(), "anish-skill-base-"));
+  git(directory, "init", "--quiet");
+  git(directory, "config", "user.email", "fixture@example.com");
+  git(directory, "config", "user.name", "Fixture");
+  writeFileSync(path.join(directory, "README.md"), "# Fixture\n");
+  git(directory, "add", "README.md");
+  git(directory, "commit", "--quiet", "-m", "base");
+  const base = spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: directory,
+    encoding: "utf8",
+  }).stdout.trim();
+
+  mkdirSync(path.join(directory, "content/copy/pages"), { recursive: true });
+  writeFileSync(
+    path.join(directory, "content/copy/pages/home.md"),
+    "<!-- copy-page: home -->\n\n## hero-headline\nA useful headline\n",
+  );
+  git(directory, "add", "content/copy/pages/home.md");
+  git(directory, "commit", "--quiet", "-m", "copy");
+
+  const result = spawnSync(
+    process.execPath,
+    [helper, "--plan", "--base", base],
+    {
+      cwd: directory,
+      encoding: "utf8",
+      maxBuffer: 8 * 1024 * 1024,
+    },
+  );
+  rmSync(directory, { recursive: true, force: true });
+  return { base, result };
+}
+
 test("content source edits select canonical content and attestation checks", () => {
   const result = plan("content/curation/work-groups.v1.json");
   assert.equal(result.status, 0, output(result));
@@ -89,7 +123,7 @@ test("owner OAuth and write routes require a security regression test", () => {
 test("responsive Spotify changes require the browser quality gate", () => {
   const result = plan("components/spotify/RankedGroove.tsx");
   assert.equal(result.status, 0, output(result));
-  assert.match(result.stdout, /npm run validate:browser/);
+  assert.match(result.stdout, /npm run browser:public:existing/);
 });
 
 test("responsive Discogs changes require connector and browser gates", () => {
@@ -100,9 +134,185 @@ test("responsive Discogs changes require connector and browser gates", () => {
   assert.equal(result.status, 0, output(result));
   assert.match(result.stdout, /npm run test:content/);
   assert.match(result.stdout, /npm run test:backend/);
-  assert.match(result.stdout, /npm run validate:browser/);
+  assert.match(result.stdout, /npm run browser:public:existing/);
 });
 
+test("copy-deck edits select copy validation and browser review", () => {
+  const result = plan("content/copy/pages/home.md");
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, /- copy-deck/);
+  assert.match(result.stdout, /npm run copy:check/);
+  assert.match(result.stdout, /npm run copy:voice/);
+  assert.match(result.stdout, /npm run copy:test/);
+  assert.match(result.stdout, /npm run copy:diff/);
+  assert.match(result.stdout, /npm run copy:audit/);
+  assert.match(result.stdout, /owner-check every FACT-CHECK field/);
+  assert.match(result.stdout, /npm run browser:public:existing/);
+});
+
+test("voice contracts and the copy skill select voice, audit, fact-check, and skill gates", () => {
+  const result = plan(
+    "lib/copy-voice-contract.ts",
+    ".agents/skills/edit-anish-site-copy/SKILL.md",
+  );
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, /npm run copy:voice/);
+  assert.match(result.stdout, /npm run copy:audit/);
+  assert.match(result.stdout, /npm run skill:validate/);
+  assert.match(result.stdout, /owner-check every FACT-CHECK field/);
+});
+
+test("mixed dependency and copy changes retain copy diff and browser gates", () => {
+  const result = plan("package.json", "content/copy/pages/home.md");
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, /npm run validate/);
+  assert.match(result.stdout, /npm run copy:diff/);
+  assert.match(result.stdout, /npm run browser:public:existing/);
+});
+
+test("mixed dependency and documentation changes retain documentation coverage", () => {
+  const result = plan("package.json", "README.md");
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, /- documentation/);
+  assert.match(result.stdout, /npm run validate/);
+});
+
+test("local DX, documentation tooling, and skill tooling are classified", () => {
+  for (const [pathName, expected] of [
+    ["scripts/setup-local.mjs", /npm run test:local-dx/],
+    ["scripts/lib/docs-check.mjs", /npm run docs:check/],
+    ["scripts/validate-repository-skills.mjs", /npm run skill:validate/],
+  ]) {
+    const result = plan(pathName);
+    assert.equal(result.status, 0, `${pathName}\n${output(result)}`);
+    assert.match(result.stdout, /- developer-experience/);
+    assert.match(result.stdout, expected);
+  }
+});
+
+test("--base classifies committed changes from the requested merge base", () => {
+  const { base, result } = committedBasePlan();
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, new RegExp(`Base: ${base}`));
+  assert.match(result.stdout, /content\/copy\/pages\/home\.md/);
+  assert.match(result.stdout, /- copy-deck/);
+  assert.match(result.stdout, /npm run copy:diff -- --base [a-f0-9]{40}/);
+  assert.match(result.stdout, /npm run copy:audit -- --base [a-f0-9]{40}/);
+});
+
+test("--base rejects Git-option injection", () => {
+  const result = spawnSync(process.execPath, [helper, "--plan", "--base", "-p"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 2);
+  assert.match(output(result), /safe Git ref/);
+});
+
+test("every Travel source class selects the complete Travel validation gate", () => {
+  for (const travelPath of [
+    "scripts/travel/generate-geography.mjs",
+    "public/assets/travel/geography/manifest.v1.json",
+    "lib/travel/globe-math.ts",
+  ]) {
+    const result = plan(travelPath);
+    assert.equal(result.status, 0, `${travelPath}\n${output(result)}`);
+    for (const command of [
+      "npm run travel:geography:check",
+      "npm run test:backend",
+      "npm run test:rendered",
+      "npm run db:local:migrate:clean",
+      "npm run browser:travel:existing",
+    ]) {
+      assert.match(result.stdout, new RegExp(command.replaceAll(" ", "\\s+")), `${travelPath}: ${command}`);
+    }
+  }
+});
+
+test("Travel media mutations require behavior-level security coverage", () => {
+  for (const travelPath of [
+    "lib/server/travel/media.ts",
+    "lib/server/travel/repository/photos.ts",
+    "lib/server/travel/repository/uploads-media.ts",
+    "lib/server/travel/repository/publication.ts",
+  ]) {
+    const uncovered = plan(travelPath);
+    assert.equal(uncovered.status, 1, travelPath);
+    assert.match(
+      output(uncovered),
+      /Travel upload, media, photo, or publication code changed without a Travel backend\/security regression test/,
+      travelPath,
+    );
+  }
+
+  const covered = plan(
+    "lib/server/travel/media.ts",
+    "tests/travel-security.test.mjs",
+  );
+  assert.equal(covered.status, 0, output(covered));
+  assert.match(covered.stdout, /- travel/);
+  assert.match(covered.stdout, /npm run test:backend/);
+  assert.match(covered.stdout, /npm run browser:travel:existing/);
+});
+
+test("Simulation server and test changes select privacy, rendered, bundle, and browser gates", () => {
+  const uncovered = plan("lib/server/simulation/provider.ts");
+  assert.equal(uncovered.status, 1);
+  assert.match(
+    output(uncovered),
+    /Simulation API, session, Gateway, or privacy code changed without a Simulation backend\/security regression test/,
+  );
+
+  const covered = plan(
+    "lib/server/simulation/provider.ts",
+    "tests/simulation-backend.test.mjs",
+  );
+  assert.equal(covered.status, 0, output(covered));
+  assert.match(covered.stdout, /- simulation/);
+  for (const command of [
+    "npm run test:backend",
+    "npm run test:rendered",
+    "npm run bundle:scan",
+    "npm run browser:simulation:existing",
+  ]) {
+    assert.match(
+      covered.stdout,
+      new RegExp(command.replaceAll(" ", "\\s+")),
+      command,
+    );
+  }
+  assert.match(covered.stdout, /Gateway prompt\/response logging and caching are disabled/);
+
+  const regressionOnly = plan("tests/simulation-backend.test.mjs");
+  assert.equal(regressionOnly.status, 0, output(regressionOnly));
+  assert.match(regressionOnly.stdout, /- simulation/);
+  assert.match(regressionOnly.stdout, /npm run test:backend/);
+});
+
+test("closed room registry changes require parity coverage", () => {
+  const uncovered = plan(
+    "components/play/room-platform/room-object-contract.ts",
+  );
+  assert.equal(uncovered.status, 1);
+  assert.match(output(uncovered), /registry-parity regression test/);
+
+  const covered = plan(
+    "components/play/room-platform/room-object-contract.ts",
+    "tests/play-room-routes.test.mjs",
+  );
+  assert.equal(covered.status, 0, output(covered));
+  assert.match(covered.stdout, /npm run test:rendered/);
+  assert.match(covered.stdout, /npm run browser:public:existing/);
+  assert.match(covered.stdout, /npm run browser:room:existing/);
+});
+
+test("ordinary documentation changes remain documentation-only", () => {
+  const result = plan("docs/testing.md");
+  assert.equal(result.status, 0, output(result));
+  assert.match(result.stdout, /- documentation/);
+  assert.match(result.stdout, /Checks:\n  - npm run docs:check\n/);
+  assert.doesNotMatch(result.stdout, /npm run build|npm run test:backend/);
+});
 test("Access and authentication changes fail classification without coverage", () => {
   const missingTest = plan("worker/access.ts");
   assert.equal(missingTest.status, 1);
@@ -156,6 +366,16 @@ test("documented placeholders and synthetic negative fixtures are accepted", () 
   );
 });
 
+test("runner work paths derived from the authenticated account home are accepted", () => {
+  assert.deepEqual(
+    scanSensitiveContent(
+      "scripts/runner/entrypoint.sh",
+      'runner_work="${runner_home%/}/_work"\n--work "$runner_work"\n',
+    ),
+    [],
+  );
+});
+
 test("literal high-entropy credential assignments are rejected", () => {
   const credential = ["8f39", "A7c2", "91bd", "EE43", "0a7f", "6C11"].join("");
   const findings = scanSensitiveContent(
@@ -193,6 +413,12 @@ test("applied migrations are immutable", () => {
   assert.match(output(result), /applied migrations are immutable/);
 });
 
+test("applied Drizzle snapshots are immutable with their SQL migration", () => {
+  const result = plan("drizzle/meta/0007_snapshot.json");
+  assert.equal(result.status, 1);
+  assert.match(output(result), /applied migrations are immutable/);
+});
+
 test("deleting an applied migration is rejected", () => {
   const result = deletedPathPlan("drizzle/0001_applied.sql", "SELECT 1;\n");
   assert.equal(result.status, 1);
@@ -222,18 +448,19 @@ test("deleting mistakenly tracked sensitive material is allowed", () => {
   assert.equal(result.status, 0, output(result));
 });
 
-test("release work selects validation without production mutation", () => {
+test("release work selects ordinary validation without production mutation", () => {
   const result = plan("releases/next-release.json");
   assert.equal(result.status, 0, output(result));
-  assert.match(result.stdout, /npm run validate:release/);
+  assert.match(result.stdout, /Checks:\n  - npm run validate\n/);
   assert.match(
     result.stdout,
-    /Release validation never deploys, migrates production, rotates credentials, or mutates Git/,
+    /Run validate:release separately only for a clean, pushed, explicitly approved production candidate/,
   );
+  assert.match(result.stdout, /maintenance helper never deploys/);
   assert.doesNotMatch(result.stdout, /cloudflare:deploy|cloudflare:migrate/);
 });
 
-test("release gate implementation changes always select full release validation", () => {
+test("release gate implementation changes select release-code validation", () => {
   for (const gate of [
     "scripts/lib/release-config-contract.mjs",
     "scripts/lib/deployable-artifact-contract.mjs",
@@ -243,7 +470,8 @@ test("release gate implementation changes always select full release validation"
   ]) {
     const result = plan(gate);
     assert.equal(result.status, 0, `${gate}\n${output(result)}`);
-    assert.match(result.stdout, /npm run validate:release/, gate);
+    assert.match(result.stdout, /Checks:\n  - npm run validate\n/, gate);
+    assert.match(result.stdout, /Run validate:release separately/, gate);
     assert.doesNotMatch(result.stdout, /cloudflare:deploy|cloudflare:migrate/, gate);
   }
 });

@@ -1,24 +1,31 @@
-export const ROOM_OBJECT_IDS = [
-  "watch",
-  "read",
-  "listen",
-  "collect",
-  "play",
-  "move",
-] as const;
+import type {
+  RoomObjectContract,
+  RoomObjectId,
+} from "./room-object-contract";
 
-export type RoomObjectId = (typeof ROOM_OBJECT_IDS)[number];
+export { ROOM_OBJECT_IDS } from "./room-object-contract";
+export type { RoomObjectId } from "./room-object-contract";
+
+export type RoomConnectorObjectId = Exclude<RoomObjectId, "travel">;
 
 export type RoomProviderById = {
-  watch: "myanimelist";
-  read: "hardcover";
-  listen: "spotify";
-  collect: "discogs";
-  play: "steam";
-  move: "strava";
+  readonly [Id in RoomConnectorObjectId]: Extract<
+    RoomObjectContract,
+    { id: Id }
+  >["contentSource"]["provider"];
 };
 
-export type RoomProviderId = RoomProviderById[RoomObjectId];
+export type RoomProviderId = RoomProviderById[RoomConnectorObjectId];
+
+export type RoomContentSourceById = {
+  readonly [Id in RoomObjectId]: Extract<
+    RoomObjectContract,
+    { id: Id }
+  >["contentSource"];
+};
+
+export type RoomContentSource =
+  RoomContentSourceById[keyof RoomContentSourceById];
 
 export type RoomRotation = {
   /** Polar rotation, in degrees. */
@@ -30,16 +37,17 @@ export type RoomRotation = {
 export type RoomObjectDefinition<Id extends RoomObjectId = RoomObjectId> = {
   id: Id;
   slug: Id;
-  route: `/play/${Id}`;
+  route: Extract<RoomObjectContract, { id: Id }>["route"];
   label: string;
   roomLabel: string;
-  provider: RoomProviderById[Id];
+  contentSource: Extract<RoomObjectContract, { id: Id }>["contentSource"];
   object: string;
+  screenEyebrow: string;
   title: string;
   description: string;
-  approachPoseId: `${Id}-approach`;
-  meshRoot: `OBJ__${Id}`;
-  matchCutSurface: string;
+  approachPoseId: Extract<RoomObjectContract, { id: Id }>["approachPoseId"];
+  meshRoot: Extract<RoomObjectContract, { id: Id }>["meshRoot"];
+  matchCutSurface: Extract<RoomObjectContract, { id: Id }>["matchCutSurface"];
 };
 
 export type RoomObjectRegistry = {

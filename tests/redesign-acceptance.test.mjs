@@ -5,6 +5,7 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import test, { after, before } from "node:test";
 import { fileURLToPath } from "node:url";
+import { buildCopyDeck } from "../scripts/lib/copy-deck.mjs";
 
 const PROJECT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -19,6 +20,7 @@ const CLIENT_MANIFEST_PATH = path.join(
   "dist/client/.vite/manifest.json",
 );
 const publicBundle = JSON.parse(await readFile(PUBLIC_BUNDLE_PATH, "utf8"));
+const copyDeck = await buildCopyDeck(PROJECT_ROOT);
 const PORT = 50_000 + (process.pid % 5_000);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
@@ -40,6 +42,8 @@ before(async () => {
       "--local",
       "--var",
       "NODE_ENV:development",
+      "--var",
+      "TRAVEL_ATLAS_MODE:atlas-v1",
       "--log-level",
       "error",
       "--persist-to",
@@ -130,7 +134,9 @@ function textFromMarkup(markup) {
 }
 
 function defaultVisibleHomeText(html) {
-  const markup = documentMarkup(html).replace(
+  const document = documentMarkup(html);
+  const main = document.match(/<main\b[\s\S]*?<\/main>/i)?.[0] ?? "";
+  const markup = main.replace(
     /<details(?![^>]*\bopen\b)[^>]*>([\s\S]*?)<\/details>/gi,
     (_details, body) => body.match(/<summary\b[\s\S]*?<\/summary>/i)?.[0] ?? "",
   );
@@ -185,30 +191,29 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   const visible = defaultVisibleHomeText(html);
   const bodiesSection =
     markup.match(
-      /<section\b[^>]*aria-labelledby="bodies-of-work-title"[\s\S]*?<\/section>/i,
+      /<section\b[^>]*aria-labelledby="lines-of-work-title"[\s\S]*?<\/section>/i,
     )?.[0] ?? "";
+  const workLines = [
+    ...bodiesSection.matchAll(/<li\b[^>]*data-work-line(?:="[^"]*")?[^>]*>/gi),
+  ];
   const workLinks = [
     ...bodiesSection.matchAll(/<a\b[^>]*href="\/work\/([^"?#]+)"/gi),
   ].map((match) => match[1]);
 
   assert(
-    wordCount(visible) <= 300,
-    `Default Home contains ${wordCount(visible)} visible words; budget is 300`,
+    wordCount(visible) <= 220,
+    `Default Home contains ${wordCount(visible)} visible words; budget is 220`,
   );
-  assert.equal((bodiesSection.match(/<details\b/g) ?? []).length, 4);
-  assert.equal(workLinks.length, 12);
-  assert.equal(new Set(workLinks).size, 12);
-  assert.match(
-    bodiesSection,
-    /<details\b[^>]*open/i,
-    "One body of work should be readable without interaction",
-  );
-  assert.equal(occurrences(visible, "Explore my work"), 1);
+  assert.equal(workLines.length, 4);
+  assert.equal(workLinks.length, 4);
+  assert.equal(new Set(workLinks).size, 4);
+  assert.doesNotMatch(bodiesSection, /<details\b|<summary\b/i);
+  assert.equal(occurrences(visible, "See the work"), 1);
   assert.equal(occurrences(visible, "7K+"), 1);
   assert.equal(occurrences(visible, "$4M+"), 1);
   assert.equal(occurrences(visible, "200K+"), 1);
-  assert.equal(occurrences(visible, "More than two-thirds"), 1);
-  assert.equal(occurrences(visible, "About half"), 1);
+  assert.equal(occurrences(visible, "More than two-thirds"), 0);
+  assert.equal(occurrences(visible, "About half"), 0);
   assert.equal(
     (markup.match(/data-impact-track="(?:deployed|taught|programs)"/g) ?? [])
       .length,
@@ -216,11 +221,11 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   );
   assert.doesNotMatch(
     visible,
-    /Teach\. Build\. Convene|representative work/i,
+    /Teach\. Build\. Convene|representative work|Current focus|Operational ML|Generative systems|Evaluation & adoption|Agent-native product/i,
   );
 });
 
-test("Work pairs a four-line time calendar with four complete body folds", async () => {
+test("Work keeps the four-line calendar primary and paginates canonical work", async () => {
   const html = await renderHtml("/work");
   const markup = documentMarkup(html);
   const calendar =
@@ -234,43 +239,68 @@ test("Work pairs a four-line time calendar with four complete body folds", async
     ...markup.matchAll(/<li\b[^>]*data-work-id="([^"]+)"/gi),
   ].map((match) => match[1]);
 
-  assert.deepEqual(bodyDetails, [
-    "products-open-source",
-    "courses-learning",
-    "writing-research",
-    "talks-programs",
-  ]);
-  assert.equal(workIds.length, 82);
-  assert.equal(new Set(workIds).size, 82);
-  assert.deepEqual(
-    new Set(workIds),
-    new Set(publicBundle.workGroups.map((group) => group.id)),
-  );
+  assert.deepEqual(bodyDetails, []);
+  assert.deepEqual(workIds, []);
+  assert.doesNotMatch(markup, /data-work-index-prompt|id="work-index"/i);
+  assert.doesNotMatch(markup, /Showing 1—24|work-index-title/i);
   assert.equal((calendarBody.match(/<tr\b/g) ?? []).length, 4);
   assert.equal((calendarBody.match(/<td\b/g) ?? []).length, 24);
   assert.match(
     calendar,
-    /Bodies of work by year, with exact work and public-form counts/i,
+    /Projects by line and year/i,
   );
+  assert.doesNotMatch(calendar, /public[- ]form|artifact count|formCount/i);
   assert.match(calendar, /data-density="[1-5]"/i);
   assert.match(
     calendar,
     /href="\/work\?bucket=products-open-source(?:&amp;|&)year=202[1-6]#work-index"/i,
   );
   assert.equal((markup.match(/<input\b[^>]*type="search"/gi) ?? []).length, 1);
-  for (const name of [
-    "bucket",
-    "topic",
-    "year",
-    "format",
-    "organization",
-    "role",
-  ]) {
+  for (const name of ["bucket", "topic", "year", "format"]) {
     assert.match(markup, new RegExp(`<select\\b[^>]*name="${name}"`, "i"));
   }
+  assert.doesNotMatch(markup, /<select\b[^>]*name="(?:organization|role)"/i);
+  assert.match(
+    markup,
+    /<details\b[^>]*id="work-more-filters"[\s\S]*?<select\b[^>]*name="format"/i,
+  );
+  assert.match(markup, />Line of work<|>Topic<|>Year<|>Format</i);
+
+  const selectedPages = await Promise.all([
+    renderHtml("/work?year=2024"),
+    renderHtml("/work?year=2024&page=2"),
+  ]);
+  const selectedMarkup = documentMarkup(selectedPages[0]);
+  const workIdsByPage = selectedPages.map((pageHtml) => [
+    ...documentMarkup(pageHtml).matchAll(
+      /<li\b[^>]*data-work-id="([^"]+)"/gi,
+    ),
+  ].map((match) => match[1]));
+  assert.equal(workIdsByPage[0].length, 24);
+  assert(workIdsByPage[1].length > 0 && workIdsByPage[1].length <= 24);
+  assert.equal(
+    new Set(workIdsByPage.flat()).size,
+    workIdsByPage.flat().length,
+  );
+  const canonicalWorkIds = new Set(
+    publicBundle.workGroups.map((group) => group.id),
+  );
+  assert(workIdsByPage.flat().every((id) => canonicalWorkIds.has(id)));
+  assert.match(selectedMarkup, /Showing 1—24 of \d+ projects/i);
+  assert.match(
+    selectedMarkup,
+    /href="\/work\?year=2024(?:&amp;|&)page=2#work-index"/i,
+  );
+  assert.match(selectedMarkup, /id="work-index-title"/i);
   assert.doesNotMatch(
     markup,
-    /\bMap\b|Visual archive|Complete grouped index|aria-pressed|<canvas\b|<svg\b/i,
+    /\bMap\b|Visual archive|Complete grouped index|<canvas\b|<svg\b/i,
+  );
+  assert.equal(
+    (markup.match(/<button\b[^>]*aria-pressed="(?:true|false)"[^>]*data-work-year=/gi) ?? [])
+      .length,
+    6,
+    "The six calendar-year controls should expose their selected state",
   );
   assert.doesNotMatch(markup, /name="practice"/i);
   assert.doesNotMatch(markup, /name="view"/i);
@@ -290,7 +320,8 @@ test("child-title search returns the parent and identifies the matching form", a
   const html = await renderHtml(
     `/work?q=${encodeURIComponent(child.displayTitle)}`,
   );
-  assert.match(html, /Matched public record:/i);
+  assert.match(html, /Matched:/i);
+  assert.doesNotMatch(html, /Matched public record:/i);
   assert.match(html, new RegExp(child.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(html, new RegExp(`/work/${group.slug}#${child.id}`));
 });
@@ -310,7 +341,8 @@ test("child slugs search and redirect to the exact form anchor", async () => {
   const searchHtml = await renderHtml(
     `/work?q=${encodeURIComponent(child.slug)}`,
   );
-  assert.match(searchHtml, /Matched public record:/i);
+  assert.match(searchHtml, /Matched:/i);
+  assert.doesNotMatch(searchHtml, /Matched public record:/i);
   assert.match(searchHtml, new RegExp(`/work/${group.slug}#${child.id}`));
 
   const response = await fetch(`${BASE_URL}/work/${child.slug}`, {
@@ -332,22 +364,27 @@ test("single- and multi-form WorkGroup details avoid duplicate presentation", as
 
   const singleHtml = await renderHtml(`/work/${single.slug}`);
   const singleText = textFromMarkup(documentMarkup(singleHtml));
+  const singleSummary = copyDeck.workGroups[single.id].summary;
   assert.equal(
-    occurrences(singleText, single.summary),
+    occurrences(singleText, singleSummary),
     1,
     "The single-form summary is repeated",
   );
-  assert.doesNotMatch(singleHtml, /Appearances and artifacts/i);
-  assert.match(singleHtml, /Open the |Historical source unavailable/i);
+  assert.doesNotMatch(singleHtml, /Talks, recordings, and code/i);
+  assert.match(
+    singleHtml,
+    /Read article|View event|Open course|Watch recording|Read report|Open reference|View credit|Read translation|Open mirror|View profile|View repository|View pull request|Historical source unavailable/i,
+  );
 
   const multiHtml = await renderHtml(`/work/${multiple.slug}`);
   const multiText = textFromMarkup(documentMarkup(multiHtml));
+  const multiSummary = copyDeck.workGroups[multiple.id].summary;
   assert.equal(
-    occurrences(multiText, multiple.summary),
+    occurrences(multiText, multiSummary),
     1,
     "The multi-form summary is repeated",
   );
-  assert.match(multiHtml, /Appearances and artifacts/i);
+  assert.match(multiHtml, /Talks, recordings, and code/i);
   for (const itemId of multiple.itemIds) {
     assert.match(
       multiHtml,
@@ -355,18 +392,11 @@ test("single- and multi-form WorkGroup details avoid duplicate presentation", as
     );
   }
 
-  const primaryEntity = publicBundle.entities.find(
-    (entity) => entity.id === multiple.primaryEntityId,
-  );
-  assert(primaryEntity);
   const duplicateTitleHtml = await renderHtml(`/work/${multiple.slug}`);
-  assert.equal(
-    occurrences(
-      textFromMarkup(documentMarkup(duplicateTitleHtml)).toLocaleLowerCase(),
-      "primary form",
-    ),
-    1,
-    "Only the identity-selected primary item may be labeled primary",
+  assert.doesNotMatch(
+    textFromMarkup(documentMarkup(duplicateTitleHtml)),
+    /primary artifact/i,
+    "Work details should use the material's real type rather than content-model language",
   );
 });
 
@@ -414,11 +444,12 @@ test("Work-detail outcomes are direct while wider measures remain contextual", a
   }
 });
 
-test("Three.js stays inside the deferred Play room and out of archive navigation", async () => {
+test("Three.js stays inside deferred Play room and Travel boundaries", async () => {
   const sourceEntries = await Promise.all(
     (await runtimeSourceFiles())
       .filter((file) => /\.(?:js|mjs|ts|tsx)$/i.test(file))
       .filter((file) => !file.includes("components/play/room-3d/"))
+      .filter((file) => !file.includes("components/play/travel/"))
       .map(async (file) => ({ file, text: await readFile(file, "utf8") })),
   );
   for (const { file, text } of sourceEntries) {
@@ -441,55 +472,50 @@ test("Three.js stays inside the deferred Play room and out of archive navigation
     /^assets\/RoomStage-[\w-]+\.js$/,
     "the Three.js room must retain an independently cacheable chunk",
   );
+  const travelStage = manifest["components/play/travel/TravelGlobeStage.tsx"];
+  assert.equal(
+    travelStage?.isDynamicEntry,
+    true,
+    "the Travel globe must remain a dynamic route-scoped entry",
+  );
+  assert.match(
+    travelStage?.file ?? "",
+    /^assets\/TravelGlobeStage-[\w-]+\.js$/,
+    "the Travel globe must retain an independently cacheable chunk",
+  );
   for (const pathname of ["/", "/work"]) {
     assert.doesNotMatch(documentMarkup(await renderHtml(pathname)), /<canvas\b/i);
   }
 });
 
-test("Play remains consent-gated and has a complete no-JavaScript state", async () => {
+test("Play is a provider-free semantic room before an object route is opened", async () => {
   const html = await renderHtml("/play");
   const markup = documentMarkup(html);
-  for (const provider of [
-    "MyAnimeList",
-    "Hardcover",
-    "Spotify",
-    "Discogs",
-    "Steam",
-    "Strava",
+  for (const object of [
+    "watch",
+    "read",
+    "listen",
+    "collect",
+    "play",
+    "move",
+    "travel",
   ]) {
-    assert.match(markup, new RegExp(provider));
+    assert.match(markup, new RegExp(`data-room-object-link="${object}"`));
   }
-  assert.equal((markup.match(/role="tab"/g) ?? []).length, 6);
-  const noScript = markup.match(/<noscript\b[\s\S]*?<\/noscript>/i)?.[0] ?? "";
-  assert.equal((noScript.match(/<details\b/g) ?? []).length, 6);
-  const rawNoScript =
-    html.match(/<noscript\b[\s\S]*?<\/noscript>/i)?.[0] ?? "";
-  assert.doesNotMatch(rawNoScript, /\.undefined\b/);
-  const enhancedClass = rawNoScript.match(
-    /<style>\.([^{}]+)\{display:none!important\}<\/style>/i,
-  )?.[1];
-  assert(enhancedClass, "The no-JavaScript state must hide enhanced controls");
-  const escapedEnhancedClass = enhancedClass.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    "\\$&",
-  );
-  assert.match(
-    html,
-    new RegExp(`class="[^"]*${escapedEnhancedClass}[^"]*"`),
-    "The no-JavaScript selector must target the enhanced tab interface",
-  );
   assert.doesNotMatch(
     markup,
-    /<iframe\b|open\.spotify\.com\/embed|strava-embeds\.com|www\.strava\.com\/athletes/i,
+    /<iframe\b|api\/connectors|open\.spotify\.com\/embed|strava-embeds\.com/i,
   );
 
-  const [source, spotify, playPage] = await Promise.all([
-    Promise.all(
-      [
-        "components/PersonalStreams.tsx",
-        "components/play/MovementStream.tsx",
-      ].map((file) => readFile(path.join(PROJECT_ROOT, file), "utf8")),
-    ).then((files) => files.join("\n")),
+  const [overview, screens, spotify, movement] = await Promise.all([
+    readFile(
+      path.join(PROJECT_ROOT, "components/play/room-platform/RoomOverview.tsx"),
+      "utf8",
+    ),
+    readFile(
+      path.join(PROJECT_ROOT, "components/play/room-platform/room-screen-registry.ts"),
+      "utf8",
+    ),
     Promise.all(
       [
         "components/SpotifyStream.tsx",
@@ -499,24 +525,13 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
       ].map((file) => readFile(path.join(PROJECT_ROOT, file), "utf8")),
     ).then((files) => files.join("\n")),
     readFile(
-      path.join(PROJECT_ROOT, "components/play/ClassicPlayExperience.tsx"),
+      path.join(PROJECT_ROOT, "components/play/MovementStream.tsx"),
       "utf8",
     ),
   ]);
-  assert.match(
-    source,
-    /<SpotifyStream active=\{active === "listen"\} serverFallback=\{spotifyNoScript\}/,
-  );
-  assert.match(
-    source,
-    /active === "collect"[\s\S]*?<DiscogsStream/,
-    "Discogs must mount only after Collect is selected",
-  );
-  assert.match(
-    playPage,
-    /spotifyNoScript=\{[\s\S]*?<ol>[\s\S]*?open\.spotify\.com\/track/,
-    "The no-JavaScript Spotify state must receive a semantic ranked track list",
-  );
+  assert.doesNotMatch(overview, /getPublicConnector|fetch\(/);
+  assert.match(screens, /listen: \(\) => import\("\.\.\/room-screens\/ListenRoomScreen"\)/);
+  assert.match(screens, /collect: \(\) => import\("\.\.\/room-screens\/CollectRoomScreen"\)/);
   assert.match(spotify, /<svg[\s\S]*?className=\{styles\.groove\}/);
   assert.match(
     spotify,
@@ -536,16 +551,12 @@ test("Play remains consent-gated and has a complete no-JavaScript state", async 
     /<audio\b|AudioContext|webkitAudioContext|from\s+["']three["']|WebGL|autoplay;/i,
   );
   assert.match(
-    source,
-    /active === "move"[\s\S]*?<MovementStream/,
-  );
-  assert.match(
-    source,
+    movement,
     /function MovementStream[\s\S]*?if \(state\.status !== "ready"\)/,
     "An unpublished Strava stream must render the compact empty row",
   );
   assert.match(
-    source,
+    movement,
     /function MovementStream[\s\S]*?show && state\.payload\.embed \? \([\s\S]*?<iframe/,
     "The Strava iframe must remain behind explicit visitor intent",
   );
@@ -555,20 +566,12 @@ test("Home absorbs the useful profile arc and About redirects permanently", asyn
   const homeText = textFromMarkup(documentMarkup(await renderHtml("/")));
   assert.match(
     homeText,
-    /how agents discover tools, use context, and leave evidence teams can trust/i,
+    /I build the systems that make AI agents useful after the demo/i,
   );
-  for (const stage of [
-    "Operational ML",
-    "Generative systems",
-    "Evaluation & adoption",
-    "Agent-native product",
-  ]) {
-    assert.equal(
-      occurrences(homeText, stage),
-      1,
-      `${stage} should appear once in the compact Home trajectory`,
-    );
-  }
+  assert.doesNotMatch(
+    homeText,
+    /Current focus|Operational ML|Generative systems|Evaluation & adoption|Agent-native product/i,
+  );
 
   const response = await fetch(`${BASE_URL}/about`, { redirect: "manual" });
   assert.equal(response.status, 308);
@@ -600,11 +603,19 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
   }
   assert.deepEqual(overflowMasking, [
     {
+      file: "app/studio/travel/travel.module.css",
+      selector: ".mapTable",
+    },
+    {
+      file: "app/studio/travel/travel.module.css",
+      selector: ".visuallyHidden",
+    },
+    {
       file: "app/work/WorkTimeline.module.css",
       selector: ".frame caption",
     },
     {
-      file: "components/PersonalStreams.module.css",
+      file: "components/play/StreamPresentation.module.css",
       selector: ".visuallyHidden",
     },
     {
@@ -614,6 +625,10 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
     {
       file: "components/play/room-platform/RoomExperienceProvider.module.css",
       selector: ".announcer",
+    },
+    {
+      file: "components/play/room-platform/RoomExperienceProvider.module.css",
+      selector: ".runtimeLoading picture",
     },
     {
       file: "components/play/room-platform/RoomOverview.module.css",
@@ -642,6 +657,22 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
     {
       file: "components/play/room-screens/RoomScreens.module.css",
       selector: ".cardioDisplay",
+    },
+    {
+      file: "components/play/travel/PostcardPlanet.module.css",
+      selector: ".srOnly",
+    },
+    {
+      file: "components/play/travel/PostcardPlanet.module.css",
+      selector: ".globeFrame",
+    },
+    {
+      file: "components/play/travel/PostcardPlanet.module.css",
+      selector: ".tripCard picture,\n.tripFallback",
+    },
+    {
+      file: "components/play/travel/TravelGlobe.module.css",
+      selector: ".canvas",
     },
   ]);
   const timelineCss = await readFile(

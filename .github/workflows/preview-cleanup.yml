@@ -2,9 +2,9 @@ name: Clean PR previews
 
 on:
   pull_request:
-    types: [closed]
+    types: [closed, unlabeled]
   schedule:
-    - cron: "41 6 * * *"
+    - cron: "41 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -12,11 +12,15 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: preview-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'janitor' }}
+  group: preview-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'janitor' }}
   cancel-in-progress: true
 
 jobs:
   cleanup:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action == 'closed' ||
+      (github.event.action == 'unlabeled' && github.event.label.name == 'preview')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: preview
@@ -26,11 +30,9 @@ jobs:
         with:
           ref: ${{ github.workflow_sha }}
           persist-credentials: false
-      - name: Use Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24.18.0
-      - name: Delete the closed PR preview
+      - name: Verify the dependency-free cleanup runtime
+        run: test "$(node --version | cut -d. -f1)" -ge 20
+      - name: Delete the closed or explicitly unlabeled PR preview
         if: github.event_name == 'pull_request'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PREVIEW_API_TOKEN }}

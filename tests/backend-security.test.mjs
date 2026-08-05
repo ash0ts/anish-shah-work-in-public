@@ -351,3 +351,30 @@ test("runtime D1 access uses prepared statements and owner-gated writes", async 
   assert.match(joined, /rejectCrossOriginWrite/);
   assert.doesNotMatch(joined, /dangerouslySetInnerHTML/);
 });
+
+test("copy ownership reporting is owner-protected, read-only, and no-store", async () => {
+  const [route, repository] = await Promise.all([
+    readFile(
+      new URL("../app/api/studio/copy-ownership/route.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../lib/server/copy-ownership.ts", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(
+    route,
+    /export async function GET\(\)[\s\S]*authorizeOwnerApi\(\)[\s\S]*getCopyOwnershipReport\(\)/,
+  );
+  assert.match(route, /"cache-control": "private, no-store"/);
+  assert.match(route, /"x-robots-tag": "noindex, nofollow, noarchive"/);
+  assert.doesNotMatch(route, /export async function (?:POST|PUT|PATCH|DELETE)/);
+  assert.match(repository, /recordType: "work_group"/);
+  assert.match(repository, /buildCopyOwnershipReport\(result\.records\)/);
+  assert.doesNotMatch(
+    repository,
+    /ensureSanitizedPublicRecords|INSERT|UPDATE|DELETE/,
+  );
+});

@@ -32,7 +32,7 @@ test("Studio exposes a provider-specific Spotify OAuth and publication flow", as
   assert.match(controls, /Publish Top Tracks publicly/);
   assert.match(controls, /acknowledgePublicDisplay:\s*publishTopTracks/);
   assert.match(controls, /Spotify-calculated affinity/);
-  assert.match(controls, /Snapshot refresh due/);
+  assert.match(controls, /Manual refresh available/);
   assert.match(controls, /Public cutoff/);
   assert.match(controls, /Reauthorize by/);
   assert.match(controls, /Access token refresh/);
@@ -71,7 +71,7 @@ test("owner guide pins separate Spotify environments and forbids promotion", asy
 test("Privacy describes Spotify data boundaries and visitor consent", async () => {
   const privacy = await source("app/privacy/page.tsx");
 
-  assert.match(privacy, /Six deliberately different connections/);
+  assert.match(privacy, /Six connections and one owner-authored atlas/);
   assert.match(privacy, /Spotify · Listen/);
   assert.match(privacy, /does not infer listening time, genre, trends, or a taste/);
   assert.match(privacy, /blocked until a visitor explicitly chooses to load it/);

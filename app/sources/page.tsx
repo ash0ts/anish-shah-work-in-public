@@ -7,11 +7,11 @@ import {
 } from "@/lib/server/public-content";
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
 import styles from "./sources.module.css";
+import { SITE_COPY } from "@/lib/copy";
 
 export const dynamic = "force-dynamic";
 
-const sourcesDescription =
-  "Inspect the counting rules, attribution boundaries, claim periods, caveats, and public bibliography behind Anish Shah’s work archive.";
+const sourcesDescription = SITE_COPY.sources["seo-description"];
 
 const metricThemeDescriptions = {
   learning: "Enrollment and launch measures from three practical AI courses.",
@@ -33,7 +33,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const params = await searchParams;
   return publicPageMetadata({
-    title: "Sources and methodology",
+    title: SITE_COPY.sources["seo-title"],
     description: sourcesDescription,
     path: "/sources",
     noindex: hasPublicQuery(params),
@@ -63,9 +63,6 @@ export default async function SourcesPage({
   const sourceAssociation = firstValue(params.association) || "all";
   const sourcePage = positivePage(params.page);
   const metrics = publicMetricsFrom(bundle);
-  const methodology = bundle.narratives.find(
-    (entry) => entry.placement === "sources",
-  );
   const lastUpdated = new Intl.DateTimeFormat("en-US", {
     month: "long",
     day: "numeric",
@@ -129,149 +126,16 @@ export default async function SourcesPage({
         return metric ? [metric] : [];
       }),
     }));
-  const publicWorkGroupCount = bundle.workGroups.filter(
-    (group) => group.publicationState === "public",
-  ).length;
-
   return (
     <main id="main" className={`site-main ${styles.page}`}>
       <header className={styles.intro}>
-        <p className={styles.eyebrow}>The public record</p>
-        <h1>Sources, counts, and claims.</h1>
-        <p>
-          {methodology?.body ??
-            "Public counts come from the public inventory. Internally derived outcomes are rounded, dated, and qualified."}
-        </p>
+        <p className={styles.eyebrow}>{SITE_COPY.sources["intro-eyebrow"]}</p>
+        <h1>{SITE_COPY.sources["intro-title"]}</h1>
+        <p>{SITE_COPY.sources["intro-fallback"]}</p>
         <small>
           {metrics.length} public measures · updated {lastUpdated}
         </small>
       </header>
-
-      <section
-        className={styles.accounting}
-        aria-labelledby="accounting-title"
-      >
-        <header>
-          <p className={styles.eyebrow}>Archive accounting</p>
-          <h2 id="accounting-title">Two inputs, two different outputs.</h2>
-          <p>
-            Footprint records describe the archive. Impact records support the
-            claim ledger. They are reconciled separately.
-          </p>
-        </header>
-        <div className={styles.accountingFlows}>
-          <section aria-labelledby="archive-flow-title">
-            <h3 id="archive-flow-title">Public archive</h3>
-            <ol>
-              <li>
-                <strong>{bundle.sourceSummary.footprintRows}</strong>
-                <span>footprint observations</span>
-              </li>
-              <li>
-                <strong>{publicWorkGroupCount}</strong>
-                <span>bodies of work</span>
-              </li>
-              <li>
-                <strong>{bundle.sourceSummary.publicItems}</strong>
-                <span>public forms</span>
-              </li>
-              <li>
-                <strong>{bundle.evidence.length}</strong>
-                <span>evidence records</span>
-              </li>
-            </ol>
-          </section>
-          <section aria-labelledby="impact-flow-title">
-            <h3 id="impact-flow-title">Impact ledger</h3>
-            <ol>
-              <li>
-                <strong>{bundle.sourceSummary.impactRows}</strong>
-                <span>impact observations reviewed</span>
-              </li>
-              <li>
-                <strong>{metrics.length}</strong>
-                <span>rounded public measures</span>
-              </li>
-            </ol>
-          </section>
-        </div>
-      </section>
-
-      <section
-        className={styles.nonClaims}
-        aria-labelledby="non-claims-title"
-      >
-        <header>
-          <p className={styles.eyebrow}>Attribution boundary</p>
-          <h2 id="non-claims-title">What this site does not claim.</h2>
-        </header>
-        <ul>
-          <li>Pipeline supported is not booked revenue or ARR.</li>
-          <li>
-            Program reach and organization outcomes are not personal causality.
-          </li>
-          <li>
-            Course enrollments are not unique learners or completion counts.
-          </li>
-          <li>
-            Same-day account creation is an association, not a conversion rate.
-          </li>
-          <li>
-            MCP tool calls describe usage, not users, organizations, or revenue.
-          </li>
-        </ul>
-      </section>
-
-      <section className={styles.rules} id="public-footprint" aria-labelledby="rules-title">
-        <header>
-          <p className={styles.eyebrow}>Reading rules</p>
-          <h2 id="rules-title">Four rules stay visible.</h2>
-        </header>
-        <ol>
-          <li>
-            <span>01</span>
-            <div>
-              <h3>Count one underlying work once</h3>
-              <p>
-                All {bundle.sourceSummary.publicItems} public forms remain
-                discoverable. Recordings, translations, mirrors, profiles,
-                excerpts, and evidence pages do not inflate unique-work totals.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>02</span>
-            <div>
-              <h3>Keep forms attached to their source</h3>
-              <p>
-                A talk, regional appearance, replay, repository, and translation
-                can describe the same body of work without becoming five
-                unrelated accomplishments.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>03</span>
-            <div>
-              <h3>Separate contribution from causality</h3>
-              <p>
-                Individual roles, program reach, supported pipeline, and
-                organization-wide outcomes are named separately.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span>04</span>
-            <div>
-              <h3>Keep the qualifier beside the number</h3>
-              <p>
-                Every internally derived measure keeps its time window, source
-                class, attribution, rounding, and caveat in the same record.
-              </p>
-            </div>
-          </li>
-        </ol>
-      </section>
 
       <section
         className={styles.claims}
@@ -279,8 +143,8 @@ export default async function SourcesPage({
         aria-labelledby="claims-title"
       >
         <header>
-          <p className={styles.eyebrow}>Claim ledger</p>
-          <h2 id="claims-title">{metrics.length} measures in four contexts.</h2>
+          <p className={styles.eyebrow}>{SITE_COPY.sources["claims-eyebrow"]}</p>
+          <h2 id="claims-title">{metrics.length} claims, each with its limit.</h2>
         </header>
         <div className={styles.themeGroups}>
           {groupedMetrics.map((theme) => (
@@ -320,7 +184,7 @@ export default async function SourcesPage({
                         </div>
                       </dl>
                       <div className={styles.metricEvidence}>
-                        <span>Public evidence</span>
+                        <span>Sources</span>
                         {metric.publicEvidenceIds.flatMap((evidenceId) => {
                           const source = evidenceById.get(evidenceId);
                           if (!source) return [];
@@ -346,6 +210,33 @@ export default async function SourcesPage({
             </section>
           ))}
         </div>
+      </section>
+
+      <section className={styles.rules} id="public-footprint" aria-labelledby="rules-title">
+        <header>
+          <p className={styles.eyebrow}>{SITE_COPY.sources["rules-eyebrow"]}</p>
+          <h2 id="rules-title">{SITE_COPY.sources["rules-title"]}</h2>
+          <p>
+            {bundle.sourceSummary.footprintRows} source observations resolve to{" "}
+            {bundle.workGroups.length} projects and series. Related records stay
+            searchable without inflating that count.
+          </p>
+        </header>
+        <ol>
+          {[
+            ["01", "rule-1-title", "rule-1-body"],
+            ["02", "rule-3-title", "rule-3-body"],
+            ["03", "rule-4-title", "rule-4-body"],
+          ].map(([number, titleKey, bodyKey]) => (
+            <li key={number}>
+              <span>{number}</span>
+              <div>
+                <h3>{SITE_COPY.sources[titleKey as keyof typeof SITE_COPY.sources]}</h3>
+                <p>{SITE_COPY.sources[bodyKey as keyof typeof SITE_COPY.sources]}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
       </section>
 
       <SourcesIndex
