@@ -51,6 +51,9 @@ import {
   crossedTravelGlobeDragThreshold,
   latLngToVector3,
   resolveTravelGlobeGesture,
+  TRAVEL_GLOBE_COUNTRY_SURFACE_YAW,
+  travelGlobeSurfaceLongitudeFromTextureU,
+  travelGlobeSurfaceQuaternion,
   travelRegionTripCounts,
   TRAVEL_GLOBE_DRAG_THRESHOLD_PX,
   vector3ToLatLng,
@@ -214,6 +217,25 @@ test("travel globe math preserves geography and the eight-pixel drag threshold",
   assert.deepEqual(countryTexturePixel(-90, 179.999, 1024, 512), [1023, 511]);
 });
 
+test("travel globe country surface aligns the rendered map with pins and click decoding", () => {
+  // Three SphereGeometry places the texture's prime meridian 90 degrees east
+  // of the geographic +Z meridian used by pins and CPU click sampling. Rotate
+  // only that UV-bearing surface so every equirectangular longitude lands on
+  // its matching geographic point.
+  assert.equal(TRAVEL_GLOBE_COUNTRY_SURFACE_YAW, -Math.PI / 2);
+  for (const longitude of [-180, 0, -74.006, 139.6917, 179.999, 180]) {
+    const textureU = (longitude + 180) / 360;
+    const rendered = travelGlobeSurfaceLongitudeFromTextureU(textureU);
+    assert.ok(Math.abs(rendered - longitude) < 0.000_001);
+  }
+
+  const tokyo = latLngToVector3(35.6762, 139.6503).normalize();
+  const haloNormal = new Vector3(0, 0, 1).applyQuaternion(
+    travelGlobeSurfaceQuaternion(35.6762, 139.6503),
+  );
+  assert.ok(haloNormal.distanceTo(tokyo) < 0.000_001);
+});
+
 test("travel region counts remain scoped to the selected country", () => {
   const counts = travelRegionTripCounts(
     [
@@ -323,6 +345,11 @@ test("Postcard Planet is demand-driven, pixel-bordered, and semantically navigab
   );
   assert.match(stage, /position \* \$\{PIN_VISUAL_SCALE\.toFixed\(2\)\}/);
   assert.match(stage, /<sphereGeometry args=\{\[PIN_HIT_RADIUS, 8, 6\]\}/);
+  assert.match(
+    stage,
+    /rotation=\{\[0, TRAVEL_GLOBE_COUNTRY_SURFACE_YAW, 0\]\}/,
+  );
+  assert.match(stage, /quaternion=\{selectedPlaceMarker\.quaternion\}/);
   assert.match(stage, /data-travel-globe-hovered-place/);
   assert.match(stage, /if \(pinching\.current\) \{[\s\S]*?cancelGesture\(\)/);
   assert.match(

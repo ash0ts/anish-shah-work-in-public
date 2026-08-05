@@ -262,7 +262,37 @@ test("release preflight rejects a configuration that weakens production boundari
         { ...environment, SIMULATION_EXPERIENCE_MODE: "experimental" },
         { head: expected.head, contentVersion: expected.contentVersion, packageVersion: expected.releaseVersion },
       ),
-    /disabled or campaign-v1/,
+    /disabled, coming-soon, or campaign-v1/,
+  );
+  const comingSoon = expectedPublicReleaseConfig(
+    {
+      ...environment,
+      SIMULATION_EXPERIENCE_MODE: "coming-soon",
+      SIMULATION_AI_MODE: "authored-only",
+    },
+    {
+      head: expected.head,
+      contentVersion: expected.contentVersion,
+      packageVersion: expected.releaseVersion,
+    },
+  );
+  assert.equal(comingSoon.simulationExperienceMode, "coming-soon");
+  assert.equal(comingSoon.simulationAiMode, "authored-only");
+  assert.throws(
+    () =>
+      expectedPublicReleaseConfig(
+        {
+          ...environment,
+          SIMULATION_EXPERIENCE_MODE: "coming-soon",
+          SIMULATION_AI_MODE: "live",
+        },
+        {
+          head: expected.head,
+          contentVersion: expected.contentVersion,
+          packageVersion: expected.releaseVersion,
+        },
+      ),
+    /disabled or coming-soon production simulation must use authored-only/,
   );
   assert.throws(
     () =>
@@ -397,33 +427,36 @@ test("simulation release evidence is sanitized and bound to the hosted model", (
   );
 });
 
-test("disabled simulation releases reject stale approval or live-AI evidence", () => {
-  const record = simulationReleaseRecord({
-    campaignVersion: "meet-me-4n1sh-v1",
-    experienceMode: "disabled",
-    aiMode: "authored-only",
-    provider: "anthropic",
-    model: "claude-sonnet-5",
-  });
-  assert.deepEqual(record.approvedProviders, []);
-  assert.equal(record.approvalStateDigest, null);
-  assert.throws(
-    () =>
-      simulationReleaseRecord({
-        ...record,
-        aiMode: "live",
-      }),
-    /cannot carry live AI/,
-  );
-  assert.throws(
-    () =>
-      simulationReleaseRecord({
-        ...record,
-        approvedProviders: ["spotify"],
-        approvalStateDigest: "b".repeat(64),
-      }),
-    /cannot carry live AI or provider-approval evidence/,
-  );
+test("non-campaign simulation releases reject stale approval or live-AI evidence", () => {
+  for (const experienceMode of ["disabled", "coming-soon"]) {
+    const record = simulationReleaseRecord({
+      campaignVersion: "meet-me-4n1sh-v1",
+      experienceMode,
+      aiMode: "authored-only",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+    });
+    assert.equal(record.experienceMode, experienceMode);
+    assert.deepEqual(record.approvedProviders, []);
+    assert.equal(record.approvalStateDigest, null);
+    assert.throws(
+      () =>
+        simulationReleaseRecord({
+          ...record,
+          aiMode: "live",
+        }),
+      /cannot carry live AI/,
+    );
+    assert.throws(
+      () =>
+        simulationReleaseRecord({
+          ...record,
+          approvedProviders: ["spotify"],
+          approvalStateDigest: "b".repeat(64),
+        }),
+      /cannot carry live AI or provider-approval evidence/,
+    );
+  }
 });
 
 test("non-versioned trigger reconciliation is bound to the exact cutover release", () => {

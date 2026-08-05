@@ -5,14 +5,17 @@ import {
 import type { WorkerEnv } from "./runtime-types";
 import { previewFixtureRuntime } from "../lib/deployment-environment";
 
-function isContentBackedPublicPath(pathname: string): boolean {
+function isContentBackedPublicPath(
+  pathname: string,
+  simulationExperienceMode: string | undefined,
+): boolean {
   return (
     pathname === "/" ||
     pathname === "/play" ||
     pathname === "/play/" ||
     pathname.startsWith("/play/") ||
-    pathname === "/simulation" ||
-    pathname === "/simulation/" ||
+    (simulationExperienceMode === "campaign-v1" &&
+      (pathname === "/simulation" || pathname === "/simulation/")) ||
     pathname === "/sources" ||
     pathname === "/sources/" ||
     pathname === "/work" ||
@@ -46,7 +49,7 @@ export async function publicationAvailabilityResponse(
   if (
     !directProduction ||
     !["GET", "HEAD"].includes(request.method) ||
-    !isContentBackedPublicPath(pathname)
+    !isContentBackedPublicPath(pathname, env.SIMULATION_EXPERIENCE_MODE)
   ) {
     return null;
   }

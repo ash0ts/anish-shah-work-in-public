@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { steamStorageCountries } from "@/lib/server/connectors/steam-policy";
+import { simulationExperienceMode } from "@/lib/server/simulation/mode";
 import { publicPageMetadata } from "@/lib/seo";
 import styles from "./privacy.module.css";
 
@@ -14,6 +15,7 @@ export const metadata: Metadata = publicPageMetadata({
 
 export default function PrivacyPage() {
   const storageCountries = steamStorageCountries();
+  const simulationMode = simulationExperienceMode();
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
@@ -278,43 +280,54 @@ export default function PrivacyPage() {
           </p>
         </section>
 
-        <section>
-          <h2>Meet Me simulation and optional AI processing</h2>
-          <p>
-            <strong>4N1SH is a generated game character assembled from Anish
-            Shah’s public work and approved public collection snapshots. It is
-            not Anish, does not speak for Anish or W&amp;B, and can be wrong.</strong>{" "}
-            The campaign remains fully completable with authored dialogue when
-            its model service is unavailable or when a visitor chooses not to
-            write anything.
-          </p>
-          <p>
-            The campaign contains exactly two optional text prompts, each
-            limited to 280 characters. If used, the message is sent to
-            Anthropic through Cloudflare AI Gateway to generate a short,
-            schema-bounded character response. The application processes that
-            text in memory and converts any useful result into a small fixed set
-            of game signals. It does not write the visitor message, the model
-            prompt, or the raw provider response to D1, KV, application logs,
-            analytics, or browser persistence. To make a retried turn
-            idempotent, D1 may retain the validated, length-bounded character
-            line and its allowlisted game IDs with the short-lived session; that
-            safe projection is removed with the session no later than two hours
-            after expiry. Cloudflare and Anthropic still process the request
-            under their own applicable terms and policies. Do not enter
-            confidential, sensitive, or personal information.
-          </p>
-          <p>
-            A one-hour opaque session cookie coordinates revision-safe game
-            turns. D1 stores only its one-way hash, safe scene and action IDs,
-            fixed visitor-signal enums, bounded counters, and expiry. Campaign
-            progress kept in session storage stays in the current browser tab.
-            Completion, reset, or explicit exit deletes the active session;
-            abandoned session rows are removed no later than two hours after
-            expiry. There is no account, transcript, leaderboard, durable
-            visitor profile, or cross-session behavioral history.
-          </p>
-        </section>
+        {simulationMode === "campaign-v1" ? (
+          <section>
+            <h2>Meet Me simulation and optional AI processing</h2>
+            <p>
+              <strong>4N1SH is a generated game character assembled from Anish
+              Shah’s public work and approved public collection snapshots. It is
+              not Anish, does not speak for Anish or W&amp;B, and can be wrong.</strong>{" "}
+              The campaign remains fully completable with authored dialogue when
+              its model service is unavailable or when a visitor chooses not to
+              write anything.
+            </p>
+            <p>
+              The campaign contains exactly two optional text prompts, each
+              limited to 280 characters. If used, the message is sent to
+              Anthropic through Cloudflare AI Gateway to generate a short,
+              schema-bounded character response. The application processes that
+              text in memory and converts any useful result into a small fixed set
+              of game signals. It does not write the visitor message, the model
+              prompt, or the raw provider response to D1, KV, application logs,
+              analytics, or browser persistence. To make a retried turn
+              idempotent, D1 may retain the validated, length-bounded character
+              line and its allowlisted game IDs with the short-lived session; that
+              safe projection is removed with the session no later than two hours
+              after expiry. Cloudflare and Anthropic still process the request
+              under their own applicable terms and policies. Do not enter
+              confidential, sensitive, or personal information.
+            </p>
+            <p>
+              A one-hour opaque session cookie coordinates revision-safe game
+              turns. D1 stores only its one-way hash, safe scene and action IDs,
+              fixed visitor-signal enums, bounded counters, and expiry. Campaign
+              progress kept in session storage stays in the current browser tab.
+              Completion, reset, or explicit exit deletes the active session;
+              abandoned session rows are removed no later than two hours after
+              expiry. There is no account, transcript, leaderboard, durable
+              visitor profile, or cross-session behavioral history.
+            </p>
+          </section>
+        ) : (
+          <section>
+            <h2>Meet Me simulation is not running</h2>
+            <p>
+              {simulationMode === "coming-soon"
+                ? "The coming-soon page is a static preview. It creates no simulation session, loads no Work or Play collection dossier, sends no visitor text to a model, and stores no campaign progress."
+                : "Meet Me is disabled. Its public route, campaign session, model processing, and visitor-text prompts are unavailable."}
+            </p>
+          </section>
+        )}
 
         <section aria-labelledby="accessibility-contact-title">
           <h2 id="accessibility-contact-title">

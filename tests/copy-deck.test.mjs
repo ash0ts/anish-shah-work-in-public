@@ -228,13 +228,23 @@ test("editable Play flavor copy excludes guarded provider-policy literals", asyn
 });
 
 test("Simulation presentation copy is deck-owned while model disclosures remain guarded", async () => {
-  const [deck, campaignManifest, simulationPage, campaignCopy] = await Promise.all([
+  const [
+    deck,
+    campaignManifest,
+    simulationPage,
+    simulationComingSoon,
+    campaignCopy,
+  ] = await Promise.all([
     buildCopyDeck(root),
     readFile(
       path.join(root, "content/presentation/simulation.v1.json"),
       "utf8",
     ),
     readFile(path.join(root, "app/simulation/page.tsx"), "utf8"),
+    readFile(
+      path.join(root, "components/simulation/SimulationComingSoon.tsx"),
+      "utf8",
+    ),
     readFile(
       path.join(root, "components/simulation/campaign/campaign-copy.ts"),
       "utf8",
@@ -247,7 +257,28 @@ test("Simulation presentation copy is deck-owned while model disclosures remain 
     "Beat the model’s first answer.",
   );
   assert.match(simulationPage, /SITE_COPY\.simulation\["seo-title"\]/u);
+  assert.match(
+    simulationPage,
+    /SITE_COPY\.simulation\["coming-soon-seo-description"\]/u,
+  );
   assert.match(simulationPage, /SITE_COPY\.simulation\["noscript-summary"\]/u);
+  assert.equal(
+    deck.pages.simulation["coming-soon-status"],
+    "Campaign status · Coming soon",
+  );
+  for (const key of [
+    "coming-soon-eyebrow",
+    "coming-soon-title",
+    "coming-soon-summary",
+    "coming-soon-room-cta",
+    "coming-soon-work-cta",
+    "coming-soon-status",
+  ]) {
+    assert.match(
+      simulationComingSoon,
+      new RegExp(`SITE_COPY\\.simulation\\["${key}"\\]`, "u"),
+    );
+  }
   assert.equal(deck.pages.simulation["action-probe-label"], "Probe");
   assert.match(campaignCopy, /SIMULATION_ACTION_COPY_IDS\.map/u);
   assert.match(campaignCopy, /SITE_COPY\.simulation\[`action-\$\{action\}-hint`\]/u);

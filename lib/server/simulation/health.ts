@@ -3,10 +3,11 @@ import { listSimulationProviderApprovals } from "./approvals";
 import { readSimulationUsageHealth } from "./repository";
 import { simulationManifest } from "./policy";
 import { simulationRuntimeConfiguration } from "./runtime";
+import type { SimulationExperienceMode } from "./mode";
 
 export type SimulationHealthSummary = {
   campaignVersion: string;
-  experienceMode: "disabled" | "campaign-v1";
+  experienceMode: SimulationExperienceMode;
   aiMode: "fixture" | "live" | "authored-only" | "invalid";
   provider: "anthropic";
   model: string;

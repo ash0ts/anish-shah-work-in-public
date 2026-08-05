@@ -6,6 +6,9 @@ Meet 4N1SH
 ## seo-description
 Challenge a generated public model of Anish by recovering evidence, preserving qualifiers, and building a better question.
 
+## coming-soon-seo-description
+4N1SH is under construction: a short playable model connecting Anish Shah’s public work and collections.
+
 ## ingress-label
 There is another signal behind the room.
 
@@ -23,6 +26,24 @@ Compressing the archive into a memory wafer and entering the Anish simulation.
 
 ## transition-cancel-cta
 Cancel dive
+
+## coming-soon-eyebrow
+4N1SH // Public model
+
+## coming-soon-title
+The simulation is still learning how not to flatten the person.
+
+## coming-soon-summary
+I’m building a short game about how public evidence becomes a model of a person—and what gets lost when that model gets too confident.
+
+## coming-soon-status
+Campaign status · Coming soon
+
+## coming-soon-room-cta
+Return to the room
+
+## coming-soon-work-cta
+See the work
 
 ## boot-eyebrow
 Meet Me mode

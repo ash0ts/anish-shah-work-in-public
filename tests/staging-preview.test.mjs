@@ -202,8 +202,25 @@ test("staging can apply simulation persistence with the campaign disabled first"
         contentVersion,
         releaseVersion,
       ),
-    /disabled or campaign-v1/,
+    /disabled, coming-soon, or campaign-v1/,
   );
+});
+
+test("staging can publish the simulation doorway without enabling the campaign", () => {
+  const environment = {
+    ...stagingEnvironment(),
+    STAGING_SIMULATION_EXPERIENCE_MODE: "coming-soon",
+  };
+  const expected = expectedStagingCoordinates(
+    environment,
+    contentVersion,
+    releaseVersion,
+  );
+  const config = stagingConfiguration(generatedBase(), expected);
+  assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
+  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "coming-soon");
+  assert.equal(config.vars.SIMULATION_AI_MODE, "authored-only");
+  assert.equal(config.vars.TRAVEL_ATLAS_MODE, "atlas-v1");
 });
 
 test("staging can bootstrap Travel privately before atlas activation", () => {
@@ -372,6 +389,68 @@ test("staging candidate receipts bind health, copy, Simulation, Travel, and publ
         { head: releaseSha, plan },
       ),
     /not configured, published, and current/,
+  );
+});
+
+test("staging health accepts coming-soon without AI or provider approvals", () => {
+  const plan = {
+    releaseVersion,
+    contentVersion,
+    copyVersion: "c".repeat(16),
+    travelAtlasMode: "atlas-v1",
+    simulation: {
+      campaignVersion: "meet-me-4n1sh-v1",
+      experienceMode: "coming-soon",
+      aiMode: "authored-only",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      approvedProviders: [],
+      approvalStateDigest: null,
+    },
+  };
+  const health = {
+    status: "healthy",
+    releaseSha,
+    releaseVersion,
+    contentVersion,
+    copyVersion: plan.copyVersion,
+    simulation: {
+      campaignVersion: plan.simulation.campaignVersion,
+      experienceMode: "coming-soon",
+      aiMode: "authored-only",
+      provider: "anthropic",
+      model: "claude-sonnet-5",
+      configured: false,
+      approvedProviders: [],
+      providerApprovalDigest: null,
+    },
+    travel: {
+      mode: "atlas-v1",
+      configured: true,
+      activePublication: { contentHash: "e".repeat(64) },
+      cleanupHeartbeat: { status: "current" },
+    },
+  };
+
+  assert.deepEqual(
+    assertStagingCandidateHealth(health, { head: releaseSha, plan }).simulation,
+    { approvedProviders: [], approvalStateDigest: null },
+  );
+  assert.throws(
+    () =>
+      assertStagingCandidateHealth(
+        {
+          ...health,
+          simulation: {
+            ...health.simulation,
+            experienceMode: "campaign-v1",
+            aiMode: "live",
+            configured: true,
+          },
+        },
+        { head: releaseSha, plan },
+      ),
+    /Simulation configuration or provider approvals do not match/,
   );
 });
 
@@ -1997,6 +2076,15 @@ test("staging release bootstraps and verifies its isolated D1/KV publication", a
   assert.match(script, /\/api\/studio\/maintenance\/bootstrap/);
   assert.match(script, /requireStagedCandidate/);
   assert.match(script, /waitForStagingDeploymentState/);
+  assert.match(
+    script,
+    /expectedSimulationStatus\s*=\s*\n?\s*plan\.simulation\.experienceMode === "disabled" \? 404 : 200/,
+  );
+  assert.match(script, /authenticatedFetch\(\s*"\/api\/simulation\/session"/);
+  assert.match(
+    script,
+    /expectedSimulationSessionStatus\s*=\s*\n?\s*plan\.simulation\.experienceMode === "campaign-v1" \? 200 : 404/,
+  );
 
   const stageStart = script.indexOf('if (action === "stage")');
   const stageEnd = script.indexOf("} else {", stageStart);

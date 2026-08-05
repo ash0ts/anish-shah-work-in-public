@@ -104,6 +104,17 @@ SIMULATION_AI_MODE=fixture \
 npm run dev:studio
 ```
 
+To inspect the public placeholder contract locally, use:
+
+```bash
+SIMULATION_EXPERIENCE_MODE=coming-soon \
+SIMULATION_AI_MODE=authored-only \
+npm run dev:studio
+```
+
+That route must render without creating a session, reading the dossier, or
+loading campaign code; `/api/simulation/**` remains unavailable.
+
 To smoke-test real Claude behavior locally, keep the provider key in an existing
 owner-only environment file and pass that file to the guarded launcher:
 
@@ -303,6 +314,8 @@ the semantic no-JavaScript dossier, reduced-motion/forced-colors/Save-Data
 fallbacks, and authored completion during a total model outage. Assert that:
 
 - `/simulation` is absent when the feature is disabled;
+- `/simulation` is a noindexed server-only placeholder and every Simulation API
+  remains unavailable in `coming-soon` mode;
 - Tactical never downloads Phaser;
 - Action downloads Phaser only after the visitor selects it;
 - Tone.js is absent until `SOUND ON`;

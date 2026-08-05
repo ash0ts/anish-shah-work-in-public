@@ -50,7 +50,7 @@ export function simulationReleaseRecord({
   if (!/^[A-Za-z0-9._-]{1,64}$/.test(String(campaignVersion ?? ""))) {
     throw new Error("The simulation campaign version is invalid.");
   }
-  if (!new Set(["disabled", "campaign-v1"]).has(experienceMode)) {
+  if (!new Set(["disabled", "coming-soon", "campaign-v1"]).has(experienceMode)) {
     throw new Error("The simulation experience mode is invalid.");
   }
   if (!new Set(["live", "authored-only"]).has(aiMode)) {
@@ -76,7 +76,7 @@ export function simulationReleaseRecord({
     digest.length > 0
   ) {
     throw new Error(
-      "A disabled simulation release cannot carry live AI or provider-approval evidence.",
+      "A non-campaign simulation release cannot carry live AI or provider-approval evidence.",
     );
   }
   return {

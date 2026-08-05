@@ -47,6 +47,8 @@ const {
   allowedEntityIds,
   authoredFallback,
   simulationExperienceEnabled,
+  simulationExperienceMode,
+  simulationExperienceVisible,
   simulationManifest,
   trustedActions,
 } = policyModule;
@@ -82,10 +84,16 @@ const {
   validateSimulationTurnRequest,
 } = validationModule;
 
-const { handleSimulationSessionPost, handleSimulationTurnPost } =
+const {
+  handleSimulationSessionGet,
+  handleSimulationSessionPost,
+  handleSimulationTurnPost,
+} =
   await import("../lib/server/simulation/http.ts");
 const { throttleSimulationApi } =
   await import("../worker/rate-limiting.ts");
+const { publicationAvailabilityResponse } =
+  await import("../worker/publication-fallback.ts");
 
 const hmacKey = Buffer.alloc(32, 71).toString("base64");
 const publicBundle = JSON.parse(
@@ -222,6 +230,55 @@ test("campaign manifest exposes four bounded scenes and trusted fallbacks", () =
     "counter",
   );
   assert.equal(simulationExperienceEnabled(), false);
+});
+
+test("coming-soon exposes the public route while every campaign API stays disabled", async () => {
+  await withRuntime(
+    {
+      ...localRuntime,
+      DEPLOYMENT_TIER: "staging",
+      SIMULATION_EXPERIENCE_MODE: "coming-soon",
+      SIMULATION_AI_MODE: "authored-only",
+    },
+    async () => {
+      assert.equal(simulationExperienceMode(), "coming-soon");
+      assert.equal(simulationExperienceVisible(), true);
+      assert.equal(simulationExperienceEnabled(), false);
+      assert.equal(simulationRuntimeConfiguration().configured, false);
+
+      const response = await handleSimulationSessionGet(
+        new Request("https://staging.example/api/simulation/session"),
+      );
+      assert.equal(response.status, 404);
+      assert.equal((await response.json()).code, "simulation_not_found");
+
+      assert.equal(
+        await throttleSimulationApi(
+          { SIMULATION_EXPERIENCE_MODE: "coming-soon" },
+          new Request("https://staging.example/api/simulation/session"),
+          false,
+        ),
+        null,
+      );
+      assert.equal(
+        await publicationAvailabilityResponse(
+          new Request("https://staging.example/simulation"),
+          { SIMULATION_EXPERIENCE_MODE: "coming-soon" },
+          true,
+        ),
+        null,
+      );
+    },
+  );
+});
+
+test("the campaign route remains content-backed when campaign-v1 is active", async () => {
+  const response = await publicationAvailabilityResponse(
+    new Request("https://anish-shah-is.online/simulation"),
+    { SIMULATION_EXPERIENCE_MODE: "campaign-v1" },
+    true,
+  );
+  assert.equal(response?.status, 503);
 });
 
 test("simulation HTTP writes reject cross-origin and oversized requests", async () => {

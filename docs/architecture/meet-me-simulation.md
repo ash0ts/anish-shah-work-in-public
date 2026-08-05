@@ -124,16 +124,27 @@ Cloudflare references:
 
 ## Environment matrix
 
+The experience gate has three exact states:
+
+- `disabled` hides the Play ingress, returns 404 from the route and APIs, and
+  omits the route from the sitemap.
+- `coming-soon` keeps the semantic Play ingress and serves a server-rendered,
+  noindexed placeholder. It creates no session, reads no publication dossier,
+  loads no campaign client, invokes no rate limiter, and keeps every Simulation
+  API at 404.
+- `campaign-v1` enables the complete dossier, session, Action/Tactical, and
+  model-or-authored-fallback contract.
+
 | Tier | Experience | AI | Persistence |
 | --- | --- | --- | --- |
 | Local | `campaign-v1` by default in development | deterministic fixture unless explicitly configured | local D1 only |
 | PR preview | `campaign-v1` | deterministic authored fixture | no D1, KV, secrets, or provider calls |
-| Staging | `campaign-v1` | live staging Gateway | isolated staging D1, limits, keys, and approvals |
-| Production | `disabled` by default | authored-only while disabled; live when activated | production D1 and distinct limits/keys |
+| Staging | `coming-soon` for doorway review or `campaign-v1` for campaign acceptance | authored-only while coming soon; live for the campaign | isolated staging D1, limits, keys, and approvals |
+| Production | `disabled` or `coming-soon` until campaign activation | authored-only outside the campaign; live when activated | production D1 and distinct limits/keys |
 
-Hosted production and staging reject fixture mode. Disabled mode hides the Play
-ingress, returns 404 from the route and APIs, and omits `/simulation` from the
-sitemap. Preview cannot access Studio or mutation APIs.
+Hosted production and staging reject fixture mode. Neither `disabled` nor
+`coming-soon` accepts campaign approval evidence or live AI configuration.
+Preview cannot access Studio or mutation APIs.
 
 ## Source map
 
@@ -151,7 +162,9 @@ drizzle/0006_public_model_simulation.sql     additive state tables
 ## Validation and release
 
 Run the repository maintenance classifier, `npm run validate`, and
-`npm run validate:browser`. Staging acceptance must complete both Action and
+`npm run validate:browser`. A `coming-soon` candidate must prove the route is
+200 and noindexed, its APIs are 404, and no dossier, session, model, Phaser, or
+Tone code is loaded. A `campaign-v1` candidate must complete both Action and
 Tactical campaigns, exercise authored fallback under a full model outage, and
 confirm that no Phaser or Tone chunk loads before the corresponding explicit
 gesture.

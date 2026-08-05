@@ -22,6 +22,10 @@ that would bypass the exact-config, staged-checkpoint, and attestation contract.
 Neither option requires a D1 restore, provider disconnect, approval deletion,
 Gateway-key rotation, or Play snapshot change.
 
+`coming-soon` is a planned presentation state, not incident containment. It may
+keep the doorway visible while the campaign is withheld, but a security or
+session-boundary incident should use `disabled` or the recorded prior Worker.
+
 ## Worker rollback
 
 Use the previous version recorded in the checked-in release record. During an

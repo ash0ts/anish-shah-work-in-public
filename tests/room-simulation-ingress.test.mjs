@@ -15,8 +15,8 @@ test("the simulation ingress is a server-gated semantic link in both room modes"
     source("content/copy/pages/simulation.md"),
   ]);
 
-  assert.match(layout, /simulationExperienceEnabled\(\)/);
-  assert.match(layout, /simulationEnabled=\{simulationExperienceEnabled\(\)\}/);
+  assert.match(layout, /simulationExperienceVisible\(\)/);
+  assert.match(layout, /simulationEnabled=\{simulationExperienceVisible\(\)\}/);
   assert.match(control, /if \(!room\.simulationEnabled\) return null/);
   assert.match(control, /<Link/);
   assert.match(control, /href="\/simulation"/);

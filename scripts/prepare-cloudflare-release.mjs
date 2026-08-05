@@ -102,10 +102,11 @@ const simulationExperienceMode =
   process.env.SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
 if (
   simulationExperienceMode !== "disabled" &&
+  simulationExperienceMode !== "coming-soon" &&
   simulationExperienceMode !== "campaign-v1"
 ) {
   throw new Error(
-    "SIMULATION_EXPERIENCE_MODE must be disabled or campaign-v1.",
+    "SIMULATION_EXPERIENCE_MODE must be disabled, coming-soon, or campaign-v1.",
   );
 }
 const simulationAiMode =
@@ -113,10 +114,12 @@ const simulationAiMode =
   (simulationExperienceMode === "campaign-v1" ? "live" : "authored-only");
 if (
   !["live", "authored-only"].includes(simulationAiMode) ||
-  (simulationExperienceMode === "campaign-v1" && simulationAiMode !== "live")
+  (simulationExperienceMode === "campaign-v1" && simulationAiMode !== "live") ||
+  (simulationExperienceMode !== "campaign-v1" &&
+    simulationAiMode !== "authored-only")
 ) {
   throw new Error(
-    "Production simulation must be disabled/authored-only or campaign-v1/live.",
+    "Production simulation must be disabled or coming-soon with authored-only, or campaign-v1 with live AI.",
   );
 }
 const travelAtlasMode = process.env.TRAVEL_ATLAS_MODE?.trim() || "disabled";
