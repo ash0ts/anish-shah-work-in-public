@@ -10,11 +10,11 @@ import {
 } from "react";
 import styles from "./SiteHeader.module.css";
 
-type NavigationKey = "home" | "work" | "play";
+type NavigationKey = "home" | "about" | "work" | "play";
 
 type PrimaryNavigationItem = readonly [
   label: string,
-  href: "/work" | "/play",
+  href: "/about" | "/work" | "/play",
 ];
 
 type IndicatorMotion = {
@@ -25,6 +25,7 @@ type IndicatorMotion = {
 
 function navigationKeyForPath(pathname: string): NavigationKey | null {
   if (pathname === "/") return "home";
+  if (pathname === "/about") return "about";
   if (pathname === "/work" || pathname.startsWith("/work/")) return "work";
   if (
     pathname === "/play" ||

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0",
+  "phases": [
+    {
+      "id": "weights-and-biases",
+      "period": "2021–Now",
+      "organization": "Weights & Biases",
+      "track": "ML support → MLOps growth → agent systems",
+      "summaryCopyKey": "career-phase-1-summary",
+      "mark": {
+        "kind": "typographic",
+        "label": "W&B",
+        "assetPath": null,
+        "sourceUrl": "https://wandb.ai/",
+        "lastVerified": "2026-08-05"
+      }
+    },
+    {
+      "id": "sap-and-brilliant-hire",
+      "period": "2017–2021",
+      "organization": "SAP & Brilliant Hire by SAP",
+      "track": "Analytics → data science → production ML",
+      "summaryCopyKey": "career-phase-2-summary",
+      "mark": {
+        "kind": "typographic",
+        "label": "SAP",
+        "assetPath": null,
+        "sourceUrl": "https://www.sap.com/",
+        "lastVerified": "2026-08-05"
+      }
+    },
+    {
+      "id": "temple-university",
+      "period": "2016–2019",
+      "organization": "Temple University",
+      "track": "Teaching & research",
+      "summaryCopyKey": "career-phase-3-summary",
+      "mark": {
+        "kind": "typographic",
+        "label": "TU",
+        "assetPath": null,
+        "sourceUrl": "https://www.temple.edu/",
+        "lastVerified": "2026-08-05"
+      }
+    }
+  ]
+}

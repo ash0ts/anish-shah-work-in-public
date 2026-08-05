@@ -4,6 +4,7 @@ import type {
   WorkBucket,
   WorkGroup,
 } from "@/types/content";
+import { workOrganizationMarkIdsByGroupFrom } from "@/lib/work-organizations";
 
 export type WorkIndexEntry = {
   id: string;
@@ -66,6 +67,7 @@ export type WorkArchiveRecord = WorkIndexEntry & {
   topics: string[];
   organizationIds: string[];
   organizationNames: string[];
+  organizationMarkIds: string[];
   formats: string[];
   searchAliases: string[];
   childTitles: string[];
@@ -99,6 +101,8 @@ export function workArchiveRecordsFrom(
   const publicWorkGroups = (bundle.workGroups ?? []).filter(
     (group) => group.publicationState === "public",
   );
+  const organizationMarkIdsByGroup =
+    workOrganizationMarkIdsByGroupFrom(bundle);
 
   if (publicWorkGroups.length) {
     return publicWorkGroups.flatMap((group) =>
@@ -107,6 +111,7 @@ export function workArchiveRecordsFrom(
         bundle,
         itemById,
         organizationById,
+        organizationMarkIdsByGroup,
       ),
     );
   }
@@ -141,6 +146,7 @@ export function workArchiveRecordsFrom(
       organizationNames: item.organizationIds
         .map((id) => organizationById.get(id))
         .filter((name): name is string => Boolean(name)),
+      organizationMarkIds: [],
       formats: [item.type],
       searchAliases: [
         item.displayTitle,
@@ -192,6 +198,7 @@ export function workArchiveRecordsFrom(
         organizationNames: organizationIds
           .map((id) => organizationById.get(id))
           .filter((name): name is string => Boolean(name)),
+        organizationMarkIds: [],
         formats: [...new Set(members.map((item) => item.type))],
         searchAliases: [
           ...(entity.slugAliases ?? []),
@@ -228,6 +235,7 @@ function workGroupRecord(
   bundle: AnishContentBundle,
   itemById: Map<string, PortfolioItem>,
   organizationById: Map<string, string>,
+  organizationMarkIdsByGroup: Map<string, string[]>,
 ): WorkArchiveRecord[] {
   const members = group.itemIds
     .map((id) => itemById.get(id))
@@ -289,6 +297,7 @@ function workGroupRecord(
       organizationNames: group.organizationIds
         .map((id) => organizationById.get(id))
         .filter((name): name is string => Boolean(name)),
+      organizationMarkIds: organizationMarkIdsByGroup.get(group.id) ?? [],
       formats: group.formats,
       searchAliases: [
         ...group.slugAliases,

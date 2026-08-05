@@ -4,6 +4,7 @@
 
 - `content/copy/pages/site.md`: navigation, footer, global labels, and shared metadata wording.
 - `content/copy/pages/home.md`: homepage framing, current focus, calls to action, and homepage metadata.
+- `content/copy/pages/about.md`: concise biography, reviewed career chronology, calls to action, and About metadata.
 - `content/copy/pages/work.md`: Work archive introduction, search wording, and metadata.
 - `content/copy/pages/play.md`: room overview, seven object descriptions, Travel doorway/atlas framing, and Play metadata.
 - `content/copy/pages/simulation.md`: Simulation introduction, CTA, nonfactual encounter flavor, instructions, and metadata.
@@ -31,6 +32,7 @@ Owner verification is required for:
 - Profile headline and summary.
 - WorkGroup display title, short title, summary, and role summary.
 - Career trajectory and methodology/counting prose.
+- About biography, chronology, periods, organizations, and relationship wording.
 - Any statement naming dates, organizations, scope, attribution, product behavior, or technical capability.
 
 `npm run copy:diff -- --base <ref>` groups changed keys by risk and affected route. Treat `fact_check` as a review requirement, not a suggestion.

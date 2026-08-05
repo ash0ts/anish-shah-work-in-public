@@ -41,6 +41,16 @@ orders the 13 rounded public measures, while
 `curation/public-claim-upgrades.v1.json` records the selected rounded measure
 replacements and their immutable source-row selectors.
 
+`presentation/career.v1.json` and
+`presentation/work-organizations.v1.json` are reviewed public presentation
+contracts, not canonical-content overrides. The career manifest contains only
+coarse chronology structure and first-party asset provenance; its prose lives
+in the copy deck. The organization manifest may reference only sanitized
+organization and WorkGroup IDs with a real evidence intersection. Runtime
+resolution removes hidden or empty WorkGroups before rendering and counting.
+Neither manifest may introduce new relationships, metrics, dates, or public
+records.
+
 The migration report explains current row counts, canonicalization, relation
 generation, and privacy checks. Public impact metrics intentionally contain
 reviewed display strings instead of raw numeric values. Item-detail selectors

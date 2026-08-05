@@ -205,6 +205,19 @@ test("homepage renders four lines of work and three qualified proof statements",
 test("all public routes expose useful server-rendered content", async () => {
   const routes = [
     {
+      path: "/about",
+      required: [
+        /About · ML systems/i,
+        /turn traces, evaluations, and tools into clearer next actions/i,
+        /How the work developed/i,
+        /2021–Now/i,
+        /Weights &amp; Biases/i,
+        /SAP &amp; Brilliant Hire by SAP/i,
+        /Temple University/i,
+        /href="https:\/\/www\.linkedin\.com\/in\/anish-shah\/?"/i,
+      ],
+    },
+    {
       path: "/work",
       required: [
         /What I(?:’|&#x27;|')ve built, taught, and tested\./i,
@@ -219,6 +232,11 @@ test("all public routes expose useful server-rendered content", async () => {
         /Technical education/i,
         /Research, writing &amp; implementations/i,
         /Talks, workshops &amp; programs/i,
+        /Organizations &amp; platforms/i,
+        /The work crosses companies, projects, and technical communities/i,
+        /href="#work-calendar"/i,
+        /href="#work-organizations"/i,
+        /href="\/work\?organization=google-cloud#work-index"/i,
       ],
     },
     {
@@ -271,12 +289,17 @@ test("all public routes expose useful server-rendered content", async () => {
   assert.doesNotMatch(workHtml, /name="role"/i);
 });
 
-test("legacy About requests permanently redirect to the homepage profile", async () => {
+test("About publishes a bounded career profile without resume-level private detail", async () => {
   const response = await fetch(`${BASE_URL}/about`, { redirect: "manual" });
-  assert.equal(response.status, 308);
-  const location = new URL(response.headers.get("location"), BASE_URL);
-  assert.equal(location.pathname, "/");
-  assert.equal(location.hash, "#profile");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  const main = documentMarkup(html).match(/<main\b[\s\S]*?<\/main>/i)?.[0] ?? "";
+  assert.equal((main.match(/<h1\b/gi) ?? []).length, 1);
+  assert.match(main, /View LinkedIn/i);
+  assert.doesNotMatch(
+    main,
+    /mailto:|\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b|\b\d{3}[-.)\s]+\d{3}[-.\s]+\d{4}\b|credential\s+id|certificate\s+id|street\s+address/i,
+  );
 });
 
 test("Sources paginates the complete searchable bibliography 24 rows at a time", async () => {
@@ -423,7 +446,7 @@ test("the public shell has the exact compact navigation and footer contract", as
   const header = html.match(/<header\b[\s\S]*?<\/header>/i)?.[0] ?? "";
   const footer = html.match(/<footer\b[\s\S]*?<\/footer>/i)?.[0] ?? "";
 
-  for (const label of ["Work", "Play"]) {
+  for (const label of ["About", "Work", "Play"]) {
     assert.match(header, new RegExp(`>${label}<`));
   }
   assert.match(header, /data-navigation-key="home"/i);
@@ -431,7 +454,6 @@ test("the public shell has the exact compact navigation and footer contract", as
   assert.match(header, /aria-current="page"/i);
   assert.match(header, /data-primary-navigation/i);
   assert.match(header, /data-primary-navigation-indicator/i);
-  assert.doesNotMatch(header, />About</);
   assert.doesNotMatch(header, />Sources</);
   for (const label of ["LinkedIn", "GitHub", "W&amp;B", "Sources", "Privacy"]) {
     assert.equal(
@@ -532,13 +554,13 @@ test("robots and sitemap publish only public editorial surfaces", async () => {
   assert.match(robots, /Sitemap: https:\/\/anish-shah-is\.online\/sitemap\.xml/i);
   assert.match(sitemap, /<loc>[^<]+\/work<\/loc>/i);
   assert.match(sitemap, /<loc>[^<]+\/work\/wandb-mcp-server<\/loc>/i);
-  assert.doesNotMatch(sitemap, /<loc>[^<]+\/about<\/loc>/i);
+  assert.match(sitemap, /<loc>[^<]+\/about<\/loc>/i);
   assert.doesNotMatch(sitemap, /\/studio|\/api\//i);
   assert.doesNotMatch(sitemap, /workers\.dev/i);
 });
 
 test("public pages expose canonical, social, and structured metadata", async () => {
-  const routes = ["/", "/work", "/play", "/sources", "/privacy"];
+  const routes = ["/", "/about", "/work", "/play", "/sources", "/privacy"];
   const socialTitles = new Set();
   for (const pathname of routes) {
     const html = await renderHtml(pathname);
@@ -566,13 +588,17 @@ test("public pages expose canonical, social, and structured metadata", async () 
   }
   assert.equal(socialTitles.size, routes.length);
 
-  const [home, work] = await Promise.all([
+  const [home, about, work] = await Promise.all([
     renderHtml("/"),
+    renderHtml("/about"),
     renderHtml("/work/wandb-mcp-server"),
   ]);
   assert.match(home, /"@type":"ProfilePage"/);
   assert.match(home, /"@type":"Person"/);
   assert.match(home, /"@type":"WebSite"/);
+  assert.match(about, /"@type":"ProfilePage"/);
+  assert.match(about, /"@id":"https:\/\/anish-shah-is\.online\/#anish-shah"/);
+  assert.doesNotMatch(about, /"@type":"Person"/);
   assert.match(work, /"@type":"CreativeWork"/);
   assert.match(work, /"@type":"BreadcrumbList"/);
 });

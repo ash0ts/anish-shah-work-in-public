@@ -55,6 +55,34 @@
   line-height: 1.48;
 }
 
+.sectionNav {
+  display: flex;
+  min-width: 0;
+  min-height: 3.25rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem var(--gutter, 2rem);
+  border-bottom: 1px solid var(--blueprint-ink, #17223b);
+  background: var(--trace-white, #f4f7f8);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sectionNav a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  text-underline-offset: 0.25rem;
+}
+
+.sectionNav a:hover,
+.sectionNav a:focus-visible {
+  color: var(--work-blue, #295dff);
+}
+
 .tools {
   position: relative;
   z-index: 2;

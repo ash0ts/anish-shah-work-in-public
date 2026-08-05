@@ -135,6 +135,25 @@ export function buildHomeStructuredData(
   };
 }
 
+export function buildAboutStructuredData(
+  profileUrl: string,
+  title: string,
+  description: string,
+  identity: SitePresentationIdentity = sitePresentationIdentity(),
+) {
+  const homeUrl = absoluteSiteUrl("/");
+  return {
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    "@id": `${profileUrl}#profile-page`,
+    url: profileUrl,
+    name: socialPageTitle(title, identity),
+    description,
+    mainEntity: { "@id": `${homeUrl}#anish-shah` },
+    isPartOf: { "@id": `${homeUrl}#website` },
+  };
+}
+
 export function hasPublicQuery(
   values: Record<string, string | string[] | undefined>,
 ): boolean {

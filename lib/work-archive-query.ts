@@ -1,5 +1,6 @@
 import type { WorkArchiveRecord } from "@/lib/work-index";
 import { workFacetsForRecord } from "@/lib/work-facets";
+import { workOrganizationLabelForId } from "@/lib/work-organizations";
 
 export type WorkSearchParams = Record<
   string,
@@ -222,6 +223,7 @@ export function filterWorkArchiveRecords(
           query.format as (typeof facets.media)[number],
         )) &&
       (!query.organization ||
+        work.organizationMarkIds.includes(query.organization) ||
         work.organizationIds.includes(query.organization) ||
         facets.ecosystem.includes(
           query.organization as (typeof facets.ecosystem)[number],
@@ -265,4 +267,8 @@ export function humanizeWorkFilter(value: string): string {
     .replaceAll("_", " ")
     .replaceAll("-", " ")
     .replace(/\b\p{L}/gu, (character) => character.toLocaleUpperCase());
+}
+
+export function workOrganizationFilterLabel(value: string): string {
+  return workOrganizationLabelForId(value) ?? humanizeWorkFilter(value);
 }

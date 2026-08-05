@@ -48,6 +48,7 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
     <section
       aria-labelledby="work-timeline-title"
       className={styles.section}
+      id="work-calendar"
     >
       <header className={styles.header}>
         <div>

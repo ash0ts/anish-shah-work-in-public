@@ -10,6 +10,7 @@ The editing surface is [the copy deck](../content/copy/README.md):
 content/copy/
   pages/site.md
   pages/home.md
+  pages/about.md
   pages/work.md
   pages/play.md
   pages/simulation.md
@@ -56,6 +57,7 @@ These fields may be changed directly, subject to tone, length, layout, and
 accessibility review:
 
 - Home framing and CTA labels;
+- About headings and CTA labels;
 - Work and Play introductions;
 - room overview and object flavor text;
 - Travel atlas framing and Simulation invitation, instructions, and nonfactual encounter flavor through declared fields;
@@ -70,6 +72,7 @@ These fields may be edited, but the owner must verify every factual implication
 before approval:
 
 - profile headline, summary, and current-focus language;
+- About biography, chronology summaries, dates, and organization relationships;
 - WorkGroup display title, short title, summary, role summary, and optional Home wording;
 - career trajectory and bucket descriptions;
 - Sources methodology, counting-rule, and non-claim prose; and

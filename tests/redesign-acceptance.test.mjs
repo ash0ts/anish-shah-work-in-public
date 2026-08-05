@@ -243,6 +243,14 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   assert.deepEqual(workIds, []);
   assert.doesNotMatch(markup, /data-work-index-prompt|id="work-index"/i);
   assert.doesNotMatch(markup, /Showing 1—24|work-index-title/i);
+  assert.match(markup, /id="work-calendar"/i);
+  assert.match(markup, /id="work-organizations"/i);
+  assert.match(markup, /Organizations &amp; platforms/i);
+  assert.equal(
+    (markup.match(/href="\/work\?organization=[^"]+#work-index"/gi) ?? [])
+      .length,
+    24,
+  );
   assert.equal((calendarBody.match(/<tr\b/g) ?? []).length, 4);
   assert.equal((calendarBody.match(/<td\b/g) ?? []).length, 24);
   assert.match(
@@ -304,6 +312,20 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   );
   assert.doesNotMatch(markup, /name="practice"/i);
   assert.doesNotMatch(markup, /name="view"/i);
+
+  const organizationHtml = await renderHtml(
+    "/work?organization=google-cloud",
+  );
+  const organizationMarkup = documentMarkup(organizationHtml);
+  assert.match(organizationMarkup, />Google Cloud projects</i);
+  assert.equal(
+    (organizationMarkup.match(/<li\b[^>]*data-work-id=/gi) ?? []).length,
+    7,
+  );
+  assert.match(
+    organizationMarkup,
+    /href="\/work\?organization=google-cloud#work-index"[^>]*aria-current="page"|aria-current="page"[^>]*href="\/work\?organization=google-cloud#work-index"/i,
+  );
 });
 
 test("child-title search returns the parent and identifies the matching form", async () => {
@@ -562,7 +584,7 @@ test("Play is a provider-free semantic room before an object route is opened", a
   );
 });
 
-test("Home absorbs the useful profile arc and About redirects permanently", async () => {
+test("Home stays concise while About owns the bounded career chronology", async () => {
   const homeText = textFromMarkup(documentMarkup(await renderHtml("/")));
   assert.match(
     homeText,
@@ -574,10 +596,12 @@ test("Home absorbs the useful profile arc and About redirects permanently", asyn
   );
 
   const response = await fetch(`${BASE_URL}/about`, { redirect: "manual" });
-  assert.equal(response.status, 308);
-  const location = new URL(response.headers.get("location"), BASE_URL);
-  assert.equal(location.pathname, "/");
-  assert.equal(location.hash, "#profile");
+  assert.equal(response.status, 200);
+  const about = textFromMarkup(documentMarkup(await response.text()));
+  assert.match(about, /How the work developed/i);
+  assert.match(about, /2021–Now/i);
+  assert.match(about, /2017–2021/i);
+  assert.match(about, /2016–2019/i);
 });
 
 test("the CSS architecture is scoped and has no page-level overflow masking", async () => {
