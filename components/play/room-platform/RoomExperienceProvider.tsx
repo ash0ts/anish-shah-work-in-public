@@ -628,7 +628,7 @@ export function RoomExperienceProvider({
       pendingRoomNavigation.current = id;
       const object = ROOM_OBJECT_BY_ID[id];
       playCue("interface-confirm");
-      announce(`Opening ${object.label} in the ${object.object.toLowerCase()}.`);
+      announce(`Opening the ${object.object.toLowerCase()}: ${object.label}.`);
       dispatch({ type: "select", id });
       const reduced = window.matchMedia(
         "(prefers-reduced-motion: reduce)",

@@ -31,13 +31,13 @@ Start with an object.
 Opening the room
 
 ## room-return-eyebrow
-Return
+Room view
 
 ## room-return-title
-Back to the room.
+Opening the room.
 
 ## room-return-summary
-Restoring your last view…
+The objects are coming into view…
 
 ## room-fallback-body
 Use the object directory below.
