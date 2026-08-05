@@ -1,50 +1,68 @@
-import { readFile, readdir, stat } from "node:fs/promises";
+import { lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
-export const REQUIRED_DOCUMENTS = [
+import { requiredReleaseSmokeTests } from "./release-smoke-contract.mjs";
+
+export const AUTHORITY_MAP_DOCUMENTS = Object.freeze([
   "README.md",
   "CONTRIBUTING.md",
-  "SECURITY.md",
-  "docs/testing.md",
   "docs/architecture/overview.md",
+  "docs/architecture/codebase-tour.md",
   "docs/architecture/content-and-state.md",
   "docs/architecture/my-room-2001.md",
-  "docs/operations/staging-and-previews.md",
+  "docs/architecture/meet-me-simulation.md",
+  "docs/travel-atlas.md",
+  "docs/testing.md",
+  "docs/play-connections.md",
+  "docs/copywriting.md",
+  "docs/audio-production.md",
+  "SECURITY.md",
+  "docs/security-notes.md",
+  "docs/operations/bootstrap.md",
+  "docs/operations/staging.md",
+  "docs/operations/previews.md",
   "docs/operations/release.md",
   "docs/operations/rollback.md",
   "docs/operations/incidents.md",
   "docs/operations/observability.md",
-  "docs/play-connections.md",
-  "docs/copywriting.md",
-];
+  "content/README.md",
+  "content/copy/README.md",
+  ".github/runner/README.md",
+  "releases/README.md",
+]);
 
-export const PRODUCTION_SMOKE_CHECKS = [
-  "public_routes",
-  "studio_access",
-  "non_owner_denial",
-  "connector_galleries",
-  "oauth_callbacks",
-  "security_headers",
-  "owner_health",
-  "simulation_experience",
-  "canonical_apex",
-  "www_redirect",
-  "workers_dev_disabled",
-  "preview_urls_disabled",
-  "request_id_header",
-  "access_destinations",
-  "play_watch",
-  "play_read",
-  "play_listen",
-  "play_collect",
-  "play_play",
-  "play_move",
-  "play_travel",
-];
+export const REQUIRED_DOCUMENTS = Object.freeze([
+  ...new Set([
+    "docs/README.md",
+    "AGENTS.md",
+    ".github/pull_request_template.md",
+    ".github/PULL_REQUEST_TEMPLATE/copy-change.md",
+    ...AUTHORITY_MAP_DOCUMENTS,
+  ]),
+]);
+
+export const PRODUCTION_SMOKE_CHECKS = Object.freeze(
+  requiredReleaseSmokeTests({ travelAtlasMode: "atlas-v1" }),
+);
+
+const CODEBASE_TOUR_HEADINGS = Object.freeze([
+  "system-context",
+  "request-lifecycle",
+  "content-and-state",
+  "play-as-progressive-enhancement",
+  "repository-map",
+  "connector-boundary",
+  "travel-boundary",
+  "simulation-boundary",
+  "environment-isolation",
+  "release-path",
+  "architectural-tradeoffs",
+  "where-to-go-deeper",
+]);
 
 async function fileExists(candidate) {
-  const metadata = await stat(candidate).catch(() => null);
-  return Boolean(metadata?.isFile());
+  const metadata = await lstat(candidate).catch(() => null);
+  return Boolean(metadata?.isFile() && !metadata.isSymbolicLink());
 }
 
 async function listMarkdownFiles(root, relativeDirectory) {
@@ -67,49 +85,177 @@ async function listMarkdownFiles(root, relativeDirectory) {
 }
 
 function markdownLinks(source) {
-  return [...source.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)].map(
+  return [...source.matchAll(/\[[^\]]*\]\(([^)]+)\)/gu)].map(
     (match) => match[1].trim(),
   );
 }
 
-function localLinkTarget(root, sourcePath, target) {
-  if (
-    !target ||
-    target.startsWith("#") ||
-    /^(?:https?:|mailto:|tel:)/i.test(target)
-  ) {
+function linkDestination(rawTarget) {
+  const angle = rawTarget.match(/^<([^>]+)>(?:\s+["'][^"']*["'])?$/u);
+  if (angle) return angle[1];
+  return rawTarget.replace(/\s+["'][^"']*["']\s*$/u, "");
+}
+
+function localLinkTarget(root, sourcePath, rawTarget) {
+  const target = linkDestination(rawTarget);
+  if (/^[a-zA-Z]:[\\/]/u.test(target)) {
+    return { issue: `contains an absolute filesystem link: ${rawTarget}` };
+  }
+  if (!target || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/iu.test(target)) {
     return null;
   }
-  const withoutTitle = target.replace(/\s+["'][^"']*["']\s*$/, "");
-  const withoutFragment = withoutTitle.split("#", 1)[0].split("?", 1)[0];
-  let decoded;
+
+  const fragmentIndex = target.indexOf("#");
+  const rawFragment = fragmentIndex >= 0 ? target.slice(fragmentIndex + 1) : "";
+  const beforeFragment = fragmentIndex >= 0 ? target.slice(0, fragmentIndex) : target;
+  const rawPath = beforeFragment.split("?", 1)[0];
+  let decodedPath;
+  let fragment;
   try {
-    decoded = decodeURIComponent(withoutFragment);
+    decodedPath = decodeURIComponent(rawPath);
+    fragment = decodeURIComponent(rawFragment);
   } catch {
-    return { issue: `contains a malformed encoded link target: ${target}` };
+    return { issue: `contains a malformed encoded link target: ${rawTarget}` };
   }
-  if (decoded.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(decoded)) {
-    return { issue: `contains an absolute filesystem link: ${target}` };
+  if (decodedPath.startsWith("/")) {
+    return { issue: `contains an absolute filesystem link: ${rawTarget}` };
   }
-  const resolved = path.resolve(root, path.dirname(sourcePath), decoded);
+
+  const resolved = path.resolve(
+    root,
+    path.dirname(sourcePath),
+    decodedPath || path.basename(sourcePath),
+  );
   const relative = path.relative(root, resolved);
   if (relative.startsWith("..") || path.isAbsolute(relative)) {
-    return { issue: `contains a link outside the repository: ${target}` };
+    return { issue: `contains a link outside the repository: ${rawTarget}` };
   }
-  return { resolved, target };
+  return { fragment, resolved, target: rawTarget };
+}
+
+function markdownAnchorIds(source) {
+  const anchors = new Set();
+  const duplicates = new Map();
+  let fenced = false;
+  let fenceMarker = "";
+
+  for (const line of source.replaceAll("\r\n", "\n").split("\n")) {
+    const fence = line.match(/^ {0,3}(`{3,}|~{3,})/u);
+    if (fence) {
+      const marker = fence[1][0];
+      if (!fenced) {
+        fenced = true;
+        fenceMarker = marker;
+      } else if (marker === fenceMarker) {
+        fenced = false;
+        fenceMarker = "";
+      }
+      continue;
+    }
+    if (fenced) continue;
+    const heading = line.match(/^ {0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$/u);
+    if (!heading) continue;
+    const label = heading[1]
+      .replace(/!\[([^\]]*)\]\([^)]*\)/gu, "$1")
+      .replace(/\[([^\]]+)\]\([^)]*\)/gu, "$1")
+      .replace(/<[^>]*>/gu, "")
+      .replace(/[`*_~]/gu, "")
+      .trim()
+      .toLowerCase();
+    const base = label
+      .replace(/[^\p{Letter}\p{Number}\s_-]/gu, "")
+      .replace(/\s+/gu, "-");
+    const duplicate = duplicates.get(base) ?? 0;
+    duplicates.set(base, duplicate + 1);
+    anchors.add(duplicate === 0 ? base : `${base}-${duplicate}`);
+  }
+
+  for (const match of source.matchAll(/\bid=["']([^"']+)["']/giu)) {
+    anchors.add(match[1]);
+  }
+  return anchors;
+}
+
+function npmScriptReferences(source) {
+  return [
+    ...source.matchAll(
+      /\bnpm[ \t]+run(?:[ \t]+--[A-Za-z0-9][A-Za-z0-9-]*(?:=[^\s`]+)?)*[ \t]+([A-Za-z0-9][A-Za-z0-9:_-]*)/gu,
+    ),
+  ].map((match) => match[1]);
+}
+
+function repositoryScriptPaths(source) {
+  const paths = [];
+  for (const line of source.replaceAll("\r\n", "\n").split("\n")) {
+    for (const match of line.matchAll(
+      /(?:^|[\s"'`(=])((?:\.\/)?(?:scripts|tests|\.agents)\/[A-Za-z0-9_./-]+\.(?:mjs|js|cjs|sh|py))(?=$|[\s"'`),.;:!?\\])/gu,
+    )) {
+      paths.push(match[1].replace(/^\.\//u, ""));
+    }
+  }
+  return paths;
 }
 
 function includesEvery(source, values) {
   return values.every((value) => source.includes(value));
 }
 
+function authorityMapIssues(root, documents) {
+  const file = "docs/README.md";
+  const source = documents.get(file);
+  if (!source) return [];
+  const issues = [];
+  if (
+    !/\|\s*Audience \/ task\s*\|\s*Type\s*\|\s*Canonical authority\s*\|\s*Update trigger\s*\|/iu.test(
+      source,
+    )
+  ) {
+    issues.push(
+      `${file} must use the Audience / task / Type / Canonical authority / Update trigger table contract.`,
+    );
+  }
+  if (!/^## Maintenance rule\s*$/mu.test(source)) {
+    issues.push(`${file} must contain the Maintenance rule section.`);
+  }
+
+  const allowedTypes = new Set(["Concept", "How-to", "Reference", "Runbook"]);
+  for (const line of source.split("\n")) {
+    if (!line.startsWith("|") || /^\|[ -]+\|/u.test(line)) continue;
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    if (cells.length !== 4 || cells[1] === "Type") continue;
+    if (!allowedTypes.has(cells[1])) {
+      issues.push(`${file} contains an unsupported authority type: ${cells[1]}.`);
+    }
+  }
+
+  const counts = new Map();
+  for (const target of markdownLinks(source)) {
+    const local = localLinkTarget(root, file, target);
+    if (!local || local.issue) continue;
+    const relative = path.relative(root, local.resolved).replaceAll(path.sep, "/");
+    counts.set(relative, (counts.get(relative) ?? 0) + 1);
+  }
+  for (const authority of AUTHORITY_MAP_DOCUMENTS) {
+    const count = counts.get(authority) ?? 0;
+    if (count !== 1) {
+      issues.push(
+        `${file} must link the canonical authority ${authority} exactly once; found ${count}.`,
+      );
+    }
+  }
+  return issues;
+}
+
 function semanticIssues(documents) {
   const issues = [];
   const requireTerms = (file, terms, description) => {
     const source = documents.get(file) ?? "";
-    const normalized = source.toLowerCase();
+    const normalized = source.toLowerCase().replace(/\s+/gu, " ");
     const missing = terms.filter(
-      (term) => !normalized.includes(term.toLowerCase()),
+      (term) => !normalized.includes(term.toLowerCase().replace(/\s+/gu, " ")),
     );
     if (missing.length > 0) {
       issues.push(`${file} is missing ${description}: ${missing.join(", ")}.`);
@@ -118,12 +264,8 @@ function semanticIssues(documents) {
 
   requireTerms(
     "README.md",
-    [
-      "docs/testing.md",
-      "docs/copywriting.md",
-      "docs/architecture/my-room-2001.md",
-    ],
-    "links to the authoritative testing, copywriting, and My Room documents",
+    ["docs/README.md", "docs/testing.md", "docs/operations/release.md"],
+    "links to the documentation map, testing authority, and release authority",
   );
   if (!/reference(?:\s*\/\s*| and )recovery/i.test(documents.get("README.md") ?? "")) {
     issues.push(
@@ -137,16 +279,12 @@ function semanticIssues(documents) {
     "the authoritative local setup and validation commands",
   );
 
-  for (const file of ["README.md", "docs/testing.md", "docs/play-connections.md"]) {
+  for (const file of ["docs/testing.md"]) {
     const source = documents.get(file) ?? "";
     const setupIndex = source.indexOf("npm run setup:local");
     const ownerIndex = source.indexOf("OWNER_EMAILS", setupIndex + 1);
     const doctorIndex = source.indexOf("npm run doctor", setupIndex + 1);
-    if (
-      setupIndex < 0 ||
-      ownerIndex < setupIndex ||
-      doctorIndex < ownerIndex
-    ) {
+    if (setupIndex < 0 || ownerIndex < setupIndex || doctorIndex < ownerIndex) {
       issues.push(
         `${file} must configure OWNER_EMAILS after setup:local and before doctor.`,
       );
@@ -174,9 +312,19 @@ function semanticIssues(documents) {
   }
 
   requireTerms(
-    "docs/operations/staging-and-previews.md",
-    ["Local", "PR preview", "Live staging", "Production", "noindex", "Access", "synthetic"],
-    "the four-tier environment, indexing, access, and fixture contract",
+    "docs/operations/bootstrap.md",
+    ["one-time", "production", "staging", "explicit"],
+    "the one-time hosted provisioning boundary",
+  );
+  requireTerms(
+    "docs/operations/staging.md",
+    ["Local", "PR preview", "Staging", "Production", "Access"],
+    "the four-tier environment and access contract",
+  );
+  requireTerms(
+    "docs/operations/previews.md",
+    ["synthetic", "Access", "noindex"],
+    "the synthetic, protected, noindex preview contract",
   );
 
   requireTerms(
@@ -185,11 +333,14 @@ function semanticIssues(documents) {
       ...PRODUCTION_SMOKE_CHECKS,
       "RELEASE_BROWSER_URL",
       "COPY_VERSION",
+      "npm run --silent release:smoke:list",
     ],
     "the exact release evidence and production smoke contract",
   );
   for (const [file, source] of documents) {
-    if (file === "docs/operations/release.md") continue;
+    if (new Set(["docs/operations/release.md", "releases/README.md"]).has(file)) {
+      continue;
+    }
     const leaked = PRODUCTION_SMOKE_CHECKS.filter((name) => source.includes(name));
     if (leaked.length > 0) {
       issues.push(
@@ -243,6 +394,33 @@ function semanticIssues(documents) {
     );
   }
 
+  const tour = documents.get("docs/architecture/codebase-tour.md") ?? "";
+  const tourAnchors = markdownAnchorIds(tour);
+  const missingTourHeadings = CODEBASE_TOUR_HEADINGS.filter(
+    (heading) => !tourAnchors.has(heading),
+  );
+  if (missingTourHeadings.length > 0) {
+    issues.push(
+      `docs/architecture/codebase-tour.md is missing stable sections: ${missingTourHeadings.join(", ")}.`,
+    );
+  }
+  requireTerms(
+    "docs/architecture/codebase-tour.md",
+    [
+      "content/public/anish-content.public.v1.json",
+      "app/api/studio/**",
+      "explicit owner action",
+      "not a connector",
+      "scheduled",
+      "retention",
+      "Validate",
+      "Gitleaks",
+      "CodeQL",
+      "Browser Quality",
+    ],
+    "the generated-content, owner-write, connector, retention, and release boundaries",
+  );
+
   return issues;
 }
 
@@ -260,11 +438,22 @@ export async function checkDocumentation({ root }) {
     documents.set(relativePath, await readFile(absolutePath, "utf8"));
   }
 
+  const docsPaths = await listMarkdownFiles(root, "docs");
+  for (const relativePath of docsPaths) {
+    if (
+      relativePath !== "docs/README.md" &&
+      !AUTHORITY_MAP_DOCUMENTS.includes(relativePath)
+    ) {
+      issues.push(
+        `${relativePath} is orphaned; every Markdown file under docs/ must appear in the authority map contract.`,
+      );
+    }
+  }
+
   const documentationPaths = new Set([
     ...REQUIRED_DOCUMENTS,
-    ...(await listMarkdownFiles(root, "docs")),
-    "content/README.md",
-    "content/copy/README.md",
+    ...docsPaths,
+    ...(await listMarkdownFiles(root, ".github/PULL_REQUEST_TEMPLATE")),
   ]);
   for (const relativePath of [...documentationPaths].sort()) {
     if (documents.has(relativePath)) continue;
@@ -273,10 +462,41 @@ export async function checkDocumentation({ root }) {
     documents.set(relativePath, await readFile(absolutePath, "utf8"));
   }
 
+  const packagePath = path.join(root, "package.json");
+  let scripts = {};
+  try {
+    const packageManifest = JSON.parse(await readFile(packagePath, "utf8"));
+    if (
+      !packageManifest?.scripts ||
+      typeof packageManifest.scripts !== "object" ||
+      Array.isArray(packageManifest.scripts)
+    ) {
+      throw new Error("scripts must be an object");
+    }
+    scripts = packageManifest.scripts;
+  } catch (error) {
+    issues.push(`package.json cannot validate documentation commands: ${error.message}.`);
+  }
+
+  const anchorCache = new Map();
   for (const [relativePath, source] of documents) {
-    if (/file:\/\//i.test(source) || /\/Users\/[A-Za-z0-9._-]+\//.test(source)) {
+    if (/file:\/\//i.test(source) || /\/Users\/[A-Za-z0-9._-]+\//u.test(source)) {
       issues.push(`${relativePath} contains a machine-local path.`);
     }
+
+    for (const script of npmScriptReferences(source)) {
+      if (typeof scripts[script] !== "string") {
+        issues.push(`${relativePath} references an unknown npm script: ${script}.`);
+      }
+    }
+    for (const scriptPath of repositoryScriptPaths(source)) {
+      if (!(await fileExists(path.join(root, scriptPath)))) {
+        issues.push(
+          `${relativePath} references a missing repository script path: ${scriptPath}.`,
+        );
+      }
+    }
+
     for (const target of markdownLinks(source)) {
       const local = localLinkTarget(root, relativePath, target);
       if (!local) continue;
@@ -286,10 +506,36 @@ export async function checkDocumentation({ root }) {
       }
       if (!(await fileExists(local.resolved))) {
         issues.push(`${relativePath} has a broken local link: ${local.target}.`);
+        continue;
+      }
+      if (local.fragment && path.extname(local.resolved).toLowerCase() === ".md") {
+        if (!anchorCache.has(local.resolved)) {
+          anchorCache.set(
+            local.resolved,
+            markdownAnchorIds(await readFile(local.resolved, "utf8")),
+          );
+        }
+        if (!anchorCache.get(local.resolved).has(local.fragment)) {
+          issues.push(
+            `${relativePath} has a broken local anchor: ${local.target}.`,
+          );
+        }
       }
     }
   }
 
+  for (const [name, command] of Object.entries(scripts)) {
+    if (typeof command !== "string") continue;
+    for (const scriptPath of repositoryScriptPaths(command)) {
+      if (!(await fileExists(path.join(root, scriptPath)))) {
+        issues.push(
+          `package.json script ${name} references a missing repository script path: ${scriptPath}.`,
+        );
+      }
+    }
+  }
+
+  issues.push(...authorityMapIssues(root, documents));
   issues.push(...semanticIssues(documents));
   return { checked: documents.size, issues, ok: issues.length === 0 };
 }

@@ -24,7 +24,7 @@ function normalizeChangedPath(value) {
 function isDocs(pathname) {
   return (
     pathname.startsWith("docs/") ||
-    pathname.startsWith("releases/") ||
+    pathname === "releases/README.md" ||
     pathname === "README.md" ||
     pathname === "AGENTS.md" ||
     pathname === "CONTRIBUTING.md" ||
@@ -32,6 +32,18 @@ function isDocs(pathname) {
     pathname === ".github/pull_request_template.md" ||
     (pathname.startsWith(".agents/") &&
       /\.(?:md|ya?ml)$/u.test(pathname))
+  );
+}
+
+function isSecurityCritical(pathname) {
+  return (
+    pathname.startsWith("worker/") ||
+    pathname.startsWith("app/api/studio/") ||
+    pathname.startsWith("lib/server/cloudflare-access") ||
+    pathname.startsWith("lib/server/credential-crypto") ||
+    pathname.startsWith("lib/server/owner-") ||
+    pathname.startsWith("lib/server/request-security") ||
+    /(?:^|[\/._-])(?:auth|oauth|security)(?:[\/._-]|$)/u.test(pathname)
   );
 }
 
@@ -48,8 +60,10 @@ function isFull(pathname) {
     pathname.startsWith(".github/workflows/") ||
     pathname.startsWith(".github/runner/") ||
     pathname.startsWith("drizzle/") ||
+    pathname.startsWith("releases/") ||
     pathname.startsWith("scripts/ci/") ||
     pathname.startsWith("scripts/runner/") ||
+    isSecurityCritical(pathname) ||
     /(?:^|\/)(?:release|staging|hosted|deployable|preview)-(?:[^/]+)\.mjs$/u.test(
       pathname,
     )

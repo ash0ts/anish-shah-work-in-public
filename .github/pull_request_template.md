@@ -8,11 +8,10 @@
 
 ## Evidence
 
-- [ ] `npm run db:local:migrate`
-- [ ] `npm run validate`
+- [ ] Maintenance helper’s selected checks passed (list exact commands below)
+- [ ] `npm run validate` completed when the change required full validation
 - [ ] Public-content attestation updated if canonical content changed
 - [ ] UI screenshots/keyboard checks attached if presentation changed
-- [ ] Migration compatibility and rollback impact described
 - [ ] No credentials, private source data, local paths, or provider payloads added
 
 ## Production steps

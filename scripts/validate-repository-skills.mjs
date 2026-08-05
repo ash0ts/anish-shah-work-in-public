@@ -12,7 +12,10 @@ import { fileURLToPath } from "node:url";
 const scriptPath = fileURLToPath(import.meta.url);
 const defaultRoot = path.resolve(path.dirname(scriptPath), "..");
 
-const expectedSkills = ["maintain-anish-site", "edit-anish-site-copy"];
+export const EXPECTED_REPOSITORY_SKILLS = Object.freeze([
+  "maintain-anish-site",
+  "edit-anish-site-copy",
+]);
 
 function relativeToRoot(root, value) {
   return path.relative(root, value).replaceAll(path.sep, "/");
@@ -241,9 +244,26 @@ export function validateSkillDirectory(skillDirectory, expectedName, root = defa
 
 export function validateRepositorySkills(root = defaultRoot) {
   const skillsRoot = path.join(root, ".agents/skills");
-  return expectedSkills.flatMap((name) =>
-    validateSkillDirectory(path.join(skillsRoot, name), name, root),
+  const errors = [];
+  const entries = existsSync(skillsRoot)
+    ? readdirSync(skillsRoot, { withFileTypes: true })
+    : [];
+  const unexpected = entries
+    .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+    .map((entry) => entry.name)
+    .filter((name) => !EXPECTED_REPOSITORY_SKILLS.includes(name))
+    .sort();
+  for (const name of unexpected) {
+    errors.push(
+      `.agents/skills/${name}: unexpected repository skill; the exact repository skill set is ${EXPECTED_REPOSITORY_SKILLS.join(", ")}`,
+    );
+  }
+  errors.push(
+    ...EXPECTED_REPOSITORY_SKILLS.flatMap((name) =>
+      validateSkillDirectory(path.join(skillsRoot, name), name, root),
+    ),
   );
+  return errors;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
@@ -263,5 +283,5 @@ if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
     for (const error of errors) console.error(`  - ${error}`);
     process.exit(1);
   }
-  console.log(`Validated ${expectedSkills.length} repository skills.`);
+  console.log(`Validated ${EXPECTED_REPOSITORY_SKILLS.length} repository skills.`);
 }

@@ -162,7 +162,7 @@ The preview receives no D1, KV, provider network, OAuth, credentials, Studio,
 cron, production data, or write APIs. Access is limited to the owner, approved
 reviewers, and its smoke-test service principal. The persistent comment reports
 the exact SHA, `COPY_VERSION`, risk classes, routes, screenshot coverage, and
-status. See [Staging and PR previews](./operations/staging-and-previews.md).
+status. See [PR previews](./operations/previews.md).
 
 ## Ownership after merge
 

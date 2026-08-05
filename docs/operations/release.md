@@ -41,110 +41,29 @@ If authentication expired, run `npx --no-install wrangler login`, then repeat
 `whoami`. Never use `NODE_TLS_REJECT_UNAUTHORIZED=0`, disable TLS validation,
 or copy a corporate CA certificate into this repository.
 
-## One-time infrastructure bootstrap
-
-Provision infrastructure separately from a code release. Create the production
-KV namespace once and keep the binding name exactly `PUBLICATION_CACHE`:
-
-```bash
-npx --no-install wrangler kv namespace create PUBLICATION_CACHE
-```
-
-Record its namespace ID in the private infrastructure inventory. Reuse that
-namespace across releases; do not delete or recreate it for an ordinary
-deployment.
-
-Postcard Planet adds one private production media bucket. Create it once and
-keep its name exactly `anish-shah-travel-media`:
-
-```bash
-export CLOUDFLARE_ACCOUNT_ID='690e6286eb53a6df1bd0080633caf91f'
-npx --no-install wrangler whoami
-npx --no-install wrangler r2 bucket list
-npx --no-install wrangler r2 bucket create anish-shah-travel-media
-```
-
-Require `whoami` to show that exact account. The list command must succeed
-before the create command. Cloudflare error
-`10042` means R2 is not enabled for the owning account; enable it in the
-Cloudflare dashboard and repeat the read-only check. Do not bypass the failure
-or substitute a staging bucket.
-
-The generated production configuration binds that bucket as `TRAVEL_MEDIA`,
-Cloudflare Images as `IMAGES`, and the Travel media rate limiter as
-`TRAVEL_MEDIA_RATE_LIMITER` with the reviewed production namespace
-`88001006`. Treat the bucket and namespace as durable production coordinates.
-They must never equal their staging counterparts, and PR preview receives none
-of these bindings. Cloudflare Images must be enabled for the owning account
-before accepting an upload; the Worker fails closed when either media binding
-is unavailable.
-
-Set durable secrets interactively only during initial provisioning or an
-explicitly approved rotation:
-
-```bash
-npx --no-install wrangler secret put CONNECTOR_ENCRYPTION_KEY --config dist/server/wrangler.public.json
-npx --no-install wrangler secret put RATE_LIMIT_SALT --config dist/server/wrangler.public.json
-npx --no-install wrangler secret put SIMULATION_SESSION_HMAC_KEY --config dist/server/wrangler.public.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_ACCOUNT_ID --config dist/server/wrangler.public.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_ID --config dist/server/wrangler.public.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_TOKEN --config dist/server/wrangler.public.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_BYOK_ALIAS --config dist/server/wrangler.public.json
-```
-
-Never rotate `CONNECTOR_ENCRYPTION_KEY` during an ordinary release. Bootstrap
-changes need their own recovery notes and are not covered by the release plan
-below.
-
-Create a production-only Cloudflare AI Gateway and store the Anthropic key
-there under the configured BYOK alias. The Worker must never receive the
-Anthropic key directly. In the Gateway dashboard:
-
-- disable prompt/response logging and payload collection;
-- disable response caching;
-- configure DLP to block likely secrets and sensitive values;
-- configure content Guardrails for visitor and model text;
-- set a hard spend limit consistent with the application daily-call ceiling;
-  and
-- confirm the Gateway token is scoped only to the production Gateway.
-
-The Worker also requests no payload logging, no cache, one Gateway attempt, and
-a bounded timeout on every model call. Those request flags do not replace the
-Gateway-wide controls. Staging uses a different Gateway, token, BYOK alias,
-provider key, budget, and session key.
-
-### Two-release simulation bootstrap
-
-The first production deployment that introduces simulation persistence must
-keep `SIMULATION_EXPERIENCE_MODE=disabled` and apply the reviewed additive
-`0006_public_model_simulation.sql` migration. After that disabled release is
-healthy, enter provider approvals through owner-only Studio. Only then prepare
-a second, no-migration activation release with `campaign-v1` and live AI. This
-ordering prevents a release plan from claiming approvals before their protected
-table exists.
-
-A no-migration `coming-soon` release may follow the infrastructure release
-before campaign approval. It exposes the semantic doorway and server-rendered
-placeholder while keeping every Simulation API unavailable. It must use
-`SIMULATION_AI_MODE=authored-only`, carry no approval variables, stay noindexed,
-and remain absent from the sitemap.
+One-time Cloudflare resources, durable secrets, Gateway controls, and the
+initial Simulation/Travel schema activation sequence belong in
+[Hosted infrastructure bootstrap](./bootstrap.md). Confirm that work is complete
+before starting a recurring production release; do not provision or rotate
+infrastructure from this runbook.
 
 ## 1. Validate the exact commit and bytes
 
 Merge through a reviewed PR, then manually dispatch Validate, Gitleaks, CodeQL,
 and Browser Quality with the same full commit SHA. All four workflow identities
-and successful conclusions must be valid. The temporary owner-runner option in
-[Testing and release gates](../testing.md) keeps those active workflow
-identities and gates intact when hosted Actions capacity is unavailable. On the
-release machine:
+and successful conclusions must be valid. The
+[disposable owner-runner procedure](../../.github/runner/README.md) keeps those
+active workflow identities and gates intact when hosted Actions capacity is
+unavailable. On the release machine:
 
 For a release candidate, validate the pushed `release/<semver>` branch and keep
 the `release/* → main` pull request draft. A production release validates the
-exact merged `main` SHA. Tags are immutable: fixes after `v2.0.0-rc.1` produce
-`v2.0.0-rc.2`; never move an RC tag.
+exact merged `main` SHA. RC tags are immutable: a fix produces the next RC
+number; never move an existing tag.
 
 ```bash
-git switch release/2.0.0 # use main only for an authorized final release
+export RELEASE_LINE="$(node -p "require('./package.json').version.split('-')[0]")"
+git switch "release/$RELEASE_LINE" # use main only for an authorized final release
 git pull --ff-only
 git status --short
 export RELEASE_VALIDATED_SHA="$(git rev-parse HEAD)"
@@ -174,12 +93,12 @@ npm run validate:release
 ```
 
 `RELEASE_VERSION` must be exact SemVer and must exactly equal the checked-in
-`package.json` version. Release candidates therefore use the matching package
-version such as `2.0.0-rc.1`; a missing, prefixed (`v2.0.0`), or mismatched
-value fails configuration generation before any hosted command can run. Keep
-the draft release branch on its RC version. Bump both package files to `2.0.0`
-only in the separately authorized final-production change after the release PR
-is approved.
+`package.json` version. Release candidates therefore use their matching exact
+prerelease version; a missing, `v`-prefixed, or mismatched value fails
+configuration generation before any hosted command can run. Keep the draft
+release branch on its RC version. Bump both package files to the final exact
+SemVer only in the separately authorized final-production change after the
+release PR is approved.
 
 Download the exact `validated-dist-<SHA>` artifact produced by the successful
 Validate run before `validate:release`. The command verifies that attestation,
@@ -195,7 +114,7 @@ There is no hosted Classic flag or fallback. The release plan records
 `RELEASE_VERSION` and also computes `COPY_VERSION` from the copy deck and parser
 contract. `COPY_VERSION` is distinct from canonical-data `CONTENT_VERSION`.
 
-For the later activation release, use
+For an enabled campaign release, use
 `SIMULATION_EXPERIENCE_MODE=campaign-v1` and `SIMULATION_AI_MODE=live` before
 building. Hosted production rejects fixture mode and rejects an enabled
 campaign that is not live. These non-secret values are embedded in the exact
@@ -209,14 +128,12 @@ export SIMULATION_EXPERIENCE_MODE='coming-soon'
 export SIMULATION_AI_MODE='authored-only'
 ```
 
-Do not set provider-approval variables for that mode.
-
-Keep `TRAVEL_ATLAS_MODE=disabled` for the first code deployment. Preparing
-private trips in production Studio does not publish `/play/travel`. A later
-guarded release may select `atlas-v1` only with an owner-reviewed active Travel
-snapshot and explicit visual acceptance. The integrated schema adds Simulation
-as `0006_public_model_simulation.sql` and Travel as `0007_travel_atlas.sql`; list
-only migrations still pending on the target database.
+Do not set provider-approval variables for that mode. A guarded release may
+select `TRAVEL_ATLAS_MODE=atlas-v1` only with an owner-reviewed active Travel
+snapshot and explicit visual acceptance. Follow
+[Hosted infrastructure bootstrap](./bootstrap.md) when the target tier has not
+completed its initial Simulation/Travel schema activation; this recurring
+runbook lists only migrations still pending on the target database.
 
 ## 2. Capture read-only production coordinates
 
@@ -282,7 +199,7 @@ export RELEASE_PUBLICATION_KV_MATCH='<1 only when checkpoint says true; otherwis
 npm run release:plan
 ```
 
-For the activation release only, set these before `release:plan`:
+For a `campaign-v1` release only, set these before `release:plan`:
 
 ```bash
 export RELEASE_SIMULATION_APPROVED_PROVIDERS='<comma-separated simulation.approvedProviders>'
@@ -301,14 +218,12 @@ reviewed pending migration. Replace the empty value only with exact
 remote-pending filenames; do not include an already-applied, absent-from-Git,
 or unreviewed file.
 
-Use `0006_public_model_simulation.sql` only for the disabled infrastructure
-release and only when Wrangler reports it pending. Subsequent `coming-soon` or
-campaign activation releases set `RELEASE_MIGRATION_LIST=''`. A `campaign-v1`
-release plan requires at least one allowlisted provider name and a 64-character
-approval digest. Disabled and coming-soon plans reject stale approval
-variables. The plan records only campaign version, experience/AI mode,
-provider/model, sorted provider names, and the digest; it has no field for
-approval references or secrets.
+A `campaign-v1` release plan requires at least one allowlisted provider name
+and a 64-character approval digest. Disabled and coming-soon plans reject stale
+approval variables. The plan records only campaign version, experience/AI
+mode, provider/model, sorted provider names, and the digest; it has no field for
+approval references or secrets. Initial feature-schema migration ordering is
+owned by [Hosted infrastructure bootstrap](./bootstrap.md).
 
 `release:plan` refuses a dirty worktree or a SHA mismatch. It also asks the
 authenticated GitHub CLI to verify that all four distinct Actions runs belong
@@ -462,8 +377,9 @@ Wrangler deployment commands, or activate static fallback content.
 
 ## 8. Run the exact smoke checklist
 
-Record each of these fourteen checks as pass only after observing it in
-production:
+Record each of these 14 base checks as pass only after observing it in
+production. The six connector-route checks and conditional Travel check follow
+the base set:
 
 1. `public_routes`: logged-out `/`, `/work`, `/play`, `/sources`, `/privacy`,
    `robots.txt`, and `sitemap.xml` are available; connector reads are sanitized
@@ -537,8 +453,8 @@ After all checks required by the recorded Play and simulation modes pass:
 
 ```bash
 export RELEASE_WORKER_VERSION='<deployed version id>'
-export RELEASE_SMOKE_TESTED_AT='2026-08-03T18:00:00.000Z'
-export RELEASE_SMOKE_RESULTS='public_routes,studio_access,non_owner_denial,connector_galleries,oauth_callbacks,security_headers,owner_health,simulation_experience,canonical_apex,www_redirect,workers_dev_disabled,preview_urls_disabled,request_id_header,access_destinations,play_watch,play_read,play_listen,play_collect,play_play,play_move,play_travel'
+export RELEASE_SMOKE_TESTED_AT='<canonical ISO timestamp>'
+export RELEASE_SMOKE_RESULTS="$(npm run --silent release:smoke:list)"
 npm run release:attest
 ```
 

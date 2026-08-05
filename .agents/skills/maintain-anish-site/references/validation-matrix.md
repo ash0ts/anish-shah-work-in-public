@@ -19,7 +19,7 @@ node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run --base or
 | Simulation campaign, session, Gateway, Action/Tactical, or shared audio | same-change Simulation regression coverage for server/privacy work; backend/security and rendered tests, bundle scan, exact runtime/privacy coverage, and full browser gate; verify authored fallback and gesture gating |
 | Worker/auth/CSP/publication/security | backend/security tests, build, bundle scan, dependency audit |
 | D1 migrations | clean local migration plus relevant backend/content tests; never edit an applied migration |
-| README/docs | `npm run docs:check` plus link/command freshness review |
+| README/docs | `npm run docs:check`; keep the authority map, local links/anchors, documented commands, and script paths current |
 | `.agents` or skill policy | `npm run skill:validate` and `npm run test:maintenance-skill` |
 | dependency/build/CI/cross-domain | full `npm run validate` and applicable browser gate |
 | release scripts/contracts | ordinary `npm run validate`; production-candidate execution remains separate and authorization-gated |
@@ -76,5 +76,8 @@ Run `validate:release` only for a clean, pushed, approved production candidate a
 - Environments: preview fixtures only, staging isolation/noindex, production exact host/Access, private Sites unchanged.
 - Release: follow the canonical runbook's registry-derived required smoke set
   and distinguish automated evidence from manual inspection.
+- Documentation: verify the task is reachable from `README.md` through
+  `docs/README.md` in at most two links. Architecture changes must keep the
+  codebase tour and this skill's repository map consistent.
 
 If private inputs, provider credentials, browser/Cloudflare access, or exact workflow evidence are unavailable, name the unverified step. Never weaken a gate to manufacture success.

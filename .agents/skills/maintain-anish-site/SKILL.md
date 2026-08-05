@@ -12,7 +12,7 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 1. Read the repository-root `AGENTS.md`, inspect `git status`, and preserve unrelated work.
 2. Classify the request as diagnosis, copy, canonical content, UI, room, connector/Studio, storage, security, CI/docs, staging, or production release. A review or diagnosis does not authorize writes or deployment.
 3. Read only the applicable reference:
-   - Architecture, UI, room, or repository ownership: [repository-map.md](references/repository-map.md). Also use `frontend-design` for visual, interaction, or hierarchy changes.
+   - Architecture, UI, room, or repository ownership: [repository-map.md](references/repository-map.md). Also use `frontend-design` for visual, interaction, or hierarchy changes. Use `docs/architecture/codebase-tour.md` as the human-readable system tour; keep the skill reference focused on editing constraints and high-risk seams.
    - Canonical facts, claims, WorkGroups, or copy ownership: [content-contract.md](references/content-contract.md).
    - Public language: use `$edit-anish-site-copy` and its voice, surface, claims, protected-boundary, and pull-request references.
    - Connectors, OAuth, environments, security, staging, or production: [connectors-security-release.md](references/connectors-security-release.md).
@@ -90,5 +90,8 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Simulation APIs, persistence, campaign, Gateway, or provider-approval work requires focused Simulation security, migration, UI, privacy, and browser checks. Preserve both Action and Tactical completion plus authored outage fallback.
 - Room registry changes require seven-key parity, zero overview data reads, direct-route source isolation, desktop/Pocket input tests, and disabled-feature reachability tests.
 - Copy changes require copy parsing, voice/audit, owner fact-check, diff, rendered, metadata, and browser checks. Skill and docs changes require their dedicated validators.
+- Documentation changes must preserve the authority map in `docs/README.md`.
+  Run `npm run docs:check`; when architecture ownership changes, update both
+  `docs/architecture/codebase-tour.md` and the repository map in this skill.
 - Release-code edits select ordinary `npm run validate`. A clean pushed `release/<semver>` candidate may use the guarded staging workflow with all four exact-SHA workflow URLs. `npm run validate:release` and production mutation remain separately authorized.
 - The helper never deploys, migrates hosted state, rotates credentials, or mutates Git.

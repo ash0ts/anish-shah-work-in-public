@@ -1,5 +1,8 @@
 # Security and privacy reporting
 
+> Policy last reviewed: **2026-08-05**. Reverify the supported-environment
+> statements after any hosting, Access, production-origin, or recovery change.
+
 ## Reporting
 
 Report a suspected security, privacy, or accessibility issue privately through
@@ -58,8 +61,9 @@ through the incident runbook.
 ## Credential and environment handling
 
 - Run the local bootstrap in [Testing](./docs/testing.md); it creates only
-  missing local encryption and rate-limit values, never prints or overwrites
-  them, and locks `.env.local` to owner-only permissions.
+  missing local connector-encryption, rate-limit, and Simulation session-HMAC
+  values, never prints or overwrites them, and locks `.env.local` to owner-only
+  permissions.
 - Enter provider credentials through the protected Studio. API secrets and
   OAuth tokens are encrypted before D1 storage.
 - Never send secrets through GitHub, CI output, browser storage, screenshots,

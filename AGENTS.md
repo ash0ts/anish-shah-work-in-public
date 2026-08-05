@@ -14,6 +14,10 @@
 - Remote migrations, deployments, Access changes, and secret rotation require an explicit user request.
 - Preserve semantic server-rendered HTML, keyboard access, visible focus, reduced-motion behavior, and no-JavaScript fallbacks.
 - Classify committed PR changes with `node .agents/skills/maintain-anish-site/scripts/check-change.mjs --plan --base origin/main`. Ordinary release-code changes run `validate`; production-candidate execution remains separately authorized and exact-SHA guarded.
+- Keep `docs/README.md` as the documentation authority map. Documentation
+  changes run `npm run docs:check`; subsystem-boundary changes update both the
+  human-readable `docs/architecture/codebase-tour.md` and the maintenance
+  skill's repository map.
 - Metric, source, privacy, provider-policy, route, stable-ID, and programmatic accessibility wording remains owner-guarded. Put desired changes in an implementation request instead of smoothing away a required fact or behavior.
 - Travel may use advanced R3F, shaders, geographic interaction, and owner-side image processing only under `components/play/travel/**`, the selection-only globe prop in `components/play/room-3d/**`, and `app/studio/travel/**`. Travel remains semantic HTML first and may not introduce WebGL navigation elsewhere.
 
