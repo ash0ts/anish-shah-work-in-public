@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SITE_COPY } from "@/lib/copy";
 import type { HomepageImpactTrack } from "@/lib/home-impact";
 import styles from "./ImpactEvidence.module.css";
 
@@ -7,13 +8,14 @@ export function ImpactEvidence({ tracks }: { tracks: HomepageImpactTrack[] }) {
     <section className={styles.section} aria-labelledby="impact-title">
       <header className={styles.heading}>
         <div>
-          <p>Proof, with limits</p>
-          <h2 id="impact-title">What happened after the work shipped.</h2>
+          <p>{SITE_COPY.home["impact-eyebrow"]}</p>
+          <h2 id="impact-title">{SITE_COPY.home["impact-heading"]}</h2>
         </div>
         <p>
-          Three independent measures; no shared scale.{" "}
-          <Link href="/sources#internal-analytics" prefetch={false}>
-            See how I count ↗
+          {SITE_COPY.home["impact-summary"]}{" "}
+          <Link href="/sources#public-footprint" prefetch={false}>
+            {SITE_COPY.home["impact-source-cta"]}{" "}
+            <span aria-hidden="true">↗</span>
           </Link>
         </p>
       </header>

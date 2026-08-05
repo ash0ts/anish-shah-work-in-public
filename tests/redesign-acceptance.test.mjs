@@ -239,25 +239,15 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
     ...markup.matchAll(/<li\b[^>]*data-work-id="([^"]+)"/gi),
   ].map((match) => match[1]);
 
-  assert.deepEqual(bodyDetails, [
-    "products-open-source",
-    "courses-learning",
-    "writing-research",
-    "talks-programs",
-  ]);
-  assert.equal(workIds.length, 24);
-  assert.equal(new Set(workIds).size, 24);
-  const canonicalWorkIds = new Set(
-    publicBundle.workGroups.map((group) => group.id),
-  );
-  assert(workIds.every((id) => canonicalWorkIds.has(id)));
-  assert.match(markup, /Showing 1—24 of 82 projects/i);
-  assert.match(markup, /href="\/work\?page=2#work-index"[^>]*>\s*Next\s*</i);
+  assert.deepEqual(bodyDetails, []);
+  assert.deepEqual(workIds, []);
+  assert.doesNotMatch(markup, /data-work-index-prompt|id="work-index"/i);
+  assert.doesNotMatch(markup, /Showing 1—24|work-index-title/i);
   assert.equal((calendarBody.match(/<tr\b/g) ?? []).length, 4);
   assert.equal((calendarBody.match(/<td\b/g) ?? []).length, 24);
   assert.match(
     calendar,
-    /Project counts by line and year/i,
+    /Projects by line and year/i,
   );
   assert.doesNotMatch(calendar, /public[- ]form|artifact count|formCount/i);
   assert.match(calendar, /data-density="[1-5]"/i);
@@ -276,23 +266,32 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   );
   assert.match(markup, />Line of work<|>Topic<|>Year<|>Format</i);
 
-  const pages = await Promise.all(
-    [1, 2, 3, 4].map((page) =>
-      page === 1 ? Promise.resolve(html) : renderHtml(`/work?page=${page}`),
-    ),
-  );
-  const workIdsByPage = pages.map((pageHtml) => [
+  const selectedPages = await Promise.all([
+    renderHtml("/work?year=2024"),
+    renderHtml("/work?year=2024&page=2"),
+  ]);
+  const selectedMarkup = documentMarkup(selectedPages[0]);
+  const workIdsByPage = selectedPages.map((pageHtml) => [
     ...documentMarkup(pageHtml).matchAll(
       /<li\b[^>]*data-work-id="([^"]+)"/gi,
     ),
   ].map((match) => match[1]));
-  assert.deepEqual(workIdsByPage.map((ids) => ids.length), [24, 24, 24, 10]);
-  assert.equal(new Set(workIdsByPage.flat()).size, 82);
-  assert.deepEqual(
-    new Set(workIdsByPage.flat()),
-    new Set(publicBundle.workGroups.map((group) => group.id)),
+  assert.equal(workIdsByPage[0].length, 24);
+  assert(workIdsByPage[1].length > 0 && workIdsByPage[1].length <= 24);
+  assert.equal(
+    new Set(workIdsByPage.flat()).size,
+    workIdsByPage.flat().length,
   );
-  assert.match(markup, /href="\/work\?page=2#work-index"/i);
+  const canonicalWorkIds = new Set(
+    publicBundle.workGroups.map((group) => group.id),
+  );
+  assert(workIdsByPage.flat().every((id) => canonicalWorkIds.has(id)));
+  assert.match(selectedMarkup, /Showing 1—24 of \d+ projects/i);
+  assert.match(
+    selectedMarkup,
+    /href="\/work\?year=2024(?:&amp;|&)page=2#work-index"/i,
+  );
+  assert.match(selectedMarkup, /id="work-index-title"/i);
   assert.doesNotMatch(
     markup,
     /\bMap\b|Visual archive|Complete grouped index|<canvas\b|<svg\b/i,

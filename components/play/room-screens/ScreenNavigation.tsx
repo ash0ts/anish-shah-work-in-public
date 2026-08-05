@@ -31,7 +31,7 @@ export function ScreenNavigation({
         prefetch={false}
       >
         <span aria-hidden="true">←</span>
-        <span>Room</span>
+        <span>Back to room</span>
       </Link>
       <span className={styles.screenCurrent}>
         {object.object} · {object.label}

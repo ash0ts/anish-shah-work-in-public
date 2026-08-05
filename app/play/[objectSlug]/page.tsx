@@ -140,7 +140,7 @@ export async function generateMetadata({
   }
   return publicPageMetadata({
     title: `${object.label} · ${object.title}`,
-    description: `${object.description} Open the ${object.object.toLowerCase()} to explore the collection.`,
+    description: `${object.description} Browse it through ${object.title}.`,
     path: object.route,
     noindex: hasPublicQuery(query),
   });

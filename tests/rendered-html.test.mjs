@@ -83,6 +83,13 @@ async function render(pathname = "/") {
   });
 }
 
+async function renderWithoutFollowingRedirect(pathname) {
+  return fetch(`${BASE_URL}${pathname}`, {
+    headers: { accept: "text/html" },
+    redirect: "manual",
+  });
+}
+
 async function renderHtml(pathname) {
   const response = await render(pathname);
   assert.equal(response.status, 200, `${pathname} did not render`);
@@ -170,6 +177,13 @@ test("homepage renders four lines of work and three qualified proof statements",
       new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
     );
   }
+  assert.match(text, /Use, learning, and program reach\./i);
+  assert.match(
+    text,
+    /Three separate measures\. Each keeps its scope and limit\./i,
+  );
+  assert.match(text, /How I count/i);
+  assert.doesNotMatch(text, /What happened after the work shipped/i);
   assert.equal((markup.match(/data-impact-track=/g) ?? []).length, 3);
   assert.match(html, /Internal analytics/i);
   assert.match(html, /July 29 internal analytics checkpoint/i);
@@ -194,8 +208,9 @@ test("all public routes expose useful server-rendered content", async () => {
       path: "/work",
       required: [
         /What I(?:’|&#x27;|')ve built, taught, and tested\./i,
-        /follow the idea instead of counting every appearance/i,
-        /Search projects, talks, and code/i,
+        /Choose a year and line\./i,
+        /One project stays one record—even when it became a talk, recording, or code release\./i,
+        /Search the work/i,
         /name="bucket"/i,
         /name="topic"/i,
         /name="year"/i,
@@ -214,6 +229,7 @@ test("all public routes expose useful server-rendered content", async () => {
       path: "/play",
       required: [
         /The room behind the résumé\./i,
+        /The objects tell the rest/i,
         />TV · Watch</i,
         />Bookshelf · Read</i,
         />Music player · Listen</i,
@@ -357,6 +373,14 @@ test("legacy map URLs redirect to the two-dimensional Work index", async () => {
   assert.equal(location.searchParams.get("page"), "2");
 });
 
+test("page-only Work URLs canonicalize to the calendar", async () => {
+  const response = await renderWithoutFollowingRedirect("/work?page=2");
+  assert.equal(response.status, 308);
+  const location = new URL(response.headers.get("location"), BASE_URL);
+  assert.equal(location.pathname, "/work");
+  assert.equal(location.search, "");
+});
+
 test("legacy context routes land on a real nested anchor or a useful search", async () => {
   const related = await fetch(
     `${BASE_URL}/work/7-top-machine-learning-operations-startups-and-the-problem-they-solve`,
@@ -400,6 +424,8 @@ test("the public shell has the exact compact navigation and footer contract", as
   for (const label of ["Work", "Play"]) {
     assert.match(header, new RegExp(`>${label}<`));
   }
+  assert.match(header, /data-primary-navigation/i);
+  assert.match(header, /data-primary-navigation-indicator/i);
   assert.doesNotMatch(header, />About</);
   assert.doesNotMatch(header, />Sources</);
   for (const label of ["LinkedIn", "GitHub", "W&amp;B", "Sources", "Privacy"]) {

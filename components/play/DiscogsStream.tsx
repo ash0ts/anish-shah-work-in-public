@@ -177,8 +177,6 @@ export function DiscogsStream({
       <header className={styles.collectionHeader}>
         {presentation === "crate" ? (
           <div className={styles.cratePanelHeading}>
-            <span>In the crate</span>
-            <h2>Inside the crate.</h2>
             <p>{payload.coverage}</p>
           </div>
         ) : (

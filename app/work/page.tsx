@@ -69,9 +69,6 @@ export default async function WorkPage({
   );
   const filtered = filterWorkArchiveRecords(allWorks, query);
   const page = paginateWorkArchiveRecords(filtered, query.page);
-  const firstVisibleBucketId = workBuckets.find((bucket) =>
-    page.items.some((work) => work.bucket === bucket.id),
-  )?.id;
   const timelineRecords = filterWorkArchiveRecords(allWorks, {
     ...query,
     bucket: "",
@@ -99,16 +96,28 @@ export default async function WorkPage({
   const hasScopedResults = Boolean(
     query.query || activeFilterCount || query.practice,
   );
+  if (query.page > 1 && !hasScopedResults) {
+    permanentRedirect("/work");
+  }
+  const selectedBucket = workBuckets.find(
+    (bucket) => bucket.id === query.bucket,
+  );
   const resultLabel = filtered.length
-    ? `Showing ${page.rangeStart}—${page.rangeEnd} of ${filtered.length} ${
-        filtered.length === 1 ? "project" : "projects"
-      }`
+    ? page.totalPages > 1
+      ? `Showing ${page.rangeStart}—${page.rangeEnd} of ${filtered.length} projects`
+      : `${filtered.length} ${filtered.length === 1 ? "project" : "projects"}`
     : "No projects found";
   const explorerHeading = query.query
     ? `Results for “${query.query}”`
-    : activeFilterCount
-      ? SITE_COPY.work["index-filtered-heading"]
-      : SITE_COPY.work["index-default-heading"];
+    : selectedBucket && query.year
+      ? `${selectedBucket.title} · ${query.year}`
+      : selectedBucket
+        ? selectedBucket.title
+        : query.year
+          ? `Projects from ${query.year}`
+          : activeFilterCount
+            ? SITE_COPY.work["index-filtered-heading"]
+            : SITE_COPY.work["index-default-heading"];
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
@@ -214,84 +223,81 @@ export default async function WorkPage({
 
       <WorkTimeline query={query} records={timelineRecords} />
 
-      <section
-        aria-labelledby="work-index-title"
-        className={styles.index}
-        id="work-index"
-      >
-        <header className={styles.indexHeader}>
-          <p
-            aria-atomic="true"
-            aria-live="polite"
-            className={styles.resultCount}
-            role="status"
-          >
-            {resultLabel}
-          </p>
-          <h2 id="work-index-title" tabIndex={-1}>
-            {explorerHeading}
-          </h2>
-        </header>
-        <FilteredResultFocus
-          active={hasScopedResults || query.page > 1}
-          targetId="work-index-title"
-        />
+      {hasScopedResults ? (
+        <section
+          aria-labelledby="work-index-title"
+          className={styles.index}
+          id="work-index"
+        >
+          <header className={styles.indexHeader}>
+            <p
+              aria-atomic="true"
+              aria-live="polite"
+              className={styles.resultCount}
+              role="status"
+            >
+              {resultLabel}
+            </p>
+            <h2 id="work-index-title" tabIndex={-1}>
+              {explorerHeading}
+            </h2>
+          </header>
+          <FilteredResultFocus
+            active
+            key={workArchiveHref(query)}
+            targetId="work-index-title"
+          />
 
-        <div className={styles.bodyIndex}>
-          {workBuckets.map((bucket) => {
-            const works = page.items.filter(
-              (work) => work.bucket === bucket.id,
-            );
-            if (!works.length) return null;
-            return (
-              <details
-                className={styles.body}
-                data-default-open={
-                  hasScopedResults ? "true" : "false"
-                }
-                data-work-body={bucket.id}
-                key={bucket.id}
-                open={
-                  hasScopedResults
-                    ? works.length > 0
-                    : bucket.id === firstVisibleBucketId
-                }
-              >
-                <summary>
-                  <div>
-                    <h3>{bucket.title}</h3>
-                  </div>
-                  <i aria-hidden="true">+</i>
-                </summary>
-                <ol className={styles.workList}>
-                  {works.map((work) => (
-                    <WorkRow
-                      key={work.id}
-                      query={query.query}
-                      work={work}
-                    />
-                  ))}
-                </ol>
-              </details>
-            );
-          })}
-        </div>
-
-        <WorkBodyBehavior />
-
-        {!filtered.length ? (
-          <div className={styles.empty}>
-            <p>{SITE_COPY.work["no-results"]}</p>
-            <Link href="/work" prefetch={false}>
-              {SITE_COPY.work["clear-search"]}
-            </Link>
+          <div className={styles.bodyIndex}>
+            {workBuckets.map((bucket) => {
+              const works = page.items.filter(
+                (work) => work.bucket === bucket.id,
+              );
+              if (!works.length) return null;
+              return (
+                <details
+                  className={styles.body}
+                  data-default-open="true"
+                  data-work-body={bucket.id}
+                  key={bucket.id}
+                  open
+                >
+                  <summary>
+                    <div>
+                      <h3>{bucket.title}</h3>
+                    </div>
+                    <i aria-hidden="true">+</i>
+                  </summary>
+                  <ol className={styles.workList}>
+                    {works.map((work) => (
+                      <WorkRow
+                        key={work.id}
+                        query={query.query}
+                        work={work}
+                      />
+                    ))}
+                  </ol>
+                </details>
+              );
+            })}
           </div>
-        ) : null}
 
-        {page.totalPages > 1 ? (
-          <WorkPagination page={page.currentPage} query={query} totalPages={page.totalPages} />
-        ) : null}
-      </section>
+          <WorkBodyBehavior />
+
+          {!filtered.length ? (
+            <div className={styles.empty}>
+              <p>{SITE_COPY.work["no-results"]}</p>
+              <Link href="/work" prefetch={false}>
+                {SITE_COPY.work["clear-search"]}
+              </Link>
+            </div>
+          ) : null}
+
+          {page.totalPages > 1 ? (
+            <WorkPagination page={page.currentPage} query={query} totalPages={page.totalPages} />
+          ) : null}
+        </section>
+      ) : null}
     </main>
   );
 }

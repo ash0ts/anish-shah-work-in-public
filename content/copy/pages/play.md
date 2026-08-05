@@ -13,19 +13,43 @@ My Room · 2001
 The room behind the résumé.
 
 ## intro-summary
-Late-night anime, books in stacks, a pocket music player, records in crates, games on a beige PC, and miles outside. Every object opens as a regular page.
+The objects tell the rest: anime, books, music, records, games, miles, and places.
 
 ## poster-still-label
-Room on pause
+Room preview
 
 ## poster-capable-label
-Enter in 3D
+Each object opens its own view
 
 ## directory-eyebrow
 Room directory
 
 ## directory-title
-Pick a corner.
+Start with an object.
+
+## room-opening-status
+Opening the room
+
+## room-return-eyebrow
+Return
+
+## room-return-title
+Back to the room.
+
+## room-return-summary
+Restoring your last view…
+
+## room-fallback-body
+Use the object directory below.
+
+## pocket-stage-opening
+Opening the room
+
+## pocket-stage-placing
+Folding out the objects
+
+## pocket-stage-ready
+Room ready
 
 ## view-overview
 Overview
@@ -34,13 +58,13 @@ Overview
 Browse all
 
 ## loading-collection
-Loading the collection…
+Opening this corner…
 
 ## collection-unavailable
 This collection is not available yet.
 
 ## return-overview
-Return to overview
+Back to overview
 
 ## status-stale
 Refresh delayed
@@ -49,25 +73,28 @@ Refresh delayed
 Search this collection
 
 ## collection-no-results-title
-No titles match this view.
+Nothing here matches.
 
 ## collection-no-results-body
-Change the search or filter to return to the collection.
+Try a broader search or fewer filters.
 
 ## collect-search-placeholder
 Search the record shelf
 
 ## collect-no-results-title
-No releases match this view.
+Nothing in the crate matches.
 
 ## collect-no-results-body
-Change the title, artist, format, or decade to widen the shelf.
+Broaden the title, artist, format, or decade.
 
 ## travel-search-placeholder
 Search the public atlas
 
 ## travel-no-results
 No countries match that search.
+
+## travel-loading-map
+Drawing the map…
 
 ## profile-myanimelist
 Open on MyAnimeList
@@ -100,7 +127,7 @@ My game library
 TV
 
 ## watch-description
-Late-night anime, current watches, and a shelf that never quite stops growing.
+Anime I return to, what I’m watching, and the full shelf.
 
 ## watch-screen-eyebrow
 Channel 11
@@ -112,7 +139,7 @@ Midnight Broadcast
 Bookshelf
 
 ## read-description
-Open books, finished books, and everything waiting its turn.
+Books in progress, finished, rated, and waiting.
 
 ## read-screen-eyebrow
 Shelf light on
@@ -124,7 +151,7 @@ Bedside Shelf
 Music player
 
 ## listen-description
-A pocket-sized window into the tracks Spotify puts closest to the surface.
+The tracks Spotify puts closest to the surface for me.
 
 ## listen-screen-eyebrow
 Top Tracks
@@ -136,7 +163,7 @@ Pocket Player
 Record crate
 
 ## collect-description
-A crate to flip through by title, format, and decade.
+Records on my shelf, sorted by format and decade.
 
 ## collect-screen-eyebrow
 Crate 01
@@ -148,7 +175,7 @@ Crate Archive
 Computer
 
 ## play-description
-A beige desktop crowded with games worth booting up again.
+Games I own, games I return to, and rounded playtime.
 
 ## play-screen-eyebrow
 Desktop 01
@@ -160,7 +187,7 @@ Desktop Library
 Treadmill
 
 ## move-description
-A tiny cardio TV for the rides and runs outside the room.
+Recent rides and runs, when Strava’s public feed is available.
 
 ## move-screen-eyebrow
 Cardio feed
@@ -175,7 +202,7 @@ Globe
 Places I’ve been, the photos I kept, and where they belong.
 
 ## travel-screen-eyebrow
-Postcard Planet
+Travel log
 
 ## travel-screen-title
 Postcard Planet

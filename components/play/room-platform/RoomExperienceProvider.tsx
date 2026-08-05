@@ -131,7 +131,7 @@ function LazyRoomFallback({ onLeave }: { onLeave: () => void }) {
         />
       </picture>
       <div>
-        <p role="status">Opening room</p>
+        <p role="status">{SITE_COPY.play["room-opening-status"]}</p>
         <button onClick={onLeave} ref={leaveRef} type="button">
           Leave room
         </button>
@@ -164,9 +164,11 @@ function ReturnSignal({ objectId }: { objectId: RoomObjectId }) {
           <i />
         </div>
         <div className={styles.returnSignalCopy}>
-          <p>Return channel · {object.object}</p>
-          <h2>Rewinding to My Room…</h2>
-          <span>{object.label} stays selected while the room signal returns.</span>
+          <p>
+            {object.object} · {SITE_COPY.play["room-return-eyebrow"]}
+          </p>
+          <h2>{SITE_COPY.play["room-return-title"]}</h2>
+          <span>{SITE_COPY.play["room-return-summary"]}</span>
         </div>
         <div aria-hidden="true" className={styles.returnSignalTrack}>
           <i />
@@ -626,9 +628,7 @@ export function RoomExperienceProvider({
       pendingRoomNavigation.current = id;
       const object = ROOM_OBJECT_BY_ID[id];
       playCue("interface-confirm");
-      announce(
-        `Selected ${object.label}. Moving toward the ${object.object.toLowerCase()}.`,
-      );
+      announce(`Opening ${object.label} in the ${object.object.toLowerCase()}.`);
       dispatch({ type: "select", id });
       const reduced = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
@@ -718,8 +718,8 @@ export function RoomExperienceProvider({
     const roomHistoryDepth = activeObjectRouteDepth.current;
     announce(
       target
-        ? `Rewinding to My Room. ${ROOM_OBJECT_BY_ID[target].label} will remain selected.`
-        : "Rewinding to My Room.",
+        ? `Returning to the room. ${ROOM_OBJECT_BY_ID[target].label} remains selected.`
+        : "Returning to the room.",
     );
     playCue("interface-return");
     dispatch({ type: "return" });

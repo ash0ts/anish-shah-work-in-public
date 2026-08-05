@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SITE_COPY } from "@/lib/copy";
+import { PrimaryNavigation } from "./PrimaryNavigation";
 import styles from "./SiteHeader.module.css";
 
 const navigation = [
@@ -19,13 +20,7 @@ export function SiteHeader() {
       >
         {wordmark}
       </Link>
-      <nav className={styles.navigation} aria-label="Primary navigation">
-        {navigation.map(([label, href]) => (
-          <Link key={href} href={href} prefetch={false}>
-            {label}
-          </Link>
-        ))}
-      </nav>
+      <PrimaryNavigation items={navigation} />
     </header>
   );
 }
