@@ -7,6 +7,8 @@ import { chromium } from "@playwright/test";
 import * as chromeLauncher from "chrome-launcher";
 import lighthouse from "lighthouse";
 
+import { selectMedianLighthouseResult } from "./lib/lighthouse-statistics.mjs";
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const releaseVersion = JSON.parse(
   await readFile(path.join(root, "package.json"), "utf8"),
@@ -25,6 +27,7 @@ const audits = [
 const categories = ["performance", "accessibility", "best-practices", "seo"];
 const minimumScore = 0.9;
 const maximumCls = 0.1;
+const lighthouseRunsPerRoute = 3;
 
 function boundedOutput(current, chunk) {
   return `${current}${chunk}`.slice(-16_000);
@@ -178,20 +181,34 @@ try {
   chrome = await launchChrome();
   for (const { mode, routes } of audits) {
     for (const route of routes) {
-      const result = await runRouteAudit(route, server, output, chrome);
-      if (!result?.lhr || result.lhr.runtimeError) {
-        const runtime = result?.lhr?.runtimeError;
-        throw new Error(
-          runtime
-            ? `${mode} ${route}: ${runtime.code} — ${runtime.message}`
-            : `Lighthouse returned no result for ${mode} ${route}.`,
+      const samples = [];
+      for (let run = 1; run <= lighthouseRunsPerRoute; run += 1) {
+        const sample = await runRouteAudit(route, server, output, chrome);
+        if (!sample?.lhr || sample.lhr.runtimeError) {
+          const runtime = sample?.lhr?.runtimeError;
+          throw new Error(
+            runtime
+              ? `${mode} ${route}: ${runtime.code} — ${runtime.message}`
+              : `Lighthouse returned no result for ${mode} ${route}.`,
+          );
+        }
+        samples.push(sample);
+        await writeFile(
+          path.join(
+            reportDirectory,
+            `${reportName(route, mode)}.run-${run}.report.json`,
+          ),
+          sample.report,
+          "utf8",
         );
       }
-      const reportPath = path.join(
-        reportDirectory,
-        `${reportName(route, mode)}.report.json`,
+
+      const result = selectMedianLighthouseResult(samples);
+      await writeFile(
+        path.join(reportDirectory, `${reportName(route, mode)}.report.json`),
+        result.report,
+        "utf8",
       );
-      await writeFile(reportPath, result.report, "utf8");
 
       const summary = {};
       for (const category of categories) {
@@ -206,6 +223,9 @@ try {
 
       const cls = result.lhr.audits["cumulative-layout-shift"]?.numericValue;
       summary.cls = cls;
+      summary.performanceSamples = samples.map(
+        (sample) => sample.lhr.categories.performance?.score,
+      );
       if (typeof cls !== "number" || cls > maximumCls) {
         failures.push(`${mode} ${route} CLS: ${cls ?? "missing"} > ${maximumCls}`);
       }

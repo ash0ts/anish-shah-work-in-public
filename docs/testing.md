@@ -275,6 +275,9 @@ hard budget. WebKit completes before Lighthouse starts so two browser/server
 pairs never compete during startup. This prevents a SwiftShader-heavy room
 process from starving a newly created no-JavaScript Chromium renderer on a
 bounded release runner without weakening or retrying the assertion.
+Lighthouse collects three samples per route and applies the 0.90 performance
+budget to the median-performance run; all reports are retained. This is
+benchmark sampling, not a retry that converts a functional failure into a pass.
 Twenty-fold click/drag loops, all-object Pocket stress, performance-downgrade
 stress, and room-review captures belong to the separate manual stability soak.
 

@@ -1697,6 +1697,8 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.match(config, /const e2eCompatibilityDate = "2026-07-28"/);
   assert.match(config, /--compatibility-date \$\{e2eCompatibilityDate\}/);
   assert.match(lighthouse, /node_modules\/wrangler-e2e\/bin\/wrangler\.js/);
+  assert.match(lighthouse, /const lighthouseRunsPerRoute = 3/);
+  assert.match(lighthouse, /selectMedianLighthouseResult\(samples\)/);
   assert.match(lighthouse, /const e2eCompatibilityDate = "2026-07-28"/);
   assert.match(lighthouse, /"--compatibility-date",\n\s+e2eCompatibilityDate/);
   assert.doesNotMatch(

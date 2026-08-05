@@ -80,7 +80,8 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - `--run` executes affected-surface checks. `--full` runs `validate` and the
   bounded fail-fast release browser gate. The gate isolates Simulation fallback
   foundations before parallel WebGL-heavy coverage and serializes WebKit before
-  Lighthouse, without retries.
+  Lighthouse, without functional-test retries. Lighthouse budgets use the
+  retained median of three benchmark samples per route.
   Exhaustive 20-fold interaction stress
   and visual capture belong to the separate manual stability workflow.
 - `--base <ref>` includes committed changes from that merge base through `HEAD`; use it for PR and freelancer review.
