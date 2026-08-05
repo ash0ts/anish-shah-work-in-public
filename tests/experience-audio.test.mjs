@@ -54,6 +54,11 @@ test("audio startup has a deterministic bounded fallback", async () => {
     schedule: () => 18,
   });
   assert.equal(successTimerCancelled, true);
+
+  const value = await startAudioWithinDeadline(() => Promise.resolve("ready"), {
+    schedule: () => 19,
+  });
+  assert.equal(value, "ready");
 });
 
 test("the experience audio manifest is strict, quiet, and deterministic", async () => {
@@ -149,7 +154,9 @@ test("Tone remains behind explicit consent and outside non-experience routes", a
   ]);
   assert.doesNotMatch(provider, /^import .* from ["']tone["'];?$/m);
   assert.match(provider, /await import\("tone"\)/);
-  assert.match(provider, /startAudioWithinDeadline\(\(\) => imported\.start\(\)\)/);
+  assert.match(provider, /startAudioWithinDeadline\(async \(\) => \{/);
+  assert.match(provider, /await import\("tone"\)/);
+  assert.match(provider, /await tone\.start\(\)/);
   assert.match(provider, /onClick=\{\(\) => void setEnabled\(status !== "on"\)\}/);
   assert.match(provider, /pathname === "\/play"/);
   assert.match(provider, /pathname === "\/simulation"/);

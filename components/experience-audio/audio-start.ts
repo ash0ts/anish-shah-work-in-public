@@ -20,10 +20,10 @@ export class ExperienceAudioStartTimeoutError extends Error {
  * shared control in a permanent loading state. The timer functions are
  * injectable to keep the policy deterministic in unit tests.
  */
-export async function startAudioWithinDeadline(
-  start: () => Promise<void>,
+export async function startAudioWithinDeadline<T>(
+  start: () => Promise<T>,
   options: AudioStartDeadlineOptions = {},
-): Promise<void> {
+): Promise<T> {
   const timeoutMs = options.timeoutMs ?? EXPERIENCE_AUDIO_START_TIMEOUT_MS;
   const schedule = options.schedule ?? setTimeout;
   const cancel = options.cancel ?? clearTimeout;
@@ -36,7 +36,7 @@ export async function startAudioWithinDeadline(
   });
 
   try {
-    await Promise.race([start(), timeout]);
+    return await Promise.race([start(), timeout]);
   } finally {
     if (timeoutHandle !== null) cancel(timeoutHandle);
   }

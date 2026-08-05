@@ -172,9 +172,13 @@ export function ExperienceAudioProvider({ children }: { children: ReactNode }) {
     setStatus("loading");
     try {
       // Tone and its Web Audio graph are requested only from this explicit
-      // visitor gesture. No experience route imports the engine eagerly.
-      const imported = (await import("tone")) as unknown as ToneModule;
-      await startAudioWithinDeadline(() => imported.start());
+      // visitor gesture. Bound the complete import-and-start operation so a
+      // slow chunk can never strand the shared control in its loading state.
+      const imported = await startAudioWithinDeadline(async () => {
+        const tone = (await import("tone")) as unknown as ToneModule;
+        await tone.start();
+        return tone;
+      });
       if (epoch !== requestEpoch.current) return;
       const nextRuntime = createRuntime(imported, externalMedia.current.size > 0);
       runtime.current = nextRuntime;
