@@ -238,6 +238,8 @@ test("all public routes expose useful server-rendered content", async () => {
         />Treadmill · Move</i,
         /data-room-static-stage="true"/i,
         /aria-labelledby="room-directory-title"/i,
+        /fetchpriority="high"/i,
+        /my-room-2001-neutral-mobile\.[a-f0-9]{12}\.avif/i,
       ],
     },
     {

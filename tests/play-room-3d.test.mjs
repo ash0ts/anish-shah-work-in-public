@@ -600,10 +600,6 @@ test("fisheye health ignores warmup and downgrades only after sustained misses",
 });
 
 test("the static room poster is first-party, content-hashed, and bounded", async () => {
-  const posterFiles = [
-    "my-room-2001-neutral.01c6f825bbc1.avif",
-    "my-room-2001-neutral.00d2bc80d8dc.webp",
-  ];
   const [overview, runtime] = await Promise.all([
     readFile(
       new URL(
@@ -620,19 +616,40 @@ test("the static room poster is first-party, content-hashed, and bounded", async
       "utf8",
     ),
   ]);
+  const posterFiles = [
+    {
+      filename: "my-room-2001-neutral.01c6f825bbc1.avif",
+      surfaces: [overview, runtime],
+    },
+    {
+      filename: "my-room-2001-neutral.00d2bc80d8dc.webp",
+      surfaces: [overview, runtime],
+    },
+    {
+      filename: "my-room-2001-neutral-mobile.27b17548d9bf.avif",
+      surfaces: [overview],
+    },
+    {
+      filename: "my-room-2001-neutral-mobile.95603956f4ee.webp",
+      surfaces: [overview],
+    },
+  ];
 
-  for (const filename of posterFiles) {
+  for (const { filename, surfaces } of posterFiles) {
     const url = new URL(`../public/assets/play/${filename}`, import.meta.url);
     const [bytes, metadata] = await Promise.all([readFile(url), stat(url)]);
     const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
     assert.match(filename, new RegExp(`\\.${digest}\\.`));
     assert.ok(metadata.size <= 200_000);
-    assert.match(overview, new RegExp(filename.replaceAll(".", "\\.")));
-    assert.match(runtime, new RegExp(filename.replaceAll(".", "\\.")));
+    for (const surface of surfaces) {
+      assert.match(surface, new RegExp(filename.replaceAll(".", "\\.")));
+    }
   }
 
   assert.match(overview, /<picture>/);
   assert.match(overview, /alt=""/);
+  assert.match(overview, /fetchPriority="high"/);
+  assert.match(overview, /media="\(max-width: 767px\)"/);
   assert.doesNotMatch(overview, /https?:\/\//);
 });
 
