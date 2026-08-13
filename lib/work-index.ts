@@ -10,6 +10,7 @@ export type WorkIndexEntry = {
   id: string;
   slug: string;
   title: string;
+  shortTitle: string;
   year: number | null;
   practice: "teach" | "build" | "convene";
   formCount: number;
@@ -128,6 +129,7 @@ export function workArchiveRecordsFrom(
       id: item.id,
       slug: item.slug,
       title: item.title,
+      shortTitle: item.shortTitle || item.displayTitle || item.title,
       year: item.year,
       practice: legacyPractice(item),
       recordType: "entity",
@@ -177,6 +179,13 @@ export function workArchiveRecordsFrom(
           entity.displayTitle ??
           entity.shortTitle ??
           entity.title ??
+          primary.title,
+        shortTitle:
+          entity.shortTitle ??
+          entity.displayTitle ??
+          entity.title ??
+          primary.shortTitle ??
+          primary.displayTitle ??
           primary.title,
         year: entity.year ?? primary.year,
         practice: entity.practice ?? legacyPractice(primary),
@@ -279,6 +288,7 @@ function workGroupRecord(
       id: group.id,
       slug: group.slug,
       title: group.title,
+      shortTitle: group.shortTitle || group.title,
       year: group.yearEnd ?? group.yearStart,
       practice,
       recordType: "work_group",

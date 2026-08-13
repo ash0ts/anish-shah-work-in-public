@@ -7,7 +7,7 @@ Large-language-model agents
 LLM agents
 
 ## summary
-I presented a webinar on large-language-model agents.
+A webinar introduced large-language-model agents and their system patterns.
 
 ## role-summary
 Webinar speaker

@@ -19,7 +19,6 @@ import { useRoomCapability } from "../room-3d/Room3DGate";
 import type { RoomCapabilityResult } from "../room-3d/room-capability";
 import { adjacentPocketRoomRotation } from "../room-3d/room-math";
 import { ROOM_OBJECTS } from "./room-registry";
-import { RevealSimulationControl } from "./RevealSimulationControl";
 import { useRoomExperience } from "./RoomExperienceProvider";
 import styles from "./RoomRuntime.module.css";
 
@@ -32,6 +31,12 @@ const LazyRoomStage = lazy(() =>
 const LazyPocketRoomStage = lazy(() =>
   import("../room-3d/PocketRoomStage").then((module) => ({
     default: module.PocketRoomStage,
+  })),
+);
+
+const LazyRevealSimulationControl = lazy(() =>
+  import("./RevealSimulationControl").then((module) => ({
+    default: module.RevealSimulationControl,
   })),
 );
 
@@ -134,7 +139,7 @@ export function RoomRuntime() {
   const ready = stageReady && (!pocket || pocketEntryPhase === "ready");
   const returning = room.phase === "returning";
   const presenting = room.objectRouteActive && !returning;
-  const blocked = presenting || returning || room.simulationTransitioning;
+  const blocked = presenting || returning;
   const markReady = useCallback(() => {
     if (capability.eligible) setReadyCapability(capability);
   }, [capability]);
@@ -343,7 +348,11 @@ export function RoomRuntime() {
           >
             Leave room
           </button>
-          <RevealSimulationControl className={styles.simulationButton} />
+          {room.simulationEnabled ? (
+            <Suspense fallback={null}>
+              <LazyRevealSimulationControl className={styles.simulationButton} />
+            </Suspense>
+          ) : null}
           {!presenting ? (
             <ExperienceAudioControl className={styles.audioControl} />
           ) : null}

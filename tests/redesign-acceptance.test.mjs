@@ -199,14 +199,25 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   const workLinks = [
     ...bodiesSection.matchAll(/<a\b[^>]*href="\/work\/([^"?#]+)"/gi),
   ].map((match) => match[1]);
+  const bucketLinks = [
+    ...bodiesSection.matchAll(
+      /<a\b[^>]*href="\/work\?bucket=([^"&]+)#work-index"/gi,
+    ),
+  ];
+  const topicLinks = [
+    ...bodiesSection.matchAll(
+      /<a\b[^>]*href="\/work\?bucket=[^"]+(?:&amp;|&)topic=[^"]+#work-index"/gi,
+    ),
+  ];
 
   assert(
-    wordCount(visible) <= 220,
-    `Default Home contains ${wordCount(visible)} visible words; budget is 220`,
+    wordCount(visible) <= 140,
+    `Default Home contains ${wordCount(visible)} visible words; budget is 140`,
   );
   assert.equal(workLines.length, 4);
-  assert.equal(workLinks.length, 4);
-  assert.equal(new Set(workLinks).size, 4);
+  assert.equal(workLinks.length, 0);
+  assert.equal(bucketLinks.length, 4);
+  assert(topicLinks.length > 0 && topicLinks.length <= 12);
   assert.doesNotMatch(bodiesSection, /<details\b|<summary\b/i);
   assert.equal(occurrences(visible, "See the work"), 1);
   assert.equal(occurrences(visible, "7K+"), 1);
@@ -217,6 +228,11 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   assert.equal(
     (markup.match(/data-impact-track="(?:deployed|taught|programs)"/g) ?? [])
       .length,
+    3,
+  );
+  assert.equal((markup.match(/data-signal-circuit/g) ?? []).length, 1);
+  assert.equal(
+    (markup.match(/<details\b[^>]*name="home-signal"/g) ?? []).length,
     3,
   );
   assert.doesNotMatch(
@@ -244,8 +260,15 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   assert.doesNotMatch(markup, /data-work-index-prompt|id="work-index"/i);
   assert.doesNotMatch(markup, /Showing 1—24|work-index-title/i);
   assert.match(markup, /id="work-calendar"/i);
-  assert.match(markup, /id="work-organizations"/i);
-  assert.match(markup, /Organizations &amp; platforms/i);
+  assert.match(
+    markup,
+    /<details\b(?=[^>]*id="work-organizations")(?![^>]*\bopen(?:=|\s|>))[^>]*>/i,
+  );
+  assert.match(markup, />Organizations<[\s\S]{0,160}>24</i);
+  assert.doesNotMatch(
+    markup,
+    /id="work-context-organizations-title"|Organizations in this view/i,
+  );
   assert.equal(
     (markup.match(/href="\/work\?organization=[^"]+#work-index"/gi) ?? [])
       .length,
@@ -300,6 +323,25 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
     /href="\/work\?year=2024(?:&amp;|&)page=2#work-index"/i,
   );
   assert.match(selectedMarkup, /id="work-index-title"/i);
+  assert.match(
+    selectedMarkup,
+    /id="work-context-organizations-title"[^>]*>Organizations in this view</i,
+  );
+  assert.match(selectedMarkup, /aria-label="Active work scope"/i);
+  assert.match(selectedMarkup, />Change filters</i);
+  assert(
+    (selectedMarkup.match(/data-variant="context"/gi) ?? []).length <= 6,
+  );
+  const contextualOrganizationHrefs = [
+    ...selectedMarkup.matchAll(
+      /<a\b(?=[^>]*data-variant="context")(?=[^>]*href="([^"]+)")[^>]*>/gi,
+    ),
+  ].map((match) => match[1].replaceAll("&amp;", "&"));
+  assert(
+    contextualOrganizationHrefs.every((href) =>
+      new URL(href, "https://example.test").searchParams.has("year"),
+    ),
+  );
   assert.doesNotMatch(
     markup,
     /\bMap\b|Visual archive|Complete grouped index|<canvas\b|<svg\b/i,
@@ -313,6 +355,39 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   assert.doesNotMatch(markup, /name="practice"/i);
   assert.doesNotMatch(markup, /name="view"/i);
 
+  const bucketMarkup = documentMarkup(
+    await renderHtml("/work?bucket=products-open-source"),
+  );
+  assert.match(
+    bucketMarkup,
+    /id="work-index-title"[^>]*>Agent systems &amp; open source</i,
+  );
+  assert.doesNotMatch(bucketMarkup, /data-work-line=|data-work-body=/i);
+  assert.match(
+    bucketMarkup,
+    /aria-label="Remove Agent systems &amp; open source bucket filter"/i,
+  );
+
+  const topicMarkup = documentMarkup(
+    await renderHtml("/work?topic=agent-systems"),
+  );
+  assert.match(
+    topicMarkup,
+    /id="work-index-title"[^>]*>Agent systems projects</i,
+  );
+  assert.match(topicMarkup, /data-work-line=/i);
+
+  const combinedMarkup = documentMarkup(
+    await renderHtml(
+      "/work?bucket=products-open-source&topic=agent-systems",
+    ),
+  );
+  assert.match(
+    combinedMarkup,
+    /id="work-index-title"[^>]*>Agent systems · Agent systems &amp; open source</i,
+  );
+  assert.doesNotMatch(combinedMarkup, /data-work-line=|data-work-body=/i);
+
   const organizationHtml = await renderHtml(
     "/work?organization=google-cloud",
   );
@@ -325,6 +400,66 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   assert.match(
     organizationMarkup,
     /href="\/work\?organization=google-cloud#work-index"[^>]*aria-current="page"|aria-current="page"[^>]*href="\/work\?organization=google-cloud#work-index"/i,
+  );
+  assert.match(
+    organizationMarkup,
+    /aria-label="Remove Google Cloud organization filter"/i,
+  );
+  const organizationContextIds = [
+    ...organizationMarkup.matchAll(
+      /<a\b(?=[^>]*data-organization-id="([^"]+)")(?=[^>]*data-variant="context")[^>]*>/gi,
+    ),
+  ].map((match) => match[1]);
+  assert.deepEqual(organizationContextIds, [
+    "google-cloud",
+    "coreweave",
+    "mlops-world",
+    "odsc",
+  ]);
+
+  const fugueMarkup = documentMarkup(await renderHtml("/work?q=Fugue"));
+  const fugueRow =
+    fugueMarkup.match(
+      /<li\b[^>]*data-work-id="group:standalone:wk-fp-0161"[^>]*>[\s\S]*?<\/li>/i,
+    )?.[0] ?? "";
+  assert.match(fugueRow, /<strong>Fugue agent experiments<\/strong>/i);
+  assert.doesNotMatch(
+    fugueRow,
+    /<strong>Fugue: governed experiments for AI agents<\/strong>/i,
+  );
+
+  const scopedOrganizationMarkup = documentMarkup(
+    await renderHtml("/work?year=2024&organization=google-cloud"),
+  );
+  assert.match(
+    scopedOrganizationMarkup,
+    /aria-label="Remove Google Cloud organization filter"[^>]*href="\/work\?year=2024#work-index"|href="\/work\?year=2024#work-index"[^>]*aria-label="Remove Google Cloud organization filter"/i,
+  );
+
+  const emptyOrganizationMarkup = documentMarkup(
+    await renderHtml("/work?q=no-such-project&organization=google-cloud"),
+  );
+  assert.match(
+    emptyOrganizationMarkup,
+    /id="work-context-organizations-title"[^>]*>Organizations in this view</i,
+  );
+  assert.match(
+    emptyOrganizationMarkup,
+    /aria-label="Remove Google Cloud organization filter"[^>]*href="\/work\?q=no-such-project#work-index"|href="\/work\?q=no-such-project#work-index"[^>]*aria-label="Remove Google Cloud organization filter"/i,
+  );
+  assert.match(emptyOrganizationMarkup, /No projects found/i);
+
+  const legacyOrganizationMarkup = documentMarkup(
+    await renderHtml("/work?organization=org%3Ajudgment-day-devpost"),
+  );
+  assert.match(legacyOrganizationMarkup, />Judgment Day \/ Devpost projects</i);
+  assert.match(
+    legacyOrganizationMarkup,
+    /aria-label="Remove Judgment Day \/ Devpost organization filter"[^>]*href="\/work"|href="\/work"[^>]*aria-label="Remove Judgment Day \/ Devpost organization filter"/i,
+  );
+  assert.equal(
+    (legacyOrganizationMarkup.match(/data-variant="context"/gi) ?? []).length,
+    0,
   );
 });
 
@@ -374,6 +509,34 @@ test("child slugs search and redirect to the exact form anchor", async () => {
   const location = new URL(response.headers.get("location"), BASE_URL);
   assert.equal(location.pathname, `/work/${group.slug}`);
   assert.equal(location.hash, `#${child.id}`);
+
+  const multiPrimary = publicBundle.workGroups
+    .filter((candidate) => candidate.itemIds.length > 1)
+    .map((candidate) => {
+      const entity = publicBundle.entities.find(
+        (entry) => entry.id === candidate.primaryEntityId,
+      );
+      const primaryItem = publicBundle.items.find(
+        (entry) => entry.id === entity?.primaryItemId,
+      );
+      return { group: candidate, primaryItem };
+    })
+    .find(
+      ({ group: candidate, primaryItem }) =>
+        primaryItem && primaryItem.slug !== candidate.slug,
+    );
+  assert(multiPrimary?.primaryItem);
+  const primaryResponse = await fetch(
+    `${BASE_URL}/work/${multiPrimary.primaryItem.slug}`,
+    { redirect: "manual" },
+  );
+  assert([307, 308].includes(primaryResponse.status));
+  const primaryLocation = new URL(
+    primaryResponse.headers.get("location"),
+    BASE_URL,
+  );
+  assert.equal(primaryLocation.pathname, `/work/${multiPrimary.group.slug}`);
+  assert.equal(primaryLocation.hash, `#${multiPrimary.primaryItem.id}`);
 });
 
 test("single- and multi-form WorkGroup details avoid duplicate presentation", async () => {
@@ -397,6 +560,19 @@ test("single- and multi-form WorkGroup details avoid duplicate presentation", as
     singleHtml,
     /Read article|View event|Open course|Watch recording|Read report|Open reference|View credit|Read translation|Open mirror|View profile|View repository|View pull request|Historical source unavailable/i,
   );
+  assert.match(
+    singleHtml,
+    new RegExp(
+      `href="/work\\?bucket=${single.bucket}#work-index"`,
+      "i",
+    ),
+  );
+  const topicFilterLinks = [
+    ...documentMarkup(singleHtml).matchAll(
+      /<a\b[^>]*href="(\/work\?bucket=[^"#]+(?:&amp;|&)topic=[^"#]+#work-index)"[^>]*>/gi,
+    ),
+  ];
+  assert(topicFilterLinks.length <= 3);
 
   const multiHtml = await renderHtml(`/work/${multiple.slug}`);
   const multiText = textFromMarkup(documentMarkup(multiHtml));
@@ -407,7 +583,20 @@ test("single- and multi-form WorkGroup details avoid duplicate presentation", as
     "The multi-form summary is repeated",
   );
   assert.match(multiHtml, /Talks, recordings, and code/i);
-  for (const itemId of multiple.itemIds) {
+  const multiPrimaryEntity = publicBundle.entities.find(
+    (entity) => entity.id === multiple.primaryEntityId,
+  );
+  const multiPrimaryItemId = multiPrimaryEntity?.primaryItemId;
+  assert(multiPrimaryItemId);
+  assert.match(
+    multiHtml,
+    new RegExp(
+      `<header[^>]*id="${multiPrimaryItemId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`,
+    ),
+  );
+  for (const itemId of multiple.itemIds.filter(
+    (itemId) => itemId !== multiPrimaryItemId,
+  )) {
     assert.match(
       multiHtml,
       new RegExp(`id="${itemId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`),

@@ -38,7 +38,12 @@ request path, durable store, or progressive-enhancement boundary changes.
 
 ## Content and Copy Ownership
 
-- `content/curation/**` and `content/presentation/**`: reviewed canonical grouping and metric presentation inputs.
+- `content/curation/**` and `content/presentation/**`: reviewed canonical grouping and protected presentation inputs.
+- `content/presentation/home-signal-rails.v1.json`: exact Home metric IDs,
+  compact limits, code-native icon IDs, and four bucket/topic rail mappings.
+  Runtime counts derive from visible WorkGroups; hidden work never contributes.
+  The manifest is attested and participates in `COPY_VERSION`, but remains
+  outside the freelancer copy surface.
 - Career and Work-organization presentation manifests may map only to validated public IDs; they never add canonical facts or infer affiliation from organization names.
 - `content/public/**`: generated, sanitized deployable artifacts; never hand-edit.
 - `content/copy/pages/**`: Git-owned page presentation prose.
@@ -54,6 +59,13 @@ Runtime precedence is: sanitized canonical facts and structure, then published D
 
 - `frontend-design` is the only creative skill and is required when public-language work changes layout, interaction, or hierarchy.
 - Work stays a two-dimensional, server-rendered semantic color calendar; copy changes do not authorize a second archive or WebGL navigation.
+- Home uses one equal-weight three-node signal circuit and four general
+  bucket/topic rails. There is no representative-project or WandBot-specific
+  Home selection. All Home rails, calendar cells, search, organization marks,
+  and filters converge on the same Work Project index.
+- Filtered Work uses a flat list for one line and simple non-collapsible line
+  headings across lines. `/work/[slug]` pages are compact canonical evidence
+  leaves whose line and topic links return to the filtered Work view.
 - Public copy uses a first-person technical voice and the sequence outcome → mechanism → proof → meaning. Keep one claim per sentence and its qualifier adjacent.
 - The copy deck owns only allowlisted presentation prose. Sanitized canonical facts and D1 publication state remain authoritative for identity, metrics, evidence, visibility, ordering, and caveats.
 - Keep motion brief, interruptible, and nonessential. Do not use copy or presentation work to introduce film, autoplay, or scroll capture.
@@ -76,6 +88,9 @@ Runtime precedence is: sanitized canonical facts and structure, then published D
 - Discogs uses OAuth 1.0a, bounded sequential pagination, no provider artwork, and the unified owner-only publication approval gate. Accepted snapshots do not age out.
 - Travel is not a connector. It uses isolated D1/KV/R2 state, whole-trip atomic publication, publication-aware media delivery, and the `TRAVEL_ATLAS_MODE` gate. Preview uses synthetic fixtures and never receives R2.
 - Simulation keeps model prose separate from trusted fact cards, never stores free text or model prompts/responses, and must retain an authored fallback when AI is unavailable.
+- A disabled Simulation is unreachable by design: no Play control, sitemap
+  entry, public route/API response, or Play-loaded client bundle. Keep dormant
+  implementation and owner data intact for a separately reviewed activation.
 - Hosted tier configuration is exact and mutually exclusive. Fixture mode is preview-only; staging and production must fail closed on missing or inconsistent bindings.
 - Worker middleware—not a successful local page—owns production security behavior.
 

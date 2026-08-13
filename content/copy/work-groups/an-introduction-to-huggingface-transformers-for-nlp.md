@@ -7,7 +7,7 @@ Hugging Face Transformers for NLP
 Transformers for NLP
 
 ## summary
-I wrote an introduction to using Hugging Face Transformers for NLP.
+A Hugging Face Transformers introduction showed how the library supports NLP workflows.
 
 ## role-summary
 Article author

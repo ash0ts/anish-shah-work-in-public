@@ -63,8 +63,8 @@ export OWNER_EMAILS='<exact owner email>'
 export CF_ACCESS_TEAM_DOMAIN='https://<team>.cloudflareaccess.com'
 unset LOCAL_OWNER_EMAIL
 
-# Select exactly one reviewed Simulation presentation state for this candidate.
-export STAGING_SIMULATION_EXPERIENCE_MODE='coming-soon'
+# Simulation remains fully unavailable for the v2.2.0 candidate.
+export STAGING_SIMULATION_EXPERIENCE_MODE='disabled'
 
 npm run staging:prepare
 ```

@@ -7,7 +7,7 @@ Deep learning and MLOps for MedSAM
 MedSAM MLOps
 
 ## summary
-I wrote a report on applying deep learning and MLOps practices to MedSAM.
+A report connected MedSAM development with practical deep-learning and MLOps workflows.
 
 ## role-summary
 Report author

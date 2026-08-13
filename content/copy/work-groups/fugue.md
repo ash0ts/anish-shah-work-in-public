@@ -7,7 +7,7 @@ Fugue: governed experiments for AI agents
 Fugue agent experiments
 
 ## summary
-I created Fugue, an open-source repository for governed experiments with AI agents.
+Fugue provides an open-source harness for governed AI-agent experiments.
 
 ## role-summary
 Creator and repository owner

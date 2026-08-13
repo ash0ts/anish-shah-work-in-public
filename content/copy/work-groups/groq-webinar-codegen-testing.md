@@ -7,7 +7,7 @@ Testing code generation with Groq
 Groq codegen testing
 
 ## summary
-I built a code-generation testing demo for a Groq webinar.
+A webinar demo tested code-generation workflows with Groq.
 
 ## role-summary
 Demo creator and repository owner

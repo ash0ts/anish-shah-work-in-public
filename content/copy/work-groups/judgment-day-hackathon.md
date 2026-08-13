@@ -7,7 +7,7 @@ Judging the Judgment Day Hackathon
 Judgment Day
 
 ## summary
-I judged an in-person AI hackathon at the W&B office.
+An in-person Judgment Day Hackathon with a documented judging role.
 
 ## role-summary
 Hackathon judge

@@ -166,6 +166,8 @@ export function workMetadataDescription(
   title: string,
   summary: string,
 ): string {
+  const minimumLength = 80;
+  const maximumLength = 160;
   const cleaned = summary.replace(/\s+/g, " ").trim();
   const looksLikePlaceholder =
     /^(author|contributor|presenter|speaker|repository owner)\.?$/i.test(
@@ -174,13 +176,19 @@ export function workMetadataDescription(
     /^\d{1,2}:\d{2}$/.test(cleaned) ||
     /^(no replay|exact .*not recovered|latest indexed copy)/i.test(cleaned);
 
-  if (!looksLikePlaceholder && cleaned.length >= 80 && cleaned.length <= 160) {
-    return cleaned;
+  if (!looksLikePlaceholder && cleaned.length >= minimumLength) {
+    if (cleaned.length <= maximumLength) return cleaned;
+  } else if (!looksLikePlaceholder && cleaned) {
+    const completeSummary = /[.!?]$/u.test(cleaned) ? cleaned : `${cleaned}.`;
+    const expanded = `${completeSummary} This page documents the role, public artifacts, and supporting sources.`;
+    if (expanded.length >= minimumLength && expanded.length <= maximumLength) {
+      return expanded;
+    }
   }
 
-  const lead = `Explore Anish Shah’s work on ${title}, with its documented role, public artifacts, related appearances, and inspectable evidence.`;
-  if (lead.length <= 160) return lead;
-  return `${lead.slice(0, 157).trimEnd()}…`;
+  const lead = `Explore Anish Shah’s work on ${title}, including its documented role, public artifacts, and supporting sources.`;
+  if (lead.length >= minimumLength && lead.length <= maximumLength) return lead;
+  return "Explore this work through its documented role, public artifacts, related appearances, and supporting sources.";
 }
 
 export function safeJsonLd(value: unknown): string {

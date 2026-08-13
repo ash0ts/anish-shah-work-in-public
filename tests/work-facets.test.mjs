@@ -12,6 +12,7 @@ const {
   mediaFacetDefinitions,
   themeFacetDefinitions,
   workFacetsForRecord,
+  workThemeFacetLabel,
 } = await tsImport("../lib/work-facets.ts", import.meta.url);
 const { workArchiveRecordsFrom } = await tsImport(
   "../lib/work-index.ts",
@@ -39,6 +40,12 @@ test("presentation facets use the compact reviewed vocabularies", () => {
     contributionFacetDefinitions.length,
     expectedDefinitionCounts.contribution,
   );
+});
+
+test("theme facet labels are shared by filters and evidence-leaf navigation", () => {
+  for (const { id, label } of themeFacetDefinitions) {
+    assert.equal(workThemeFacetLabel(id), label);
+  }
 });
 
 test("all public WorkGroups derive valid presentation-only facets", () => {

@@ -7,7 +7,7 @@ Scaling autonomous-vehicle workloads
 Autonomous-vehicle scaling primer
 
 ## summary
-I wrote a primer on scaling autonomous-vehicle workloads with L5Kit and Ray.
+A primer mapped autonomous-vehicle workloads across L5Kit and Ray.
 
 ## role-summary
 Primer author

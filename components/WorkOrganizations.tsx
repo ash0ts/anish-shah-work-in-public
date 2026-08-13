@@ -1,5 +1,6 @@
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
+import { SITE_COPY } from "@/lib/copy";
 import styles from "./WorkOrganizations.module.css";
 
 export type WorkOrganizationRelationship =
@@ -28,109 +29,219 @@ export type WorkOrganizationSectionView = {
   marks: WorkOrganizationMarkView[];
 };
 
-export type WorkOrganizationsProps = {
-  eyebrow: string;
-  title: string;
-  summary: string;
+type OrganizationHref = (organizationId: string) => string;
+
+export type WorkOrganizationLensProps = {
+  open: boolean;
   sections: WorkOrganizationSectionView[];
   selectedOrganizationId?: string | null;
+  organizationHref: OrganizationHref;
 };
 
-export function WorkOrganizations({
-  eyebrow,
-  title,
-  summary,
+export function WorkOrganizationLens({
+  open,
   sections,
   selectedOrganizationId = null,
-}: WorkOrganizationsProps) {
+  organizationHref,
+}: WorkOrganizationLensProps) {
   const visibleSections = sections.filter(({ marks }) => marks.length > 0);
+  const markCount = visibleSections.reduce(
+    (count, section) => count + section.marks.length,
+    0,
+  );
+  if (!markCount) return null;
 
-  if (!visibleSections.length) return null;
-  const relationshipLabels = Object.fromEntries(
-    sections.map(({ id, label }) => [id, label]),
-  ) as Record<WorkOrganizationRelationship, string>;
+  const relationshipLabels = relationshipLabelsFrom(sections);
+  const marks = visibleSections.flatMap((section) => section.marks);
 
   return (
     <section
-      aria-labelledby="work-organizations-title"
-      className={styles.section}
-      id="work-organizations"
+      aria-label={SITE_COPY.work["organizations-browse-label"]}
+      className={styles.lensSection}
     >
-      <header className={styles.header}>
-        <p className={styles.eyebrow}>{eyebrow}</p>
-        <div className={styles.introduction}>
-          <h2 id="work-organizations-title">{title}</h2>
-          <p>{summary}</p>
+      <details className={styles.lens} id="work-organizations" open={open}>
+        <summary>
+          <span>{SITE_COPY.work["organizations-control-label"]}</span>
+          <strong>{markCount}</strong>
+          <i aria-hidden="true">+</i>
+        </summary>
+
+        <div className={styles.directory}>
+          <header className={styles.directoryHeader}>
+            <p>
+              {SITE_COPY.work["organizations-browse-all-prefix"]}{" "}
+              {SITE_COPY.work["organizations-noun-plural"]}
+            </p>
+            <RelationshipLegend sections={visibleSections} />
+          </header>
+
+          <ol className={styles.directoryMarks}>
+            {marks.map((mark) => (
+              <li key={mark.id}>
+                <OrganizationMark
+                  href={organizationHref(mark.id)}
+                  mark={mark}
+                  relationshipLabels={relationshipLabels}
+                  selected={selectedOrganizationId === mark.id}
+                  variant="directory"
+                />
+              </li>
+            ))}
+          </ol>
+        </div>
+      </details>
+    </section>
+  );
+}
+
+export type WorkOrganizationContextProps = {
+  allOrganizationCount: number;
+  browseAllHref: string;
+  marks: WorkOrganizationMarkView[];
+  matchingMarkCount: number;
+  organizationHref: OrganizationHref;
+  relationshipLabels: Record<WorkOrganizationRelationship, string>;
+  selectedOrganizationId?: string | null;
+};
+
+export function WorkOrganizationContext({
+  allOrganizationCount,
+  browseAllHref,
+  marks,
+  matchingMarkCount,
+  organizationHref,
+  relationshipLabels,
+  selectedOrganizationId = null,
+}: WorkOrganizationContextProps) {
+  const remaining = Math.max(0, matchingMarkCount - marks.length);
+
+  return (
+    <section
+      aria-labelledby="work-context-organizations-title"
+      className={styles.context}
+    >
+      <header className={styles.contextHeader}>
+        <div>
+          <p>{SITE_COPY.work["organizations-context-eyebrow"]}</p>
+          <h2 id="work-context-organizations-title">
+            {SITE_COPY.work["organizations-context-title"]}
+          </h2>
         </div>
       </header>
 
-      <div className={styles.relationships}>
-        {visibleSections.map((section) => {
-          const headingId = `work-organizations-${section.id}`;
-          return (
-            <section
-              aria-labelledby={headingId}
-              className={styles.relationship}
-              data-relationship={section.id}
-              key={section.id}
-            >
-              <header className={styles.relationshipHeader}>
-                <h3 id={headingId}>{section.label}</h3>
-                <span aria-hidden="true">
-                  {String(section.marks.length).padStart(2, "0")}
-                </span>
-              </header>
+      {marks.length ? (
+        <ol className={styles.contextMarks}>
+          {marks.map((mark) => (
+            <li key={mark.id}>
+              <OrganizationMark
+                href={organizationHref(mark.id)}
+                mark={mark}
+                relationshipLabels={relationshipLabels}
+                selected={selectedOrganizationId === mark.id}
+                variant="context"
+              />
+            </li>
+          ))}
+        </ol>
+      ) : null}
 
-              <ol className={styles.marks}>
-                {section.marks.map((mark) => (
-                  <li key={mark.id}>
-                    <OrganizationMark
-                      mark={mark}
-                      relationshipLabels={relationshipLabels}
-                      selected={selectedOrganizationId === mark.id}
-                    />
-                  </li>
-                ))}
-              </ol>
-            </section>
-          );
-        })}
+      <div className={styles.contextFooter}>
+        {remaining > 0 ? (
+          <span>
+            +{remaining} more{" "}
+            {remaining === 1
+              ? SITE_COPY.work["organizations-more-singular"]
+              : SITE_COPY.work["organizations-more-plural"]}
+          </span>
+        ) : null}
+        <Link className={styles.more} href={browseAllHref} prefetch={false}>
+          {SITE_COPY.work["organizations-browse-all-prefix"]}{" "}
+          {allOrganizationCount}{" "}
+          {SITE_COPY.work["organizations-noun-plural"]}
+        </Link>
       </div>
     </section>
   );
 }
 
+function RelationshipLegend({
+  sections,
+}: {
+  sections: WorkOrganizationSectionView[];
+}) {
+  return (
+    <ul
+      aria-label={SITE_COPY.work["organizations-legend-label"]}
+      className={styles.legend}
+    >
+      {sections.map((section) => (
+        <li key={section.id}>
+          <RelationshipIcon relationship={section.id} />
+          <span>{section.label}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function RelationshipIcon({
+  relationship,
+}: {
+  relationship: WorkOrganizationRelationship;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={styles.relationshipIcon}
+      data-relationship={relationship}
+    />
+  );
+}
+
 function OrganizationMark({
+  href,
   mark,
   relationshipLabels,
   selected,
+  variant,
 }: {
+  href: string;
   mark: WorkOrganizationMarkView;
-  relationshipLabels: Record<WorkOrganizationRelationship, string>;
+  relationshipLabels?: Record<WorkOrganizationRelationship, string>;
   selected: boolean;
+  variant: "context" | "directory";
 }) {
-  const primaryRelationship = relationshipLabels[mark.relationship];
+  const primaryRelationship = relationshipLabels?.[mark.relationship];
   const secondaryRelationships = uniqueRelationships(
     mark.secondaryRelationships,
     mark.relationship,
   );
   const projectLabel = `${mark.projectCount} ${
-    mark.projectCount === 1 ? "project" : "projects"
+    mark.projectCount === 1
+      ? SITE_COPY.work["organizations-project-singular"]
+      : SITE_COPY.work["organizations-project-plural"]
   }`;
-  const accessibleRelationship = [
-    primaryRelationship,
-    ...secondaryRelationships.map(
-      (relationship) => `also ${relationshipLabels[relationship].toLowerCase()}`,
-    ),
-  ].join(", ");
+  const accessibleRelationship = primaryRelationship
+    ? [
+        primaryRelationship,
+        ...secondaryRelationships.map(
+          (relationship) =>
+            `${SITE_COPY.work["organizations-secondary-prefix"]} ${relationshipLabels?.[relationship].toLowerCase()}`,
+        ),
+      ].join(", ")
+    : null;
 
   return (
     <Link
       aria-current={selected ? "page" : undefined}
-      aria-label={`${mark.name}: ${accessibleRelationship}; ${projectLabel}`}
+      aria-label={`${mark.name}${
+        accessibleRelationship ? `: ${accessibleRelationship};` : ":"
+      } ${projectLabel}`}
       className={styles.mark}
+      data-organization-id={mark.id}
       data-selected={selected || undefined}
-      href={`/work?organization=${encodeURIComponent(mark.id)}#work-index`}
+      data-variant={variant}
+      href={href}
       prefetch={false}
     >
       <span aria-hidden="true" className={styles.logo}>
@@ -139,7 +250,7 @@ function OrganizationMark({
             alt=""
             height={mark.logo.height}
             loading="lazy"
-            sizes="160px"
+            sizes={variant === "context" ? "112px" : "144px"}
             src={mark.logo.src}
             unoptimized
             width={mark.logo.width}
@@ -151,22 +262,22 @@ function OrganizationMark({
 
       <span className={styles.markBody}>
         {mark.logo ? <strong>{mark.name}</strong> : null}
-        <span className={styles.relationshipLabel}>
-          {primaryRelationship}
-          {secondaryRelationships.map((relationship) => (
-            <small key={relationship}>
-              Also {relationshipLabels[relationship].toLowerCase()}
-            </small>
-          ))}
-        </span>
+        {primaryRelationship && variant === "directory" ? (
+          <span className={styles.markRelationshipIcon}>
+            <RelationshipIcon relationship={mark.relationship} />
+          </span>
+        ) : null}
       </span>
 
-      <span className={styles.projectCount}>
-        {projectLabel}
-        <i aria-hidden="true">↗</i>
-      </span>
+      <span className={styles.projectCount}>{projectLabel}</span>
     </Link>
   );
+}
+
+function relationshipLabelsFrom(sections: WorkOrganizationSectionView[]) {
+  return Object.fromEntries(
+    sections.map(({ id, label }) => [id, label]),
+  ) as Record<WorkOrganizationRelationship, string>;
 }
 
 function uniqueRelationships(

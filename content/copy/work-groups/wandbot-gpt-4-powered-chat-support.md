@@ -7,13 +7,7 @@ WandBot: GPT-4 documentation support
 WandBot support system
 
 ## summary
-I coauthored an account of W&B's GPT-4-powered documentation assistant.
+A coauthored account documented W&B's GPT-4-powered documentation assistant.
 
 ## role-summary
 Article coauthor
-
-## home-title
-WandBot: GPT-4 documentation support
-
-## home-role
-Coauthor

@@ -7,7 +7,7 @@ Prompt-tuning LLMs for question answering
 Prompt-tuning with NVIDIA NeMo
 
 ## summary
-I wrote and implemented a question-answering workflow using prompt tuning, NVIDIA NeMo, and W&B.
+An implemented workflow adapted LLMs for question answering with NVIDIA NeMo prompt tuning and W&B.
 
 ## role-summary
 Article and repository author

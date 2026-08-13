@@ -3,7 +3,9 @@ import Link from "next/link";
 import { permanentRedirect } from "next/navigation";
 import { FilteredResultFocus } from "@/components/FilteredResultFocus";
 import {
-  WorkOrganizations,
+  WorkOrganizationContext,
+  WorkOrganizationLens,
+  type WorkOrganizationMarkView,
   type WorkOrganizationSectionView,
 } from "@/components/WorkOrganizations";
 import {
@@ -14,19 +16,24 @@ import {
   parseWorkArchiveQuery,
   workArchiveHref,
   workOrganizationFilterLabel,
+  workResultHeading,
   type WorkSearchParams,
 } from "@/lib/work-archive-query";
 import {
   countWorkFacetOptions,
   mediaFacetDefinitions,
   workFacetsForRecord,
+  workThemeFacetLabel,
 } from "@/lib/work-facets";
 import { workBuckets } from "@/lib/work-groups";
 import { workArchiveRecordsFrom, type WorkArchiveRecord } from "@/lib/work-index";
-import { workOrganizationSectionsFrom } from "@/lib/work-organizations";
+import {
+  contextualWorkOrganizationMarksFrom,
+  workOrganizationSectionsFrom,
+  type ResolvedWorkOrganizationMark,
+} from "@/lib/work-organizations";
 import { getPublicContentView } from "@/lib/server/public-content";
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
-import { WorkBodyBehavior } from "./WorkBodyBehavior";
 import { WorkMobileFilters } from "./WorkMobileFilters";
 import { WorkTimeline } from "./WorkTimeline";
 import { SITE_COPY } from "@/lib/copy";
@@ -82,22 +89,27 @@ export default async function WorkPage({
           : section.id === "contributed-to"
             ? SITE_COPY.work["organizations-contributed-to"]
             : SITE_COPY.work["organizations-presented-with"],
-      marks: section.marks.map((mark) => ({
-        id: mark.id,
-        name: mark.name,
-        relationship: mark.group,
-        secondaryRelationships: mark.secondaryGroups,
-        projectCount: mark.projectCount,
-        logo: mark.logo
-          ? {
-              src: mark.logo.assetPath,
-              width: mark.logo.width,
-              height: mark.logo.height,
-            }
-          : null,
-      })),
+      marks: section.marks.map(organizationMarkView),
     }));
+  const relationshipLabels = Object.fromEntries(
+    organizationSections.map(({ id, label }) => [id, label]),
+  ) as Record<
+    WorkOrganizationSectionView["id"],
+    string
+  >;
+  const allOrganizationCount = organizationSections.reduce(
+    (count, section) => count + section.marks.length,
+    0,
+  );
   const filtered = filterWorkArchiveRecords(allWorks, query);
+  const contextualOrganizations = contextualWorkOrganizationMarksFrom(
+    bundle,
+    filtered,
+    query.organization || null,
+  );
+  const contextualOrganizationMarks = contextualOrganizations.marks.map(
+    organizationMarkView,
+  );
   const page = paginateWorkArchiveRecords(filtered, query.page);
   const timelineRecords = filterWorkArchiveRecords(allWorks, {
     ...query,
@@ -136,25 +148,32 @@ export default async function WorkPage({
     ? (bundle.organizations.find(({ id }) => id === query.organization)?.name ??
       workOrganizationFilterLabel(query.organization))
     : null;
+  const selectedTopicLabel = query.topic
+    ? workThemeFacetLabel(query.topic)
+    : null;
   const resultLabel = filtered.length
     ? page.totalPages > 1
       ? `Showing ${page.rangeStart}—${page.rangeEnd} of ${filtered.length} projects`
       : `${filtered.length} ${filtered.length === 1 ? "project" : "projects"}`
     : "No projects found";
-  const explorerHeading = query.query
-    ? `Results for “${query.query}”`
-    : selectedOrganizationName
-      ? `${selectedOrganizationName} projects`
-    : selectedBucket && query.year
-      ? `${selectedBucket.title} · ${query.year}`
-      : selectedBucket
-        ? selectedBucket.title
-        : query.year
-          ? `Projects from ${query.year}`
-          : activeFilterCount
-            ? SITE_COPY.work["index-filtered-heading"]
-            : SITE_COPY.work["index-default-heading"];
-
+  const explorerHeading = workResultHeading({
+    bucketTitle: selectedBucket?.title ?? null,
+    defaultHeading: SITE_COPY.work["index-default-heading"],
+    filteredHeading: SITE_COPY.work["index-filtered-heading"],
+    organizationName: selectedOrganizationName,
+    query,
+    topicLabel: selectedTopicLabel,
+  });
+  const organizationHref = (organizationId: string) =>
+    `${workArchiveHref(query, {
+      organization: organizationId,
+      organizations: null,
+      page: null,
+    })}#work-index`;
+  const browseOrganizationsHref = `${workArchiveHref(query, {
+    organizations: "all",
+    page: null,
+  })}#work-organizations`;
   return (
     <main id="main" className={`site-main ${styles.page}`}>
       <header className={styles.masthead}>
@@ -166,14 +185,6 @@ export default async function WorkPage({
           <p>{SITE_COPY.work["masthead-summary"]}</p>
         </div>
       </header>
-
-      <nav aria-label="Work sections" className={styles.sectionNav}>
-        <a href="#work-calendar">{SITE_COPY.work["section-nav-calendar"]}</a>
-        <span aria-hidden="true">·</span>
-        <a href="#work-organizations">
-          {SITE_COPY.work["section-nav-organizations"]}
-        </a>
-      </nav>
 
       <section className={styles.tools} aria-labelledby="work-search-title">
         <div className={styles.filterToolbar}>
@@ -267,20 +278,29 @@ export default async function WorkPage({
 
       <WorkTimeline query={query} records={timelineRecords} />
 
-      <WorkOrganizations
-        eyebrow={SITE_COPY.work["organizations-eyebrow"]}
+      <WorkOrganizationLens
+        open={query.organizations === "all"}
+        organizationHref={organizationHref}
         sections={organizationSections}
         selectedOrganizationId={query.organization || null}
-        summary={SITE_COPY.work["organizations-summary"]}
-        title={SITE_COPY.work["organizations-title"]}
       />
 
       {hasScopedResults ? (
-        <section
-          aria-labelledby="work-index-title"
-          className={styles.index}
-          id="work-index"
-        >
+        <>
+          <WorkOrganizationContext
+            allOrganizationCount={allOrganizationCount}
+            browseAllHref={browseOrganizationsHref}
+            marks={contextualOrganizationMarks}
+            matchingMarkCount={contextualOrganizations.matchingMarkCount}
+            organizationHref={organizationHref}
+            relationshipLabels={relationshipLabels}
+            selectedOrganizationId={query.organization || null}
+          />
+          <section
+            aria-labelledby="work-index-title"
+            className={styles.index}
+            id="work-index"
+          >
           <header className={styles.indexHeader}>
             <p
               aria-atomic="true"
@@ -294,6 +314,12 @@ export default async function WorkPage({
               {explorerHeading}
             </h2>
           </header>
+          <ActiveScope
+            query={query}
+            selectedBucketTitle={selectedBucket?.title ?? null}
+            selectedOrganizationName={selectedOrganizationName}
+            selectedTopicLabel={selectedTopicLabel}
+          />
           <FilteredResultFocus
             active
             key={workArchiveHref(query)}
@@ -301,40 +327,28 @@ export default async function WorkPage({
           />
 
           <div className={styles.bodyIndex}>
-            {workBuckets.map((bucket) => {
-              const works = page.items.filter(
-                (work) => work.bucket === bucket.id,
-              );
-              if (!works.length) return null;
-              return (
-                <details
-                  className={styles.body}
-                  data-default-open="true"
-                  data-work-body={bucket.id}
-                  key={bucket.id}
-                  open
-                >
-                  <summary>
-                    <div>
-                      <h3>{bucket.title}</h3>
-                    </div>
-                    <i aria-hidden="true">+</i>
-                  </summary>
-                  <ol className={styles.workList}>
-                    {works.map((work) => (
-                      <WorkRow
-                        key={work.id}
-                        query={query.query}
-                        work={work}
-                      />
-                    ))}
-                  </ol>
-                </details>
-              );
-            })}
+            {query.bucket ? (
+              <WorkList query={query.query} works={page.items} />
+            ) : (
+              workBuckets.map((bucket) => {
+                const works = page.items.filter(
+                  (work) => work.bucket === bucket.id,
+                );
+                if (!works.length) return null;
+                return (
+                  <section
+                    aria-labelledby={`work-line-${bucket.id}`}
+                    className={styles.body}
+                    data-work-line={bucket.id}
+                    key={bucket.id}
+                  >
+                    <h3 id={`work-line-${bucket.id}`}>{bucket.title}</h3>
+                    <WorkList query={query.query} works={works} />
+                  </section>
+                );
+              })
+            )}
           </div>
-
-          <WorkBodyBehavior />
 
           {!filtered.length ? (
             <div className={styles.empty}>
@@ -348,9 +362,120 @@ export default async function WorkPage({
           {page.totalPages > 1 ? (
             <WorkPagination page={page.currentPage} query={query} totalPages={page.totalPages} />
           ) : null}
-        </section>
+          </section>
+        </>
       ) : null}
     </main>
+  );
+}
+
+function organizationMarkView(
+  mark: ResolvedWorkOrganizationMark,
+): WorkOrganizationMarkView {
+  return {
+    id: mark.id,
+    name: mark.name,
+    relationship: mark.group,
+    secondaryRelationships: mark.secondaryGroups,
+    projectCount: mark.projectCount,
+    logo: mark.logo
+      ? {
+          src: mark.logo.assetPath,
+          width: mark.logo.width,
+          height: mark.logo.height,
+        }
+      : null,
+  };
+}
+
+function ActiveScope({
+  query,
+  selectedBucketTitle,
+  selectedOrganizationName,
+  selectedTopicLabel,
+}: {
+  query: ReturnType<typeof parseWorkArchiveQuery>;
+  selectedBucketTitle: string | null;
+  selectedOrganizationName: string | null;
+  selectedTopicLabel: string | null;
+}) {
+  const filters = [
+    selectedBucketTitle
+      ? {
+          key: "bucket",
+          label: selectedBucketTitle,
+          href: workArchiveHref(query, { bucket: null, page: null }),
+        }
+      : null,
+    selectedTopicLabel
+      ? {
+          key: "topic",
+          label: selectedTopicLabel,
+          href: workArchiveHref(query, { topic: null, page: null }),
+        }
+      : null,
+    query.year
+      ? {
+          key: "year",
+          label: query.year === "undated" ? "Undated" : query.year,
+          href: workArchiveHref(query, { year: null, page: null }),
+        }
+      : null,
+    selectedOrganizationName
+      ? {
+          key: "organization",
+          label: selectedOrganizationName,
+          href: workArchiveHref(query, {
+            organization: null,
+            organizations: null,
+            page: null,
+          }),
+        }
+      : null,
+  ].filter((filter): filter is NonNullable<typeof filter> => Boolean(filter));
+
+  return (
+    <nav aria-label="Active work scope" className={styles.activeScope}>
+      {filters.length ? (
+        <ul>
+          {filters.map((filter) => (
+            <li key={filter.key}>
+              <Link
+                aria-label={`Remove ${filter.label} ${filter.key} filter`}
+                href={
+                  filter.href === "/work"
+                    ? filter.href
+                    : `${filter.href}#work-index`
+                }
+                prefetch={false}
+              >
+                <span>{filter.label}</span>
+                <i aria-hidden="true">×</i>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <span>Filtered view</span>
+      )}
+      <a href="#work-search-form">Change filters</a>
+    </nav>
+  );
+}
+
+function WorkList({
+  query,
+  works,
+}: {
+  query: string;
+  works: WorkArchiveRecord[];
+}) {
+  return (
+    <ol className={styles.workList}>
+      {works.map((work) => (
+        <WorkRow key={work.id} query={query} work={work} />
+      ))}
+    </ol>
   );
 }
 
@@ -449,7 +574,7 @@ function WorkRow({
       >
         <span className={styles.year}>{periodLabel(work)}</span>
         <span className={styles.workTitle}>
-          <strong>{work.title}</strong>
+          <strong>{work.shortTitle}</strong>
           {support ? <small>{support}</small> : null}
         </span>
         <i aria-hidden="true">↗</i>

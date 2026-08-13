@@ -281,242 +281,6 @@
   animation: return-track 720ms steps(8, end) infinite;
 }
 
-.simulationReveal {
-  position: fixed;
-  z-index: 1160;
-  inset: 0;
-  display: grid;
-  min-width: 0;
-  min-height: 100dvh;
-  grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
-  gap: clamp(1rem, 5vw, 5rem);
-  align-items: center;
-  overflow: auto;
-  padding: clamp(1rem, 4vw, 4rem);
-  color: #eee4cf;
-  background:
-    radial-gradient(circle at 30% 48%, rgb(200 184 255 / 20%), transparent 32rem),
-    repeating-linear-gradient(0deg, transparent 0 3px, rgb(85 228 208 / 4%) 3px 4px),
-    #050912;
-  opacity: 0;
-}
-
-.simulationField {
-  position: relative;
-  display: grid;
-  width: min(100%, 54rem);
-  min-width: 0;
-  aspect-ratio: 4 / 3;
-  place-items: center;
-  perspective: 50rem;
-}
-
-.simulationField::before,
-.simulationField::after {
-  position: absolute;
-  border: 1px solid rgb(85 228 208 / 28%);
-  border-radius: 50%;
-  content: "";
-}
-
-.simulationField::before {
-  width: 82%;
-  aspect-ratio: 1;
-}
-
-.simulationField::after {
-  width: 58%;
-  aspect-ratio: 1;
-  border-color: rgb(255 104 71 / 32%);
-}
-
-.simulationRobot {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  width: min(56%, 20rem);
-  min-width: 12rem;
-  justify-items: center;
-  filter: drop-shadow(0 1.8rem 1.8rem rgb(0 0 0 / 38%));
-  transform-origin: 50% 82%;
-}
-
-.robotAntenna {
-  display: block;
-  width: 0.5rem;
-  height: 3.2rem;
-  border: 1px solid #050912;
-  background: #55e4d0;
-  transform: rotate(8deg);
-  transform-origin: bottom;
-}
-
-.robotAntenna::before {
-  position: absolute;
-  top: -0.85rem;
-  left: 50%;
-  width: 1.45rem;
-  aspect-ratio: 1;
-  border: 1px solid #050912;
-  border-radius: 50%;
-  background: #ff6847;
-  content: "";
-  transform: translateX(-50%);
-}
-
-.robotHead {
-  position: relative;
-  display: grid;
-  width: 100%;
-  aspect-ratio: 1.35;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2rem;
-  align-items: center;
-  padding: 1.5rem 2rem 3.2rem;
-  border: 0.3rem solid #050912;
-  border-radius: 42% 42% 34% 34% / 36% 36% 48% 48%;
-  background: #c8b8ff;
-  box-shadow: inset -1rem -1rem 0 rgb(37 43 69 / 18%);
-}
-
-.robotHead i {
-  display: block;
-  aspect-ratio: 1;
-  border: 0.28rem solid #050912;
-  border-radius: 50%;
-  background: #55e4d0;
-  box-shadow: inset 0 0 0 0.35rem #252b45;
-}
-
-.robotHead span {
-  position: absolute;
-  right: 22%;
-  bottom: 17%;
-  left: 22%;
-  height: 1.55rem;
-  border: 0.28rem solid #050912;
-  border-radius: 0.25rem 0.25rem 1rem 1rem;
-  background: #050912;
-  box-shadow: inset 0 -0.42rem 0 #ff6847;
-}
-
-.robotBody {
-  display: grid;
-  width: 70%;
-  min-height: 7rem;
-  place-content: center;
-  border: 0.3rem solid #050912;
-  border-top: 0;
-  border-radius: 0 0 2.2rem 2.2rem;
-  background: #ff6847;
-  text-align: center;
-}
-
-.robotBody b,
-.robotBody span {
-  font-family: var(--font-mono);
-}
-
-.robotBody b {
-  font-size: clamp(1.8rem, 5vw, 3.8rem);
-  letter-spacing: -0.08em;
-  line-height: 0.8;
-}
-
-.robotBody span {
-  margin-top: 0.45rem;
-  font-size: 0.64rem;
-  letter-spacing: 0.18em;
-}
-
-.memoryWafer {
-  position: absolute;
-  z-index: 4;
-  display: grid;
-  width: clamp(6rem, 18vw, 11rem);
-  aspect-ratio: 1.7;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.35rem;
-  align-items: end;
-  padding: 0.65rem;
-  border: 0.22rem solid #050912;
-  border-radius: 0.5rem;
-  background: #55e4d0;
-  box-shadow: 0.55rem 0.55rem 0 #252b45;
-  opacity: 0;
-}
-
-.memoryWafer i {
-  height: 40%;
-  background: #252b45;
-}
-
-.memoryWafer span {
-  position: absolute;
-  top: 0.55rem;
-  left: 0.65rem;
-  color: #050912;
-  font-family: var(--font-mono);
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.simulationCopy {
-  position: relative;
-  z-index: 5;
-  min-width: 0;
-}
-
-.simulationCopy p,
-.simulationCopy span {
-  font-family: var(--font-mono);
-}
-
-.simulationCopy p {
-  margin: 0;
-  color: #55e4d0;
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.simulationCopy h2 {
-  max-width: 9ch;
-  margin: 0.8rem 0 1rem;
-  font-size: clamp(3rem, 7vw, 7.5rem);
-  font-variation-settings: "CASL" 0.58, "wght" 790;
-  letter-spacing: -0.075em;
-  line-height: 0.82;
-}
-
-.simulationCopy span {
-  display: block;
-  max-width: 35rem;
-  color: #b9b2ca;
-  font-size: 0.76rem;
-  line-height: 1.55;
-}
-
-.simulationCopy button {
-  min-height: 44px;
-  margin-top: 1.4rem;
-  padding: 0.65rem 0.85rem;
-  border: 1px solid #c8b8ff;
-  color: #eee4cf;
-  background: #252b45;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.simulationCopy button:hover,
-.simulationCopy button:focus-visible {
-  color: #07101b;
-  background: #55e4d0;
-}
-
 @keyframes return-scan {
   to { transform: translateY(310%); }
 }
@@ -534,18 +298,6 @@
     width: min(100%, 16rem);
   }
 
-  .simulationReveal {
-    grid-template-columns: 1fr;
-  }
-
-  .simulationField {
-    width: min(100%, 23rem);
-    margin-inline: auto;
-  }
-
-  .simulationCopy h2 {
-    font-size: clamp(2.8rem, 16vw, 4.8rem);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -560,9 +312,6 @@
     width: 100%;
   }
 
-  .simulationReveal {
-    opacity: 1;
-  }
 }
 
 @media (max-width: 1099px) and (prefers-reduced-motion: reduce) {
@@ -583,18 +332,13 @@
 
   .returnSignal,
   .returnSignalPanel,
-  .returnSignalPicture,
-  .simulationReveal,
-  .robotHead,
-  .robotBody,
-  .memoryWafer {
+  .returnSignalPicture {
     color: CanvasText;
     background: Canvas;
   }
 
   .returnSignalPicture i,
-  .returnSignalTrack,
-  .robotHead i {
+  .returnSignalTrack {
     border: 1px solid CanvasText;
     background: Canvas;
   }

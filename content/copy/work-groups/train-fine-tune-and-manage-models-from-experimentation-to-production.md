@@ -7,7 +7,7 @@ From model training to production
 Models from training to production
 
 ## summary
-I led a workshop on training, fine-tuning, and managing models from experimentation through production.
+A workshop connected training and fine-tuning to production model management.
 
 ## role-summary
 Workshop instructor

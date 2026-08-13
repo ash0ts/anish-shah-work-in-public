@@ -7,7 +7,7 @@ Optimizing GPU cost with W&B
 GPU cost with W&B
 
 ## summary
-I wrote a report on using W&B to analyze and optimize GPU cost.
+A report showed how W&B can expose and optimize GPU cost.
 
 ## role-summary
 Report author

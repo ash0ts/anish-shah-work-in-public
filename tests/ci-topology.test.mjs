@@ -239,10 +239,14 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(runner, /Spotify rank navigation and consent remain keyboard-first/u);
   assert.match(runner, /--retries=0/u);
   assert.match(runner, /--max-failures=1/u);
-  assert.match(runner, /segment: "release-simulation-fallbacks"/u);
-  assert.match(runner, /const simulationFallbackPattern = "without JavaScript\|room reveal"/u);
-  assert.match(runner, /label: "Simulation fallback foundations"/u);
-  assert.match(runner, /timeoutMs: 75_000/u);
+  assert.match(runner, /segment: "release-public"/u);
+  assert.doesNotMatch(runner, /segment: "release-simulation-fallbacks"/u);
+  assert.doesNotMatch(
+    runner.match(/async function runReleaseBrowserGate\(\)[\s\S]*?^\}/mu)?.[0] ?? "",
+    /simulation-quality\.spec\.mjs/u,
+  );
+  assert.match(runner, /simulationExperienceMode: "campaign-v1"/u);
+  assert.match(runner, /BROWSER_SIMULATION_EXPERIENCE_MODE/u);
   assert.match(runner, /spawnSync\("ps", \["-axo", "pid=,ppid=,pgid="\]/u);
   assert.match(runner, /process\.kill\(-groupId, name\)/u);
   assert.match(runner, /detached: usesProcessGroups/u);
@@ -251,6 +255,8 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(runner, /label: "Lighthouse coverage"/u);
   assert.match(runner, /timeoutMs: 3 \* 60_000/u);
   assert.match(playwrightConfig, /const inspectorPort = port \+ 5_000/u);
+  assert.match(playwrightConfig, /BROWSER_SIMULATION_EXPERIENCE_MODE/u);
+  assert.match(playwrightConfig, /"disabled", "campaign-v1"/u);
   assert.match(playwrightConfig, /--inspector-port \$\{inspectorPort\}/u);
   assert.equal(
     webkitConfig.use.launchOptions,

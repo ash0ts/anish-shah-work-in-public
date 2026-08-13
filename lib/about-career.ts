@@ -1,6 +1,5 @@
 import manifest from "@/content/presentation/career.v1.json";
 import { brandAssetForId, type BrandAsset } from "@/lib/brand-assets";
-import { SITE_COPY } from "@/lib/copy";
 
 const careerPhaseIds = [
   "weights-and-biases",
@@ -9,35 +8,20 @@ const careerPhaseIds = [
 ] as const;
 
 type CareerPhaseId = (typeof careerPhaseIds)[number];
-type CareerSummaryCopyKey =
-  | "career-phase-1-summary"
-  | "career-phase-2-summary"
-  | "career-phase-3-summary";
 
 export type CareerPhase = {
   id: CareerPhaseId;
   period: string;
   organization: string;
   track: string;
-  summary: string;
   mark: {
     label: string;
     asset: BrandAsset | null;
   };
 };
 
-const summaryKeys = new Set<CareerSummaryCopyKey>([
-  "career-phase-1-summary",
-  "career-phase-2-summary",
-  "career-phase-3-summary",
-]);
-
 function isCareerPhaseId(value: string): value is CareerPhaseId {
   return careerPhaseIds.some((id) => id === value);
-}
-
-function isCareerSummaryCopyKey(value: string): value is CareerSummaryCopyKey {
-  return summaryKeys.has(value as CareerSummaryCopyKey);
 }
 
 /**
@@ -61,7 +45,6 @@ export function aboutCareerPhases(): readonly CareerPhase[] {
       !phase.period.trim() ||
       !phase.organization.trim() ||
       !phase.track.trim() ||
-      !isCareerSummaryCopyKey(phase.summaryCopyKey) ||
       !phase.mark.label.trim() ||
       (phase.mark.kind !== "official" &&
         phase.mark.kind !== "typographic") ||
@@ -76,7 +59,6 @@ export function aboutCareerPhases(): readonly CareerPhase[] {
       period: phase.period,
       organization: phase.organization,
       track: phase.track,
-      summary: SITE_COPY.about[phase.summaryCopyKey],
       mark: {
         label: phase.mark.label,
         asset: phase.mark.brandAssetId

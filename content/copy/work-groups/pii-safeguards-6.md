@@ -7,7 +7,7 @@ PII detection safeguards contribution
 PII evaluation safeguards
 
 ## summary
-I contributed a representative evaluation report to an open-source PII safeguards project.
+An evaluation report tested safeguards for detecting personally identifiable information.
 
 ## role-summary
 Report contributor

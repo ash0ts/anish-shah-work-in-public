@@ -7,7 +7,7 @@ Biomedical RAG with Snowflake Arctic
 PubMed RAG with Snowflake Arctic
 
 ## summary
-I built and documented a PubMed-paper RAG application using Snowflake Arctic and W&B Weave.
+A PubMed RAG implementation paired Snowflake Arctic with W&B Weave.
 
 ## role-summary
 Guide author and demo contributor

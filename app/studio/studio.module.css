@@ -895,11 +895,6 @@
   overflow-wrap: anywhere;
 }
 
-.copyDeckEmpty {
-  color: rgba(23, 34, 59, 0.52);
-  font-style: italic;
-}
-
 .compactFields {
   display: grid;
   grid-template-columns: 1fr 1fr;

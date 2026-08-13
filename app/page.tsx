@@ -3,7 +3,7 @@ import { BodiesOfWork } from "@/components/BodiesOfWork";
 import { HomeIntroduction } from "@/components/HomeIntroduction";
 import { ImpactEvidence } from "@/components/ImpactEvidence";
 import { homepageImpactTracksFrom } from "@/lib/home-impact";
-import { featuredWorkBucketsFrom } from "@/lib/work-groups";
+import { homeTopicRailsFrom } from "@/lib/home-presentation";
 import { getPublicContentView } from "@/lib/server/public-content";
 import { requestCspNonce } from "@/lib/server/csp";
 import {
@@ -27,7 +27,7 @@ export const metadata: Metadata = publicPageMetadata({
 export default async function Home() {
   const nonce = await requestCspNonce();
   const { bundle } = await getPublicContentView();
-  const buckets = featuredWorkBucketsFrom(bundle);
+  const rails = homeTopicRailsFrom(bundle);
   const impactTracks = homepageImpactTracksFrom(bundle);
   const profileUrl = absoluteSiteUrl("/");
   const structuredData = buildHomeStructuredData(bundle, profileUrl);
@@ -44,7 +44,7 @@ export default async function Home() {
         headline={bundle.profile.headline}
         summary={bundle.profile.summary}
       />
-      <BodiesOfWork buckets={buckets} />
+      <BodiesOfWork rails={rails} />
       <ImpactEvidence tracks={impactTracks} />
     </main>
   );

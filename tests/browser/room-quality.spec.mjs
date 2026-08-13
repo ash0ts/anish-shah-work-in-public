@@ -951,11 +951,6 @@ test.describe("My Room 2001 browser quality", () => {
       "Interactive room opened.",
     );
     await leave.press("Tab");
-    const revealSimulation = room.getByRole("link", {
-      name: "REVEAL THE SIMULATION",
-    });
-    await expect(revealSimulation).toBeFocused();
-    await revealSimulation.press("Tab");
     const sound = room.getByRole("button", { name: "Sound on" });
     await expect(sound).toBeFocused();
     await sound.press("Tab");
@@ -1418,7 +1413,8 @@ test.describe("My Room 2001 browser quality", () => {
     await page.getByRole("link", { name: "Back to room" }).click();
     const status = page.locator("[data-room-return-status]");
     await expect(status).toBeVisible();
-    await expect(status).toContainText("Opening the room");
+    await expect(status).toContainText("Rebuilding the room.");
+    await expect(status).toContainText("Placing the objects…");
     room = page.locator("[data-room-runtime]");
     await expect(room).toBeVisible();
     await expect(room).toHaveAttribute("data-room-transition-phase", "returning");

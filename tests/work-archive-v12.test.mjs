@@ -14,13 +14,22 @@ const {
   parseWorkArchiveQuery,
   WORK_ARCHIVE_PAGE_SIZE,
   workArchiveHref,
+  workResultHeading,
 } = await tsImport("../lib/work-archive-query.ts", import.meta.url);
 const { workArchiveRecordsFrom } = await tsImport(
   "../lib/work-index.ts",
   import.meta.url,
 );
+const { applyCopyDeckToBundle } = await tsImport(
+  "../lib/copy.ts",
+  import.meta.url,
+);
 const { workBuckets } = await tsImport(
   "../lib/work-groups.ts",
+  import.meta.url,
+);
+const { workMetadataDescription } = await tsImport(
+  "../lib/seo.ts",
   import.meta.url,
 );
 const {
@@ -32,6 +41,47 @@ const {
 } = await tsImport("../lib/work-facets.ts", import.meta.url);
 
 const records = workArchiveRecordsFrom(publicBundle);
+const copyAppliedRecords = workArchiveRecordsFrom(
+  applyCopyDeckToBundle(publicBundle),
+);
+
+test("filtered headings describe the active line and presentation topic", () => {
+  const heading = (params, overrides = {}) =>
+    workResultHeading({
+      bucketTitle: null,
+      defaultHeading: "Project index",
+      filteredHeading: "Filtered projects",
+      organizationName: null,
+      query: parseWorkArchiveQuery(params),
+      topicLabel: null,
+      ...overrides,
+    });
+
+  assert.equal(
+    heading(
+      { bucket: "products-open-source" },
+      { bucketTitle: "Agent systems & open source" },
+    ),
+    "Agent systems & open source",
+  );
+  assert.equal(
+    heading(
+      { topic: "agent-systems" },
+      { topicLabel: "Agent systems" },
+    ),
+    "Agent systems projects",
+  );
+  assert.equal(
+    heading(
+      { bucket: "products-open-source", topic: "agent-systems" },
+      {
+        bucketTitle: "Agent systems & open source",
+        topicLabel: "Agent systems",
+      },
+    ),
+    "Agent systems · Agent systems & open source",
+  );
+});
 
 test("the archive indexes public WorkGroups while keeping context-only observations nested", () => {
   const publicItems = publicBundle.items.filter(
@@ -63,6 +113,59 @@ test("the archive indexes public WorkGroups while keeping context-only observati
       profile: 6,
     },
   );
+});
+
+test("archive rows expose the curated short title independently of the detail title", () => {
+  const groups = new Map(
+    applyCopyDeckToBundle(publicBundle).workGroups.map((group) => [
+      group.id,
+      group,
+    ]),
+  );
+
+  assert(
+    copyAppliedRecords.every(
+      (record) => record.shortTitle === groups.get(record.id)?.shortTitle,
+    ),
+  );
+
+  const fugue = copyAppliedRecords.find(
+    (record) => record.id === "group:standalone:wk-fp-0161",
+  );
+  assert(fugue);
+  assert.equal(fugue.title, "Fugue: governed experiments for AI agents");
+  assert.equal(fugue.shortTitle, "Fugue agent experiments");
+});
+
+test("Work metadata expands concise summaries and stays within the public SEO budget", () => {
+  const concise =
+    "An MCP interface lets agents inspect W&B experiments and traces.";
+  const expanded = workMetadataDescription("W&B MCP Server", concise);
+  assert.equal(
+    expanded,
+    `${concise} This page documents the role, public artifacts, and supporting sources.`,
+  );
+  assert(expanded.length >= 80 && expanded.length <= 160);
+
+  const placeholder = workMetadataDescription("Example", "Contributor.");
+  assert.match(placeholder, /^Explore Anish Shah’s work on Example,/u);
+  assert(placeholder.length >= 80 && placeholder.length <= 160);
+
+  const longSummary = "A".repeat(200);
+  const bounded = workMetadataDescription("Example", longSummary);
+  assert.equal(
+    bounded,
+    "Explore Anish Shah’s work on Example, including its documented role, public artifacts, and supporting sources.",
+  );
+  assert(bounded.length >= 80 && bounded.length <= 160);
+
+  for (const record of copyAppliedRecords) {
+    const description = workMetadataDescription(record.title, record.summary);
+    assert(
+      description.length >= 80 && description.length <= 160,
+      `${record.slug} metadata description is ${description.length} characters`,
+    );
+  }
 });
 
 test("related context is searchable when it has an explicit group relationship", () => {
@@ -367,7 +470,6 @@ test("Work source renders a paginated four-line index and semantic color calenda
     timeline,
     timelineControls,
     mobileFilters,
-    bodyBehavior,
     css,
     timelineCss,
     detailSource,
@@ -383,10 +485,6 @@ test("Work source renders a paginated four-line index and semantic color calenda
       new URL("../app/work/WorkMobileFilters.tsx", import.meta.url),
       "utf8",
     ),
-    readFile(
-      new URL("../app/work/WorkBodyBehavior.tsx", import.meta.url),
-      "utf8",
-    ),
     readFile(new URL("../app/work/work.module.css", import.meta.url), "utf8"),
     readFile(
       new URL("../app/work/WorkTimeline.module.css", import.meta.url),
@@ -398,7 +496,11 @@ test("Work source renders a paginated four-line index and semantic color calenda
     ),
   ]);
   assert.match(source, /workBuckets\.map/);
-  assert.match(source, /data-work-body=\{bucket\.id\}/);
+  assert.match(source, /data-work-line=\{bucket\.id\}/);
+  assert.doesNotMatch(source, /data-work-body|<details[\s\S]{0,200}styles\.body/);
+  assert.match(source, /<ActiveScope/);
+  assert.match(source, /Remove \$\{filter\.label\} \$\{filter\.key\} filter/);
+  assert.match(source, />Change filters</);
   assert.match(source, /<WorkTimeline query=\{query\} records=\{timelineRecords\}/);
   assert.match(source, /countWorkFacetOptions\(allWorks, "theme"\)/);
   assert.match(source, /countWorkFacetOptions\(allWorks, "media"\)/);
@@ -483,6 +585,9 @@ test("Work source renders a paginated four-line index and semantic color calenda
   assert.match(css, /\.mobileFilterDialog::backdrop/);
   assert.match(detailSource, /<dl className=\{styles\.facts\}/);
   assert.match(detailSource, /<dt>\{label\}<\/dt>/);
+  assert.match(detailSource, /href=\{bucketHref\}/);
+  assert.match(detailSource, /workThemeFacetLabel\(topic\)/);
+  assert.match(detailSource, /<PublicArtifactLink item=\{primary\} primary \/>/);
 
   assert.match(
     source,
@@ -490,10 +595,6 @@ test("Work source renders a paginated four-line index and semantic color calenda
     "Format should open server-side when that filter is active",
   );
   assert.doesNotMatch(source, /WorkFilterBehavior/);
-  assert.match(bodyBehavior, /body\.open = index === 0/);
-  assert.match(bodyBehavior, /body\.dataset\.defaultOpen === "true"/);
-  assert.match(bodyBehavior, /body\.open = defaults\.includes\(body\)/);
-  assert.match(bodyBehavior, /min-width:\s*761px/);
   assert.match(css, /@media\s*\(max-width:\s*760px\)/);
   assert.match(
     css,

@@ -32,8 +32,22 @@ function neutralPreviewArtwork(): Response {
   });
 }
 
-function isPreviewDisabledPath(pathname: string): boolean {
+function isSimulationPath(pathname: string): boolean {
   return (
+    pathname === "/simulation" ||
+    pathname === "/simulation/" ||
+    pathname === "/api/simulation" ||
+    pathname.startsWith("/api/simulation/")
+  );
+}
+
+function isPreviewDisabledPath(
+  pathname: string,
+  simulationExperienceMode: string | undefined,
+): boolean {
+  return (
+    (simulationExperienceMode !== "campaign-v1" &&
+      isSimulationPath(pathname)) ||
     pathname === "/studio" ||
     pathname.startsWith("/studio/") ||
     pathname === "/api/studio" ||
@@ -48,16 +62,59 @@ function isPreviewDisabledPath(pathname: string): boolean {
   );
 }
 
+function disabledSimulationResponse(): Response {
+  return new Response("Not Found", {
+    status: 404,
+    headers: {
+      "cache-control": "private, no-store",
+      "content-type": "text/plain; charset=utf-8",
+      "x-robots-tag": "noindex, nofollow, noarchive",
+    },
+  });
+}
+
+/**
+ * Fail closed before throttling or body parsing when the hosted release does
+ * not expose the campaign. The coming-soon page may remain visible, but its
+ * session APIs stay unavailable until campaign-v1 is active.
+ */
+export function simulationExperienceBoundaryResponse(
+  pathname: string,
+  simulationExperienceMode: string | undefined,
+): Response | null {
+  const apiPath =
+    pathname === "/api/simulation" || pathname.startsWith("/api/simulation/");
+  const disabledPage =
+    simulationExperienceMode !== "coming-soon" &&
+    (pathname === "/simulation" || pathname === "/simulation/");
+  if (
+    simulationExperienceMode !== "campaign-v1" &&
+    (apiPath || disabledPage)
+  ) {
+    return disabledSimulationResponse();
+  }
+  return null;
+}
+
 export function hostedDeploymentBoundaryResponse(
   request: Request,
+  pathname: string,
   tier: HostedDeploymentTier | null,
+  simulationExperienceMode: string | undefined = "disabled",
 ): Response | null {
   if (tier !== "preview") return null;
-  const pathname = new URL(request.url).pathname;
+  if (
+    simulationExperienceMode === "campaign-v1" &&
+    isSimulationPath(pathname)
+  ) {
+    return null;
+  }
   if (pathname.startsWith("/api/connector-artwork/")) {
     return neutralPreviewArtwork();
   }
-  if (isPreviewDisabledPath(pathname)) return disabledPreviewResponse();
+  if (isPreviewDisabledPath(pathname, simulationExperienceMode)) {
+    return disabledPreviewResponse();
+  }
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response("Visual previews are read-only.", {
       status: 405,

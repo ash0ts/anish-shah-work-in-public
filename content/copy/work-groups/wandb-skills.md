@@ -7,7 +7,7 @@ W&B Skills repository
 W&B Skills contributions
 
 ## summary
-I contributed to W&B's public skills repository.
+An upstream contribution extended the W&B Skills repository.
 
 ## role-summary
 Upstream repository contributor

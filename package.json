@@ -1,6 +1,6 @@
 {
   "name": "anish-shah-work-in-public",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "private": true,
   "packageManager": "npm@11.6.2",
   "engines": {
@@ -50,7 +50,8 @@
     "browser:full:existing": "BROWSER_QUALITY_SCOPE=all node scripts/run-browser-quality.mjs",
     "browser:public:existing": "BROWSER_QUALITY_SCOPE=public node scripts/run-browser-quality.mjs",
     "browser:room:existing": "BROWSER_QUALITY_SCOPE=room-smoke node scripts/run-browser-quality.mjs",
-    "browser:simulation:existing": "BROWSER_QUALITY_SCOPE=simulation node scripts/run-browser-quality.mjs",
+    "browser:simulation:campaign:existing": "BROWSER_QUALITY_SCOPE=simulation node scripts/run-browser-quality.mjs",
+    "browser:simulation:existing": "npm run browser:simulation:campaign:existing",
     "browser:travel:existing": "BROWSER_QUALITY_SCOPE=travel node scripts/run-browser-quality.mjs",
     "browser:soak:existing": "node scripts/ci/run-browser-soak.mjs",
     "validate:browser:segment": "node scripts/run-browser-quality.mjs",

@@ -7,7 +7,7 @@ AI for healthcare and drug discovery
 Healthcare and drug discovery
 
 ## summary
-I spoke at a meetup about AI applications in healthcare and drug discovery.
+A meetup talk surveyed AI applications in healthcare and drug discovery.
 
 ## role-summary
 Meetup speaker

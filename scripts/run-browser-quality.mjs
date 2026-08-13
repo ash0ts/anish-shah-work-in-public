@@ -38,7 +38,12 @@ function run(binary, arguments_, environment = {}, { continueOnFailure = false }
   return status;
 }
 
-function runPlaywright({ port, segment = "", arguments_ = [] }) {
+function runPlaywright({
+  port,
+  segment = "",
+  arguments_ = [],
+  simulationExperienceMode = "disabled",
+}) {
   const suffix = segment ? `-${segment}` : "";
   const relativeStateDirectory = `.wrangler/browser-quality-room${suffix}`;
   const stateDirectory = path.join(root, relativeStateDirectory);
@@ -50,6 +55,7 @@ function runPlaywright({ port, segment = "", arguments_ = [] }) {
       BROWSER_QUALITY_PORT: String(port),
       BROWSER_QUALITY_SEGMENT: segment,
       BROWSER_QUALITY_STATE_DIR: relativeStateDirectory,
+      BROWSER_SIMULATION_EXPERIENCE_MODE: simulationExperienceMode,
       ROOM_CAPTURE_VISUALS: "0",
     },
     { continueOnFailure: true },
@@ -190,6 +196,7 @@ function releasePlaywrightCommand({
   segment,
   arguments_,
   config = "playwright.config.mjs",
+  simulationExperienceMode = "disabled",
 }) {
   const relativeStateDirectory = `.wrangler/browser-quality-room-${segment}`;
   rmSync(path.join(root, relativeStateDirectory), { force: true, recursive: true });
@@ -210,6 +217,7 @@ function releasePlaywrightCommand({
       BROWSER_QUALITY_SEGMENT: segment,
       BROWSER_QUALITY_STATE_DIR: relativeStateDirectory,
       BROWSER_QUALITY_RELEASE: "1",
+      BROWSER_SIMULATION_EXPERIENCE_MODE: simulationExperienceMode,
       ROOM_CAPTURE_VISUALS: "0",
     },
   });
@@ -224,41 +232,13 @@ const releaseStressPattern = [
   "sustained slow completed fisheye frames",
 ].join("|");
 
-// Simulation's fallback contexts are intentionally isolated from the
-// WebGL-heavy Room and Travel checks. On constrained release runners Chromium
-// can otherwise starve a new no-JavaScript renderer while the parallel room
-// process is compiling SwiftShader shaders. Running these two foundations first
-// keeps the assertions real without adding retries or serializing the rest of
-// the release gate.
-const simulationFallbackPattern = "without JavaScript|room reveal";
-
 async function runReleaseBrowserGate() {
   await runConcurrentReleaseCommands(
     [
       releasePlaywrightCommand({
-        port: 4172,
-        segment: "release-simulation-fallbacks",
-        arguments_: [
-          "tests/browser/simulation-quality.spec.mjs",
-          "--grep",
-          simulationFallbackPattern,
-        ],
-      }),
-    ],
-    { label: "Simulation fallback foundations", timeoutMs: 75_000 },
-  );
-
-  await runConcurrentReleaseCommands(
-    [
-      releasePlaywrightCommand({
         port: 4174,
-        segment: "release-public-simulation",
-        arguments_: [
-          "tests/browser/public-quality.spec.mjs",
-          "tests/browser/simulation-quality.spec.mjs",
-          "--grep-invert",
-          simulationFallbackPattern,
-        ],
+        segment: "release-public",
+        arguments_: ["tests/browser/public-quality.spec.mjs"],
       }),
       releasePlaywrightCommand({
         port: 4181,
@@ -389,6 +369,7 @@ if (scope === "all" || scope === "simulation") {
     runPlaywright({
       port: 4180,
       segment: "simulation-core",
+      simulationExperienceMode: "campaign-v1",
       arguments_: [
         "tests/browser/simulation-quality.spec.mjs",
         "--grep-invert",
@@ -402,6 +383,7 @@ if (scope === "all" || scope === "simulation") {
     runPlaywright({
       port: 4186,
       segment: "simulation-fallbacks",
+      simulationExperienceMode: "campaign-v1",
       arguments_: [
         "tests/browser/simulation-quality.spec.mjs",
         "--grep",

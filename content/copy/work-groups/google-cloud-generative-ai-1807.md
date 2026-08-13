@@ -7,7 +7,7 @@ Google Cloud Generative AI implementation
 Google Cloud GenAI
 
 ## summary
-I contributed an implementation to Google Cloud's Generative AI repository.
+An implementation added W&B support to Google Cloud's Generative AI repository.
 
 ## role-summary
 Implementation contributor

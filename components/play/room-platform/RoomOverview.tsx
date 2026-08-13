@@ -9,9 +9,11 @@ import { SITE_COPY } from "@/lib/copy";
 
 export function RoomOverview({
   fixture,
+  simulationEnabled = false,
   travelEnabled = false,
 }: {
   fixture?: PreviewFixtureScenario;
+  simulationEnabled?: boolean;
   travelEnabled?: boolean;
 }) {
   const objects = travelEnabled
@@ -29,10 +31,12 @@ export function RoomOverview({
         <div>
           <p>{SITE_COPY.play["intro-summary"]}</p>
           <RoomEntryControl />
-          <div className={styles.simulationIngress}>
-            <p>{SITE_COPY.simulation["ingress-label"]}</p>
-            <RevealSimulationControl />
-          </div>
+          {simulationEnabled ? (
+            <div className={styles.simulationIngress}>
+              <p>{SITE_COPY.simulation["ingress-label"]}</p>
+              <RevealSimulationControl />
+            </div>
+          ) : null}
         </div>
       </header>
 

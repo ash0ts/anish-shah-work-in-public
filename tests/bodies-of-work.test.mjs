@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { tsImport } from "tsx/esm/api";
 import { buildCopyDeck } from "../scripts/lib/copy-deck.mjs";
 
 const projectRoot = path.resolve(
@@ -20,6 +21,10 @@ const [
   timelineSource,
   impactSource,
   impactEvidenceSource,
+  impactEvidenceStyles,
+  homePresentationSource,
+  homePresentationManifest,
+  homeIconsSource,
   packageJson,
 ] =
   await Promise.all([
@@ -50,34 +55,31 @@ const [
     path.join(projectRoot, "components/ImpactEvidence.tsx"),
     "utf8",
   ),
+  readFile(
+    path.join(projectRoot, "components/ImpactEvidence.module.css"),
+    "utf8",
+  ),
+  readFile(path.join(projectRoot, "lib/home-presentation.ts"), "utf8"),
+  readFile(
+    path.join(
+      projectRoot,
+      "content/presentation/home-signal-rails.v1.json",
+    ),
+    "utf8",
+  ).then(JSON.parse),
+  readFile(
+    path.join(projectRoot, "components/HomeVisualIcons.tsx"),
+    "utf8",
+  ),
   readFile(path.join(projectRoot, "package.json"), "utf8").then(JSON.parse),
 ]);
 const copyDeck = await buildCopyDeck(projectRoot);
+const { homeTopicRailsFrom } = await tsImport(
+  "../lib/home-presentation.ts",
+  import.meta.url,
+);
 
-const expectedFeatured = {
-  "products-open-source": [
-    "group:products:wandb-mcp",
-    "group:products:evalforge",
-    "group:products:lightning-fabric",
-  ],
-  "courses-learning": [
-    "group:courses:ai-curriculum",
-    "group:courses:agentic-llm-series",
-    "group:courses:startup-school",
-  ],
-  "writing-research": [
-    "group:writing:wandbot",
-    "group:writing:prompt-engineering-langchain",
-    "group:writing:automated-pdf-summarization",
-  ],
-  "talks-programs": [
-    "group:talks:architecting-agents",
-    "group:talks:llm-agent-fine-tuning",
-    "group:talks:building-evaluating-agents",
-  ],
-};
-
-test("Bodies of Work resolves four parallel buckets with three featured stories each", () => {
+test("Home resolves every public WorkGroup into one of four lines", () => {
   assert.equal(bundle.schemaVersion, "1.2");
   assert.equal(bundle.workGroups.length, 82);
   const publicGroups = bundle.workGroups.filter(
@@ -86,7 +88,12 @@ test("Bodies of Work resolves four parallel buckets with three featured stories 
   assert.equal(publicGroups.length, 82);
   assert.deepEqual(
     Object.fromEntries(
-      Object.keys(expectedFeatured).map((bucket) => [
+      [
+        "products-open-source",
+        "courses-learning",
+        "writing-research",
+        "talks-programs",
+      ].map((bucket) => [
         bucket,
         publicGroups.filter((group) => group.bucket === bucket).length,
       ]),
@@ -100,36 +107,70 @@ test("Bodies of Work resolves four parallel buckets with three featured stories 
   );
   assert(
     publicGroups.every((group) =>
-      Object.hasOwn(expectedFeatured, group.bucket),
+      [
+        "products-open-source",
+        "courses-learning",
+        "writing-research",
+        "talks-programs",
+      ].includes(group.bucket),
     ),
     "Every public WorkGroup must fold into exactly one visible body",
   );
-
-  for (const [bucket, expectedIds] of Object.entries(expectedFeatured)) {
-    const featured = publicGroups
-      .filter((group) => group.bucket === bucket)
-      .filter((group) => group.featuredOrder !== null)
-      .sort((left, right) => left.featuredOrder - right.featuredOrder);
-    assert.deepEqual(featured.map((group) => group.id), expectedIds);
-    assert.equal(featured.length, 3);
-  }
 });
 
-test("Home is a semantic four-line index with one representative link per line", () => {
+test("Home is a semantic four-line topic index without representative projects", () => {
   assert.match(homeSource, /<HomeIntroduction/);
-  assert.match(homeSource, /<BodiesOfWork/);
+  assert.match(homeSource, /<BodiesOfWork rails=/);
   assert.match(bodySource, /data-work-line/);
-  assert.match(bodySource, /bucket\.groups\[0\]/);
+  assert.match(bodySource, /rails\.map/);
+  assert.match(bodySource, /rail\.topics\.map/);
   assert.equal(
     copyDeck.pages.home["selected-heading"],
-    "Four ways I put AI systems into the world.",
+    "Choose a line, then a topic.",
   );
   assert.match(bodySource, /SITE_COPY\.home\["selected-heading"\]/u);
-  assert.match(bodySource, /<strong>\{group\.homeTitle\}<\/strong>/);
-  assert.doesNotMatch(bodySource, /bucket\.groups\.map/);
+  assert.match(bodySource, /href=\{rail\.href\}/);
+  assert.match(bodySource, /href=\{topic\.href\}/);
+  assert.doesNotMatch(bodySource, /href=\{`\/work\/\$\{/);
+  assert.doesNotMatch(bodySource, /homeTitle|homeRole|group\.slug/);
   assert.doesNotMatch(bodySource, /<details|<summary/);
   assert.doesNotMatch(bodySource, /bucket\.number|padStart/);
   assert.doesNotMatch(bodySource, /canvas|three|webgl/i);
+});
+
+test("Home rail and topic counts exclude hidden WorkGroups", () => {
+  const visibleRails = homeTopicRailsFrom(bundle);
+  const hiddenBundle = structuredClone(bundle);
+  const hiddenGroup = hiddenBundle.workGroups.find(
+    (group) => group.bucket === "products-open-source",
+  );
+  assert(hiddenGroup);
+  hiddenGroup.publicationState = "hidden";
+
+  const hiddenRails = homeTopicRailsFrom(hiddenBundle);
+  const visibleLine = visibleRails.find(
+    (rail) => rail.id === "products-open-source",
+  );
+  const hiddenLine = hiddenRails.find(
+    (rail) => rail.id === "products-open-source",
+  );
+  assert(visibleLine && hiddenLine);
+  assert.equal(hiddenLine.projectCount, visibleLine.projectCount - 1);
+  assert(
+    hiddenLine.topics.every(
+      (topic) =>
+        topic.count <=
+        (visibleLine.topics.find(({ id }) => id === topic.id)?.count ?? 0),
+    ),
+  );
+  assert(
+    hiddenLine.topics.some(
+      (topic) =>
+        topic.count <
+        (visibleLine.topics.find(({ id }) => id === topic.id)?.count ?? 0),
+    ),
+    "at least one reviewed topic count should lose the hidden project",
+  );
 });
 
 test("Home and Work share one expert-facing four-body taxonomy", () => {
@@ -144,22 +185,21 @@ test("Home and Work share one expert-facing four-body taxonomy", () => {
   ]) {
     assert(bucketTitles.includes(label), label);
   }
-  for (const id of [
-    "group:products:wandb-mcp",
-    "group:courses:ai-curriculum",
-    "group:writing:wandbot",
-    "group:talks:architecting-agents",
-  ]) {
-    assert.match(workGroupsSource, new RegExp(id.replaceAll(":", "\\:")));
-  }
   assert.match(workGroupsSource, /SITE_COPY\.work\["bucket-1-title"\]/u);
-  assert.match(workGroupsSource, /workGroupCopyFor\(group\.id\)/u);
   assert.doesNotMatch(workGroupsSource, /title: "Products \/ Open Source"/);
   assert.doesNotMatch(workGroupsSource, /title: "Courses \/ Learning"/);
   assert.doesNotMatch(workGroupsSource, /title: "Writing \/ Research"/);
   assert.doesNotMatch(workGroupsSource, /title: "Talks \/ Programs"/);
   assert.doesNotMatch(workGroupsSource, /homepageWorkBuckets/);
-  assert.match(workGroupsSource, /return workBuckets\.map/);
+  assert.deepEqual(
+    homePresentationManifest.rails.map(({ bucketId }) => bucketId),
+    [
+      "products-open-source",
+      "courses-learning",
+      "writing-research",
+      "talks-programs",
+    ],
+  );
 });
 
 test("Bodies of Work stays server-rendered and does not hydrate for decorative motion", () => {
@@ -175,9 +215,10 @@ test("Home keeps its LCP and introduction static without a client hydration boun
   assert.match(introductionSource, /prefetch=\{false\}/);
 });
 
-test("Work pairs its four-body SSR index with a semantic body-by-year color calendar", () => {
+test("Work pairs flat filtered results with a semantic line-by-year color calendar", () => {
   assert.match(workPageSource, /workBuckets\.map/);
-  assert.match(workPageSource, /data-work-body=\{bucket\.id\}/);
+  assert.match(workPageSource, /data-work-line=\{bucket\.id\}/);
+  assert.doesNotMatch(workPageSource, /data-work-body/);
   assert.match(workPageSource, /<WorkTimeline/);
   assert.doesNotMatch(
     workPageSource,
@@ -226,33 +267,82 @@ test("Work pairs its four-body SSR index with a semantic body-by-year color cale
   assert.equal(packageJson.dependencies["@observablehq/plot"], undefined);
 });
 
-test("Home proof statements resolve the three required qualified metric IDs", () => {
+test("Home signal circuit resolves three reviewed qualified metric IDs", () => {
   for (const metricId of [
     "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
     "metric:courses:enrollments:2026-07-30",
     "metric:events:pipeline-supported:2024-2025",
   ]) {
-    assert.match(impactSource, new RegExp(metricId.replaceAll(":", "\\:")));
+    assert(
+      homePresentationManifest.signals.some(
+        (signal) => signal.metricId === metricId,
+      ),
+      metricId,
+    );
   }
   assert.match(impactSource, /throw new Error/);
   assert.match(impactSource, /missing, unpublished, or assigned to the wrong theme/);
   assert.match(impactSource, /must be public and include its limit/);
-  assert.match(impactSource, /SITE_COPY\.home\["proof-1-statement"\]/);
-  for (const key of [
-    "impact-eyebrow",
-    "impact-heading",
-    "impact-summary",
-    "impact-source-cta",
-  ]) {
-    assert.match(
-      impactEvidenceSource,
-      new RegExp(`SITE_COPY\\.home\\["${key}"\\]`),
-    );
-  }
+  assert.doesNotMatch(impactSource, /proof-[123]-statement/);
+  assert.match(impactEvidenceSource, /<figure/);
+  assert.match(impactEvidenceSource, /data-signal-circuit/);
+  assert.match(impactEvidenceSource, /<details/);
+  assert.match(impactEvidenceSource, /name="home-signal"/);
+  assert.match(impactEvidenceSource, /\/sources#internal-analytics/);
+  assert.match(impactEvidenceSource, /`\/sources#\$\{datum\.metric\.id\}`/);
+  assert.match(impactEvidenceSource, /track\.periodAsOf/);
+  assert.match(impactSource, /periodAsOf: metric\.period\.asOf \?\? null/);
+  assert.match(homeIconsSource, /function HomeSignalIcon/);
+  assert.match(
+    impactEvidenceStyles,
+    /\.signals > li \{[\s\S]*--signal-accent: var\(--work-blue\)/,
+  );
+  assert.doesNotMatch(impactEvidenceStyles, /data-impact-track=/);
   assert.doesNotMatch(
     impactEvidenceSource,
     /What happened after the work shipped|Three independent measures/i,
   );
+});
+
+test("Home presentation mapping is closed, ordered, and rejects unreviewed changes", () => {
+  assert.equal(homePresentationManifest.schemaVersion, "1.0");
+  assert.deepEqual(
+    homePresentationManifest.signals.map(
+      ({ id, theme, iconId, compactLimit }) => ({
+        id,
+        theme,
+        iconId,
+        compactLimit,
+      }),
+    ),
+    [
+      {
+        id: "deployed",
+        theme: "product",
+        iconId: "tool-interface",
+        compactLimit: "Direct project usage · not revenue",
+      },
+      {
+        id: "taught",
+        theme: "learning",
+        iconId: "open-book",
+        compactLimit: "Enrollments · not unique learners",
+      },
+      {
+        id: "programs",
+        theme: "programs",
+        iconId: "program-network",
+        compactLimit: "Supported pipeline · not revenue",
+      },
+    ],
+  );
+  assert.equal(
+    homePresentationManifest.rails.flatMap(({ topicIds }) => topicIds).length,
+    12,
+  );
+  assert.match(homePresentationSource, /home_signal_spec_unreviewed/);
+  assert.match(homePresentationSource, /home_signal_order_invalid/);
+  assert.match(homePresentationSource, /home_rail_order_invalid/);
 });
 
 test("the superseded chapter-stack and Three.js implementation is gone", () => {

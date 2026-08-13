@@ -7,13 +7,7 @@ EvalForge: aligned evaluation criteria
 EvalForge evaluation criteria
 
 ## summary
-I built an open-source implementation of EvalGen for generating and aligning evaluation criteria.
+EvalForge implements EvalGen for generating and aligning evaluation criteria.
 
 ## role-summary
 Creator and implementer
-
-## home-title
-EvalForge: evaluation-criteria generation & alignment
-
-## home-role
-Creator

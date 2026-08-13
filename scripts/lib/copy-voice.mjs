@@ -17,7 +17,8 @@ const METRIC_LIMIT = /\b(?:internal\s+analytics|about|approximately|rounded|supp
 const MEANINGLESS_SUMMARY = /^(?:(?:article\s+)?author|(?:webinar|workshop|conference|meetup)?\s*speaker|presenter|co-presenter|contributor|repository\s+owner|host|judge)\.?$|^(?:\d{1,2}:\d{2}\s*(?:AM|PM)?|in-person\s+at|recording\s+uploaded|scheduled\s+event|exact\s+session\s+slot|no\s+replay\b)|\b(?:registration\s+record\s+retained|editorial\s+item)\b/iu;
 const REPEATED_CORPUS_WORDS = new Set(["public", "technical", "work"]);
 const DUPLICATE_SENTENCE_FIELDS = /(?:^|[-.])(?:body|description|fallback|headline|nonclaim-\d+|statement|summary)$/u;
-const FIRST_PERSON_ROLE_OPENING = /^I\b/u;
+const FIRST_PERSON_OPENING = /^(?:I|My)\b/u;
+const FIRST_PERSON_TOKEN = /\b(?:I|me|my|mine|myself)\b/giu;
 const ROLE_OVERLAP_STOPWORDS = new Set([
   "about",
   "across",
@@ -160,8 +161,22 @@ function auditEntry(entry, errors, warnings, corpusCounts) {
   }
   if (
     surface === "work-group" &&
+    field === "summary" &&
+    FIRST_PERSON_OPENING.test(value)
+  ) {
+    errors.push(
+      issue(
+        "error",
+        "artifact-first-summary",
+        key,
+        "must open with the artifact, mechanism, or result rather than I or My",
+      ),
+    );
+  }
+  if (
+    surface === "work-group" &&
     field === "role-summary" &&
-    FIRST_PERSON_ROLE_OPENING.test(value)
+    FIRST_PERSON_OPENING.test(value)
   ) {
     errors.push(
       issue(
@@ -324,7 +339,7 @@ function validateWorkGroupSummaryRolePairs(entries, warnings) {
     (entry) =>
       entry.surface === "work-group" && entry.field === "role-summary",
   )) {
-    if (!FIRST_PERSON_ROLE_OPENING.test(role.value)) continue;
+    if (!FIRST_PERSON_OPENING.test(role.value)) continue;
     const prefix = role.key.slice(0, -".role-summary".length);
     const summary = summaries.get(prefix);
     if (!summary) continue;
@@ -344,6 +359,128 @@ function validateWorkGroupSummaryRolePairs(entries, warnings) {
   }
 }
 
+function countFirstPerson(entries) {
+  return entries.reduce(
+    (total, entry) => total + (entry.value.match(FIRST_PERSON_TOKEN) ?? []).length,
+    0,
+  );
+}
+
+function entriesForSurface(entries, surface, include) {
+  return entries.filter(
+    (entry) => entry.surface === surface && include(entry.field),
+  );
+}
+
+function validatePublicSurfaceBudgets(entries, errors) {
+  const firstPersonBudgets = [
+    {
+      key: "home-visible",
+      maximum: 1,
+      entries: entriesForSurface(
+        entries,
+        "home",
+        (field) => !field.startsWith("seo-"),
+      ),
+    },
+    {
+      key: "about-visible",
+      maximum: 3,
+      entries: entriesForSurface(
+        entries,
+        "about",
+        (field) => !field.startsWith("seo-"),
+      ),
+    },
+    {
+      key: "work-overview",
+      maximum: 0,
+      entries: entriesForSurface(
+        entries,
+        "work",
+        (field) => !field.startsWith("detail-"),
+      ),
+    },
+    {
+      key: "sources-visible",
+      maximum: 0,
+      entries: entriesForSurface(
+        entries,
+        "sources",
+        (field) => !field.startsWith("seo-"),
+      ),
+    },
+    {
+      key: "play-object-descriptions",
+      maximum: 0,
+      entries: entriesForSurface(
+        entries,
+        "play",
+        (field) => /^(?:watch|read|listen|collect|play|move|travel)-description$/u.test(field),
+      ),
+    },
+  ];
+
+  for (const budget of firstPersonBudgets) {
+    const count = countFirstPerson(budget.entries);
+    if (count <= budget.maximum) continue;
+    errors.push(
+      issue(
+        "error",
+        "first-person-budget",
+        budget.key,
+        `uses ${count} first-person token${count === 1 ? "" : "s"}; maximum is ${budget.maximum}`,
+      ),
+    );
+  }
+
+  const wordBudgets = [
+    {
+      key: "about-body",
+      maximum: 55,
+      entries: entriesForSurface(
+        entries,
+        "about",
+        (field) => field === "body" || field === "current-focus",
+      ),
+    },
+    {
+      key: "work-masthead",
+      maximum: 25,
+      entries: entriesForSurface(
+        entries,
+        "work",
+        (field) => field.startsWith("masthead-"),
+      ),
+    },
+    {
+      key: "sources-intro-and-rules",
+      maximum: 70,
+      entries: entriesForSurface(
+        entries,
+        "sources",
+        (field) => field.startsWith("intro-") || field.startsWith("rules-") || /^rule-[134]-/u.test(field),
+      ),
+    },
+  ];
+
+  for (const budget of wordBudgets) {
+    const count = budget.entries.reduce(
+      (total, entry) => total + countCopyWords(entry.value),
+      0,
+    );
+    if (count <= budget.maximum) continue;
+    errors.push(
+      issue(
+        "error",
+        "surface-word-budget",
+        budget.key,
+        `uses ${count} words; maximum is ${budget.maximum}`,
+      ),
+    );
+  }
+}
+
 export function auditCopyVoice(entries) {
   const errors = [];
   const warnings = [];
@@ -352,6 +489,7 @@ export function auditCopyVoice(entries) {
   validatePlayObjectNames(entries, errors);
   validateDuplicateSentences(entries, errors);
   validateWorkGroupSummaryRolePairs(entries, warnings);
+  validatePublicSurfaceBudgets(entries, errors);
 
   const corpusThresholds = { public: 12, technical: 10, work: 12 };
   for (const [word, maximum] of Object.entries(corpusThresholds)) {

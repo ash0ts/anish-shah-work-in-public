@@ -431,26 +431,6 @@ export function EditorialRecords({
                           <dt>Role summary</dt>
                           <dd>{copyOwnershipRecord.gitCopy.roleSummary}</dd>
                         </div>
-                        <div>
-                          <dt>Home title</dt>
-                          <dd>
-                            {copyOwnershipRecord.gitCopy.homeTitle ?? (
-                              <span className={styles.copyDeckEmpty}>
-                                Not set
-                              </span>
-                            )}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Home role</dt>
-                          <dd>
-                            {copyOwnershipRecord.gitCopy.homeRole ?? (
-                              <span className={styles.copyDeckEmpty}>
-                                Not set
-                              </span>
-                            )}
-                          </dd>
-                        </div>
                       </dl>
                       <code>{copyOwnershipRecord.deckPath}</code>
                     </>

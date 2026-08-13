@@ -38,11 +38,10 @@ test("the About career manifest declares one official mark and two reviewed fall
     ],
   );
   assert(
-    manifest.phases.every(({ mark, summaryCopyKey }) =>
-      /^career-phase-[1-3]-summary$/u.test(summaryCopyKey) &&
-      (mark.kind === "official"
+    manifest.phases.every(({ mark }) =>
+      mark.kind === "official"
         ? mark.brandAssetId === "weights-biases"
-        : mark.brandAssetId === null),
+        : mark.brandAssetId === null,
     ),
   );
 });

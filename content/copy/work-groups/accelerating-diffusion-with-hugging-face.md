@@ -7,7 +7,7 @@ Accelerating diffusion-model workflows
 Diffusion with Hugging Face
 
 ## summary
-I co-presented a session on accelerating diffusion-model workflows with Hugging Face.
+A joint session mapped faster diffusion-model workflows with Hugging Face.
 
 ## role-summary
 Co-presenter with Zach Mueller and Suraj Patil

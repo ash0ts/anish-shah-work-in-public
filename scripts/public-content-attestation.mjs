@@ -16,6 +16,7 @@ const staticArtifactPaths = [
   "content/curation/public-claim-upgrades.v1.json",
   "content/curation/work-groups.v1.json",
   "content/presentation/metric-groups.v1.json",
+  "content/presentation/home-signal-rails.v1.json",
   "content/presentation/career.v1.json",
   "content/presentation/work-organizations.v1.json",
   "content/presentation/brand-assets.v1.json",

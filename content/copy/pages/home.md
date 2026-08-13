@@ -4,7 +4,7 @@
 Applied AI systems that hold up after the demo
 
 ## seo-description
-I build agent tooling, evaluation systems, and technical learning programs at Weights & Biases.
+Agent tooling, evaluation systems, and technical learning programs developed at Weights & Biases.
 
 ## identity-eyebrow
 Applied AI · New York · 2021—Now
@@ -13,7 +13,7 @@ Applied AI · New York · 2021—Now
 I build the systems that make AI agents useful after the demo.
 
 ## profile-summary
-At Weights & Biases, I focus on evaluation, observability, and tool interfaces—and turn what I learn into open source, courses, and practitioner programs.
+Evaluation, observability, and tool interfaces—shared through open source and courses.
 
 ## primary-cta
 See the work
@@ -22,34 +22,25 @@ See the work
 Lines of work
 
 ## selected-heading
-Four ways I put AI systems into the world.
+Choose a line, then a topic.
 
 ## impact-eyebrow
 Selected signals
 
 ## impact-heading
-Use, learning, and program reach.
+Three signals. One method.
 
 ## impact-summary
-Three separate measures. Each keeps its scope and limit.
+Independent measures; no shared scale.
 
 ## impact-source-cta
-How I count
+See the method
 
 ## proof-1-label
-Agents in use
-
-## proof-1-statement
-The MCP server moved beyond launch curiosity into real use.
+MCP tool calls
 
 ## proof-2-label
-Methods taught
-
-## proof-2-statement
-Three AI courses turned technical practice into shared curriculum.
+Course enrollments
 
 ## proof-3-label
-Programs with reach
-
-## proof-3-statement
-Tracked event programs supported downstream commercial interest.
+Supported event pipeline

@@ -27,20 +27,29 @@ templates, imports, variables, or executable content. WorkGroup files join
 through immutable stable-ID markers, never filenames or titles.
 
 Generation writes the ignored `.generated/site-copy.ts`. `COPY_VERSION` is a
-deterministic digest of every deck file, the field contract, and the parser and
-generator implementation. It is recorded in preview metadata, owner health,
-staging/production plans, and immutable release attestations. It changes
-presentation wording without changing canonical `CONTENT_VERSION`.
+deterministic digest of every deck file, the field contract, the parser and
+generator implementation, and the reviewed
+`content/presentation/home-signal-rails.v1.json` manifest. It is recorded in
+preview metadata, owner health, staging/production plans, and immutable release
+attestations. It changes presentation wording and protected Home navigation
+presentation without changing canonical `CONTENT_VERSION`.
+
+The Home manifest is also inventoried by the public content attestation. It
+owns the three signal metric IDs, compact limits, icon IDs, and the four
+bucket/topic rail mappings. Those values are owner-reviewed engineering data,
+not freelancer copy fields.
 
 ## Ownership and precedence
 
-The three sources have disjoint authority:
+The four sources have disjoint authority:
 
 1. **Canonical sanitized content** supplies facts and structure: IDs, routes,
    dates, relationships, metrics, evidence, and WorkGroup membership.
-2. **Published D1 state** supplies visibility, ordering, caveats, featured
+2. **Reviewed presentation manifests** supply narrow protected mappings such as
+   Home signal metrics/limits/icons and line/topic rails.
+3. **Published D1 state** supplies visibility, ordering, caveats, featured
    state, owner-approved metric wording, and publication state.
-3. **Git-owned copy deck** supplies only declared page and WorkGroup
+4. **Git-owned copy deck** supplies only declared page and WorkGroup
    presentation fields.
 
 For WorkGroup wording moved to Git, retained D1 title/summary values are listed

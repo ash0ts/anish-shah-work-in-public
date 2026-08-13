@@ -5,6 +5,9 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import test, { after, before } from "node:test";
 import { fileURLToPath } from "node:url";
+import publicBundle from "../content/public/anish-content.public.v1.json" with {
+  type: "json",
+};
 
 const PROJECT_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -140,7 +143,15 @@ function visibleText(html) {
     .trim();
 }
 
-test("homepage renders four lines of work and three qualified proof statements", async () => {
+function initiallyVisibleText(html) {
+  const markup = documentMarkup(html).replace(
+    /<details(?![^>]*\bopen\b)[^>]*>([\s\S]*?)<\/details>/gi,
+    (_details, body) => body.match(/<summary\b[\s\S]*?<\/summary>/i)?.[0] ?? "",
+  );
+  return visibleText(markup);
+}
+
+test("homepage renders four topic rails and one qualified signal circuit", async () => {
   const html = await renderHtml("/");
   const markup = documentMarkup(html);
   const text = visibleText(html);
@@ -169,7 +180,17 @@ test("homepage renders four lines of work and three qualified proof statements",
   assert.equal((markup.match(/data-work-line=/g) ?? []).length, 4);
   assert.equal(
     (markup.match(/<a\b[^>]*href="\/work\/[^"]+"/g) ?? []).length,
+    0,
+  );
+  assert.equal(
+    (markup.match(/<a\b[^>]*href="\/work\?bucket=[^"&]+#work-index"/g) ?? [])
+      .length,
     4,
+  );
+  assert(
+    (markup.match(
+      /<a\b[^>]*href="\/work\?bucket=[^"]+(?:&amp;|&)topic=[^"]+#work-index"/g,
+    ) ?? []).length <= 12,
   );
   for (const value of ["200K+", "7K+", "$4M+"]) {
     assert.match(
@@ -177,24 +198,39 @@ test("homepage renders four lines of work and three qualified proof statements",
       new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
     );
   }
-  assert.match(text, /Use, learning, and program reach\./i);
+  assert.match(text, /Three signals\. One method\./i);
   assert.match(
     text,
-    /Three separate measures\. Each keeps its scope and limit\./i,
+    /Independent measures; no shared scale\./i,
   );
-  assert.match(text, /How I count/i);
+  assert.match(text, /Method/i);
   assert.doesNotMatch(text, /What happened after the work shipped/i);
   assert.equal((markup.match(/data-impact-track=/g) ?? []).length, 3);
+  assert.equal((markup.match(/data-signal-circuit/g) ?? []).length, 1);
+  assert.equal(
+    (markup.match(/<details\b[^>]*name="home-signal"/g) ?? []).length,
+    3,
+  );
+  assert.match(text, /Direct project usage · not revenue/i);
+  assert.match(text, /Enrollments · not unique learners/i);
+  assert.match(text, /Supported pipeline · not revenue/i);
   assert.match(html, /Internal analytics/i);
   assert.match(html, /July 29 internal analytics checkpoint/i);
   assert.match(html, /Enrollments, not unique learners/i);
   assert.match(html, /not revenue, closed ARR, or personal attribution/i);
+  for (const checkpoint of ["2026-07-29", "2026-07-30", "2025-10-01"]) {
+    assert.match(html, new RegExp(`as of ${checkpoint}`, "i"));
+  }
+  assert.doesNotMatch(text, /Tool use followed the MCP server launch/i);
+  assert.doesNotMatch(text, /Three AI courses turned working methods/i);
+  assert.doesNotMatch(text, /Event programs supported downstream/i);
   assert.doesNotMatch(text, /More than two-thirds|About half/i);
   const main = markup.match(/<main\b[\s\S]*?<\/main>/i)?.[0] ?? "";
-  const mainWordCount = visibleText(main).match(/[\p{L}\p{N}$+]+/gu)?.length ?? 0;
+  const mainWordCount =
+    initiallyVisibleText(main).match(/[\p{L}\p{N}$+]+/gu)?.length ?? 0;
   assert(
-    mainWordCount <= 220,
-    `homepage main content exceeds 220 visible words (${mainWordCount})`,
+    mainWordCount <= 140,
+    `homepage main content exceeds 140 initially visible words (${mainWordCount})`,
   );
   assert.match(html, /property="og:image" content="[^"]*\/og\.jpg"/i);
   assert.match(html, /href="[^"]*\/favicon\.png"/i);
@@ -220,9 +256,9 @@ test("all public routes expose useful server-rendered content", async () => {
     {
       path: "/work",
       required: [
-        /What I(?:’|&#x27;|')ve built, taught, and tested\./i,
+        /Built, taught, tested\./i,
         /Choose a year and line\./i,
-        /One project stays one record—even when it became a talk, recording, or code release\./i,
+        /One project per record\. Talks, code, and recordings stay attached\./i,
         /Search the work/i,
         /name="bucket"/i,
         /name="topic"/i,
@@ -232,10 +268,8 @@ test("all public routes expose useful server-rendered content", async () => {
         /Technical education/i,
         /Research, writing &amp; implementations/i,
         /Talks, workshops &amp; programs/i,
-        /Organizations &amp; platforms/i,
-        /The work crosses companies, projects, and technical communities/i,
-        /href="#work-calendar"/i,
-        /href="#work-organizations"/i,
+        /Browse all(?:\s|<!--.*?-->)+organizations/i,
+        />Organizations</i,
         /href="\/work\?organization=google-cloud#work-index"/i,
       ],
     },
@@ -267,7 +301,7 @@ test("all public routes expose useful server-rendered content", async () => {
         /id="public-footprint"/i,
         /id="internal-analytics"/i,
         /13(?:\s|<!--.*?-->)*claims, each with its limit/i,
-        /I count one underlying project once/i,
+        /Count each project once/i,
         /id="bibliography"/i,
       ],
     },
@@ -287,6 +321,20 @@ test("all public routes expose useful server-rendered content", async () => {
   const workHtml = await renderHtml("/work");
   assert.doesNotMatch(workHtml, /name="organization"/i);
   assert.doesNotMatch(workHtml, /name="role"/i);
+  assert.doesNotMatch(
+    visibleText(workHtml),
+    /\b(?:I|me|my|mine|myself)\b/iu,
+    "the default Work overview must remain artifact-first",
+  );
+  const workDescription = workHtml.match(
+    /<meta\b(?=[^>]*\bname="description")(?=[^>]*\bcontent="([^"]*)")[^>]*>/i,
+  )?.[1];
+  assert(workDescription, "Work must expose a metadata description");
+  assert.doesNotMatch(
+    decodeHtml(workDescription),
+    /\b(?:I|me|my|mine|myself)\b/iu,
+    "Work metadata must remain artifact-first",
+  );
 });
 
 test("About publishes a bounded career profile without resume-level private detail", async () => {
@@ -312,7 +360,7 @@ test("Sources paginates the complete searchable bibliography 24 rows at a time",
     "198",
     "13",
     "Claims",
-    "How I count",
+    "Method",
     "Sources",
   ]) {
     assert.match(sourceText, new RegExp(value.replace("+", "\\+"), "i"));
@@ -530,17 +578,14 @@ test("Home and Work omit 3D, canvas, and chart-library payloads", async () => {
     const html = await renderHtml(pathname);
     const markup = documentMarkup(html);
     assert.doesNotMatch(markup, /<canvas\b/i);
-    assert.doesNotMatch(markup, /<svg\b/i);
     const assets = [
       ...html.matchAll(/<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"/gi),
     ].map((match) => match[1]);
     assert(assets.every((asset) => !/three/i.test(asset)));
-    if (pathname === "/work") {
-      assert(
-        assets.every((asset) => !/observablehq|WorkPlot|plot-/i.test(asset)),
-        "The work calendar must not load a separate charting runtime",
-      );
-    }
+    assert(
+      assets.every((asset) => !/observablehq|WorkPlot|plot-/i.test(asset)),
+      "Home and Work must not load a separate charting runtime",
+    );
   }
 });
 
@@ -601,6 +646,59 @@ test("public pages expose canonical, social, and structured metadata", async () 
   assert.doesNotMatch(about, /"@type":"Person"/);
   assert.match(work, /"@type":"CreativeWork"/);
   assert.match(work, /"@type":"BreadcrumbList"/);
+  const conciseWorkSummary =
+    "An MCP interface lets agents inspect W&amp;B experiments and traces. This page documents the role, public artifacts, and supporting sources.";
+  const workDescription = work.match(
+    /<meta\b(?=[^>]*\bname="description")(?=[^>]*\bcontent="([^"]+)")[^>]*>/i,
+  )?.[1];
+  assert.equal(workDescription, conciseWorkSummary);
+  assert.match(
+    work,
+    /"description":"An MCP interface lets agents inspect W&B experiments and traces\. This page documents the role, public artifacts, and supporting sources\."/,
+  );
+});
+
+test("every Work route keeps metadata and CreativeWork JSON-LD synchronized", { timeout: 120_000 }, async () => {
+  const workGroups = publicBundle.workGroups.filter(
+    (group) => group.publicationState === "public",
+  );
+
+  for (let index = 0; index < workGroups.length; index += 8) {
+    const groupBatch = workGroups.slice(index, index + 8);
+    const pages = await Promise.all(
+      groupBatch.map(async (group) => ({
+        group,
+        html: await renderHtml(`/work/${encodeURIComponent(group.slug)}`),
+      })),
+    );
+
+    for (const { group, html } of pages) {
+      const encodedDescription = html.match(
+        /<meta\b(?=[^>]*\bname="description")(?=[^>]*\bcontent="([^"]+)")[^>]*>/i,
+      )?.[1];
+      assert(encodedDescription, `${group.slug} is missing its description`);
+      const description = decodeHtml(encodedDescription);
+      assert(
+        description.length >= 80 && description.length <= 160,
+        `${group.slug} description is ${description.length} characters`,
+      );
+
+      const structuredDataSource = html.match(
+        /<script\b(?=[^>]*\btype="application\/ld\+json")[^>]*>([\s\S]*?)<\/script>/i,
+      )?.[1];
+      assert(structuredDataSource, `${group.slug} is missing structured data`);
+      const structuredData = JSON.parse(structuredDataSource);
+      const creativeWork = structuredData["@graph"]?.find(
+        (entry) => entry["@type"] === "CreativeWork",
+      );
+      assert(creativeWork, `${group.slug} is missing CreativeWork data`);
+      assert.equal(
+        creativeWork.description,
+        description,
+        `${group.slug} metadata and JSON-LD descriptions differ`,
+      );
+    }
+  }
 });
 
 test("filtered variants are noindexed and the custom 404 is accessible", async () => {

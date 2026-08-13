@@ -7,7 +7,7 @@ Improving AI evaluation workflows
 AI evaluation workflows
 
 ## summary
-I spoke at a meetup about improving AI evaluation workflows.
+A meetup talk examined how to improve AI evaluation workflows.
 
 ## role-summary
 Meetup speaker

@@ -35,6 +35,11 @@ export type ResolvedWorkOrganizationSection = {
   marks: ResolvedWorkOrganizationMark[];
 };
 
+export type ContextualWorkOrganizationMarks = {
+  marks: ResolvedWorkOrganizationMark[];
+  matchingMarkCount: number;
+};
+
 type WorkOrganizationManifest = {
   schemaVersion: "1.0";
   marks: WorkOrganizationMark[];
@@ -250,6 +255,54 @@ export function workOrganizationSectionsFrom(
     label,
     marks: marks.filter((mark) => mark.group === id),
   }));
+}
+
+/**
+ * Resolves the organization evidence that intersects the complete, unpaginated
+ * archive scope. The selected mark is retained even when it falls outside the
+ * highest-count results so the active filter never disappears from view.
+ */
+export function contextualWorkOrganizationMarksFrom(
+  bundle: AnishContentBundle,
+  records: ReadonlyArray<{ id: string }>,
+  selectedOrganizationId: string | null,
+  limit = 6,
+): ContextualWorkOrganizationMarks {
+  const recordIds = new Set(records.map(({ id }) => id));
+  const matching = workOrganizationMarksFrom(bundle)
+    .flatMap((mark): ResolvedWorkOrganizationMark[] => {
+      const workGroupIds = mark.workGroupIds.filter((id) => recordIds.has(id));
+      if (!workGroupIds.length) return [];
+      return [
+        {
+          ...mark,
+          secondaryGroups: [...mark.secondaryGroups],
+          sourceOrganizationIds: [...mark.sourceOrganizationIds],
+          workGroupIds,
+          projectCount: workGroupIds.length,
+        },
+      ];
+    })
+    .sort(
+      (left, right) =>
+        right.projectCount - left.projectCount ||
+        left.featuredOrder - right.featuredOrder,
+    );
+
+  const safeLimit = Math.max(1, Math.trunc(limit));
+  const marks = matching.slice(0, safeLimit);
+  const selected = selectedOrganizationId
+    ? matching.find(({ id }) => id === selectedOrganizationId)
+    : undefined;
+
+  if (selected && !marks.some(({ id }) => id === selected.id)) {
+    marks.splice(Math.max(0, marks.length - 1), 1, selected);
+  }
+
+  return {
+    marks,
+    matchingMarkCount: matching.length,
+  };
 }
 
 export function workOrganizationMarkIdsByGroupFrom(

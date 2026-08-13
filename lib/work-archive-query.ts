@@ -16,6 +16,7 @@ export type WorkArchiveQuery = {
   organization: string;
   role: string;
   practice: string;
+  organizations: string;
   page: number;
 };
 
@@ -31,6 +32,15 @@ export type WorkArchivePage<T> = {
   totalPages: number;
 };
 
+export type WorkArchiveHeadingContext = {
+  bucketTitle: string | null;
+  defaultHeading: string;
+  filteredHeading: string;
+  organizationName: string | null;
+  query: WorkArchiveQuery;
+  topicLabel: string | null;
+};
+
 type WorkArchiveQueryPatch = Partial<
   Record<
     | "q"
@@ -41,6 +51,7 @@ type WorkArchiveQueryPatch = Partial<
     | "organization"
     | "role"
     | "practice"
+    | "organizations"
     | "page",
     string | number | null
   >
@@ -55,6 +66,7 @@ const queryParameterOrder = [
   "organization",
   "role",
   "practice",
+  "organizations",
   "page",
 ] as const;
 
@@ -80,6 +92,7 @@ export function parseWorkArchiveQuery(
     role: first(params.role),
     // Retained only so old bookmarked practice URLs keep working.
     practice: first(params.practice),
+    organizations: first(params.organizations) === "all" ? "all" : "",
     page: Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1,
   };
 }
@@ -94,6 +107,7 @@ function queryEntries(query: WorkArchiveQuery) {
     organization: query.organization,
     role: query.role,
     practice: query.practice,
+    organizations: query.organizations,
     page: query.page === 1 ? "" : String(query.page),
   };
 }
@@ -117,6 +131,31 @@ export function workArchiveHref(
   }
   const suffix = parameters.toString();
   return suffix ? `/work?${suffix}` : "/work";
+}
+
+export function workResultHeading({
+  bucketTitle,
+  defaultHeading,
+  filteredHeading,
+  organizationName,
+  query,
+  topicLabel,
+}: WorkArchiveHeadingContext): string {
+  if (query.query) return `Results for “${query.query}”`;
+  if (organizationName) return `${organizationName} projects`;
+  if (bucketTitle && topicLabel) return `${topicLabel} · ${bucketTitle}`;
+  if (topicLabel) return `${topicLabel} projects`;
+  if (bucketTitle) return bucketTitle;
+  if (query.year) return `Projects from ${query.year}`;
+  const hasFilter = Boolean(
+    query.bucket ||
+      query.topic ||
+      query.format ||
+      query.organization ||
+      query.role ||
+      query.practice,
+  );
+  return hasFilter ? filteredHeading : defaultHeading;
 }
 
 export function legacyMapRedirectPath(

@@ -7,7 +7,7 @@ Persisting scikit-learn classifiers
 Persisting scikit-learn models
 
 ## summary
-I wrote a practical guide to saving and reloading scikit-learn classifiers.
+A classifier-persistence guide covered saving and reloading scikit-learn models.
 
 ## role-summary
 Guide author

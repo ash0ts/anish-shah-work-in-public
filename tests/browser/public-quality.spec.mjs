@@ -83,10 +83,46 @@ test("About and Work load only approved first-party brand artwork", async ({
     }
   }
 
+  await page.locator("#work-organizations > summary").click();
   const openAiFallback = page.getByRole("link", { name: /^OpenAI:/u });
   await expect(openAiFallback.getByText("OpenAI", { exact: true })).toBeVisible();
   await expect(openAiFallback.locator("img")).toHaveCount(0);
   expect(remoteImageRequests).toEqual([]);
+});
+
+test("the v2.2 public runtime keeps Simulation fully disabled", async ({
+  page,
+  request,
+}) => {
+  const response = await page.goto("/play", { waitUntil: "networkidle" });
+  expect(response?.status()).toBe(200);
+  await expect(
+    page.getByRole("link", { name: "REVEAL THE SIMULATION" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("There is another signal behind the room."),
+  ).toHaveCount(0);
+
+  expect((await request.get("/simulation")).status()).toBe(404);
+  expect((await request.get("/api/simulation/session")).status()).toBe(404);
+  expect(
+    (
+      await request.post("/api/simulation/turn", {
+        data: {},
+      })
+    ).status(),
+  ).toBe(404);
+
+  const loadedResources = await page.evaluate(() =>
+    performance
+      .getEntriesByType("resource")
+      .map((entry) => entry.name),
+  );
+  expect(
+    loadedResources.filter((url) =>
+      /RevealSimulation|SimulationCampaign|ActionArena|phaser/i.test(url),
+    ),
+  ).toEqual([]);
 });
 
 for (const width of widths) {
@@ -352,12 +388,17 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
   await expect(page.locator("details[data-work-body][open]")).toHaveCount(0);
   await expect(page.locator("li[data-work-id]")).toHaveCount(0);
   await expect(page.locator("#work-index")).toHaveCount(0);
+  const organizationLens = page.locator("#work-organizations");
+  await expect(organizationLens).not.toHaveAttribute("open", "");
   await expect(
-    page.getByRole("heading", {
-      name: "The work crosses companies, projects, and technical communities.",
-    }),
-  ).toBeVisible();
+    organizationLens.getByText("Browse all organizations"),
+  ).not.toBeVisible();
 
+  await organizationLens.locator(":scope > summary").click();
+  await expect(organizationLens).toHaveAttribute("open", "");
+  await expect(
+    organizationLens.getByText("Browse all organizations"),
+  ).toBeVisible();
   await page.getByRole("link", { name: /Google Cloud:/ }).click();
   await expect(page).toHaveURL(
     /\/work\?organization=google-cloud#work-index$/,
@@ -367,6 +408,16 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
   );
   await expect(page.locator("#work-index-title")).toBeFocused();
   await expect(page.locator("li[data-work-id]")).toHaveCount(7);
+  await expect(
+    page.getByRole("heading", { name: "Organizations in this view" }),
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-variant="context"]:visible'),
+  ).toHaveCount(4);
+  const clearOrganization = page.getByRole("link", {
+    name: "Remove Google Cloud organization filter",
+  });
+  await expect(clearOrganization).toHaveAttribute("href", "/work");
 
   await page.goto("/work", { waitUntil: "networkidle" });
   await expect(page.locator("#work-index")).toHaveCount(0);
@@ -385,6 +436,13 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
 
   await page.goto("/work?year=2024", { waitUntil: "networkidle" });
   await expect(page.locator("li[data-work-id]")).toHaveCount(24);
+  const contextualOrganizationHref = await page
+    .locator('[data-variant="context"]')
+    .first()
+    .getAttribute("href");
+  expect(contextualOrganizationHref).toContain("year=2024");
+  expect(contextualOrganizationHref).toContain("organization=");
+  await expect(page.locator('[data-variant="context"]')).toHaveCount(6);
   await page.getByRole("link", { name: "Page 2" }).click();
   await expect(page).toHaveURL(/\/work\?year=2024&page=2#work-index$/);
   await expect(page.locator("li[data-work-id]").first()).toBeVisible();
@@ -436,12 +494,19 @@ test("mobile Work keeps primary filter actions readable at 320px", async ({
   });
   expect(selectedVisibility).toBe(true);
 
+  const organizationLens = page.locator("#work-organizations");
+  await organizationLens.locator(":scope > summary").click();
+  await expect(organizationLens).toHaveAttribute("open", "");
+  await expect(
+    organizationLens.locator('[data-variant="directory"]:visible'),
+  ).toHaveCount(24);
+
   const overflow = await pageOverflow(page);
   expect(overflow.offenders).toEqual([]);
   expect(overflow.documentWidth).toBeLessThanOrEqual(321);
 });
 
-test("Work supporting material is mobile-collapsible and fragment-safe", async ({
+test("Work supporting material is collapsed by default and fragment-safe", async ({
   page,
 }) => {
   const route = "/work/architecting-and-orchestrating-ai-agents-series";
@@ -469,7 +534,8 @@ test("Work supporting material is mobile-collapsible and fragment-safe", async (
   const desktopAppearances = page.locator(
     "details[data-supporting-disclosure]:has(#appearances-title)",
   );
-  await expect(desktopAppearances.locator(":scope > ol")).toBeVisible();
+  await expect(desktopAppearances).not.toHaveAttribute("open", "");
+  await expect(desktopAppearances.locator(":scope > ol")).not.toBeVisible();
 });
 
 test("Spotify rank navigation and consent remain keyboard-first", async ({ page }) => {
@@ -768,6 +834,18 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
   await page.goto("/play", { waitUntil: "load" });
   await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
   await expect(page.locator("iframe")).toHaveCount(0);
+
+  await page.goto("/work", { waitUntil: "load" });
+  const organizations = page.locator("#work-organizations");
+  await expect(organizations).not.toHaveAttribute("open", "");
+  await organizations.locator(":scope > summary").click();
+  await expect(organizations).toHaveAttribute("open", "");
+  await expect(
+    organizations.locator('[data-variant="directory"]'),
+  ).toHaveCount(24);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(391);
   await context.close();
 });
 

@@ -7,7 +7,7 @@ Bay Area AI and Ray Summit meetup
 Bay Area AI and Ray Summit
 
 ## summary
-I was listed as a speaker at the Bay Area AI and Ray Summit meetup.
+A Bay Area AI and Ray Summit meetup with a listed speaking role.
 
 ## role-summary
 Listed meetup speaker

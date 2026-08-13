@@ -4,6 +4,7 @@ import { permanentRedirect } from "next/navigation";
 import { RoomOverview } from "@/components/play/room-platform/RoomOverview";
 import { roomObjectContract } from "@/components/play/room-platform/room-object-contract";
 import { travelAtlasEnabled } from "@/lib/server/travel";
+import { simulationExperienceVisible } from "@/lib/server/simulation/mode";
 import {
   activePreviewFixtureRuntime,
   previewFixtureScenario,
@@ -58,6 +59,7 @@ export default async function PlayPage({
   return (
     <RoomOverview
       fixture={fixture}
+      simulationEnabled={simulationExperienceVisible()}
       travelEnabled={travelAtlasEnabled()}
     />
   );

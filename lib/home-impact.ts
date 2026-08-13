@@ -4,48 +4,35 @@ import type {
   PublicImpactMetric,
 } from "@/types/content";
 import { SITE_COPY } from "@/lib/copy";
+import {
+  homePresentationManifest,
+  type HomeSignalIconId,
+} from "@/lib/home-presentation";
 
 export type HomepageImpactDatum = {
   metric: PublicImpactMetric;
-  shortLabel: string;
 };
 
 export type HomepageImpactTrack = {
   id: "deployed" | "taught" | "programs";
   theme: Extract<MetricTheme, "product" | "learning" | "programs">;
   label: string;
-  statement: string;
+  iconId: HomeSignalIconId;
+  compactLimit: string;
   periodLabel: string;
+  periodAsOf: string | null;
   qualifier: string;
   metrics: HomepageImpactDatum[];
 };
 
-const trackSpecs = [
-  {
-    id: "deployed",
-    theme: "product",
-    metricId: "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
-    label: SITE_COPY.home["proof-1-label"],
-    statement: SITE_COPY.home["proof-1-statement"],
-    shortLabel: "MCP tool calls",
-  },
-  {
-    id: "taught",
-    theme: "learning",
-    metricId: "metric:courses:enrollments:2026-07-30",
-    label: SITE_COPY.home["proof-2-label"],
-    statement: SITE_COPY.home["proof-2-statement"],
-    shortLabel: "course enrollments",
-  },
-  {
-    id: "programs",
-    theme: "programs",
-    metricId: "metric:events:pipeline-supported:2024-2025",
-    label: SITE_COPY.home["proof-3-label"],
-    statement: SITE_COPY.home["proof-3-statement"],
-    shortLabel: "supported event pipeline",
-  },
-] as const;
+const trackSpecs = homePresentationManifest.signals.map((signal) => ({
+  ...signal,
+  label: {
+    deployed: SITE_COPY.home["proof-1-label"],
+    taught: SITE_COPY.home["proof-2-label"],
+    programs: SITE_COPY.home["proof-3-label"],
+  }[signal.id],
+}));
 
 export const homepageImpactMetricIds = trackSpecs.map((spec) => spec.metricId);
 
@@ -81,10 +68,12 @@ export function homepageImpactTracksFrom(
       id: spec.id,
       theme: spec.theme,
       label: spec.label,
-      statement: spec.statement,
+      iconId: spec.iconId,
+      compactLimit: spec.compactLimit,
       periodLabel: metric.period.label,
+      periodAsOf: metric.period.asOf ?? null,
       qualifier,
-      metrics: [{ metric, shortLabel: spec.shortLabel }],
+      metrics: [{ metric }],
     };
   });
 }
