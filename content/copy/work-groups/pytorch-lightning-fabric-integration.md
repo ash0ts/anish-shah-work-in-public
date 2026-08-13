@@ -7,7 +7,7 @@ W&B logging and checkpoints for Lightning Fabric
 Lightning Fabric integration
 
 ## summary
-I contributed W&B logging and checkpoint support across three PyTorch Lightning pull requests.
+Three upstream changes added W&B logging and checkpoint support to Lightning Fabric.
 
 ## role-summary
 Upstream contributor across three pull requests

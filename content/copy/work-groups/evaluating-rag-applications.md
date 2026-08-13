@@ -7,7 +7,7 @@ Evaluating RAG applications
 RAG evaluation
 
 ## summary
-I hosted and co-facilitated a session on evaluating retrieval-augmented generation applications.
+A facilitated session broke RAG evaluation into practical system checks.
 
 ## role-summary
 Host and co-facilitator

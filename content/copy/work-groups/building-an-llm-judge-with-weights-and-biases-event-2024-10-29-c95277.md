@@ -7,7 +7,7 @@ Building an LLM judge with W&B
 Building an LLM judge
 
 ## summary
-I presented a session on building an LLM judge with W&B.
+A session demonstrated how to build an LLM judge with W&B.
 
 ## role-summary
 Session speaker

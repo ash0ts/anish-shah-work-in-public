@@ -367,7 +367,6 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
             <details
               className={styles.supportingDisclosure}
               data-supporting-disclosure
-              open
             >
               <summary>
                 <span className={styles.sectionLabel}>Sources</span>
@@ -412,7 +411,6 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           <details
             className={styles.supportingDisclosure}
             data-supporting-disclosure
-            open
           >
             <summary>
               <span className={styles.sectionLabel}>Nested public forms</span>
@@ -446,7 +444,6 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
           <details
             className={styles.supportingDisclosure}
             data-supporting-disclosure
-            open
           >
             <summary>
               <span className={styles.sectionLabel}>Related public context</span>

@@ -7,7 +7,7 @@ Graph learning with PyTorch Geometric
 PyTorch Geometric with W&B
 
 ## summary
-I wrote an introduction to graph learning with PyTorch Geometric and W&B.
+An introduction connected graph-learning workflows in PyTorch Geometric with W&B.
 
 ## role-summary
 Article author

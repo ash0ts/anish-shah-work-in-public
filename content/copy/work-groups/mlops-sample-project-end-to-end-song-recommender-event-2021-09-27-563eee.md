@@ -7,7 +7,7 @@ End-to-end MLOps song recommender
 MLOps song recommender
 
 ## summary
-I built and presented a capstone project that applied an end-to-end MLOps workflow to song recommendation.
+A capstone applied an end-to-end MLOps workflow to song recommendation.
 
 ## role-summary
 Project builder and capstone presenter

@@ -4,40 +4,40 @@
 What the numbers mean
 
 ## seo-description
-See how I count projects, qualify the claims, and connect each number to its source.
+Project counts, claim limits, and source links show what each number means and where it came from.
 
 ## intro-eyebrow
-Evidence and methods
+Evidence
 
 ## intro-title
 What the numbers mean.
 
 ## intro-fallback
-I keep the source, date, attribution, and limit beside every claim.
+Each claim keeps its source, date, attribution, and limit.
 
 ## rules-eyebrow
-How I count
+Method
 
 ## rules-title
-Three rules stay beside the record.
+Three rules.
 
 ## rule-1-title
-I count one underlying project once
+Count each project once
 
 ## rule-1-body
 Recordings, translations, mirrors, profiles, excerpts, and source pages do not inflate the total.
 
 ## rule-3-title
-I separate contribution from causality
+Separate contribution from causality
 
 ## rule-3-body
-My role, program reach, supported pipeline, and organization outcomes remain separate.
+Individual contribution, program reach, supported pipeline, and organization outcomes remain separate.
 
 ## rule-4-title
-I keep the limit beside the number
+Keep the limit beside the claim
 
 ## rule-4-body
-Every internally derived measure keeps its period, source, attribution, rounding, and caveat in the same row.
+Each derived measure keeps its period, source, attribution, rounding, and caveat.
 
 ## claims-eyebrow
 Claims

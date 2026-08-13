@@ -7,7 +7,7 @@ HEMM: holistic multimodal model evaluation
 HEMM multimodal evaluation
 
 ## summary
-I presented a virtual workshop on holistic evaluation of multimodal generative models.
+A virtual workshop examined holistic evaluation for multimodal generative models.
 
 ## role-summary
 Virtual workshop speaker

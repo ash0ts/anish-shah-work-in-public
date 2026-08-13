@@ -13,22 +13,13 @@ About · ML systems
 I build ML systems that turn traces, evaluations, and tools into clearer next actions.
 
 ## body
-I started by teaching programming and working in computer-vision research, then moved through analytics, data science, production ML, and recommendation systems at SAP. At Weights & Biases, I progressed from customer-facing ML support to MLOps growth and now full-stack agent systems.
+Teaching and computer-vision research led to analytics, production ML, and recommendation systems at SAP, then ML support, MLOps growth, and agent systems at Weights & Biases.
 
 ## current-focus
-Today, I build agent interfaces, evaluation and observability workflows, bounded tool execution, and human-review systems for ML practitioners. I also turn those lessons into open source, courses, talks, and programs.
+Current work centers on agent interfaces, evaluation, observability, bounded tool execution, and human review—shared through open source, courses, talks, and programs.
 
 ## career-heading
 How the work developed.
-
-## career-phase-1-summary
-I moved from customer-facing ML support into MLOps growth, then into agent systems and evaluation.
-
-## career-phase-2-summary
-I worked across analytics, computer vision, recommendation systems, and production ML.
-
-## career-phase-3-summary
-I taught programming and contributed to computer-vision research.
 
 ## work-cta
 See the work

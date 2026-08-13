@@ -19,8 +19,16 @@ const { workArchiveRecordsFrom } = await tsImport(
   "../lib/work-index.ts",
   import.meta.url,
 );
+const { applyCopyDeckToBundle } = await tsImport(
+  "../lib/copy.ts",
+  import.meta.url,
+);
 const { workBuckets } = await tsImport(
   "../lib/work-groups.ts",
+  import.meta.url,
+);
+const { workMetadataDescription } = await tsImport(
+  "../lib/seo.ts",
   import.meta.url,
 );
 const {
@@ -32,6 +40,9 @@ const {
 } = await tsImport("../lib/work-facets.ts", import.meta.url);
 
 const records = workArchiveRecordsFrom(publicBundle);
+const copyAppliedRecords = workArchiveRecordsFrom(
+  applyCopyDeckToBundle(publicBundle),
+);
 
 test("the archive indexes public WorkGroups while keeping context-only observations nested", () => {
   const publicItems = publicBundle.items.filter(
@@ -63,6 +74,59 @@ test("the archive indexes public WorkGroups while keeping context-only observati
       profile: 6,
     },
   );
+});
+
+test("archive rows expose the curated short title independently of the detail title", () => {
+  const groups = new Map(
+    applyCopyDeckToBundle(publicBundle).workGroups.map((group) => [
+      group.id,
+      group,
+    ]),
+  );
+
+  assert(
+    copyAppliedRecords.every(
+      (record) => record.shortTitle === groups.get(record.id)?.shortTitle,
+    ),
+  );
+
+  const fugue = copyAppliedRecords.find(
+    (record) => record.id === "group:standalone:wk-fp-0161",
+  );
+  assert(fugue);
+  assert.equal(fugue.title, "Fugue: governed experiments for AI agents");
+  assert.equal(fugue.shortTitle, "Fugue agent experiments");
+});
+
+test("Work metadata expands concise summaries and stays within the public SEO budget", () => {
+  const concise =
+    "An MCP interface lets agents inspect W&B experiments and traces.";
+  const expanded = workMetadataDescription("W&B MCP Server", concise);
+  assert.equal(
+    expanded,
+    `${concise} This page documents the role, public artifacts, and supporting sources.`,
+  );
+  assert(expanded.length >= 80 && expanded.length <= 160);
+
+  const placeholder = workMetadataDescription("Example", "Contributor.");
+  assert.match(placeholder, /^Explore Anish Shah’s work on Example,/u);
+  assert(placeholder.length >= 80 && placeholder.length <= 160);
+
+  const longSummary = "A".repeat(200);
+  const bounded = workMetadataDescription("Example", longSummary);
+  assert.equal(
+    bounded,
+    "Explore Anish Shah’s work on Example, including its documented role, public artifacts, and supporting sources.",
+  );
+  assert(bounded.length >= 80 && bounded.length <= 160);
+
+  for (const record of copyAppliedRecords) {
+    const description = workMetadataDescription(record.title, record.summary);
+    assert(
+      description.length >= 80 && description.length <= 160,
+      `${record.slug} metadata description is ${description.length} characters`,
+    );
+  }
 });
 
 test("related context is searchable when it has an explicit group relationship", () => {

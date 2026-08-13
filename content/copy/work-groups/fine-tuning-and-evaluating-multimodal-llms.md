@@ -7,7 +7,7 @@ Fine-tuning and evaluating multimodal LLMs
 Multimodal LLM evaluation
 
 ## summary
-I spoke about fine-tuning and evaluating multimodal LLMs.
+A session linked multimodal LLM fine-tuning with evaluation.
 
 ## role-summary
 Session speaker

@@ -7,7 +7,7 @@ Observing AI agents
 Agent observability
 
 ## summary
-I spoke at an AI Innovators meetup about agent observability.
+An AI Innovators meetup talk on agent observability.
 
 ## role-summary
 AI Innovators meetup speaker

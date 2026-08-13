@@ -7,7 +7,7 @@ W&B integrations for Diffusers
 Diffusers × W&B
 
 ## summary
-I contributed W&B integrations to Hugging Face Diffusers through two related changes.
+Two upstream changes added W&B experiment tracking to Hugging Face Diffusers.
 
 ## role-summary
 Upstream contributor across two pull requests

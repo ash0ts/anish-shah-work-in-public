@@ -7,7 +7,7 @@ Fine-tuning and evaluating agentic LLMs
 Agentic LLM workshops
 
 ## summary
-I co-taught a multi-session workshop on adapting and evaluating LLMs for agentic use cases.
+A multi-session workshop connected model adaptation with evaluation for agentic use cases.
 
 ## role-summary
 Speaker and co-instructor across the series

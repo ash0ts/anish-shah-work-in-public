@@ -7,7 +7,7 @@ Converting Hugging Face models for deployment
 Hugging Face model deployment
 
 ## summary
-I coauthored a comparison of methods for converting and optimizing Hugging Face models for deployment.
+A coauthored comparison tested methods for converting and optimizing Hugging Face models for deployment.
 
 ## role-summary
 Coauthor with Manan Goel

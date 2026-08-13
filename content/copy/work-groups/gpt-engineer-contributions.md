@@ -7,7 +7,7 @@ Two contributions to GPT Engineer
 GPT Engineer pull requests
 
 ## summary
-I contributed two related changes to GPT Engineer.
+Two upstream changes extended GPT Engineer.
 
 ## role-summary
 Upstream contributor across two pull requests

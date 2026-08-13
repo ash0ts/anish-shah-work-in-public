@@ -7,7 +7,7 @@ Evals and observability for production AI
 Production AI evaluation
 
 ## summary
-I led a workshop on applying evaluation and observability to production AI systems.
+A workshop applied evaluation and observability to production AI systems.
 
 ## role-summary
 Workshop instructor

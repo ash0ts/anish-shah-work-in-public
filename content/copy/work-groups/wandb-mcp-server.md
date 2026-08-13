@@ -7,7 +7,7 @@ W&B MCP Server: agent-native experiment access
 MCP for W&B
 
 ## summary
-I helped build an MCP interface that lets agents inspect W&B experiments and traces.
+An MCP interface lets agents inspect W&B experiments and traces.
 
 ## role-summary
 Server contributor and launch-article coauthor

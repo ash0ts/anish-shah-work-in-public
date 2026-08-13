@@ -7,7 +7,7 @@ Building RAG systems for production
 Production-ready RAG
 
 ## summary
-I presented a webinar on building RAG systems for production.
+A webinar traced RAG systems from prototype toward production.
 
 ## role-summary
 Webinar speaker

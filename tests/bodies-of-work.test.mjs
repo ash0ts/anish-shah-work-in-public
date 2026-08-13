@@ -122,7 +122,7 @@ test("Home is a semantic four-line index with one representative link per line",
   assert.match(bodySource, /bucket\.groups\[0\]/);
   assert.equal(
     copyDeck.pages.home["selected-heading"],
-    "Four ways I put AI systems into the world.",
+    "Four ways the work ships.",
   );
   assert.match(bodySource, /SITE_COPY\.home\["selected-heading"\]/u);
   assert.match(bodySource, /<strong>\{group\.homeTitle\}<\/strong>/);

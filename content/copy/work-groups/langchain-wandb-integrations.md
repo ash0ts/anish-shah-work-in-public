@@ -7,7 +7,7 @@ W&B integrations for LangChain
 LangChain × W&B
 
 ## summary
-I contributed two W&B integration changes to LangChain.
+Two upstream changes connected LangChain workflows with W&B.
 
 ## role-summary
 Upstream contributor across two pull requests

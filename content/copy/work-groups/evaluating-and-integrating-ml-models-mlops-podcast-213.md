@@ -7,7 +7,7 @@ Evaluating and integrating ML models
 MLOps Podcast #213
 
 ## summary
-I joined Morgan McGuire on MLOps Podcast #213 to discuss evaluating and integrating ML models.
+A podcast conversation examined how teams evaluate and integrate ML models.
 
 ## role-summary
 Podcast guest with Morgan McGuire

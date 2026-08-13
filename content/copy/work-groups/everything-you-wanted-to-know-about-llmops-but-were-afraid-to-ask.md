@@ -7,7 +7,7 @@ Practical questions about LLMOps
 LLMOps in practice
 
 ## summary
-I joined an interview about the practical demands of operating LLM applications.
+An interview unpacked the practical demands of operating LLM applications.
 
 ## role-summary
 Interview guest

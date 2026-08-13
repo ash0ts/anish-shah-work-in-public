@@ -7,7 +7,7 @@ LangChain database interactions on Snowpark
 LangChain on Snowpark
 
 ## summary
-I wrote a guide to combining LangChain and W&B for database interactions on Snowpark.
+A guide connected LangChain and W&B to database workflows on Snowpark.
 
 ## role-summary
 Article author

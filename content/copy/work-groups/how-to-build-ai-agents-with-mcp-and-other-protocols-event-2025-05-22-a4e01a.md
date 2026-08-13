@@ -7,7 +7,7 @@ Building AI agents with MCP and protocols
 Agents with MCP and protocols
 
 ## summary
-I presented a webinar on building AI agents with MCP and adjacent protocols.
+A webinar mapped MCP and adjacent protocols onto agent-system design.
 
 ## role-summary
 Webinar speaker

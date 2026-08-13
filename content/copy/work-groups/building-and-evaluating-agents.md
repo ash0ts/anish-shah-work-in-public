@@ -7,7 +7,7 @@ Building agents with evaluation in the loop
 Building and evaluating agents
 
 ## summary
-I presented how to build agent systems with evaluation integrated into development.
+A conference session put evaluation inside the agent-development loop.
 
 ## role-summary
 Conference speaker

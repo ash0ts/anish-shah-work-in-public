@@ -7,7 +7,7 @@ Introducing LLMs into business workflows
 LLMs in business workflows
 
 ## summary
-I presented a step-by-step approach to introducing LLMs into business workflows.
+A session laid out a stepwise path for adding LLMs to business workflows.
 
 ## role-summary
 Session speaker

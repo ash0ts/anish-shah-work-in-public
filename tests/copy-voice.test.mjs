@@ -9,10 +9,14 @@ import {
   effectiveCopyRisk,
 } from "../lib/copy-voice-contract.ts";
 import { COPY_PAGE_DEFINITIONS } from "../lib/copy-contract.ts";
-import { parseCopyDocument } from "../scripts/lib/copy-deck.mjs";
+import {
+  buildCopyDeck,
+  parseCopyDocument,
+} from "../scripts/lib/copy-deck.mjs";
 import {
   assertCopyVoice,
   auditCopyVoice,
+  copyVoiceEntries,
   countCopyWords,
 } from "../scripts/lib/copy-voice.mjs";
 
@@ -40,6 +44,8 @@ function rules(report, severity = "errors") {
 test("voice profiles apply deterministic field budgets", () => {
   assert.equal(copyVoicePolicyForField("home", "primary-cta").maxWords, 6);
   assert.equal(copyVoicePolicyForField("work-group", "summary").minWords, 6);
+  assert.equal(copyVoicePolicyForField("work-group", "summary").maxWords, 20);
+  assert.equal(copyVoicePolicyForField("play", "watch-description").maxWords, 10);
   assert.equal(copyVoicePolicyForField("play", "watch-title").voiceProfile, "play-object-title");
   assert.equal(countCopyWords("Evaluation, observability, and tool interfaces."), 5);
 
@@ -54,7 +60,7 @@ test("voice profiles apply deterministic field budgets", () => {
   assert.throws(() => assertCopyVoice(report), /field-budget/u);
 });
 
-test("meaningless WorkGroup summaries fail while outcome-mechanism copy passes", () => {
+test("WorkGroup summaries must be meaningful and artifact-first", () => {
   for (const value of [
     "Author.",
     "2:00 PM workshop",
@@ -75,7 +81,7 @@ test("meaningless WorkGroup summaries fail while outcome-mechanism copy passes",
     );
   }
 
-  const useful = auditCopyVoice([
+  const firstPerson = auditCopyVoice([
     entry({
       key: "group:test.summary",
       surface: "work-group",
@@ -83,7 +89,102 @@ test("meaningless WorkGroup summaries fail while outcome-mechanism copy passes",
       value: "I connected evaluation traces to the agent workflow so failures stayed inspectable.",
     }),
   ]);
+  assert(rules(firstPerson).includes("artifact-first-summary"));
+
+  const useful = auditCopyVoice([
+    entry({
+      key: "group:test.summary",
+      surface: "work-group",
+      field: "summary",
+      value: "Evaluation traces keep failures inspectable inside the agent workflow.",
+    }),
+  ]);
   assert.equal(useful.errors.length, 0);
+});
+
+test("the complete deck obeys public first-person and density budgets", async () => {
+  const deck = await buildCopyDeck(root);
+  const entries = copyVoiceEntries(deck);
+  const report = auditCopyVoice(entries);
+  assert.deepEqual(report.errors, []);
+
+  const summaries = Object.values(deck.workGroups).map((group) => group.summary);
+  assert.equal(summaries.length, 82);
+  assert(
+    summaries.every(
+      (summary) =>
+        !/^(?:I|My)\b/u.test(summary) &&
+        countCopyWords(summary) >= 6 &&
+        countCopyWords(summary) <= 20,
+    ),
+  );
+  for (const object of Object.keys(PLAY_OBJECT_LANGUAGE)) {
+    const description = deck.pages.play[`${object}-description`];
+    assert(countCopyWords(description) <= 10, `${object}: ${description}`);
+    assert.doesNotMatch(description, /\b(?:I|me|my|mine|myself)\b/iu);
+  }
+  assert.doesNotMatch(
+    deck.pages.work["seo-description"],
+    /\b(?:I|me|my|mine|myself)\b/iu,
+  );
+
+  const metricBundle = JSON.parse(
+    await readFile(
+      path.join(root, "content/public/anish-content.public.v1.json"),
+      "utf8",
+    ),
+  );
+  const proofMetrics = [
+    "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+    "metric:courses:enrollments:2026-07-30",
+    "metric:events:pipeline-supported:2024-2025",
+  ];
+  proofMetrics.forEach((metricId, offset) => {
+    const metric = metricBundle.metrics.find((candidate) => candidate.id === metricId);
+    assert(metric, metricId);
+    const copy = [
+      deck.pages.home[`proof-${offset + 1}-label`],
+      deck.pages.home[`proof-${offset + 1}-statement`],
+      metric.qualifier,
+    ].join(" ");
+    assert(
+      countCopyWords(copy) <= 24,
+      `${metricId} uses ${countCopyWords(copy)} prose words beyond its value`,
+    );
+  });
+});
+
+test("surface budgets reject first-person drift and dense page copy", () => {
+  const firstPerson = auditCopyVoice([
+    entry({ key: "work.masthead-title", surface: "work", field: "masthead-title", value: "I built this." }),
+  ]);
+  assert(rules(firstPerson).includes("first-person-budget"));
+
+  const metadataFirstPerson = auditCopyVoice([
+    entry({
+      key: "work.seo-description",
+      surface: "work",
+      field: "seo-description",
+      value: "Browse my agent systems and evaluation projects.",
+    }),
+  ]);
+  assert(rules(metadataFirstPerson).includes("first-person-budget"));
+
+  const denseAbout = auditCopyVoice([
+    entry({
+      key: "about.body",
+      surface: "about",
+      field: "body",
+      value: Array.from({ length: 40 }, () => "systems").join(" "),
+    }),
+    entry({
+      key: "about.current-focus",
+      surface: "about",
+      field: "current-focus",
+      value: Array.from({ length: 20 }, () => "evaluation").join(" "),
+    }),
+  ]);
+  assert(rules(denseAbout).includes("surface-word-budget"));
 });
 
 test("WorkGroup role summaries reject first-person sentence openings", () => {

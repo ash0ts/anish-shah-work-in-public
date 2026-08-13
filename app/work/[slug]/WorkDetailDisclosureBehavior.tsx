@@ -4,13 +4,6 @@ import { useLayoutEffect } from "react";
 
 export function WorkDetailDisclosureBehavior() {
   useLayoutEffect(() => {
-    const mobile = window.matchMedia("(max-width: 760px)");
-    const disclosures = Array.from(
-      document.querySelectorAll<HTMLDetailsElement>(
-        "details[data-supporting-disclosure]",
-      ),
-    );
-
     const revealFragment = () => {
       let fragment = window.location.hash.slice(1);
       if (!fragment) return;
@@ -30,19 +23,10 @@ export function WorkDetailDisclosureBehavior() {
       });
     };
 
-    const syncDisclosureMode = () => {
-      for (const disclosure of disclosures) {
-        disclosure.open = !mobile.matches;
-      }
-      revealFragment();
-    };
-
-    syncDisclosureMode();
+    revealFragment();
     window.addEventListener("hashchange", revealFragment);
-    mobile.addEventListener("change", syncDisclosureMode);
     return () => {
       window.removeEventListener("hashchange", revealFragment);
-      mobile.removeEventListener("change", syncDisclosureMode);
     };
   }, []);
 

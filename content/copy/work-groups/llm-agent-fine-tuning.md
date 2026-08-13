@@ -7,7 +7,7 @@ Fine-tuning LLM agents
 LLM agent fine-tuning
 
 ## summary
-I presented a session on fine-tuning LLM agents for task automation, first publicly and later at NVIDIA GTC.
+Two talks connected LLM-agent fine-tuning with task automation.
 
 ## role-summary
 Speaker across both deliveries

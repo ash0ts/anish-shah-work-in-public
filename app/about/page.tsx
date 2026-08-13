@@ -121,7 +121,6 @@ export default async function AboutPage() {
               <div className={styles.phaseCopy}>
                 <h3>{phase.organization}</h3>
                 <p className={styles.track}>{phase.track}</p>
-                <p className={styles.phaseSummary}>{phase.summary}</p>
               </div>
             </li>
           ))}

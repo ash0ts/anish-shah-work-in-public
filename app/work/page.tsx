@@ -3,7 +3,9 @@ import Link from "next/link";
 import { permanentRedirect } from "next/navigation";
 import { FilteredResultFocus } from "@/components/FilteredResultFocus";
 import {
-  WorkOrganizations,
+  WorkOrganizationContext,
+  WorkOrganizationLens,
+  type WorkOrganizationMarkView,
   type WorkOrganizationSectionView,
 } from "@/components/WorkOrganizations";
 import {
@@ -23,7 +25,11 @@ import {
 } from "@/lib/work-facets";
 import { workBuckets } from "@/lib/work-groups";
 import { workArchiveRecordsFrom, type WorkArchiveRecord } from "@/lib/work-index";
-import { workOrganizationSectionsFrom } from "@/lib/work-organizations";
+import {
+  contextualWorkOrganizationMarksFrom,
+  workOrganizationSectionsFrom,
+  type ResolvedWorkOrganizationMark,
+} from "@/lib/work-organizations";
 import { getPublicContentView } from "@/lib/server/public-content";
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
 import { WorkBodyBehavior } from "./WorkBodyBehavior";
@@ -82,22 +88,27 @@ export default async function WorkPage({
           : section.id === "contributed-to"
             ? SITE_COPY.work["organizations-contributed-to"]
             : SITE_COPY.work["organizations-presented-with"],
-      marks: section.marks.map((mark) => ({
-        id: mark.id,
-        name: mark.name,
-        relationship: mark.group,
-        secondaryRelationships: mark.secondaryGroups,
-        projectCount: mark.projectCount,
-        logo: mark.logo
-          ? {
-              src: mark.logo.assetPath,
-              width: mark.logo.width,
-              height: mark.logo.height,
-            }
-          : null,
-      })),
+      marks: section.marks.map(organizationMarkView),
     }));
+  const relationshipLabels = Object.fromEntries(
+    organizationSections.map(({ id, label }) => [id, label]),
+  ) as Record<
+    WorkOrganizationSectionView["id"],
+    string
+  >;
+  const allOrganizationCount = organizationSections.reduce(
+    (count, section) => count + section.marks.length,
+    0,
+  );
   const filtered = filterWorkArchiveRecords(allWorks, query);
+  const contextualOrganizations = contextualWorkOrganizationMarksFrom(
+    bundle,
+    filtered,
+    query.organization || null,
+  );
+  const contextualOrganizationMarks = contextualOrganizations.marks.map(
+    organizationMarkView,
+  );
   const page = paginateWorkArchiveRecords(filtered, query.page);
   const timelineRecords = filterWorkArchiveRecords(allWorks, {
     ...query,
@@ -125,6 +136,15 @@ export default async function WorkPage({
   const secondaryFilterCount = query.format ? 1 : 0;
   const hasScopedResults = Boolean(
     query.query || activeFilterCount || query.practice,
+  );
+  const hasScopeWithoutOrganization = Boolean(
+    query.query ||
+      query.bucket ||
+      query.topic ||
+      query.year ||
+      query.format ||
+      query.role ||
+      query.practice,
   );
   if (query.page > 1 && !hasScopedResults) {
     permanentRedirect("/work");
@@ -154,6 +174,26 @@ export default async function WorkPage({
           : activeFilterCount
             ? SITE_COPY.work["index-filtered-heading"]
             : SITE_COPY.work["index-default-heading"];
+  const organizationHref = (organizationId: string) =>
+    `${workArchiveHref(query, {
+      organization: organizationId,
+      organizations: null,
+      page: null,
+    })}#work-index`;
+  const browseOrganizationsHref = `${workArchiveHref(query, {
+    organizations: "all",
+    page: null,
+  })}#work-organizations`;
+  const clearOrganizationPath = workArchiveHref(query, {
+    organization: null,
+    organizations: null,
+    page: null,
+  });
+  const clearOrganizationHref = query.organization
+    ? hasScopeWithoutOrganization
+      ? `${clearOrganizationPath}#work-index`
+      : clearOrganizationPath
+    : null;
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
@@ -166,14 +206,6 @@ export default async function WorkPage({
           <p>{SITE_COPY.work["masthead-summary"]}</p>
         </div>
       </header>
-
-      <nav aria-label="Work sections" className={styles.sectionNav}>
-        <a href="#work-calendar">{SITE_COPY.work["section-nav-calendar"]}</a>
-        <span aria-hidden="true">·</span>
-        <a href="#work-organizations">
-          {SITE_COPY.work["section-nav-organizations"]}
-        </a>
-      </nav>
 
       <section className={styles.tools} aria-labelledby="work-search-title">
         <div className={styles.filterToolbar}>
@@ -267,20 +299,31 @@ export default async function WorkPage({
 
       <WorkTimeline query={query} records={timelineRecords} />
 
-      <WorkOrganizations
-        eyebrow={SITE_COPY.work["organizations-eyebrow"]}
+      <WorkOrganizationLens
+        open={query.organizations === "all"}
+        organizationHref={organizationHref}
         sections={organizationSections}
         selectedOrganizationId={query.organization || null}
-        summary={SITE_COPY.work["organizations-summary"]}
-        title={SITE_COPY.work["organizations-title"]}
       />
 
       {hasScopedResults ? (
-        <section
-          aria-labelledby="work-index-title"
-          className={styles.index}
-          id="work-index"
-        >
+        <>
+          <WorkOrganizationContext
+            allOrganizationCount={allOrganizationCount}
+            browseAllHref={browseOrganizationsHref}
+            clearOrganizationHref={clearOrganizationHref}
+            marks={contextualOrganizationMarks}
+            matchingMarkCount={contextualOrganizations.matchingMarkCount}
+            organizationHref={organizationHref}
+            relationshipLabels={relationshipLabels}
+            selectedOrganizationId={query.organization || null}
+            selectedOrganizationName={selectedOrganizationName}
+          />
+          <section
+            aria-labelledby="work-index-title"
+            className={styles.index}
+            id="work-index"
+          >
           <header className={styles.indexHeader}>
             <p
               aria-atomic="true"
@@ -348,10 +391,30 @@ export default async function WorkPage({
           {page.totalPages > 1 ? (
             <WorkPagination page={page.currentPage} query={query} totalPages={page.totalPages} />
           ) : null}
-        </section>
+          </section>
+        </>
       ) : null}
     </main>
   );
+}
+
+function organizationMarkView(
+  mark: ResolvedWorkOrganizationMark,
+): WorkOrganizationMarkView {
+  return {
+    id: mark.id,
+    name: mark.name,
+    relationship: mark.group,
+    secondaryRelationships: mark.secondaryGroups,
+    projectCount: mark.projectCount,
+    logo: mark.logo
+      ? {
+          src: mark.logo.assetPath,
+          width: mark.logo.width,
+          height: mark.logo.height,
+        }
+      : null,
+  };
 }
 
 function WorkPagination({
@@ -449,7 +512,7 @@ function WorkRow({
       >
         <span className={styles.year}>{periodLabel(work)}</span>
         <span className={styles.workTitle}>
-          <strong>{work.title}</strong>
+          <strong>{work.shortTitle}</strong>
           {support ? <small>{support}</small> : null}
         </span>
         <i aria-hidden="true">↗</i>

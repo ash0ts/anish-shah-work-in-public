@@ -9,6 +9,7 @@ import manifest from "../content/presentation/work-organizations.v1.json" with {
 };
 
 const {
+  contextualWorkOrganizationMarksFrom,
   parseWorkOrganizationManifest,
   validateWorkOrganizationManifest,
   workOrganizationLabelForId,
@@ -161,6 +162,67 @@ test("hidden WorkGroups disappear from mark counts and archive records", () => {
   assert.equal(google.projectCount, 6);
   assert(!google.workGroupIds.includes(hiddenId));
   assert(!workArchiveRecordsFrom(hiddenBundle).some(({ id }) => id === hiddenId));
+});
+
+test("contextual marks use the complete filtered scope and retain a selected mark", () => {
+  const records = workArchiveRecordsFrom(publicBundle);
+  const allMarks = workOrganizationMarksFrom(publicBundle);
+  const selected = allMarks.at(-1);
+  assert(selected);
+
+  const context = contextualWorkOrganizationMarksFrom(
+    publicBundle,
+    records,
+    selected.id,
+  );
+  assert.equal(context.matchingMarkCount, 24);
+  assert.equal(context.marks.length, 6);
+  assert(context.marks.some(({ id }) => id === selected.id));
+  assert(
+    context.marks.every(({ projectCount, workGroupIds }) =>
+      projectCount === workGroupIds.length,
+    ),
+  );
+
+  const yearScope = filterWorkArchiveRecords(
+    records,
+    parseWorkArchiveQuery({ year: "2024" }),
+  );
+  const yearIds = new Set(yearScope.map(({ id }) => id));
+  const yearContext = contextualWorkOrganizationMarksFrom(
+    publicBundle,
+    yearScope,
+    null,
+  );
+  assert(yearContext.marks.length <= 6);
+  assert(
+    yearContext.marks.every(({ workGroupIds }) =>
+      workGroupIds.every((id) => yearIds.has(id)),
+    ),
+  );
+  assert.deepEqual(
+    yearContext.marks.map(({ projectCount }) => projectCount),
+    yearContext.marks
+      .map(({ projectCount }) => projectCount)
+      .toSorted((left, right) => right - left),
+  );
+
+  const selectedScope = filterWorkArchiveRecords(
+    records,
+    parseWorkArchiveQuery({ organization: selected.id }),
+  );
+  const selectedScopeIds = new Set(selectedScope.map(({ id }) => id));
+  const selectedContext = contextualWorkOrganizationMarksFrom(
+    publicBundle,
+    selectedScope,
+    selected.id,
+  );
+  assert(selectedContext.marks.some(({ id }) => id === selected.id));
+  assert(
+    selectedContext.marks.every(({ workGroupIds }) =>
+      workGroupIds.every((id) => selectedScopeIds.has(id)),
+    ),
+  );
 });
 
 test("curated organization IDs produce reviewed human-readable labels", () => {

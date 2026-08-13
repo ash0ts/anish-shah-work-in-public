@@ -16,6 +16,7 @@ export type WorkArchiveQuery = {
   organization: string;
   role: string;
   practice: string;
+  organizations: string;
   page: number;
 };
 
@@ -41,6 +42,7 @@ type WorkArchiveQueryPatch = Partial<
     | "organization"
     | "role"
     | "practice"
+    | "organizations"
     | "page",
     string | number | null
   >
@@ -55,6 +57,7 @@ const queryParameterOrder = [
   "organization",
   "role",
   "practice",
+  "organizations",
   "page",
 ] as const;
 
@@ -80,6 +83,7 @@ export function parseWorkArchiveQuery(
     role: first(params.role),
     // Retained only so old bookmarked practice URLs keep working.
     practice: first(params.practice),
+    organizations: first(params.organizations) === "all" ? "all" : "",
     page: Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1,
   };
 }
@@ -94,6 +98,7 @@ function queryEntries(query: WorkArchiveQuery) {
     organization: query.organization,
     role: query.role,
     practice: query.practice,
+    organizations: query.organizations,
     page: query.page === 1 ? "" : String(query.page),
   };
 }

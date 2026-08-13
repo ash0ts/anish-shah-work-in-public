@@ -26,16 +26,15 @@ export function ImpactEvidence({ tracks }: { tracks: HomepageImpactTrack[] }) {
           if (!datum) return null;
           return (
             <li data-impact-track={track.id} data-proof-row key={track.id}>
-              <span>{track.label}</span>
               <Link href={`/sources#${datum.metric.id}`} prefetch={false}>
                 <strong>{datum.metric.displayValue}</strong>
-                <small>{datum.shortLabel}</small>
+                <span>{track.label}</span>
               </Link>
               <div>
                 <h3>{track.statement}</h3>
-                <p>{track.qualifier}</p>
                 <small>
-                  {track.periodLabel} · {humanize(datum.metric.scope)} ·{" "}
+                  {track.qualifier} · {track.periodLabel} ·{" "}
+                  {humanize(datum.metric.scope)} ·{" "}
                   {humanize(datum.metric.attribution)} · {datum.metric.sourceLabel}
                 </small>
               </div>

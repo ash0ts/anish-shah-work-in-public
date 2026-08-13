@@ -7,7 +7,6 @@ import { SITE_COPY } from "@/lib/copy";
 
 export type HomepageImpactDatum = {
   metric: PublicImpactMetric;
-  shortLabel: string;
 };
 
 export type HomepageImpactTrack = {
@@ -27,7 +26,6 @@ const trackSpecs = [
     metricId: "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
     label: SITE_COPY.home["proof-1-label"],
     statement: SITE_COPY.home["proof-1-statement"],
-    shortLabel: "MCP tool calls",
   },
   {
     id: "taught",
@@ -35,7 +33,6 @@ const trackSpecs = [
     metricId: "metric:courses:enrollments:2026-07-30",
     label: SITE_COPY.home["proof-2-label"],
     statement: SITE_COPY.home["proof-2-statement"],
-    shortLabel: "course enrollments",
   },
   {
     id: "programs",
@@ -43,7 +40,6 @@ const trackSpecs = [
     metricId: "metric:events:pipeline-supported:2024-2025",
     label: SITE_COPY.home["proof-3-label"],
     statement: SITE_COPY.home["proof-3-statement"],
-    shortLabel: "supported event pipeline",
   },
 ] as const;
 
@@ -84,7 +80,7 @@ export function homepageImpactTracksFrom(
       statement: spec.statement,
       periodLabel: metric.period.label,
       qualifier,
-      metrics: [{ metric, shortLabel: spec.shortLabel }],
+      metrics: [{ metric }],
     };
   });
 }

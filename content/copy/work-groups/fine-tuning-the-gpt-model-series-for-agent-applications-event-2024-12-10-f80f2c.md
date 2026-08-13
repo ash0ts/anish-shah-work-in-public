@@ -7,7 +7,7 @@ Fine-tuning GPT models for agent applications
 GPT fine-tuning for agents
 
 ## summary
-I co-presented how to fine-tune GPT models for agent applications.
+A joint session covered fine-tuning GPT models for agent applications.
 
 ## role-summary
 Co-presenter with Gerard Woods

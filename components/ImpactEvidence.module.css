@@ -55,7 +55,7 @@
   --proof-accent: var(--work-blue);
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(8rem, 0.32fr) minmax(9rem, 0.4fr) minmax(0, 1.28fr);
+  grid-template-columns: minmax(9rem, 0.48fr) minmax(0, 1.52fr);
   gap: clamp(1rem, 3vw, 3.5rem);
   align-items: center;
   padding: clamp(1rem, 1.5vw, 1.35rem) 0;
@@ -63,15 +63,6 @@
 }
 .proofs li[data-impact-track="taught"] { --proof-accent: #7a4c00; }
 .proofs li[data-impact-track="programs"] { --proof-accent: #08715e; }
-
-.proofs li > span {
-  color: var(--proof-accent);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.055em;
-  line-height: 1.4;
-  text-transform: uppercase;
-}
 
 .proofs a {
   display: grid;
@@ -89,7 +80,14 @@
   line-height: 0.9;
   overflow-wrap: anywhere;
 }
-.proofs a small { color: var(--ink-muted); font-size: 0.78rem; }
+.proofs a span {
+  color: var(--proof-accent);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.055em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
 .proofs a:hover strong,
 .proofs a:focus-visible strong { color: var(--proof-accent); }
 
@@ -99,18 +97,13 @@
   font-size: clamp(0.95rem, 1.3vw, 1.15rem);
   line-height: 1.25;
 }
-.proofs li > div > p {
-  max-width: 50rem;
-  margin: 0.35rem 0;
-  color: var(--ink-muted);
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
 .proofs li > div > small {
+  display: block;
+  max-width: 50rem;
+  margin-top: 0.35rem;
   color: var(--ink-muted);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   letter-spacing: 0.045em;
   line-height: 1.4;
   text-transform: uppercase;
@@ -120,13 +113,11 @@
   .heading { grid-template-columns: 1fr; }
   .heading { gap: 1rem; }
   .proofs li {
-    grid-template-columns: minmax(7rem, 0.4fr) minmax(0, 1fr);
+    grid-template-columns: minmax(8.5rem, 0.42fr) minmax(0, 1fr);
     gap: 0.65rem 1rem;
   }
-  .proofs li > div { grid-column: 1 / -1; }
 }
 
 @media (max-width: 440px) {
   .proofs li { grid-template-columns: 1fr; }
-  .proofs li > div { grid-column: auto; }
 }

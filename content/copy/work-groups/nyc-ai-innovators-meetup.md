@@ -7,7 +7,7 @@ NYC AI Innovators meetup
 NYC AI Innovators
 
 ## summary
-I spoke at and helped host the NYC AI Innovators meetup.
+A NYC AI Innovators meetup with a documented speaker and host role.
 
 ## role-summary
 Speaker; helped host the meetup

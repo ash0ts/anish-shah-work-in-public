@@ -202,13 +202,6 @@
   line-height: 1.5;
 }
 
-.phaseSummary {
-  max-width: 48rem;
-  margin: 0.8rem 0 0;
-  color: var(--ink-muted);
-  line-height: 1.58;
-}
-
 @media (max-width: 860px) {
   .introduction {
     grid-template-columns: 1fr;

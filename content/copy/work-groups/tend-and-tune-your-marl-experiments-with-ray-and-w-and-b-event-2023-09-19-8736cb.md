@@ -7,7 +7,7 @@ Tracking MARL experiments with Ray and W&B
 MARL experiments with Ray
 
 ## summary
-I presented a conference session on managing multi-agent reinforcement-learning experiments with Ray and W&B.
+A conference session managed multi-agent reinforcement-learning experiments with Ray and W&B.
 
 ## role-summary
 Conference speaker

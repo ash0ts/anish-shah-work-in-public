@@ -7,7 +7,7 @@ When a plausible tab is wrong
 Toraneko evidence analysis
 
 ## summary
-I examined why a plausible browser tab can still fail an evidence-level check.
+An evidence-level analysis showed why a plausible browser tab can still be wrong.
 
 ## role-summary
 Analysis author

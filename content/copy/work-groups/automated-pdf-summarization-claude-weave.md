@@ -7,7 +7,7 @@ Automated paper summarization with Claude and Weave
 PDF summarization with Claude
 
 ## summary
-I wrote and implemented a workflow for summarizing arXiv papers with Claude 3.5 Sonnet and W&B Weave.
+An implemented workflow summarized arXiv papers with Claude 3.5 Sonnet and W&B Weave.
 
 ## role-summary
 Article author and cookbook contributor

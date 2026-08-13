@@ -34,10 +34,10 @@ Opening the room
 Room view
 
 ## room-return-title
-Opening the room.
+Rebuilding the room.
 
 ## room-return-summary
-The objects are coming into view…
+Placing the objects…
 
 ## room-fallback-body
 Use the object directory below.
@@ -58,7 +58,7 @@ Overview
 Browse all
 
 ## loading-collection
-Opening this corner…
+Loading the collection…
 
 ## collection-unavailable
 This collection is not available yet.
@@ -127,7 +127,7 @@ My game library
 TV
 
 ## watch-description
-Anime I return to, what I’m watching, and the full shelf.
+Returning anime, current watches, and the full shelf.
 
 ## watch-screen-eyebrow
 Channel 11
@@ -151,7 +151,7 @@ Bedside Shelf
 Music player
 
 ## listen-description
-The tracks Spotify puts closest to the surface for me.
+Spotify’s returned top tracks, kept in their original order.
 
 ## listen-screen-eyebrow
 Top Tracks
@@ -163,7 +163,7 @@ Pocket Player
 Record crate
 
 ## collect-description
-Records on my shelf, sorted by format and decade.
+Records on the shelf, sorted by format and decade.
 
 ## collect-screen-eyebrow
 Crate 01
@@ -175,7 +175,7 @@ Crate Archive
 Computer
 
 ## play-description
-Games I own, games I return to, and rounded playtime.
+Owned games, returning favorites, and rounded playtime.
 
 ## play-screen-eyebrow
 Desktop 01
@@ -187,7 +187,7 @@ Desktop Library
 Treadmill
 
 ## move-description
-Recent rides and runs, when Strava’s public feed is available.
+Recent rides and runs, when Strava can show them.
 
 ## move-screen-eyebrow
 Cardio feed
@@ -199,7 +199,7 @@ Cardio Television
 Globe
 
 ## travel-description
-Places I’ve been, the photos I kept, and where they belong.
+Trips, kept photographs, and their places.
 
 ## travel-screen-eyebrow
 Travel log

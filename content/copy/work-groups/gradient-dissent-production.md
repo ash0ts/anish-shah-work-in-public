@@ -7,7 +7,7 @@ Producing Gradient Dissent
 Gradient Dissent production
 
 ## summary
-I produced and transcribed a set of Gradient Dissent interviews, with Korean and Japanese translations.
+A production archive added transcripts plus Korean and Japanese translations to Gradient Dissent interviews.
 
 ## role-summary
 Producer and transcriber

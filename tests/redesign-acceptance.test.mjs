@@ -244,8 +244,15 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   assert.doesNotMatch(markup, /data-work-index-prompt|id="work-index"/i);
   assert.doesNotMatch(markup, /Showing 1—24|work-index-title/i);
   assert.match(markup, /id="work-calendar"/i);
-  assert.match(markup, /id="work-organizations"/i);
-  assert.match(markup, /Organizations &amp; platforms/i);
+  assert.match(
+    markup,
+    /<details\b(?=[^>]*id="work-organizations")(?![^>]*\bopen(?:=|\s|>))[^>]*>/i,
+  );
+  assert.match(markup, />Organizations<[\s\S]{0,160}>24</i);
+  assert.doesNotMatch(
+    markup,
+    /id="work-context-organizations-title"|Organizations in this view/i,
+  );
   assert.equal(
     (markup.match(/href="\/work\?organization=[^"]+#work-index"/gi) ?? [])
       .length,
@@ -300,6 +307,23 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
     /href="\/work\?year=2024(?:&amp;|&)page=2#work-index"/i,
   );
   assert.match(selectedMarkup, /id="work-index-title"/i);
+  assert.match(
+    selectedMarkup,
+    /id="work-context-organizations-title"[^>]*>Organizations in this view</i,
+  );
+  assert(
+    (selectedMarkup.match(/data-variant="context"/gi) ?? []).length <= 6,
+  );
+  const contextualOrganizationHrefs = [
+    ...selectedMarkup.matchAll(
+      /<a\b(?=[^>]*data-variant="context")(?=[^>]*href="([^"]+)")[^>]*>/gi,
+    ),
+  ].map((match) => match[1].replaceAll("&amp;", "&"));
+  assert(
+    contextualOrganizationHrefs.every((href) =>
+      new URL(href, "https://example.test").searchParams.has("year"),
+    ),
+  );
   assert.doesNotMatch(
     markup,
     /\bMap\b|Visual archive|Complete grouped index|<canvas\b|<svg\b/i,
@@ -325,6 +349,66 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   assert.match(
     organizationMarkup,
     /href="\/work\?organization=google-cloud#work-index"[^>]*aria-current="page"|aria-current="page"[^>]*href="\/work\?organization=google-cloud#work-index"/i,
+  );
+  assert.match(
+    organizationMarkup,
+    /aria-label="Remove Google Cloud organization filter"/i,
+  );
+  const organizationContextIds = [
+    ...organizationMarkup.matchAll(
+      /<a\b(?=[^>]*data-organization-id="([^"]+)")(?=[^>]*data-variant="context")[^>]*>/gi,
+    ),
+  ].map((match) => match[1]);
+  assert.deepEqual(organizationContextIds, [
+    "google-cloud",
+    "coreweave",
+    "mlops-world",
+    "odsc",
+  ]);
+
+  const fugueMarkup = documentMarkup(await renderHtml("/work?q=Fugue"));
+  const fugueRow =
+    fugueMarkup.match(
+      /<li\b[^>]*data-work-id="group:standalone:wk-fp-0161"[^>]*>[\s\S]*?<\/li>/i,
+    )?.[0] ?? "";
+  assert.match(fugueRow, /<strong>Fugue agent experiments<\/strong>/i);
+  assert.doesNotMatch(
+    fugueRow,
+    /<strong>Fugue: governed experiments for AI agents<\/strong>/i,
+  );
+
+  const scopedOrganizationMarkup = documentMarkup(
+    await renderHtml("/work?year=2024&organization=google-cloud"),
+  );
+  assert.match(
+    scopedOrganizationMarkup,
+    /aria-label="Remove Google Cloud organization filter"[^>]*href="\/work\?year=2024#work-index"|href="\/work\?year=2024#work-index"[^>]*aria-label="Remove Google Cloud organization filter"/i,
+  );
+
+  const emptyOrganizationMarkup = documentMarkup(
+    await renderHtml("/work?q=no-such-project&organization=google-cloud"),
+  );
+  assert.match(
+    emptyOrganizationMarkup,
+    /id="work-context-organizations-title"[^>]*>Organizations in this view</i,
+  );
+  assert.match(
+    emptyOrganizationMarkup,
+    /aria-label="Remove Google Cloud organization filter"[^>]*href="\/work\?q=no-such-project#work-index"|href="\/work\?q=no-such-project#work-index"[^>]*aria-label="Remove Google Cloud organization filter"/i,
+  );
+  assert.match(emptyOrganizationMarkup, /No projects found/i);
+
+  const legacyOrganizationMarkup = documentMarkup(
+    await renderHtml("/work?organization=org%3Ajudgment-day-devpost"),
+  );
+  assert.match(legacyOrganizationMarkup, />Judgment Day \/ Devpost projects</i);
+  assert.match(
+    legacyOrganizationMarkup,
+    /aria-label="Remove Judgment Day \/ Devpost organization filter"[^>]*href="\/work"|href="\/work"[^>]*aria-label="Remove Judgment Day \/ Devpost organization filter"/i,
+  );
+  assert.equal(
+    (legacyOrganizationMarkup.match(/data-variant="context"/gi) ?? []).length,
+    0,
   );
 });
 

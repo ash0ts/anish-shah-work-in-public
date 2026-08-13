@@ -4,22 +4,16 @@
 Work
 
 ## seo-description
-Browse my agent systems, courses, implementations, open-source contributions, talks, and workshops.
+Agent systems, courses, implementations, open-source contributions, talks, and workshops.
 
 ## masthead-eyebrow
 Work · 2021—now
 
 ## masthead-title
-What I’ve built, taught, and tested.
+Built, taught, tested.
 
 ## masthead-summary
-One project stays one record—even when it became a talk, recording, or code release.
-
-## section-nav-calendar
-Calendar
-
-## section-nav-organizations
-Organizations
+One project per record. Talks, code, and recordings stay attached.
 
 ## search-label
 Search the work
@@ -84,14 +78,47 @@ Color marks the line. Darker cells contain more projects.
 ## timeline-caption
 Projects by line and year
 
-## organizations-eyebrow
-Organizations & platforms
+## organizations-control-label
+Organizations
 
-## organizations-title
-The work crosses companies, projects, and technical communities.
+## organizations-browse-label
+Browse organizations
 
-## organizations-summary
-Built at, contributed to, or presented with. Every mark opens the projects that document the connection.
+## organizations-browse-all-prefix
+Browse all
+
+## organizations-noun-plural
+organizations
+
+## organizations-context-eyebrow
+Evidence in this view
+
+## organizations-context-title
+Organizations in this view
+
+## organizations-more-singular
+organization in this view
+
+## organizations-more-plural
+organizations in this view
+
+## organizations-remove-filter-prefix
+Remove
+
+## organizations-remove-filter-suffix
+organization filter
+
+## organizations-legend-label
+Organization relationship legend
+
+## organizations-project-singular
+project
+
+## organizations-project-plural
+projects
+
+## organizations-secondary-prefix
+also
 
 ## organizations-built-at
 Built at
@@ -109,7 +136,7 @@ Agent systems & open source
 Systems
 
 ## bucket-1-statement
-Interfaces, integrations, and evaluation tools I built or contributed to for agents and ML workflows.
+Agent interfaces, integrations, and evaluation tools for ML workflows.
 
 ## bucket-2-title
 Technical education

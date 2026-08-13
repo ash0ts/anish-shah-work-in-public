@@ -7,7 +7,7 @@ Evaluating LLM applications in practice
 Practical LLM evaluation
 
 ## summary
-I presented practical approaches to evaluating LLM applications.
+A session translated LLM evaluation into practical application checks.
 
 ## role-summary
 Session speaker

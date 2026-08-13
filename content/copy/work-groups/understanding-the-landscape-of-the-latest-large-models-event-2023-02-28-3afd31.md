@@ -7,7 +7,7 @@ Surveying the latest large models
 Latest large models
 
 ## summary
-I presented a conference survey of the latest large language models.
+A conference survey mapped current large-language-model families.
 
 ## role-summary
 Conference speaker

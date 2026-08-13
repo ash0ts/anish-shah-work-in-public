@@ -7,7 +7,7 @@ Building and monitoring AI/ML models
 AI/ML model operations
 
 ## summary
-I presented a webinar on building, scaling, tracking, and monitoring AI/ML models.
+A webinar connected model building, scaling, tracking, and monitoring.
 
 ## role-summary
 Webinar speaker

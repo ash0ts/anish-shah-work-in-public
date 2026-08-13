@@ -56,11 +56,11 @@ const PROFILE_BUDGETS = {
   narrative: { maxWords: 45, maxSentences: 3 },
   "work-title": { maxWords: 18, maxSentences: 1 },
   "work-short-title": { maxWords: 10, maxSentences: 1 },
-  "work-summary": { minWords: 6, maxWords: 45, maxSentences: 3 },
+  "work-summary": { minWords: 6, maxWords: 20, maxSentences: 2 },
   "work-role-summary": { minWords: 2, maxWords: 12, maxSentences: 1 },
   role: { maxWords: 18, maxSentences: 2 },
   "play-object-title": { maxWords: 3, maxSentences: 1 },
-  "play-object-description": { minWords: 4, maxWords: 24, maxSentences: 2 },
+  "play-object-description": { minWords: 4, maxWords: 10, maxSentences: 1 },
 } as const satisfies Record<
   CopyVoiceProfile,
   { minWords?: number; maxWords: number; maxSentences: number }

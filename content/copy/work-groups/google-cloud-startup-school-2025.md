@@ -7,7 +7,7 @@ Google Cloud GenAI Startup School
 GenAI Startup School
 
 ## summary
-I taught one GenAI application lesson across EMEA/APAC and the Americas, with a public replay.
+A replay-backed lesson taught GenAI application development across two regional sessions.
 
 ## role-summary
 Instructor for both regional sessions

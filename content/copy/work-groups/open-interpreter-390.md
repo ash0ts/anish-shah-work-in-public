@@ -7,7 +7,7 @@ Open Interpreter integration contribution
 Open Interpreter pull request
 
 ## summary
-I contributed an integration change to Open Interpreter.
+An upstream change added W&B integration support to Open Interpreter.
 
 ## role-summary
 Integration contributor
