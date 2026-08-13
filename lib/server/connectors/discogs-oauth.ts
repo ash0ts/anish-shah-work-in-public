@@ -39,6 +39,7 @@ export type DiscogsTemporaryCredential = {
 export type DiscogsOAuthTransactionPayload = DiscogsOAuthClient &
   DiscogsTemporaryCredential & {
     phase: "authorization" | "callback";
+    replaceExisting: boolean;
     callbackUrl: string;
     ownerEmail: string;
     stateHash: string;

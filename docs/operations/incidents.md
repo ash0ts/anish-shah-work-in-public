@@ -27,10 +27,11 @@ confirm that pointer before investigating credentials. Reauthorize only for an
 explicit authorization failure, not for `429`, transport, `5xx`, malformed, or
 public-projector errors.
 
-For Discogs, the normal public catalog expires six hours after its last
-successful refresh. Older stale display is permitted only when the owner-only
-provider-permission record is enabled, current, and independently verified;
-never fabricate, expose, or silently extend that approval during an incident.
+Accepted connector snapshots remain stored without an age cutoff. In required
+mode, public display is permitted only while the unified owner-only approval is
+enabled, current, and includes both required scopes; never fabricate, expose,
+or silently extend an approval during an incident. A withheld snapshot remains
+private and recoverable until explicit replacement, unpublish, or disconnect.
 Strava remote health may be checked only with Studio **Verify now** or while
 saving its configuration.
 

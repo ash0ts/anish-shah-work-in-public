@@ -2,9 +2,11 @@ import { classifyDatabaseError } from "../database-errors";
 import { fetchDiscogsSnapshot } from "./discogs";
 import {
   clearDiscogsRetry,
+  DISCOGS_RETRY_MAINTENANCE_KEY,
   discogsRetryNotBefore,
   recordDiscogsRetryAfter,
 } from "./discogs-retry";
+import { DISCOGS_EXTENDED_DISPLAY_APPROVAL_SETTING_KEY } from "./discogs-extended-display-approval";
 import { fetchHardcoverSnapshot } from "./hardcover";
 import { fetchMyAnimeListSnapshot } from "./myanimelist";
 import {
@@ -13,21 +15,28 @@ import {
   shouldRefreshMyAnimeListToken,
 } from "./myanimelist-oauth";
 import { validateConnectorPublicPayload } from "./public-payload-policy";
+import { parseStoredConnectorPublicPayload } from "./public-payload-policy";
+import {
+  connectorPublicationApprovalPendingSettingKey,
+  connectorPublicationApprovalPendingValue,
+  connectorPublicationApprovalSettingKey,
+} from "./publication-approval";
 import {
   loadCredential,
   persistRefreshedMyAnimeListCredential,
   persistRefreshedSpotifyCredential,
 } from "./repository-credentials";
 import { databaseOrNull } from "./repository-primitives";
-import { pruneConnectorRetention } from "./repository-retention";
 import type { RefreshResult } from "./repository-contracts";
 import { fetchSpotifySnapshot } from "./spotify";
+import { SPOTIFY_PRESENTATION_SETTING_KEY } from "./spotify-presentation";
 import {
   isSpotifyOAuthCredential,
   refreshSpotifyOAuthCredential,
   shouldRefreshSpotifyToken,
 } from "./spotify-oauth";
 import { fetchSteamSnapshot } from "./steam";
+import { DISCOGS_PRESENTATION_SETTING_KEY } from "./discogs-presentation";
 import { steamStorageCountries } from "./steam-policy";
 import {
   ConnectorFetchError,
@@ -52,8 +61,212 @@ function freshnessWindow(provider: ConnectorProvider): number {
     : FRESHNESS_WINDOW_MS;
 }
 
-function retainedSnapshotCount(provider: ConnectorProvider): number {
-  return provider === "discogs" ? 1 : 2;
+function retainedSnapshotCount(): number {
+  return 2;
+}
+
+const OAUTH_ACCOUNT_PROVIDERS = new Set<ConnectorProvider>([
+  "myanimelist",
+  "spotify",
+  "discogs",
+]);
+
+function publicProfileUrl(
+  payload: Record<string, unknown>,
+): string | null {
+  return typeof payload.profileUrl === "string" ? payload.profileUrl : null;
+}
+
+async function acceptedProfileIdentity(
+  database: D1Database,
+  provider: ConnectorProvider,
+): Promise<{ profileUrl: string | null; hasReadyRows: boolean }> {
+  const rows = await database
+    .prepare(
+      `SELECT public_payload_json AS publicPayloadJson
+       FROM connector_snapshots
+       WHERE provider = ? AND status = 'ready'
+       ORDER BY fetched_at DESC, id DESC
+       LIMIT 25`,
+    )
+    .bind(provider)
+    .all<{ publicPayloadJson: string }>();
+  for (const row of rows.results ?? []) {
+    const payload = parseStoredConnectorPublicPayload(
+      provider,
+      row.publicPayloadJson,
+    );
+    const profileUrl = payload ? publicProfileUrl(payload) : null;
+    if (profileUrl) {
+      return { profileUrl, hasReadyRows: true };
+    }
+  }
+  return {
+    profileUrl: null,
+    hasReadyRows: (rows.results?.length ?? 0) > 0,
+  };
+}
+
+async function withholdChangedOAuthAccount(input: {
+  database: D1Database;
+  provider: ConnectorProvider;
+  credentialGeneration: number;
+  runId: string;
+  requestedByEmail: string | null;
+  changedAt: string;
+}): Promise<boolean> {
+  const {
+    database,
+    provider,
+    credentialGeneration,
+    runId,
+    requestedByEmail,
+    changedAt,
+  } = input;
+  const guarded = () => `
+    EXISTS (
+      SELECT 1 FROM connector_credentials
+      WHERE provider = ? AND generation = ?
+    )
+    AND EXISTS (
+      SELECT 1 FROM sync_runs
+      WHERE id = ? AND provider = ? AND status = 'running'
+    )`;
+  const guardBindings = [
+    provider,
+    credentialGeneration,
+    runId,
+    provider,
+  ] as const;
+  const presentationKey =
+    provider === "spotify"
+      ? SPOTIFY_PRESENTATION_SETTING_KEY
+      : provider === "discogs"
+        ? DISCOGS_PRESENTATION_SETTING_KEY
+        : null;
+  const results = await database.batch([
+    database
+      .prepare(
+        `DELETE FROM connector_snapshots
+         WHERE provider = ? AND ${guarded()}`,
+      )
+      .bind(provider, ...guardBindings),
+    database
+      .prepare(
+        `DELETE FROM editorial_settings
+         WHERE key = ? AND ${guarded()}`,
+      )
+      .bind(
+        connectorPublicationApprovalSettingKey(provider),
+        ...guardBindings,
+      ),
+    ...(provider === "discogs"
+      ? [
+          database
+            .prepare(
+              `DELETE FROM editorial_settings
+               WHERE key = ? AND ${guarded()}`,
+            )
+            .bind(
+              DISCOGS_EXTENDED_DISPLAY_APPROVAL_SETTING_KEY,
+              ...guardBindings,
+            ),
+        ]
+      : []),
+    ...(presentationKey
+      ? [
+          database
+            .prepare(
+              `DELETE FROM editorial_settings
+               WHERE key = ? AND ${guarded()}`,
+            )
+            .bind(presentationKey, ...guardBindings),
+        ]
+      : []),
+    ...(provider === "discogs"
+      ? [
+          database
+            .prepare(
+              `DELETE FROM maintenance_state
+               WHERE key = ? AND ${guarded()}`,
+            )
+            .bind(DISCOGS_RETRY_MAINTENANCE_KEY, ...guardBindings),
+        ]
+      : []),
+    database
+      .prepare(
+        `DELETE FROM sync_runs
+         WHERE provider = ? AND id <> ? AND ${guarded()}`,
+      )
+      .bind(provider, runId, ...guardBindings),
+    database
+      .prepare(
+        `DELETE FROM audit_log
+         WHERE entity_type = 'connector' AND entity_id = ?
+           AND ${guarded()}`,
+      )
+      .bind(provider, ...guardBindings),
+    database
+      .prepare(
+        `INSERT INTO editorial_settings (
+           key, value_json, updated_by_email, updated_at
+         )
+         SELECT ?, ?, ?, ?
+         WHERE ${guarded()}
+         ON CONFLICT(key) DO UPDATE SET
+           value_json = excluded.value_json,
+           updated_by_email = excluded.updated_by_email,
+           updated_at = excluded.updated_at`,
+      )
+      .bind(
+        connectorPublicationApprovalPendingSettingKey(provider),
+        connectorPublicationApprovalPendingValue(provider, changedAt),
+        requestedByEmail ?? "system",
+        changedAt,
+        ...guardBindings,
+      ),
+    database
+      .prepare(
+        `UPDATE sync_runs
+         SET status = 'failed', finished_at = ?, item_count = NULL,
+             http_status = 409, error_code = 'account_changed',
+             error_message = 'The provider account changed; publication approval is required.'
+         WHERE id = ? AND provider = ? AND status = 'running'
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = ? AND generation = ?
+           )`,
+      )
+      .bind(
+        changedAt,
+        runId,
+        provider,
+        provider,
+        credentialGeneration,
+      ),
+    database
+      .prepare(
+        `INSERT INTO audit_log (
+           id, actor_email, action, entity_type, entity_id,
+           details_json, created_at
+         )
+         SELECT ?, ?, 'connector.account_changed', 'connector', ?, '{}', ?
+         WHERE EXISTS (
+           SELECT 1 FROM sync_runs
+           WHERE id = ? AND provider = ? AND status = 'failed'
+             AND error_code = 'account_changed'
+         )`,
+      )
+      .bind(
+        crypto.randomUUID(),
+        requestedByEmail ?? "system",
+        provider,
+        changedAt,
+        runId,
+        provider,
+      ),
+  ]);
+  return (results.at(-2)?.meta.changes ?? 0) === 1;
 }
 
 async function discogsManualRefreshNotBefore(
@@ -271,12 +484,6 @@ export async function refreshConnectorUsingDatabase(
     }
   }
 
-  try {
-    await pruneConnectorRetention(database);
-  } catch {
-    return { status: "setup_required", provider, reason: "database" };
-  }
-
   const runId = crypto.randomUUID();
   const startedAt = new Date().toISOString();
   const staleLockBefore = new Date(
@@ -355,6 +562,43 @@ export async function refreshConnectorUsingDatabase(
     }
     const publicPayloadJson = JSON.stringify(publicPayload);
 
+    if (OAUTH_ACCOUNT_PROVIDERS.has(provider)) {
+      const previousIdentity = await acceptedProfileIdentity(
+        database,
+        provider,
+      );
+      const nextProfileUrl = publicProfileUrl(publicPayload);
+      if (
+        nextProfileUrl &&
+        ((previousIdentity.profileUrl !== null &&
+          previousIdentity.profileUrl !== nextProfileUrl) ||
+          (previousIdentity.profileUrl === null &&
+            previousIdentity.hasReadyRows))
+      ) {
+        const withheld = await withholdChangedOAuthAccount({
+          database,
+          provider,
+          credentialGeneration: loadedCredential.generation,
+          runId,
+          requestedByEmail,
+          changedAt: fetchedAt,
+        });
+        return withheld
+          ? {
+              status: "failed",
+              provider,
+              code: "account_changed",
+              retryable: false,
+            }
+          : {
+              status: "failed",
+              provider,
+              code: "credential_changed",
+              retryable: true,
+            };
+      }
+    }
+
     const completionResults = await database.batch([
       database
         .prepare(
@@ -402,7 +646,7 @@ export async function refreshConnectorUsingDatabase(
                FROM connector_snapshots
                WHERE provider = ?
                ORDER BY fetched_at DESC, id DESC
-               LIMIT ${retainedSnapshotCount(provider)}
+               LIMIT ${retainedSnapshotCount()}
              )`,
         )
         .bind(

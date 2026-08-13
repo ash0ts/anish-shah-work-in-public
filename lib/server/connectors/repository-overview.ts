@@ -7,7 +7,6 @@ import {
   placeholderHealth,
 } from "./repository-primitives";
 import { discogsRetryNotBefore } from "./discogs-retry";
-import { pruneConnectorRetention } from "./repository-retention";
 import type {
   ConnectorHealth,
   StudioOverview,
@@ -30,9 +29,7 @@ export async function getStudioOverview(
   }
 
   try {
-    const nowDate = new Date();
-    const now = nowDate.toISOString();
-    await pruneConnectorRetention(database, nowDate);
+    const now = new Date().toISOString();
 
     const publicationRows = await database
       .prepare(
@@ -119,7 +116,7 @@ export async function getStudioOverview(
           : null;
       const retryNotBefore =
         provider === "discogs"
-          ? await discogsRetryNotBefore(database, nowDate.getTime())
+          ? await discogsRetryNotBefore(database, Date.parse(now))
           : null;
 
       const configured = Boolean(credential);

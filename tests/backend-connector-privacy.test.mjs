@@ -660,3 +660,22 @@ test("Discogs rate-limit responses expose a standard retry contract", async () =
     error: `The provider is rate-limiting requests. Retry after ${retryNotBefore}. No new snapshot was published; any previously accepted snapshot remains unchanged.`,
   });
 });
+
+test("account-change refresh responses explain that prior account data was withheld", async () => {
+  const response = connectorRefreshResponse({
+    status: "failed",
+    provider: "spotify",
+    code: "account_changed",
+    retryable: false,
+  });
+
+  assert.equal(response.status, 424);
+  assert.deepEqual(await response.json(), {
+    status: "failed",
+    provider: "spotify",
+    code: "account_changed",
+    retryable: false,
+    error:
+      "The authorized provider account changed. Data from the prior account was withheld. Save publication approval for this account, then refresh again.",
+  });
+});

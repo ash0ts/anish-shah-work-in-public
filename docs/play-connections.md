@@ -303,9 +303,19 @@ when the client ID or secret changed. A 403 commonly means the application
 owner no longer has Premium or the authorized account is not on the
 development-mode allowlist; a 429 requires waiting for the provider’s
 `Retry-After` interval. A failed refresh preserves the last eligible snapshot,
-but API-derived Top Tracks are unpublished after 72 hours without a successful
-refresh and deleted after 30 days. Disconnect deletes credentials, tokens,
-snapshots, OAuth state, sync history, fallback, and publication approval.
+and age alone does not unpublish or delete an accepted snapshot. Once both
+publication-approval scopes are active, an older accepted snapshot remains
+visible as a saved snapshot with its actual update time. Disconnect deletes
+credentials, tokens, snapshots, OAuth state, sync history, fallback, and the
+provider publication approval.
+
+The protected Publication approvals panel stores a provider-specific reference
+encrypted with `CONNECTOR_ENCRYPTION_KEY`. It never returns that reference after
+storage. The initial `report_only` mode preserves configured providers while the
+owner records `public_display` and `retain_last_known_good` for each one.
+Activation is atomic and succeeds only when every configured provider has both
+active scopes. Required mode withholds missing or expired approvals without
+deleting the private snapshot.
 
 Spotify is deliberately excluded from the local-to-production transfer.
 Deploy code normally, then authorize and review the separate production
@@ -378,15 +388,11 @@ Studio-displayed provider retry time before selecting **Refresh now** again.
 The server does not retry a 429 automatically, and any failure leaves the
 accepted snapshot unchanged.
 
-The standard publication policy, which applies the repository's conservative
-interpretation of the
-[Discogs API Terms](https://support.discogs.com/hc/en-us/articles/360009334593-API-Terms-of-Use),
-makes the public catalog unavailable six hours after its last successful
-refresh. If the owner has a separate provider
-permission for longer display, Studio may record its private reference,
-approval date, optional expiry, and enabled state. Only while that protected
-record is current may the site keep serving the older catalog, visibly marked
-stale with its actual update time. Permission details never enter public JSON.
+The owner records provider permission for public display and retained
+last-known-good use in the unified protected approval register. An accepted
+catalog remains visible as a saved snapshot with its actual update time while
+the gate allows it; age alone does not delete or unpublish it. Permission
+details never enter public JSON.
 Disconnect deletes the application credentials, OAuth state, collection
 snapshot, sync history, publication approval, and extended-display approval.
 Discogs is deliberately excluded from the local-to-production transfer.
@@ -466,6 +472,9 @@ check. The official iframe remains the only Strava display surface.
 | Read public Strava config | `GET /api/connectors/strava` | No owner credential |
 | Disconnect API stream | `DELETE /api/studio/connectors/[provider]/credentials` | No body |
 | Disconnect Strava | `DELETE /api/studio/connectors/strava/config` | No body |
+| Review publication approvals | `GET /api/studio/connectors/publication-approvals` | No body; references are never returned |
+| Save provider publication approval | `PUT /api/studio/connectors/[provider]/publication-approval` | Both `public_display` and `retain_last_known_good`, approval dates, enabled state, and a protected reference |
+| Activate publication enforcement | `POST /api/studio/connectors/publication-approvals/activate` | No body; succeeds atomically only when every configured provider is approved |
 | Issue one-time promotion code | `POST /api/studio/play-promotion/start` | No body; production only |
 | Stage local provider settings | `POST /api/studio/play-promotion/send` | `{ "transferCode": "…" }`; loopback only |
 | Review promotion queue | `GET /api/studio/play-promotion` | No body; production only |
@@ -488,13 +497,20 @@ due** means no provider request occurred; and **Rate limited**, **Failed**, or
 the next safe retry time when available and must not label **Not due** as a
 successful sync.
 
-A transient provider failure preserves the latest known-good stored snapshot
-and active pointer. Public display still observes provider-specific age and
-privacy rules: MyAnimeList and Hardcover may remain visibly stale, Spotify and
-Steam keep their existing public-age gates, and Discogs uses its standard
-six-hour cutoff unless the protected extended-display approval is active.
-Disconnect is different: it deletes that provider’s credentials, snapshots,
-pending OAuth state, sync history, and provider-specific audit history, then
+A transient provider failure preserves the latest accepted snapshot and active
+pointer. Accepted snapshots have no age-based deletion or public cutoff; an
+approved older snapshot remains available as **Saved snapshot** with its actual
+update time.
+
+Publication approval initially runs in `report_only`, preserving providers
+that were already configured when this code deployed. New or explicitly
+replaced configurations are marked approval-required immediately and remain
+private even in report-only mode. After both required scopes are recorded for
+every configured provider, the owner may atomically activate required mode.
+Missing, disabled, or expired approval then withholds public display without
+deleting the private snapshot. Disconnect is different: it deletes that
+provider’s credentials, snapshots, approval and requirement marker, pending
+OAuth state, sync history, and provider-specific audit history, then
 unpublishes the stream.
 
 Do not paste credentials into source files, deployment variables intended for

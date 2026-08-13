@@ -27,6 +27,11 @@ import {
 } from "./repository-contracts";
 import { databaseOrNull } from "./repository-primitives";
 import {
+  connectorPublicationApprovalPendingSettingKey,
+  connectorPublicationApprovalPendingValue,
+  connectorPublicationApprovalSettingKey,
+} from "./publication-approval";
+import {
   ConnectorFetchError,
   type MyAnimeListOAuthCredential,
 } from "./types";
@@ -121,6 +126,7 @@ async function decryptOAuthTransaction(
 export async function startMyAnimeListOAuth(input: {
   clientId?: string;
   clientSecret?: string;
+  replaceExisting?: boolean;
   actorEmail: string;
   requestUrl: string;
 }): Promise<MyAnimeListOAuthStartResult> {
@@ -136,7 +142,15 @@ export async function startMyAnimeListOAuth(input: {
   }
 
   let client: MyAnimeListOAuthClient | null = null;
-  if (input.clientId !== undefined || input.clientSecret !== undefined) {
+  const hasSuppliedClient =
+    input.clientId !== undefined || input.clientSecret !== undefined;
+  if (
+    input.replaceExisting !== undefined &&
+    input.replaceExisting !== hasSuppliedClient
+  ) {
+    return { status: "invalid", reason: "credential" };
+  }
+  if (hasSuppliedClient) {
     client = normalizeMyAnimeListOAuthClient(
       input.clientId ?? "",
       input.clientSecret ?? "",
@@ -173,6 +187,7 @@ export async function startMyAnimeListOAuth(input: {
     encrypted = await encryptCredential(
       {
         phase: "authorization",
+        replaceExisting: input.replaceExisting ?? hasSuppliedClient,
         ...client,
         codeVerifier,
         callbackUrl,
@@ -286,6 +301,7 @@ export async function stageMyAnimeListOAuthCallback(input: {
   if (
     !transaction ||
     transaction.phase !== "authorization" ||
+    typeof transaction.replaceExisting !== "boolean" ||
     transaction.callbackUrl !== callbackUrl ||
     transaction.ownerEmail !== normalizedOwnerEmail(row.ownerEmail) ||
     transaction.stateHash !== stateHash
@@ -344,6 +360,7 @@ async function saveMyAnimeListOAuthCredential(
   credential: MyAnimeListOAuthCredential,
   actorEmail: string,
   stateHash: string,
+  replaceExisting: boolean,
 ): Promise<void> {
   const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
   if (!encryptionKey) throw new Error("Connector encryption is unavailable.");
@@ -354,8 +371,7 @@ async function saveMyAnimeListOAuthCredential(
   );
   const now = new Date().toISOString();
   const ownerEmail = normalizedOwnerEmail(actorEmail);
-  const results = await database.batch([
-    database
+  const credentialStatement = database
       .prepare(
         `INSERT INTO connector_credentials (
            provider, ciphertext, iv, key_version, credential_label,
@@ -390,7 +406,9 @@ async function saveMyAnimeListOAuthCredential(
         stateHash,
         ownerEmail,
         now,
-      ),
+      );
+  const destructiveStatements = replaceExisting
+    ? [
     database
       .prepare(
         `DELETE FROM connector_snapshots
@@ -424,6 +442,106 @@ async function saveMyAnimeListOAuthCredential(
            )`,
       )
       .bind(encrypted.ciphertext, encrypted.iv, now),
+    database
+      .prepare(
+        `DELETE FROM editorial_settings
+         WHERE key = ?
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = 'myanimelist' AND ciphertext = ?
+               AND iv = ? AND updated_at = ?
+           )`,
+      )
+      .bind(
+        connectorPublicationApprovalSettingKey("myanimelist"),
+        encrypted.ciphertext,
+        encrypted.iv,
+        now,
+      ),
+    database
+      .prepare(
+        `INSERT INTO editorial_settings (
+           key, value_json, updated_by_email, updated_at
+         )
+         SELECT ?, ?, ?, ?
+         WHERE EXISTS (
+           SELECT 1 FROM connector_credentials
+           WHERE provider = 'myanimelist' AND ciphertext = ?
+             AND iv = ? AND updated_at = ?
+         )
+         ON CONFLICT(key) DO UPDATE SET
+           value_json = excluded.value_json,
+           updated_by_email = excluded.updated_by_email,
+           updated_at = excluded.updated_at`,
+      )
+      .bind(
+        connectorPublicationApprovalPendingSettingKey("myanimelist"),
+        connectorPublicationApprovalPendingValue("myanimelist", now),
+        actorEmail,
+        now,
+        encrypted.ciphertext,
+        encrypted.iv,
+        now,
+      ),
+    ]
+    : [];
+  const routineReauthorizationStatements = replaceExisting
+    ? []
+    : [
+        database
+          .prepare(
+            `DELETE FROM editorial_settings
+             WHERE key = ?
+               AND NOT EXISTS (
+                 SELECT 1 FROM connector_snapshots
+                 WHERE provider = 'myanimelist' AND status = 'ready'
+               )
+               AND EXISTS (
+                 SELECT 1 FROM connector_credentials
+                 WHERE provider = 'myanimelist' AND ciphertext = ?
+                   AND iv = ? AND updated_at = ?
+               )`,
+          )
+          .bind(
+            connectorPublicationApprovalSettingKey("myanimelist"),
+            encrypted.ciphertext,
+            encrypted.iv,
+            now,
+          ),
+        database
+          .prepare(
+            `INSERT INTO editorial_settings (
+               key, value_json, updated_by_email, updated_at
+             )
+             SELECT ?, ?, ?, ?
+             WHERE NOT EXISTS (
+               SELECT 1 FROM connector_snapshots
+               WHERE provider = 'myanimelist' AND status = 'ready'
+             )
+               AND EXISTS (
+                 SELECT 1 FROM connector_credentials
+                 WHERE provider = 'myanimelist' AND ciphertext = ?
+                   AND iv = ? AND updated_at = ?
+               )
+             ON CONFLICT(key) DO UPDATE SET
+               value_json = excluded.value_json,
+               updated_by_email = excluded.updated_by_email,
+               updated_at = excluded.updated_at`,
+          )
+          .bind(
+            connectorPublicationApprovalPendingSettingKey("myanimelist"),
+            connectorPublicationApprovalPendingValue("myanimelist", now),
+            actorEmail,
+            now,
+            encrypted.ciphertext,
+            encrypted.iv,
+            now,
+          ),
+      ];
+  const results = await database.batch([
+    credentialStatement,
+    ...destructiveStatements,
+    ...routineReauthorizationStatements,
     database
       .prepare(
         `DELETE FROM connector_oauth_transactions
@@ -508,6 +626,7 @@ export async function completeMyAnimeListOAuth(input: {
   if (
     !transaction ||
     transaction.phase !== "callback" ||
+    typeof transaction.replaceExisting !== "boolean" ||
     transaction.callbackUrl !== callbackUrl ||
     transaction.ownerEmail !== normalizedOwnerEmail(row.ownerEmail) ||
     transaction.ownerEmail !== normalizedOwnerEmail(input.actorEmail) ||
@@ -587,6 +706,7 @@ export async function completeMyAnimeListOAuth(input: {
       credential,
       input.actorEmail,
       stateHash,
+      transaction.replaceExisting,
     );
   } catch (error) {
     try {

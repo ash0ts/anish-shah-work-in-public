@@ -71,8 +71,8 @@ Gateway aggregate cost/latency instead.
 
 - repeated 5xx responses or public rendering failures
 - Studio unexpectedly public or owner unexpectedly denied
-- connector snapshots beyond their permitted stale window, or Discogs stale
-  display without a current protected extended-display approval
+- connector display without an active required publication approval, or
+  Discogs saved-snapshot display without `retain_last_known_good`
 - retention heartbeat older than three hours
 - sudden artwork proxy rejection/rate-limit spikes
 - D1 migration mismatch or failed publication reconciliation

@@ -45,10 +45,9 @@ Make the smallest coherent change while preserving the site's content, copy, pri
   mutate provider collection data; Studio's explicit Refresh action owns that
   boundary.
 - Failed connector synchronization preserves the active last-known-good
-  snapshot. Discogs uses OAuth 1.0a HMAC-SHA1 and normally retains its six-hour
-  public cutoff; older stale display requires a current, owner-only recorded
-  provider permission. Do not treat Discogs as an OAuth 2 or artwork-gallery
-  provider.
+  snapshot. Accepted snapshots do not age out; the owner-only approval gate
+  governs public display without deleting private state. Discogs uses OAuth
+  1.0a HMAC-SHA1; do not treat it as an OAuth 2 or artwork-gallery provider.
 
 ## Non-Negotiable Boundaries
 

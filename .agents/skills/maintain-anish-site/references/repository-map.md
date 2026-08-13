@@ -73,7 +73,7 @@ Runtime precedence is: sanitized canonical facts and structure, then published D
 - `scripts/build-content.mjs` orchestrates `scripts/content/**`; refresh the public attestation whenever generator, curation, or output changes.
 - Connector repository facades span credentials/OAuth, public projectors, snapshots, locks, audit, retention, Studio, Play, and privacy tests. Change the whole contract, not one facade.
 - Every connector collection refresh is an explicit owner Studio action. Public reads, callbacks, credential saves, and cron never call provider data APIs; a failed refresh preserves the active last-known-good snapshot.
-- Discogs uses OAuth 1.0a, bounded sequential pagination, a standard six-hour public cutoff, and no provider artwork. Older stale display is allowed only by a current owner-only recorded provider permission.
+- Discogs uses OAuth 1.0a, bounded sequential pagination, no provider artwork, and the unified owner-only publication approval gate. Accepted snapshots do not age out.
 - Travel is not a connector. It uses isolated D1/KV/R2 state, whole-trip atomic publication, publication-aware media delivery, and the `TRAVEL_ATLAS_MODE` gate. Preview uses synthetic fixtures and never receives R2.
 - Simulation keeps model prose separate from trusted fact cards, never stores free text or model prompts/responses, and must retain an authored fallback when AI is unavailable.
 - Hosted tier configuration is exact and mutually exclusive. Fixture mode is preview-only; staging and production must fail closed on missing or inconsistent bindings.

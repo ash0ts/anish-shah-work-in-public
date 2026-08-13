@@ -910,6 +910,8 @@ class FakeD1 {
     );
     this.snapshots = structuredClone(snapshots);
     this.runs = structuredClone(runs);
+    this.settings = new Map();
+    this.audits = [];
     this.statementLog = [];
   }
 
@@ -947,6 +949,15 @@ class FakeD1 {
           .filter((run) => run.provider === provider && run.trigger === "stale_revalidate")
           .sort((left, right) => right.startedAt.localeCompare(left.startedAt))[0] ?? null
       );
+    }
+    if (sql.includes("FROM editorial_settings")) {
+      const setting = this.settings.get(statement.values[0]);
+      return setting
+        ? {
+            valueJson: setting.valueJson,
+            updatedAt: setting.updatedAt,
+          }
+        : null;
     }
     return null;
   }
@@ -1085,6 +1096,21 @@ class FakeD1 {
       return 1;
     }
 
+    if (sql.includes("INSERT INTO editorial_settings")) {
+      const [key, valueJson, , updatedAt] = values;
+      this.settings.set(key, { valueJson, updatedAt });
+      return 1;
+    }
+
+    if (sql.includes("DELETE FROM editorial_settings")) {
+      return this.settings.delete(values[0]) ? 1 : 0;
+    }
+
+    if (sql.includes("INSERT INTO audit_log")) {
+      this.audits.push(structuredClone(values));
+      return 1;
+    }
+
     if (sql.includes("UPDATE connector_credentials")) {
       const [
         ciphertext,
@@ -1115,7 +1141,13 @@ class FakeD1 {
     if (sql.includes("DELETE FROM connector_snapshots")) {
       const [provider, retainedId] = values;
       if (sql.includes("generation = ?")) {
-        const conditionOffset = sql.includes("id NOT IN") ? 1 : 2;
+        const conditionOffset = sql.includes("id NOT IN")
+          ? 1
+          : sql.includes("id <>")
+            ? 2
+            : sql.includes("status = 'running'")
+            ? 1
+            : 2;
         const expectedProvider = values[conditionOffset];
         const expectedGeneration = values[conditionOffset + 1];
         const expectedRunId = values[conditionOffset + 2];
@@ -1267,6 +1299,31 @@ class FakeD1 {
           finishedAt: values[0],
           errorCode: "credential_missing",
         });
+      } else if (sql.includes("error_code = 'account_changed'")) {
+        const [finishedAt, id, runProvider, credentialProvider, expectedGeneration] =
+          values;
+        const run = this.runs.find(
+          (entry) =>
+            entry.id === id &&
+            entry.provider === runProvider &&
+            entry.status === "running",
+        );
+        const credential = this.credentials.get(credentialProvider);
+        if (
+          !run ||
+          !credential ||
+          credential.generation !== expectedGeneration
+        ) {
+          return 0;
+        }
+        Object.assign(run, {
+          status: "failed",
+          finishedAt,
+          httpStatus: 409,
+          errorCode: "account_changed",
+          errorMessage:
+            "The provider account changed; publication approval is required.",
+        });
       } else {
         const id = values[4];
         const runProvider = values[5];
@@ -1379,6 +1436,44 @@ function storedHardcoverPayload({
   };
 }
 
+function storedSpotifyPayload({ profileUrl, syncedAt, freshUntil }) {
+  return {
+    provider: "spotify",
+    snapshotVersion: 1,
+    profileUrl,
+    coverage: "Spotify-calculated affinity; not play counts",
+    windows: {
+      short_term: { tracks: [] },
+      medium_term: { tracks: [] },
+      long_term: { tracks: [] },
+    },
+    syncedAt,
+    freshUntil,
+  };
+}
+
+function storedDiscogsPayload({ profileUrl, syncedAt, freshUntil }) {
+  return {
+    provider: "discogs",
+    snapshotVersion: 1,
+    profileUrl,
+    coverage: "Physical releases returned from the public Discogs collection",
+    totals: { physicalItems: 0, distinctReleases: 0 },
+    formats: [
+      { label: "Box set", count: 0 },
+      { label: "Vinyl", count: 0 },
+      { label: "CD", count: 0 },
+      { label: "Cassette", count: 0 },
+      { label: "Other", count: 0 },
+    ],
+    decades: [],
+    formatDecadeMatrix: [],
+    library: [],
+    syncedAt,
+    freshUntil,
+  };
+}
+
 async function encryptedMyAnimeListCredential(key) {
   return encryptCredential({ accessToken: "repository-token" }, key, "myanimelist");
 }
@@ -1402,6 +1497,24 @@ async function encryptedDiscogsCredential(key) {
     },
     key,
     "discogs",
+  );
+}
+
+async function encryptedSpotifyOAuthCredential(key) {
+  return encryptCredential(
+    {
+      kind: "oauth",
+      clientId: "spotify-client-id",
+      clientSecret: "spotify-client-secret",
+      accessToken: "spotify-access-token",
+      refreshToken: "spotify-refresh-token",
+      accessTokenExpiresAt: new Date(
+        Date.now() + 60 * 60 * 1_000,
+      ).toISOString(),
+      scopes: ["user-top-read", "user-read-private"],
+    },
+    key,
+    "spotify",
   );
 }
 
@@ -2034,6 +2147,77 @@ test("Discogs rate limiting preserves the last accepted catalog row", async () =
   );
 });
 
+test("successful Discogs refresh retains the current and rollback snapshots", async () => {
+  const key = Buffer.alloc(32, 45).toString("base64");
+  const credential = await encryptedDiscogsCredential(key);
+  const snapshots = [2, 1].map((daysAgo) => {
+    const fetchedAt = new Date(
+      Date.now() - daysAgo * 24 * 60 * 60 * 1_000,
+    ).toISOString();
+    const freshUntil = new Date(
+      Date.parse(fetchedAt) + 4 * 60 * 60 * 1_000,
+    ).toISOString();
+    return {
+      id: `discogs-prior-${daysAgo}`,
+      provider: "discogs",
+      status: "ready",
+      publicPayloadJson: JSON.stringify({
+        provider: "discogs",
+        snapshotVersion: 1,
+        profileUrl: "https://www.discogs.com/user/example/collection",
+        coverage: "Physical releases returned from the public Discogs collection",
+        totals: { physicalItems: 0, distinctReleases: 0 },
+        formats: [
+          { label: "Box set", count: 0 },
+          { label: "Vinyl", count: 0 },
+          { label: "CD", count: 0 },
+          { label: "Cassette", count: 0 },
+          { label: "Other", count: 0 },
+        ],
+        decades: [],
+        formatDecadeMatrix: [],
+        library: [],
+        syncedAt: fetchedAt,
+        freshUntil,
+      }),
+      fetchedAt,
+      freshUntil,
+      itemCount: 0,
+    };
+  });
+  const database = new FakeD1({
+    credentials: { discogs: credential },
+    snapshots,
+  });
+  let calls = 0;
+
+  const refresh = await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(async () => {
+        calls += 1;
+        return calls === 1
+          ? jsonResponse(
+              { username: "example" },
+              { headers: { "x-discogs-ratelimit-remaining": "59" } },
+            )
+          : jsonResponse(
+              {
+                pagination: { page: 1, pages: 1, per_page: 100, items: 0 },
+                releases: [],
+              },
+              { headers: { "x-discogs-ratelimit-remaining": "58" } },
+            );
+      }, () => refreshConnector("discogs", "manual", "anish@example.com")),
+  );
+
+  assert.equal(refresh.status, "complete");
+  assert.equal(calls, 2);
+  assert.equal(database.snapshots.length, 2);
+  assert(database.snapshots.some((snapshot) => snapshot.id === "discogs-prior-1"));
+  assert(!database.snapshots.some((snapshot) => snapshot.id === "discogs-prior-2"));
+});
+
 test("MyAnimeList refreshes once after API 401 and retries with the new token", async () => {
   const key = Buffer.alloc(32, 25).toString("base64");
   const credential = await encryptedMyAnimeListOAuthCredential(key);
@@ -2150,6 +2334,271 @@ test("failed refresh preserves the last-known-good snapshot", async () => {
   );
 });
 
+test("same-account OAuth refresh preserves approval and publishes normally", async () => {
+  const key = Buffer.alloc(32, 53).toString("base64");
+  const credential = await encryptedMyAnimeListCredential(key);
+  const oldPayload = storedMalPayload({
+    title: "Prior title",
+    profileUrl: "https://myanimelist.net/profile/anish",
+    syncedAt: "2026-07-01T00:00:00.000Z",
+    freshUntil: "2026-07-01T12:00:00.000Z",
+  });
+  const database = new FakeD1({
+    credentials: { myanimelist: credential },
+    snapshots: [
+      storedSnapshot("myanimelist", oldPayload, {
+        fetchedAt: oldPayload.syncedAt,
+        freshUntil: oldPayload.freshUntil,
+      }),
+    ],
+  });
+  database.settings.set(
+    "connector.publication_approval.provider.myanimelist",
+    { valueJson: "encrypted-approval-placeholder", updatedAt: oldPayload.syncedAt },
+  );
+
+  const result = await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(
+        async (input) =>
+          String(input).includes("/v2/users/@me?")
+            ? jsonResponse({ id: 42, name: "anish" })
+            : jsonResponse({ data: [], paging: {} }),
+        () => refreshConnector("myanimelist", "manual", "anish@example.com"),
+      ),
+  );
+
+  assert.equal(result.status, "complete");
+  assert.equal(database.snapshots.length, 2);
+  assert.equal(
+    database.settings.has(
+      "connector.publication_approval.provider.myanimelist",
+    ),
+    true,
+  );
+  assert.equal(
+    database.settings.has(
+      "connector.publication_approval.pending.myanimelist",
+    ),
+    false,
+  );
+});
+
+test("changed OAuth account clears inherited publication state and requires approval", async () => {
+  const key = Buffer.alloc(32, 55).toString("base64");
+  const credential = await encryptedMyAnimeListCredential(key);
+  const oldPayload = storedMalPayload({
+    title: "Prior title",
+    profileUrl: "https://myanimelist.net/profile/previous-owner",
+    syncedAt: "2026-07-01T00:00:00.000Z",
+    freshUntil: "2026-07-01T12:00:00.000Z",
+  });
+  const database = new FakeD1({
+    credentials: { myanimelist: credential },
+    snapshots: [
+      storedSnapshot("myanimelist", oldPayload, {
+        fetchedAt: oldPayload.syncedAt,
+        freshUntil: oldPayload.freshUntil,
+      }),
+    ],
+  });
+  database.settings.set(
+    "connector.publication_approval.provider.myanimelist",
+    { valueJson: "encrypted-approval-placeholder", updatedAt: oldPayload.syncedAt },
+  );
+
+  const result = await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(
+        async (input) =>
+          String(input).includes("/v2/users/@me?")
+            ? jsonResponse({ id: 84, name: "different-owner" })
+            : jsonResponse({ data: [], paging: {} }),
+        () => refreshConnector("myanimelist", "manual", "anish@example.com"),
+      ),
+  );
+
+  assert.deepEqual(result, {
+    status: "failed",
+    provider: "myanimelist",
+    code: "account_changed",
+    retryable: false,
+  });
+  assert.equal(database.snapshots.length, 0);
+  assert.equal(
+    database.settings.has(
+      "connector.publication_approval.provider.myanimelist",
+    ),
+    false,
+  );
+  assert.equal(
+    database.settings.has(
+      "connector.publication_approval.pending.myanimelist",
+    ),
+    true,
+  );
+  assert.equal(database.runs.at(-1)?.errorCode, "account_changed");
+  assert.equal(
+    JSON.stringify(database.audits).includes("different-owner"),
+    false,
+  );
+});
+
+test("changed Spotify account clears its snapshot, approval, and presentation", async () => {
+  const key = Buffer.alloc(32, 57).toString("base64");
+  const credential = await encryptedSpotifyOAuthCredential(key);
+  const syncedAt = "2026-07-01T00:00:00.000Z";
+  const freshUntil = "2026-07-01T12:00:00.000Z";
+  const oldPayload = storedSpotifyPayload({
+    profileUrl: `https://open.spotify.com/user/${"a".repeat(22)}`,
+    syncedAt,
+    freshUntil,
+  });
+  const database = new FakeD1({
+    credentials: { spotify: credential },
+    snapshots: [
+      storedSnapshot("spotify", oldPayload, { fetchedAt: syncedAt, freshUntil }),
+    ],
+  });
+  database.settings.set(
+    "connector.publication_approval.provider.spotify",
+    { valueJson: "encrypted-approval-placeholder", updatedAt: syncedAt },
+  );
+  database.settings.set("connector.spotify.presentation", {
+    valueJson: JSON.stringify({ publishTopTracks: true }),
+    updatedAt: syncedAt,
+  });
+  const replacementIdentity = "z".repeat(22);
+
+  const result = await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(
+        async (input) => {
+          const url = new URL(String(input));
+          return url.pathname === "/v1/me"
+            ? jsonResponse({ id: replacementIdentity })
+            : jsonResponse({ items: [] });
+        },
+        () => refreshConnector("spotify", "manual", "anish@example.com"),
+      ),
+  );
+
+  assert.deepEqual(result, {
+    status: "failed",
+    provider: "spotify",
+    code: "account_changed",
+    retryable: false,
+  });
+  assert.equal(database.snapshots.length, 0);
+  assert.equal(
+    database.settings.has("connector.publication_approval.provider.spotify"),
+    false,
+  );
+  assert.equal(database.settings.has("connector.spotify.presentation"), false);
+  assert.equal(
+    database.settings.has("connector.publication_approval.pending.spotify"),
+    true,
+  );
+  assert.equal(database.runs.at(-1)?.errorCode, "account_changed");
+  assert.equal(JSON.stringify(database.audits).includes(replacementIdentity), false);
+  assert.equal(
+    JSON.stringify(database.statementLog).includes(replacementIdentity),
+    false,
+  );
+});
+
+test("changed Discogs account clears catalog publication state and retry state", async () => {
+  const key = Buffer.alloc(32, 59).toString("base64");
+  const credential = await encryptedDiscogsCredential(key);
+  const syncedAt = new Date(
+    Date.now() - 24 * 60 * 60 * 1_000,
+  ).toISOString();
+  const freshUntil = new Date(
+    Date.parse(syncedAt) + 4 * 60 * 60 * 1_000,
+  ).toISOString();
+  const oldPayload = storedDiscogsPayload({
+    profileUrl: "https://www.discogs.com/user/previous-owner/collection",
+    syncedAt,
+    freshUntil,
+  });
+  const database = new FakeD1({
+    credentials: { discogs: credential },
+    snapshots: [
+      storedSnapshot("discogs", oldPayload, { fetchedAt: syncedAt, freshUntil }),
+    ],
+  });
+  database.settings.set(
+    "connector.publication_approval.provider.discogs",
+    { valueJson: "encrypted-approval-placeholder", updatedAt: syncedAt },
+  );
+  database.settings.set("connector.discogs.presentation", {
+    valueJson: JSON.stringify({ publishCollection: true }),
+    updatedAt: syncedAt,
+  });
+  database.settings.set("connector.discogs.extended_display_approval", {
+    valueJson: "legacy-approval-placeholder",
+    updatedAt: syncedAt,
+  });
+  const replacementIdentity = "replacement-owner";
+  let calls = 0;
+
+  const result = await withRuntimeBindings(
+    { DB: database, CONNECTOR_ENCRYPTION_KEY: key },
+    () =>
+      withFetch(async () => {
+        calls += 1;
+        return calls === 1
+          ? jsonResponse(
+              { username: replacementIdentity },
+              { headers: { "x-discogs-ratelimit-remaining": "59" } },
+            )
+          : jsonResponse(
+              {
+                pagination: { page: 1, pages: 1, per_page: 100, items: 0 },
+                releases: [],
+              },
+              { headers: { "x-discogs-ratelimit-remaining": "58" } },
+            );
+      }, () => refreshConnector("discogs", "manual", "anish@example.com")),
+  );
+
+  assert.deepEqual(result, {
+    status: "failed",
+    provider: "discogs",
+    code: "account_changed",
+    retryable: false,
+  });
+  assert.equal(calls, 2);
+  assert.equal(database.snapshots.length, 0);
+  for (const removedKey of [
+    "connector.publication_approval.provider.discogs",
+    "connector.discogs.presentation",
+    "connector.discogs.extended_display_approval",
+  ]) {
+    assert.equal(database.settings.has(removedKey), false, removedKey);
+  }
+  assert.equal(
+    database.settings.has("connector.publication_approval.pending.discogs"),
+    true,
+  );
+  assert(
+    database.statementLog.some(
+      ({ sql, values }) =>
+        sql.includes("DELETE FROM maintenance_state") &&
+        values[0] === "connector.discogs.retry",
+    ),
+  );
+  assert.equal(database.runs.at(-1)?.errorCode, "account_changed");
+  assert.equal(JSON.stringify(database.audits).includes(replacementIdentity), false);
+  assert.equal(
+    JSON.stringify(database.statementLog).includes(replacementIdentity),
+    false,
+  );
+});
+
 test("refresh rejects unsafe provider output before writing a snapshot", async () => {
   const key = Buffer.alloc(32, 11).toString("base64");
   const credential = await encryptedMyAnimeListCredential(key);
@@ -2196,7 +2645,7 @@ test("refresh rejects unsafe provider output before writing a snapshot", async (
   );
 });
 
-test("Steam snapshots expire publicly after 72 hours", async () => {
+test("Steam snapshots remain available as stale last-known-good data", async () => {
   const now = Date.now();
   const fetchedAt = new Date(now - 73 * 60 * 60 * 1000).toISOString();
   const freshUntil = new Date(now - 61 * 60 * 60 * 1000).toISOString();
@@ -2243,11 +2692,10 @@ test("Steam snapshots expire publicly after 72 hours", async () => {
   const result = await withRuntimeBindings({ DB: database }, () =>
     getPublicConnectorSnapshot("steam"),
   );
-  assert.deepEqual(result, {
-    status: "unavailable",
-    provider: "steam",
-    reason: "stale_expired",
-  });
+  assert.equal(result.status, "ready");
+  assert.equal(result.provider, "steam");
+  assert.equal(result.fetchedAt, fetchedAt);
+  assert.equal(result.stale, true);
 });
 
 test("Steam visibility tombstone blocks every older ready snapshot", async () => {

@@ -21,6 +21,11 @@ import {
 } from "./spotify-oauth";
 import { SPOTIFY_PRESENTATION_SETTING_KEY } from "./spotify-presentation";
 import {
+  connectorPublicationApprovalPendingSettingKey,
+  connectorPublicationApprovalPendingValue,
+  connectorPublicationApprovalSettingKey,
+} from "./publication-approval";
+import {
   ConnectorFetchError,
   type SpotifyOAuthCredential,
 } from "./types";
@@ -175,6 +180,7 @@ async function reusableClient(
 export async function startSpotifyOAuth(input: {
   clientId?: string;
   clientSecret?: string;
+  replaceExisting?: boolean;
   actorEmail: string;
   requestUrl: string;
 }): Promise<SpotifyOAuthStartResult> {
@@ -190,7 +196,15 @@ export async function startSpotifyOAuth(input: {
   }
 
   let client: SpotifyOAuthClient | null;
-  if (input.clientId !== undefined || input.clientSecret !== undefined) {
+  const hasSuppliedClient =
+    input.clientId !== undefined || input.clientSecret !== undefined;
+  if (
+    input.replaceExisting !== undefined &&
+    input.replaceExisting !== hasSuppliedClient
+  ) {
+    return { status: "invalid", reason: "credential" };
+  }
+  if (hasSuppliedClient) {
     client = normalizeSpotifyOAuthClient(
       input.clientId ?? "",
       input.clientSecret ?? "",
@@ -215,6 +229,7 @@ export async function startSpotifyOAuth(input: {
     encrypted = await encryptCredential(
       {
         phase: "authorization",
+        replaceExisting: input.replaceExisting ?? hasSuppliedClient,
         ...client,
         codeVerifier,
         callbackUrl: redirectUri,
@@ -315,6 +330,7 @@ export async function stageSpotifyOAuthCallback(input: {
   if (
     !transaction ||
     transaction.phase !== "authorization" ||
+    typeof transaction.replaceExisting !== "boolean" ||
     transaction.callbackUrl !== redirectUri ||
     transaction.ownerEmail !== normalizedOwnerEmail(row.ownerEmail) ||
     transaction.stateHash !== stateHash
@@ -371,6 +387,7 @@ async function saveCredential(
   credential: SpotifyOAuthCredential,
   actorEmail: string,
   stateHash: string,
+  replaceExisting: boolean,
 ): Promise<void> {
   const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
   if (!encryptionKey) throw new Error("Connector encryption is unavailable.");
@@ -381,8 +398,7 @@ async function saveCredential(
   );
   const now = new Date().toISOString();
   const ownerEmail = normalizedOwnerEmail(actorEmail);
-  const results = await database.batch([
-    database
+  const credentialStatement = database
       .prepare(
         `INSERT INTO connector_credentials (
            provider, ciphertext, iv, key_version, credential_label,
@@ -417,17 +433,178 @@ async function saveCredential(
         stateHash,
         ownerEmail,
         now,
-      ),
-    database.prepare(`DELETE FROM connector_snapshots WHERE provider = 'spotify'`),
-    database.prepare(`DELETE FROM sync_runs WHERE provider = 'spotify'`),
+      );
+  const destructiveStatements = replaceExisting
+    ? [
+    database
+      .prepare(
+        `DELETE FROM connector_snapshots
+         WHERE provider = 'spotify'
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = 'spotify' AND ciphertext = ?
+               AND iv = ? AND updated_at = ?
+           )`,
+      )
+      .bind(encrypted.ciphertext, encrypted.iv, now),
+    database
+      .prepare(
+        `DELETE FROM sync_runs
+         WHERE provider = 'spotify'
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = 'spotify' AND ciphertext = ?
+               AND iv = ? AND updated_at = ?
+           )`,
+      )
+      .bind(encrypted.ciphertext, encrypted.iv, now),
     database
       .prepare(
         `DELETE FROM audit_log
-         WHERE entity_type = 'connector' AND entity_id = 'spotify'`,
+         WHERE entity_type = 'connector' AND entity_id = 'spotify'
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = 'spotify' AND ciphertext = ?
+               AND iv = ? AND updated_at = ?
+           )`,
+      )
+      .bind(encrypted.ciphertext, encrypted.iv, now),
+    database
+      .prepare(
+        `DELETE FROM editorial_settings
+         WHERE key = ?
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = 'spotify' AND ciphertext = ?
+               AND iv = ? AND updated_at = ?
+           )`,
+      )
+      .bind(
+        SPOTIFY_PRESENTATION_SETTING_KEY,
+        encrypted.ciphertext,
+        encrypted.iv,
+        now,
       ),
     database
-      .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
-      .bind(SPOTIFY_PRESENTATION_SETTING_KEY),
+      .prepare(
+        `DELETE FROM editorial_settings
+         WHERE key = ?
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = 'spotify' AND ciphertext = ?
+               AND iv = ? AND updated_at = ?
+           )`,
+      )
+      .bind(
+        connectorPublicationApprovalSettingKey("spotify"),
+        encrypted.ciphertext,
+        encrypted.iv,
+        now,
+      ),
+    database
+      .prepare(
+        `INSERT INTO editorial_settings (
+           key, value_json, updated_by_email, updated_at
+         )
+         SELECT ?, ?, ?, ?
+         WHERE EXISTS (
+           SELECT 1 FROM connector_credentials
+           WHERE provider = 'spotify' AND ciphertext = ?
+             AND iv = ? AND updated_at = ?
+         )
+         ON CONFLICT(key) DO UPDATE SET
+           value_json = excluded.value_json,
+           updated_by_email = excluded.updated_by_email,
+           updated_at = excluded.updated_at`,
+      )
+      .bind(
+        connectorPublicationApprovalPendingSettingKey("spotify"),
+        connectorPublicationApprovalPendingValue("spotify", now),
+        actorEmail,
+        now,
+        encrypted.ciphertext,
+        encrypted.iv,
+        now,
+      ),
+    ]
+    : [];
+  const routineReauthorizationStatements = replaceExisting
+    ? []
+    : [
+        database
+          .prepare(
+            `DELETE FROM editorial_settings
+             WHERE key = ?
+               AND NOT EXISTS (
+                 SELECT 1 FROM connector_snapshots
+                 WHERE provider = 'spotify' AND status = 'ready'
+               )
+               AND EXISTS (
+                 SELECT 1 FROM connector_credentials
+                 WHERE provider = 'spotify' AND ciphertext = ?
+                   AND iv = ? AND updated_at = ?
+               )`,
+          )
+          .bind(
+            connectorPublicationApprovalSettingKey("spotify"),
+            encrypted.ciphertext,
+            encrypted.iv,
+            now,
+          ),
+        database
+          .prepare(
+            `DELETE FROM editorial_settings
+             WHERE key = ?
+               AND NOT EXISTS (
+                 SELECT 1 FROM connector_snapshots
+                 WHERE provider = 'spotify' AND status = 'ready'
+               )
+               AND EXISTS (
+                 SELECT 1 FROM connector_credentials
+                 WHERE provider = 'spotify' AND ciphertext = ?
+                   AND iv = ? AND updated_at = ?
+               )`,
+          )
+          .bind(
+            SPOTIFY_PRESENTATION_SETTING_KEY,
+            encrypted.ciphertext,
+            encrypted.iv,
+            now,
+          ),
+        database
+          .prepare(
+            `INSERT INTO editorial_settings (
+               key, value_json, updated_by_email, updated_at
+             )
+             SELECT ?, ?, ?, ?
+             WHERE NOT EXISTS (
+               SELECT 1 FROM connector_snapshots
+               WHERE provider = 'spotify' AND status = 'ready'
+             )
+               AND EXISTS (
+                 SELECT 1 FROM connector_credentials
+                 WHERE provider = 'spotify' AND ciphertext = ?
+                   AND iv = ? AND updated_at = ?
+               )
+             ON CONFLICT(key) DO UPDATE SET
+               value_json = excluded.value_json,
+               updated_by_email = excluded.updated_by_email,
+               updated_at = excluded.updated_at`,
+          )
+          .bind(
+            connectorPublicationApprovalPendingSettingKey("spotify"),
+            connectorPublicationApprovalPendingValue("spotify", now),
+            actorEmail,
+            now,
+            encrypted.ciphertext,
+            encrypted.iv,
+            now,
+          ),
+      ];
+  const results = await database.batch([
+    credentialStatement,
+    ...destructiveStatements,
+    ...routineReauthorizationStatements,
     database
       .prepare(
         `DELETE FROM connector_oauth_transactions
@@ -505,6 +682,7 @@ export async function completeSpotifyOAuth(input: {
   if (
     !transaction ||
     transaction.phase !== "callback" ||
+    typeof transaction.replaceExisting !== "boolean" ||
     transaction.callbackUrl !== redirectUri ||
     transaction.ownerEmail !== normalizedOwnerEmail(input.actorEmail) ||
     transaction.stateHash !== stateHash
@@ -576,7 +754,13 @@ export async function completeSpotifyOAuth(input: {
   }
 
   try {
-    await saveCredential(database, credential, input.actorEmail, stateHash);
+    await saveCredential(
+      database,
+      credential,
+      input.actorEmail,
+      stateHash,
+      transaction.replaceExisting,
+    );
   } catch (error) {
     try {
       await deleteTransaction(database, stateHash);

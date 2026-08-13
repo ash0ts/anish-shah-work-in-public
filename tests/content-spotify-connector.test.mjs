@@ -87,6 +87,15 @@ class PresentationD1 {
   }
   async first(statement) {
     if (statement.sql.includes("FROM editorial_settings")) {
+      if (
+        statement.values[0] === "connector.publication_approval.enforcement" ||
+        statement.values[0] ===
+          "connector.publication_approval.pending.spotify" ||
+        statement.values[0] ===
+          "connector.publication_approval.provider.spotify"
+      ) {
+        return null;
+      }
       return this.setting;
     }
     return null;
@@ -607,7 +616,12 @@ test("Spotify Top Tracks remain withheld until the owner explicitly acknowledges
     });
     assert.equal(database.audits.length, 1);
 
-    const now = new Date().toISOString();
+    const fetchedAt = new Date(
+      Date.now() - 31 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const freshUntil = new Date(
+      Date.now() - 30 * 24 * 60 * 60 * 1000,
+    ).toISOString();
     database.snapshots = [
       {
         status: "ready",
@@ -621,15 +635,17 @@ test("Spotify Top Tracks remain withheld until the owner explicitly acknowledges
             medium_term: { tracks: [] },
             long_term: { tracks: [] },
           },
-          syncedAt: now,
-          freshUntil: now,
+          syncedAt: fetchedAt,
+          freshUntil,
         }),
-        fetchedAt: now,
-        freshUntil: now,
+        fetchedAt,
+        freshUntil,
       },
     ];
     const published = await getPublicConnectorSnapshot("spotify");
     assert.equal(published.status, "ready");
     assert.equal(published.provider, "spotify");
+    assert.equal(published.fetchedAt, fetchedAt);
+    assert.equal(published.stale, true);
   });
 });

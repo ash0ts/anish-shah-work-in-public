@@ -775,7 +775,7 @@ test("hourly retention clears expired promotion ciphertext and deletes old hando
       return statement;
     },
     async batch(batchStatements) {
-      assert.equal(batchStatements.length, 6);
+      assert.equal(batchStatements.length, 5);
       return batchStatements.map((_, index) => ({ meta: { changes: index + 1 } }));
     },
   };
@@ -800,8 +800,9 @@ test("hourly retention clears expired promotion ciphertext and deletes old hando
   );
   assert(heartbeat);
   const details = JSON.parse(heartbeat.values[2]);
-  assert.equal(details.clearedExpiredPromotionPayloads, 5);
-  assert.equal(details.deletedPromotionTransactions, 6);
+  assert.equal(details.clearedExpiredPromotionPayloads, 4);
+  assert.equal(details.deletedPromotionTransactions, 5);
+  assert.equal("deletedSpotifySnapshots" in details, false);
 });
 
 test("the owner-only staging bootstrap initializes a fresh retention heartbeat", async () => {

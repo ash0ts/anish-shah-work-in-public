@@ -970,6 +970,61 @@
   font-size: 0.92em;
 }
 
+.approvalPanel {
+  margin: 28px 0;
+  padding: 24px;
+  border: 1px solid var(--ink);
+  background: color-mix(in srgb, var(--blue) 5%, var(--paper));
+}
+
+.approvalPanel > p {
+  margin: 12px 0 18px;
+  color: rgba(23, 34, 59, 0.72);
+}
+
+.approvalGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.approvalCard {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(23, 34, 59, 0.35);
+  background: var(--paper);
+}
+
+.approvalCard > span,
+.approvalCard label {
+  color: rgba(23, 34, 59, 0.72);
+  font-size: 13px;
+}
+
+.approvalCard input:not([type="checkbox"]) {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  padding: 10px;
+  border: 1px solid rgba(23, 34, 59, 0.5);
+  background: white;
+}
+
+.approvalCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .approvalGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .connectorGrid {
   min-width: 0;
   border-bottom: 1px solid var(--ink);

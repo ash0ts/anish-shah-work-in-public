@@ -1,17 +1,10 @@
-import {
-  discogsExtendedDisplayApprovalIsActive,
-  getDiscogsExtendedDisplayApproval,
-  getDiscogsPresentationConfig,
-} from "./discogs-presentation";
+import { getDiscogsPresentationConfig } from "./discogs-presentation";
 import { getSpotifyPresentationConfig } from "./spotify-presentation";
+import { connectorPublicationGate } from "./publication-approval";
 import { parseStoredConnectorPublicPayload } from "./public-payload-policy";
 import { databaseOrNull } from "./repository-primitives";
 import type { PublicSnapshotResult } from "./repository-contracts";
 import type { ConnectorProvider } from "./types";
-
-const STEAM_MAX_PUBLIC_AGE_MS = 72 * 60 * 60 * 1000;
-const SPOTIFY_MAX_PUBLIC_AGE_MS = 72 * 60 * 60 * 1000;
-const DISCOGS_MAX_PUBLIC_AGE_MS = 6 * 60 * 60 * 1000;
 
 function canonicalIsoTimestamp(value: string): boolean {
   const parsed = new Date(value);
@@ -24,6 +17,14 @@ export async function getPublicConnectorSnapshot(
   const database = databaseOrNull();
   if (!database) {
     return { status: "unavailable", provider, reason: "database_unavailable" };
+  }
+
+  const publicationGate = await connectorPublicationGate(provider, database);
+  if (publicationGate.status === "setup_required") {
+    return { status: "unavailable", provider, reason: "database_unavailable" };
+  }
+  if (publicationGate.status === "withheld") {
+    return { status: "unavailable", provider, reason: "visibility_withheld" };
   }
 
   if (provider === "spotify") {
@@ -52,15 +53,6 @@ export async function getPublicConnectorSnapshot(
       };
     }
   }
-
-  const extendedDiscogsDisplay =
-    provider === "discogs"
-      ? await getDiscogsExtendedDisplayApproval(database).then(
-          (result) =>
-            result.status === "ready" &&
-            discogsExtendedDisplayApprovalIsActive(result.approval),
-        )
-      : false;
 
   try {
     const snapshots = await database
@@ -104,29 +96,6 @@ export async function getPublicConnectorSnapshot(
       ) {
         continue;
       }
-      if (
-        provider === "steam" ||
-        provider === "spotify" ||
-        (provider === "discogs" && !extendedDiscogsDisplay)
-      ) {
-        const fetchedTime = Date.parse(snapshot.fetchedAt);
-        if (
-          !Number.isFinite(fetchedTime) ||
-          Date.now() - fetchedTime >
-            (provider === "steam"
-              ? STEAM_MAX_PUBLIC_AGE_MS
-              : provider === "spotify"
-                ? SPOTIFY_MAX_PUBLIC_AGE_MS
-                : DISCOGS_MAX_PUBLIC_AGE_MS)
-        ) {
-          return {
-            status: "unavailable",
-            provider,
-            reason: "stale_expired",
-          };
-        }
-      }
-
       return {
         status: "ready",
         provider,

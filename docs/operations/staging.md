@@ -212,9 +212,9 @@ automated browser:
 - real staging OAuth, manual Refresh, publish/unpublish, stale, and recovery
   paths work, while public reads and cron make no provider data calls;
 - Spotify and Strava frames remain consent-gated;
-- Discogs obeys its four-hour manual-refresh eligibility and standard six-hour
-  public cutoff; if an isolated staging approval tests extended display, its
-  private record must be current and must never be copied to production;
+- Discogs obeys its four-hour manual-refresh eligibility; approved stale
+  display retains the real update time, and its isolated staging approval must
+  never be copied to production;
 - My Room capability fallbacks and semantic navigation work without WebGL;
 - Pocket Room entry, swipe/tap separation, Back/Escape, and focus restoration work;
 - Simulation completes in Action and Tactical modes with live-model and authored-fallback paths, bounded sessions, budgets, and rejected unsafe output;

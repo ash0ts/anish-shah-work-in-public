@@ -7,7 +7,10 @@ import {
 import { resolveDiscogsCallbackUrl } from "@/lib/server/connectors/discogs-oauth";
 import { resolveMyAnimeListCallbackUrl } from "@/lib/server/connectors/myanimelist-oauth";
 import { resolveSpotifyCallbackUrl } from "@/lib/server/connectors/spotify-oauth";
-import { getStudioOverview } from "@/lib/server/connectors";
+import {
+  getConnectorPublicationApprovalOverview,
+  getStudioOverview,
+} from "@/lib/server/connectors";
 import { getCopyOwnershipReport } from "@/lib/server/copy-ownership";
 import { listEditorialRecords } from "@/lib/server/editorial";
 import { ownerAuthorizationForEmail } from "@/lib/server/owner-auth";
@@ -17,6 +20,7 @@ import {
   ConnectorControls,
   StravaConnectorControls,
 } from "./ConnectorControls";
+import { ConnectorPublicationApprovals } from "./ConnectorPublicationApprovals";
 import { CopyOwnershipSummary } from "./CopyOwnershipSummary";
 import { EditorialRecords } from "./EditorialRecords";
 import { PlayPromotionControls } from "./PlayPromotionControls";
@@ -128,13 +132,14 @@ export default async function StudioPage() {
   }
   const overview = await getStudioOverview(user.email);
   const connectors = overview.connectors;
-  const [initialEditorialRecords, copyOwnershipReport] =
+  const [initialEditorialRecords, copyOwnershipReport, publicationApprovals] =
     overview.status === "ready"
       ? await Promise.all([
           listEditorialRecords({ limit: 50, offset: 0 }),
           getCopyOwnershipReport().catch(() => null),
+          getConnectorPublicationApprovalOverview(),
         ])
-      : [null, null];
+      : [null, null, null];
 
   return (
     <main className={styles.shell} id="main">
@@ -270,6 +275,14 @@ export default async function StudioPage() {
             </span>
           </div>
         ) : null}
+        {publicationApprovals?.status === "ready" ? (
+          <ConnectorPublicationApprovals initial={publicationApprovals} />
+        ) : (
+          <div className={styles.inlineNotice}>
+            <strong>Publication approval records need setup.</strong>
+            <span>Confirm D1 and connector encryption before activating enforcement.</span>
+          </div>
+        )}
         <div className={styles.connectorGrid}>
           {connectors.map((connector) => (
             <ConnectorControls

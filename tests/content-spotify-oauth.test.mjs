@@ -14,7 +14,7 @@ const {
   stageSpotifyOAuthCallback,
   startSpotifyOAuth,
 } = oauthRepository;
-const { decryptCredential } = cryptoModule;
+const { decryptCredential, encryptCredential } = cryptoModule;
 
 const encryptionKey = Buffer.alloc(32, 53).toString("base64");
 const ownerEmail = "owner@example.com";
@@ -84,7 +84,7 @@ class SpotifyOAuthD1 {
     this.snapshots = [];
     this.runs = [];
     this.audits = [];
-    this.presentation = null;
+    this.settings = new Map();
   }
 
   prepare(sql) {
@@ -117,6 +117,18 @@ class SpotifyOAuthD1 {
 
   apply(statement) {
     const { sql, values } = statement;
+
+    const credentialGuardMatches = () => {
+      if (!sql.includes("ciphertext = ?")) return true;
+      const [ciphertext, iv, updatedAt] = values.slice(-3);
+      const credential = this.credentials.get("spotify");
+      return Boolean(
+        credential &&
+          credential.ciphertext === ciphertext &&
+          credential.iv === iv &&
+          credential.updatedAt === updatedAt,
+      );
+    };
 
     if (sql.startsWith("INSERT INTO connector_oauth_transactions")) {
       const [
@@ -263,21 +275,47 @@ class SpotifyOAuthD1 {
         : 0;
     }
     if (sql.startsWith("DELETE FROM connector_snapshots")) {
+      if (!credentialGuardMatches()) return 0;
+      if (
+        sql.includes("NOT EXISTS") &&
+        this.snapshots.length > 0
+      ) {
+        return 0;
+      }
       const previous = this.snapshots.length;
       this.snapshots = [];
       return previous;
     }
     if (sql.startsWith("DELETE FROM sync_runs")) {
+      if (!credentialGuardMatches()) return 0;
       const previous = this.runs.length;
       this.runs = [];
       return previous;
     }
     if (sql.startsWith("DELETE FROM editorial_settings")) {
-      const existed = this.presentation !== null;
-      this.presentation = null;
-      return existed ? 1 : 0;
+      if (!credentialGuardMatches()) return 0;
+      if (
+        sql.includes("NOT EXISTS") &&
+        this.snapshots.length > 0
+      ) {
+        return 0;
+      }
+      return this.settings.delete(values[0]) ? 1 : 0;
+    }
+    if (sql.startsWith("INSERT INTO editorial_settings")) {
+      if (!credentialGuardMatches()) return 0;
+      if (
+        sql.includes("NOT EXISTS") &&
+        this.snapshots.length > 0
+      ) {
+        return 0;
+      }
+      const [key, valueJson] = values;
+      this.settings.set(key, valueJson);
+      return 1;
     }
     if (sql.startsWith("DELETE FROM audit_log")) {
+      if (!credentialGuardMatches()) return 0;
       const previous = this.audits.length;
       this.audits = [];
       return previous;
@@ -285,7 +323,7 @@ class SpotifyOAuthD1 {
     if (sql.startsWith("INSERT INTO audit_log")) {
       if (
         sql.includes("connector.oauth_connected") &&
-        !this.credentials.has("spotify")
+        !credentialGuardMatches()
       ) {
         return 0;
       }
@@ -461,6 +499,41 @@ test("Spotify OAuth rejects the wrong owner, consumes before exchange, and preve
   assert.deepEqual(replay, { status: "invalid_state" });
 });
 
+test("Spotify rejects pre-deploy callback state without an explicit replacement intent", async () => {
+  const database = new SpotifyOAuthD1();
+  const started = await begin(database);
+  const staged = await stage(database, started.authorizationUrl);
+  assert.equal(staged.status, "ready");
+
+  const [stored] = database.transactions.values();
+  const current = await decryptCredential(
+    stored,
+    encryptionKey,
+    "spotify-oauth-transaction",
+  );
+  const legacyTransaction = { ...current };
+  delete legacyTransaction.replaceExisting;
+  Object.assign(
+    stored,
+    await encryptCredential(
+      legacyTransaction,
+      encryptionKey,
+      "spotify-oauth-transaction",
+    ),
+  );
+
+  const result = await withRuntime(database, () =>
+    completeSpotifyOAuth({
+      resumeState: staged.resumeState,
+      actorEmail: ownerEmail,
+      requestUrl: callbackUrl,
+    }),
+  );
+  assert.deepEqual(result, { status: "invalid_state" });
+  assert.equal(stored.consumedAt, null);
+  assert.equal(database.credentials.size, 0);
+});
+
 test("Spotify OAuth denial consumes and deletes state without creating a credential", async () => {
   const database = new SpotifyOAuthD1();
   const started = await begin(database);
@@ -541,4 +614,112 @@ test("a newer Spotify authorization invalidates pending state and replaces crede
   assert.equal(credential.clientId, "spotify-client-id-three");
   assert.equal(credential.accessToken, "spotify-access-token-one");
   assert.equal(database.transactions.size, 0);
+});
+
+test("an expired replacement authorization cannot erase the accepted Spotify state", async () => {
+  const database = new SpotifyOAuthD1();
+  const original = await begin(database);
+  const originalStaged = await stage(database, original.authorizationUrl);
+  const originalCompletion = await withRuntime(database, () =>
+    withFetch(tokenResponseForRequest, () =>
+      completeSpotifyOAuth({
+        resumeState: originalStaged.resumeState,
+        actorEmail: ownerEmail,
+        requestUrl: callbackUrl,
+      }),
+    ),
+  );
+  assert.deepEqual(originalCompletion, { status: "connected" });
+
+  database.snapshots.push({ id: "last-known-good" });
+  database.runs.push({ id: "last-run" });
+  database.audits.push({ id: "last-audit" });
+  database.settings.set("connector.spotify.presentation", { valueJson: "{}" });
+  database.settings.set("connector.publication_approval.provider.spotify", {
+    valueJson: "{}",
+  });
+  const credentialBefore = structuredClone(database.credentials.get("spotify"));
+  const auditsBefore = structuredClone(database.audits);
+
+  const replacement = await begin(database, {
+    clientId: "spotify-client-id-two",
+    clientSecret: "spotify-client-secret-two",
+  });
+  const replacementStaged = await stage(database, replacement.authorizationUrl, {
+    authorizationCode: "spotify-authorization-code-two",
+  });
+  const failedReplacement = await withRuntime(database, () =>
+    withFetch(async (url, init) => {
+      for (const transaction of database.transactions.values()) {
+        transaction.expiresAt = new Date(Date.now() - 1_000).toISOString();
+      }
+      return tokenResponseForRequest(url, init);
+    }, () =>
+      completeSpotifyOAuth({
+        resumeState: replacementStaged.resumeState,
+        actorEmail: ownerEmail,
+        requestUrl: callbackUrl,
+      }),
+    ),
+  );
+
+  assert.deepEqual(failedReplacement, { status: "invalid_state" });
+  assert.deepEqual(database.credentials.get("spotify"), credentialBefore);
+  assert.deepEqual(database.snapshots, [{ id: "last-known-good" }]);
+  assert.deepEqual(database.runs, [{ id: "last-run" }]);
+  assert.deepEqual(database.audits, auditsBefore);
+  assert(database.settings.has("connector.spotify.presentation"));
+  assert(database.settings.has("connector.publication_approval.provider.spotify"));
+});
+
+test("routine Spotify reauthorization preserves accepted publication state", async () => {
+  const database = new SpotifyOAuthD1();
+  const initial = await begin(database);
+  const initialStage = await stage(database, initial.authorizationUrl);
+  await withRuntime(database, () =>
+    withFetch(tokenResponseForRequest, () =>
+      completeSpotifyOAuth({
+        resumeState: initialStage.resumeState,
+        actorEmail: ownerEmail,
+        requestUrl: callbackUrl,
+      }),
+    ),
+  );
+  database.snapshots.push({ id: "accepted" });
+  database.runs.push({ id: "history" });
+  database.settings.set("connector.spotify.presentation", "presentation");
+  database.settings.set(
+    "connector.publication_approval.provider.spotify",
+    "approval",
+  );
+
+  const routine = await begin(database, {
+    clientId: undefined,
+    clientSecret: undefined,
+  });
+  const routineStage = await stage(database, routine.authorizationUrl, {
+    authorizationCode: "spotify-authorization-code-two",
+  });
+  const result = await withRuntime(database, () =>
+    withFetch(tokenResponseForRequest, () =>
+      completeSpotifyOAuth({
+        resumeState: routineStage.resumeState,
+        actorEmail: ownerEmail,
+        requestUrl: callbackUrl,
+      }),
+    ),
+  );
+
+  assert.deepEqual(result, { status: "connected" });
+  assert.equal(database.credentials.get("spotify").generation, 2);
+  assert.deepEqual(database.snapshots, [{ id: "accepted" }]);
+  assert.deepEqual(database.runs, [{ id: "history" }]);
+  assert.equal(
+    database.settings.get("connector.spotify.presentation"),
+    "presentation",
+  );
+  assert.equal(
+    database.settings.get("connector.publication_approval.provider.spotify"),
+    "approval",
+  );
 });

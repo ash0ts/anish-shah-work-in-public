@@ -27,8 +27,11 @@ export async function myAnimeListOAuthStartPost(
   const candidate = body as Record<string, unknown>;
   const hasClientId = Object.hasOwn(candidate, "clientId");
   const hasClientSecret = Object.hasOwn(candidate, "clientSecret");
+  const hasReplaceExisting = Object.hasOwn(candidate, "replaceExisting");
   if (
     hasClientId !== hasClientSecret ||
+    hasReplaceExisting !== hasClientId ||
+    (hasReplaceExisting && candidate.replaceExisting !== true) ||
     (hasClientId &&
       (typeof candidate.clientId !== "string" ||
         typeof candidate.clientSecret !== "string"))
@@ -44,6 +47,7 @@ export async function myAnimeListOAuthStartPost(
       ? {
           clientId: candidate.clientId as string,
           clientSecret: candidate.clientSecret as string,
+          replaceExisting: true,
         }
       : {}),
     actorEmail: authorization.user.email,

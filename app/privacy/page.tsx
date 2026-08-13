@@ -150,19 +150,15 @@ export default function PrivacyPage() {
             reads and scheduled maintenance never request new collection data.
             Strava checks its saved public widget only when the owner saves it or
             selects Verify feed now. D1 retains at most the latest two complete
-            sanitized snapshots for the other API providers and one current
-            Discogs snapshot. A failed request never replaces the last accepted
-            snapshot. Steam’s public fallback and Spotify’s API-derived display
-            still expire after 72 hours; expired Spotify metadata is deleted
-            after 30 days.
-          </p>
-          <p>
-            Discogs is normally unavailable six hours after its last successful
-            synchronization. When the owner has separately documented a
-            provider-granted exception in protected Studio settings, the last
-            accepted catalog may remain visible beyond that window and is marked
-            stale with its actual update time. The permission reference is never
-            part of the public site or connector response.
+            sanitized snapshots for each collection provider: the current
+            version and one rollback version. A failed request never replaces
+            the last accepted snapshot. With an active owner-recorded publication approval, an
+            accepted collection snapshot remains available as a saved snapshot
+            with its actual update time. Age alone never deletes it. Once
+            publication-approval enforcement is active, a missing, disabled, or
+            expired approval withholds public display without deleting the
+            private snapshot. Publication references are encrypted and never
+            returned by Studio, public APIs, health responses, logs, or bundles.
           </p>
           <p>
             Raw provider responses are processed in memory and discarded.

@@ -35,11 +35,13 @@ export async function discogsOAuthStartPost(
   const keys = Object.keys(candidate);
   const reusingStoredClient = keys.length === 0;
   const exactNewClient =
-    keys.length === 2 &&
+    keys.length === 3 &&
     keys.includes("consumerKey") &&
     keys.includes("consumerSecret") &&
+    keys.includes("replaceExisting") &&
     typeof candidate.consumerKey === "string" &&
-    typeof candidate.consumerSecret === "string";
+    typeof candidate.consumerSecret === "string" &&
+    candidate.replaceExisting === true;
   if (!reusingStoredClient && !exactNewClient) {
     return Response.json(
       { error: "Both Discogs consumer key and consumer secret are required." },
@@ -53,6 +55,7 @@ export async function discogsOAuthStartPost(
       ? {
           consumerKey: candidate.consumerKey as string,
           consumerSecret: candidate.consumerSecret as string,
+          replaceExisting: true,
         }
       : {}),
     actorEmail: authorization.user.email,

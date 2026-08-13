@@ -18,7 +18,7 @@ const [
     resolveMyAnimeListCallbackUrl,
     shouldRefreshMyAnimeListToken,
   },
-  { decryptCredential },
+  { decryptCredential, encryptCredential },
   {
     completeMyAnimeListOAuth,
     deleteConnectorCredential,
@@ -89,6 +89,7 @@ class OAuthD1 {
     this.snapshots = [];
     this.runs = [];
     this.audits = [];
+    this.settings = new Map();
   }
 
   prepare(sql) {
@@ -548,6 +549,140 @@ test("OAuth completion rejects the wrong owner and replay, then stores renewable
   );
   assert.deepEqual(replay, { status: "invalid_state" });
   assert.equal(tokenRequests, 1);
+});
+
+test("OAuth completion rejects pre-deploy state without an explicit replacement intent", async () => {
+  const database = new OAuthD1();
+  const started = await beginOAuth(database);
+  const state = new URL(started.authorizationUrl).searchParams.get("state");
+  const staged = await withRuntimeBindings(
+    { ...localOAuthEnvironment, DB: database },
+    () =>
+      stageMyAnimeListOAuthCallback({
+        state,
+        authorizationCode: "authorization-code-value",
+        requestUrl: oauthCallbackUrl,
+      }),
+  );
+  assert.equal(staged.status, "ready");
+
+  const [stored] = database.transactions.values();
+  const current = await decryptCredential(
+    stored,
+    localOAuthEnvironment.CONNECTOR_ENCRYPTION_KEY,
+    "myanimelist-oauth-transaction",
+  );
+  const legacyTransaction = { ...current };
+  delete legacyTransaction.replaceExisting;
+  Object.assign(
+    stored,
+    await encryptCredential(
+      legacyTransaction,
+      localOAuthEnvironment.CONNECTOR_ENCRYPTION_KEY,
+      "myanimelist-oauth-transaction",
+    ),
+  );
+
+  const result = await withRuntimeBindings(
+    { ...localOAuthEnvironment, DB: database },
+    () =>
+      completeMyAnimeListOAuth({
+        resumeState: staged.resumeState,
+        actorEmail: "owner@example.com",
+        requestUrl: oauthCallbackUrl,
+      }),
+  );
+  assert.deepEqual(result, { status: "invalid_state" });
+  assert.equal(stored.consumedAt, null);
+  assert.equal(database.credentials.size, 0);
+});
+
+test("routine MyAnimeList reauthorization preserves accepted publication state", async () => {
+  const database = new OAuthD1();
+  const initial = await beginOAuth(database);
+  const initialState = new URL(initial.authorizationUrl).searchParams.get("state");
+  const initialStage = await withRuntimeBindings(
+    { ...localOAuthEnvironment, DB: database },
+    () =>
+      stageMyAnimeListOAuthCallback({
+        state: initialState,
+        authorizationCode: "authorization-code-value",
+        requestUrl: oauthCallbackUrl,
+      }),
+  );
+  await withRuntimeBindings(
+    { ...localOAuthEnvironment, DB: database },
+    () =>
+      withFetch(
+        async () =>
+          jsonResponse({
+            expires_in: 3600,
+            access_token: "initial-access-token",
+            refresh_token: "initial-refresh-token",
+          }),
+        () =>
+          completeMyAnimeListOAuth({
+            resumeState: initialStage.resumeState,
+            actorEmail: "owner@example.com",
+            requestUrl: oauthCallbackUrl,
+          }),
+      ),
+  );
+  database.snapshots.push({ provider: "myanimelist", id: "accepted" });
+  database.runs.push({ provider: "myanimelist", id: "history" });
+  database.settings.set("connector.publication_approval.provider.myanimelist", "approval");
+
+  const routine = await withRuntimeBindings(
+    { ...localOAuthEnvironment, DB: database },
+    () =>
+      startMyAnimeListOAuth({
+        actorEmail: "owner@example.com",
+        requestUrl: oauthStartUrl,
+      }),
+  );
+  const routineState = new URL(routine.authorizationUrl).searchParams.get("state");
+  const routineStage = await withRuntimeBindings(
+    { ...localOAuthEnvironment, DB: database },
+    () =>
+      stageMyAnimeListOAuthCallback({
+        state: routineState,
+        authorizationCode: "routine-authorization-code",
+        requestUrl: oauthCallbackUrl,
+      }),
+  );
+  const result = await withRuntimeBindings(
+    { ...localOAuthEnvironment, DB: database },
+    () =>
+      withFetch(
+        async () =>
+          jsonResponse({
+            expires_in: 3600,
+            access_token: "routine-access-token",
+            refresh_token: "routine-refresh-token",
+          }),
+        () =>
+          completeMyAnimeListOAuth({
+            resumeState: routineStage.resumeState,
+            actorEmail: "owner@example.com",
+            requestUrl: oauthCallbackUrl,
+          }),
+      ),
+  );
+
+  assert.deepEqual(result, { status: "connected" });
+  assert.equal(database.credentials.get("myanimelist").generation, 2);
+  assert.deepEqual(database.snapshots, [
+    { provider: "myanimelist", id: "accepted" },
+  ]);
+  assert.deepEqual(database.runs, [
+    { provider: "myanimelist", id: "history" },
+  ]);
+  assert.equal(
+    database.settings.get(
+      "connector.publication_approval.provider.myanimelist",
+    ),
+    "approval",
+  );
 });
 
 test("OAuth denial consumes the transaction without creating credentials", async () => {

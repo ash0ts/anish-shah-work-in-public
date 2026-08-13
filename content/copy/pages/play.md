@@ -67,7 +67,7 @@ This collection is not available yet.
 Back to overview
 
 ## status-stale
-Refresh delayed
+Saved snapshot
 
 ## collection-search-placeholder
 Search this collection

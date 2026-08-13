@@ -63,7 +63,6 @@ export type PublicSnapshotResult =
         | "never_synced"
         | "invalid_snapshot"
         | "visibility_withheld"
-        | "stale_expired"
         | "database_unavailable";
     };
 

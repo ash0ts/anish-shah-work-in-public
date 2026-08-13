@@ -3,7 +3,6 @@ import {
   RETENTION_MAINTENANCE_KEY,
 } from "../maintenance-state";
 
-const SPOTIFY_SNAPSHOT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const OAUTH_TRANSACTION_RETENTION_MS = 24 * 60 * 60 * 1000;
 const SYNC_RUN_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 const AUDIT_RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
@@ -25,10 +24,6 @@ export async function pruneConnectorRetention(
   const oauthCutoff = retentionCutoff(now, OAUTH_TRANSACTION_RETENTION_MS);
   const syncCutoff = retentionCutoff(now, SYNC_RUN_RETENTION_MS);
   const auditCutoff = retentionCutoff(now, AUDIT_RETENTION_MS);
-  const spotifySnapshotCutoff = retentionCutoff(
-    now,
-    SPOTIFY_SNAPSHOT_RETENTION_MS,
-  );
   const promotionCutoff = retentionCutoff(
     now,
     PROMOTION_TRANSACTION_RETENTION_MS,
@@ -52,12 +47,6 @@ export async function pruneConnectorRetention(
         .bind(auditCutoff),
       database
         .prepare(
-          `DELETE FROM connector_snapshots
-           WHERE provider = 'spotify' AND fetched_at < ?`,
-        )
-        .bind(spotifySnapshotCutoff),
-      database
-        .prepare(
           `UPDATE play_promotion_transactions
            SET status = 'expired', ciphertext = NULL, iv = NULL,
                key_version = NULL, providers_json = '[]', updated_at = ?
@@ -79,9 +68,8 @@ export async function pruneConnectorRetention(
         deletedOauthTransactions: results[0]?.meta.changes ?? 0,
         deletedSyncRuns: results[1]?.meta.changes ?? 0,
         deletedAuditRows: results[2]?.meta.changes ?? 0,
-        deletedSpotifySnapshots: results[3]?.meta.changes ?? 0,
-        clearedExpiredPromotionPayloads: results[4]?.meta.changes ?? 0,
-        deletedPromotionTransactions: results[5]?.meta.changes ?? 0,
+        clearedExpiredPromotionPayloads: results[3]?.meta.changes ?? 0,
+        deletedPromotionTransactions: results[4]?.meta.changes ?? 0,
       },
       now.toISOString(),
     );

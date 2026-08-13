@@ -33,7 +33,9 @@ export function connectorRefreshResponse(
             ? "Configure the truthful Steam data storage-country disclosure before syncing."
             : "The site database is not ready."
       : result.status === "failed"
-        ? result.code === "credential_expired" ||
+        ? result.code === "account_changed"
+          ? "The authorized provider account changed. Data from the prior account was withheld. Save publication approval for this account, then refresh again."
+          : result.code === "credential_expired" ||
           result.code === "reauthorization_required"
           ? "The provider credential needs to be renewed. No new snapshot was published; any previously accepted snapshot remains unchanged."
           : result.code === "rate_limited"

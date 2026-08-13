@@ -237,7 +237,8 @@ The collection lifecycle is:
 5. A central public-payload policy validates that projection before D1 stores a
    ready snapshot and audit record.
 6. Public APIs and Play screens read the stored snapshot, project pagination or
-   gallery state, and apply provider-specific visibility and age rules.
+   gallery state, and apply the provider's publication choice and unified
+   encrypted approval gate.
 
 Non-manual trigger values remain parseable only for historical database
 compatibility; the refresh service rejects them at runtime. Public reads,
@@ -245,6 +246,15 @@ OAuth callbacks, credential saves, and scheduled maintenance are pure with
 respect to provider collections. Failed attempts keep the last-known-good
 snapshot, except for an explicit visibility-withheld state where retaining a
 collection would itself be misleading.
+
+Configured providers begin in report-only approval mode so deployment cannot
+silently hide existing collections. Studio records encrypted, provider-bound
+references for `public_display` and `retain_last_known_good`; activation becomes
+available only when every configured provider has both scopes. In required
+mode, a missing, disabled, or expired approval withholds public display without
+deleting the private snapshot. Accepted connector snapshots do not age out;
+their actual update time and stale state remain visible until replacement,
+explicit unpublish, disconnect, or Steam's verified-private tombstone.
 
 This design favors privacy, predictable provider load, and inspectable owner
 intent over minute-by-minute freshness. It also makes stale and unavailable

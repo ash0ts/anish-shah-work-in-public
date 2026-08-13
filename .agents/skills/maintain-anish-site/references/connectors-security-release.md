@@ -59,11 +59,14 @@ Local promotion may transfer only reviewed, explicitly portable provider setup o
 - D1 commits validated publication state; versioned `PUBLICATION_CACHE` KV advances only after D1 succeeds. If both are unavailable/invalid in production, return a noindexed `503`, never the checked-in bundle.
 - A failed, rate-limited, malformed, or rejected synchronization never changes
   the active snapshot pointer. Preserve the stored last-known-good snapshot;
-  public display still observes each provider's age/privacy rules.
-- Discogs keeps the standard six-hour cutoff unless a current owner-only
-  permission record explicitly enables older stale display. That record keeps
-  provider, permission reference, approval time, optional expiry, and enabled
-  state private; public output exposes only freshness and the actual update time.
+  accepted Spotify and Steam snapshots have no age-based deletion or cutoff.
+- Every configured connector uses the owner-only publication approval register.
+  References are encrypted; both `public_display` and
+  `retain_last_known_good` are required after atomic activation. Missing or
+  expired approvals withhold public display without deleting private data.
+- Approved connector snapshots have no age-based deletion or public cutoff.
+  Public output exposes only freshness and the actual update time; required
+  mode withholds missing or expired approvals without deleting private state.
 - Disconnect deletes provider credentials/config, snapshots, pending OAuth state, sync history, and provider audit records, then unpublishes.
 - Third-party frames remain consent-gated and CSP allowlists exact.
 - Update Privacy and tests whenever retrieval, storage, retention, disclosure, or deletion changes.

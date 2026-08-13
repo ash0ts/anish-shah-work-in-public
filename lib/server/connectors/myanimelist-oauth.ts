@@ -33,6 +33,7 @@ export type MyAnimeListOAuthClient = {
 
 export type MyAnimeListOAuthTransactionPayload = MyAnimeListOAuthClient & {
   phase: "authorization" | "callback";
+  replaceExisting: boolean;
   codeVerifier: string;
   callbackUrl: string;
   ownerEmail: string;

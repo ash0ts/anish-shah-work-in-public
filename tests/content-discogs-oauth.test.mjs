@@ -27,7 +27,7 @@ const {
   stageDiscogsOAuthCallback,
   startDiscogsOAuth,
 } = repository;
-const { decryptCredential } = cryptoModule;
+const { decryptCredential, encryptCredential } = cryptoModule;
 
 const encryptionKey = Buffer.alloc(32, 29).toString("base64");
 const ownerEmail = "owner@example.com";
@@ -275,10 +275,33 @@ class DiscogsOAuthD1 {
       this.snapshots = [];
       return previous;
     }
+    if (sql.startsWith("UPDATE editorial_settings")) {
+      if (!this.presentationSetting) return 0;
+      this.presentationSetting = {
+        ...this.presentationSetting,
+        credentialGeneration: this.credentials.get("discogs")?.generation,
+      };
+      return 1;
+    }
     if (sql.startsWith("DELETE FROM editorial_settings")) {
+      if (
+        sql.includes("NOT EXISTS") &&
+        this.snapshots.length > 0
+      ) {
+        return 0;
+      }
       const changed = this.presentationSetting === null ? 0 : 1;
       this.presentationSetting = null;
       return changed;
+    }
+    if (sql.startsWith("INSERT INTO editorial_settings")) {
+      if (
+        sql.includes("NOT EXISTS") &&
+        this.snapshots.length > 0
+      ) {
+        return 0;
+      }
+      return 1;
     }
     if (sql.startsWith("DELETE FROM sync_runs")) {
       const previous = this.runs.length;
@@ -918,6 +941,124 @@ test("Discogs callback consumes before exchange, rejects wrong owner, and preven
     }),
   );
   assert.deepEqual(replay, { status: "invalid_state" });
+});
+
+test("Discogs rejects pre-deploy callback state without an explicit replacement intent", async () => {
+  const database = new DiscogsOAuthD1();
+  const browserNonce = createDiscogsOAuthBrowserNonce();
+  const started = await begin(database, browserNonce);
+  const staged = await withRuntime(database, () =>
+    stageDiscogsOAuthCallback({
+      requestToken: new URL(started.authorizationUrl).searchParams.get(
+        "oauth_token",
+      ),
+      oauthVerifier: "discogs-verifier-one",
+      browserNonce,
+      requestUrl: callbackUrl,
+    }),
+  );
+  assert.equal(staged.status, "ready");
+
+  const [stored] = database.transactions.values();
+  const current = await decryptCredential(
+    stored,
+    encryptionKey,
+    "discogs-oauth-transaction",
+  );
+  const legacyTransaction = { ...current };
+  delete legacyTransaction.replaceExisting;
+  Object.assign(
+    stored,
+    await encryptCredential(
+      legacyTransaction,
+      encryptionKey,
+      "discogs-oauth-transaction",
+    ),
+  );
+
+  const result = await withRuntime(database, () =>
+    completeDiscogsOAuth({
+      resumeState: staged.resumeState,
+      actorEmail: ownerEmail,
+      browserNonce,
+      requestUrl: localResumeUrl,
+    }),
+  );
+  assert.deepEqual(result, { status: "invalid_state" });
+  assert.equal(stored.consumedAt, null);
+  assert.equal(database.credentials.size, 0);
+});
+
+test("routine Discogs reauthorization preserves state and rebinds presentation", async () => {
+  const database = new DiscogsOAuthD1();
+  const firstBrowserNonce = createDiscogsOAuthBrowserNonce();
+  const initial = await begin(database, firstBrowserNonce);
+  const initialStage = await withRuntime(database, () =>
+    stageDiscogsOAuthCallback({
+      requestToken: new URL(initial.authorizationUrl).searchParams.get(
+        "oauth_token",
+      ),
+      oauthVerifier: "discogs-verifier-one",
+      browserNonce: firstBrowserNonce,
+      requestUrl: callbackUrl,
+    }),
+  );
+  await withRuntime(database, () =>
+    withFetch(requestTokenFetch(), () =>
+      completeDiscogsOAuth({
+        resumeState: initialStage.resumeState,
+        actorEmail: ownerEmail,
+        browserNonce: firstBrowserNonce,
+        requestUrl: localResumeUrl,
+      }),
+    ),
+  );
+  database.snapshots.push({ id: "accepted" });
+  database.runs.push({ id: "history" });
+  database.presentationSetting = {
+    schemaVersion: 1,
+    publishCollection: true,
+    reviewedAt: "2026-08-01T00:00:00.000Z",
+    credentialGeneration: 1,
+  };
+
+  const secondBrowserNonce = createDiscogsOAuthBrowserNonce();
+  const routine = await withRuntime(database, () =>
+    withFetch(requestTokenFetch(), () =>
+      startDiscogsOAuth({
+        actorEmail: ownerEmail,
+        browserNonce: secondBrowserNonce,
+        requestUrl: startUrl,
+      }),
+    ),
+  );
+  const routineStage = await withRuntime(database, () =>
+    stageDiscogsOAuthCallback({
+      requestToken: new URL(routine.authorizationUrl).searchParams.get(
+        "oauth_token",
+      ),
+      oauthVerifier: "discogs-verifier-two",
+      browserNonce: secondBrowserNonce,
+      requestUrl: callbackUrl,
+    }),
+  );
+  const result = await withRuntime(database, () =>
+    withFetch(requestTokenFetch(), () =>
+      completeDiscogsOAuth({
+        resumeState: routineStage.resumeState,
+        actorEmail: ownerEmail,
+        browserNonce: secondBrowserNonce,
+        requestUrl: localResumeUrl,
+      }),
+    ),
+  );
+
+  assert.deepEqual(result, { status: "connected" });
+  assert.equal(database.credentials.get("discogs").generation, 2);
+  assert.deepEqual(database.snapshots, [{ id: "accepted" }]);
+  assert.deepEqual(database.runs, [{ id: "history" }]);
+  assert.equal(database.presentationSetting.publishCollection, true);
+  assert.equal(database.presentationSetting.credentialGeneration, 2);
 });
 
 test("Discogs never retries the consumed access-token exchange", async () => {
