@@ -1004,6 +1004,13 @@
   font-size: 13px;
 }
 
+.approvalCard small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(23, 34, 59, 0.72);
+  line-height: 1.4;
+}
+
 .approvalCard input:not([type="checkbox"]) {
   display: block;
   width: 100%;
