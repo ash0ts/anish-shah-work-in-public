@@ -5,6 +5,11 @@ import type {
   ConnectorPublicationApprovalOverview,
   PublicConnectorProvider,
 } from "@/lib/server/connectors";
+import {
+  approvalDateAtStartOfDayUtc,
+  approvalExpiryAtEndOfDayUtc,
+  connectorApprovalReferenceField,
+} from "./connectors/publication-approval-form";
 import styles from "./studio.module.css";
 
 const labels: Record<PublicConnectorProvider, string> = {
@@ -15,12 +20,6 @@ const labels: Record<PublicConnectorProvider, string> = {
   steam: "Steam",
   strava: "Strava",
 };
-
-function isoDate(value: FormDataEntryValue | null) {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
-    ? new Date(`${value}T00:00:00.000Z`).toISOString()
-    : null;
-}
 
 export function ConnectorPublicationApprovals({
   initial,
@@ -45,7 +44,7 @@ export function ConnectorPublicationApprovals({
 
   async function save(provider: PublicConnectorProvider, form: HTMLFormElement) {
     const data = new FormData(form);
-    const approvedAt = isoDate(data.get("approvedAt"));
+    const approvedAt = approvalDateAtStartOfDayUtc(data.get("approvedAt"));
     if (!approvedAt) {
       setMessage(`${labels[provider]} needs an approval date.`);
       return;
@@ -63,7 +62,7 @@ export function ConnectorPublicationApprovals({
             : {}),
           scopes: ["public_display", "retain_last_known_good"],
           approvedAt,
-          expiresAt: isoDate(data.get("expiresAt")),
+          expiresAt: approvalExpiryAtEndOfDayUtc(data.get("expiresAt")),
           enabled: data.get("enabled") === "on",
         }),
       });
@@ -112,7 +111,11 @@ export function ConnectorPublicationApprovals({
       </div>
       <p role="status" aria-live="polite">{message}</p>
       <div className={styles.approvalGrid}>
-        {overview.providers.map(({ provider, configured, approval, missingScopes }) => (
+        {overview.providers.map(({ provider, configured, approval, missingScopes }) => {
+          const referenceField = connectorApprovalReferenceField(
+            approval?.source ?? null,
+          );
+          return (
           <form className={styles.approvalCard} key={provider} onSubmit={(event) => { event.preventDefault(); void save(provider, event.currentTarget); }}>
             <strong>{labels[provider]}</strong>
             <span>
@@ -129,13 +132,26 @@ export function ConnectorPublicationApprovals({
                         ? "Approval incomplete"
                         : "Approval missing"}
             </span>
-            <label>Reference<input name="reference" type="password" autoComplete="off" required={!approval} placeholder={approval ? "Stored — leave blank to keep" : "Private reference"} /></label>
+            <label>
+              Reference
+              <input
+                name="reference"
+                type="password"
+                autoComplete="off"
+                required={referenceField.required}
+                placeholder={referenceField.placeholder}
+              />
+              {referenceField.legacyHelp ? (
+                <small>{referenceField.legacyHelp}</small>
+              ) : null}
+            </label>
             <label>Approved<input name="approvedAt" type="date" required defaultValue={approval?.approvedAt.slice(0, 10)} /></label>
             <label>Expires (optional)<input name="expiresAt" type="date" defaultValue={approval?.expiresAt?.slice(0, 10)} /></label>
             <label className={styles.approvalCheckbox}><input name="enabled" type="checkbox" defaultChecked={approval?.enabled ?? true} /> Enabled</label>
             <button type="submit" disabled={pending !== null}>{pending === provider ? "Saving…" : "Save approval"}</button>
           </form>
-        ))}
+          );
+        })}
       </div>
       {overview.enforcement.mode === "report_only" ? (
         <button type="button" disabled={pending !== null || !overview.activationReady} onClick={() => void activate()}>
