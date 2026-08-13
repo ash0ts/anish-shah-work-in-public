@@ -35,8 +35,17 @@ const baseURL = `http://127.0.0.1:${port}`;
 const persistedState =
   process.env.BROWSER_QUALITY_STATE_DIR ??
   `.wrangler/browser-quality-${playMode}`;
+const simulationExperienceMode =
+  process.env.BROWSER_SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
+if (!new Set(["disabled", "campaign-v1"]).has(simulationExperienceMode)) {
+  throw new Error(
+    "BROWSER_SIMULATION_EXPERIENCE_MODE must be disabled or campaign-v1.",
+  );
+}
+const simulationAiMode =
+  simulationExperienceMode === "campaign-v1" ? "fixture" : "authored-only";
 const previewRuntimeVariables =
-  ` --var DEPLOYMENT_TIER:preview --var PREVIEW_PR_NUMBER:1 --var SITE_URL:https://pr-1.anish-shah-is.online --var PRODUCTION_SITE_URL:https://anish-shah-is.online --var PUBLIC_CONTENT_MODE:static_preview --var RELEASE_VERSION:${packageVersion} --var SIMULATION_EXPERIENCE_MODE:campaign-v1 --var SIMULATION_AI_MODE:fixture --var SIMULATION_PROVIDER:fixture --var SIMULATION_MODEL:authored-fixture-v1 --var TRAVEL_ATLAS_MODE:atlas-v1`;
+  ` --var DEPLOYMENT_TIER:preview --var PREVIEW_PR_NUMBER:1 --var SITE_URL:https://pr-1.anish-shah-is.online --var PRODUCTION_SITE_URL:https://anish-shah-is.online --var PUBLIC_CONTENT_MODE:static_preview --var RELEASE_VERSION:${packageVersion} --var SIMULATION_EXPERIENCE_MODE:${simulationExperienceMode} --var SIMULATION_AI_MODE:${simulationAiMode} --var SIMULATION_PROVIDER:fixture --var SIMULATION_MODEL:authored-fixture-v1 --var TRAVEL_ATLAS_MODE:atlas-v1`;
 
 export default defineConfig({
   testDir: "./tests/browser",

@@ -11,9 +11,3 @@ A conference session put evaluation inside the agent-development loop.
 
 ## role-summary
 Conference speaker
-
-## home-title
-Building agents with evaluation in the loop
-
-## home-role
-Conference speaker

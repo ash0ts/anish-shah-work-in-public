@@ -35,10 +35,15 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Canonical facts and structure come from immutable source inputs, reviewed curation, and the generated sanitized public bundle.
 - Git-owned presentation prose comes from `content/copy/**`. For copy-only work, use `$edit-anish-site-copy`; never move metrics, evidence, privacy, provider policy, routes, or behavior into that deck.
 - Published D1 state owns allowlisted visibility, ordering, caveats, and metric wording. `PUBLICATION_CACHE` KV is the validated last-known-good production fallback.
+- `content/presentation/home-signal-rails.v1.json` is reviewed protected
+  presentation data. It binds the three equal-weight Home signals to exact
+  metrics and compact limits and binds four lines to approved topic rails. Its
+  IDs and limits participate in `COPY_VERSION` and the public attestation; the
+  copy deck owns only the surrounding Home labels and prose.
 - My Room 2001 is the authoritative Play experience. Its dependency-free closed seven-object contract, semantic routes, and HTML foundations own navigation and content; desktop and Pocket R3F rooms are optional enhancements. There is no Classic mode.
 - Derive routes, controls, focus targets, and smoke paths from the structural object contract. Keep screen imports, provider adapters, scene objects, and other executable maps literal, closed, and parity-tested.
 - Three.js/R3F may exist only under `components/play/room-3d/**` and `components/play/travel/**`, load only after their own intent/capability boundaries, and never own provider data, Travel photos, navigation semantics, or accessibility content.
-- The Simulation may use Phaser, XState, and game Canvas only under its scoped paths. Keep Action lazy, Tactical semantic, authored fallback complete, visitor text ephemeral, and every factual card server-owned.
+- The Simulation may use Phaser, XState, and game Canvas only under its scoped paths. Keep Action lazy, Tactical semantic, authored fallback complete, visitor text ephemeral, and every factual card server-owned. When its experience mode is `disabled`, remove every public ingress, route/API response, sitemap entry, and Play-loaded Simulation chunk while retaining dormant source and owner state.
 - Tone/Web Audio is gesture-gated under `components/experience-audio/**`; missing audio is silent and never blocks interaction.
 - Connector collection synchronization is owner-triggered only. Public reads,
   OAuth callbacks, credential saves, and scheduled maintenance must not fetch or
@@ -89,6 +94,10 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Simulation APIs, persistence, campaign, Gateway, or provider-approval work requires focused Simulation security, migration, UI, privacy, and browser checks. Preserve both Action and Tactical completion plus authored outage fallback.
 - Room registry changes require seven-key parity, zero overview data reads, direct-route source isolation, desktop/Pocket input tests, and disabled-feature reachability tests.
 - Copy changes require copy parsing, voice/audit, owner fact-check, diff, rendered, metadata, and browser checks. Skill and docs changes require their dedicated validators.
+- Home signal/rail changes require manifest validation, content attestation,
+  `COPY_VERSION`, rendered Home/Work behavior, and affected browser checks.
+  Preserve equal signal geometry and route every bucket/topic rail into the
+  existing Work calendar and flat Project index.
 - Documentation changes must preserve the authority map in `docs/README.md`.
   Run `npm run docs:check`; when architecture ownership changes, update both
   `docs/architecture/codebase-tour.md` and the repository map in this skill.

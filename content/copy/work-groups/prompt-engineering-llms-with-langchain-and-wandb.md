@@ -11,9 +11,3 @@ Practical guidance connected prompt design with LangChain and W&B tracking.
 
 ## role-summary
 Guide author
-
-## home-title
-Prompt engineering with LangChain & W&B
-
-## home-role
-Author

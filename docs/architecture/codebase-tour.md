@@ -122,6 +122,7 @@ flowchart LR
   curation["Reviewed curation and presentation inputs"] --> generator
   generator --> public["Generated sanitized public bundle"]
   public --> base["Canonical facts, IDs, evidence, metrics, and structure"]
+  home["Reviewed Home signal/rail manifest"] --> base
   copy["Git copy deck"] --> copygen["Strict parser and generated typed copy"] --> base
   base --> seed["Sanitized D1 public records"]
   studio["Protected Studio editorial decisions"] --> seed
@@ -134,14 +135,20 @@ Authority is field-specific:
 
 1. The sanitized canonical bundle owns facts, stable IDs, routes, relations,
    evidence, metrics, and structure.
-2. Published D1 state owns allowlisted visibility, ordering, featured state,
+2. Reviewed presentation manifests own narrow protected mappings. In
+   particular, `home-signal-rails.v1.json` binds three equal-weight signals to
+   exact metric IDs and compact limits and binds four lines to approved topics
+   and code-native icons.
+3. Published D1 state owns allowlisted visibility, ordering, featured state,
    caveats, and metric wording.
-3. `content/copy/**` owns only declared page and WorkGroup presentation fields.
+4. `content/copy/**` owns only declared page and WorkGroup presentation fields.
 
 `content/public/anish-content.public.v1.json` is generated deployable content;
 it is never an editing surface. Raw inputs and `content/private` stay outside
 public output. `CONTENT_VERSION` identifies canonical data, while
-`COPY_VERSION` identifies the reviewed copy contract and sources.
+`COPY_VERSION` identifies the reviewed copy contract, sources, parser, and
+Home signal/rail manifest. That manifest is also inventoried in the public
+content attestation; it is not a freelancer copy surface.
 
 At runtime, `lib/server/public-content.ts` applies the Git-owned copy fields to
 the sanitized base and resolves the active D1 publication. The selector
@@ -190,7 +197,7 @@ There is no alternate Classic mode; only bounded legacy query redirects remain.
 | Path | Owns | Boundary to preserve |
 | --- | --- | --- |
 | `app/**` | App Router pages, metadata, route composition, thin API exports | Keep route files thin and server-render semantic foundations |
-| `app/play/**` | Play overview, six connector object routes, Travel routes | `/play` reads no collections; each direct route loads one source |
+| `app/play/**` | Play overview, six connector routes, and Travel routes | `/play` reads no collections; each direct route loads one source |
 | `app/simulation/**` | Simulation route gate and server-rendered campaign foundation | Disabled and coming-soon modes must not initialize campaign state |
 | `app/studio/**` | Owner operational UI and Travel Desk | Git copy is read-only here; mutations go through protected APIs |
 | `app/api/studio/**` | Canonical owner reads and writes | Same-origin, Access, owner allowlist, bounded exact validation |
@@ -213,11 +220,19 @@ Home remains the canonical `Person` identity and About references that identity
 through `ProfilePage` structured data. Studio is a separate owner plane, even
 though it ships in the same application.
 
-Work's organization index is a reviewed presentation layer, not a relationship
-inference engine. Its manifest maps a normalized mark to exact public
-organization and WorkGroup IDs, and runtime resolution drops hidden or empty
-groups before counts and links are rendered. A typographic fallback is used
-when an official first-party brand asset cannot be safely checked in.
+Home compresses its evidence into one semantic, equal-weight three-node signal
+circuit and four icon-led line/topic rails. Signal value never controls
+geometry. Rails contain no representative project and create no topic route;
+their counts derive from visible WorkGroups and their links enter the existing
+filtered Work calendar and Project index.
+
+Work's calendar remains primary. Calendar, Home rail, search, organization, and
+filter selections reveal one Project index. One-line results are flat;
+cross-line results use non-collapsible line headings. Canonical project pages
+are lean evidence leaves whose line and topic links return to that same index.
+The organization resolver remains a reviewed presentation layer rather than a
+relationship inference engine: hidden or empty work is removed before counts
+and links render, and unsupported brand artwork falls back to visible text.
 
 ## Connector boundary
 
@@ -299,6 +314,12 @@ for media and geography details.
 The Simulation has three exact experience modes: `disabled`, `coming-soon`,
 and `campaign-v1`. These are configuration contracts, not statements about
 which mode any hosted environment currently serves.
+
+The v2.2 preview, staging, and production candidate selects `disabled` with
+`authored-only`. In that mode Play renders no ingress, the sitemap omits the
+route, `/simulation` and its public APIs return 404, and Play loads no
+Simulation client chunk. The source and protected owner state remain dormant
+for a separately reviewed future activation.
 
 In the complete campaign:
 

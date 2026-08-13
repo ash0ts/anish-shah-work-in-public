@@ -36,6 +36,14 @@ test("the copy deck accounts for every public WorkGroup by stable ID", async () 
   assert.equal((await buildCopyDeck(root)).copyVersion, deck.copyVersion);
 });
 
+test("COPY_VERSION includes the reviewed Home signal and rail contract", async () => {
+  const source = await readFile(
+    path.join(root, "scripts/lib/copy-deck.mjs"),
+    "utf8",
+  );
+  assert.match(source, /content\/presentation\/home-signal-rails\.v1\.json/u);
+});
+
 test("curated WorkGroup copy stays meaningful and free of importer residue", async () => {
   const deck = await buildCopyDeck(root);
   for (const group of deck.publicBundle.workGroups.filter(
@@ -455,8 +463,6 @@ test("copy ownership report enumerates deck paths and retained D1 wording safely
         shortTitle: deck.workGroups[matchingGroup.id].shortTitle,
         summary: deck.workGroups[matchingGroup.id].summary,
         roleSummary: deck.workGroups[matchingGroup.id].roleSummary,
-        homeTitle: deck.workGroups[matchingGroup.id].homeTitle ?? null,
-        homeRole: deck.workGroups[matchingGroup.id].homeRole ?? null,
       },
       gitOwnedFields: GIT_OWNED_WORK_GROUP_FIELDS,
       d1RecordPresent: true,
@@ -476,8 +482,6 @@ test("copy ownership report enumerates deck paths and retained D1 wording safely
       shortTitle: current.shortTitle,
       summary: current.summary,
       roleSummary: current.roleSummary,
-      homeTitle: current.homeTitle ?? null,
-      homeRole: current.homeRole ?? null,
     });
     assert.equal(
       record.deckPath,
@@ -538,8 +542,6 @@ test("copy ownership API and Studio surface stay owner-only, read-only, and no-s
     "shortTitle",
     "summary",
     "roleSummary",
-    "homeTitle",
-    "homeRole",
   ]) {
     assert.match(editor, new RegExp(`copyOwnershipRecord\\.gitCopy\\.${field}`, "u"));
   }

@@ -289,33 +289,6 @@
   text-wrap: balance;
 }
 
-.activeFilter {
-  display: inline-flex;
-  min-width: 0;
-  min-height: 2.75rem;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.45rem 0.65rem;
-  border: 1px solid var(--work-blue, #295dff);
-  color: var(--work-blue, #295dff);
-  font-family: var(--font-mono, monospace);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.035em;
-  text-decoration: none;
-  text-transform: uppercase;
-}
-
-.activeFilter span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.activeFilter i {
-  font-size: 1rem;
-  font-style: normal;
-}
-
 .contextMarks {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.5rem;
@@ -401,10 +374,6 @@
     min-height: 6.5rem;
   }
 
-  .activeFilter {
-    max-width: 100%;
-  }
-
   .contextFooter {
     align-items: flex-start;
     flex-direction: column;
@@ -439,8 +408,7 @@
     border-color: CanvasText;
   }
 
-  .lens > summary strong,
-  .activeFilter {
+  .lens > summary strong {
     color: HighlightText;
     background: Highlight;
   }

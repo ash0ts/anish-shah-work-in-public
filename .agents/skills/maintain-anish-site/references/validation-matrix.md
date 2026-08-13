@@ -17,6 +17,7 @@ node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run --base or
 | connectors, Studio, OAuth | typecheck, content/backend/security tests, exact public projector and provider-failure coverage; prove zero provider data calls from public reads/callbacks/saves/cron, one attempt per Studio refresh, and last-known-good preservation |
 | Travel atlas, Travel Desk, geography, uploads/media, or room-globe integration | `travel:geography:check`, backend and rendered tests, clean local D1 migration, Travel security coverage, and full browser gate |
 | Simulation campaign, session, Gateway, Action/Tactical, or shared audio | same-change Simulation regression coverage for server/privacy work; backend/security and rendered tests, bundle scan, exact runtime/privacy coverage, and full browser gate; verify authored fallback and gesture gating |
+| Simulation mode disabled | rendered, sitemap, API, bundle, and Play ingress checks; prove route/APIs are 404, sitemap/control are absent, and Play loads no Simulation chunk |
 | Worker/auth/CSP/publication/security | backend/security tests, build, bundle scan, dependency audit |
 | D1 migrations | clean local migration plus relevant backend/content tests; never edit an applied migration |
 | README/docs | `npm run docs:check`; keep the authority map, local links/anchors, documented commands, and script paths current |

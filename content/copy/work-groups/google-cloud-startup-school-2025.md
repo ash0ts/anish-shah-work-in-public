@@ -11,9 +11,3 @@ A replay-backed lesson taught GenAI application development across two regional 
 
 ## role-summary
 Instructor for both regional sessions
-
-## home-title
-Google Cloud Startup School: GenAI applications
-
-## home-role
-Presenter · two regional broadcasts + replay

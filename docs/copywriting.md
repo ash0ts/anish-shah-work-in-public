@@ -73,7 +73,7 @@ before approval:
 
 - profile headline, summary, and current-focus language;
 - About biography, chronology summaries, dates, and organization relationships;
-- WorkGroup display title, short title, summary, role summary, and optional Home wording;
+- WorkGroup display title, short title, summary, and role summary;
 - career trajectory and bucket descriptions;
 - Sources methodology, counting-rule, and non-claim prose; and
 - statements about dates, organizations, scope, attribution, roles, or product capabilities.
@@ -87,6 +87,8 @@ change canonical facts.
 The deck cannot change:
 
 - metric value, label, qualifier, period, scope, attribution, or evidence;
+- Home signal compact limits, metric/icon IDs, line/topic IDs, and ordering in
+  `content/presentation/home-signal-rails.v1.json`;
 - IDs, slugs, aliases, URLs, relationships, WorkGroup membership, order,
   visibility, or featured state;
 - dates, evidence/bibliography records, source titles, or canonical data;
@@ -103,6 +105,10 @@ Desk. Simulation disclosure, factual cards, metrics, model/provider policy,
 system prompts, safety behavior, budgets, session rules, fallback behavior, and
 provider approvals are likewise protected. Copywriters may propose changes to
 those surfaces, but they cannot implement them through an editorial field.
+
+Simulation is disabled for the v2.2 preview and release: there is no Play
+invitation, sitemap entry, route/API response, or client bundle. Its copy-deck
+fields remain dormant and do not authorize activation.
 
 Describe one of these changes in **Implementation or visual requests** in the
 copy PR template. The owner can add an engineering commit, which moves the PR
@@ -149,9 +155,10 @@ npm run dev
 
 `.generated/site-copy.ts` is ignored, regenerated before development/tests/
 builds, and must never be committed or edited. `COPY_VERSION` deterministically
-hashes every deck file plus the field contract and parser/generator. It appears
-in preview metadata, owner health, release plans, and attestations; canonical
-`CONTENT_VERSION` is separate.
+hashes every deck file, the field contract, parser/generator, and reviewed Home
+signal/rail manifest. It appears in preview metadata, owner health, release
+plans, and attestations; canonical `CONTENT_VERSION` is separate. The same Home
+manifest is also inventoried in the public content attestation.
 
 ## Trusted preview model
 

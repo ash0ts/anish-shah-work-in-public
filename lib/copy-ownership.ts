@@ -13,8 +13,6 @@ export const GIT_OWNED_WORK_GROUP_FIELDS = [
   "short-title",
   "summary",
   "role-summary",
-  "home-title",
-  "home-role",
 ] as const;
 
 export type CopyOwnershipSourceRecord = {
@@ -32,8 +30,6 @@ export type CopyOwnershipRecord = {
     shortTitle: string;
     summary: string;
     roleSummary: string;
-    homeTitle: string | null;
-    homeRole: string | null;
   };
   gitOwnedFields: readonly string[];
   d1RecordPresent: boolean;
@@ -88,11 +84,10 @@ function retainedWording(value: string | undefined): string | null {
 function currentDeckValue(
   value: string | undefined,
   field: string,
-  options: { optional?: boolean; maxLength?: number } = {},
-): string | null {
+  options: { maxLength?: number } = {},
+): string {
   const copy = value?.trim() ?? "";
   if (!copy) {
-    if (options.optional) return null;
     throw new CopyOwnershipError();
   }
   if (copy.length > (options.maxLength ?? 600)) {
@@ -149,14 +144,6 @@ export function buildCopyOwnershipReport(
         shortTitle,
         summary,
         roleSummary,
-        homeTitle: currentDeckValue(copy.homeTitle, "homeTitle", {
-          optional: true,
-          maxLength: 140,
-        }),
-        homeRole: currentDeckValue(copy.homeRole, "homeRole", {
-          optional: true,
-          maxLength: 140,
-        }),
       },
       gitOwnedFields: GIT_OWNED_WORK_GROUP_FIELDS,
       d1RecordPresent: Boolean(sourceRecord),

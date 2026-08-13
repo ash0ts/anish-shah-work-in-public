@@ -192,7 +192,7 @@ function releaseMetadata(environment, contentVersion, packageVersion) {
 export function expectedStagingCoordinates(environment, contentVersion, packageVersion) {
   const metadata = releaseMetadata(environment, contentVersion, packageVersion);
   const simulationExperienceMode =
-    environment.STAGING_SIMULATION_EXPERIENCE_MODE?.trim() || "campaign-v1";
+    environment.STAGING_SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
   if (
     !new Set(["disabled", "coming-soon", "campaign-v1"]).has(
       simulationExperienceMode,
@@ -393,8 +393,8 @@ export function previewConfiguration(base, expected) {
       PUBLIC_CONTENT_MODE: "static_preview",
       DEPLOYMENT_TIER: "preview",
       PREVIEW_PR_NUMBER: expected.prNumber,
-      SIMULATION_EXPERIENCE_MODE: "campaign-v1",
-      SIMULATION_AI_MODE: "fixture",
+      SIMULATION_EXPERIENCE_MODE: "disabled",
+      SIMULATION_AI_MODE: "authored-only",
       SIMULATION_PROVIDER: "fixture",
       SIMULATION_MODEL: "authored-fixture-v1",
       TRAVEL_ATLAS_MODE: "atlas-v1",

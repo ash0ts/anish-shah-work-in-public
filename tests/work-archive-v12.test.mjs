@@ -14,6 +14,7 @@ const {
   parseWorkArchiveQuery,
   WORK_ARCHIVE_PAGE_SIZE,
   workArchiveHref,
+  workResultHeading,
 } = await tsImport("../lib/work-archive-query.ts", import.meta.url);
 const { workArchiveRecordsFrom } = await tsImport(
   "../lib/work-index.ts",
@@ -43,6 +44,44 @@ const records = workArchiveRecordsFrom(publicBundle);
 const copyAppliedRecords = workArchiveRecordsFrom(
   applyCopyDeckToBundle(publicBundle),
 );
+
+test("filtered headings describe the active line and presentation topic", () => {
+  const heading = (params, overrides = {}) =>
+    workResultHeading({
+      bucketTitle: null,
+      defaultHeading: "Project index",
+      filteredHeading: "Filtered projects",
+      organizationName: null,
+      query: parseWorkArchiveQuery(params),
+      topicLabel: null,
+      ...overrides,
+    });
+
+  assert.equal(
+    heading(
+      { bucket: "products-open-source" },
+      { bucketTitle: "Agent systems & open source" },
+    ),
+    "Agent systems & open source",
+  );
+  assert.equal(
+    heading(
+      { topic: "agent-systems" },
+      { topicLabel: "Agent systems" },
+    ),
+    "Agent systems projects",
+  );
+  assert.equal(
+    heading(
+      { bucket: "products-open-source", topic: "agent-systems" },
+      {
+        bucketTitle: "Agent systems & open source",
+        topicLabel: "Agent systems",
+      },
+    ),
+    "Agent systems · Agent systems & open source",
+  );
+});
 
 test("the archive indexes public WorkGroups while keeping context-only observations nested", () => {
   const publicItems = publicBundle.items.filter(
@@ -431,7 +470,6 @@ test("Work source renders a paginated four-line index and semantic color calenda
     timeline,
     timelineControls,
     mobileFilters,
-    bodyBehavior,
     css,
     timelineCss,
     detailSource,
@@ -447,10 +485,6 @@ test("Work source renders a paginated four-line index and semantic color calenda
       new URL("../app/work/WorkMobileFilters.tsx", import.meta.url),
       "utf8",
     ),
-    readFile(
-      new URL("../app/work/WorkBodyBehavior.tsx", import.meta.url),
-      "utf8",
-    ),
     readFile(new URL("../app/work/work.module.css", import.meta.url), "utf8"),
     readFile(
       new URL("../app/work/WorkTimeline.module.css", import.meta.url),
@@ -462,7 +496,11 @@ test("Work source renders a paginated four-line index and semantic color calenda
     ),
   ]);
   assert.match(source, /workBuckets\.map/);
-  assert.match(source, /data-work-body=\{bucket\.id\}/);
+  assert.match(source, /data-work-line=\{bucket\.id\}/);
+  assert.doesNotMatch(source, /data-work-body|<details[\s\S]{0,200}styles\.body/);
+  assert.match(source, /<ActiveScope/);
+  assert.match(source, /Remove \$\{filter\.label\} \$\{filter\.key\} filter/);
+  assert.match(source, />Change filters</);
   assert.match(source, /<WorkTimeline query=\{query\} records=\{timelineRecords\}/);
   assert.match(source, /countWorkFacetOptions\(allWorks, "theme"\)/);
   assert.match(source, /countWorkFacetOptions\(allWorks, "media"\)/);
@@ -547,6 +585,9 @@ test("Work source renders a paginated four-line index and semantic color calenda
   assert.match(css, /\.mobileFilterDialog::backdrop/);
   assert.match(detailSource, /<dl className=\{styles\.facts\}/);
   assert.match(detailSource, /<dt>\{label\}<\/dt>/);
+  assert.match(detailSource, /href=\{bucketHref\}/);
+  assert.match(detailSource, /workThemeFacetLabel\(topic\)/);
+  assert.match(detailSource, /<PublicArtifactLink item=\{primary\} primary \/>/);
 
   assert.match(
     source,
@@ -554,10 +595,6 @@ test("Work source renders a paginated four-line index and semantic color calenda
     "Format should open server-side when that filter is active",
   );
   assert.doesNotMatch(source, /WorkFilterBehavior/);
-  assert.match(bodyBehavior, /body\.open = index === 0/);
-  assert.match(bodyBehavior, /body\.dataset\.defaultOpen === "true"/);
-  assert.match(bodyBehavior, /body\.open = defaults\.includes\(body\)/);
-  assert.match(bodyBehavior, /min-width:\s*761px/);
   assert.match(css, /@media\s*\(max-width:\s*760px\)/);
   assert.match(
     css,

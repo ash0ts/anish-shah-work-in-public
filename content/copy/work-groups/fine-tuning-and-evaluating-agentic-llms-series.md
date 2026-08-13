@@ -11,9 +11,3 @@ A multi-session workshop connected model adaptation with evaluation for agentic 
 
 ## role-summary
 Speaker and co-instructor across the series
-
-## home-title
-Agentic LLM fine-tuning & evaluation
-
-## home-role
-Speaker / co-instructor · three sessions

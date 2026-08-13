@@ -6,9 +6,9 @@ not an impersonation of Anish and not a source of new factual claims.
 
 ## Experience boundary
 
-- `/play` exposes `REVEAL THE SIMULATION` as a normal semantic link. When the
-  room runtime is active, a cancellable Anime.js/R3F handoff may enhance the
-  navigation; failure always follows the link.
+- When the feature is exposed, `/play` presents `REVEAL THE SIMULATION` as a
+  normal semantic link. A cancellable Anime.js/R3F handoff may enhance that
+  navigation. Disabled mode renders no link or transition.
 - The server renders the disclosure, campaign setup, dossier, evidence links,
   Tactical mode, and a complete no-JavaScript foundation.
 - Phaser is imported only after the visitor selects Action mode. Its Canvas is
@@ -138,13 +138,18 @@ The experience gate has three exact states:
 | Tier | Experience | AI | Persistence |
 | --- | --- | --- | --- |
 | Local | `campaign-v1` by default in development | deterministic fixture unless explicitly configured | local D1 only |
-| PR preview | `campaign-v1` | deterministic authored fixture | no D1, KV, secrets, or provider calls |
+| PR preview | `disabled` | authored-only | no route, client bundle, D1, KV, secrets, or provider calls |
 | Staging | `coming-soon` for doorway review or `campaign-v1` for campaign acceptance | authored-only while coming soon; live for the campaign | isolated staging D1, limits, keys, and approvals |
 | Production | `disabled` or `coming-soon` until campaign activation | authored-only outside the campaign; live when activated | production D1 and distinct limits/keys |
 
 Hosted production and staging reject fixture mode. Neither `disabled` nor
 `coming-soon` accepts campaign approval evidence or live AI configuration.
 Preview cannot access Studio or mutation APIs.
+
+The v2.2 preview, staging, and production candidate uses `disabled` with
+`authored-only`. It retains this dormant source and protected owner state while
+serving no Play ingress, sitemap entry, route/API response, or Simulation
+client bundle.
 
 ## Source map
 
@@ -167,7 +172,9 @@ Run the repository maintenance classifier, `npm run validate`, and
 Tone code is loaded. A `campaign-v1` candidate must complete both Action and
 Tactical campaigns, exercise authored fallback under a full model outage, and
 confirm that no Phaser or Tone chunk loads before the corresponding explicit
-gesture.
+gesture. A disabled candidate must prove that Play has no ingress, the route
+and APIs return 404, the sitemap omits the route, and Play loads no Simulation
+chunk.
 
 Production activation is a separate guarded release with
 `SIMULATION_EXPERIENCE_MODE=campaign-v1` and `SIMULATION_AI_MODE=live`. Record a

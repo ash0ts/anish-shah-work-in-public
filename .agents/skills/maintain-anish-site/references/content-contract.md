@@ -5,7 +5,9 @@
 1. Four owner-held CSV/Markdown inputs are immutable observations.
 2. `content/curation/content-v1.1.json` owns stable observations, aliases, relations, corrections, and conservative grouping.
 3. `content/curation/work-groups.v1.json` owns WorkGroup membership and structure.
-4. Reviewed claim and metric presentation files own approved rounded quantitative claims.
+4. Reviewed claim, metric, and Home signal/rail presentation files own
+   approved quantitative claims, compact limits, icon identities, and
+   bucket/topic navigation.
 5. `scripts/build-content.mjs` deterministically generates owner/public bundles, schema, report, and attestation.
 6. `content/public/anish-content.public.v1.json` is the only checked-in canonical public bundle imported by the application.
 
@@ -17,13 +19,21 @@ Do not hand-edit generated bundles, schemas, attestations, or reports. Complete 
 2. Published D1 state controls allowlisted visibility, ordering, caveats, and owner metric wording.
 3. `content/copy/**` supplies only declared page and WorkGroup presentation fields.
 
-`CONTENT_VERSION` identifies canonical data. `COPY_VERSION` hashes every copy source, field contract, parser, and generator. Record both in preview metadata, owner health, release plans, and attestations.
+`CONTENT_VERSION` identifies canonical data. `COPY_VERSION` hashes every copy
+source, field contract, parser/generator, and the reviewed
+`content/presentation/home-signal-rails.v1.json` manifest. The public content
+attestation also inventories that manifest. Record both versions in preview
+metadata, owner health, release plans, and attestations.
 
 ## Copy Ownership
 
 Copywriters may directly edit declared narrative, framing, CTA, navigation, metadata, room flavor, and non-behavioral labels. WorkGroup/profile/methodology prose is fact-check risk and requires owner verification.
 
-The copy deck cannot own metrics, evidence, dates, IDs, slugs, relationships, URLs, ordering, visibility, privacy/security/legal language, provider attribution/policy, connector payloads, states, behavior, or generated data. Those belong in a proposal or linked engineering change. Use `$edit-anish-site-copy` for copy-only work.
+The copy deck cannot own metrics, evidence, dates, IDs, slugs, relationships,
+URLs, ordering, visibility, privacy/security/legal language, provider
+attribution/policy, connector payloads, states, behavior, generated data, or
+the Home signal/rail mapping and compact limits. Those belong in a proposal or
+linked engineering change. Use `$edit-anish-site-copy` for copy-only work.
 
 The parser rejects unknown/duplicate/missing headings, altered stable-ID markers, HTML, JSX, scripts, code fences, embedded links, control characters, private paths/domains, and field-length violations. Copy renders as plain React text; Markdown is never interpreted.
 

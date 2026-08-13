@@ -11,9 +11,3 @@ EvalForge implements EvalGen for generating and aligning evaluation criteria.
 
 ## role-summary
 Creator and implementer
-
-## home-title
-EvalForge: evaluation-criteria generation & alignment
-
-## home-role
-Creator

@@ -68,7 +68,7 @@ const PROFILE_BUDGETS = {
 
 function profileForField(surface: string, key: string): CopyVoiceProfile {
   if (surface === "work-group") {
-    if (key === "display-title" || key === "home-title") return "work-title";
+    if (key === "display-title") return "work-title";
     if (key === "short-title") return "work-short-title";
     if (key === "summary") return "work-summary";
     if (key === "role-summary") return "work-role-summary";

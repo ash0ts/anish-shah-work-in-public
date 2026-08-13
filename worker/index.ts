@@ -29,7 +29,10 @@ import {
 } from "./redacted-observability";
 import { productionOriginResponse } from "./production-origin";
 import { canonicalSecurityPathname } from "./request-path";
-import { hostedDeploymentBoundaryResponse } from "./deployment-boundary";
+import {
+  hostedDeploymentBoundaryResponse,
+  simulationExperienceBoundaryResponse,
+} from "./deployment-boundary";
 import { hostedDeploymentTier } from "../lib/deployment-environment";
 import { boundedApiWrite } from "./request-limits";
 import type {
@@ -133,9 +136,18 @@ const worker = {
         return finalize(authentication.response);
       }
 
+      const simulationBoundaryFailure =
+        simulationExperienceBoundaryResponse(
+          pathname,
+          env.SIMULATION_EXPERIENCE_MODE,
+        );
+      if (simulationBoundaryFailure) return finalize(simulationBoundaryFailure);
+
       const boundaryFailure = hostedDeploymentBoundaryResponse(
         request,
+        pathname,
         deploymentTier,
+        env.SIMULATION_EXPERIENCE_MODE,
       );
       if (boundaryFailure) return finalize(boundaryFailure);
 

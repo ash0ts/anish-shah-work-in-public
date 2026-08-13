@@ -34,6 +34,10 @@ const { canonicalSecurityPathname } = await tsImport(
   "../worker/request-path.ts",
   import.meta.url,
 );
+const { simulationExperienceBoundaryResponse } = await tsImport(
+  "../worker/deployment-boundary.ts",
+  import.meta.url,
+);
 const { pruneConnectorRetention } = await tsImport(
   "../lib/server/connectors/repository-retention.ts",
   import.meta.url,
@@ -153,9 +157,19 @@ test("encoded route segments are canonicalized before Worker security decisions"
   );
   const malformedRejection = workerSource.indexOf("if (pathname === null)");
   const originGuard = workerSource.indexOf("const originFailure");
+  const simulationBoundary = workerSource.indexOf(
+    "simulationExperienceBoundaryResponse",
+    originGuard,
+  );
+  const requestLimits = workerSource.indexOf(
+    "requiresConfiguredRateLimit(",
+    simulationBoundary,
+  );
   assert(canonicalization >= 0);
   assert(malformedRejection > canonicalization);
   assert(originGuard > malformedRejection);
+  assert(simulationBoundary > originGuard);
+  assert(requestLimits > simulationBoundary);
 
   const encodedPublic = new Request(
     "https://anish-shah-is.online/api/connectors/%64iscogs?page=2",
@@ -184,6 +198,20 @@ test("encoded route segments are canonicalized before Worker security decisions"
   );
   assert.equal(studioPath, "/api/studio/connectors/discogs/refresh");
   assert.equal(isProtectedOwnerPath(studioPath), true);
+
+  for (const rawPath of [
+    "/simu%6cation",
+    "/api/simu%6cation/session",
+    "//api/simulation/turn",
+  ]) {
+    const simulationPath = canonicalSecurityPathname(rawPath);
+    assert.ok(simulationPath, rawPath);
+    assert.equal(
+      simulationExperienceBoundaryResponse(simulationPath, "disabled")?.status,
+      404,
+      rawPath,
+    );
+  }
 
   const capturedKeys = [];
   const environment = {

@@ -11,9 +11,3 @@ Two talks connected LLM-agent fine-tuning with task automation.
 
 ## role-summary
 Speaker across both deliveries
-
-## home-title
-LLM agent fine-tuning for task automation
-
-## home-role
-Speaker · two public deliveries

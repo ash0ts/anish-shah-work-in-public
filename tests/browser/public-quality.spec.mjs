@@ -90,6 +90,41 @@ test("About and Work load only approved first-party brand artwork", async ({
   expect(remoteImageRequests).toEqual([]);
 });
 
+test("the v2.2 public runtime keeps Simulation fully disabled", async ({
+  page,
+  request,
+}) => {
+  const response = await page.goto("/play", { waitUntil: "networkidle" });
+  expect(response?.status()).toBe(200);
+  await expect(
+    page.getByRole("link", { name: "REVEAL THE SIMULATION" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("There is another signal behind the room."),
+  ).toHaveCount(0);
+
+  expect((await request.get("/simulation")).status()).toBe(404);
+  expect((await request.get("/api/simulation/session")).status()).toBe(404);
+  expect(
+    (
+      await request.post("/api/simulation/turn", {
+        data: {},
+      })
+    ).status(),
+  ).toBe(404);
+
+  const loadedResources = await page.evaluate(() =>
+    performance
+      .getEntriesByType("resource")
+      .map((entry) => entry.name),
+  );
+  expect(
+    loadedResources.filter((url) =>
+      /RevealSimulation|SimulationCampaign|ActionArena|phaser/i.test(url),
+    ),
+  ).toEqual([]);
+});
+
 for (const width of widths) {
   test(`public routes fit a ${width}px viewport`, async ({ page }) => {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });

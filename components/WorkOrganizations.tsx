@@ -97,25 +97,21 @@ export function WorkOrganizationLens({
 export type WorkOrganizationContextProps = {
   allOrganizationCount: number;
   browseAllHref: string;
-  clearOrganizationHref: string | null;
   marks: WorkOrganizationMarkView[];
   matchingMarkCount: number;
   organizationHref: OrganizationHref;
   relationshipLabels: Record<WorkOrganizationRelationship, string>;
   selectedOrganizationId?: string | null;
-  selectedOrganizationName?: string | null;
 };
 
 export function WorkOrganizationContext({
   allOrganizationCount,
   browseAllHref,
-  clearOrganizationHref,
   marks,
   matchingMarkCount,
   organizationHref,
   relationshipLabels,
   selectedOrganizationId = null,
-  selectedOrganizationName = null,
 }: WorkOrganizationContextProps) {
   const remaining = Math.max(0, matchingMarkCount - marks.length);
 
@@ -131,17 +127,6 @@ export function WorkOrganizationContext({
             {SITE_COPY.work["organizations-context-title"]}
           </h2>
         </div>
-        {selectedOrganizationName && clearOrganizationHref ? (
-          <Link
-            aria-label={`${SITE_COPY.work["organizations-remove-filter-prefix"]} ${selectedOrganizationName} ${SITE_COPY.work["organizations-remove-filter-suffix"]}`}
-            className={styles.activeFilter}
-            href={clearOrganizationHref}
-            prefetch={false}
-          >
-            <span>{selectedOrganizationName}</span>
-            <i aria-hidden="true">×</i>
-          </Link>
-        ) : null}
       </header>
 
       {marks.length ? (

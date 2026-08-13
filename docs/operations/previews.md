@@ -43,10 +43,11 @@ provider, cron, Studio, write, promotion, or OAuth capability. The Worker
 accepts a verified Access service principal only in preview; it never grants
 owner authorization.
 
-The preview simulation is a deterministic authored fixture. It never calls AI
-Gateway or Anthropic, creates a simulation session row, reads provider APIs, or
-uses protected approval state. Preview success is gameplay and visual evidence
-only.
+Simulation is disabled in public previews. The Play doorway is absent,
+`/simulation` and its public APIs return 404, and no Simulation client bundle,
+Gateway request, session row, provider read, or approval state is used. A future
+campaign-specific branch must deliberately reintroduce an isolated fixture
+contract before preview gameplay can become review evidence again.
 
 The trusted-main workflow compensates for that Cloudflare IAM limitation. It
 runs only after same-repository validation, rechecks that the PR is open and at

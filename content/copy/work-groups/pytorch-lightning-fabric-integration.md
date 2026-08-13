@@ -11,9 +11,3 @@ Three upstream changes added W&B logging and checkpoint support to Lightning Fab
 
 ## role-summary
 Upstream contributor across three pull requests
-
-## home-title
-W&B logging & checkpointing for Lightning Fabric
-
-## home-role
-Contributor · three upstream pull requests

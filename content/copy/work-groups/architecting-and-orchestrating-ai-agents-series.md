@@ -11,9 +11,3 @@ A four-event series translated agent architecture and orchestration into reusabl
 
 ## role-summary
 Speaker and workshop lead across the series
-
-## home-title
-Architecting & orchestrating AI agents
-
-## home-role
-Speaker / instructor · four public deliveries

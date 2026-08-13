@@ -11,9 +11,3 @@ An MCP interface lets agents inspect W&B experiments and traces.
 
 ## role-summary
 Server contributor and launch-article coauthor
-
-## home-title
-W&B MCP Server
-
-## home-role
-Contributor · launch coauthor

@@ -11,9 +11,3 @@ A coauthored account documented W&B's GPT-4-powered documentation assistant.
 
 ## role-summary
 Article coauthor
-
-## home-title
-WandBot: GPT-4 documentation support
-
-## home-role
-Coauthor

@@ -11,9 +11,3 @@ Three practical courses covered prompting, LLM evaluation, and agent engineering
 
 ## role-summary
 Instructor across three courses and open-source materials contributor
-
-## home-title
-AI curriculum: prompting, evaluation & agents
-
-## home-role
-Instructor · three courses

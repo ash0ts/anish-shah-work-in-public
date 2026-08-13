@@ -32,6 +32,15 @@ export type WorkArchivePage<T> = {
   totalPages: number;
 };
 
+export type WorkArchiveHeadingContext = {
+  bucketTitle: string | null;
+  defaultHeading: string;
+  filteredHeading: string;
+  organizationName: string | null;
+  query: WorkArchiveQuery;
+  topicLabel: string | null;
+};
+
 type WorkArchiveQueryPatch = Partial<
   Record<
     | "q"
@@ -122,6 +131,31 @@ export function workArchiveHref(
   }
   const suffix = parameters.toString();
   return suffix ? `/work?${suffix}` : "/work";
+}
+
+export function workResultHeading({
+  bucketTitle,
+  defaultHeading,
+  filteredHeading,
+  organizationName,
+  query,
+  topicLabel,
+}: WorkArchiveHeadingContext): string {
+  if (query.query) return `Results for “${query.query}”`;
+  if (organizationName) return `${organizationName} projects`;
+  if (bucketTitle && topicLabel) return `${topicLabel} · ${bucketTitle}`;
+  if (topicLabel) return `${topicLabel} projects`;
+  if (bucketTitle) return bucketTitle;
+  if (query.year) return `Projects from ${query.year}`;
+  const hasFilter = Boolean(
+    query.bucket ||
+      query.topic ||
+      query.format ||
+      query.organization ||
+      query.role ||
+      query.practice,
+  );
+  return hasFilter ? filteredHeading : defaultHeading;
 }
 
 export function legacyMapRedirectPath(

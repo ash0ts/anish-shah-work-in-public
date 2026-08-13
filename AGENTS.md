@@ -19,12 +19,24 @@
   human-readable `docs/architecture/codebase-tour.md` and the maintenance
   skill's repository map.
 - Metric, source, privacy, provider-policy, route, stable-ID, and programmatic accessibility wording remains owner-guarded. Put desired changes in an implementation request instead of smoothing away a required fact or behavior.
+- Treat `content/presentation/home-signal-rails.v1.json` as reviewed, protected
+  presentation data. Its metric IDs, compact limits, icon IDs, bucket IDs, and
+  topic IDs are not copy-deck fields. Keep it in `COPY_VERSION` and the public
+  content attestation whenever its contract changes.
 - Travel may use advanced R3F, shaders, geographic interaction, and owner-side image processing only under `components/play/travel/**`, the selection-only globe prop in `components/play/room-3d/**`, and `app/studio/travel/**`. Travel remains semantic HTML first and may not introduce WebGL navigation elsewhere.
 
 ## Project creative direction
 
-- The Work archive is one ruled, typographic Bodies of Work index: four editorial buckets connect enduring work to its public forms without cards or a second duplicate index.
-- Keep the complete Work archive two-dimensional and server rendered. Its temporal overview is a semantic four-line-by-year color calendar with exact counts and links into the same body folds. Do not use a separate plot, Three.js, or WebGL for archive navigation.
+- Home presents one equal-weight, three-node signal circuit and four line/topic
+  rails. Never scale a signal by its value, select a representative project for
+  a line, or add a topic/category route; every rail links into the existing
+  filtered Work calendar and Project index.
+- Keep the complete Work archive two-dimensional and server rendered. Its temporal overview is a semantic four-line-by-year color calendar with exact counts. Calendar, topic, search, organization, and filter selections all reveal the same flat Project index; individual project pages remain lean evidence leaves. Do not use a separate plot, Three.js, or WebGL for archive navigation.
 - Preserve an editorial, inspectable HTML experience when JavaScript or motion is unavailable.
 - Public copy is first-person, technically precise, and structured as outcome → mechanism → proof → meaning. Keep one claim per sentence, keep limits beside numbers, and avoid hype, rhetorical questions, or unsupported causality.
 - Treat the dependency-free closed seven-object contract, semantic `/play/<object>` routes, and object directory as authoritative. Derive routes, controls, focus targets, and smoke paths from that contract while keeping executable screen/provider/scene maps literal and parity-tested. The low-poly room is optional enhancement: it may not own provider or Travel content, preload connectors, geography, or media, or make any collection unreachable without WebGL. There is no Classic Play mode; retain only the permanent legacy `?stream=` redirects.
+- The v2.2 public, preview, and staging contract keeps Simulation dormant with
+  `SIMULATION_EXPERIENCE_MODE=disabled` and
+  `SIMULATION_AI_MODE=authored-only`. Disabled means no Play ingress, sitemap
+  entry, public route/API access, or Play-loaded Simulation bundle. Retain the
+  source for a separately reviewed future activation.

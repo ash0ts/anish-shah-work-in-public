@@ -82,6 +82,14 @@ export type WorkFacetSelectOption = {
   count: number;
 };
 
+const themeLabels = new Map<string, string>(
+  themeFacetDefinitions.map(({ id, label }) => [id, label]),
+);
+
+export function workThemeFacetLabel(id: string): string {
+  return themeLabels.get(id) ?? id;
+}
+
 const themeByCanonicalTopic: Record<string, ThemeFacetId> = {
   llms: "foundation-models",
   "fine-tuning": "foundation-models",

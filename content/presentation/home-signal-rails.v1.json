@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "1.0",
+  "signals": [
+    {
+      "id": "deployed",
+      "theme": "product",
+      "metricId": "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+      "iconId": "tool-interface",
+      "compactLimit": "Direct project usage · not revenue"
+    },
+    {
+      "id": "taught",
+      "theme": "learning",
+      "metricId": "metric:courses:enrollments:2026-07-30",
+      "iconId": "open-book",
+      "compactLimit": "Enrollments · not unique learners"
+    },
+    {
+      "id": "programs",
+      "theme": "programs",
+      "metricId": "metric:events:pipeline-supported:2024-2025",
+      "iconId": "program-network",
+      "compactLimit": "Supported pipeline · not revenue"
+    }
+  ],
+  "rails": [
+    {
+      "bucketId": "products-open-source",
+      "iconId": "tool-node",
+      "topicIds": [
+        "agent-systems",
+        "evaluation-observability",
+        "open-source-ecosystems"
+      ]
+    },
+    {
+      "bucketId": "courses-learning",
+      "iconId": "learning-loop",
+      "topicIds": [
+        "agent-systems",
+        "foundation-models",
+        "evaluation-observability"
+      ]
+    },
+    {
+      "bucketId": "writing-research",
+      "iconId": "research-trace",
+      "topicIds": [
+        "foundation-models",
+        "ml-systems-infrastructure",
+        "retrieval-knowledge-systems"
+      ]
+    },
+    {
+      "bucketId": "talks-programs",
+      "iconId": "program-broadcast",
+      "topicIds": [
+        "agent-systems",
+        "education-community",
+        "ml-systems-infrastructure"
+      ]
+    }
+  ]
+}

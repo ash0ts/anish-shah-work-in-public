@@ -13,7 +13,7 @@ Applied AI · New York · 2021—Now
 I build the systems that make AI agents useful after the demo.
 
 ## profile-summary
-Evaluation, observability, and tool interfaces—carried into open source, courses, and practitioner programs.
+Evaluation, observability, and tool interfaces—shared through open source and courses.
 
 ## primary-cta
 See the work
@@ -22,13 +22,13 @@ See the work
 Lines of work
 
 ## selected-heading
-Four ways the work ships.
+Choose a line, then a topic.
 
 ## impact-eyebrow
 Selected signals
 
 ## impact-heading
-Signals from use, learning, and program reach.
+Three signals. One method.
 
 ## impact-summary
 Independent measures; no shared scale.
@@ -39,17 +39,8 @@ See the method
 ## proof-1-label
 MCP tool calls
 
-## proof-1-statement
-Tool use followed the MCP server launch.
-
 ## proof-2-label
 Course enrollments
 
-## proof-2-statement
-Three AI courses turned working methods into shared curriculum.
-
 ## proof-3-label
 Supported event pipeline
-
-## proof-3-statement
-Event programs supported downstream commercial interest.

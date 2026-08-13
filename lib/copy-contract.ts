@@ -64,10 +64,9 @@ export const COPY_PAGE_DEFINITIONS = {
     field("home", "impact-heading", "editorial", 120),
     field("home", "impact-summary", "editorial", 180),
     field("home", "impact-source-cta", "editorial", 48),
-    ...[1, 2, 3].flatMap((index) => [
+    ...[1, 2, 3].map((index) =>
       field("home", `proof-${index}-label`, "fact_check", 60),
-      field("home", `proof-${index}-statement`, "fact_check", 180),
-    ]),
+    ),
   ],
   about: [
     field("about", "seo-title", "editorial", 70),
@@ -262,6 +261,4 @@ export const WORK_GROUP_COPY_DEFINITIONS = [
   field("work-group", "short-title", "fact_check", 70),
   field("work-group", "summary", "fact_check", 500, { allowParagraphs: true }),
   field("work-group", "role-summary", "fact_check", 180),
-  field("work-group", "home-title", "fact_check", 140, { required: false }),
-  field("work-group", "home-role", "fact_check", 140, { required: false }),
 ] as const satisfies readonly CopyFieldDefinition[];

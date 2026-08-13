@@ -44,7 +44,11 @@ import {
 register("./content-connector-loader.mjs", import.meta.url);
 
 const { productionOriginResponse } = await import("../worker/production-origin.ts");
-const { hostedDeploymentBoundaryResponse } = await import("../worker/deployment-boundary.ts");
+const { canonicalSecurityPathname } = await import("../worker/request-path.ts");
+const {
+  hostedDeploymentBoundaryResponse,
+  simulationExperienceBoundaryResponse,
+} = await import("../worker/deployment-boundary.ts");
 const { requiresHostedAccessIdentity } = await import("../worker/access.ts");
 const { securedResponse, securityPolicy } = await import("../worker/security-headers.ts");
 const { previewConnectorSnapshot, previewStravaSnapshot } = await import(
@@ -132,8 +136,8 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
   assert.equal(config.vars.DEPLOYMENT_TIER, "staging");
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "d1_kv_required");
   assert.equal(config.vars.RELEASE_VERSION, releaseVersion);
-  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "campaign-v1");
-  assert.equal(config.vars.SIMULATION_AI_MODE, "live");
+  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "disabled");
+  assert.equal(config.vars.SIMULATION_AI_MODE, "authored-only");
   assert.equal(config.vars.SIMULATION_MODEL, "claude-sonnet-5");
   assert.equal(config.compatibility_date, "2026-07-30");
   assert.equal(config.vars.TRAVEL_ATLAS_MODE, "atlas-v1");
@@ -855,8 +859,8 @@ test("preview config has no durable, secret, cron, Studio, or OAuth capability",
   assert.equal(config.vars.PUBLIC_CONTENT_MODE, "static_preview");
   assert.equal(config.vars.RELEASE_VERSION, releaseVersion);
   assert.equal(config.vars.DEPLOYMENT_TIER, "preview");
-  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "campaign-v1");
-  assert.equal(config.vars.SIMULATION_AI_MODE, "fixture");
+  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "disabled");
+  assert.equal(config.vars.SIMULATION_AI_MODE, "authored-only");
   assert.equal(config.vars.SIMULATION_PROVIDER, "fixture");
   assert.equal(config.compatibility_date, "2026-07-30");
   assert.equal(config.vars.TRAVEL_ATLAS_MODE, "atlas-v1");
@@ -1003,21 +1007,91 @@ test("staging callbacks alone bypass identity while preview remains fully gated"
 
   const studio = hostedDeploymentBoundaryResponse(
     new Request("https://pr-42.anish-shah-is.online/studio"),
+    "/studio",
     "preview",
   );
   assert.equal(studio?.status, 404);
   const write = hostedDeploymentBoundaryResponse(
     new Request("https://pr-42.anish-shah-is.online/api/example", { method: "POST" }),
+    "/api/example",
     "preview",
   );
   assert.equal(write?.status, 405);
+  for (const [pathname, method] of [
+    ["/simulation", "GET"],
+    ["/simulation/", "GET"],
+    ["/api/simulation/session", "GET"],
+    ["/api/simulation/session", "POST"],
+    ["/api/simulation/turn", "POST"],
+  ]) {
+    const disabled = hostedDeploymentBoundaryResponse(
+      new Request(`https://pr-42.anish-shah-is.online${pathname}`, {
+        method,
+      }),
+      pathname,
+      "preview",
+    );
+    assert.equal(disabled?.status, 404, `${method} ${pathname}`);
+  }
+  for (const tier of ["staging", "production"]) {
+    for (const [pathname, method] of [
+      ["/simulation", "GET"],
+      ["/api/simulation/session", "GET"],
+      ["/api/simulation/session", "POST"],
+      ["/api/simulation/turn", "POST"],
+    ]) {
+      assert.equal(
+        simulationExperienceBoundaryResponse(pathname, "disabled")?.status,
+        404,
+        `${tier} ${method} ${pathname}`,
+      );
+    }
+  }
+  assert.equal(
+    simulationExperienceBoundaryResponse(
+      "/simulation",
+      "coming-soon",
+    ),
+    null,
+  );
+  assert.equal(
+    simulationExperienceBoundaryResponse(
+      "/api/simulation/session",
+      "coming-soon",
+    )?.status,
+    404,
+  );
+  assert.equal(
+    hostedDeploymentBoundaryResponse(
+      new Request("https://pr-42.anish-shah-is.online/simulation"),
+      "/simulation",
+      "preview",
+      "campaign-v1",
+    ),
+    null,
+  );
   assert.equal(
     hostedDeploymentBoundaryResponse(
       new Request("https://pr-42.anish-shah-is.online/play"),
+      "/play",
       "preview",
     ),
     null,
   );
+
+  for (const rawPath of [
+    "/simu%6cation",
+    "/api/simu%6cation/session",
+    "//api/simulation/turn",
+  ]) {
+    const canonicalPath = canonicalSecurityPathname(rawPath);
+    assert.ok(canonicalPath, rawPath);
+    assert.equal(
+      simulationExperienceBoundaryResponse(canonicalPath, "disabled")?.status,
+      404,
+      rawPath,
+    );
+  }
 });
 
 test("sitemap always publishes enabled room routes and never exposes disabled Travel", async () => {
@@ -1257,6 +1331,7 @@ test("preview blocks provider frames and serves only neutral artwork", async () 
     new Request(
       "https://pr-42.anish-shah-is.online/api/connector-artwork/spotify/arbitrary",
     ),
+    "/api/connector-artwork/spotify/arbitrary",
     "preview",
   );
   assert.equal(artwork?.status, 200);
@@ -1289,13 +1364,14 @@ test("preview Travel media is read-only and closed to the exact synthetic fixtur
     const request = new Request(`${origin}${pathname}`);
 
     assert.equal(
-      hostedDeploymentBoundaryResponse(request, "preview"),
+      hostedDeploymentBoundaryResponse(request, pathname, "preview"),
       null,
       "the route projector, not a blanket Worker response, authorizes Travel media",
     );
     assert.equal(
       hostedDeploymentBoundaryResponse(
         new Request(`${origin}${pathname}`, { method: "HEAD" }),
+        pathname,
         "preview",
       ),
       null,
@@ -1303,6 +1379,7 @@ test("preview Travel media is read-only and closed to the exact synthetic fixtur
     for (const method of ["POST", "PUT", "DELETE"]) {
       const blocked = hostedDeploymentBoundaryResponse(
         new Request(`${origin}${pathname}`, { method }),
+        pathname,
         "preview",
       );
       assert.equal(blocked?.status, 405, method);
@@ -1767,11 +1844,14 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.match(runner, /BROWSER_QUALITY_SCOPE/);
   assert.match(runner, /BROWSER_QUALITY_SHARD/);
   assert.match(runner, /ROOM_CAPTURE_VISUALS: "0"/);
-  assert.match(runner, /segment: "release-simulation-fallbacks"/);
-  assert.match(runner, /const simulationFallbackPattern = "without JavaScript\|room reveal"/);
+  assert.match(runner, /segment: "release-public"/);
+  assert.doesNotMatch(runner, /segment: "release-simulation-fallbacks"/);
+  assert.match(runner, /simulationExperienceMode: "campaign-v1"/);
+  assert.match(runner, /BROWSER_SIMULATION_EXPERIENCE_MODE/);
   assert.match(runner, /remaining release checks were cancelled/);
   assert.match(config, /process\.env\.BROWSER_QUALITY_PORT/);
   assert.match(config, /process\.env\.BROWSER_QUALITY_SEGMENT/);
+  assert.match(config, /process\.env\.BROWSER_SIMULATION_EXPERIENCE_MODE/);
   assert.match(config, /node_modules\/wrangler-e2e\/bin\/wrangler\.js/);
   assert.match(config, /const e2eCompatibilityDate = "2026-07-28"/);
   assert.match(config, /--compatibility-date \$\{e2eCompatibilityDate\}/);
@@ -1780,6 +1860,8 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.match(lighthouse, /selectMedianLighthouseResult\(samples\)/);
   assert.match(lighthouse, /const e2eCompatibilityDate = "2026-07-28"/);
   assert.match(lighthouse, /"--compatibility-date",\n\s+e2eCompatibilityDate/);
+  assert.match(lighthouse, /"SIMULATION_EXPERIENCE_MODE:disabled"/);
+  assert.match(lighthouse, /"SIMULATION_AI_MODE:authored-only"/);
   assert.doesNotMatch(
     lighthouse,
     /DEPLOYMENT_TIER:preview|PUBLIC_CONTENT_MODE:static_preview/,

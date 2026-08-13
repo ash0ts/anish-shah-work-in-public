@@ -16,7 +16,15 @@ import {
   getPublicContentView,
   publicMetricsFrom,
 } from "@/lib/server/public-content";
-import { humanizeWorkFilter } from "@/lib/work-archive-query";
+import {
+  humanizeWorkFilter,
+  parseWorkArchiveQuery,
+  workArchiveHref,
+} from "@/lib/work-archive-query";
+import {
+  workFacetsForRecord,
+  workThemeFacetLabel,
+} from "@/lib/work-facets";
 import { workArchiveRecordsFrom } from "@/lib/work-index";
 import { requestCspNonce } from "@/lib/server/csp";
 import {
@@ -198,7 +206,16 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
   const bucket =
     workBuckets.find((candidate) => candidate.id === group.bucket)?.title ??
     humanizeWorkFilter(group.bucket);
-  const hasMultipleForms = items.length > 1;
+  const bucketHref = `${workArchiveHref(
+    parseWorkArchiveQuery({ bucket: group.bucket }),
+  )}#work-index`;
+  const archiveRecord = workArchiveRecordsFrom(bundle).find(
+    (record) => record.id === group.id,
+  );
+  const topicFacets = archiveRecord
+    ? workFacetsForRecord(archiveRecord).theme.slice(0, 3)
+    : [];
+  const additionalItems = items.filter((item) => item.id !== primary.id);
   const relatedContextItems = [
     ...new Map(
       [...group.programEntityIds, ...group.contextEntityIds]
@@ -264,6 +281,12 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
       },
     ],
   };
+  const hasPrimaryContent = Boolean(
+    topicFacets.length ||
+      outcomes.length ||
+      memberEntities.length > 1 ||
+      context.length,
+  );
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
@@ -274,136 +297,153 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }}
       />
-      <header
-        className={styles.hero}
-        id={!hasMultipleForms ? primary.id : undefined}
-      >
+      <header className={styles.hero} id={primary.id}>
         <div className={styles.heroTop}>
           <Link href="/work">← {SITE_COPY.work["detail-back"]}</Link>
           <div className={styles.kicker} aria-label="Work classification">
-            <span>{bucket}</span>
+            <Link href={bucketHref} prefetch={false}>
+              {bucket}
+            </Link>
             <span>{workGroupPeriodLabel(group)}</span>
           </div>
         </div>
         <h1>{group.title}</h1>
         <div className={styles.intro}>
           <p>{group.summary}</p>
-          {!hasMultipleForms ? (
-            <PublicArtifactLink item={primary} primary />
-          ) : null}
+          <PublicArtifactLink item={primary} primary />
         </div>
       </header>
 
       <dl className={styles.facts} aria-label="Work facts">
         <Fact label={SITE_COPY.work["detail-role"]} value={group.roleSummary} />
-        <Fact label={SITE_COPY.work["detail-period"]} value={formatGroupPeriod(group)} />
+        <Fact
+          label={SITE_COPY.work["detail-period"]}
+          value={formatGroupPeriod(group)}
+        />
         <Fact
           label={SITE_COPY.work["detail-organization"]}
           value={organizations.join(" / ") || "Independent"}
         />
       </dl>
 
-      <div className={styles.content}>
-        <article className={styles.story}>
-          {group.topics.length ? (
-            <div className={styles.topics} aria-label="Topics">
-              {group.topics.map((topic) => (
-                <span key={topic}>{humanizeWorkFilter(topic)}</span>
-              ))}
-            </div>
-          ) : null}
-
-          {outcomes.length ? (
-            <section
-              className={styles.outcomes}
-              aria-labelledby="outcomes-title"
-            >
-              <p className={styles.sectionLabel}>Direct outcomes</p>
-              <h2 id="outcomes-title">{SITE_COPY.work["detail-results"]}</h2>
-              <MetricRows metrics={outcomes} />
-            </section>
-          ) : null}
-
-          {memberEntities.length > 1 ? (
-            <section
-              className={styles.members}
-              aria-labelledby="members-title"
-            >
-              <h2 id="members-title">{SITE_COPY.work["detail-included"]}</h2>
-              <ol>
-                {memberEntities.map((entity) =>
-                  entity ? (
-                    <li id={entity.id} key={entity.id}>
-                      <span>
-                        {entity.year ?? "Undated"} · {entity.role}
-                      </span>
-                      <h3>{entity.displayTitle}</h3>
-                      {entity.summary && entity.summary !== group.summary ? (
-                        <p>{entity.summary}</p>
-                      ) : null}
-                    </li>
-                  ) : null,
-                )}
-              </ol>
-            </section>
-          ) : null}
-
-          {context.length ? (
-            <section
-              className={styles.context}
-              aria-labelledby="context-title"
-            >
-              <h2 id="context-title">Wider program</h2>
-              <p className={styles.contextNote}>
-                {SITE_COPY.work["detail-context"]}
-              </p>
-              <MetricRows metrics={context} compact />
-            </section>
-          ) : null}
-        </article>
-
-        {evidence.length ? (
-          <aside aria-labelledby="evidence-title" className={styles.evidence}>
-            <details
-              className={styles.supportingDisclosure}
-              data-supporting-disclosure
-            >
-              <summary>
-                <span className={styles.sectionLabel}>Sources</span>
-                <strong aria-level={2} id="evidence-title" role="heading">
-                  {SITE_COPY.work["detail-sources"]}
-                </strong>
-                <i aria-hidden="true">{evidence.length}</i>
-              </summary>
-              <ol>
-                {evidence.map((source) => (
-                  <li key={source.id}>
-                    {source.url && !isKnownUnavailablePublicUrl(source.url) ? (
-                      <a href={source.url} rel="noreferrer" target="_blank">
-                        <span>
-                          {source.publisher ?? humanizeWorkFilter(source.kind)}
-                        </span>
-                        <strong>{source.title}</strong>
-                        <i aria-hidden="true">↗</i>
-                      </a>
-                    ) : (
-                      <span>
-                        <small>
-                          {source.publisher ?? humanizeWorkFilter(source.kind)}
-                        </small>
-                        <strong>{source.title}</strong>
-                        {source.url ? <i>Historical host unavailable</i> : null}
-                      </span>
-                    )}
-                  </li>
+      {hasPrimaryContent || evidence.length ? (
+        <div
+          className={`${styles.content} ${
+            hasPrimaryContent ? "" : styles.evidenceOnly
+          }`}
+        >
+          {hasPrimaryContent ? <article className={styles.story}>
+            {topicFacets.length ? (
+              <div className={styles.topics} aria-label="Topics">
+                {topicFacets.map((topic) => (
+                  <Link
+                    href={`${workArchiveHref(
+                      parseWorkArchiveQuery({
+                        bucket: group.bucket,
+                        topic,
+                      }),
+                    )}#work-index`}
+                    key={topic}
+                    prefetch={false}
+                  >
+                    {workThemeFacetLabel(topic)}
+                  </Link>
                 ))}
-              </ol>
-            </details>
-          </aside>
-        ) : null}
-      </div>
+              </div>
+            ) : null}
 
-      {hasMultipleForms ? (
+            {outcomes.length ? (
+              <section
+                className={styles.outcomes}
+                aria-labelledby="outcomes-title"
+              >
+                <p className={styles.sectionLabel}>Direct outcomes</p>
+                <h2 id="outcomes-title">{SITE_COPY.work["detail-results"]}</h2>
+                <MetricRows metrics={outcomes} />
+              </section>
+            ) : null}
+
+            {memberEntities.length > 1 ? (
+              <section
+                className={styles.members}
+                aria-labelledby="members-title"
+              >
+                <h2 id="members-title">{SITE_COPY.work["detail-included"]}</h2>
+                <ol>
+                  {memberEntities.map((entity) =>
+                    entity ? (
+                      <li id={entity.id} key={entity.id}>
+                        <span>
+                          {entity.year ?? "Undated"} · {entity.role}
+                        </span>
+                        <h3>{entity.displayTitle}</h3>
+                        {entity.summary && entity.summary !== group.summary ? (
+                          <p>{entity.summary}</p>
+                        ) : null}
+                      </li>
+                    ) : null,
+                  )}
+                </ol>
+              </section>
+            ) : null}
+
+            {context.length ? (
+              <section
+                className={styles.context}
+                aria-labelledby="context-title"
+              >
+                <h2 id="context-title">Wider program</h2>
+                <p className={styles.contextNote}>
+                  {SITE_COPY.work["detail-context"]}
+                </p>
+                <MetricRows metrics={context} compact />
+              </section>
+            ) : null}
+          </article> : null}
+
+          {evidence.length ? (
+            <aside aria-labelledby="evidence-title" className={styles.evidence}>
+              <details
+                className={styles.supportingDisclosure}
+                data-supporting-disclosure
+              >
+                <summary>
+                  <span className={styles.sectionLabel}>Sources</span>
+                  <strong aria-level={2} id="evidence-title" role="heading">
+                    {SITE_COPY.work["detail-sources"]}
+                  </strong>
+                  <i aria-hidden="true">{evidence.length}</i>
+                </summary>
+                <ol>
+                  {evidence.map((source) => (
+                    <li key={source.id}>
+                      {source.url && !isKnownUnavailablePublicUrl(source.url) ? (
+                        <a href={source.url} rel="noreferrer" target="_blank">
+                          <span>
+                            {source.publisher ?? humanizeWorkFilter(source.kind)}
+                          </span>
+                          <strong>{source.title}</strong>
+                          <i aria-hidden="true">↗</i>
+                        </a>
+                      ) : (
+                        <span>
+                          <small>
+                            {source.publisher ?? humanizeWorkFilter(source.kind)}
+                          </small>
+                          <strong>{source.title}</strong>
+                          {source.url ? <i>Historical host unavailable</i> : null}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            </aside>
+          ) : null}
+        </div>
+      ) : null}
+
+      {additionalItems.length ? (
         <section
           className={styles.appearances}
           aria-labelledby="appearances-title"
@@ -417,10 +457,10 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
               <strong aria-level={2} id="appearances-title" role="heading">
                 {SITE_COPY.work["detail-materials"]}
               </strong>
-              <i aria-hidden="true">{items.length}</i>
+              <i aria-hidden="true">{additionalItems.length}</i>
             </summary>
             <ol>
-              {items.map((item) => (
+              {additionalItems.map((item) => (
                 <li id={item.id} key={item.id}>
                   <div className={styles.formMeta}>
                     <span>{formatDate(item.date)}</span>

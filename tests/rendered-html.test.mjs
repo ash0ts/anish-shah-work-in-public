@@ -143,7 +143,15 @@ function visibleText(html) {
     .trim();
 }
 
-test("homepage renders four lines of work and three qualified proof statements", async () => {
+function initiallyVisibleText(html) {
+  const markup = documentMarkup(html).replace(
+    /<details(?![^>]*\bopen\b)[^>]*>([\s\S]*?)<\/details>/gi,
+    (_details, body) => body.match(/<summary\b[\s\S]*?<\/summary>/i)?.[0] ?? "",
+  );
+  return visibleText(markup);
+}
+
+test("homepage renders four topic rails and one qualified signal circuit", async () => {
   const html = await renderHtml("/");
   const markup = documentMarkup(html);
   const text = visibleText(html);
@@ -172,7 +180,17 @@ test("homepage renders four lines of work and three qualified proof statements",
   assert.equal((markup.match(/data-work-line=/g) ?? []).length, 4);
   assert.equal(
     (markup.match(/<a\b[^>]*href="\/work\/[^"]+"/g) ?? []).length,
+    0,
+  );
+  assert.equal(
+    (markup.match(/<a\b[^>]*href="\/work\?bucket=[^"&]+#work-index"/g) ?? [])
+      .length,
     4,
+  );
+  assert(
+    (markup.match(
+      /<a\b[^>]*href="\/work\?bucket=[^"]+(?:&amp;|&)topic=[^"]+#work-index"/g,
+    ) ?? []).length <= 12,
   );
   for (const value of ["200K+", "7K+", "$4M+"]) {
     assert.match(
@@ -180,34 +198,39 @@ test("homepage renders four lines of work and three qualified proof statements",
       new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
     );
   }
-  assert.match(text, /Signals from use, learning, and program reach\./i);
+  assert.match(text, /Three signals\. One method\./i);
   assert.match(
     text,
     /Independent measures; no shared scale\./i,
   );
-  assert.match(text, /See the method/i);
+  assert.match(text, /Method/i);
   assert.doesNotMatch(text, /What happened after the work shipped/i);
   assert.equal((markup.match(/data-impact-track=/g) ?? []).length, 3);
+  assert.equal((markup.match(/data-signal-circuit/g) ?? []).length, 1);
+  assert.equal(
+    (markup.match(/<details\b[^>]*name="home-signal"/g) ?? []).length,
+    3,
+  );
+  assert.match(text, /Direct project usage · not revenue/i);
+  assert.match(text, /Enrollments · not unique learners/i);
+  assert.match(text, /Supported pipeline · not revenue/i);
   assert.match(html, /Internal analytics/i);
   assert.match(html, /July 29 internal analytics checkpoint/i);
   assert.match(html, /Enrollments, not unique learners/i);
   assert.match(html, /not revenue, closed ARR, or personal attribution/i);
-  const proofRows = [
-    ...markup.matchAll(
-      /<li\b[^>]*data-proof-row[^>]*>([\s\S]*?)<\/li>/gi,
-    ),
-  ].map((match) => match[1]);
-  assert.equal(proofRows.length, 3);
-  for (const proofRow of proofRows) {
-    assert.equal((proofRow.match(/<small\b/gi) ?? []).length, 1);
-    assert.doesNotMatch(proofRow, /<p\b/i);
+  for (const checkpoint of ["2026-07-29", "2026-07-30", "2025-10-01"]) {
+    assert.match(html, new RegExp(`as of ${checkpoint}`, "i"));
   }
+  assert.doesNotMatch(text, /Tool use followed the MCP server launch/i);
+  assert.doesNotMatch(text, /Three AI courses turned working methods/i);
+  assert.doesNotMatch(text, /Event programs supported downstream/i);
   assert.doesNotMatch(text, /More than two-thirds|About half/i);
   const main = markup.match(/<main\b[\s\S]*?<\/main>/i)?.[0] ?? "";
-  const mainWordCount = visibleText(main).match(/[\p{L}\p{N}$+]+/gu)?.length ?? 0;
+  const mainWordCount =
+    initiallyVisibleText(main).match(/[\p{L}\p{N}$+]+/gu)?.length ?? 0;
   assert(
-    mainWordCount <= 220,
-    `homepage main content exceeds 220 visible words (${mainWordCount})`,
+    mainWordCount <= 140,
+    `homepage main content exceeds 140 initially visible words (${mainWordCount})`,
   );
   assert.match(html, /property="og:image" content="[^"]*\/og\.jpg"/i);
   assert.match(html, /href="[^"]*\/favicon\.png"/i);
@@ -555,17 +578,14 @@ test("Home and Work omit 3D, canvas, and chart-library payloads", async () => {
     const html = await renderHtml(pathname);
     const markup = documentMarkup(html);
     assert.doesNotMatch(markup, /<canvas\b/i);
-    assert.doesNotMatch(markup, /<svg\b/i);
     const assets = [
       ...html.matchAll(/<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"/gi),
     ].map((match) => match[1]);
     assert(assets.every((asset) => !/three/i.test(asset)));
-    if (pathname === "/work") {
-      assert(
-        assets.every((asset) => !/observablehq|WorkPlot|plot-/i.test(asset)),
-        "The work calendar must not load a separate charting runtime",
-      );
-    }
+    assert(
+      assets.every((asset) => !/observablehq|WorkPlot|plot-/i.test(asset)),
+      "Home and Work must not load a separate charting runtime",
+    );
   }
 });
 

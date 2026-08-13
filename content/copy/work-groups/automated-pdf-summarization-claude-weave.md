@@ -11,9 +11,3 @@ An implemented workflow summarized arXiv papers with Claude 3.5 Sonnet and W&B W
 
 ## role-summary
 Article author and cookbook contributor
-
-## home-title
-arXiv summarization with Claude & Weave
-
-## home-role
-Author · cookbook implementation contributor

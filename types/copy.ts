@@ -44,6 +44,4 @@ export type WorkGroupCopy = {
   shortTitle: string;
   summary: string;
   roleSummary: string;
-  homeTitle?: string;
-  homeRole?: string;
 };

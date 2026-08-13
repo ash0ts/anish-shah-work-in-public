@@ -4,10 +4,16 @@ Treat the typed copy-field registry as the source of truth for exact field names
 
 ## Home
 
-- Keep the visible page near 220 words.
+- Keep initially visible Home copy at or below roughly 140 words.
 - Use one thesis, one supporting sentence, and one primary call to action.
-- Present four lines of work with one representative link each.
-- Present no more than three proof statements; keep each period, scope, attribution, and limit beside its value.
+- Present one equal-weight three-node signal circuit. Compact nodes show icon,
+  value, label, and reviewed short limit; native disclosures retain the full
+  period, scope, attribution, qualifier, and exact Sources link.
+- Present four lines of work as icon-led topic rails. Each line links to its
+  filtered Work view and offers up to three approved topic filters with counts.
+  Do not select, feature, or name a representative Home project.
+- Treat compact signal limits and line/topic/icon mappings as protected
+  presentation data, not editable copy.
 - Remove duplicate trajectory, current-focus, archive-accounting, and methodology modules rather than rewriting all of them.
 
 Preferred thesis pattern:
@@ -19,24 +25,31 @@ Treat that wording as fact-check copy, not an immutable slogan.
 ## Work index
 
 - Let the color calendar and search carry the structure.
-- Use a compact first-person masthead.
+- Keep the Work overview free of first-person framing.
 - Keep line, year, and topic filters visible; put secondary filters behind one disclosure.
+- Send Home rails, calendar cells, search, organizations, and filters to the
+  same Project index. The unfiltered overview does not show that index.
+- Use a compact active-scope strip with independently removable line, topic,
+  year, and organization filters.
+- Render one selected line as a flat list. For cross-line searches, use simple
+  non-collapsible line headings rather than nested disclosure wrappers.
 - Write result rows as period + short title + either role or medium.
 - If a child title matched, use one compact “Matched: …” note and still link to the canonical parent.
 - Do not repeat form counts, category explanations, or archive totals in every row.
 
 ## Work detail
 
-Use this order:
+Keep the page a lean canonical evidence leaf, in this order:
 
 1. Title and one what/why sentence.
-2. My role, period, and organization.
-3. Results tied directly to this work.
-4. Separately labelled program context.
-5. Talks, recordings, and code in one nested section.
-6. Sources and related work.
+2. Role, period, organization, and one primary artifact.
+3. Line plus no more than three high-level topic links back to filtered Work.
+4. Direct results, when present.
+5. Collapsed additional artifacts, sources, and related context.
 
-Do not repeat the title or summary. Give a single-artifact project one primary artifact link rather than a duplicate artifact section.
+Do not repeat the title or summary, render empty ornamental sections, or turn
+detail pages into category navigation. Give a single-artifact project one
+primary artifact link rather than a duplicate artifact section.
 
 ## Sources
 
@@ -46,11 +59,11 @@ Prefer the visible title **What the numbers mean** and three sections:
 2. How I count.
 3. Sources.
 
-Keep counting rules first-person and short:
+Keep counting rules neutral and short:
 
-- I count one underlying work once.
-- I separate my contribution from program and company outcomes.
-- I keep the limit beside the number.
+- Count each project once.
+- Separate contribution from causality.
+- Keep the limit beside the claim.
 
 Do not restate the same limitation in accounting, non-claim, rule, caveat, and claim modules.
 
@@ -97,6 +110,9 @@ Keep consent, provider attribution, coverage, freshness, and recovery wording ne
 
 ## Simulation
 
+- For v2.2 public and preview surfaces, Simulation is disabled: no invitation,
+  route, API, sitemap entry, or client bundle is visible. Existing deck fields
+  remain dormant preparation for a separately reviewed future activation.
 - Keep `4N1SH` clearly framed as a generated game character, never Anish or an
   authoritative personal representative.
 - Use editable copy for the invitation, instructions, nonfactual encounter

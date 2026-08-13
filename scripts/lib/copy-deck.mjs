@@ -253,8 +253,6 @@ export async function readCopyDeck(root) {
       shortTitle: values["short-title"],
       summary: values.summary,
       roleSummary: values["role-summary"],
-      ...(values["home-title"] ? { homeTitle: values["home-title"] } : {}),
-      ...(values["home-role"] ? { homeRole: values["home-role"] } : {}),
     };
     sourceFiles.push({ path: relativePath, source });
   }
@@ -264,6 +262,7 @@ export async function readCopyDeck(root) {
 
 export async function copyVersionForDeck(root, sourceFiles) {
   const implementationPaths = [
+    "content/presentation/home-signal-rails.v1.json",
     "lib/copy-contract.ts",
     "lib/copy-voice-contract.ts",
     "scripts/lib/copy-deck.mjs",

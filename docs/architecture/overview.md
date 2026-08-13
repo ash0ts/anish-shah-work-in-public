@@ -37,11 +37,15 @@ and then applies the exact owner allowlist.
 
 - `content/public/` supplies sanitized facts, stable IDs, relations, metrics,
   evidence, and structural groupings.
+- `content/presentation/home-signal-rails.v1.json` supplies the reviewed,
+  protected equal-weight Home signal and bucket/topic rail mapping.
 - `content/copy/` supplies declared plain-text presentation fields.
 - D1 supplies published visibility, ordering, caveats, owner-approved metric
   wording, and operational connector state.
 - `CONTENT_VERSION` identifies canonical public data.
-- `COPY_VERSION` identifies the copy sources plus their parser and field contract.
+- `COPY_VERSION` identifies the copy sources, parser, field contract, and
+  reviewed Home signal/rail manifest. The public attestation also inventories
+  that manifest.
 
 See [Content and state](./content-and-state.md) for precedence and failure
 behavior and [Copywriting](../copywriting.md) for the freelancer-safe surface.
