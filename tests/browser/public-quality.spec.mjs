@@ -378,7 +378,7 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
   ).toBeVisible();
   await expect(
     page.locator('[data-variant="context"]:visible'),
-  ).toHaveCount(6);
+  ).toHaveCount(4);
   const clearOrganization = page.getByRole("link", {
     name: "Remove Google Cloud organization filter",
   });

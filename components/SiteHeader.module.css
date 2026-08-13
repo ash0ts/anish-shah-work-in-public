@@ -120,7 +120,6 @@
   border-radius: 52% 48% 46% 54% / 47% 53% 47% 53%;
   background: var(--blue, #295dff);
   transform-origin: center;
-  transition: background-color 220ms var(--ease-out, ease-out);
   will-change: transform;
 }
 
