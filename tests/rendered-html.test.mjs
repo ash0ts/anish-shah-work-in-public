@@ -234,6 +234,19 @@ test("homepage renders four topic rails and one qualified signal circuit", async
   );
   assert.match(html, /property="og:image" content="[^"]*\/og\.jpg"/i);
   assert.match(html, /href="[^"]*\/favicon\.png"/i);
+  for (const font of [
+    "recursive-latin.woff2",
+    "hanken-grotesk-latin.woff2",
+    "ibm-plex-mono-medium-latin.woff2",
+  ]) {
+    assert.match(
+      html,
+      new RegExp(
+        `<link[^>]+rel="preload"[^>]+href="[^"]*\\/fonts\\/${font.replace(".", "\\.")}"[^>]+as="font"[^>]+type="font\\/woff2"[^>]+crossorigin="anonymous"`,
+        "i",
+      ),
+    );
+  }
   assert.match(html, /href="#main"[^>]*>Skip to content/i);
   assert.doesNotMatch(markup, /<canvas\b/i);
 });
