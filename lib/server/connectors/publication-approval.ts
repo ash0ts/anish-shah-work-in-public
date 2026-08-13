@@ -617,14 +617,20 @@ export async function connectorPublicationGate(
         retainLastKnownGood: false,
       };
     }
+    const approval = await getConnectorPublicationApproval(
+      provider,
+      binding,
+      now,
+    );
+    if (approval.status !== "ready") {
+      return {
+        status: "setup_required",
+        mode: "report_only",
+        retainLastKnownGood: false,
+      };
+    }
     if (pending) {
-      const approval = await getConnectorPublicationApproval(
-        provider,
-        binding,
-        now,
-      );
       if (
-        approval.status !== "ready" ||
         requiredScopesMissing(approval.approval).length > 0
       ) {
         return {
@@ -637,6 +643,19 @@ export async function connectorPublicationGate(
         status: "allowed",
         mode: "report_only",
         retainLastKnownGood: true,
+      };
+    }
+    // Grandfathering applies only while no unified owner decision exists. An
+    // explicit Make private, expired record, or incomplete unified record must
+    // take effect immediately even before the one-time activation is finished.
+    if (
+      approval.approval?.source === "unified" &&
+      requiredScopesMissing(approval.approval).length > 0
+    ) {
+      return {
+        status: "withheld",
+        mode: "report_only",
+        retainLastKnownGood: false,
       };
     }
     return {
@@ -831,6 +850,13 @@ export async function activateConnectorPublicationApprovals(input: {
     Date.parse(activatedAt),
   );
   if (overview.status !== "ready") return overview;
+  if (overview.enforcement.mode === "required") {
+    return {
+      status: "activated",
+      enforcement: overview.enforcement,
+      approvalStateDigest: overview.approvalStateDigest,
+    };
+  }
   const missingProviders = overview.providers
     .filter((entry) => entry.configured && entry.missingScopes.length > 0)
     .map((entry) => entry.provider);
@@ -860,6 +886,10 @@ export async function activateConnectorPublicationApprovals(input: {
         .map(({ provider }) => provider),
     };
   }
+  const enforcementRow = await readSetting(
+    database,
+    CONNECTOR_PUBLICATION_ENFORCEMENT_SETTING_KEY,
+  );
   const enforcement: StoredEnforcement = {
     schemaVersion: 1,
     mode: "required",
@@ -885,11 +915,26 @@ export async function activateConnectorPublicationApprovals(input: {
        )`,
   );
   const activationGuardSql = [
+    enforcementRow
+      ? `EXISTS (
+           SELECT 1 FROM editorial_settings
+           WHERE key = ? AND value_json = ? AND updated_at = ?
+         )`
+      : `NOT EXISTS (
+           SELECT 1 FROM editorial_settings WHERE key = ?
+         )`,
     ...credentialPresenceGuards,
     `(SELECT COUNT(*) FROM editorial_settings WHERE key = ?) = ?`,
     ...approvalGuards,
   ].join(" AND ");
   const activationGuardBindings = [
+    ...(enforcementRow
+      ? [
+          CONNECTOR_PUBLICATION_ENFORCEMENT_SETTING_KEY,
+          enforcementRow.valueJson,
+          enforcementRow.updatedAt,
+        ]
+      : [CONNECTOR_PUBLICATION_ENFORCEMENT_SETTING_KEY]),
     ...credentialProviders,
     STRAVA_SETTING_KEY,
     configuredProviders.includes("strava") ? 1 : 0,
@@ -954,6 +999,13 @@ export async function activateConnectorPublicationApprovals(input: {
       const currentMissing = current.providers
         .filter((entry) => entry.configured && entry.missingScopes.length > 0)
         .map((entry) => entry.provider);
+      if (current.enforcement.mode === "required") {
+        return {
+          status: "activated",
+          enforcement: current.enforcement,
+          approvalStateDigest: current.approvalStateDigest,
+        };
+      }
       return currentMissing.length > 0
         ? { status: "incomplete", missingProviders: currentMissing }
         : { status: "setup_required" };

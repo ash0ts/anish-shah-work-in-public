@@ -4,7 +4,6 @@ import {
   getConnectorPublicationApprovalOverview,
   isPublicConnectorProvider,
   saveConnectorPublicationApproval,
-  type ConnectorPublicationApprovalScope,
 } from "@/lib/server/connectors";
 import {
   authorizeOwnerApi,
@@ -18,18 +17,14 @@ function exactKeys(value: Record<string, unknown>, allowed: string[]): boolean {
   return Object.keys(value).every((key) => allowed.includes(key));
 }
 
-function approvalScopes(value: unknown): ConnectorPublicationApprovalScope[] | null {
-  if (!Array.isArray(value)) return null;
-  const scopes = value.filter(
-    (scope): scope is ConnectorPublicationApprovalScope =>
-      typeof scope === "string" &&
-      CONNECTOR_PUBLICATION_APPROVAL_SCOPES.includes(
-        scope as ConnectorPublicationApprovalScope,
-      ),
+function hasFixedApprovalScopes(value: unknown): boolean {
+  if (!Array.isArray(value)) return false;
+  return (
+    value.length === CONNECTOR_PUBLICATION_APPROVAL_SCOPES.length &&
+    CONNECTOR_PUBLICATION_APPROVAL_SCOPES.every((scope) =>
+      value.includes(scope),
+    )
   );
-  return scopes.length === value.length && new Set(scopes).size === scopes.length
-    ? scopes
-    : null;
 }
 
 async function authorizeWrite(request: Request) {
@@ -70,11 +65,10 @@ export async function connectorPublicationApprovalPut(
     return Response.json({ error: "Approval must be a JSON object." }, { status: 400, headers: NO_STORE });
   }
   const body = parsed.value as Record<string, unknown>;
-  const scopes = approvalScopes(body.scopes);
   if (
     !exactKeys(body, ["reference", "scopes", "approvedAt", "expiresAt", "enabled"]) ||
     (body.reference !== undefined && typeof body.reference !== "string") ||
-    !scopes ||
+    !hasFixedApprovalScopes(body.scopes) ||
     typeof body.approvedAt !== "string" ||
     !(body.expiresAt === null || typeof body.expiresAt === "string") ||
     typeof body.enabled !== "boolean"
@@ -84,7 +78,7 @@ export async function connectorPublicationApprovalPut(
   const result = await saveConnectorPublicationApproval({
     provider: providerValue,
     ...(body.reference === undefined ? {} : { reference: body.reference }),
-    scopes,
+    scopes: [...CONNECTOR_PUBLICATION_APPROVAL_SCOPES],
     approvedAt: body.approvedAt,
     expiresAt: body.expiresAt,
     enabled: body.enabled,

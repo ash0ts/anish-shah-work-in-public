@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import styles from "../studio.module.css";
 import {
   callbackResultMessages,
-  connectorStatusClass,
-  connectorStatusLabel,
   formatTimestamp,
   responseJson,
   safeAuthorizationUrl,
@@ -19,6 +17,15 @@ import {
   type ConnectorMutationAction,
 } from "./mutation-policy";
 import { retryDeadlineState } from "./retry-deadline";
+import { ConnectorPermissionControl } from "./ConnectorPermissionControl";
+import { studioConnectorActionLabel } from "./action-label";
+
+const publicStateLabel = {
+  live: "Live",
+  private: "Private",
+  needs_action: "Needs action",
+  not_connected: "Not connected",
+} as const;
 
 const defaultOAuthCredentialShape = {
   idLabel: "Client ID",
@@ -32,17 +39,21 @@ const defaultOAuthCredentialShape = {
 
 export function ApiConnectorPanel({
   connector,
+  view,
+  approvalOverview,
+  expanded,
+  onExpandedChange,
+  onPermissionUpdated,
   environment,
   encryptionConfigured,
   meta,
   oauth,
   steamStorageCountries = null,
   children,
+  advancedChildren,
 }: ApiConnectorPanelProps) {
   const router = useRouter();
   const isSpotify = connector.provider === "spotify";
-  const isPublicationGated =
-    isSpotify || connector.provider === "discogs";
   const isOAuthProvider = Boolean(oauth);
   const oauthProvider = oauth?.provider ?? "myanimelist";
   const oauthProviderTitle = oauth?.title ?? "MyAnimeList";
@@ -52,7 +63,10 @@ export function ApiConnectorPanel({
   const [credentialId, setCredentialId] = useState("");
   const [steamId, setSteamId] = useState("");
   const [showCredentialForm, setShowCredentialForm] = useState(
-    !connector.configured,
+    !connector.configured &&
+      (view.primaryAction === "connect" ||
+        (view.primaryAction === "continue_authorization" &&
+          !connector.canReuseOAuthClient)),
   );
   const [pending, setPending] = useState<
     "save" | "authorize" | "refresh" | "disconnect" | "copy" | null
@@ -65,7 +79,11 @@ export function ApiConnectorPanel({
   const [authorizationDestination, setAuthorizationDestination] = useState<
     string | null
   >(null);
-  const focusAfterMutation = useRef<"credential" | "refresh" | null>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const focusAfterMutation = useRef<"credential" | "primary" | null>(null);
+  const focusAfterAction = useRef<
+    ApiConnectorPanelProps["view"]["primaryAction"] | null
+  >(null);
   const firstCredentialField = useRef<HTMLInputElement>(null);
   const refreshButton = useRef<HTMLButtonElement>(null);
   const connectorBlocked =
@@ -89,11 +107,12 @@ export function ApiConnectorPanel({
       () => {
         setRetryClock(Date.now());
         setLocalRetryNotBefore(null);
+        router.refresh();
       },
       Math.min(retryTimestamp - Date.now() + 50, 2_147_483_647),
     );
     return () => window.clearTimeout(timer);
-  }, [retryTimestamp]);
+  }, [retryTimestamp, router]);
 
   useEffect(() => {
     if (!isOAuthProvider) return;
@@ -103,9 +122,12 @@ export function ApiConnectorPanel({
     const resultMessageFactory = result
       ? callbackResultMessages[result]
       : null;
-    const resultMessage = resultMessageFactory
-      ? resultMessageFactory(oauthProviderTitle)
-      : null;
+    const resultMessage =
+      result === "connected"
+        ? `${oauthProviderTitle} connection saved. Allow public use next.`
+        : resultMessageFactory
+          ? resultMessageFactory(oauthProviderTitle)
+          : null;
     const updateTimer = resultMessage
       ? window.setTimeout(() => {
           setMessage(resultMessage);
@@ -117,7 +139,11 @@ export function ApiConnectorPanel({
     const cleaned = new URL(window.location.href);
     cleaned.searchParams.delete("connector");
     cleaned.searchParams.delete("result");
-    window.history.replaceState({}, "", `${cleaned.pathname}${cleaned.search}`);
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${cleaned.pathname}${cleaned.search}${cleaned.hash}`,
+    );
     return () => {
       if (updateTimer !== null) window.clearTimeout(updateTimer);
     };
@@ -125,14 +151,23 @@ export function ApiConnectorPanel({
 
   useEffect(() => {
     if (pending !== null || focusAfterMutation.current === null) return;
+    if (
+      focusAfterMutation.current === "primary" &&
+      focusAfterAction.current === view.primaryAction
+    ) {
+      return;
+    }
     const target =
-      focusAfterMutation.current === "refresh"
-        ? refreshButton.current
+      focusAfterMutation.current === "primary"
+        ? panelRef.current?.querySelector<HTMLElement>(
+            "[data-studio-primary-action]:not(:disabled)",
+          ) ?? panelRef.current?.querySelector<HTMLElement>("summary") ?? null
         : firstCredentialField.current;
     if (!target) return;
     focusAfterMutation.current = null;
+    focusAfterAction.current = null;
     target.focus();
-  }, [pending, showCredentialForm]);
+  }, [pending, showCredentialForm, view.primaryAction]);
 
   async function copyCallback(): Promise<void> {
     if (!registeredCallback) {
@@ -278,6 +313,13 @@ export function ApiConnectorPanel({
             ? `Discogs is rate-limiting synchronization. Refresh becomes available after ${formatTimestamp(responseRetryNotBefore)}. No new snapshot was published; the last accepted snapshot remains unchanged.`
             : result.error ?? `Request failed (${response.status}).`,
         );
+        if (
+          connectorMutationShouldReconcile(action, result.status)
+        ) {
+          focusAfterMutation.current = "primary";
+          focusAfterAction.current = view.primaryAction;
+          router.refresh();
+        }
         return;
       }
 
@@ -296,6 +338,9 @@ export function ApiConnectorPanel({
             ? `No provider request was made. Manual refresh becomes available after ${formatTimestamp(responseRetryNotBefore)}; the last accepted snapshot remains published.`
             : "No provider request was made because this collection is not due for a manual refresh. The last accepted snapshot remains published.",
         );
+        focusAfterMutation.current = "primary";
+        focusAfterAction.current = view.primaryAction;
+        router.refresh();
         return;
       }
 
@@ -308,7 +353,8 @@ export function ApiConnectorPanel({
         setLocalRetryNotBefore(null);
       }
       if (action === "save") {
-        focusAfterMutation.current = "refresh";
+        focusAfterMutation.current = "primary";
+        focusAfterAction.current = view.primaryAction;
         setShowCredentialForm(false);
       }
       if (action === "disconnect") {
@@ -319,11 +365,7 @@ export function ApiConnectorPanel({
       }
       setMessage(
         action === "save"
-          ? environment === "local"
-            ? "Credential encrypted in local D1. Run Refresh now to verify it in this sandbox."
-            : connector.provider === "spotify"
-              ? "Credential encrypted and saved. Run Refresh now to verify it; public display remains controlled separately."
-              : "Credential encrypted and saved. Run Refresh now to verify and publish it."
+          ? "Connection saved. Allow public use next."
           : action === "disconnect"
             ? cancellingPendingAuthorization
               ? `Pending ${oauthProviderTitle} authorization cancelled.`
@@ -335,6 +377,14 @@ export function ApiConnectorPanel({
                   "Steam game details are not public, so the stream was unpublished."
                 : `${environment === "local" ? "Local sync" : "Sync"} complete${typeof result.itemCount === "number" ? ` · ${result.itemCount} items` : ""}.`,
       );
+      if (
+        action === "refresh" &&
+        result.status === "complete" &&
+        view.primaryAction !== "refresh"
+      ) {
+        focusAfterMutation.current = "primary";
+        focusAfterAction.current = view.primaryAction;
+      }
       if (connectorMutationShouldReconcile(action, result.status)) {
         router.refresh();
       }
@@ -349,138 +399,119 @@ export function ApiConnectorPanel({
     }
   }
 
-  const statusLabel = connectorStatusLabel(connector, connectorBlocked);
+  const publicState = publicStateLabel[view.publicState];
+  const actionLabel =
+    retryBlocked && retryNotBefore
+      ? `Retry after ${formatTimestamp(retryNotBefore)}`
+      : view.primaryAction === "wait_retry"
+        ? "Try again"
+        : studioConnectorActionLabel(view);
+  const guidesConnection =
+    view.primaryAction === "connect" ||
+    view.primaryAction === "continue_authorization" ||
+    view.primaryAction === "reauthorize" ||
+    view.primaryAction === "replace_credential";
+  const guidesRefresh =
+    view.primaryAction === "sync" ||
+    view.primaryAction === "refresh" ||
+    view.primaryAction === "retry" ||
+    view.primaryAction === "wait_retry";
+  const needsCredentialForm =
+    showCredentialForm ||
+    (view.primaryAction === "continue_authorization" &&
+      !connector.canReuseOAuthClient) ||
+    view.primaryAction === "replace_credential" ||
+    (view.primaryAction === "reauthorize" && !connector.canReuseOAuthClient);
+  const approvalEntry = approvalOverview.providers.find(
+    (entry) => entry.provider === connector.provider,
+  );
+  const guidance =
+    view.primaryAction === "record_public_permission"
+      ? view.publicState === "live"
+        ? "This collection remains live during the one-time setup. Record its permission before finishing setup."
+        : "The connection is saved. Record public permission before synchronizing this collection."
+      : view.primaryAction === "publish"
+        ? "The saved collection is private. Review the public display choice below."
+        : view.primaryAction === "continue_authorization" &&
+            !connector.canReuseOAuthClient
+          ? `The previous ${oauthProviderTitle} authorization was not completed. Re-enter the app credentials to replace that single-use request, or cancel it below.`
+          : statusGuidance(
+              {
+                ...connector,
+                retryNotBefore: retryBlocked ? retryNotBefore : null,
+              },
+              environment,
+              encryptionConfigured,
+              steamStorageCountries,
+            );
 
   return (
     <section
+      ref={panelRef}
       className={styles.connectorPanel}
       aria-labelledby={`${connector.provider}-title`}
       data-provider={connector.provider}
     >
-      <header className={styles.connectorRail}>
-        <p>{meta.stream}</p>
-        <h3 id={`${connector.provider}-title`}>{meta.title}</h3>
-        <span
-          className={`${styles.statusPill} ${connectorStatusClass(connector, connectorBlocked)}`}
-        >
-          {statusLabel}
-        </span>
-      </header>
+      <details
+        className={styles.connectorDisclosure}
+        open={expanded}
+        onToggle={(event) => onExpandedChange(event.currentTarget.open)}
+      >
+        <summary className={styles.connectorSummary}>
+          <span className={styles.connectorSummaryIdentity}>
+            <span>{view.stream}</span>
+            <strong id={`${connector.provider}-title`}>{view.label}</strong>
+          </span>
+          <span className={styles.connectorSummaryMeta}>
+            <span
+              className={`${styles.statusPill} ${
+                publicState === "Live"
+                  ? styles.status_healthy
+                  : publicState === "Needs action"
+                    ? styles.status_error
+                    : styles.status_setup_required
+              }`}
+            >
+              {publicState}
+            </span>
+            <span>
+              {view.snapshot.itemCount === null
+                ? "No saved items"
+                : `${view.snapshot.itemCount.toLocaleString()} saved items`}
+            </span>
+            <span>
+              {view.snapshot.lastSyncedAt
+                ? `Updated ${formatTimestamp(view.snapshot.lastSyncedAt)}`
+                : "Not updated"}
+            </span>
+          </span>
+          <span className={styles.connectorPrimaryAction}>{actionLabel}</span>
+        </summary>
 
-      <div className={styles.connectorMain}>
-        <div className={styles.providerLead}>
-          <p>{meta.summary}</p>
-          <nav aria-label={`${meta.title} setup resources`}>
-            {meta.sources.map((source) => (
-              <a
-                href={source.href}
-                rel="noreferrer"
-                target="_blank"
-                key={source.href}
-              >
-                {source.label}
-              </a>
-            ))}
-          </nav>
-        </div>
-
-        <dl className={styles.connectorFacts}>
-          <div>
-            <dt>You need</dt>
-            <dd>{meta.requirement}</dd>
-          </div>
-          <div>
-            <dt>Last successful sync</dt>
-            <dd>{formatTimestamp(connector.lastSyncedAt)}</dd>
-          </div>
-          <div>
-            <dt>
-              {environment === "local"
-                ? "Local snapshot"
-                : isPublicationGated
-                  ? "Sanitized snapshot"
-                  : "Published snapshot"}
-            </dt>
-            <dd>
-              {connector.itemCount === null
-                ? "None"
-                : `${connector.itemCount.toLocaleString()} items`}
-            </dd>
-          </div>
-          <div>
-            <dt>
-              {connector.provider === "discogs"
-                ? "Manual refresh available"
-                : "Fresh through"}
-            </dt>
-            <dd>{formatTimestamp(connector.freshUntil)}</dd>
-          </div>
-          {retryBlocked ? (
-            <div>
-              <dt>Provider retry available</dt>
-              <dd>{formatTimestamp(retryNotBefore)}</dd>
-            </div>
-          ) : null}
-          {isOAuthProvider && oauthCredentialShape.showsAccessTokenExpiry ? (
-            <div>
-              <dt>Access token refresh</dt>
-              <dd>{formatTimestamp(connector.credentialExpiresAt)}</dd>
-            </div>
-          ) : null}
-          {isSpotify ? (
-            <>
-              <div>
-                <dt>Reauthorize by</dt>
-                <dd>
-                  {formatTimestamp(
-                    spotifyReauthorizationDate(connector.authorizedAt),
-                  )}
-                </dd>
-              </div>
-            </>
-          ) : null}
-        </dl>
-
-        <p className={styles.statusGuidance}>
-          {statusGuidance(
-            {
-              ...connector,
-              retryNotBefore: retryBlocked ? retryNotBefore : null,
-            },
-            environment,
-            encryptionConfigured,
-            steamStorageCountries,
-          )}
+        <div className={`${styles.connectorMain} ${styles.connectorDetails}`}>
+        <p className={styles.statusGuidance} role="status">
+          {guidance}
         </p>
 
-        {isOAuthProvider ? (
-          <div className={styles.callbackBlock}>
-            <span>
-              Callback URL for this{" "}
-              {environment === "local" ? "local client" : "production client"}
-            </span>
-            <div>
-              <code>{registeredCallback ?? "SITE_URL is not configured"}</code>
-              <button
-                className={styles.copyButton}
-                type="button"
-                disabled={pending !== null || !registeredCallback}
-                onClick={() => void copyCallback()}
-              >
-                {pending === "copy" ? "Copying…" : "Copy"}
-              </button>
-            </div>
-            <p>
-              Register this exact URL in {oauthProviderTitle}. Use a separate
-              application for local and production.
-              {isSpotify && environment === "local"
-                ? " Spotify rejects localhost redirects, so this callback uses the explicit 127.0.0.1 loopback address."
-                : ""}
-            </p>
-          </div>
+        {connector.lastErrorCode && connector.itemCount !== null ? (
+          <p className={styles.savedSnapshotNotice}>
+            <strong>Saved snapshot</strong>
+            <span>{connector.itemCount.toLocaleString()} items</span>
+            <span>Updated {formatTimestamp(connector.lastSyncedAt)}</span>
+          </p>
         ) : null}
 
-        {showCredentialForm ? (
+        {view.primaryAction === "record_public_permission" ? (
+          <ConnectorPermissionControl
+            provider={connector.provider}
+            providerLabel={meta.title}
+            approval={approvalEntry?.approval ?? view.permission.approval}
+            missingScopes={approvalEntry?.missingScopes ?? view.permission.missingScopes}
+            onUpdated={onPermissionUpdated}
+          />
+        ) : null}
+
+        {needsCredentialForm ? (
           <form
             className={styles.credentialForm}
             onSubmit={(event) => {
@@ -587,6 +618,14 @@ export function ApiConnectorPanel({
             <div className={styles.formActions}>
               <button
                 type="submit"
+                data-studio-primary-action={
+                  view.primaryAction === "connect" ||
+                  view.primaryAction === "continue_authorization" ||
+                  view.primaryAction === "reauthorize" ||
+                  view.primaryAction === "replace_credential"
+                    ? ""
+                    : undefined
+                }
                 disabled={pending !== null || connectorBlocked}
               >
                 {pending === "authorize"
@@ -594,10 +633,14 @@ export function ApiConnectorPanel({
                   : pending === "save"
                     ? "Saving…"
                     : isOAuthProvider
-                      ? `Authorize with ${oauthProviderTitle}`
-                      : connector.configured
+                      ? view.primaryAction === "continue_authorization"
+                        ? "Restart authorization"
+                        : `Authorize with ${oauthProviderTitle}`
+                      : view.primaryAction === "replace_credential"
                         ? "Replace credential"
-                        : "Connect"}
+                        : connector.configured
+                          ? "Replace credential"
+                          : "Connect"}
               </button>
               {connector.configured ? (
                 <button
@@ -630,66 +673,176 @@ export function ApiConnectorPanel({
               ) : null}
             </div>
           </form>
-        ) : (
+        ) : guidesRefresh || guidesConnection ? (
           <div className={styles.actionRow}>
-            <button
-              ref={refreshButton}
-              type="button"
-              disabled={pending !== null || connectorBlocked || retryBlocked}
-              onClick={() => void request("refresh")}
-            >
-              {pending === "refresh"
-                ? "Refreshing…"
-                : retryBlocked
-                  ? `Retry after ${formatTimestamp(retryNotBefore)}`
-                  : "Refresh now"}
-            </button>
-            {isOAuthProvider && connector.canReuseOAuthClient ? (
+            {guidesRefresh ? (
               <button
+                ref={refreshButton}
+                data-studio-primary-action
+                type="button"
+                disabled={pending !== null || connectorBlocked || retryBlocked}
+                onClick={() => void request("refresh")}
+              >
+                {pending === "refresh"
+                  ? "Refreshing…"
+                  : actionLabel}
+              </button>
+            ) : null}
+            {isOAuthProvider &&
+            connector.canReuseOAuthClient &&
+            (view.primaryAction === "continue_authorization" ||
+              view.primaryAction === "reauthorize") ? (
+              <button
+                data-studio-primary-action
                 className={styles.quietButton}
                 type="button"
                 disabled={pending !== null || connectorBlocked}
                 onClick={() => void authorizeOAuthProvider(true)}
               >
-                {pending === "authorize" ? "Opening…" : "Authorize again"}
+                {pending === "authorize"
+                  ? "Opening…"
+                  : view.primaryAction === "continue_authorization"
+                    ? "Continue authorization"
+                    : "Authorize again"}
               </button>
             ) : null}
-            <button
-              className={styles.quietButton}
-              type="button"
-              disabled={pending !== null}
-              onClick={() => {
-                setMessage(null);
-                setShowCredentialForm(true);
-              }}
-            >
-              {isOAuthProvider
-                ? "Replace app credentials"
-                : "Replace credential"}
-            </button>
-            <button
-              className={styles.quietButton}
-              type="button"
-              disabled={pending !== null}
-              onClick={() => void request("disconnect")}
-            >
-              {pending === "disconnect" ? "Disconnecting…" : "Disconnect"}
-            </button>
           </div>
-        )}
-
-        <p className={styles.recoveryText}>
-          <strong>If it needs attention</strong>
-          {meta.recovery}
-        </p>
-
-        {children}
-
-        {message ? (
-          <p className={styles.formMessage} role="status">
-            {message}
-          </p>
         ) : null}
+
+        {view.primaryAction === "publish" ? children : null}
+
+        <details className={styles.connectorAdvanced}>
+          <summary>Advanced / recovery</summary>
+          <div className={styles.providerLead}>
+            <p>{meta.summary}</p>
+            <nav aria-label={`${meta.title} setup resources`}>
+              {meta.sources.map((source) => (
+                <a
+                  href={source.href}
+                  rel="noreferrer"
+                  target="_blank"
+                  key={source.href}
+                >
+                  {source.label}
+                </a>
+              ))}
+            </nav>
+          </div>
+          <dl className={styles.connectorFacts}>
+            <div>
+              <dt>You need</dt>
+              <dd>{meta.requirement}</dd>
+            </div>
+            <div>
+              <dt>Last successful sync</dt>
+              <dd>{formatTimestamp(connector.lastSyncedAt)}</dd>
+            </div>
+            <div>
+              <dt>Saved snapshot</dt>
+              <dd>
+                {connector.itemCount === null
+                  ? "None"
+                  : `${connector.itemCount.toLocaleString()} items`}
+              </dd>
+            </div>
+            <div>
+              <dt>
+                {connector.provider === "discogs"
+                  ? "Manual refresh available"
+                  : "Fresh through"}
+              </dt>
+              <dd>{formatTimestamp(connector.freshUntil)}</dd>
+            </div>
+            {retryBlocked ? (
+              <div>
+                <dt>Provider retry available</dt>
+                <dd>{formatTimestamp(retryNotBefore)}</dd>
+              </div>
+            ) : null}
+            {isOAuthProvider && oauthCredentialShape.showsAccessTokenExpiry ? (
+              <div>
+                <dt>Access token refresh</dt>
+                <dd>{formatTimestamp(connector.credentialExpiresAt)}</dd>
+              </div>
+            ) : null}
+            {isSpotify ? (
+              <div>
+                <dt>Reauthorize by</dt>
+                <dd>{formatTimestamp(spotifyReauthorizationDate(connector.authorizedAt))}</dd>
+              </div>
+            ) : null}
+          </dl>
+          {isOAuthProvider ? (
+            <div className={styles.callbackBlock}>
+              <span>
+                Callback URL for this {environment === "local" ? "local client" : "production client"}
+              </span>
+              <div>
+                <code>{registeredCallback ?? "SITE_URL is not configured"}</code>
+                <button
+                  className={styles.copyButton}
+                  type="button"
+                  disabled={pending !== null || !registeredCallback}
+                  onClick={() => void copyCallback()}
+                >
+                  {pending === "copy" ? "Copying…" : "Copy"}
+                </button>
+              </div>
+              <p>
+                Register this exact URL in {oauthProviderTitle}. Use a separate application for local and production.
+                {isSpotify && environment === "local"
+                  ? " Spotify rejects localhost redirects, so this callback uses the explicit 127.0.0.1 loopback address."
+                  : ""}
+              </p>
+            </div>
+          ) : null}
+          {connector.configured && view.primaryAction !== "record_public_permission" ? (
+            <ConnectorPermissionControl
+              provider={connector.provider}
+              providerLabel={meta.title}
+              approval={approvalEntry?.approval ?? view.permission.approval}
+              missingScopes={approvalEntry?.missingScopes ?? view.permission.missingScopes}
+              onUpdated={onPermissionUpdated}
+            />
+          ) : null}
+          {connector.configured ? (
+            <div className={styles.actionRow}>
+              <button
+                className={styles.quietButton}
+                type="button"
+                disabled={pending !== null}
+                onClick={() => {
+                  setMessage(null);
+                  setShowCredentialForm(true);
+                }}
+              >
+                {isOAuthProvider ? "Replace app credentials" : "Replace credential"}
+              </button>
+              <button
+                className={styles.quietButton}
+                type="button"
+                disabled={pending !== null}
+                onClick={() => void request("disconnect")}
+              >
+                {pending === "disconnect" ? "Disconnecting…" : "Disconnect"}
+              </button>
+            </div>
+          ) : null}
+          {advancedChildren}
+          <p className={styles.recoveryText}>
+            <strong>If it needs attention</strong>
+            {meta.recovery}
+          </p>
+        </details>
+
+        <p
+          className={styles.formMessage}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {message ?? ""}
+        </p>
         {authorizationDestination ? (
           <a
             className={styles.authorizationLink}
@@ -699,7 +852,8 @@ export function ApiConnectorPanel({
             Continue to {oauthProviderTitle}
           </a>
         ) : null}
-      </div>
+        </div>
+      </details>
     </section>
   );
 }

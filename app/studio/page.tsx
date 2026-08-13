@@ -8,23 +8,20 @@ import { resolveDiscogsCallbackUrl } from "@/lib/server/connectors/discogs-oauth
 import { resolveMyAnimeListCallbackUrl } from "@/lib/server/connectors/myanimelist-oauth";
 import { resolveSpotifyCallbackUrl } from "@/lib/server/connectors/spotify-oauth";
 import {
-  getConnectorPublicationApprovalOverview,
+  getStudioCollectionsView,
   getStudioOverview,
+  isPublicConnectorProvider,
 } from "@/lib/server/connectors";
 import { getCopyOwnershipReport } from "@/lib/server/copy-ownership";
 import { listEditorialRecords } from "@/lib/server/editorial";
 import { ownerAuthorizationForEmail } from "@/lib/server/owner-auth";
 import { ensureSanitizedPublicRecords } from "@/lib/server/public-record-seed";
 import { runtimeValue } from "@/lib/server/runtime-env";
-import {
-  ConnectorControls,
-  StravaConnectorControls,
-} from "./ConnectorControls";
-import { ConnectorPublicationApprovals } from "./ConnectorPublicationApprovals";
 import { CopyOwnershipSummary } from "./CopyOwnershipSummary";
 import { EditorialRecords } from "./EditorialRecords";
 import { PlayPromotionControls } from "./PlayPromotionControls";
 import { SimulationProviderApprovals } from "./SimulationProviderApprovals";
+import { StudioCollections } from "./StudioCollections";
 import { TravelDeskEntry } from "./travel/TravelDeskEntry";
 import styles from "./studio.module.css";
 
@@ -58,7 +55,23 @@ function SetupNotice({
   );
 }
 
-export default async function StudioPage() {
+export default async function StudioPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const query = (await searchParams) ?? {};
+  const connectorQuery = Array.isArray(query.connector)
+    ? query.connector[0]
+    : query.connector;
+  const initialExpandedProvider =
+    typeof connectorQuery === "string" &&
+    isPublicConnectorProvider(connectorQuery) &&
+    (connectorQuery === "myanimelist" ||
+      connectorQuery === "spotify" ||
+      connectorQuery === "discogs")
+      ? connectorQuery
+      : null;
   const user = await requireChatGPTUser("/studio");
   const isLocalStudio = user.authSource === "local-development";
   const ownerAuthorization = ownerAuthorizationForEmail(user.email);
@@ -132,14 +145,37 @@ export default async function StudioPage() {
   }
   const overview = await getStudioOverview(user.email);
   const connectors = overview.connectors;
-  const [initialEditorialRecords, copyOwnershipReport, publicationApprovals] =
+  const [initialEditorialRecords, copyOwnershipReport, collectionsView] =
     overview.status === "ready"
       ? await Promise.all([
           listEditorialRecords({ limit: 50, offset: 0 }),
           getCopyOwnershipReport().catch(() => null),
-          getConnectorPublicationApprovalOverview(),
+          getStudioCollectionsView(user.email, overview, {
+            myanimelist:
+              overview.encryptionConfigured && Boolean(myAnimeListCallbackUrl),
+            hardcover: overview.encryptionConfigured,
+            spotify:
+              overview.encryptionConfigured && Boolean(spotifyCallbackUrl),
+            discogs:
+              overview.encryptionConfigured && Boolean(discogsCallbackUrl),
+            steam:
+              overview.encryptionConfigured &&
+              Boolean(overview.steamStorageCountries),
+            strava: overview.encryptionConfigured,
+          }),
         ])
-      : [null, null, null];
+      : [
+          null,
+          null,
+          await getStudioCollectionsView(user.email, overview, {
+            myanimelist: false,
+            hardcover: false,
+            spotify: false,
+            discogs: false,
+            steam: false,
+            strava: false,
+          }),
+        ];
 
   return (
     <main className={styles.shell} id="main">
@@ -216,30 +252,14 @@ export default async function StudioPage() {
         </p>
       </header>
 
-      <PlayPromotionControls
-        environment={
-          isLocalStudio
-            ? "local"
-            : deploymentTier === "staging"
-              ? "staging"
-              : "hosted"
-        }
-      />
-
-      <TravelDeskEntry atlasMode={runtimeValue("TRAVEL_ATLAS_MODE") ?? null} />
-
       <section className={styles.section} aria-labelledby="connectors-title">
         <div className={styles.sectionIntro}>
-          <p className={styles.eyebrow}>Connector health</p>
-          <h2 id="connectors-title">
-            {isLocalStudio
-              ? "Personal data, tested safely"
-              : "Personal data, published safely"}
-          </h2>
+          <p className={styles.eyebrow}>Collections</p>
+          <h2 id="connectors-title">One state. One next action.</h2>
           <p>
             {isLocalStudio
-              ? "Each refresh writes a sanitized snapshot only to local D1. If a provider fails, the last successful local snapshot remains available."
-              : "Each refresh writes a new public-only snapshot. If a provider fails, the last successful snapshot remains available."}
+              ? "Connect, allow public use, then sync each local collection. Failed syncs keep the last accepted local snapshot."
+              : "Connect, allow public use, then sync. Refreshes run only when you choose them, and failures keep the saved snapshot."}
           </p>
         </div>
         {!overview.encryptionConfigured ? (
@@ -275,34 +295,33 @@ export default async function StudioPage() {
             </span>
           </div>
         ) : null}
-        {publicationApprovals?.status === "ready" ? (
-          <ConnectorPublicationApprovals initial={publicationApprovals} />
-        ) : (
-          <div className={styles.inlineNotice}>
-            <strong>Publication approval records need setup.</strong>
-            <span>Confirm D1 and connector encryption before activating enforcement.</span>
-          </div>
-        )}
-        <div className={styles.connectorGrid}>
-          {connectors.map((connector) => (
-            <ConnectorControls
-              connector={connector}
-              environment={isLocalStudio ? "local" : "hosted"}
-              encryptionConfigured={overview.encryptionConfigured}
-              discogsCallbackUrl={discogsCallbackUrl}
-              myAnimeListCallbackUrl={myAnimeListCallbackUrl}
-              spotifyCallbackUrl={spotifyCallbackUrl}
-              steamStorageCountries={overview.steamStorageCountries}
-              key={connector.provider}
-            />
-          ))}
-          <StravaConnectorControls
-            environment={isLocalStudio ? "local" : "hosted"}
-          />
-        </div>
+        <StudioCollections
+          initialView={collectionsView}
+          connectors={connectors}
+          environment={isLocalStudio ? "local" : "hosted"}
+          encryptionConfigured={overview.encryptionConfigured}
+          discogsCallbackUrl={discogsCallbackUrl}
+          myAnimeListCallbackUrl={myAnimeListCallbackUrl}
+          spotifyCallbackUrl={spotifyCallbackUrl}
+          steamStorageCountries={overview.steamStorageCountries}
+          initialExpandedProvider={initialExpandedProvider}
+        />
       </section>
 
-      {overview.status !== "database_setup_required" ? (
+      <PlayPromotionControls
+        environment={
+          isLocalStudio
+            ? "local"
+            : deploymentTier === "staging"
+              ? "staging"
+              : "hosted"
+        }
+      />
+
+      <TravelDeskEntry atlasMode={runtimeValue("TRAVEL_ATLAS_MODE") ?? null} />
+
+      {overview.status !== "database_setup_required" &&
+      runtimeValue("SIMULATION_EXPERIENCE_MODE") !== "disabled" ? (
         <SimulationProviderApprovals />
       ) : null}
 

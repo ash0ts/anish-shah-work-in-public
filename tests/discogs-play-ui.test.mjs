@@ -67,9 +67,10 @@ test("Discogs uses a ruled shelf and an accessible pressing matrix", async () =>
 });
 
 test("Studio exposes Discogs OAuth1 and an explicit publication gate", async () => {
-  const [panel, sharedPanel, controls, page, privacy] = await Promise.all([
+  const [panel, sharedPanel, actionLabels, controls, page, privacy] = await Promise.all([
     source("app/studio/connectors/DiscogsConnectorPanel.tsx"),
     source("app/studio/connectors/ApiConnectorPanel.tsx"),
+    source("app/studio/connectors/action-label.ts"),
     source("app/studio/ConnectorControls.tsx"),
     source("app/studio/page.tsx"),
     source("app/privacy/page.tsx"),
@@ -80,11 +81,13 @@ test("Studio exposes Discogs OAuth1 and an explicit publication gate", async () 
   assert.match(panel, /id: "consumerKey"/);
   assert.match(panel, /secret: "consumerSecret"/);
   assert.match(panel, /showsAccessTokenExpiry: false/);
-  assert.match(panel, /Publish the sanitized collection/);
+  assert.match(panel, /Publish this sanitized collection/);
   assert.match(panel, /acknowledgeNoncommercial/);
   assert.match(panel, /personal, noncommercial display/);
-  assert.match(panel, /unified Publication approvals panel/);
-  assert.match(page, /ConnectorPublicationApprovals/);
+  assert.doesNotMatch(panel, /unified Publication approvals panel/);
+  assert.match(page, /StudioCollections/);
+  assert.match(sharedPanel, /ConnectorPermissionControl/);
+  assert.match(sharedPanel, /Advanced \/ recovery/);
   assert.match(
     sharedPanel,
     /\[oauthCredentialShape\.requestKeys\.id\]: credentialId\.trim\(\)/,
@@ -95,7 +98,14 @@ test("Studio exposes Discogs OAuth1 and an explicit publication gate", async () 
   );
   assert.match(sharedPanel, /Provider retry available/);
   assert.match(sharedPanel, /connectorBlocked \|\| retryBlocked/);
-  assert.match(sharedPanel, /Retry after \$\{formatTimestamp\(retryNotBefore\)\}/);
+  assert.match(
+    sharedPanel,
+    /retryBlocked && retryNotBefore[\s\S]*Retry after \$\{formatTimestamp\(retryNotBefore\)\}/,
+  );
+  assert.match(
+    actionLabels,
+    /Retry after \$\{formatTimestamp\(view\.snapshot\.retryNotBefore\)\}/,
+  );
   assert.match(controls, /case "discogs"/);
   assert.match(page, /resolveDiscogsCallbackUrl/);
   assert.match(page, /discogsCallbackUrl=\{discogsCallbackUrl\}/);

@@ -1,5 +1,9 @@
 import { runtimeDatabase } from "../runtime-env";
-import { connectorPublicationGate } from "./publication-approval";
+import {
+  CONNECTOR_PUBLICATION_APPROVAL_SCOPES,
+  connectorPublicationGate,
+  getConnectorPublicationApproval,
+} from "./publication-approval";
 import { parseStoredConnectorPublicPayload } from "./public-payload-policy";
 
 export {
@@ -196,23 +200,46 @@ export async function saveDiscogsPresentationConfig(input: {
   actorEmail: string;
 }): Promise<
   | { status: "saved"; config: DiscogsPresentationConfig }
-  | { status: "invalid"; reason: "acknowledgement" | "snapshot" }
+  | {
+      status: "invalid";
+      reason: "acknowledgement" | "approval" | "snapshot";
+    }
   | { status: "setup_required" }
 > {
+  const database = runtimeDatabase();
+  if (!database) return { status: "setup_required" };
+
+  const current = await getDiscogsPresentationConfig(database);
+  if (current.status !== "ready") return current;
   if (
     input.publishCollection &&
+    !current.config.publishCollection &&
     input.acknowledgeNoncommercial !== true
   ) {
     return { status: "invalid", reason: "acknowledgement" };
   }
-  const database = runtimeDatabase();
-  if (!database) return { status: "setup_required" };
 
   const now = new Date().toISOString();
   const reviewedAt = input.publishCollection ? now : null;
   let credentialGeneration: number | null = null;
   if (input.publishCollection) {
     try {
+      const approval = await getConnectorPublicationApproval(
+        "discogs",
+        database,
+        Date.parse(now),
+      );
+      const activeApproval =
+        approval.status === "ready" ? approval.approval : null;
+      if (
+        !activeApproval?.active ||
+        activeApproval.source !== "unified" ||
+        !CONNECTOR_PUBLICATION_APPROVAL_SCOPES.every((scope) =>
+          activeApproval.scopes.includes(scope),
+        )
+      ) {
+        return { status: "invalid", reason: "approval" };
+      }
       const publicationGate = await connectorPublicationGate(
         "discogs",
         database,

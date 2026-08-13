@@ -76,7 +76,11 @@ export async function spotifyConfigPut(request: Request): Promise<Response> {
     result.status === "invalid"
       ? result.reason === "acknowledgement"
         ? "Acknowledge the public display before publishing Spotify Top Tracks."
-        : "Use an official open.spotify.com track, album, or playlist URL."
+        : result.reason === "approval"
+          ? "Allow public use for Spotify before publishing Top Tracks."
+          : result.reason === "snapshot"
+            ? "Sync Spotify successfully before publishing Top Tracks."
+            : "Use an official open.spotify.com track, album, or playlist URL."
       : result.status === "setup_required"
         ? "The site database is not ready."
         : undefined;

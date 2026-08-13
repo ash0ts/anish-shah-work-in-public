@@ -86,7 +86,7 @@ class ProviderSwapDuringActivationD1 extends ApprovalD1 {
       if (guards.length !== 5) {
         throw new Error("activation must guard every provider identity");
       }
-      const providerBindings = activation.values.slice(4, 9);
+      const providerBindings = activation.values.slice(5, 10);
       const guardsMatch = guards.every((match, index) => {
         const exists = this.providers.includes(providerBindings[index]);
         return match[1] === "EXISTS" ? exists : !exists;
@@ -185,6 +185,29 @@ test("report-only grandfathers existing configuration but withholds pending conf
       mode: "report_only",
       retainLastKnownGood: false,
     });
+  });
+});
+
+test("an explicit private decision overrides report-only grandfathering", async () => {
+  const database = new ApprovalD1(["spotify"]);
+  await withEnvironment(database, async () => {
+    await approval("spotify", database);
+    const disabled = await saveConnectorPublicationApproval({
+      provider: "spotify",
+      scopes: ["public_display", "retain_last_known_good"],
+      approvedAt: "2026-08-01T00:00:00.000Z",
+      expiresAt: null,
+      enabled: false,
+      actorEmail: "owner@example.com",
+      database,
+    });
+    assert.equal(disabled.status, "saved");
+    assert.deepEqual(await connectorPublicationGate("spotify", database), {
+      status: "withheld",
+      mode: "report_only",
+      retainLastKnownGood: false,
+    });
+    assert.deepEqual(database.providers, ["spotify"]);
   });
 });
 
@@ -289,6 +312,34 @@ test("activation requires complete unified approvals for every configured provid
     const overview = await getConnectorPublicationApprovalOverview(database);
     assert.equal(overview.status, "ready");
     assert.equal(overview.enforcement.mode, "report_only");
+  });
+});
+
+test("activation is idempotent and preserves the first activation record", async () => {
+  const database = new ApprovalD1(["spotify"]);
+  await withEnvironment(database, async () => {
+    await approval("spotify", database);
+    const first = await activateConnectorPublicationApprovals({
+      actorEmail: "owner@example.com",
+      database,
+    });
+    assert.equal(first.status, "activated");
+    const stored = database.settings.get(
+      "connector.publication_approval.enforcement",
+    );
+    const auditsAfterFirst = database.audits.length;
+
+    const second = await activateConnectorPublicationApprovals({
+      actorEmail: "owner@example.com",
+      database,
+    });
+    assert.equal(second.status, "activated");
+    assert.deepEqual(second.enforcement, first.enforcement);
+    assert.deepEqual(
+      database.settings.get("connector.publication_approval.enforcement"),
+      stored,
+    );
+    assert.equal(database.audits.length, auditsAfterFirst);
   });
 });
 

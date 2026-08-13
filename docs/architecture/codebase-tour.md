@@ -199,7 +199,7 @@ There is no alternate Classic mode; only bounded legacy query redirects remain.
 | `app/**` | App Router pages, metadata, route composition, thin API exports | Keep route files thin and server-render semantic foundations |
 | `app/play/**` | Play overview, six connector routes, and Travel routes | `/play` reads no collections; each direct route loads one source |
 | `app/simulation/**` | Simulation route gate and server-rendered campaign foundation | Disabled and coming-soon modes must not initialize campaign state |
-| `app/studio/**` | Owner operational UI and Travel Desk | Git copy is read-only here; mutations go through protected APIs |
+| `app/studio/**` | Owner operational UI, composed connector lifecycle, and Travel Desk | Connector rows expose one next action; Git copy is read-only and mutations use protected APIs |
 | `app/api/studio/**` | Canonical owner reads and writes | Same-origin, Access, owner allowlist, bounded exact validation |
 | `app/api/connectors/**` | Public reads, exact OAuth callbacks, compatibility redirects | No new owner mutation authority and no collection fetch on read |
 | `components/**` | Public UI, Play screens, room, Travel, Simulation, shared audio | Rich runtimes stay scoped, lazy, accessible, and nonessential |
@@ -243,17 +243,39 @@ generic collection snapshot.
 
 The collection lifecycle is:
 
-1. The owner connects or replaces a credential in Studio. OAuth completion or
-   credential save does not fetch a collection.
-2. The owner explicitly chooses **Refresh**.
-3. The server acquires a provider-scoped D1 lock, decrypts the current
+1. An owner-only `StudioConnectorView` composes connection, authorization,
+   permission, saved snapshot, provider publication choice, and recovery state.
+   It selects one next action without contacting the provider.
+2. The owner connects the provider. OAuth completion or credential save stores
+   access only; it does not fetch a collection.
+3. **Allow public use** records one encrypted provider-bound reference, approval
+   date, and optional expiry. The server fixes both required scopes; they are
+   not owner-selectable switches.
+4. The owner explicitly chooses **Sync**, **Sync and publish**, or **Refresh
+   now**. The server acquires a provider-scoped D1 lock, decrypts the current
    credential generation, and makes one bounded provider attempt.
-4. Provider-specific code reduces the response to an exact public payload.
-5. A central public-payload policy validates that projection before D1 stores a
-   ready snapshot and audit record.
-6. Public APIs and Play screens read the stored snapshot, project pagination or
-   gallery state, and apply the provider's publication choice and unified
-   encrypted approval gate.
+5. Provider code reduces the response to an exact public payload. Central
+   policy validates it before D1 atomically stores a ready snapshot and audit
+   record; failure leaves the active pointer unchanged.
+6. Spotify and Discogs then require their independent, content-specific
+   publication acknowledgement. MyAnimeList, Hardcover, and Steam can publish
+   as part of the successful first sync.
+7. Public APIs and Play screens read only the stored snapshot, project bounded
+   pagination or gallery state, and apply the provider publication choice plus
+   permission gate.
+
+```mermaid
+flowchart LR
+  connect["Connect"] --> permission["Allow public use"]
+  permission --> sync["Owner-triggered sync"]
+  sync --> validate["Normalize and validate"]
+  validate --> snapshot["Last-known-good snapshot"]
+  snapshot --> choice["Provider display choice"]
+  permission --> gate["Permission gate"]
+  choice --> gate
+  gate --> public["Public Play read"]
+  validate -. "failure preserves pointer" .-> snapshot
+```
 
 Non-manual trigger values remain parseable only for historical database
 compatibility; the refresh service rejects them at runtime. Public reads,
@@ -262,14 +284,35 @@ respect to provider collections. Failed attempts keep the last-known-good
 snapshot, except for an explicit visibility-withheld state where retaining a
 collection would itself be misleading.
 
-Configured providers begin in report-only approval mode so deployment cannot
-silently hide existing collections. Studio records encrypted, provider-bound
-references for `public_display` and `retain_last_known_good`; activation becomes
-available only when every configured provider has both scopes. In required
-mode, a missing, disabled, or expired approval withholds public display without
-deleting the private snapshot. Accepted connector snapshots do not age out;
-their actual update time and stale state remain visible until replacement,
-explicit unpublish, disconnect, or Steam's verified-private tombstone.
+Configured providers begin in technical `report_only` mode so deployment cannot
+silently hide existing collections. Studio presents this rollout as one compact
+**Finish permission setup** step: it lists only configured providers still
+missing a valid record and enables the single confirmation only when all are
+ready. The server atomically advances to `required`; the banner then disappears
+and future permission work stays inside its provider row. New or replaced
+accounts require permission immediately, even before that one-time transition.
+
+Routine Studio language intentionally hides `report_only`, `required`, and the
+fixed `public_display` plus `retain_last_known_good` scopes. Those remain server
+policy and storage truth. In required mode, missing, disabled, or expired
+permission withholds public display without deleting the private snapshot.
+**Make private** preserves the connection and snapshot; **Restore public
+access** reenables an unexpired stored record; **Renew permission** updates its
+dates and optionally its encrypted reference. Destructive **Disconnect** deletes
+provider state.
+
+Accepted connector snapshots do not age out. Their actual update time and stale
+state remain visible as **Saved snapshot** until replacement, explicit
+unpublish, disconnect, or Steam's verified-private tombstone. Callback details,
+provider documentation, diagnostics, fallback embeds, credential replacement,
+unpublish, and disconnect live under **Advanced / recovery** so they do not
+compete with the row's primary action.
+
+Strava follows the same permission gate but not the generic collection path. A
+Studio save validates and stores the public profile and optional official feed;
+**Verify now** is a separate owner-triggered frameability check. Public reads
+never recheck Strava remotely, and verification is not required to retain its
+profile-link fallback.
 
 This design favors privacy, predictable provider load, and inspectable owner
 intent over minute-by-minute freshness. It also makes stale and unavailable

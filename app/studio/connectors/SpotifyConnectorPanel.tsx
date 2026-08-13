@@ -40,6 +40,12 @@ type Props = ProviderPanelProps & {
 };
 
 export function SpotifyConnectorPanel({ callbackUrl, ...props }: Props) {
+  const presentationMode =
+    props.view.primaryAction === "publish"
+      ? "publish"
+      : props.view.presentation.status === "published"
+        ? "advanced"
+        : null;
   return (
     <ApiConnectorPanel
       {...props}
@@ -50,11 +56,25 @@ export function SpotifyConnectorPanel({ callbackUrl, ...props }: Props) {
         startPath: "/api/studio/connectors/spotify/oauth/start",
         callbackUrl,
       }}
+      advancedChildren={
+        presentationMode === "advanced" ? (
+          <SpotifyPresentationControls
+            configured={props.connector.configured}
+            environment={props.environment}
+            mode="advanced"
+            onUpdated={props.onPermissionUpdated}
+          />
+        ) : null
+      }
     >
-      <SpotifyPresentationControls
-        configured={props.connector.configured}
-        environment={props.environment}
-      />
+      {presentationMode === "publish" ? (
+        <SpotifyPresentationControls
+          configured={props.connector.configured}
+          environment={props.environment}
+          mode="publish"
+          onUpdated={props.onPermissionUpdated}
+        />
+      ) : null}
     </ApiConnectorPanel>
   );
 }
@@ -75,9 +95,13 @@ function spotifyFallbackUrl(
 function SpotifyPresentationControls({
   configured,
   environment,
+  mode,
+  onUpdated,
 }: {
   configured: boolean;
   environment: Environment;
+  mode: "publish" | "advanced";
+  onUpdated: (message?: string) => Promise<void>;
 }) {
   const [state, setState] = useState<SpotifyConfigState>({ phase: "loading" });
   const [publishTopTracks, setPublishTopTracks] = useState(false);
@@ -123,12 +147,12 @@ function SpotifyPresentationControls({
     };
   }, []);
 
-  async function save(): Promise<void> {
-    if (publishTopTracks && !configured) {
+  async function save(nextPublishTopTracks = publishTopTracks): Promise<void> {
+    if (nextPublishTopTracks && !configured) {
       setMessage("Authorize and refresh Spotify before publishing Top Tracks.");
       return;
     }
-    if (publishTopTracks && !acknowledged) {
+    if (mode === "publish" && nextPublishTopTracks && !acknowledged) {
       setMessage(
         "Acknowledge the public-display qualification before publishing.",
       );
@@ -141,9 +165,14 @@ function SpotifyPresentationControls({
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          publishTopTracks,
-          fallbackEmbed: fallbackEmbed.trim() || null,
-          acknowledgePublicDisplay: publishTopTracks ? acknowledged : false,
+          publishTopTracks: nextPublishTopTracks,
+          ...(mode === "advanced"
+            ? { fallbackEmbed: fallbackEmbed.trim() || null }
+            : {}),
+          acknowledgePublicDisplay:
+            mode === "publish" && nextPublishTopTracks
+              ? acknowledged
+              : false,
         }),
       });
       const result = await responseJson(response);
@@ -162,15 +191,15 @@ function SpotifyPresentationControls({
       setPublishTopTracks(result.config.publishTopTracks);
       setFallbackEmbed(spotifyFallbackUrl(result.config.fallbackEmbed));
       setAcknowledged(false);
-      setMessage(
-        result.config.publishTopTracks
-          ? environment === "local"
-            ? "Top Tracks enabled in the local sandbox only. Production still requires separate authorization and review."
-            : "Top Tracks published with the affinity qualification."
-          : result.config.fallbackEmbed
-            ? "Top Tracks are private. The official Spotify fallback is available after visitor consent."
-            : "Spotify public display is off.",
-      );
+      const success = result.config.publishTopTracks
+        ? environment === "local"
+          ? "Top Tracks enabled in the local sandbox only. Production still requires separate authorization and review."
+          : "Top Tracks published with the affinity qualification."
+        : result.config.fallbackEmbed
+          ? "Top Tracks are private. The official Spotify fallback is available after visitor consent."
+          : "Spotify public display is off.";
+      setMessage(success);
+      await onUpdated(success);
     } catch {
       setMessage("Spotify display settings could not be saved. Try again.");
     } finally {
@@ -225,29 +254,10 @@ function SpotifyPresentationControls({
           className={styles.spotifyPublicationForm}
           onSubmit={(event) => {
             event.preventDefault();
-            void save();
+            void save(mode === "publish" ? true : publishTopTracks);
           }}
         >
-          <label className={styles.publicationSwitch}>
-            <input
-              type="checkbox"
-              checked={publishTopTracks}
-              disabled={pending}
-              onChange={(event) => {
-                setPublishTopTracks(event.target.checked);
-                setAcknowledged(false);
-              }}
-            />
-            <span>
-              <strong>Publish Top Tracks publicly</strong>
-              <small>
-                Show up to twelve Spotify-calculated affinity ranks per time
-                window. This is not play-count or listening-history data.
-              </small>
-            </span>
-          </label>
-
-          {publishTopTracks ? (
+          {mode === "publish" ? (
             <label className={styles.publicationAcknowledgement}>
               <input
                 type="checkbox"
@@ -256,36 +266,57 @@ function SpotifyPresentationControls({
                 onChange={(event) => setAcknowledged(event.target.checked)}
               />
               <span>
-                I reviewed this public display and will describe it as Spotify
-                affinity—not plays, minutes, popularity, or a listener profile.
+                Publish up to twelve Spotify-calculated affinity ranks per time
+                window. I will describe them as affinity—not plays, minutes,
+                popularity, or a listener profile.
               </span>
             </label>
-          ) : null}
-
-          <label className={styles.formField} htmlFor="spotify-fallback">
-            <span>Official fallback (optional)</span>
-            <input
-              id="spotify-fallback"
-              type="text"
-              inputMode="url"
-              value={fallbackEmbed}
-              maxLength={2048}
-              disabled={pending}
-              spellCheck={false}
-              onChange={(event) => setFallbackEmbed(event.target.value)}
-              placeholder="https://open.spotify.com/playlist/…"
-            />
-          </label>
-          <p className={styles.fieldHelp}>
-            Accepts an official Spotify track, album, or playlist URL or Embed.
-            Visitors load it only after consent. Spotify controls playback
-            availability and length.
-          </p>
+          ) : (
+            <>
+            <label className={styles.formField} htmlFor="spotify-fallback">
+              <span>Official fallback (optional)</span>
+              <input
+                id="spotify-fallback"
+                type="text"
+                inputMode="url"
+                value={fallbackEmbed}
+                maxLength={2048}
+                disabled={pending}
+                spellCheck={false}
+                onChange={(event) => setFallbackEmbed(event.target.value)}
+                placeholder="https://open.spotify.com/playlist/…"
+              />
+            </label>
+            <p className={styles.fieldHelp}>
+              Accepts an official Spotify track, album, or playlist URL or Embed.
+              Visitors load it only after consent. Spotify controls playback
+              availability and length.
+            </p>
+            </>
+          )}
 
           <div className={styles.formActions}>
-            <button type="submit" disabled={pending}>
-              {pending ? "Saving…" : "Save Spotify display"}
+            <button
+              type="submit"
+              data-studio-primary-action={mode === "publish" ? "" : undefined}
+              disabled={pending}
+            >
+              {pending
+                ? "Saving…"
+                : mode === "publish"
+                  ? "Publish"
+                  : "Save fallback"}
             </button>
+            {mode === "advanced" && config?.publishTopTracks ? (
+              <button
+                type="button"
+                className={styles.quietButton}
+                disabled={pending}
+                onClick={() => void save(false)}
+              >
+                Make Top Tracks private
+              </button>
+            ) : null}
           </div>
         </form>
       )}

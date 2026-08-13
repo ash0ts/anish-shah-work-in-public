@@ -11,11 +11,37 @@ in source code, deployment artifacts, public APIs, or browser storage.
 
 Collection synchronization is manual-only. MyAnimeList, Hardcover, Spotify,
 Discogs, and Steam call their provider data APIs only after the owner selects
-**Refresh now** in Studio. Public connector reads, OAuth callbacks, credential
-saves, and scheduled maintenance never fetch or publish new collection data.
+the provider row's **Sync**, **Sync and publish**, or **Refresh now** action in
+Studio. Public connector reads, OAuth callbacks, credential saves, and
+scheduled maintenance never fetch or publish new collection data.
 Replacing a credential may unpublish the prior account's snapshot, but only a
 successful owner-triggered refresh can publish its replacement. A connection
 therefore enters **Connected · Refresh required** until that refresh succeeds.
+
+Studio presents this as one provider-local lifecycle:
+
+**Connect → Allow public use → Sync → Show**
+
+- Each collapsed provider row shows one public state, the saved item count and
+  actual update date, and exactly one next action.
+- **Allow public use** records the private permission reference, approval date,
+  and optional expiry for both public display and retained last-known-good use.
+  The reference is encrypted and never shown again.
+- **Sync and publish** is the first synchronization action for MyAnimeList,
+  Hardcover, and Steam. Spotify and Discogs require a separate reviewed
+  **Publish** step after synchronization because their content-specific
+  acknowledgements remain independent of provider permission.
+- OAuth callbacks reopen and focus the relevant provider row. A routine
+  reauthorization reuses the stored application; credential replacement is an
+  advanced recovery action because it may invalidate the prior account state.
+- **Advanced / recovery** contains callback registration help, provider
+  documentation, diagnostics, fallback configuration, credential replacement,
+  unpublish, and destructive disconnect controls.
+
+A failed refresh never erases a valid collection. Studio shows **Saved
+snapshot** with the retained count and real update time, then offers a safe
+retry when applicable. **Make private** withholds public display while keeping
+the connection and snapshot; **Disconnect** deletes them.
 
 My Room, 2001 is the public presentation. `/play` reads no connector data; each
 direct route reads only the provider shown below:
@@ -24,12 +50,12 @@ direct route reads only the provider shown below:
 
 | Route | Stream | Provider | Obtain from provider | Enter in Studio | Verification |
 | --- | --- | --- | --- | --- | --- |
-| `/play/watch` | Watch | MyAnimeList | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current** |
-| `/play/read` | Read | Hardcover | Personal API token | Token, with or without `Bearer` | **Refresh now → Current** |
-| `/play/listen` | Listen | Spotify | Client ID and client secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
-| `/play/collect` | Collect | Discogs | Consumer key and consumer secret | Both app credentials, then approve OAuth | **Refresh now → Current**, then review publication |
-| `/play/play` | Play | Steam | Web API key and 17-digit SteamID64 | Both values | **Refresh now → Current** |
-| `/play/move` | Move | Strava | Public athlete URL and optional cumulative feed | Athlete URL + complete generated profile-feed/summary iframe | Save; Play uses the checked feed or profile-link fallback |
+| `/play/watch` | Watch | MyAnimeList | Client ID and client secret | Both app credentials, then approve OAuth | Allow public use → **Sync and publish** |
+| `/play/read` | Read | Hardcover | Personal API token | Token, with or without `Bearer` | Allow public use → **Sync and publish** |
+| `/play/listen` | Listen | Spotify | Client ID and client secret | Both app credentials, then approve OAuth | Allow public use → **Sync** → review and Publish |
+| `/play/collect` | Collect | Discogs | Consumer key and consumer secret | Both app credentials, then approve OAuth | Allow public use → **Sync** → review and Publish |
+| `/play/play` | Play | Steam | Web API key and 17-digit SteamID64 | Both values | Allow public use → **Sync and publish** |
+| `/play/move` | Move | Strava | Public athlete URL and optional cumulative feed | Athlete URL + complete generated profile-feed/summary iframe | Allow public use; Play uses the saved feed or profile-link fallback |
 
 MyAnimeList is the important distinction: its developer portal correctly gives
 you a **client ID** and **client secret**. Those identify the application.
@@ -48,17 +74,32 @@ the account password or exposes the resulting access-token pair. The public
 collection remains off until the owner reviews the normalized physical-media
 catalog and explicitly enables publication.
 
-For every API-backed stream, the verification sequence is **Connect or
-authorize → Refresh now → confirm Current**. Saving a credential alone does not
-prove that the provider accepted it and never starts a collection refresh.
+For every API-backed stream, saving credentials establishes only the
+connection. Permission and synchronization remain explicit owner actions, and
+only a successfully validated snapshot can move the row to **Live**.
 
 ## Shared connector setup
 
 Every provider uses the same owner-controlled sequence: prepare the target tier,
 create a tier-specific application where OAuth is required, enter credentials
-only in that tier's Studio, connect or authorize, select **Refresh now** for an
-API-backed stream, confirm **Current**, and complete any explicit publication
-review. Saving credentials alone never fetches or publishes a collection.
+only in that tier's Studio, connect or authorize, record **Allow public use**,
+then run the row's synchronization action. Spotify and Discogs finish with a
+separate content-specific publication review. Saving credentials or permission
+alone never fetches a collection.
+
+### One-time permission setup
+
+An existing installation may temporarily show **Finish permission setup · N of
+M ready**. The banner lists only configured providers missing a valid
+permission record. Once all configured providers are ready, the owner reviews
+and confirms **Finish permission setup** once; future providers then remain
+private until their own permission is recorded. After completion, the banner
+disappears and permission status stays inside each provider row.
+
+The implementation still uses the technical `report_only` and `required`
+modes and fixed `public_display` plus `retain_last_known_good` scopes. Those are
+server policy, not routine Studio choices. Completion remains atomic: the
+server refuses it unless every configured provider has both active scopes.
 
 Use the canonical environment guides instead of duplicating their procedures:
 
@@ -106,9 +147,12 @@ and generated embed URLs.
    cannot remain public; Studio then reports **Connected · Refresh required**.
    A changed Strava widget remains on its profile fallback until **Verify feed
    now** is selected.
-6. Authorize MyAnimeList, Spotify, and Discogs separately with their production
-   applications. Select **Refresh now** once for each configured API provider,
-   then inspect all six connector-backed object routes.
+6. Record **Allow public use** for each imported provider; publication approval
+   is never transferred from local state. Authorize MyAnimeList, Spotify, and Discogs separately
+   with their production applications, record their
+   permissions, then run each API provider's one explicit synchronization
+   action. Complete the Spotify and Discogs publication reviews and inspect all
+   six connector-backed object routes.
 
 The transfer never includes MyAnimeList, Spotify, or Discogs app credentials or
 OAuth tokens; Spotify or Discogs snapshots and publication approval; any other
@@ -142,8 +186,8 @@ Use separate MyAnimeList API clients for local, staging, and production.
    MyAnimeList**.
 5. Sign in to the owner MyAnimeList account and approve access. MyAnimeList
    returns to Studio; no token should appear in the URL or interface.
-6. Select **Refresh now**, confirm **Current**, and inspect Watch on the local
-   Play page.
+6. Record **Allow public use**, select **Sync and publish**, confirm **Live**,
+   and inspect Watch on the local Play page.
 
 ### Staging client
 
@@ -155,7 +199,8 @@ Use separate MyAnimeList API clients for local, staging, and production.
    ```
 
 3. Enter that application’s client ID and client secret only in staging Studio,
-   complete owner approval, then select **Refresh now** and confirm **Current**.
+   complete owner approval, record **Allow public use**, then select **Sync and
+   publish** and confirm **Live**.
 4. Exercise denial, expiry, reauthorization, and Safari callback behavior as
    part of the isolated [staging acceptance](./operations/staging.md).
 
@@ -170,7 +215,8 @@ Use separate MyAnimeList API clients for local, staging, and production.
 
 3. Enter that application’s client ID and client secret only in the production
    HTTPS Studio and complete approval.
-4. Select **Refresh now** and confirm **Current**.
+4. Record **Allow public use**, select **Sync and publish**, and confirm
+   **Live**.
 
 Studio encrypts the client secret, access token, and refresh token. During an
 owner-triggered synchronization it refreshes access shortly before expiry,
@@ -199,8 +245,9 @@ against the linked Hardcover documentation on **2026-08-05**.
 1. Read the [official Hardcover API setup guide](https://docs.hardcover.app/api/getting-started/)
    and copy the token from [Hardcover account → API](https://hardcover.app/account/api).
 2. In the Read panel, paste either the bare token or `Bearer <token>`.
-3. Select **Connect**, then **Refresh now**.
-4. Confirm **Current** and inspect Read on `/play`.
+3. Select **Connect**, record **Allow public use**, then select **Sync and
+   publish**.
+4. Confirm **Live** and inspect Read on `/play`.
 
 The server normalizes the authorization value, retrieves the complete sanitized
 shelf, and derives the public profile link from the authenticated identity. The
@@ -244,8 +291,9 @@ on **2026-08-05**.
    **Authorize with Spotify**.
 5. Approve the two displayed permissions for the owner account. Spotify returns
    through `127.0.0.1`; the local owner session accepts either loopback host.
-6. Select **Refresh now**, confirm **Current**, and inspect Listen on the local
-   Play page.
+6. Record **Allow public use**, select **Sync**, then review and save the
+   provider-specific publication choice. Confirm **Live** and inspect Listen on
+   the local Play page.
 7. Optionally add an official Spotify track, album, or playlist URL as the
    fallback. Leave **Publish Top Tracks publicly** off during initial testing.
 
@@ -259,7 +307,8 @@ on **2026-08-05**.
    ```
 
 3. Enter its client ID and secret only in staging Studio, authorize the staging
-   owner account, then select **Refresh now** and confirm **Current**.
+   owner account, record **Allow public use**, select **Sync**, then complete
+   the publication review and confirm **Live**.
 4. Test publication acknowledgement, consent-gated playback, expiry,
    reauthorization, and Safari behavior through the
    [staging runbook](./operations/staging.md).
@@ -275,7 +324,8 @@ on **2026-08-05**.
 
 3. Enter the production client ID and secret only in the Cloudflare
    Access-protected production Studio. Authorize the owner account there.
-4. Select **Refresh now** and confirm **Current** before changing publication.
+4. Record **Allow public use**, select **Sync**, and review the accepted
+   snapshot before changing publication.
 5. Review the displayed qualification and select the acknowledgement that the
    public site will show Spotify-calculated Top Tracks affinity rather than
    play counts. Then enable **Publish Top Tracks publicly** and save.
@@ -303,19 +353,20 @@ when the client ID or secret changed. A 403 commonly means the application
 owner no longer has Premium or the authorized account is not on the
 development-mode allowlist; a 429 requires waiting for the provider’s
 `Retry-After` interval. A failed refresh preserves the last eligible snapshot,
-and age alone does not unpublish or delete an accepted snapshot. Once both
-publication-approval scopes are active, an older accepted snapshot remains
-visible as a saved snapshot with its actual update time. Disconnect deletes
+and age alone does not unpublish or delete an accepted snapshot. Once provider
+permission is active, an older accepted snapshot remains visible as a saved
+snapshot with its actual update time. Disconnect deletes
 credentials, tokens, snapshots, OAuth state, sync history, fallback, and the
 provider publication approval.
 
-The protected Publication approvals panel stores a provider-specific reference
-encrypted with `CONNECTOR_ENCRYPTION_KEY`. It never returns that reference after
-storage. The initial `report_only` mode preserves configured providers while the
-owner records `public_display` and `retain_last_known_good` for each one.
-Activation is atomic and succeeds only when every configured provider has both
-active scopes. Required mode withholds missing or expired approvals without
-deleting the private snapshot.
+The provider row's **Allow public use** step stores a provider-specific
+reference encrypted with `CONNECTOR_ENCRYPTION_KEY`. It never returns that
+reference after storage. Studio fixes both required scopes as server policy;
+the owner supplies only the reference, approval date, and optional expiry. The
+one-time **Finish permission setup** action atomically advances the backend
+from `report_only` to `required` only when every configured provider is ready.
+Required mode withholds missing or expired approvals without deleting the
+private snapshot.
 
 Spotify is deliberately excluded from the local-to-production transfer.
 Deploy code normally, then authorize and review the separate production
@@ -341,8 +392,8 @@ calls the two application values a consumer key and consumer secret.
    **Authorize with Discogs**.
 4. Approve access to the owner account. Studio completes the signed token
    exchange behind the owner session; OAuth tokens never appear in the page.
-5. Select **Refresh now**, confirm **Current**, and inspect Pattern and Gallery
-   on the local Play page. Leave public publication off while testing.
+5. Record **Allow public use**, select **Sync**, and inspect Overview and Browse
+   all on the local Play page. Leave public publication off while testing.
 
 ### Staging application
 
@@ -354,7 +405,8 @@ calls the two application values a consumer key and consumer secret.
    ```
 
 3. Enter its consumer key and consumer secret only in staging Studio, authorize
-   the owner account, then select **Refresh now** and confirm **Current**.
+   the owner account, record **Allow public use**, select **Sync**, then
+   complete the publication review and confirm **Live**.
 4. Test publication acknowledgement, expiry, reauthorization, stale behavior,
    and Safari callbacks through the [staging runbook](./operations/staging.md).
 
@@ -368,8 +420,9 @@ calls the two application values a consumer key and consumer secret.
 
 2. Enter the production consumer key and secret only in the Access-protected
    production Studio, then authorize the owner account.
-3. Select **Refresh now**. Review physical-item and distinct-release totals,
-   formats, decades, and a sample of the ruled collection shelf.
+3. Record **Allow public use** and select **Sync**. Review physical-item and
+   distinct-release totals, formats, decades, and a sample of the ruled
+   collection shelf.
 4. Acknowledge that this is a personal, noncommercial public collection, then
    enable **Publish collection publicly**.
 5. Open Collect in a logged-out browser and confirm the attribution,
@@ -407,9 +460,9 @@ Discogs is deliberately excluded from the local-to-production transfer.
 4. Locate the owner’s 17-digit SteamID64.
 5. Confirm the site truthfully declares
    `STEAM_DATA_STORAGE_COUNTRIES=United States`.
-6. Enter the API key and SteamID64 in the Play panel, select **Connect**, then
-   **Refresh now**.
-7. Confirm **Current** and inspect Play on `/play`.
+6. Enter the API key and SteamID64 in the Play panel, select **Connect**, record
+   **Allow public use**, then select **Sync and publish**.
+7. Confirm **Live** and inspect Play on `/play`.
 
 The server stores the complete public library with rounded playtime so its
 totals and distribution are accurate. The public endpoint sends only one
@@ -435,7 +488,9 @@ verified against Strava's official documentation on **2026-08-05**.
 4. Select **Save Strava settings**. Studio makes one anonymous, no-redirect
    health check and records whether the iframe is currently frameable.
    **Verify now** repeats that check only when the owner explicitly requests it.
-5. Open Move on `/play`. If the check passed, choose to load third-party
+5. Record **Allow public use**. This authorizes the saved configuration but does
+   not run another health check.
+6. Open Move on `/play`. If the check passed, choose to load third-party
    content; otherwise verify the prominent athlete-profile link.
 Studio never executes pasted markup. It recognizes only exact generated
 `www.strava.com/athletes/.../latest-rides/...`, `activity-summary`, numeric
@@ -472,9 +527,9 @@ check. The official iframe remains the only Strava display surface.
 | Read public Strava config | `GET /api/connectors/strava` | No owner credential |
 | Disconnect API stream | `DELETE /api/studio/connectors/[provider]/credentials` | No body |
 | Disconnect Strava | `DELETE /api/studio/connectors/strava/config` | No body |
-| Review publication approvals | `GET /api/studio/connectors/publication-approvals` | No body; references are never returned |
-| Save provider publication approval | `PUT /api/studio/connectors/[provider]/publication-approval` | Both `public_display` and `retain_last_known_good`, approval dates, enabled state, and a protected reference |
-| Activate publication enforcement | `POST /api/studio/connectors/publication-approvals/activate` | No body; succeeds atomically only when every configured provider is approved |
+| Review composed connector and permission state | `GET /api/studio/connectors/publication-approvals` | No body; references are never returned |
+| Save, renew, restore, or make private | `PUT /api/studio/connectors/[provider]/publication-approval` | Studio always supplies both fixed scopes plus dates and enabled state; a protected reference is required when none is stored |
+| Finish one-time permission setup | `POST /api/studio/connectors/publication-approvals/activate` | No body; succeeds atomically only when every configured provider is approved |
 | Issue one-time promotion code | `POST /api/studio/play-promotion/start` | No body; production only |
 | Stage local provider settings | `POST /api/studio/play-promotion/send` | `{ "transferCode": "…" }`; loopback only |
 | Review promotion queue | `GET /api/studio/play-promotion` | No body; production only |
@@ -502,16 +557,21 @@ pointer. Accepted snapshots have no age-based deletion or public cutoff; an
 approved older snapshot remains available as **Saved snapshot** with its actual
 update time.
 
-Publication approval initially runs in `report_only`, preserving providers
-that were already configured when this code deployed. New or explicitly
-replaced configurations are marked approval-required immediately and remain
-private even in report-only mode. After both required scopes are recorded for
-every configured provider, the owner may atomically activate required mode.
-Missing, disabled, or expired approval then withholds public display without
-deleting the private snapshot. Disconnect is different: it deletes that
-provider’s credentials, snapshots, approval and requirement marker, pending
-OAuth state, sync history, and provider-specific audit history, then
-unpublishes the stream.
+An existing installation initially preserves already-configured providers while
+the owner records permission for each one. Studio surfaces that rollout as the
+one-time **Finish permission setup** banner, not as routine scope or mode
+controls. New or explicitly replaced configurations are approval-required
+immediately and remain private until their own permission is recorded. After
+all configured providers are ready, the owner confirms the setup once and the
+server atomically activates `required` mode. Missing, disabled, or expired
+permission then withholds public display without deleting the private snapshot.
+
+Routine permission changes remain provider-local. **Make private** preserves
+credentials, configuration, and snapshots; **Restore public access** reenables
+an unexpired stored record; **Renew permission** updates dates and may replace
+the private reference. Disconnect is different: it deletes that provider’s
+credentials, snapshots, approval and requirement marker, pending OAuth state,
+sync history, and provider-specific audit history, then unpublishes the stream.
 
 Do not paste credentials into source files, deployment variables intended for
 browser code, D1 consoles, screenshots, issues, or chat. Rotate

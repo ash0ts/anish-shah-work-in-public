@@ -455,6 +455,11 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(controls, /Bearer optional/);
   assert.match(controls, /Cancel pending authorization/);
   assert.match(controls, /canReuseOAuthClient/);
+  assert.match(
+    controls,
+    /view\.primaryAction === "continue_authorization" &&[\s\S]*?!connector\.canReuseOAuthClient/,
+  );
+  assert.match(controls, /Restart authorization/);
   assert.match(controls, /\/api\/studio\/connectors\/myanimelist\/oauth\/start/);
   assert.match(controls, /\/api\/studio\/connectors\/spotify\/oauth\/start/);
   assert.match(
@@ -514,7 +519,7 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
   assert.match(panel, /const router = useRouter\(\)/);
   assert.match(
     panel,
-    /focusAfterMutation\.current === "refresh"[\s\S]*?refreshButton\.current[\s\S]*?firstCredentialField\.current/,
+    /focusAfterMutation\.current === "primary"[\s\S]*?data-studio-primary-action[\s\S]*?firstCredentialField\.current/,
   );
   assert.match(panel, /target\.focus\(\)/);
   assert.equal(
@@ -525,7 +530,7 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
   assert.equal(
     [...panel.matchAll(/ref=\{refreshButton\}/g)].length,
     1,
-    "the post-save refresh control should expose a stable focus target",
+    "manual refresh should retain a stable button reference",
   );
   const failedResponse = panel.match(
     /if \(!response\.ok\) \{([\s\S]*?)\n      \}\n\n      setSecret/,
@@ -533,14 +538,18 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
   assert.ok(failedResponse, "failed response branch should remain explicit");
   assert.match(failedResponse[1], /setMessage\(/);
   assert.match(failedResponse[1], /return;/);
-  assert.doesNotMatch(failedResponse[1], /router\.refresh/);
+  assert.match(
+    failedResponse[1],
+    /connectorMutationShouldReconcile\(action, result\.status\)/,
+  );
+  assert.match(failedResponse[1], /router\.refresh\(\)/);
   assert.match(
     panel,
     /action === "refresh"[\s\S]*?The refresh request could not be completed\. No new snapshot was published; any previously accepted snapshot remains unchanged\.[\s\S]*?The request could not be completed\. Try again\./,
   );
   assert.match(
     panel,
-    /if \(action === "save"\) \{[\s\S]*?focusAfterMutation\.current = "refresh"[\s\S]*?setShowCredentialForm\(false\)/,
+    /if \(action === "save"\) \{[\s\S]*?focusAfterMutation\.current = "primary"[\s\S]*?focusAfterAction\.current = view\.primaryAction[\s\S]*?setShowCredentialForm\(false\)/,
   );
   assert.match(
     panel,
@@ -564,7 +573,10 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
     panel,
     /connector\.provider === "discogs"[\s\S]*?"Manual refresh available"[\s\S]*?: "Fresh through"/,
   );
-  assert.match(panel, /className=\{styles\.formMessage\} role="status"/);
+  assert.match(
+    panel,
+    /className=\{styles\.formMessage\}[\s\S]*?role="status"[\s\S]*?aria-live="polite"[\s\S]*?aria-atomic="true"/,
+  );
   assert.match(
     helpers,
     /A refresh is already running\. Check this panel again in a moment/,
@@ -574,10 +586,12 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
     panel,
     /connectorMutationShouldReconcile\(action, result\.status\)[\s\S]*?router\.refresh\(\)/,
   );
-  assert.doesNotMatch(
+  assert.match(panel, /result\.status === "withheld"/);
+  assert.match(
     panel,
-    /result\.status === "withheld"[\s\S]{0,120}router\.refresh\(\)/,
+    /view\.primaryAction === "publish" \? children : null/,
   );
+  assert.match(panel, /\{advancedChildren\}/);
   assert.match(
     helpers,
     /lastErrorCode === "public_payload_rejected"[\s\S]*?no new snapshot passed public validation\.[\s\S]*?Do not replace the credential; any previously accepted snapshot remains unchanged/,
@@ -606,7 +620,7 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
   assert.match(refreshHandler, /return connectorRefreshResponse\(result\)/);
 });
 
-test("Studio reconciles only accepted or already-running refresh outcomes", async () => {
+test("Studio reconciles only lifecycle-changing refresh outcomes", async () => {
   const { connectorMutationShouldReconcile } = await import(
     "../app/studio/connectors/mutation-policy.ts"
   );
@@ -618,18 +632,28 @@ test("Studio reconciles only accepted or already-running refresh outcomes", asyn
     connectorMutationShouldReconcile("refresh", "already_running"),
     true,
   );
-  for (const status of [
-    "not_due",
-    "rate_limited",
-    "failed",
+  assert.equal(connectorMutationShouldReconcile("refresh", "not_due"), true);
+  assert.equal(connectorMutationShouldReconcile("refresh", "withheld"), true);
+  for (const code of [
+    "account_changed",
+    "credential_expired",
+    "provider_unavailable",
     "public_payload_rejected",
-    "withheld",
-    undefined,
+    "reauthorization_required",
+    "rate_limited",
   ]) {
+    assert.equal(
+      connectorMutationShouldReconcile("refresh", "failed"),
+      true,
+      `refresh failure ${code} changes the next action`,
+    );
+  }
+  assert.equal(connectorMutationShouldReconcile("refresh", "setup_required"), true);
+  for (const status of ["rate_limited", "unknown", undefined]) {
     assert.equal(
       connectorMutationShouldReconcile("refresh", status),
       false,
-      `refresh status ${String(status)} must preserve the current panel state`,
+      `unknown refresh result ${String(status)} must preserve the current panel state`,
     );
   }
 });

@@ -24,9 +24,12 @@ Owner JSON writes reject cross-origin requests, verify Access plus exact owner a
 OAuth callbacks are public only because providers must reach them. Require exact environment callback, encrypted owner binding, ten-minute expiry, single use, replay protection, safe fixed redirects, proactive token refresh, and sanitized failure states. Never log URL/query data, identities, codes, verifiers, signatures, tokens, or provider payloads.
 
 OAuth completion and credential saves establish a connection but do not fetch a
-collection. Studio must present `Connected · Refresh required` until the owner
-explicitly synchronizes. Strava is checked only by Studio save or Verify; its
-public read never performs a remote health request.
+collection. Studio derives one provider-local next action from connection,
+authorization, permission, snapshot, and provider publication state. The
+routine lifecycle is **Connect → Allow public use → Sync → Show**; only the
+explicit Sync/Refresh action may fetch a generic connector collection. Strava
+is checked only by Studio save or Verify; its public read never performs a
+remote health request.
 
 ## Four-Tier Isolation
 
@@ -64,9 +67,19 @@ Local promotion may transfer only reviewed, explicitly portable provider setup o
   References are encrypted; both `public_display` and
   `retain_last_known_good` are required after atomic activation. Missing or
   expired approvals withhold public display without deleting private data.
+- Studio never exposes those two scopes as independent choices. The owner
+  records one private reference, approval date, and optional expiry; the server
+  applies both fixed scopes. `report_only` to `required` remains one atomic
+  rollout transition presented as **Finish permission setup**, available only
+  when every configured provider is ready.
 - Approved connector snapshots have no age-based deletion or public cutoff.
   Public output exposes only freshness and the actual update time; required
   mode withholds missing or expired approvals without deleting private state.
+- **Make private** disables public display without deleting connector state;
+  **Restore public access** reenables an unexpired stored record; **Renew
+  permission** updates dates and may replace its encrypted reference.
+  Disconnect remains destructive. Spotify and Discogs content-publication
+  acknowledgements remain separate from provider permission.
 - Disconnect deletes provider credentials/config, snapshots, pending OAuth state, sync history, and provider audit records, then unpublishes.
 - Third-party frames remain consent-gated and CSP allowlists exact.
 - Update Privacy and tests whenever retrieval, storage, retention, disclosure, or deletion changes.
