@@ -36,11 +36,25 @@ export {
   discogsExtendedDisplayApprovalIsActive,
   getDiscogsExtendedDisplayApproval,
   getDiscogsPresentationConfig,
-  saveDiscogsExtendedDisplayApproval,
   saveDiscogsPresentationConfig,
   type DiscogsExtendedDisplayApproval,
   type DiscogsPresentationConfig,
 } from "./discogs-presentation";
+export {
+  CONNECTOR_PUBLICATION_APPROVAL_SCOPES,
+  PUBLIC_CONNECTOR_PROVIDERS,
+  activateConnectorPublicationApprovals,
+  connectorPublicationApprovalSettingKey,
+  connectorPublicationGate,
+  deleteConnectorPublicationApproval,
+  getConnectorPublicationApprovalOverview,
+  isPublicConnectorProvider,
+  saveConnectorPublicationApproval,
+  type ConnectorPublicationApprovalOverview,
+  type ConnectorPublicationApprovalScope,
+  type ConnectorPublicationApprovalSummary,
+  type PublicConnectorProvider,
+} from "./publication-approval";
 export {
   CONNECTOR_PROVIDERS,
   isConnectorProvider,

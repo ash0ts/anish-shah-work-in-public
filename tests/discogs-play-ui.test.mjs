@@ -80,11 +80,11 @@ test("Studio exposes Discogs OAuth1 and an explicit publication gate", async () 
   assert.match(panel, /id: "consumerKey"/);
   assert.match(panel, /secret: "consumerSecret"/);
   assert.match(panel, /showsAccessTokenExpiry: false/);
-  assert.match(panel, /Publish physical collection publicly/);
+  assert.match(panel, /Publish the sanitized collection/);
   assert.match(panel, /acknowledgeNoncommercial/);
-  assert.match(panel, /personal, noncommercial catalog/);
-  assert.match(panel, /excluded from the production handoff/);
-  assert.match(panel, /href="\/play\/collect"/);
+  assert.match(panel, /personal, noncommercial display/);
+  assert.match(panel, /unified Publication approvals panel/);
+  assert.match(page, /ConnectorPublicationApprovals/);
   assert.match(
     sharedPanel,
     /\[oauthCredentialShape\.requestKeys\.id\]: credentialId\.trim\(\)/,
@@ -101,6 +101,6 @@ test("Studio exposes Discogs OAuth1 and an explicit publication gate", async () 
   assert.match(page, /discogsCallbackUrl=\{discogsCallbackUrl\}/);
   assert.match(privacy, /Six connections and one owner-authored atlas/);
   assert.match(privacy, /Discogs · Collect/);
-  assert.match(privacy, /unavailable six hours/i);
+  assert.match(privacy, /Age alone never deletes it/i);
   assert.match(privacy, /Discogs API Terms of Use/);
 });

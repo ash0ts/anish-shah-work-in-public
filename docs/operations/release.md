@@ -47,6 +47,12 @@ initial Simulation/Travel schema activation sequence belong in
 before starting a recurring production release; do not provision or rotate
 infrastructure from this runbook.
 
+Before deploying a release that changes an OAuth transaction schema, finish or
+cancel every pending MyAnimeList, Spotify, and Discogs authorization in Studio.
+Do not carry an in-flight provider callback across the deployment: transactions
+missing the release's required encrypted fields fail closed as `invalid_state`
+and must be started again.
+
 ## 1. Validate the exact commit and bytes
 
 Merge through a reviewed PR, then manually dispatch Validate, Gitleaks, CodeQL,

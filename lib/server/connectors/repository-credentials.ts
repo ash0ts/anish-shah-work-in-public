@@ -16,6 +16,11 @@ import { normalizeSteamApiKey, normalizeSteamId } from "./steam";
 import { steamStorageCountries } from "./steam-policy";
 import { SPOTIFY_PRESENTATION_SETTING_KEY } from "./spotify-presentation";
 import {
+  connectorPublicationApprovalPendingSettingKey,
+  connectorPublicationApprovalPendingValue,
+  connectorPublicationApprovalSettingKey,
+} from "./publication-approval";
+import {
   ConnectorFetchError,
   type ConnectorCredential,
   type ConnectorCredentialInput,
@@ -117,6 +122,25 @@ export async function saveConnectorCredential(
       )
       .bind(provider),
     database
+      .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
+      .bind(connectorPublicationApprovalSettingKey(provider)),
+    database
+      .prepare(
+        `INSERT INTO editorial_settings (
+           key, value_json, updated_by_email, updated_at
+         ) VALUES (?, ?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET
+           value_json = excluded.value_json,
+           updated_by_email = excluded.updated_by_email,
+           updated_at = excluded.updated_at`,
+      )
+      .bind(
+        connectorPublicationApprovalPendingSettingKey(provider),
+        connectorPublicationApprovalPendingValue(provider, now),
+        actorEmail,
+        now,
+      ),
+    database
       .prepare(
         `INSERT INTO audit_log (
            id, actor_email, action, entity_type, entity_id, details_json, created_at
@@ -157,6 +181,12 @@ export async function deleteConnectorCredential(
          WHERE entity_type = 'connector' AND entity_id = ?`,
       )
       .bind(provider),
+    database
+      .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
+      .bind(connectorPublicationApprovalSettingKey(provider)),
+    database
+      .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
+      .bind(connectorPublicationApprovalPendingSettingKey(provider)),
     ...(provider === "spotify" || provider === "discogs"
       ? [
           database

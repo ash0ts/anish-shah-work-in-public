@@ -10,7 +10,6 @@ import {
   formatTimestamp,
   responseJson,
   safeAuthorizationUrl,
-  spotifyPublicCutoff,
   spotifyReauthorizationDate,
   statusGuidance,
 } from "./helpers";
@@ -177,6 +176,7 @@ export function ApiConnectorPanel({
             : {
                 [oauthCredentialShape.requestKeys.id]: credentialId.trim(),
                 [oauthCredentialShape.requestKeys.secret]: secret,
+                replaceExisting: true,
               },
         ),
       });
@@ -429,14 +429,6 @@ export function ApiConnectorPanel({
           ) : null}
           {isSpotify ? (
             <>
-              <div>
-                <dt>Public cutoff</dt>
-                <dd>
-                  {formatTimestamp(
-                    spotifyPublicCutoff(connector.lastSyncedAt),
-                  )}
-                </dd>
-              </div>
               <div>
                 <dt>Reauthorize by</dt>
                 <dd>

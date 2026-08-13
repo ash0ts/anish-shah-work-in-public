@@ -111,6 +111,10 @@ export function statusGuidance(
         ? " Any previously accepted local snapshot remains unchanged."
         : " Any previously accepted public snapshot remains unchanged.";
 
+  if (connector.lastErrorCode === "account_changed") {
+    return "The authorized provider account changed. Data from the prior account was withheld. Save publication approval for this account, then refresh again.";
+  }
+
   if (
     connector.status === "reauthorization_required" ||
     connector.lastErrorCode === "credential_expired" ||
@@ -180,14 +184,6 @@ export function formatTimestamp(value: string | null): string {
     timeStyle: "short",
     timeZone: "America/New_York",
   }).format(date);
-}
-
-export function spotifyPublicCutoff(value: string | null): string | null {
-  if (!value) return null;
-  const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp)
-    ? new Date(timestamp + 72 * 60 * 60 * 1000).toISOString()
-    : null;
 }
 
 export function spotifyReauthorizationDate(value: string | null): string | null {

@@ -91,7 +91,7 @@ async function writeDocumentationFixture(root) {
   );
   content.set(
     "docs/play-connections.md",
-    "# Connections\nnpm run setup:local\nOWNER_EMAILS=owner@test.local\nnpm run doctor\nDiscogs has a four-hour refresh and six-hour cutoff.\n/api/connectors/myanimelist/oauth/callback\n/api/connectors/spotify/oauth/callback\n/api/connectors/discogs/oauth/callback\n",
+    "# Connections\nnpm run setup:local\nOWNER_EMAILS=owner@test.local\nnpm run doctor\nDiscogs has a four-hour manual-refresh window; accepted snapshots have no age-based deletion or public cutoff.\n/api/connectors/myanimelist/oauth/callback\n/api/connectors/spotify/oauth/callback\n/api/connectors/discogs/oauth/callback\n",
   );
   content.set(
     "docs/copywriting.md",

@@ -17,6 +17,9 @@ const {
   verifyStravaEmbed,
   verifyStoredStravaPublicConfig,
 } = await import("../lib/server/strava-config.ts");
+const { saveConnectorPublicationApproval } = await import(
+  "../lib/server/connectors/publication-approval.ts"
+);
 
 const PROFILE_URL = "https://www.strava.com/athletes/37597587";
 const PROFILE_FEED =
@@ -37,7 +40,9 @@ class FakeStatement {
   first() {
     if (this.sql.includes("FROM editorial_settings")) {
       const valueJson = this.database.settings.get(this.values[0]);
-      return valueJson === undefined ? null : { valueJson };
+      return valueJson === undefined
+        ? null
+        : { valueJson, updatedAt: new Date().toISOString() };
     }
     return null;
   }
@@ -69,7 +74,8 @@ class FakeD1 {
       }
     }
     if (statement.sql.startsWith("INSERT INTO audit_log")) {
-      this.audits.push(JSON.parse(statement.values[2]));
+      const detailIndex = statement.values.length === 5 ? 3 : 2;
+      this.audits.push(JSON.parse(statement.values[detailIndex]));
       return { success: true, results: [], meta: { changes: 1 } };
     }
     return { success: true, results: [], meta: { changes: 0 } };
@@ -90,7 +96,8 @@ class FakeD1 {
       } else if (statement.sql.startsWith("DELETE FROM audit_log")) {
         this.audits = [];
       } else if (statement.sql.startsWith("INSERT INTO audit_log")) {
-        this.audits.push(JSON.parse(statement.values[2]));
+        const detailIndex = statement.values.length === 5 ? 3 : 2;
+        this.audits.push(JSON.parse(statement.values[detailIndex]));
       }
       return { success: true, results: [], meta: { changes: 1 } };
     });
@@ -105,6 +112,44 @@ async function withFetch(mockFetch, callback) {
   } finally {
     globalThis.fetch = original;
   }
+}
+
+async function withApprovalEnvironment(database, callback) {
+  const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+  globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+    DB: database,
+    CONNECTOR_ENCRYPTION_KEY: Buffer.alloc(32, 27).toString("base64"),
+  };
+  try {
+    return await callback();
+  } finally {
+    if (previous === undefined) {
+      delete globalThis.__ANISH_CONNECTOR_TEST_ENV__;
+    } else {
+      globalThis.__ANISH_CONNECTOR_TEST_ENV__ = previous;
+    }
+  }
+}
+
+function approveStrava(database) {
+  return withApprovalEnvironment(database, () =>
+    saveConnectorPublicationApproval({
+      provider: "strava",
+      reference: "private-strava-publication-permission",
+      scopes: ["public_display", "retain_last_known_good"],
+      approvedAt: "2026-08-01T00:00:00.000Z",
+      expiresAt: null,
+      enabled: true,
+      actorEmail: "owner@example.com",
+      database,
+    }),
+  );
+}
+
+function getApprovedStravaPublicConfig(database) {
+  return withApprovalEnvironment(database, () =>
+    getStravaPublicConfig(database),
+  );
 }
 
 test("Strava accepts exact generated profile feeds, summaries, activities, and routes", () => {
@@ -262,7 +307,12 @@ test("Strava stores a checked feed but publishes only a same-origin-safe project
     embedKind: "profile_feed",
   });
 
-  const published = await getStravaPublicConfig(database);
+  assert.deepEqual(await getStravaPublicConfig(database), {
+    status: "unavailable",
+    reason: "visibility_withheld",
+  });
+  assert.equal((await approveStrava(database)).status, "saved");
+  const published = await getApprovedStravaPublicConfig(database);
   assert.equal(published.status, "ready");
   assert.equal(published.config.profileUrl, PROFILE_URL);
   assert.equal(published.config.embedStatus, "available");
@@ -289,6 +339,31 @@ test("Strava reuses a same-widget health check for twelve hours", async () => {
     );
   });
   assert.equal(calls, 1);
+});
+
+test("routine Strava saves preserve approval until the public account changes", async () => {
+  const database = new FakeD1();
+  await saveStravaPublicConfig(
+    { profileUrl: PROFILE_URL, embed: null },
+    "owner@example.com",
+    database,
+  );
+  const approvalKey = "connector.publication_approval.provider.strava";
+  database.settings.set(approvalKey, JSON.stringify({ encrypted: true }));
+
+  await saveStravaPublicConfig(
+    { profileUrl: PROFILE_URL, embed: null },
+    "owner@example.com",
+    database,
+  );
+  assert.equal(database.settings.has(approvalKey), true);
+
+  await saveStravaPublicConfig(
+    { profileUrl: "https://www.strava.com/athletes/42", embed: null },
+    "owner@example.com",
+    database,
+  );
+  assert.equal(database.settings.has(approvalKey), false);
 });
 
 test("public Strava reads use stored health without provider requests or writes", async () => {
@@ -386,7 +461,8 @@ test("A failing Strava widget keeps a useful profile fallback", async () => {
   );
   assert.equal(saved.status, "saved");
   assert.equal(saved.embedStatus, "unavailable");
-  const publicResult = await getStravaPublicConfig(database);
+  assert.equal((await approveStrava(database)).status, "saved");
+  const publicResult = await getApprovedStravaPublicConfig(database);
   assert.equal(publicResult.status, "ready");
   assert.equal(publicResult.config.embed, null);
   assert.equal(publicResult.config.profileUrl, PROFILE_URL);
@@ -448,7 +524,8 @@ test("Promotion imports only the Strava shape and defers remote verification", a
     embedUrl: PROFILE_FEED,
     embedKind: "profile_feed",
   });
-  const published = await getStravaPublicConfig(database);
+  assert.equal((await approveStrava(database)).status, "saved");
+  const published = await getApprovedStravaPublicConfig(database);
   assert.equal(published.status, "ready");
   assert.equal(published.config.embed, null);
   assert.equal(published.config.profileUrl, PROFILE_URL);

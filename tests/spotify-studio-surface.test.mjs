@@ -33,7 +33,8 @@ test("Studio exposes a provider-specific Spotify OAuth and publication flow", as
   assert.match(controls, /acknowledgePublicDisplay:\s*publishTopTracks/);
   assert.match(controls, /Spotify-calculated affinity/);
   assert.match(controls, /Manual refresh available/);
-  assert.match(controls, /Public cutoff/);
+  assert.doesNotMatch(controls, /Public cutoff/);
+  assert.match(page, /ConnectorPublicationApprovals/);
   assert.match(controls, /Reauthorize by/);
   assert.match(controls, /Access token refresh/);
   assert.match(controls, /local authorization[\s\S]*?stay on this machine/i);

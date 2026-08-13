@@ -130,6 +130,22 @@ function storedDiscogsPayload(overrides = {}) {
   };
 }
 
+function seedLegacyDiscogsApproval(database, overrides = {}) {
+  const updatedAt = overrides.updatedAt ?? new Date().toISOString();
+  database.settings.set("connector.discogs.extended_display_approval", {
+    valueJson: JSON.stringify({
+      schemaVersion: 1,
+      provider: "discogs",
+      reference: "owner-permission-reference-2026",
+      approvedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      expiresAt: null,
+      enabled: true,
+      ...overrides.value,
+    }),
+    updatedAt,
+  });
+}
+
 test("Discogs catalog normalization reconciles copies and drops private provider fields", async () => {
   const requests = [];
   const releases = [
@@ -822,29 +838,20 @@ test("Discogs extended-display approval keeps a validated stale catalog availabl
       fetchedAt: expiredPayload.syncedAt,
       freshUntil: expiredPayload.freshUntil,
     }];
-    assert.deepEqual(await repository.getPublicConnectorSnapshot("discogs"), {
-      status: "unavailable",
-      provider: "discogs",
-      reason: "stale_expired",
-    });
+    const grandfatheredStale =
+      await repository.getPublicConnectorSnapshot("discogs");
+    assert.equal(grandfatheredStale.status, "ready");
+    assert.equal(grandfatheredStale.stale, true);
+    assert.equal(grandfatheredStale.fetchedAt, expiredPayload.syncedAt);
 
     const approvedAt = new Date(now.getTime() - 24 * 60 * 60 * 1000)
       .toISOString();
-    const approval = await presentation.saveDiscogsExtendedDisplayApproval({
-      provider: "discogs",
-      reference: "owner-permission-reference-2026",
-      approvedAt,
-      expiresAt: null,
-      enabled: true,
-      actorEmail: "owner@example.com",
+    seedLegacyDiscogsApproval(database, {
+      value: { approvedAt },
     });
-    assert.equal(approval.status, "saved");
-    assert.deepEqual(
-      await presentation.getDiscogsExtendedDisplayApproval(),
-      approval.status === "saved"
-        ? { status: "ready", approval: approval.approval }
-        : null,
-    );
+    const approval = await presentation.getDiscogsExtendedDisplayApproval();
+    assert.equal(approval.status, "ready");
+    assert.equal(approval.approval?.reference, "owner-permission-reference-2026");
 
     const stale = await repository.getPublicConnectorSnapshot("discogs");
     assert.equal(stale.status, "ready");
@@ -858,20 +865,16 @@ test("Discogs extended-display approval keeps a validated stale catalog availabl
     });
     assert.equal(republished.status, "saved");
 
-    const expiredApproval = await presentation.saveDiscogsExtendedDisplayApproval({
-      provider: "discogs",
-      reference: "owner-permission-reference-2026",
-      approvedAt,
-      expiresAt: new Date(now.getTime() - 1_000).toISOString(),
-      enabled: true,
-      actorEmail: "owner@example.com",
+    seedLegacyDiscogsApproval(database, {
+      value: {
+        approvedAt,
+        expiresAt: new Date(now.getTime() - 1_000).toISOString(),
+      },
     });
-    assert.equal(expiredApproval.status, "saved");
-    assert.deepEqual(await repository.getPublicConnectorSnapshot("discogs"), {
-      status: "unavailable",
-      provider: "discogs",
-      reason: "stale_expired",
-    });
+    const expiredLegacyStillGrandfathered =
+      await repository.getPublicConnectorSnapshot("discogs");
+    assert.equal(expiredLegacyStillGrandfathered.status, "ready");
+    assert.equal(expiredLegacyStillGrandfathered.stale, true);
 
     await repository.deleteConnectorCredential("discogs", "owner@example.com");
     assert.equal(database.setting, null);
@@ -918,18 +921,11 @@ test("Discogs extended-display approval rejects malformed protected records", as
         enabled: true,
       },
     ]) {
-      assert.deepEqual(
-        await presentation.saveDiscogsExtendedDisplayApproval({
-          ...input,
-          actorEmail: "owner@example.com",
-        }),
-        { status: "invalid", reason: "approval" },
-      );
+      seedLegacyDiscogsApproval(database, { value: input });
+      assert.deepEqual(await presentation.getDiscogsExtendedDisplayApproval(), {
+        status: "setup_required",
+      });
     }
-    assert.equal(
-      database.settings.has("connector.discogs.extended_display_approval"),
-      false,
-    );
   });
 });
 
@@ -1056,6 +1052,7 @@ test("connector reads and cron cannot initiate provider collection synchronizati
     workerSource,
     credentialSource,
     routeSource,
+    approvalRouteSource,
     refreshRouteSource,
     publicRouteSource,
     spotifyRouteSource,
@@ -1068,6 +1065,7 @@ test("connector reads and cron cannot initiate provider collection synchronizati
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/connectors/repository-credentials.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/http/discogs-config.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/http/connector-publication-approvals.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/http/connector-refresh-response.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/connectors/[provider]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/connectors/spotify/route.ts", import.meta.url), "utf8"),
@@ -1078,15 +1076,15 @@ test("connector reads and cron cannot initiate provider collection synchronizati
   ]);
   assert.match(refreshSource, /DISCOGS_FRESHNESS_WINDOW_MS = 4 \* 60 \* 60 \* 1000/);
   assert.match(refreshSource, /trigger !== "manual"/);
-  assert.match(refreshSource, /provider === "discogs" \? 1 : 2/);
+  assert.match(refreshSource, /function retainedSnapshotCount[\s\S]*return 2;/);
   assert.match(workerSource, /if \(!env\.DB\) return;/);
   assert.match(workerSource, /const db = env\.DB;/);
   assert.doesNotMatch(workerSource, /refreshDiscogsWhenDue|refreshConnector/);
   assert.match(credentialSource, /DISCOGS_PRESENTATION_SETTING_KEY/);
   assert.match(routeSource, /rejectCrossOriginWrite\(request\)[\s\S]*authorizeOwnerApi\(\)[\s\S]*readBoundedJsonBody/);
-  assert.match(routeSource, /Object\.keys\(approval\)\.length !== approvalKeys\.size/);
-  assert.match(routeSource, /hasPresentation === hasApproval/);
-  assert.match(routeSource, /saveDiscogsExtendedDisplayApproval/);
+  assert.doesNotMatch(routeSource, /saveDiscogsExtendedDisplayApproval/);
+  assert.match(approvalRouteSource, /rejectCrossOriginWrite\(request\)[\s\S]*authorizeOwnerApi\(\)[\s\S]*readBoundedJsonBody/);
+  assert.match(approvalRouteSource, /saveConnectorPublicationApproval/);
   assert.match(refreshSource, /retryNotBefore: notBefore/);
   assert.match(refreshRouteSource, /"retry-after": String\(retryAfter\)/);
   for (const source of [publicRouteSource, spotifyRouteSource, stravaRouteSource]) {

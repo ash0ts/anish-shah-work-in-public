@@ -353,10 +353,12 @@ function semanticIssues(documents) {
   if (
     !/Discogs/i.test(connectors) ||
     !/(?:four|4)[ -]hour/i.test(connectors) ||
-    !/(?:six|6)[ -]hour/i.test(connectors)
+    !/accepted snapshots have no age-based deletion or public cutoff/i.test(
+      connectors,
+    )
   ) {
     issues.push(
-      "docs/play-connections.md must document the Discogs four-hour refresh and six-hour public cutoff.",
+      "docs/play-connections.md must document the Discogs four-hour manual-refresh window and durable accepted snapshots.",
     );
   }
   requireTerms(

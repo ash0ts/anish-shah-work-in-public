@@ -25,7 +25,13 @@ import {
   type DiscogsOAuthCredential,
 } from "./types";
 import { DISCOGS_PRESENTATION_SETTING_KEY } from "./discogs-presentation";
+import { DISCOGS_EXTENDED_DISPLAY_APPROVAL_SETTING_KEY } from "./discogs-extended-display-approval";
 import { DISCOGS_RETRY_MAINTENANCE_KEY } from "./discogs-retry";
+import {
+  connectorPublicationApprovalPendingSettingKey,
+  connectorPublicationApprovalPendingValue,
+  connectorPublicationApprovalSettingKey,
+} from "./publication-approval";
 
 const TRANSACTION_WINDOW_MS = 10 * 60 * 1000;
 const TRANSACTION_CONTEXT = "discogs-oauth-transaction";
@@ -191,6 +197,7 @@ function startProviderFailure(
 export async function startDiscogsOAuth(input: {
   consumerKey?: string;
   consumerSecret?: string;
+  replaceExisting?: boolean;
   actorEmail: string;
   browserNonce: string;
   requestUrl: string;
@@ -210,7 +217,15 @@ export async function startDiscogsOAuth(input: {
   }
 
   let client: DiscogsOAuthClient | null;
-  if (input.consumerKey !== undefined || input.consumerSecret !== undefined) {
+  const hasSuppliedClient =
+    input.consumerKey !== undefined || input.consumerSecret !== undefined;
+  if (
+    input.replaceExisting !== undefined &&
+    input.replaceExisting !== hasSuppliedClient
+  ) {
+    return { status: "invalid", reason: "credential" };
+  }
+  if (hasSuppliedClient) {
     client = normalizeDiscogsOAuthClient(
       input.consumerKey ?? "",
       input.consumerSecret ?? "",
@@ -250,6 +265,7 @@ export async function startDiscogsOAuth(input: {
     encrypted = await encryptCredential(
       {
         phase: "authorization",
+        replaceExisting: input.replaceExisting ?? hasSuppliedClient,
         ...client,
         ...temporaryCredential,
         callbackUrl: redirectUri,
@@ -369,6 +385,7 @@ export async function stageDiscogsOAuthCallback(input: {
   if (
     !transaction ||
     transaction.phase !== "authorization" ||
+    typeof transaction.replaceExisting !== "boolean" ||
     transaction.requestToken !== input.requestToken ||
     transaction.callbackUrl !== redirectUri ||
     transaction.ownerEmail !== normalizedOwnerEmail(row.ownerEmail) ||
@@ -429,6 +446,7 @@ async function saveCredential(
   credential: DiscogsOAuthCredential,
   actorEmail: string,
   stateHash: string,
+  replaceExisting: boolean,
 ): Promise<void> {
   const encryptionKey = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
   if (!encryptionKey) throw new Error("Connector encryption is unavailable.");
@@ -439,8 +457,7 @@ async function saveCredential(
   );
   const now = new Date().toISOString();
   const ownerEmail = normalizedOwnerEmail(actorEmail);
-  const results = await database.batch([
-    database
+  const credentialStatement = database
       .prepare(
         `INSERT INTO connector_credentials (
            provider, ciphertext, iv, key_version, credential_label,
@@ -473,7 +490,9 @@ async function saveCredential(
         stateHash,
         ownerEmail,
         now,
-      ),
+      );
+  const destructiveStatements = replaceExisting
+    ? [
     database
       .prepare(
         `DELETE FROM connector_snapshots
@@ -514,6 +533,47 @@ async function saveCredential(
       ),
     database
       .prepare(
+        `DELETE FROM editorial_settings
+         WHERE key = ?
+           AND EXISTS (
+             SELECT 1 FROM connector_credentials
+             WHERE provider = 'discogs' AND ciphertext = ?
+               AND iv = ? AND updated_at = ?
+           )`,
+      )
+      .bind(
+        connectorPublicationApprovalSettingKey("discogs"),
+        encrypted.ciphertext,
+        encrypted.iv,
+        now,
+      ),
+    database
+      .prepare(
+        `INSERT INTO editorial_settings (
+           key, value_json, updated_by_email, updated_at
+         )
+         SELECT ?, ?, ?, ?
+         WHERE EXISTS (
+           SELECT 1 FROM connector_credentials
+           WHERE provider = 'discogs' AND ciphertext = ?
+             AND iv = ? AND updated_at = ?
+         )
+         ON CONFLICT(key) DO UPDATE SET
+           value_json = excluded.value_json,
+           updated_by_email = excluded.updated_by_email,
+           updated_at = excluded.updated_at`,
+      )
+      .bind(
+        connectorPublicationApprovalPendingSettingKey("discogs"),
+        connectorPublicationApprovalPendingValue("discogs", now),
+        actorEmail,
+        now,
+        encrypted.ciphertext,
+        encrypted.iv,
+        now,
+      ),
+    database
+      .prepare(
         `DELETE FROM maintenance_state
          WHERE key = ?
            AND EXISTS (
@@ -539,6 +599,91 @@ async function saveCredential(
            )`,
       )
       .bind(encrypted.ciphertext, encrypted.iv, now),
+    ]
+    : [];
+  const routineReauthorizationStatements = replaceExisting
+    ? []
+    : [
+        database
+          .prepare(
+            `UPDATE editorial_settings
+             SET value_json = json_set(
+                   value_json,
+                   '$.credentialGeneration',
+                   (SELECT generation FROM connector_credentials
+                    WHERE provider = 'discogs')
+                 ),
+                 updated_at = ?
+             WHERE key = ?
+               AND json_extract(value_json, '$.publishCollection') = 1
+               AND EXISTS (
+                 SELECT 1 FROM connector_credentials
+                 WHERE provider = 'discogs' AND ciphertext = ?
+                   AND iv = ? AND updated_at = ?
+               )`,
+          )
+          .bind(
+            now,
+            DISCOGS_PRESENTATION_SETTING_KEY,
+            encrypted.ciphertext,
+            encrypted.iv,
+            now,
+          ),
+        ...[
+          connectorPublicationApprovalSettingKey("discogs"),
+          DISCOGS_EXTENDED_DISPLAY_APPROVAL_SETTING_KEY,
+          DISCOGS_PRESENTATION_SETTING_KEY,
+        ].map((key) =>
+          database
+            .prepare(
+              `DELETE FROM editorial_settings
+               WHERE key = ?
+                 AND NOT EXISTS (
+                   SELECT 1 FROM connector_snapshots
+                   WHERE provider = 'discogs' AND status = 'ready'
+                 )
+                 AND EXISTS (
+                   SELECT 1 FROM connector_credentials
+                   WHERE provider = 'discogs' AND ciphertext = ?
+                     AND iv = ? AND updated_at = ?
+                 )`,
+            )
+            .bind(key, encrypted.ciphertext, encrypted.iv, now),
+        ),
+        database
+          .prepare(
+            `INSERT INTO editorial_settings (
+               key, value_json, updated_by_email, updated_at
+             )
+             SELECT ?, ?, ?, ?
+             WHERE NOT EXISTS (
+               SELECT 1 FROM connector_snapshots
+               WHERE provider = 'discogs' AND status = 'ready'
+             )
+               AND EXISTS (
+                 SELECT 1 FROM connector_credentials
+                 WHERE provider = 'discogs' AND ciphertext = ?
+                   AND iv = ? AND updated_at = ?
+               )
+             ON CONFLICT(key) DO UPDATE SET
+               value_json = excluded.value_json,
+               updated_by_email = excluded.updated_by_email,
+               updated_at = excluded.updated_at`,
+          )
+          .bind(
+            connectorPublicationApprovalPendingSettingKey("discogs"),
+            connectorPublicationApprovalPendingValue("discogs", now),
+            actorEmail,
+            now,
+            encrypted.ciphertext,
+            encrypted.iv,
+            now,
+          ),
+      ];
+  const results = await database.batch([
+    credentialStatement,
+    ...destructiveStatements,
+    ...routineReauthorizationStatements,
     database
       .prepare(
         `DELETE FROM connector_oauth_transactions
@@ -627,6 +772,7 @@ export async function completeDiscogsOAuth(input: {
   if (
     !transaction ||
     transaction.phase !== "callback" ||
+    typeof transaction.replaceExisting !== "boolean" ||
     transaction.callbackUrl !== redirectUri ||
     transaction.ownerEmail !== normalizedOwnerEmail(input.actorEmail) ||
     transaction.stateHash !== stateHash ||
@@ -707,7 +853,13 @@ export async function completeDiscogsOAuth(input: {
   }
 
   try {
-    await saveCredential(database, credential, input.actorEmail, stateHash);
+    await saveCredential(
+      database,
+      credential,
+      input.actorEmail,
+      stateHash,
+      transaction.replaceExisting,
+    );
   } catch (error) {
     try {
       await deleteTransaction(database, stateHash);

@@ -1,0 +1,26 @@
+{
+  "name": "image-size",
+  "version": "2.0.3-security.0",
+  "private": true,
+  "description": "Bounded image metadata reader for the Anish site build",
+  "type": "module",
+  "main": "./index.mjs",
+  "module": "./index.mjs",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "default": "./index.mjs"
+    },
+    "./fromFile": {
+      "types": "./fromFile.d.ts",
+      "import": "./fromFile.mjs",
+      "default": "./fromFile.mjs"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "UNLICENSED"
+}

@@ -1,7 +1,7 @@
 # Security maintenance notes
 
 > Checked-in dependency and workflow state in this document was last reviewed
-> on **2026-08-05**. GitHub billing, feature availability, and live repository
+> on **2026-08-12**. GitHub billing, feature availability, and live repository
 > settings are mutable account state; recheck them in GitHub before relying on
 > them for a release or collaborator-access decision.
 
@@ -19,13 +19,23 @@
 - Hourly retention removes OAuth transaction data no later than 24 hours after
   expiry, clears expired staged promotion credentials on the next hourly pass,
   deletes promotion transactions within 24 hours of creation, synchronization
-  history no later than 90 days, audit history no later than 365 days, and
-  Spotify metadata no later than 30 days. Disconnect still deletes
-  provider-specific credentials and history immediately.
+  history no later than 90 days, and audit history no later than 365 days.
+  Accepted connector snapshots have no age-based deletion. Explicit disconnect
+  or account replacement still deletes provider-specific credentials,
+  snapshots, approvals, and history immediately.
 - `npm run security:audit` fails on any runtime advisory or any high/critical
   full-tree advisory. The remaining development-only moderate advisories are
   inherited through Drizzle Kit’s retired esbuild loader; Drizzle Kit is never
   shipped in the Worker runtime and `npm audit --omit=dev` must remain clean.
+- Vinext declares `image-size@2.0.2`, whose archived upstream has unpatched
+  infinite-loop advisories for ICNS, HEIF/AVIF, and JXL. The lockfile replaces
+  it with `vendor/image-size-safe`, a bounded, dependency-free metadata reader
+  for the checked-in PNG, JPEG, GIF, WebP, SVG, BMP, and ICO formats used by
+  the build. Vulnerable formats fail closed and focused tests enforce that
+  boundary. This is a reviewed local replacement, not an ignored advisory.
+- The lockfile resolves `js-yaml` to the official `4.3.1` release, which
+  replaces the vulnerable ordered-map duplicate check with bounded `Set`
+  membership. Its registry integrity is pinned in `package-lock.json`.
 - GitHub's Dependency Review action requires GitHub Advanced Security for a
   private repository, which is not enabled for this project. CI therefore runs
   `npm run security:audit` on every change, blocking all runtime advisories and

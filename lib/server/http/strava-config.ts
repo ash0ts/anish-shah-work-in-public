@@ -18,7 +18,7 @@ export async function stravaConfigGet(): Promise<Response> {
   try {
     const [portable, published] = await Promise.all([
       getStravaPortableConfig(),
-      getStravaPublicConfig(),
+      getStravaPublicConfig(undefined, { bypassPublicationApproval: true }),
     ]);
     if (!portable || published.status !== "ready") {
       return Response.json(

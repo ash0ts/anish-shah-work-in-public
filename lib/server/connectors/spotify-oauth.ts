@@ -37,6 +37,7 @@ export type SpotifyOAuthClient = {
 
 export type SpotifyOAuthTransactionPayload = SpotifyOAuthClient & {
   phase: "authorization" | "callback";
+  replaceExisting: boolean;
   codeVerifier: string;
   callbackUrl: string;
   ownerEmail: string;

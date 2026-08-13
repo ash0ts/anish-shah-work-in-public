@@ -13,6 +13,7 @@ import {
   type SimulationHealthSummary,
 } from "./simulation/health";
 import { getTravelHealth, type TravelHealth } from "./travel";
+import { getConnectorPublicationApprovalOverview } from "./connectors/publication-approval";
 export {
   PUBLICATION_MAINTENANCE_KEY,
   recordMaintenanceState,
@@ -69,6 +70,15 @@ export type StudioHealth = {
     status: "current" | "stale" | "error" | "unavailable";
     lastSuccessfulAt: string | null;
   }>;
+  connectorPublication: {
+    enforcementMode: "report_only" | "required" | "setup_required";
+    approvedProviders: HealthConnectorProvider[];
+    providerStates: Array<{
+      provider: HealthConnectorProvider;
+      status: "active" | "expired" | "disabled" | "missing" | "invalid";
+    }>;
+    approvalStateDigest: string | null;
+  };
   simulation: SimulationHealthSummary & {
     providerApprovalDigest: string | null;
   };
@@ -203,13 +213,22 @@ export async function getStudioHealth(): Promise<StudioHealth> {
         status: "unavailable",
         lastSuccessfulAt: null,
       })),
+      connectorPublication: {
+        enforcementMode: "setup_required",
+        approvedProviders: [],
+        providerStates: CONNECTOR_PROVIDERS.map((provider) => ({
+          provider,
+          status: "missing",
+        })),
+        approvalStateDigest: null,
+      },
       simulation,
       travel,
     };
   }
 
   try {
-    const [migration, retention, snapshots, strava] = await Promise.all([
+    const [migration, retention, snapshots, strava, approvalOverview] = await Promise.all([
       database
         .prepare(`SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 1`)
         .first<MigrationRow>(),
@@ -243,6 +262,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
            LIMIT 1`,
         )
         .first<StravaSettingRow>(),
+      getConnectorPublicationApprovalOverview(database),
     ]);
 
     const safeMigrationName =
@@ -261,6 +281,40 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       ),
       stravaState(strava),
     ];
+    const connectorPublication: StudioHealth["connectorPublication"] =
+      approvalOverview.status === "ready"
+        ? {
+            enforcementMode: approvalOverview.enforcement.mode,
+            approvedProviders: approvalOverview.providers
+              .filter(
+                (entry) =>
+                  entry.approval?.active === true &&
+                  entry.missingScopes.length === 0,
+              )
+              .map((entry) => entry.provider),
+            providerStates: approvalOverview.providers.map((entry) => ({
+              provider: entry.provider,
+              status: !entry.approval
+                ? "missing"
+                : !entry.approval.enabled
+                  ? "disabled"
+                  : entry.approval.active
+                    ? entry.missingScopes.length === 0
+                      ? "active"
+                      : "missing"
+                    : "expired",
+            })),
+            approvalStateDigest: approvalOverview.approvalStateDigest,
+          }
+        : {
+            enforcementMode: "setup_required",
+            approvedProviders: [],
+            providerStates: CONNECTOR_PROVIDERS.map((provider) => ({
+              provider,
+              status: "invalid" as const,
+            })),
+            approvalStateDigest: null,
+          };
     const setupRequired =
       !releaseSha ||
       !releaseVersion ||
@@ -288,6 +342,7 @@ export async function getStudioHealth(): Promise<StudioHealth> {
       },
       retentionHeartbeat,
       connectors,
+      connectorPublication,
       simulation,
       travel,
     };
@@ -307,6 +362,15 @@ export async function getStudioHealth(): Promise<StudioHealth> {
         status: "unavailable",
         lastSuccessfulAt: null,
       })),
+      connectorPublication: {
+        enforcementMode: "setup_required",
+        approvedProviders: [],
+        providerStates: CONNECTOR_PROVIDERS.map((provider) => ({
+          provider,
+          status: "invalid",
+        })),
+        approvalStateDigest: null,
+      },
       simulation,
       travel,
     };

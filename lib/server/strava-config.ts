@@ -1,6 +1,12 @@
 import { runtimeDatabase } from "./runtime-env";
+import {
+  connectorPublicationApprovalPendingSettingKey,
+  connectorPublicationApprovalPendingValue,
+  connectorPublicationApprovalSettingKey,
+  connectorPublicationGate,
+} from "./connectors/publication-approval";
 
-const STRAVA_SETTING_KEY = "connector.strava.public_embed";
+export const STRAVA_SETTING_KEY = "connector.strava.public_embed";
 const STRAVA_EMBED_HOST = "strava-embeds.com";
 const STRAVA_PROFILE_HOST = "www.strava.com";
 const STRAVA_PROFILE_PATH = /^\/athletes\/([1-9]\d{0,19})\/?$/;
@@ -49,7 +55,11 @@ export type StravaConfigResult =
   | { status: "ready"; config: StravaPublicConfig }
   | {
       status: "unavailable";
-      reason: "database_unavailable" | "not_configured" | "invalid_config";
+      reason:
+        | "database_unavailable"
+        | "not_configured"
+        | "invalid_config"
+        | "visibility_withheld";
     };
 
 export type StravaEmbedValidation =
@@ -485,6 +495,7 @@ async function readStoredConfig(
 
 export async function getStravaPublicConfig(
   database?: D1Database | null,
+  options: { bypassPublicationApproval?: boolean } = {},
 ): Promise<StravaConfigResult> {
   const storedResult = await readStoredConfig(database);
   if (storedResult === "database_unavailable") {
@@ -494,6 +505,18 @@ export async function getStravaPublicConfig(
     return { status: "unavailable", reason: "not_configured" };
   }
   const stored = storedResult;
+  if (!options.bypassPublicationApproval) {
+    const gate = await connectorPublicationGate(
+      "strava",
+      databaseOrNull(database),
+    );
+    if (gate.status === "setup_required") {
+      return { status: "unavailable", reason: "database_unavailable" };
+    }
+    if (gate.status === "withheld") {
+      return { status: "unavailable", reason: "visibility_withheld" };
+    }
+  }
   const embed =
     stored.embedStatus === "available" &&
     stored.embedUrl &&
@@ -682,10 +705,13 @@ async function writePreparedStravaConfig(
   prepared: PreparedStravaConfig,
   actorEmail: string,
   database?: D1Database | null,
+  previous: StoredStravaConfig | null = null,
 ) {
   const binding = databaseOrNull(database);
   if (!binding) throw new Error("D1 database binding is unavailable.");
   const { stored } = prepared;
+  const accountChanged =
+    previous === null || previous.profileUrl !== stored.profileUrl;
   await binding.batch([
     binding
       .prepare(
@@ -695,6 +721,32 @@ async function writePreparedStravaConfig(
            updated_by_email = excluded.updated_by_email, updated_at = excluded.updated_at`,
       )
       .bind(STRAVA_SETTING_KEY, JSON.stringify(stored), actorEmail, stored.updatedAt),
+    ...(accountChanged
+      ? [
+          binding
+            .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
+            .bind(connectorPublicationApprovalSettingKey("strava")),
+          binding
+            .prepare(
+              `INSERT INTO editorial_settings (
+                 key, value_json, updated_by_email, updated_at
+               ) VALUES (?, ?, ?, ?)
+               ON CONFLICT(key) DO UPDATE SET
+                 value_json = excluded.value_json,
+                 updated_by_email = excluded.updated_by_email,
+                 updated_at = excluded.updated_at`,
+            )
+            .bind(
+              connectorPublicationApprovalPendingSettingKey("strava"),
+              connectorPublicationApprovalPendingValue(
+                "strava",
+                stored.updatedAt,
+              ),
+              actorEmail,
+              stored.updatedAt,
+            ),
+        ]
+      : []),
     binding
       .prepare(
         `INSERT INTO audit_log (
@@ -734,7 +786,12 @@ export async function saveStravaPublicConfig(
     current && current !== "database_unavailable" ? current : null,
   );
   if (!prepared.ok) return prepared;
-  return writePreparedStravaConfig(prepared.value, actorEmail, database);
+  return writePreparedStravaConfig(
+    prepared.value,
+    actorEmail,
+    database,
+    current && current !== "database_unavailable" ? current : null,
+  );
 }
 
 export async function applyStravaPortableConfig(
@@ -799,6 +856,7 @@ export async function applyStravaPortableConfig(
     },
     actorEmail,
     database,
+    current,
   );
 }
 
@@ -817,6 +875,12 @@ export async function deleteStravaPublicConfig(
   const deletedAt = new Date().toISOString();
   await binding.batch([
     binding.prepare(`DELETE FROM editorial_settings WHERE key = ?`).bind(STRAVA_SETTING_KEY),
+    binding
+      .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
+      .bind(connectorPublicationApprovalSettingKey("strava")),
+    binding
+      .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
+      .bind(connectorPublicationApprovalPendingSettingKey("strava")),
     binding.prepare(`DELETE FROM connector_credentials WHERE provider = 'strava'`),
     binding.prepare(`DELETE FROM connector_snapshots WHERE provider = 'strava'`),
     binding.prepare(`DELETE FROM sync_runs WHERE provider = 'strava'`),

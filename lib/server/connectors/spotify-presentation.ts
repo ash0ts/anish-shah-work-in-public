@@ -1,5 +1,6 @@
 import { runtimeDatabase } from "../runtime-env";
 import { parseStoredConnectorPublicPayload } from "./public-payload-policy";
+import { connectorPublicationGate } from "./publication-approval";
 
 export const SPOTIFY_PRESENTATION_SETTING_KEY =
   "connector.spotify.presentation";
@@ -25,7 +26,6 @@ export type SpotifyPublicFallback = {
 const SPOTIFY_ID = /^[A-Za-z0-9]{22}$/;
 const CONFIG_VERSION = 1;
 const MAX_FALLBACK_INPUT_LENGTH = 4_096;
-const SNAPSHOT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 type StoredPresentation = {
   schemaVersion?: unknown;
@@ -297,18 +297,21 @@ export async function getSpotifyPublicFallback(): Promise<SpotifyPublicFallback>
   const database = runtimeDatabase();
   if (!database) return { profileUrl: null, fallbackEmbed };
 
+  const publicationGate = await connectorPublicationGate("spotify", database);
+  if (publicationGate.status !== "allowed") {
+    return { profileUrl: null, fallbackEmbed: null };
+  }
+
   let profileUrl: string | null = null;
   try {
-    const cutoff = new Date(Date.now() - SNAPSHOT_RETENTION_MS).toISOString();
     const rows = await database
       .prepare(
         `SELECT public_payload_json AS publicPayloadJson
          FROM connector_snapshots
-         WHERE provider = 'spotify' AND status = 'ready' AND fetched_at >= ?
+         WHERE provider = 'spotify' AND status = 'ready'
          ORDER BY fetched_at DESC
          LIMIT 2`,
       )
-      .bind(cutoff)
       .all<{ publicPayloadJson: string }>();
     for (const row of rows.results ?? []) {
       const payload = parseStoredConnectorPublicPayload(
