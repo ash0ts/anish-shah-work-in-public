@@ -61,3 +61,10 @@ export {
   type ConnectorProvider,
   type DiscogsOAuthCredential,
 } from "./types";
+export {
+  composeStudioConnectorViews,
+  getStudioCollectionsView,
+  type StudioCollectionsView,
+  type StudioConnectorPrimaryAction,
+  type StudioConnectorView,
+} from "./studio-connector-view";

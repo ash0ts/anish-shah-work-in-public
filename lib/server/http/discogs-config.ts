@@ -84,7 +84,9 @@ export async function discogsConfigPut(request: Request): Promise<Response> {
     result.status === "invalid"
       ? result.reason === "acknowledgement"
         ? "Acknowledge the personal, noncommercial public display before publishing the Discogs collection."
-        : "Refresh Discogs successfully and review its current snapshot before publishing the collection."
+        : result.reason === "approval"
+          ? "Allow public use for Discogs before publishing the collection."
+          : "Refresh Discogs successfully and review its current snapshot before publishing the collection."
       : result.status === "setup_required"
         ? "The site database is not ready."
         : undefined;

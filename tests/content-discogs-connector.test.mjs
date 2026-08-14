@@ -14,6 +14,7 @@ const [
   retryState,
   refreshRepository,
   retryUi,
+  publicationApproval,
 ] = await Promise.all([
   import("../lib/server/connectors/discogs.ts"),
   import("../lib/server/connectors/public-gallery.ts"),
@@ -23,6 +24,7 @@ const [
   import("../lib/server/connectors/discogs-retry.ts"),
   import("../lib/server/connectors/repository-refresh.ts"),
   import("../app/studio/connectors/retry-deadline.ts"),
+  import("../lib/server/connectors/publication-approval.ts"),
 ]);
 
 const credential = {
@@ -684,7 +686,11 @@ class DiscogsD1 {
   constructor() {
     this.settings = new Map();
     this.snapshots = [];
-    this.credential = null;
+    this.credential = {
+      provider: "discogs",
+      generation: 1,
+      iv: "iv-discogs-presentation",
+    };
     this.maintenance = null;
     this.statements = [];
   }
@@ -716,6 +722,13 @@ class DiscogsD1 {
   }
   async all(statement) {
     this.statements.push(statement);
+    if (statement.sql.includes("FROM connector_credentials")) {
+      return {
+        results: this.credential ? [this.credential] : [],
+        success: true,
+        meta: {},
+      };
+    }
     if (statement.sql.includes("FROM connector_snapshots")) {
       return { results: this.snapshots, success: true, meta: {} };
     }
@@ -752,7 +765,10 @@ class DiscogsD1 {
 
 test("Discogs extended-display approval keeps a validated stale catalog available", async () => {
   const database = new DiscogsD1();
-  await withRuntimeBindings({ DB: database }, async () => {
+  await withRuntimeBindings({
+    DB: database,
+    CONNECTOR_ENCRYPTION_KEY: Buffer.alloc(32, 19).toString("base64"),
+  }, async () => {
     assert.deepEqual(await presentation.getDiscogsPresentationConfig(), {
       status: "ready",
       config: {
@@ -779,6 +795,27 @@ test("Discogs extended-display approval keeps a validated stale catalog availabl
       reason: "visibility_withheld",
     });
 
+    const approvalOverview =
+      await publicationApproval.getConnectorPublicationApprovalOverview(
+        database,
+      );
+    assert.equal(approvalOverview.status, "ready");
+    const configurationRevision = approvalOverview.providers.find(
+      (entry) => entry.provider === "discogs",
+    ).configurationRevision;
+    const unifiedApproval = await publicationApproval.saveConnectorPublicationApproval({
+      provider: "discogs",
+      expectedConfigurationRevision: configurationRevision,
+      reference: "owner-publication-permission-2026",
+      scopes: ["public_display", "retain_last_known_good"],
+      approvedAt: new Date(Date.now() - 60_000).toISOString(),
+      expiresAt: null,
+      enabled: true,
+      actorEmail: "owner@example.com",
+      database,
+    });
+    assert.equal(unifiedApproval.status, "saved");
+
     assert.deepEqual(
       await presentation.saveDiscogsPresentationConfig({
         publishCollection: true,
@@ -793,7 +830,11 @@ test("Discogs extended-display approval keeps a validated stale catalog availabl
       syncedAt: now.toISOString(),
       freshUntil: new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString(),
     });
-    database.credential = { provider: "discogs", generation: 1 };
+    database.credential = {
+      provider: "discogs",
+      generation: 1,
+      iv: "iv-discogs-presentation",
+    };
     database.snapshots = [{
       status: "ready",
       publicPayloadJson: JSON.stringify(currentPayload),

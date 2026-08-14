@@ -54,6 +54,7 @@ export type ConnectorPublicationApprovalOverview = {
   providers: Array<{
     provider: PublicConnectorProvider;
     configured: boolean;
+    configurationRevision: string | null;
     approval: ConnectorPublicationApprovalSummary | null;
     missingScopes: ConnectorPublicationApprovalScope[];
   }>;
@@ -68,7 +69,8 @@ const APPROVAL_PENDING_SETTING_PREFIX =
   "connector.publication_approval.pending.";
 const STRAVA_SETTING_KEY = "connector.strava.public_embed";
 const APPROVAL_VERSION = 1;
-const ENFORCEMENT_VERSION = 1;
+const ENFORCEMENT_VERSION = 2;
+const LEGACY_ENFORCEMENT_VERSION = 1;
 const MAX_REFERENCE_LENGTH = 512;
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 
@@ -83,9 +85,10 @@ type StoredApproval = {
 };
 
 type StoredEnforcement = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   mode: ConnectorPublicationEnforcementMode;
   activatedAt: string | null;
+  activationAttemptId: string;
 };
 
 type StoredPendingApproval = {
@@ -262,9 +265,23 @@ function parseStoredEnforcement(
     return null;
   }
   const record = value as Record<string, unknown>;
+  const legacyRecord =
+    record.schemaVersion === LEGACY_ENFORCEMENT_VERSION &&
+    exactKeys(record, ["schemaVersion", "mode", "activatedAt"]);
+  const currentRecord =
+    record.schemaVersion === ENFORCEMENT_VERSION &&
+    exactKeys(record, [
+      "schemaVersion",
+      "mode",
+      "activatedAt",
+      "activationAttemptId",
+    ]) &&
+    typeof record.activationAttemptId === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      record.activationAttemptId,
+    );
   if (
-    !exactKeys(record, ["schemaVersion", "mode", "activatedAt"]) ||
-    record.schemaVersion !== ENFORCEMENT_VERSION ||
+    (!legacyRecord && !currentRecord) ||
     (record.mode !== "report_only" && record.mode !== "required") ||
     !(
       record.activatedAt === null ||
@@ -485,25 +502,118 @@ export async function getConnectorPublicationApproval(
   }
 }
 
-async function configuredProviders(
+type CredentialConfigurationRow = {
+  provider: string;
+  generation: number;
+  iv: string;
+};
+
+type ConfigurationGuard = {
+  revision: string;
+  sql: string;
+  bindings: Array<string | number>;
+};
+
+async function sha256Hex(value: string): Promise<string> {
+  const hash = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return Array.from(new Uint8Array(hash), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+async function credentialRevision(
+  provider: PublicConnectorProvider,
+  generationValue: unknown,
+  ivValue: unknown,
+): Promise<string | null> {
+  const generation = Number(generationValue);
+  if (
+    !Number.isSafeInteger(generation) ||
+    generation < 1 ||
+    typeof ivValue !== "string" ||
+    ivValue.length < 1 ||
+    ivValue.length > 256 ||
+    CONTROL_CHARACTER.test(ivValue)
+  ) {
+    return null;
+  }
+  return sha256Hex(
+    JSON.stringify(["credential", provider, generation, ivValue]),
+  );
+}
+
+async function stravaRevision(row: EditorialSettingRow): Promise<string> {
+  return sha256Hex(
+    JSON.stringify(["strava", row.valueJson, row.updatedAt]),
+  );
+}
+
+async function currentConfigurationGuard(
+  provider: PublicConnectorProvider,
   database: D1Database,
-): Promise<Set<PublicConnectorProvider>> {
-  const configured = new Set<PublicConnectorProvider>();
+): Promise<ConfigurationGuard | null> {
+  if (provider === "strava") {
+    const row = await readSetting(database, STRAVA_SETTING_KEY);
+    if (!row || !canonicalIsoTimestamp(row.updatedAt)) return null;
+    return {
+      revision: await stravaRevision(row),
+      sql: `EXISTS (
+              SELECT 1 FROM editorial_settings
+              WHERE key = ? AND value_json = ? AND updated_at = ?
+            )`,
+      bindings: [STRAVA_SETTING_KEY, row.valueJson, row.updatedAt],
+    };
+  }
+  const row = await database
+    .prepare(
+      `SELECT provider, generation, iv
+       FROM connector_credentials
+       WHERE provider = ?
+       LIMIT 1`,
+    )
+    .bind(provider)
+    .first<CredentialConfigurationRow>();
+  const revision = row
+    ? await credentialRevision(provider, row.generation, row.iv)
+    : null;
+  if (!row || !revision) return null;
+  return {
+    revision,
+    sql: `EXISTS (
+            SELECT 1 FROM connector_credentials
+            WHERE provider = ? AND generation = ? AND iv = ?
+          )`,
+    bindings: [provider, Number(row.generation), row.iv],
+  };
+}
+
+async function configuredProviderRevisions(
+  database: D1Database,
+): Promise<Map<PublicConnectorProvider, string>> {
+  const configured = new Map<PublicConnectorProvider, string>();
   const credentials = await database
-    .prepare(`SELECT provider FROM connector_credentials`)
-    .all<{ provider: string }>();
+    .prepare(`SELECT provider, generation, iv FROM connector_credentials`)
+    .all<CredentialConfigurationRow>();
   for (const row of credentials.results ?? []) {
-    if (isPublicConnectorProvider(row.provider) && row.provider !== "strava") {
-      configured.add(row.provider);
+    if (
+      isPublicConnectorProvider(row.provider) &&
+      row.provider !== "strava"
+    ) {
+      const revision = await credentialRevision(
+        row.provider,
+        row.generation,
+        row.iv,
+      );
+      if (revision) configured.set(row.provider, revision);
     }
   }
-  const strava = await database
-    .prepare(
-      `SELECT key FROM editorial_settings WHERE key = ? LIMIT 1`,
-    )
-    .bind(STRAVA_SETTING_KEY)
-    .first<{ key: string }>();
-  if (strava) configured.add("strava");
+  const strava = await readSetting(database, STRAVA_SETTING_KEY);
+  if (strava && canonicalIsoTimestamp(strava.updatedAt)) {
+    configured.set("strava", await stravaRevision(strava));
+  }
   return configured;
 }
 
@@ -513,9 +623,10 @@ async function digestOverview(
 ): Promise<string> {
   const serializable = {
     enforcement,
-    providers: providers.map(({ provider, configured, approval, missingScopes }) => ({
+    providers: providers.map(({ provider, configured, configurationRevision, approval, missingScopes }) => ({
       provider,
       configured,
+      configurationRevision,
       approval: approval
         ? {
             scopes: approval.scopes,
@@ -530,13 +641,7 @@ async function digestOverview(
       missingScopes,
     })),
   };
-  const hash = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(JSON.stringify(serializable)),
-  );
-  return Array.from(new Uint8Array(hash), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("");
+  return sha256Hex(JSON.stringify(serializable));
 }
 
 export async function getConnectorPublicationApprovalOverview(
@@ -547,7 +652,7 @@ export async function getConnectorPublicationApprovalOverview(
   const enforcementResult = await getConnectorPublicationEnforcement(database);
   if (enforcementResult.status !== "ready") return enforcementResult;
   try {
-    const configured = await configuredProviders(database);
+    const configured = await configuredProviderRevisions(database);
     const providers = await Promise.all(
       PUBLIC_CONNECTOR_PROVIDERS.map(async (provider) => {
         const result = await getConnectorPublicationApproval(
@@ -559,6 +664,7 @@ export async function getConnectorPublicationApprovalOverview(
         return {
           provider,
           configured: configured.has(provider),
+          configurationRevision: configured.get(provider) ?? null,
           approval: result.approval,
           missingScopes: requiredScopesMissing(result.approval),
         };
@@ -617,14 +723,20 @@ export async function connectorPublicationGate(
         retainLastKnownGood: false,
       };
     }
+    const approval = await getConnectorPublicationApproval(
+      provider,
+      binding,
+      now,
+    );
+    if (approval.status !== "ready") {
+      return {
+        status: "setup_required",
+        mode: "report_only",
+        retainLastKnownGood: false,
+      };
+    }
     if (pending) {
-      const approval = await getConnectorPublicationApproval(
-        provider,
-        binding,
-        now,
-      );
       if (
-        approval.status !== "ready" ||
         requiredScopesMissing(approval.approval).length > 0
       ) {
         return {
@@ -637,6 +749,19 @@ export async function connectorPublicationGate(
         status: "allowed",
         mode: "report_only",
         retainLastKnownGood: true,
+      };
+    }
+    // Grandfathering applies only while no unified owner decision exists. An
+    // explicit Make private, expired record, or incomplete unified record must
+    // take effect immediately even before the one-time activation is finished.
+    if (
+      approval.approval?.source === "unified" &&
+      requiredScopesMissing(approval.approval).length > 0
+    ) {
+      return {
+        status: "withheld",
+        mode: "report_only",
+        retainLastKnownGood: false,
       };
     }
     return {
@@ -673,6 +798,7 @@ export async function connectorPublicationGate(
 
 export async function saveConnectorPublicationApproval(input: {
   provider: PublicConnectorProvider;
+  expectedConfigurationRevision: string;
   reference?: string;
   scopes: ConnectorPublicationApprovalScope[];
   approvedAt: string;
@@ -682,7 +808,10 @@ export async function saveConnectorPublicationApproval(input: {
   database?: D1Database | null;
 }): Promise<
   | { status: "saved"; approval: ConnectorPublicationApprovalSummary }
-  | { status: "invalid"; reason: "approval" | "reference" }
+  | {
+      status: "invalid";
+      reason: "approval" | "reference" | "stale_configuration";
+    }
   | { status: "setup_required" }
 > {
   const database = input.database ?? databaseOrNull();
@@ -691,6 +820,9 @@ export async function saveConnectorPublicationApproval(input: {
   const scopes = canonicalScopes(input.scopes);
   if (
     !isPublicConnectorProvider(input.provider) ||
+    input.expectedConfigurationRevision.length < 1 ||
+    input.expectedConfigurationRevision.length > 128 ||
+    CONTROL_CHARACTER.test(input.expectedConfigurationRevision) ||
     !scopes ||
     !canonicalIsoTimestamp(input.approvedAt) ||
     !(input.expiresAt === null || canonicalIsoTimestamp(input.expiresAt)) ||
@@ -699,6 +831,22 @@ export async function saveConnectorPublicationApproval(input: {
     typeof input.enabled !== "boolean"
   ) {
     return { status: "invalid", reason: "approval" };
+  }
+
+  let connectionGuard: ConfigurationGuard | null;
+  try {
+    connectionGuard = await currentConfigurationGuard(
+      input.provider,
+      database,
+    );
+  } catch {
+    return { status: "setup_required" };
+  }
+  if (
+    !connectionGuard ||
+    connectionGuard.revision !== input.expectedConfigurationRevision
+  ) {
+    return { status: "invalid", reason: "stale_configuration" };
   }
 
   let encrypted: EncryptedCredential | null = null;
@@ -748,12 +896,14 @@ export async function saveConnectorPublicationApproval(input: {
     enabled: input.enabled,
   };
   try {
-    await database.batch([
+    const results = await database.batch([
       database
         .prepare(
           `INSERT INTO editorial_settings (
              key, value_json, updated_by_email, updated_at
-           ) VALUES (?, ?, ?, ?)
+           )
+           SELECT ?, ?, ?, ?
+           WHERE ${connectionGuard.sql}
            ON CONFLICT(key) DO UPDATE SET
              value_json = excluded.value_json,
              updated_by_email = excluded.updated_by_email,
@@ -764,12 +914,25 @@ export async function saveConnectorPublicationApproval(input: {
           JSON.stringify(stored),
           input.actorEmail,
           updatedAt,
+          ...connectionGuard.bindings,
         ),
       ...(input.provider === "discogs"
         ? [
             database
-              .prepare(`DELETE FROM editorial_settings WHERE key = ?`)
-              .bind("connector.discogs.extended_display_approval"),
+              .prepare(
+                `DELETE FROM editorial_settings
+                 WHERE key = ?
+                   AND EXISTS (
+                     SELECT 1 FROM editorial_settings
+                     WHERE key = ? AND value_json = ? AND updated_at = ?
+                   )`,
+              )
+              .bind(
+                "connector.discogs.extended_display_approval",
+                connectorPublicationApprovalSettingKey(input.provider),
+                JSON.stringify(stored),
+                updatedAt,
+              ),
           ]
         : []),
       database
@@ -777,8 +940,13 @@ export async function saveConnectorPublicationApproval(input: {
           `INSERT INTO audit_log (
              id, actor_email, action, entity_type, entity_id,
              details_json, created_at
-           ) VALUES (?, ?, 'connector.publication_approval_saved',
-                     'connector', ?, ?, ?)`,
+           )
+           SELECT ?, ?, 'connector.publication_approval_saved',
+                  'connector', ?, ?, ?
+           WHERE EXISTS (
+             SELECT 1 FROM editorial_settings
+             WHERE key = ? AND value_json = ? AND updated_at = ?
+           )`,
         )
         .bind(
           crypto.randomUUID(),
@@ -790,8 +958,14 @@ export async function saveConnectorPublicationApproval(input: {
             hasExpiry: input.expiresAt !== null,
           }),
           updatedAt,
+          connectorPublicationApprovalSettingKey(input.provider),
+          JSON.stringify(stored),
+          updatedAt,
         ),
     ]);
+    if ((results[0]?.meta.changes ?? 0) !== 1) {
+      return { status: "invalid", reason: "stale_configuration" };
+    }
   } catch {
     return { status: "setup_required" };
   }
@@ -831,6 +1005,13 @@ export async function activateConnectorPublicationApprovals(input: {
     Date.parse(activatedAt),
   );
   if (overview.status !== "ready") return overview;
+  if (overview.enforcement.mode === "required") {
+    return {
+      status: "activated",
+      enforcement: overview.enforcement,
+      approvalStateDigest: overview.approvalStateDigest,
+    };
+  }
   const missingProviders = overview.providers
     .filter((entry) => entry.configured && entry.missingScopes.length > 0)
     .map((entry) => entry.provider);
@@ -860,10 +1041,30 @@ export async function activateConnectorPublicationApprovals(input: {
         .map(({ provider }) => provider),
     };
   }
+  const enforcementRow = await readSetting(
+    database,
+    CONNECTOR_PUBLICATION_ENFORCEMENT_SETTING_KEY,
+  );
+  const guardedEnforcement = parseStoredEnforcement(enforcementRow);
+  if (!guardedEnforcement || guardedEnforcement.mode !== "report_only") {
+    const current = await getConnectorPublicationApprovalOverview(
+      database,
+      Date.parse(activatedAt),
+    );
+    return current.status === "ready" &&
+      current.enforcement.mode === "required"
+      ? {
+          status: "activated",
+          enforcement: current.enforcement,
+          approvalStateDigest: current.approvalStateDigest,
+        }
+      : { status: "setup_required" };
+  }
   const enforcement: StoredEnforcement = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     mode: "required",
     activatedAt,
+    activationAttemptId: crypto.randomUUID(),
   };
   const credentialProviders = PUBLIC_CONNECTOR_PROVIDERS.filter(
     (provider) => provider !== "strava",
@@ -885,11 +1086,26 @@ export async function activateConnectorPublicationApprovals(input: {
        )`,
   );
   const activationGuardSql = [
+    enforcementRow
+      ? `EXISTS (
+           SELECT 1 FROM editorial_settings
+           WHERE key = ? AND value_json = ? AND updated_at = ?
+         )`
+      : `NOT EXISTS (
+           SELECT 1 FROM editorial_settings WHERE key = ?
+         )`,
     ...credentialPresenceGuards,
     `(SELECT COUNT(*) FROM editorial_settings WHERE key = ?) = ?`,
     ...approvalGuards,
   ].join(" AND ");
   const activationGuardBindings = [
+    ...(enforcementRow
+      ? [
+          CONNECTOR_PUBLICATION_ENFORCEMENT_SETTING_KEY,
+          enforcementRow.valueJson,
+          enforcementRow.updatedAt,
+        ]
+      : [CONNECTOR_PUBLICATION_ENFORCEMENT_SETTING_KEY]),
     ...credentialProviders,
     STRAVA_SETTING_KEY,
     configuredProviders.includes("strava") ? 1 : 0,
@@ -954,6 +1170,13 @@ export async function activateConnectorPublicationApprovals(input: {
       const currentMissing = current.providers
         .filter((entry) => entry.configured && entry.missingScopes.length > 0)
         .map((entry) => entry.provider);
+      if (current.enforcement.mode === "required") {
+        return {
+          status: "activated",
+          enforcement: current.enforcement,
+          approvalStateDigest: current.approvalStateDigest,
+        };
+      }
       return currentMissing.length > 0
         ? { status: "incomplete", missingProviders: currentMissing }
         : { status: "setup_required" };

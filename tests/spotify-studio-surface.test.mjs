@@ -29,12 +29,20 @@ test("Studio exposes a provider-specific Spotify OAuth and publication flow", as
     /safeAuthorizationUrl\([\s\S]*?accounts\.spotify\.com[\s\S]*?\/authorize/,
   );
   assert.match(controls, /\/api\/studio\/connectors\/spotify\/config/);
-  assert.match(controls, /Publish Top Tracks publicly/);
-  assert.match(controls, /acknowledgePublicDisplay:\s*publishTopTracks/);
+  assert.match(
+    controls,
+    /Publish up to twelve Spotify-calculated affinity ranks per time/,
+  );
+  assert.match(
+    controls,
+    /acknowledgePublicDisplay:\s*mode === "publish" && nextPublishTopTracks[\s\S]*?\? acknowledged/,
+  );
   assert.match(controls, /Spotify-calculated affinity/);
   assert.match(controls, /Manual refresh available/);
   assert.doesNotMatch(controls, /Public cutoff/);
-  assert.match(page, /ConnectorPublicationApprovals/);
+  assert.match(page, /StudioCollections/);
+  assert.match(controls, /ConnectorPermissionControl/);
+  assert.match(controls, /Advanced \/ recovery/);
   assert.match(controls, /Reauthorize by/);
   assert.match(controls, /Access token refresh/);
   assert.match(controls, /local authorization[\s\S]*?stay on this machine/i);

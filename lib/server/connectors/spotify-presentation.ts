@@ -1,6 +1,10 @@
 import { runtimeDatabase } from "../runtime-env";
 import { parseStoredConnectorPublicPayload } from "./public-payload-policy";
-import { connectorPublicationGate } from "./publication-approval";
+import {
+  CONNECTOR_PUBLICATION_APPROVAL_SCOPES,
+  connectorPublicationGate,
+  getConnectorPublicationApproval,
+} from "./publication-approval";
 
 export const SPOTIFY_PRESENTATION_SETTING_KEY =
   "connector.spotify.presentation";
@@ -196,14 +200,21 @@ export async function saveSpotifyPresentationConfig(input: {
   actorEmail: string;
 }): Promise<
   | { status: "saved"; config: SpotifyPresentationConfig }
-  | { status: "invalid"; reason: "acknowledgement" | "fallback_embed" }
+  | {
+      status: "invalid";
+      reason: "acknowledgement" | "approval" | "fallback_embed" | "snapshot";
+    }
   | { status: "setup_required" }
 > {
-  if (input.publishTopTracks && input.acknowledgePublicDisplay !== true) {
-    return { status: "invalid", reason: "acknowledgement" };
-  }
   const current = await getSpotifyPresentationConfig();
   if (current.status !== "ready") return current;
+  if (
+    input.publishTopTracks &&
+    !current.config.publishTopTracks &&
+    input.acknowledgePublicDisplay !== true
+  ) {
+    return { status: "invalid", reason: "acknowledgement" };
+  }
   const fallbackEmbed =
     input.fallbackEmbed === undefined
       ? current.config.fallbackEmbed
@@ -222,6 +233,54 @@ export async function saveSpotifyPresentationConfig(input: {
   const database = runtimeDatabase();
   if (!database) return { status: "setup_required" };
   const now = new Date().toISOString();
+  if (input.publishTopTracks) {
+    try {
+      const approval = await getConnectorPublicationApproval(
+        "spotify",
+        database,
+        Date.parse(now),
+      );
+      const activeApproval =
+        approval.status === "ready" ? approval.approval : null;
+      if (
+        !activeApproval?.active ||
+        activeApproval.source !== "unified" ||
+        !CONNECTOR_PUBLICATION_APPROVAL_SCOPES.every((scope) =>
+          activeApproval.scopes.includes(scope),
+        )
+      ) {
+        return { status: "invalid", reason: "approval" };
+      }
+      const snapshot = await database
+        .prepare(
+          `SELECT status, public_payload_json AS publicPayloadJson,
+                  fetched_at AS fetchedAt, fresh_until AS freshUntil
+           FROM connector_snapshots
+           WHERE provider = 'spotify' AND status = 'ready'
+           ORDER BY fetched_at DESC, id DESC
+           LIMIT 1`,
+        )
+        .first<{
+          status: string;
+          publicPayloadJson: string;
+          fetchedAt: string;
+          freshUntil: string;
+        }>();
+      const payload = snapshot
+        ? parseStoredConnectorPublicPayload("spotify", snapshot.publicPayloadJson)
+        : null;
+      if (
+        !snapshot ||
+        !payload ||
+        payload.syncedAt !== snapshot.fetchedAt ||
+        payload.freshUntil !== snapshot.freshUntil
+      ) {
+        return { status: "invalid", reason: "snapshot" };
+      }
+    } catch {
+      return { status: "setup_required" };
+    }
+  }
   const stored = {
     schemaVersion: CONFIG_VERSION,
     publishTopTracks: input.publishTopTracks,

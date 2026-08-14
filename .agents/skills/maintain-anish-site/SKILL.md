@@ -49,6 +49,15 @@ Make the smallest coherent change while preserving the site's content, copy, pri
   OAuth callbacks, credential saves, and scheduled maintenance must not fetch or
   mutate provider collection data; Studio's explicit Refresh action owns that
   boundary.
+- Studio composes connection, authorization, provider permission, saved
+  snapshot, and publication choice into one provider-local lifecycle:
+  **Connect → Allow public use → Sync → Show**. Preserve exactly one primary
+  next action per row; keep callback setup, diagnostics, credential replacement,
+  unpublish, and disconnect under Advanced / recovery.
+- `public_display` and `retain_last_known_good` are fixed server policy, not
+  owner-selectable UI scopes. The initial rollout remains an atomic one-time
+  **Finish permission setup** action; after activation, permission renewal,
+  making private, and restoration stay inside the affected provider row.
 - Failed connector synchronization preserves the active last-known-good
   snapshot. Accepted snapshots do not age out; the owner-only approval gate
   governs public display without deleting private state. Discogs uses OAuth

@@ -114,10 +114,20 @@ export async function getStudioOverview(
               .bind(provider, normalizedOwnerEmail(actorEmail), now)
               .first<{ stateHash: string }>()
           : null;
-      const retryNotBefore =
+      const providerRetryNotBefore =
         provider === "discogs"
           ? await discogsRetryNotBefore(database, Date.parse(now))
           : null;
+      const retryCandidates =
+        provider === "discogs"
+          ? [providerRetryNotBefore, snapshot?.freshUntil ?? null]
+              .filter(
+                (value): value is string =>
+                  Boolean(value) && Date.parse(value as string) > Date.parse(now),
+              )
+              .sort((left, right) => Date.parse(right) - Date.parse(left))
+          : [];
+      const retryNotBefore = retryCandidates[0] ?? null;
 
       const configured = Boolean(credential);
       const stale = snapshot

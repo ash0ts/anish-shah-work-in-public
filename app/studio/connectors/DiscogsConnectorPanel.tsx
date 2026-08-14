@@ -29,6 +29,12 @@ const meta: ProviderMeta = {
 type Props = ProviderPanelProps & { callbackUrl: string | null };
 
 export function DiscogsConnectorPanel({ callbackUrl, ...props }: Props) {
+  const presentationMode =
+    props.view.primaryAction === "publish"
+      ? "publish"
+      : props.view.presentation.status === "published"
+        ? "advanced"
+        : null;
   return (
     <ApiConnectorPanel
       {...props}
@@ -45,13 +51,29 @@ export function DiscogsConnectorPanel({ callbackUrl, ...props }: Props) {
           showsAccessTokenExpiry: false,
         },
       }}
+      advancedChildren={
+        presentationMode === "advanced" ? (
+          <DiscogsPresentationControls
+            key={`advanced:${props.connector.lastSyncedAt ?? "never"}`}
+            configured={props.connector.configured}
+            environment={props.environment}
+            mode="advanced"
+            lastSyncedAt={props.connector.lastSyncedAt}
+            onUpdated={props.onPermissionUpdated}
+          />
+        ) : null
+      }
     >
-      <DiscogsPresentationControls
-        key={`${props.connector.configured}:${props.connector.status}:${props.connector.lastSyncedAt ?? "never"}`}
-        configured={props.connector.configured}
-        environment={props.environment}
-        lastSyncedAt={props.connector.lastSyncedAt}
-      />
+      {presentationMode === "publish" ? (
+        <DiscogsPresentationControls
+          key={`publish:${props.connector.lastSyncedAt ?? "never"}`}
+          configured={props.connector.configured}
+          environment={props.environment}
+          mode="publish"
+          lastSyncedAt={props.connector.lastSyncedAt}
+          onUpdated={props.onPermissionUpdated}
+        />
+      ) : null}
     </ApiConnectorPanel>
   );
 }
@@ -64,11 +86,15 @@ type ConfigState =
 function DiscogsPresentationControls({
   configured,
   environment,
+  mode,
   lastSyncedAt,
+  onUpdated,
 }: {
   configured: boolean;
   environment: Environment;
+  mode: "publish" | "advanced";
   lastSyncedAt: string | null;
+  onUpdated: (message?: string) => Promise<void>;
 }) {
   const [state, setState] = useState<ConfigState>({ phase: "loading" });
   const [publishCollection, setPublishCollection] = useState(false);
@@ -96,12 +122,12 @@ function DiscogsPresentationControls({
     return () => { active = false; };
   }, []);
 
-  async function save() {
-    if (publishCollection && !configured) {
+  async function save(nextPublishCollection = publishCollection) {
+    if (nextPublishCollection && !configured) {
       setMessage("Authorize and refresh Discogs before publishing the catalog.");
       return;
     }
-    if (publishCollection && !acknowledged) {
+    if (mode === "publish" && nextPublishCollection && !acknowledged) {
       setMessage("Acknowledge the personal, noncommercial public display before publishing.");
       return;
     }
@@ -111,8 +137,11 @@ function DiscogsPresentationControls({
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          publishCollection,
-          acknowledgeNoncommercial: publishCollection ? acknowledged : false,
+          publishCollection: nextPublishCollection,
+          acknowledgeNoncommercial:
+            mode === "publish" && nextPublishCollection
+              ? acknowledged
+              : false,
         }),
       });
       const result = await responseJson(response);
@@ -124,11 +153,13 @@ function DiscogsPresentationControls({
       setState({ phase: "ready", config });
       setPublishCollection(config.publishCollection);
       setAcknowledged(false);
-      setMessage(config.publishCollection
+      const success = config.publishCollection
         ? environment === "local"
           ? "Visible in the local sandbox only."
           : "The physical collection is published."
-        : "The Discogs collection is private.");
+        : "The Discogs collection is private.";
+      setMessage(success);
+      await onUpdated(success);
     } catch {
       setMessage("Discogs display settings could not be saved.");
     } finally {
@@ -136,8 +167,20 @@ function DiscogsPresentationControls({
     }
   }
 
-  if (state.phase === "loading") return <p className={styles.configStatus}>Checking display settings…</p>;
-  if (state.phase === "error") return <p className={styles.formMessage}>{state.message}</p>;
+  if (state.phase === "loading") {
+    return (
+      <p className={styles.configStatus} role="status">
+        Checking display settings…
+      </p>
+    );
+  }
+  if (state.phase === "error") {
+    return (
+      <p className={styles.formMessage} role="alert">
+        {state.message}
+      </p>
+    );
+  }
 
   return (
     <section className={styles.spotifyPublication} aria-labelledby="discogs-display-title">
@@ -152,19 +195,31 @@ function DiscogsPresentationControls({
           <div><dt>Updated</dt><dd>{formatTimestamp(lastSyncedAt)}</dd></div>
         </dl>
       </div>
-      <form className={styles.spotifyPublicationForm} onSubmit={(event) => { event.preventDefault(); void save(); }}>
-        <label className={styles.publicationSwitch}>
-          <input type="checkbox" checked={publishCollection} onChange={(event) => setPublishCollection(event.target.checked)} />
-          Publish the sanitized collection
-        </label>
-        {publishCollection ? (
+      <form className={styles.spotifyPublicationForm} onSubmit={(event) => { event.preventDefault(); void save(mode === "publish" ? true : publishCollection); }}>
+        {mode === "publish" ? (
           <label className={styles.publicationAcknowledgement}>
             <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />
-            This is a personal, noncommercial display.
+            Publish this sanitized collection as a personal, noncommercial display.
           </label>
         ) : null}
-        <p className={styles.spotifyIsolationNote}>Record retention permission once in the unified Publication approvals panel above.</p>
-        <button type="submit" disabled={pending}>{pending ? "Saving…" : "Save display choice"}</button>
+        {mode === "publish" ? (
+          <button
+            type="submit"
+            data-studio-primary-action
+            disabled={pending}
+          >
+            {pending ? "Saving…" : "Publish"}
+          </button>
+        ) : state.config.publishCollection ? (
+          <button
+            type="button"
+            className={styles.quietButton}
+            disabled={pending}
+            onClick={() => void save(false)}
+          >
+            {pending ? "Saving…" : "Make collection private"}
+          </button>
+        ) : null}
         {message ? <p role="status" className={styles.formMessage}>{message}</p> : null}
       </form>
     </section>

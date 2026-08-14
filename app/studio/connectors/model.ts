@@ -1,10 +1,19 @@
 import type { ReactNode } from "react";
+import type {
+  ConnectorPublicationApprovalOverview,
+  StudioConnectorView,
+} from "@/lib/server/connectors";
 import type { ConnectorHealth } from "@/lib/server/connectors/repository";
 
 export type Environment = "local" | "hosted";
 
 export type ConnectorControlsProps = {
   connector: ConnectorHealth;
+  view: StudioConnectorView;
+  approvalOverview: ConnectorPublicationApprovalOverview;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
+  onPermissionUpdated: (message?: string) => Promise<void>;
   environment: Environment;
   encryptionConfigured: boolean;
   myAnimeListCallbackUrl: string | null;
@@ -101,14 +110,18 @@ export type OAuthPanelConfig = {
   credentialShape?: OAuthCredentialShape;
 };
 
-export type ApiConnectorPanelProps = {
-  connector: ConnectorHealth;
-  environment: Environment;
-  encryptionConfigured: boolean;
+export type ApiConnectorPanelProps = Omit<
+  ConnectorControlsProps,
+  | "myAnimeListCallbackUrl"
+  | "spotifyCallbackUrl"
+  | "discogsCallbackUrl"
+  | "steamStorageCountries"
+> & {
   meta: ProviderMeta;
   oauth?: OAuthPanelConfig;
   steamStorageCountries?: string | null;
   children?: ReactNode;
+  advancedChildren?: ReactNode;
 };
 
 export type ProviderPanelProps = Omit<

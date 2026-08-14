@@ -9,6 +9,11 @@ import type { ConnectorControlsProps } from "./connectors/model";
 
 export function ConnectorControls({
   connector,
+  view,
+  approvalOverview,
+  expanded,
+  onExpandedChange,
+  onPermissionUpdated,
   environment,
   encryptionConfigured,
   discogsCallbackUrl,
@@ -16,7 +21,16 @@ export function ConnectorControls({
   spotifyCallbackUrl,
   steamStorageCountries,
 }: ConnectorControlsProps) {
-  const shared = { connector, environment, encryptionConfigured };
+  const shared = {
+    connector,
+    view,
+    approvalOverview,
+    expanded,
+    onExpandedChange,
+    onPermissionUpdated,
+    environment,
+    encryptionConfigured,
+  };
 
   switch (connector.provider) {
     case "myanimelist":

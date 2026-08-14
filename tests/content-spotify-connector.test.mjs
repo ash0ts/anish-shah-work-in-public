@@ -18,6 +18,12 @@ const {
   getSpotifyPresentationConfig,
   saveSpotifyPresentationConfig,
 } = await import("../lib/server/connectors/spotify-presentation.ts");
+const {
+  getConnectorPublicationApprovalOverview,
+  saveConnectorPublicationApproval,
+} = await import(
+  "../lib/server/connectors/publication-approval.ts"
+);
 const { getPublicConnectorSnapshot } = await import(
   "../lib/server/connectors/repository.ts"
 );
@@ -78,29 +84,37 @@ class Statement {
 
 class PresentationD1 {
   constructor() {
-    this.setting = null;
+    this.settings = new Map();
     this.snapshots = [];
     this.audits = [];
+    this.credential = {
+      provider: "spotify",
+      generation: 1,
+      iv: "iv-spotify-presentation",
+    };
+  }
+  get setting() {
+    return this.settings.get("connector.spotify.presentation") ?? null;
   }
   prepare(sql) {
     return new Statement(this, sql);
   }
   async first(statement) {
     if (statement.sql.includes("FROM editorial_settings")) {
-      if (
-        statement.values[0] === "connector.publication_approval.enforcement" ||
-        statement.values[0] ===
-          "connector.publication_approval.pending.spotify" ||
-        statement.values[0] ===
-          "connector.publication_approval.provider.spotify"
-      ) {
-        return null;
-      }
-      return this.setting;
+      return this.settings.get(statement.values[0]) ?? null;
+    }
+    if (statement.sql.includes("FROM connector_snapshots")) {
+      return this.snapshots[0] ?? null;
+    }
+    if (statement.sql.includes("FROM connector_credentials")) {
+      return this.credential;
     }
     return null;
   }
   async all(statement) {
+    if (statement.sql.includes("FROM connector_credentials")) {
+      return { results: [this.credential], success: true, meta: {} };
+    }
     if (statement.sql.includes("FROM connector_snapshots")) {
       return { results: this.snapshots, success: true, meta: {} };
     }
@@ -108,8 +122,11 @@ class PresentationD1 {
   }
   async run(statement) {
     if (statement.sql.startsWith("INSERT INTO editorial_settings")) {
-      const [, valueJson, updatedByEmail, updatedAt] = statement.values;
-      this.setting = { valueJson, updatedByEmail, updatedAt };
+      const [key, valueJson, updatedByEmail, updatedAt] = statement.values;
+      this.settings.set(key, { valueJson, updatedByEmail, updatedAt });
+    }
+    if (statement.sql.startsWith("DELETE FROM editorial_settings")) {
+      this.settings.delete(statement.values[0]);
     }
     if (statement.sql.startsWith("INSERT INTO audit_log")) {
       this.audits.push(structuredClone(statement.values));
@@ -576,7 +593,10 @@ test("Spotify snapshots use an exact public schema and the projector never sprea
 
 test("Spotify Top Tracks remain withheld until the owner explicitly acknowledges publication", async () => {
   const database = new PresentationD1();
-  await withRuntimeBindings({ DB: database }, async () => {
+  await withRuntimeBindings({
+    DB: database,
+    CONNECTOR_ENCRYPTION_KEY: Buffer.alloc(32, 17).toString("base64"),
+  }, async () => {
     assert.deepEqual(await getSpotifyPresentationConfig(), {
       status: "ready",
       config: {
@@ -602,19 +622,33 @@ test("Spotify Top Tracks remain withheld until the owner explicitly acknowledges
       reason: "visibility_withheld",
     });
 
-    const saved = await saveSpotifyPresentationConfig({
-      publishTopTracks: true,
-      acknowledgePublicDisplay: true,
-      fallbackEmbed: `https://open.spotify.com/track/${trackId}`,
+    const approvedAt = new Date(Date.now() - 60_000).toISOString();
+    const approvalOverview =
+      await getConnectorPublicationApprovalOverview(database);
+    assert.equal(approvalOverview.status, "ready");
+    const configurationRevision = approvalOverview.providers.find(
+      (entry) => entry.provider === "spotify",
+    ).configurationRevision;
+    const approval = await saveConnectorPublicationApproval({
+      provider: "spotify",
+      expectedConfigurationRevision: configurationRevision,
+      reference: "owner-publication-permission-2026",
+      scopes: ["public_display", "retain_last_known_good"],
+      approvedAt,
+      expiresAt: null,
+      enabled: true,
       actorEmail: "owner@example.com",
+      database,
     });
-    assert.equal(saved.status, "saved");
-    assert.equal(saved.config.publishTopTracks, true);
-    assert.deepEqual(saved.config.fallbackEmbed, {
-      kind: "track",
-      spotifyId: trackId,
-    });
-    assert.equal(database.audits.length, 1);
+    assert.equal(approval.status, "saved");
+    assert.deepEqual(
+      await saveSpotifyPresentationConfig({
+        publishTopTracks: true,
+        acknowledgePublicDisplay: true,
+        actorEmail: "owner@example.com",
+      }),
+      { status: "invalid", reason: "snapshot" },
+    );
 
     const fetchedAt = new Date(
       Date.now() - 31 * 24 * 60 * 60 * 1000,
@@ -642,6 +676,19 @@ test("Spotify Top Tracks remain withheld until the owner explicitly acknowledges
         freshUntil,
       },
     ];
+    const saved = await saveSpotifyPresentationConfig({
+      publishTopTracks: true,
+      acknowledgePublicDisplay: true,
+      fallbackEmbed: `https://open.spotify.com/track/${trackId}`,
+      actorEmail: "owner@example.com",
+    });
+    assert.equal(saved.status, "saved");
+    assert.equal(saved.config.publishTopTracks, true);
+    assert.deepEqual(saved.config.fallbackEmbed, {
+      kind: "track",
+      spotifyId: trackId,
+    });
+    assert.equal(database.audits.length, 2);
     const published = await getPublicConnectorSnapshot("spotify");
     assert.equal(published.status, "ready");
     assert.equal(published.provider, "spotify");
