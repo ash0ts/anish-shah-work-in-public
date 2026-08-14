@@ -15,6 +15,7 @@ import styles from "../studio.module.css";
 type Props = {
   provider: PublicConnectorProvider;
   providerLabel: string;
+  configurationRevision: string | null;
   approval: ConnectorPublicationApprovalSummary | null;
   missingScopes: string[];
   onUpdated: (message?: string) => Promise<void>;
@@ -55,6 +56,7 @@ function approvalCanBeRestored(
 export function ConnectorPermissionControl({
   provider,
   providerLabel,
+  configurationRevision,
   approval,
   missingScopes,
   onUpdated,
@@ -82,6 +84,12 @@ export function ConnectorPermissionControl({
     expiresAt: string | null;
     enabled: boolean;
   }): Promise<boolean> {
+    if (!configurationRevision) {
+      setMessage(
+        `${providerLabel} connection state changed. Review this provider before recording permission.`,
+      );
+      return false;
+    }
     const response = await fetch(
       `/api/studio/connectors/${provider}/publication-approval`,
       {
@@ -90,17 +98,23 @@ export function ConnectorPermissionControl({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           ...input,
+          expectedConfigurationRevision: configurationRevision,
           scopes: ["public_display", "retain_last_known_good"],
         }),
       },
     );
     const result = (await response.json()) as { reason?: string };
     if (!response.ok) {
-      setMessage(
+      const failure =
         result.reason === "reference"
           ? `${providerLabel} needs a private permission reference.`
-          : `${providerLabel} permission was not saved.`,
-      );
+          : result.reason === "stale_configuration"
+            ? `${providerLabel} connection changed. Review it and record permission again.`
+            : `${providerLabel} permission was not saved.`;
+      setMessage(failure);
+      if (result.reason === "stale_configuration") {
+        await onUpdated(failure);
+      }
       return false;
     }
     return true;

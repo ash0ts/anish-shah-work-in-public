@@ -409,6 +409,7 @@ export function StravaConnectorControls({
                 <ConnectorPermissionControl
                   provider="strava"
                   providerLabel="Strava"
+                  configurationRevision={view.configurationRevision}
                   approval={currentApproval}
                   missingScopes={currentMissingScopes}
                   onUpdated={refreshComposedView}
@@ -463,6 +464,7 @@ export function StravaConnectorControls({
                   <ConnectorPermissionControl
                     provider="strava"
                     providerLabel="Strava"
+                    configurationRevision={view.configurationRevision}
                     approval={currentApproval}
                     missingScopes={currentMissingScopes}
                     onUpdated={refreshComposedView}

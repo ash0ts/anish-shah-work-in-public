@@ -77,6 +77,10 @@ test("Studio presents provider-local permission and one-time setup instead of a 
   assert.match(permission, /Make private/);
   assert.match(permission, /Restore public access/);
   assert.match(permission, /Renew permission/);
+  assert.match(permission, /expectedConfigurationRevision/);
+  assert.match(permission, /stale_configuration/);
+  assert.match(generic, /configurationRevision=\{view\.configurationRevision\}/);
+  assert.match(strava, /configurationRevision=\{view\.configurationRevision\}/);
   assert.match(actionLabels, /view\.permission\.status === "disabled"/);
   assert.match(actionLabels, /view\.permission\.status === "expired"/);
   assert.match(banner, /await onUpdated\(uncertain\)/);
@@ -146,5 +150,8 @@ test("publication approval scopes are fixed by the server contract", async () =>
     handler,
     /scopes: \[\.\.\.CONNECTOR_PUBLICATION_APPROVAL_SCOPES\]/,
   );
+  assert.match(handler, /typeof body\.expectedConfigurationRevision !== "string"/);
+  assert.match(handler, /result\.reason === "stale_configuration"/);
+  assert.match(handler, /\? 409/);
   assert.doesNotMatch(handler, /scopes,\s*approvedAt/);
 });

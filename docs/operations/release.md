@@ -127,7 +127,7 @@ campaign that is not live. These non-secret values are embedded in the exact
 Worker configuration and cannot be changed after validation without rebuilding
 and replanning the release.
 
-The v2.2.0 release keeps Simulation fully unavailable. Use
+For a release that keeps Simulation fully unavailable, use
 `SIMULATION_EXPERIENCE_MODE=disabled` with
 `SIMULATION_AI_MODE=authored-only`; the Play ingress, route, sitemap entry,
 public APIs, and client bundle must remain absent.

@@ -17,7 +17,10 @@ const {
   verifyStravaEmbed,
   verifyStoredStravaPublicConfig,
 } = await import("../lib/server/strava-config.ts");
-const { saveConnectorPublicationApproval } = await import(
+const {
+  getConnectorPublicationApprovalOverview,
+  saveConnectorPublicationApproval,
+} = await import(
   "../lib/server/connectors/publication-approval.ts"
 );
 
@@ -40,11 +43,22 @@ class FakeStatement {
   first() {
     if (this.sql.includes("FROM editorial_settings")) {
       const valueJson = this.database.settings.get(this.values[0]);
+      const parsed = valueJson === undefined ? null : JSON.parse(valueJson);
       return valueJson === undefined
         ? null
-        : { valueJson, updatedAt: new Date().toISOString() };
+        : {
+            valueJson,
+            updatedAt:
+              typeof parsed?.updatedAt === "string"
+                ? parsed.updatedAt
+                : new Date().toISOString(),
+          };
     }
     return null;
+  }
+
+  all() {
+    return this.database.all(this);
   }
 
   run() {
@@ -65,6 +79,10 @@ class FakeD1 {
     return new FakeStatement(this, sql);
   }
 
+  async all() {
+    return { results: [], success: true, meta: {} };
+  }
+
   async run(statement) {
     if (statement.sql.startsWith("UPDATE editorial_settings")) {
       const [nextValue, , key, previousValue] = statement.values;
@@ -74,7 +92,13 @@ class FakeD1 {
       }
     }
     if (statement.sql.startsWith("INSERT INTO audit_log")) {
-      const detailIndex = statement.values.length === 5 ? 3 : 2;
+      const detailIndex = statement.sql.includes(
+        "connector.publication_approval_saved",
+      )
+        ? 3
+        : statement.values.length === 5
+          ? 3
+          : 2;
       this.audits.push(JSON.parse(statement.values[detailIndex]));
       return { success: true, results: [], meta: { changes: 1 } };
     }
@@ -96,7 +120,13 @@ class FakeD1 {
       } else if (statement.sql.startsWith("DELETE FROM audit_log")) {
         this.audits = [];
       } else if (statement.sql.startsWith("INSERT INTO audit_log")) {
-        const detailIndex = statement.values.length === 5 ? 3 : 2;
+        const detailIndex = statement.sql.includes(
+          "connector.publication_approval_saved",
+        )
+          ? 3
+          : statement.values.length === 5
+            ? 3
+            : 2;
         this.audits.push(JSON.parse(statement.values[detailIndex]));
       }
       return { success: true, results: [], meta: { changes: 1 } };
@@ -132,9 +162,15 @@ async function withApprovalEnvironment(database, callback) {
 }
 
 function approveStrava(database) {
-  return withApprovalEnvironment(database, () =>
-    saveConnectorPublicationApproval({
+  return withApprovalEnvironment(database, async () => {
+    const overview = await getConnectorPublicationApprovalOverview(database);
+    assert.equal(overview.status, "ready");
+    const configurationRevision = overview.providers.find(
+      (entry) => entry.provider === "strava",
+    ).configurationRevision;
+    return saveConnectorPublicationApproval({
       provider: "strava",
+      expectedConfigurationRevision: configurationRevision,
       reference: "private-strava-publication-permission",
       scopes: ["public_display", "retain_last_known_good"],
       approvedAt: "2026-08-01T00:00:00.000Z",
@@ -142,8 +178,8 @@ function approveStrava(database) {
       enabled: true,
       actorEmail: "owner@example.com",
       database,
-    }),
-  );
+    });
+  });
 }
 
 function getApprovedStravaPublicConfig(database) {

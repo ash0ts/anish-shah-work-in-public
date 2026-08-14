@@ -66,8 +66,16 @@ export async function connectorPublicationApprovalPut(
   }
   const body = parsed.value as Record<string, unknown>;
   if (
-    !exactKeys(body, ["reference", "scopes", "approvedAt", "expiresAt", "enabled"]) ||
+    !exactKeys(body, [
+      "reference",
+      "scopes",
+      "approvedAt",
+      "expiresAt",
+      "enabled",
+      "expectedConfigurationRevision",
+    ]) ||
     (body.reference !== undefined && typeof body.reference !== "string") ||
+    typeof body.expectedConfigurationRevision !== "string" ||
     !hasFixedApprovalScopes(body.scopes) ||
     typeof body.approvedAt !== "string" ||
     !(body.expiresAt === null || typeof body.expiresAt === "string") ||
@@ -77,6 +85,7 @@ export async function connectorPublicationApprovalPut(
   }
   const result = await saveConnectorPublicationApproval({
     provider: providerValue,
+    expectedConfigurationRevision: body.expectedConfigurationRevision,
     ...(body.reference === undefined ? {} : { reference: body.reference }),
     scopes: [...CONNECTOR_PUBLICATION_APPROVAL_SCOPES],
     approvedAt: body.approvedAt,
@@ -85,7 +94,14 @@ export async function connectorPublicationApprovalPut(
     actorEmail: authorization.user.email,
   });
   return Response.json(result, {
-    status: result.status === "saved" ? 200 : result.status === "invalid" ? 400 : 503,
+    status:
+      result.status === "saved"
+        ? 200
+        : result.status === "invalid" && result.reason === "stale_configuration"
+          ? 409
+          : result.status === "invalid"
+            ? 400
+            : 503,
     headers: NO_STORE,
   });
 }

@@ -34,6 +34,7 @@ export type StudioConnectorView = {
   stream: "Watch" | "Read" | "Listen" | "Collect" | "Play" | "Move";
   label: string;
   configured: boolean;
+  configurationRevision: string | null;
   publicState: "live" | "private" | "needs_action" | "not_connected";
   primaryAction: StudioConnectorPrimaryAction;
   connection: {
@@ -333,6 +334,7 @@ export function composeStudioConnectorViews(input: {
       provider,
       ...providerMeta[provider],
       configured,
+      configurationRevision: approvalEntry?.configurationRevision ?? null,
       publicState,
       primaryAction: action,
       connection: {

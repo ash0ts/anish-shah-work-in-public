@@ -18,7 +18,10 @@ const {
   getSpotifyPresentationConfig,
   saveSpotifyPresentationConfig,
 } = await import("../lib/server/connectors/spotify-presentation.ts");
-const { saveConnectorPublicationApproval } = await import(
+const {
+  getConnectorPublicationApprovalOverview,
+  saveConnectorPublicationApproval,
+} = await import(
   "../lib/server/connectors/publication-approval.ts"
 );
 const { getPublicConnectorSnapshot } = await import(
@@ -84,6 +87,11 @@ class PresentationD1 {
     this.settings = new Map();
     this.snapshots = [];
     this.audits = [];
+    this.credential = {
+      provider: "spotify",
+      generation: 1,
+      iv: "iv-spotify-presentation",
+    };
   }
   get setting() {
     return this.settings.get("connector.spotify.presentation") ?? null;
@@ -98,9 +106,15 @@ class PresentationD1 {
     if (statement.sql.includes("FROM connector_snapshots")) {
       return this.snapshots[0] ?? null;
     }
+    if (statement.sql.includes("FROM connector_credentials")) {
+      return this.credential;
+    }
     return null;
   }
   async all(statement) {
+    if (statement.sql.includes("FROM connector_credentials")) {
+      return { results: [this.credential], success: true, meta: {} };
+    }
     if (statement.sql.includes("FROM connector_snapshots")) {
       return { results: this.snapshots, success: true, meta: {} };
     }
@@ -609,8 +623,15 @@ test("Spotify Top Tracks remain withheld until the owner explicitly acknowledges
     });
 
     const approvedAt = new Date(Date.now() - 60_000).toISOString();
+    const approvalOverview =
+      await getConnectorPublicationApprovalOverview(database);
+    assert.equal(approvalOverview.status, "ready");
+    const configurationRevision = approvalOverview.providers.find(
+      (entry) => entry.provider === "spotify",
+    ).configurationRevision;
     const approval = await saveConnectorPublicationApproval({
       provider: "spotify",
+      expectedConfigurationRevision: configurationRevision,
       reference: "owner-publication-permission-2026",
       scopes: ["public_display", "retain_last_known_good"],
       approvedAt,

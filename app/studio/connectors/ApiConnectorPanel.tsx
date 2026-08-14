@@ -505,6 +505,7 @@ export function ApiConnectorPanel({
           <ConnectorPermissionControl
             provider={connector.provider}
             providerLabel={meta.title}
+            configurationRevision={view.configurationRevision}
             approval={approvalEntry?.approval ?? view.permission.approval}
             missingScopes={approvalEntry?.missingScopes ?? view.permission.missingScopes}
             onUpdated={onPermissionUpdated}
@@ -800,6 +801,7 @@ export function ApiConnectorPanel({
             <ConnectorPermissionControl
               provider={connector.provider}
               providerLabel={meta.title}
+              configurationRevision={view.configurationRevision}
               approval={approvalEntry?.approval ?? view.permission.approval}
               missingScopes={approvalEntry?.missingScopes ?? view.permission.missingScopes}
               onUpdated={onPermissionUpdated}

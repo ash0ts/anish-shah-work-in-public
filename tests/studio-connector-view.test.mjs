@@ -55,6 +55,7 @@ function input(overrides = {}) {
   const approvalProviders = providers.map((provider) => ({
     provider,
     configured: false,
+    configurationRevision: null,
     approval: null,
     missingScopes: ["public_display", "retain_last_known_good"],
   }));
@@ -109,6 +110,8 @@ function withProvider(base, provider, values) {
           ? {
               ...entry,
               configured: values.configured ?? entry.configured,
+              configurationRevision:
+                values.configurationRevision ?? entry.configurationRevision,
               approval: values.approval ?? entry.approval,
               missingScopes:
                 values.missingScopes ?? entry.missingScopes,
@@ -243,6 +246,19 @@ test("report-only distinguishes live grandfathered data from a newly withheld pr
       action: "record_public_permission",
       gate: "withheld",
     },
+  );
+});
+
+test("the composed view exposes only the current sanitized connection revision", () => {
+  const state = withProvider(input(), "spotify", {
+    configured: true,
+    configurationRevision: "7",
+    health: { configured: true, status: "healthy" },
+  });
+  assert.equal(
+    connector(composeStudioConnectorViews(state), "spotify")
+      .configurationRevision,
+    "7",
   );
 });
 

@@ -686,7 +686,11 @@ class DiscogsD1 {
   constructor() {
     this.settings = new Map();
     this.snapshots = [];
-    this.credential = null;
+    this.credential = {
+      provider: "discogs",
+      generation: 1,
+      iv: "iv-discogs-presentation",
+    };
     this.maintenance = null;
     this.statements = [];
   }
@@ -718,6 +722,13 @@ class DiscogsD1 {
   }
   async all(statement) {
     this.statements.push(statement);
+    if (statement.sql.includes("FROM connector_credentials")) {
+      return {
+        results: this.credential ? [this.credential] : [],
+        success: true,
+        meta: {},
+      };
+    }
     if (statement.sql.includes("FROM connector_snapshots")) {
       return { results: this.snapshots, success: true, meta: {} };
     }
@@ -784,8 +795,17 @@ test("Discogs extended-display approval keeps a validated stale catalog availabl
       reason: "visibility_withheld",
     });
 
+    const approvalOverview =
+      await publicationApproval.getConnectorPublicationApprovalOverview(
+        database,
+      );
+    assert.equal(approvalOverview.status, "ready");
+    const configurationRevision = approvalOverview.providers.find(
+      (entry) => entry.provider === "discogs",
+    ).configurationRevision;
     const unifiedApproval = await publicationApproval.saveConnectorPublicationApproval({
       provider: "discogs",
+      expectedConfigurationRevision: configurationRevision,
       reference: "owner-publication-permission-2026",
       scopes: ["public_display", "retain_last_known_good"],
       approvedAt: new Date(Date.now() - 60_000).toISOString(),
@@ -810,7 +830,11 @@ test("Discogs extended-display approval keeps a validated stale catalog availabl
       syncedAt: now.toISOString(),
       freshUntil: new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString(),
     });
-    database.credential = { provider: "discogs", generation: 1 };
+    database.credential = {
+      provider: "discogs",
+      generation: 1,
+      iv: "iv-discogs-presentation",
+    };
     database.snapshots = [{
       status: "ready",
       publicPayloadJson: JSON.stringify(currentPayload),

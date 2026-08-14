@@ -1,6 +1,6 @@
 {
   "name": "anish-shah-work-in-public",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "private": true,
   "packageManager": "npm@11.6.2",
   "engines": {
@@ -148,7 +148,7 @@
     "image-size": "file:vendor/image-size-safe",
     "js-yaml": "4.3.1",
     "minimatch": "10.2.5",
-    "nanoid": "3.3.17",
+    "nanoid": "3.3.18",
     "postcss": "8.5.25",
     "sharp": "0.35.3",
     "undici": "7.29.0"
