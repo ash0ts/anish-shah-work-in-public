@@ -22,7 +22,7 @@ export async function releaseSmokeTestsFromPreparedPlan(root = defaultRoot) {
   const plan = JSON.parse(planBytes.toString("utf8"));
   const config = JSON.parse(configBytes.toString("utf8"));
   if (
-    plan?.schemaVersion !== "1.3" ||
+    plan?.schemaVersion !== "1.4" ||
     !/^[a-f0-9]{40}$/u.test(plan?.commitSha ?? "") ||
     plan?.checksums?.preparedWorkerConfigSha256 !== sha256(configBytes) ||
     config?.vars?.RELEASE_SHA !== plan.commitSha ||

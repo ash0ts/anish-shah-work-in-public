@@ -1,8 +1,18 @@
-# Disposable exact-SHA release runners
+# Exact-SHA owner release evidence
 
-These containers collect the four release-evidence workflows without consuming
-GitHub-hosted minutes. They are not deployment machines and receive no
-Cloudflare, provider, staging, production, D1, KV, R2, or SSH credentials.
+Four successful GitHub workflow runs remain the default release-evidence path.
+Disposable owner runners execute those same workflows without consuming
+GitHub-hosted minutes. If GitHub artifact storage is also unavailable, the
+explicit hybrid owner-local path runs Validate, Gitleaks, and Browser Quality
+directly on the owner machine and keeps only CodeQL in its authoritative GitHub
+action on a disposable AMD64 runner.
+
+Neither path is a deployment environment. Evidence processes receive no
+Cloudflare, provider, D1, KV, R2, AI Gateway, SSH, or application secrets. The
+owner-local path uses only the non-secret production identifiers and exact
+feature-mode values needed to generate the candidate configuration. An
+executed failure is a failed candidate; never switch evidence modes to relabel
+it as success.
 
 The Ubuntu 24.04 images, Node 24.18.0 archives, npm 11.6.2, Playwright 1.62.1,
 and GitHub runner 2.336.0 are exact pins. The image build verifies the published
@@ -17,8 +27,9 @@ one narrowly scoped Spotify Ranked Groove interaction. WebKit is automated
 engine evidence; final staging acceptance still includes a manual Safari check.
 The AMD64 CodeQL image omits both browsers and their operating-system packages.
 
-Build native ARM64 for Validate, Gitleaks, Browser Quality, and soak work. Build
-AMD64 only for CodeQL:
+For the four-workflow path, build native ARM64 for Validate, Gitleaks, Browser
+Quality, and soak work. Build AMD64 only for CodeQL. The hybrid owner-local path
+needs only the AMD64 CodeQL image:
 
 ```bash
 OWNER_CA_FILE='/absolute/path/to/corporate-root.crt' \
@@ -92,7 +103,7 @@ local machine's compute and network use, so keep concurrency at one evidence
 job or two optional soak workers and destroy every container after its single
 job.
 
-## Dispatch exact-SHA evidence
+## Default: dispatch four exact-SHA workflows
 
 Dispatch the four release-evidence workflows from a trusted owner-controlled
 workflow branch, checking out one already-pushed commit. Use `main` for an
@@ -153,3 +164,104 @@ collision and prevents fan-out beyond the intended capacity.
 
 Use the resulting Actions run URLs normally. A self-hosted run does not waive
 or replace any assertion, artifact, browser, security, or release-plan check.
+
+## Capacity fallback: local gates plus owner-run CodeQL
+
+Use this path only when hosted Actions minutes or artifact storage prevent the
+normal four-workflow evidence. It still requires GitHub to schedule the pinned
+CodeQL action, but that one job runs on the disposable owner machine and uses
+`upload: never`; it consumes neither hosted minutes nor artifact storage.
+
+For a production fallback, start from a dedicated, clean worktree on the exact
+pushed head of `main`. The existing non-main emergency override remains the
+only exception; do not use it for an ordinary release candidate. Use the
+pinned Node `24.18.0`, npm `11.6.2`,
+Playwright `1.62.1`, and Gitleaks `8.30.1`. Install Gitleaks from its official
+release and verify the publisher-provided checksum; the evidence command
+rejects any other version. Do not export production, staging, Cloudflare,
+provider, AI Gateway, or local-development secrets into this shell.
+
+Dispatch only CodeQL for the exact pushed SHA before starting the local gates:
+
+```bash
+export VALIDATED_SHA='<full 40-character pushed commit SHA>'
+export WORKFLOW_REF='main'
+export CODEQL_LABEL="anish-release-$(openssl rand -hex 6)"
+
+gh workflow run codeql.yml --ref "$WORKFLOW_REF" \
+  -f commit_sha="$VALIDATED_SHA" \
+  -f runner_target=owner-amd64 \
+  -f jit_label="$CODEQL_LABEL"
+```
+
+Set `RUNNER_JIT_LABEL="$CODEQL_LABEL"`, create a fresh
+`RUNNER_INSTANCE_ID=instance-<12 lowercase hex>`, and pass one new short-lived
+registration token to `scripts/runner/run-ephemeral.sh amd64` using the hidden
+prompt or direct `gh api` pipe documented above. The CodeQL workflow verifies
+the owner, trusted ref head, exact SHA, pinned runtime, action identity, SARIF,
+and findings gate, and keeps `upload: never`. Record its successful run URL,
+then confirm that the container deregistered and was destroyed.
+
+Next, set every non-secret production configuration value listed in section 1
+of the [production release runbook](../../docs/operations/release.md). Use the
+actual target Simulation and Travel modes, not example defaults. Add the
+successful CodeQL URL and the explicit owner-local selection, then run the one
+local command:
+
+```bash
+git status --short
+git rev-parse HEAD
+git rev-parse '@{upstream}'
+export RELEASE_VALIDATED_SHA="$(git rev-parse HEAD)"
+export RELEASE_EVIDENCE_MODE='owner-local'
+export RELEASE_OWNER_LOCAL_CONFIRMATION='I_ACCEPT_OWNER_LOCAL_RELEASE_EVIDENCE'
+unset RELEASE_VALIDATION_URL RELEASE_GITLEAKS_URL RELEASE_BROWSER_URL
+export RELEASE_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+export RELEASE_CODEQL_RUNNER_LABEL="$CODEQL_LABEL"
+npm ci
+npm run release:evidence:local
+```
+
+The command first verifies that CodeQL URL, active workflow, and runner job
+through GitHub. It fails unless the worktree is clean, the branch and upstream
+are exactly `main` and `origin/main`, `HEAD` equals that pushed upstream head,
+both `origin` URLs resolve to `ash0ts/anish-shah-work-in-public`, and a live
+`git ls-remote` query confirms that the canonical remote `main` still equals
+`HEAD`. The command then:
+
+1. runs `npm run validate:release:local`, which runs full Validate/build once,
+   prepares the exact non-secret production configuration, writes the final
+   manifest and release-build checkpoint, runs candidate scans and rendered
+   tests, and verifies release preflight;
+2. runs `gitleaks git --redact --no-banner .`;
+3. runs `npm run browser:release:existing` against those exact final bytes; and
+4. rechecks source identity and artifact hashes before writing
+   `dist/local-release-evidence.json` with mode `0600`.
+
+The command mirrors workflow limits: 35 minutes for Validate, 10 for Gitleaks,
+20 for Browser Quality, and 70 minutes overall. A timeout or interrupt
+terminates the detached command group, escalates to `SIGKILL` after ten
+seconds, removes any incomplete receipt, and requires a full rerun.
+
+The schema-`1.0` receipt contains only repository/ref/SHA identity, pinned tool
+versions, canonical timestamps, pass/exit status, output digests, the three
+artifact digests, and a canonical payload self-digest. It contains no command
+output, file content, environment value, token, identity, provider data, or
+secret. This is an owner attestation whose digest detects later mutation; it is
+not an independent cryptographic proof that the local commands ran. The owner
+machine and this orchestrator are the trust root. `dist/` is ignored. Do not
+move the receipt to another worktree,
+hand-edit it, change its permission, rebuild, or rerun just one gate. A new
+commit or any failure requires the whole command again.
+
+The production runbook supplies the explicit `owner-local` mode and confirmation
+phrase to `release:plan`. Every guard through attestation re-reads the local
+receipt, hashes its exact file bytes, revalidates its self-digest, and compares
+its artifact identity with the immutable release build. It also re-verifies the
+live canonical `main` head and CodeQL workflow URL through GitHub. Keep the
+receipt and `dist` unchanged until
+the final attestation is written; remove the ignored local evidence only after
+the release is complete or abandoned. Do not run the standard
+`npm run validate:release` after this path; the local command already completed
+the final-byte release gate, and rewriting its checkpoint invalidates the
+receipt.

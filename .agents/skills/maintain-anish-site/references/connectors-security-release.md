@@ -89,7 +89,21 @@ Local promotion may transfer only reviewed, explicitly portable provider setup o
 
 ## Release Boundary
 
-Hosted mutations require explicit authorization. The guarded production contract requires exact successful URLs for Validate, Gitleaks, CodeQL, and Browser Quality at the candidate SHA. Record `RELEASE_VERSION`, `TRAVEL_ATLAS_MODE`, `SIMULATION_EXPERIENCE_MODE`, `SIMULATION_AI_MODE`, `CONTENT_VERSION`, and `COPY_VERSION` in the release plan and attestation. My Room is unconditional; no hosted Classic/Play-mode flag remains.
+Hosted mutations require explicit authorization. The normal guarded production
+contract requires exact successful URLs for Validate, Gitleaks, CodeQL, and
+Browser Quality at the candidate SHA. When GitHub-hosted minutes or artifact
+storage are unavailable, an explicitly confirmed owner-local mode may supply
+Validate, Gitleaks, and Browser Quality through a permission-restricted,
+self-digested owner attestation bound to the clean pushed `origin/main` SHA and
+one immutable build. CodeQL remains an exact successful run of the pinned
+GitHub action on the verified one-time AMD64 owner runner. A local receipt is
+not a waiver: every named
+check must pass, the release guards must re-hash the receipt and artifact, and
+the candidate must still pass the 0%-traffic browser checkpoint. Record the
+evidence mode and receipt digest alongside `RELEASE_VERSION`,
+`TRAVEL_ATLAS_MODE`, `SIMULATION_EXPERIENCE_MODE`, `SIMULATION_AI_MODE`,
+`CONTENT_VERSION`, and `COPY_VERSION` in the release plan and attestation. My
+Room is unconditional; no hosted Classic/Play-mode flag remains.
 
 `RELEASE_VERSION` is exact SemVer and must equal `package.json`. Generated
 preview/staging/production configuration, owner health, release checkpoints,

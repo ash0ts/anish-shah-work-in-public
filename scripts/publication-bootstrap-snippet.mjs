@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,7 +7,16 @@ import {
   RELEASE_BUILD_CHECKPOINT_PATH,
   verifyReleaseBuildCheckpoint,
 } from "./lib/release-build-checkpoint.mjs";
-import { releaseTravelHealthMatches } from "./lib/release-contract.mjs";
+import {
+  assertOwnerLocalTrustedSource,
+  assertReleaseValidationEvidence,
+  githubRepositoryFromRemoteUrl,
+  readOwnerLocalEvidenceReceipt,
+  RELEASE_EVIDENCE_MODES,
+  releaseTravelHealthMatches,
+} from "./lib/release-contract.mjs";
+import { reverifyPlannedOwnerLocalCodeqlEvidence } from "./lib/owner-local-codeql.mjs";
+import { verifyOwnerLocalRemoteMain } from "./lib/owner-local-source.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const [plan, releaseBuildCheckpoint, releaseBuildCheckpointBytes] =
@@ -16,8 +26,15 @@ const [plan, releaseBuildCheckpoint, releaseBuildCheckpointBytes] =
     readFile(path.join(root, RELEASE_BUILD_CHECKPOINT_PATH)),
   ]);
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+function git(...arguments_) {
+  const result = spawnSync("git", arguments_, { cwd: root, encoding: "utf8" });
+  if (result.error || result.status !== 0) {
+    throw new Error(`git ${arguments_.join(" ")} could not be verified.`);
+  }
+  return result.stdout.trim();
+}
 if (
-  plan.schemaVersion !== "1.3" ||
+  plan.schemaVersion !== "1.4" ||
   !plan.simulation ||
   !["disabled", "atlas-v1"].includes(plan.travelAtlasMode) ||
   plan.releaseBuildCheckpoint?.sha256 !==
@@ -31,6 +48,65 @@ if (
     "The release-build checkpoint is missing, stale, or does not match the planned candidate.",
   );
 }
+let localReceipt;
+let localReceiptBytes;
+if (plan.validationEvidence?.mode === RELEASE_EVIDENCE_MODES.ownerLocal) {
+  const head = git("rev-parse", "HEAD");
+  assertOwnerLocalTrustedSource({
+    head,
+    branch: git("branch", "--show-current"),
+    upstreamRef: git(
+      "rev-parse",
+      "--abbrev-ref",
+      "--symbolic-full-name",
+      "@{upstream}",
+    ),
+    upstreamSha: git("rev-parse", "@{upstream}"),
+    repository: githubRepositoryFromRemoteUrl(
+      git("remote", "get-url", "--push", "origin"),
+    ),
+    worktreeStatus: git("status", "--porcelain=v1", "--untracked-files=all"),
+  });
+  verifyOwnerLocalRemoteMain({ root, head });
+  if (head !== plan.commitSha) {
+    throw new Error("The release checkpoint no longer matches origin/main.");
+  }
+  ({ receipt: localReceipt, receiptBytes: localReceiptBytes } =
+    await readOwnerLocalEvidenceReceipt(root));
+  reverifyPlannedOwnerLocalCodeqlEvidence({
+    root,
+    head,
+    repository: plan.repository,
+    validationRuns: plan.validationRuns,
+  });
+}
+const commitTimeResult = spawnSync(
+  "git",
+  ["show", "-s", "--format=%cI", plan.commitSha],
+  { cwd: root, encoding: "utf8" },
+);
+if (commitTimeResult.error || commitTimeResult.status !== 0) {
+  throw new Error("The planned release commit timestamp could not be verified.");
+}
+assertReleaseValidationEvidence(
+  plan.validationEvidence,
+  plan.validationRuns,
+  {
+    head: plan.commitSha,
+    repository: plan.repository,
+    ref: plan.sourceRef,
+    artifact: {
+      artifactSetSha256: releaseBuildCheckpoint.artifactSetSha256,
+      deployableManifestSha256:
+        releaseBuildCheckpoint.deployableManifestSha256,
+      releaseBuildCheckpointSha256: sha256(releaseBuildCheckpointBytes),
+    },
+    notBefore: new Date(commitTimeResult.stdout.trim()).toISOString(),
+    notAfter: plan.preparedAt,
+    localReceipt,
+    localReceiptBytes,
+  },
+);
 const version = process.env.RELEASE_WORKER_VERSION?.trim();
 if (!version || !/^[0-9a-f-]{36}$/i.test(version)) {
   throw new Error("RELEASE_WORKER_VERSION must be the staged Worker version ID.");

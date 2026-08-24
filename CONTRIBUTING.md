@@ -53,8 +53,12 @@ approval, stale approvals dismissed, conversations resolved, required checks
 green, and direct/force pushes and branch deletion disabled. Do not describe
 those protections as active until they have been verified in GitHub.
 
-All release evidence must belong to the exact commit. Browser Quality may skip
-documentation-only PRs, but staging and production releases always require a
-manually dispatched exact-SHA Browser Quality run in addition to Validate,
-Gitleaks, and CodeQL. See [Testing](./docs/testing.md) and the
+All release evidence must belong to the exact pushed commit. Browser Quality
+may skip documentation-only PRs, but staging and production releases always
+require exact-SHA Validate, Gitleaks, CodeQL, and Browser Quality evidence.
+Four GitHub workflow runs are the default and remain the isolated-staging
+contract. The production release runbook documents its explicit owner-local
+capacity fallback; it retains every check and the immutable-build contract
+rather than waiving them. See
+[Testing](./docs/testing.md) and the
 [release runbook](./docs/operations/release.md).

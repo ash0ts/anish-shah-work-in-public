@@ -44,7 +44,7 @@ Every entry is classified as `Concept`, `How-to`, `Reference`, or `Runbook`.
 | Owner recovering service | Runbook | [Rollback](./operations/rollback.md) | Worker or D1 recovery mechanisms and decision boundaries change |
 | Owner containing an incident | Runbook | [Incidents](./operations/incidents.md) | Diagnosis, containment, evidence, or recovery requirements change |
 | Maintainers reading runtime signals | Reference | [Observability](./operations/observability.md) | Request tracing, health, retention, or alert signals change |
-| Owner supplying Actions capacity | Runbook | [Runner README](../.github/runner/README.md) | Image pins, registration, workflow dispatch, CA handling, or destruction changes |
+| Owner supplying release evidence capacity | Runbook | [Runner and local-evidence README](../.github/runner/README.md) | Workflow capacity, local receipt, image pins, registration, CA handling, or destruction changes |
 | Reviewers recording a deployment | Reference | [Release records](../releases/README.md) | Immutable attestation fields or required smoke-set derivation changes |
 
 ## Maintenance rule

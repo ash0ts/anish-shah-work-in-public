@@ -3,17 +3,23 @@
 Production releases use a two-phase checkpoint:
 
 1. `npm run release:plan` writes ignored `dist/release-plan.json` before any
-   production mutation. It binds the clean, CI-validated commit to the prior
-   Worker version, pre-migration D1 Time Travel bookmark, reviewed migration
-   list and checksums, four exact-commit GitHub Actions run URLs (Validate,
-   Gitleaks, CodeQL, and Browser Quality), `RELEASE_VERSION`, public content
-   version, and exact
+   production mutation. It binds the clean, exact-evidence-validated commit to
+   the prior Worker version, pre-migration D1 Time Travel bookmark, reviewed migration
+   list and checksums, the exact-commit evidence mode, `RELEASE_VERSION`, public
+   content version, and exact
    sanitized bundle hash, plus a deterministic manifest of the exact ignored
    `dist/client` and `dist/server` bytes Wrangler will upload. The plan also requires `HEAD` to match its configured
    upstream. Separately, it records the protected D1/KV publication checkpoint
    and whether the staged application projector must publish a new snapshot.
    A prior Worker version is mandatory because every candidate is staged at 0%
    while the prior version remains at 100%.
+
+   Normal evidence records four successful GitHub Actions run URLs for
+   Validate, Gitleaks, CodeQL, and Browser Quality. The explicit owner-local
+   fallback records one safe receipt digest for locally executed Validate,
+   Gitleaks, and Browser Quality plus the exact successful CodeQL run URL from
+   a disposable owner runner. It never invents URLs for local checks, and the
+   ignored receipt is re-hashed through the guarded release.
 2. `npm run release:attest` consumes that unchanged plan after deployment and
    writes one immutable JSON record in this directory. It adds the deployed
    Worker version, the final verified release-publication hash and marker time,
@@ -39,7 +45,7 @@ contains no credentials or provider payloads.
 
 `RELEASE_VERSION` is exact SemVer and is required to equal the candidate's
 `package.json` version. It is bound through Worker configuration, owner health,
-the release checkpoint, the ignored release plan, and schema `1.5` immutable
+the release checkpoint, the ignored release plan, and schema `1.6` immutable
 attestations.
 
 Release-candidate tags use SemVer prerelease names such as `v2.0.0-rc.1` and

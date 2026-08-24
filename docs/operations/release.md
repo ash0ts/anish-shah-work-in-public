@@ -55,17 +55,31 @@ and must be started again.
 
 ## 1. Validate the exact commit and bytes
 
-Merge through a reviewed PR, then manually dispatch Validate, Gitleaks, CodeQL,
-and Browser Quality with the same full commit SHA. All four workflow identities
-and successful conclusions must be valid. The
-[disposable owner-runner procedure](../../.github/runner/README.md) keeps those
-active workflow identities and gates intact when hosted Actions capacity is
-unavailable. On the release machine:
+Merge through a reviewed PR, then collect successful Validate, Gitleaks,
+CodeQL, and Browser Quality evidence for the same full commit SHA. The default
+is four manually dispatched GitHub workflow runs. When GitHub-hosted minutes or
+artifact storage are unavailable, the explicit hybrid owner-local procedure in
+the [runner and local-evidence guide](../../.github/runner/README.md) runs
+Validate, Gitleaks, and Browser Quality directly on the owner machine against
+one immutable build. CodeQL still runs the pinned GitHub action on one
+disposable AMD64 owner runner with upload disabled.
+
+The fallback does not forgive an executed failure, invent workflow URLs, or
+weaken a check. Fix a failing gate, push a new commit, and collect fresh
+evidence. The local receipt is ignored, mode `0600`, self-digested, exact-ref
+and exact-SHA bound, and safe to hash in a release record; it contains no log
+bodies, secrets, or hosted credentials. It is an explicit owner attestation,
+not an independently signed proof: the owner machine and local evidence
+process are the trust root. On the release machine:
 
 For a release candidate, validate the pushed `release/<semver>` branch and keep
 the `release/* → main` pull request draft. A production release validates the
 exact merged `main` SHA. RC tags are immutable: a fix produces the next RC
 number; never move an existing tag.
+
+The owner-local capacity fallback is limited to that exact merged `main` SHA.
+Release-branch candidates continue to use the normal self-hosted Actions path;
+the existing non-main preflight override remains emergency-only.
 
 ```bash
 export RELEASE_LINE="$(node -p "require('./package.json').version.split('-')[0]")"
@@ -79,9 +93,13 @@ npm run db:local:migrate:clean
 ```
 
 The worktree must be clean, `HEAD` must equal its upstream, and
-`RELEASE_VALIDATED_SHA` must be the exact SHA validated by CI.
+`RELEASE_VALIDATED_SHA` must be the exact SHA covered by the selected evidence
+mode.
 
-Use a shell that does not contain `LOCAL_OWNER_EMAIL`:
+Use a shell that does not contain `LOCAL_OWNER_EMAIL` or any Cloudflare,
+provider, AI Gateway, or application secret. Supply only the reviewed
+non-secret production coordinates needed to generate the exact Worker
+configuration:
 
 ```bash
 export CLOUDFLARE_D1_DATABASE_ID='<production D1 UUID>'
@@ -95,8 +113,41 @@ export CF_ACCESS_AUD='<Access application audience>'
 export SIMULATION_EXPERIENCE_MODE='disabled'
 export SIMULATION_AI_MODE='authored-only'
 export TRAVEL_ATLAS_MODE='disabled'
-npm run validate:release
 ```
+
+Choose exactly one evidence mode:
+
+- **GitHub Actions (default):** all four active workflows must succeed for the
+  exact pushed SHA. Download their `validated-dist-<SHA>` artifact as described
+  in the runner guide, then run `npm run validate:release` once. It verifies the
+  workflow artifact before adding the reviewed Worker configuration and writing
+  the final release checkpoint.
+- **Owner-local capacity fallback:** first complete the exact-SHA CodeQL action
+  on one disposable AMD64 owner runner and set its successful run URL. Then run
+  the guide's single `npm run release:evidence:local` command. Its Validate gate
+  is `npm run validate:release:local`: it builds once, prepares the exact
+  production configuration, writes and checks the final manifest/checkpoint,
+  and runs candidate scans. Gitleaks `8.30.1` and bounded Browser Quality then
+  run against those unchanged final bytes. The command verifies CodeQL and
+  writes `dist/local-release-evidence.json` only after all three local gates
+  pass.
+
+For owner-local evidence, set these values before running the command:
+
+```bash
+export RELEASE_EVIDENCE_MODE='owner-local'
+export RELEASE_OWNER_LOCAL_CONFIRMATION='I_ACCEPT_OWNER_LOCAL_RELEASE_EVIDENCE'
+unset RELEASE_VALIDATION_URL RELEASE_GITLEAKS_URL RELEASE_BROWSER_URL
+export RELEASE_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+export RELEASE_CODEQL_RUNNER_LABEL='anish-release-<12 lowercase hex from that run>'
+npm run release:evidence:local
+```
+
+Do **not** run the standard `npm run validate:release` after owner-local
+evidence; it would rewrite the checkpoint that the receipt binds. Do not copy a
+receipt or `dist` from another worktree, hand-edit the receipt, or rebuild after
+either path establishes the final artifact. Every later guard re-hashes those
+same deployable bytes and re-queries the canonical remote `main` head.
 
 `RELEASE_VERSION` must be exact SemVer and must exactly equal the checked-in
 `package.json` version. Release candidates therefore use their matching exact
@@ -106,14 +157,14 @@ release branch on its RC version. Bump both package files to the final exact
 SemVer only in the separately authorized final-production change after the
 release PR is approved.
 
-Download the exact `validated-dist-<SHA>` artifact produced by the successful
-Validate run before `validate:release`. The command verifies that attestation,
-adds only the reviewed non-secret Worker configuration, writes an immutable
-release-build checkpoint, runs candidate scans and rendered tests, and checks
-the four exact-SHA evidence URLs during release preflight. It does not rebuild
-or repeat Browser Quality and Lighthouse; their successful workflow already
-exercised the same Validate artifact. The final checkpoint fails if any
-deployable file changes.
+In the default mode, download the exact `validated-dist-<SHA>` artifact produced
+by the successful Validate run before `validate:release`. In owner-local mode,
+keep the locally validated final `dist`, release-build checkpoint, and receipt
+in place. Both paths reject any changed application-build file. The default
+path permits only its documented deterministic Worker-configuration addition
+after the downloaded Browser-tested build; owner-local Browser Quality instead
+exercises the already prepared final upload bytes. Neither path rebuilds the
+application.
 
 My Room, 2001 and its seven semantic object routes are the only Play runtime.
 There is no hosted Classic flag or fallback. The release plan records
@@ -149,8 +200,10 @@ runbook lists only migrations still pending on the target database.
 ## 2. Capture read-only production coordinates
 
 Before changing production, collect the current Worker version, a D1 Time
-Travel bookmark, the remote migration state, and the four exact-SHA successful
-GitHub Validate, Gitleaks, CodeQL, and Browser Quality run URLs:
+Travel bookmark, the remote migration state, and the selected exact-SHA
+evidence coordinates. GitHub Actions mode needs four successful run URLs.
+Owner-local mode needs the unchanged local receipt plus the successful CodeQL
+run URL:
 
 ```bash
 npx --no-install wrangler versions list --config dist/server/wrangler.public.json
@@ -194,21 +247,36 @@ the protected approval state first.
 
 ## 3. Write the pre-release plan
 
-Set the release coordinates without applying a migration or deploying:
+Set the common release coordinates without applying a migration or deploying:
 
 ```bash
 export RELEASE_PREVIOUS_WORKER_VERSION='<currently deployed version id>'
 export RELEASE_D1_BOOKMARK='<literal pre-migration Time Travel bookmark>'
-export RELEASE_VALIDATION_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
-export RELEASE_GITLEAKS_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
-export RELEASE_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
-export RELEASE_BROWSER_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export RELEASE_MIGRATION_LIST=''
 export RELEASE_PUBLICATION_HASH='<publication checkpoint contentHash, or none>'
 export RELEASE_PUBLICATION_CONTENT_VERSION='<checkpoint contentVersion, or none>'
 export RELEASE_PUBLICATION_KV_MATCH='<1 only when checkpoint says true; otherwise 0>'
-npm run release:plan
 ```
+
+For the normal four-workflow mode, leave `RELEASE_EVIDENCE_MODE` unset or set
+it explicitly and provide all four URLs:
+
+```bash
+export RELEASE_EVIDENCE_MODE='github-actions'
+unset RELEASE_OWNER_LOCAL_CONFIRMATION RELEASE_CODEQL_RUNNER_LABEL
+export RELEASE_VALIDATION_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+export RELEASE_GITLEAKS_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+export RELEASE_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+export RELEASE_BROWSER_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
+```
+
+For the hybrid owner-local mode, retain the evidence selection, deliberate
+confirmation phrase, exact successful CodeQL URL, and its one-time runner label
+already used in section 1. Keep the Validate, Gitleaks, and Browser URL
+variables unset; the plan
+rejects them so local checks cannot masquerade as GitHub runs. If this is a new
+shell, repeat that section's owner-local environment block exactly, but do not
+rerun the evidence command.
 
 For a `campaign-v1` release only, set these before `release:plan`:
 
@@ -218,6 +286,13 @@ export RELEASE_SIMULATION_APPROVAL_DIGEST='<simulation.providerApprovalDigest>'
 ```
 
 Leave both unset while Simulation is `disabled` or `coming-soon`.
+
+After setting the common coordinates, exactly one evidence-mode block, and any
+enabled-Simulation approval values, write the plan:
+
+```bash
+npm run release:plan
+```
 
 `RELEASE_PREVIOUS_WORKER_VERSION` is mandatory. Every release needs an existing
 version to hold 100% of traffic while the candidate is verified at 0%. If no
@@ -236,13 +311,19 @@ mode, provider/model, sorted provider names, and the digest; it has no field for
 approval references or secrets. Initial feature-schema migration ordering is
 owned by [Hosted infrastructure bootstrap](./bootstrap.md).
 
-`release:plan` refuses a dirty worktree or a SHA mismatch. It also asks the
-authenticated GitHub CLI to verify that all four distinct Actions runs belong
-to this repository, use the expected active workflow names and paths, target
-exact `HEAD`, and concluded successfully. Browser Quality must be a
-`workflow_dispatch` run. URLs alone are not trusted. The plan records:
+`release:plan` refuses a dirty worktree or a SHA mismatch. In the default mode,
+it asks the authenticated GitHub CLI to verify that all four distinct Actions
+runs belong to this repository, use the expected active workflow names and
+paths, target exact `HEAD`, and concluded successfully. Browser Quality must be
+a `workflow_dispatch` run. URLs alone are not trusted. In owner-local mode, it
+performs the same GitHub verification for CodeQL and independently verifies the
+receipt's schema, mode, repository, trusted ref, SHA, pinned tools, timestamps,
+three fixed successful commands, payload self-digest, mode-`0600` file, and
+artifact hashes. The plan records:
 
-- the validated commit SHA and all four GitHub Actions identities and URLs;
+- the validated commit SHA and evidence mode;
+- either all four GitHub Actions identities and URLs, or the three local result
+  identities, safe receipt digest, and exact CodeQL identity and URL;
 - explicit `RELEASE_VERSION`, `CONTENT_VERSION`, and `COPY_VERSION`;
 - the public content version and exact sanitized bundle SHA-256;
 - the deployable artifact-set hash, file count, byte count, and manifest hash;
@@ -471,13 +552,15 @@ npm run release:attest
 
 `release:attest` rechecks the clean commit and `RELEASE_VALIDATED_SHA`, verifies
 that the ignored release plan still matches the content attestation and Worker
-configuration, verifies the guarded non-versioned-trigger receipt, and requires
+configuration, re-hashes any owner-local evidence receipt and its deployable
+artifact, verifies the guarded non-versioned-trigger receipt, and requires
 exactly the base, Simulation, connector-route, and enabled Travel smoke
 identifiers selected by the release plan. It then
 writes a new immutable `releases/<date>-<sha>.json` containing the prior and
 current Worker versions, content and copy versions, D1 recovery coordinates,
-four validation URLs, trigger reconciliation, domain-cutover evidence, and
-simulation settings, sanitized approval digest, and smoke results.
+the evidence mode and its workflow URLs or safe local-receipt digest, trigger
+reconciliation, domain-cutover evidence, simulation settings, sanitized
+approval digest, and smoke results.
 
 Review and commit the new release record. Never edit or overwrite an earlier
 record. If any check fails, do not write a successful attestation; follow the

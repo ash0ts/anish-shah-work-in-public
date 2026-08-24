@@ -1220,6 +1220,8 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
     command,
     checkpointSnippet,
     contract,
+    ownerLocalCodeql,
+    ownerLocalSource,
     triggerContract,
     smokeContract,
     packageJson,
@@ -1240,6 +1242,14 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
       ),
       readFile(
         new URL("../scripts/lib/release-contract.mjs", import.meta.url),
+        "utf8",
+      ),
+      readFile(
+        new URL("../scripts/lib/owner-local-codeql.mjs", import.meta.url),
+        "utf8",
+      ),
+      readFile(
+        new URL("../scripts/lib/owner-local-source.mjs", import.meta.url),
         "utf8",
       ),
       readFile(
@@ -1289,15 +1299,38 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
   assert.match(attestation, /deployableArtifacts/);
   assert.match(plan, /verifyReleaseBuildCheckpoint\(root\)/);
   assert.match(plan, /releaseBuildCheckpointSha256/);
+  assert.match(plan, /selectedReleaseEvidenceMode\(\)/);
+  assert.match(plan, /readOwnerLocalEvidenceReceipt/);
+  assert.match(plan, /validationEvidence,/);
   assert.match(command, /verifyReleaseBuildCheckpoint\(root\)/);
   assert.match(command, /releaseBuildCheckpointSha256/);
   assert.match(checkpointSnippet, /verifyReleaseBuildCheckpoint\(root\)/);
   assert.match(checkpointSnippet, /releaseBuildCheckpoint\.artifactSetSha256/);
   assert.match(attestation, /verifyReleaseBuildCheckpoint\(root\)/);
   assert.match(attestation, /releaseBuildCheckpoint: plan\.releaseBuildCheckpoint/);
-  assert.match(command, /assertRequiredValidationRuns\(plan\.validationRuns/);
-  assert.match(attestation, /assertRequiredValidationRuns\(plan\.validationRuns/);
+  assert.match(command, /assertReleaseValidationEvidence\(/);
+  assert.match(attestation, /assertReleaseValidationEvidence\(/);
+  assert.match(command, /readOwnerLocalEvidenceReceipt/);
+  assert.match(attestation, /readOwnerLocalEvidenceReceipt/);
+  assert.match(plan, /verifyOwnerLocalCodeqlEvidence/);
+  assert.match(command, /reverifyPlannedOwnerLocalCodeqlEvidence/);
+  assert.match(checkpointSnippet, /reverifyPlannedOwnerLocalCodeqlEvidence/);
+  assert.match(attestation, /reverifyPlannedOwnerLocalCodeqlEvidence/);
+  assert.match(ownerLocalCodeql, /actions\/runs\/\$\{coordinates\.runId\}\/jobs/);
+  assert.match(ownerLocalCodeql, /"self-hosted", "linux", "x64", runnerLabel/);
+  assert.match(ownerLocalSource, /ls-remote/);
+  assert.match(ownerLocalSource, /refs\/heads\/main/);
+  assert.match(plan, /verifyOwnerLocalRemoteMain/);
+  assert.match(command, /verifyOwnerLocalRemoteMain/);
+  assert.match(checkpointSnippet, /verifyOwnerLocalRemoteMain/);
+  assert.match(attestation, /verifyOwnerLocalRemoteMain/);
+  assert.match(contract, /CANONICAL_GITHUB_REPOSITORY/);
+  assert.match(contract, /upstreamRef !== "origin\/main"/);
+  assert.match(attestation, /validationEvidence: plan\.validationEvidence/);
   assert.match(attestation, /validationRuns: plan\.validationRuns/);
+  assert.match(attestation, /schemaVersion: "1\.6"/);
+  assert.match(contract, /receiptSha256/);
+  assert.match(contract, /payloadSha256/);
   assert.match(contract, /Remote pending migrations/);
   assert.match(contract, /do not exactly match the release plan/);
   assert.match(command, /Migration \$\{migration\.name\} changed after release planning/);

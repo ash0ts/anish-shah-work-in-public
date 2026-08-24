@@ -55,6 +55,23 @@ Disposable release runners use one-time labels and trusted `main` or
 hosted secrets, reuse the Validate artifact, and be destroyed after one bounded
 job. The optional corporate CA is never baked into an image or repository.
 
+When Actions artifact capacity is unavailable, the explicit owner-local mode
+runs Validate, Gitleaks, and Browser Quality directly from one clean,
+owner-controlled worktree on the exact pushed `origin/main` head. It builds
+once, adds the reviewed non-secret
+production configuration, runs release-candidate scans, hashes the final
+deployable bytes before Browser Quality, and writes an ignored mode-`0600`
+receipt containing only safe tool/version, timing, result, SHA, and
+artifact-digest fields. CodeQL still runs the pinned GitHub action on one
+disposable AMD64 runner with result upload disabled, and the local release gate
+verifies that exact successful run. Treat the receipt as an owner attestation,
+not independent cryptographic proof. Release guards bind it to the canonical
+repository, exact pushed ref head, unchanged receipt bytes, and exact final
+artifact hash through planning, staging, promotion, and attestation. Operator
+procedure keeps the receipt and artifact in the same worktree even though the
+enforced identity is the repository/ref/SHA/artifact tuple, not a filesystem
+directory identifier.
+
 ## Full Handoff
 
 ```bash
@@ -64,7 +81,13 @@ npm run validate:browser
 
 `validate` covers copy/content attestations, lint, clean local D1 migrations, both repository skills, typechecking, content/backend tests, production build, bundle/privacy scans, rendered tests, and dependency policy. `validate:browser` covers the fail-fast release-smoke Playwright, Axe, Room/Pocket, Travel, Simulation, Spotify WebKit, responsive-overflow, and Lighthouse gate. Use `validate:browser:full` or the manual stability workflow only for exhaustive investigation.
 
-Run `validate:release` only for a clean, pushed, approved production candidate after exact-SHA Validate, Gitleaks, CodeQL, and Browser Quality evidence exists. It must reuse and verify one immutable deployable artifact; it is not an ordinary development check.
+Run `validate:release` only for a clean, pushed, approved production candidate
+using the normal four-workflow contract. The hybrid owner-local contract uses
+the single `release:evidence:local` command, whose Validate gate is
+`validate:release:local`; never run the standard command afterward. Either path
+must produce exact-SHA Validate, Gitleaks, CodeQL, and Browser Quality evidence
+and reuse one immutable deployable artifact. Neither path is an ordinary
+development check.
 
 ## Manual Coverage
 

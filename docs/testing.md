@@ -144,19 +144,23 @@ without printing any of them. Apply the normal local migration command before
 testing sessions. Never put a Gateway token, BYOK alias, provider key, or hosted
 approval record in a fixture or checked-in environment file.
 
-Run the manually dispatched Validate, Gitleaks, CodeQL, and Browser Quality
-workflows with the same full 40-character commit SHA before release. The
-checkout step rejects a different commit. Browser stability is a separate,
-optional exhaustive interaction soak and is not release-plan evidence.
+Before release, collect Validate, Gitleaks, CodeQL, and Browser Quality evidence
+for the same full 40-character pushed SHA. Four manually dispatched workflows
+are the default. If hosted minutes or artifact storage are unavailable, the
+documented owner-local mode runs the first, second, and fourth gates directly
+against one immutable build while CodeQL remains a pinned exact-SHA action on a
+disposable owner runner. Browser stability is a separate, optional exhaustive
+interaction soak and is not release-plan evidence.
 
-## Disposable exact-SHA owner runner
+## Exact-SHA owner evidence capacity
 
 Ordinary PRs use the path-classified `PR Gate`; full exact-SHA release evidence
-is owner-dispatched. When hosted minutes are unavailable, follow the sole
-[disposable runner guide](../.github/runner/README.md) for image construction,
-one-job registration, corporate-CA handling, all workflow dispatch commands,
-the optional two-worker soak, and cleanup. Self-hosting does not waive any
-assertion, artifact, browser, security, or release-plan check.
+is owner-dispatched. Follow the sole
+[runner and local-evidence guide](../.github/runner/README.md) for the normal
+disposable workflow path and the explicit artifact-capacity fallback, including
+the exact local command, safe receipt, CodeQL container, corporate-CA handling,
+and cleanup. Neither path waives an assertion, immutable-artifact check,
+browser gate, security scan, or release-plan check.
 
 ## Private-source regeneration
 
@@ -272,14 +276,23 @@ base-branch code with only validated plain-text copy applied so screenshots can
 be produced without executing contributor-authored scripts; this is a security
 boundary, not accidental duplicate validation.
 
-Every staging or production release nevertheless requires four distinct,
-successful runs for the exact 40-character SHA:
+Every staging or production release nevertheless requires four successful
+logical gates for the exact 40-character SHA:
 
-1. `Validate` from `.github/workflows/ci.yml`
-2. `Gitleaks` from `.github/workflows/gitleaks.yml`
-3. `CodeQL` from `.github/workflows/codeql.yml`
-4. manually dispatched `Browser Quality` from `.github/workflows/browser-quality.yml`
+1. Validate
+2. Gitleaks
+3. CodeQL
+4. Browser Quality
 
-The release planner verifies repository, workflow identity/path, active state,
-event type where required, conclusion, URL, and commit SHA. See the environment
-variables and guarded artifact flow in [Production release](./operations/release.md).
+Normally, each is the matching active GitHub workflow and Browser Quality is
+manually dispatched; isolated staging keeps that four-workflow contract. The
+production release planner verifies repository, workflow
+identity/path, active state, event type where required, conclusion, URL, and
+commit SHA. When production is blocked specifically by hosted minutes or
+artifact storage, its explicitly confirmed owner-local mode supplies Validate,
+Gitleaks, and Browser Quality through one safe, mode-`0600`, self-digested
+receipt over the same immutable artifact. CodeQL remains the active GitHub
+workflow on a disposable AMD64 owner runner. The production planner verifies
+the receipt, artifact, trusted pushed ref, and CodeQL URL and rejects mixed or
+invented evidence. See the environment variables and guarded artifact flow in
+[Production release](./operations/release.md).
