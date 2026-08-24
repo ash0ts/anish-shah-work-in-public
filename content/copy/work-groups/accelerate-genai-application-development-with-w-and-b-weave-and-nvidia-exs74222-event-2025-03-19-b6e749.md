@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0038 -->
 
 ## display-title
-Developing GenAI applications with Weave and NVIDIA
+GenAI application development with Weave and NVIDIA
 
 ## short-title
-GenAI with Weave and NVIDIA
+Weave and NVIDIA GenAI
 
 ## summary
-A GTC session connected W&B Weave and NVIDIA tooling for GenAI application development.
+Weave and NVIDIA tooling support GenAI application development in a GTC session.
 
 ## role-summary
-GTC speaker
+Presented the GTC session

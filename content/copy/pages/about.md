@@ -4,7 +4,7 @@
 About Anish Shah — ML systems, evaluation, and agents
 
 ## seo-description
-I build ML systems across evaluation, observability, agent interfaces, open source, and technical education, shaped by work at SAP and Weights & Biases.
+Anish Shah’s work spans evaluation, observability, agent interfaces, open source, and courses across roles at SAP and Weights & Biases.
 
 ## eyebrow
 About · ML systems
@@ -13,13 +13,13 @@ About · ML systems
 I build ML systems that turn traces, evaluations, and tools into clearer next actions.
 
 ## body
-Teaching and computer-vision research led to analytics, production ML, and recommendation systems at SAP, then ML support, MLOps growth, and agent systems at Weights & Biases.
+Teaching and computer-vision research led to analytics, recommendation systems, and production ML. At Weights & Biases, the focus shifted from customer-facing ML support to MLOps growth, then agent systems.
 
 ## current-focus
-Current work centers on agent interfaces, evaluation, observability, bounded tool execution, and human review—shared through open source, courses, talks, and programs.
+Now I build agent interfaces, evaluation and observability workflows, bounded tool execution, and human review—then turn the lessons into open source, courses, and talks.
 
 ## career-heading
-How the work developed.
+How the practice developed.
 
 ## work-cta
 See the work

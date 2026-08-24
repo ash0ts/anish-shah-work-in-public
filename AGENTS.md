@@ -38,6 +38,8 @@
   third person. Keep language technically precise and structured as outcome →
   mechanism → proof → meaning; keep one claim per sentence, limits beside
   numbers, and avoid hype, rhetorical questions, or unsupported causality.
+  Prefer concrete actors and verbs, read longer copy aloud, and reserve mild
+  personality for Play—not speaker, Privacy, consent, or recovery text.
 - Treat the dependency-free closed seven-object contract, semantic `/play/<object>` routes, and object directory as authoritative. Derive routes, controls, focus targets, and smoke paths from that contract while keeping executable screen/provider/scene maps literal and parity-tested. The low-poly room is optional enhancement: it may not own provider or Travel content, preload connectors, geography, or media, or make any collection unreachable without WebGL. There is no Classic Play mode; retain only the permanent legacy `?stream=` redirects.
 - The v2.2 public, preview, and staging contract keeps Simulation dormant with
   `SIMULATION_EXPERIENCE_MODE=disabled` and

@@ -133,8 +133,8 @@ test("archive rows expose the curated short title independently of the detail ti
     (record) => record.id === "group:standalone:wk-fp-0161",
   );
   assert(fugue);
-  assert.equal(fugue.title, "Fugue: governed experiments for AI agents");
-  assert.equal(fugue.shortTitle, "Fugue agent experiments");
+  assert.equal(fugue.title, "Fugue: governed AI-agent experiments");
+  assert.equal(fugue.shortTitle, "Fugue");
 });
 
 test("Work metadata expands concise summaries and stays within the public SEO budget", () => {
@@ -143,19 +143,22 @@ test("Work metadata expands concise summaries and stays within the public SEO bu
   const expanded = workMetadataDescription("W&B MCP Server", concise);
   assert.equal(
     expanded,
-    `${concise} This page documents the role, public artifacts, and supporting sources.`,
+    `${concise} See the role, project materials, and sources.`,
   );
   assert(expanded.length >= 80 && expanded.length <= 160);
 
   const placeholder = workMetadataDescription("Example", "Contributor.");
-  assert.match(placeholder, /^Explore Anish Shah’s work on Example,/u);
+  assert.equal(
+    placeholder,
+    "Explore Example, including Anish Shah’s role, project materials, and supporting sources.",
+  );
   assert(placeholder.length >= 80 && placeholder.length <= 160);
 
   const longSummary = "A".repeat(200);
   const bounded = workMetadataDescription("Example", longSummary);
   assert.equal(
     bounded,
-    "Explore Anish Shah’s work on Example, including its documented role, public artifacts, and supporting sources.",
+    "Explore Example, including Anish Shah’s role, project materials, and supporting sources.",
   );
   assert(bounded.length >= 80 && bounded.length <= 160);
 

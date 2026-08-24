@@ -134,6 +134,12 @@ test("the complete deck obeys public first-person and density budgets", async ()
       "utf8",
     ),
   );
+  const homePresentation = JSON.parse(
+    await readFile(
+      path.join(root, "content/presentation/home-signal-rails.v1.json"),
+      "utf8",
+    ),
+  );
   const proofMetrics = [
     "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
     "metric:courses:enrollments:2026-07-30",
@@ -142,15 +148,22 @@ test("the complete deck obeys public first-person and density budgets", async ()
   proofMetrics.forEach((metricId, offset) => {
     const metric = metricBundle.metrics.find((candidate) => candidate.id === metricId);
     assert(metric, metricId);
-    const copy = [
+    const signal = homePresentation.signals[offset];
+    assert.equal(signal.metricId, metricId);
+    const compactCopy = [
       deck.pages.home[`proof-${offset + 1}-label`],
-      deck.pages.home[`proof-${offset + 1}-statement`],
-      metric.qualifier,
+      signal.compactLimit,
     ].join(" ");
     assert(
-      countCopyWords(copy) <= 24,
-      `${metricId} uses ${countCopyWords(copy)} prose words beyond its value`,
+      countCopyWords(compactCopy) <= 12,
+      `${metricId} uses ${countCopyWords(compactCopy)} initially visible prose words`,
     );
+    assert.equal(typeof metric.qualifier, "string");
+    assert(metric.qualifier.length > 0);
+    assert.equal(typeof metric.period?.label, "string");
+    assert(metric.period.label.length > 0);
+    assert.equal(typeof metric.attribution, "string");
+    assert.equal(typeof metric.sourceLabel, "string");
   });
 });
 
@@ -404,6 +417,27 @@ test("generic openings, filler, repetition, and long sentences warn without fail
   assert(warningRules.includes("long-sentence"));
   assert.equal(report.errors.length, 0);
   assert.doesNotThrow(() => assertCopyVoice(report));
+});
+
+test("bland verbs and repeated Work summary openings are reported", () => {
+  const report = auditCopyVoice([
+    entry({
+      key: "group:first.summary",
+      surface: "work-group",
+      field: "summary",
+      value: "Evaluation traces mapped failures across agent runs for closer review.",
+    }),
+    entry({
+      key: "group:second.summary",
+      surface: "work-group",
+      field: "summary",
+      value: "Evaluation traces mapped retrieval failures before deployment decisions.",
+    }),
+  ]);
+  const warningRules = rules(report, "warnings");
+  assert(warningRules.includes("bland-verb"));
+  assert(warningRules.includes("repeated-summary-opening"));
+  assert.equal(report.errors.length, 0);
 });
 
 test("package scripts enforce voice validation without an external style service", async () => {

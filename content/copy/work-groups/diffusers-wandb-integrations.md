@@ -1,13 +1,13 @@
 <!-- copy-record: group:products:diffusers-wandb -->
 
 ## display-title
-W&B integrations for Diffusers
+W&B experiment tracking in Hugging Face Diffusers
 
 ## short-title
-Diffusers × W&B
+Diffusers with W&B tracking
 
 ## summary
-Two upstream changes added W&B experiment tracking to Hugging Face Diffusers.
+W&B experiment tracking appears in two Hugging Face Diffusers pull requests.
 
 ## role-summary
-Upstream contributor across two pull requests
+Contributed both upstream pull requests

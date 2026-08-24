@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0062 -->
 
 ## display-title
-Biomedical RAG with Snowflake Arctic
+PubMed RAG with Snowflake Arctic and Weave
 
 ## short-title
-PubMed RAG with Snowflake Arctic
+Snowflake Arctic for PubMed RAG
 
 ## summary
-A PubMed RAG implementation paired Snowflake Arctic with W&B Weave.
+Snowflake Arctic and Weave implement PubMed RAG across an article and demo.
 
 ## role-summary
-Guide author and demo contributor
+Wrote the guide and owns the demo repository

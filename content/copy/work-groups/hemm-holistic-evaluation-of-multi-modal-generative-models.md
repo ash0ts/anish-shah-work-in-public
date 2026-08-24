@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0028 -->
 
 ## display-title
-HEMM: holistic multimodal model evaluation
+HEMM: holistic evaluation for multimodal models
 
 ## short-title
-HEMM multimodal evaluation
+Holistic multimodal evaluation
 
 ## summary
-A virtual workshop examined holistic evaluation for multimodal generative models.
+Holistic multimodal model evaluation with HEMM was presented in a virtual workshop.
 
 ## role-summary
-Virtual workshop speaker
+Presented the virtual workshop

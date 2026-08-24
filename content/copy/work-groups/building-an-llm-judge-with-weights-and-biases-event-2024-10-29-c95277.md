@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0026 -->
 
 ## display-title
-Building an LLM judge with W&B
+LLM judge construction with W&B
 
 ## short-title
-Building an LLM judge
+W&B LLM judge
 
 ## summary
-A session demonstrated how to build an LLM judge with W&B.
+W&B grounded a practical demonstration of building an LLM judge.
 
 ## role-summary
-Session speaker
+Presented the session

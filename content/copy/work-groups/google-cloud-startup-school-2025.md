@@ -1,13 +1,13 @@
 <!-- copy-record: group:courses:startup-school -->
 
 ## display-title
-Google Cloud GenAI Startup School
+GenAI application development at Google Cloud Startup School
 
 ## short-title
-GenAI Startup School
+Google Cloud GenAI Startup School
 
 ## summary
-A replay-backed lesson taught GenAI application development across two regional sessions.
+One GenAI application-development lesson ran across two regional Startup School sessions.
 
 ## role-summary
-Instructor for both regional sessions
+Presented both regional sessions

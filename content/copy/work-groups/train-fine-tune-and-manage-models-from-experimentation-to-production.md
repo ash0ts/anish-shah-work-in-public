@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0023 -->
 
 ## display-title
-From model training to production
+Training and managing models from experimentation to production
 
 ## short-title
 Models from training to production
 
 ## summary
-A workshop connected training and fine-tuning to production model management.
+The workshop carries model training and fine-tuning into production management.
 
 ## role-summary
-Workshop instructor
+Quarter-day workshop instructor

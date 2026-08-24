@@ -7,7 +7,7 @@ Evaluation from model training to GenAI inference
 Evaluation across the ML lifecycle
 
 ## summary
-A talk traced how evaluation changes from model training to GenAI inference.
+Evaluation methods are compared from model training through GenAI inference.
 
 ## role-summary
-Evaluation talk speaker
+In-person session speaker

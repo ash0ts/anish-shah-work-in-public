@@ -383,7 +383,7 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
   await page.goto("/work", { waitUntil: "networkidle" });
 
   const search = page.getByRole("searchbox", {
-    name: "Search the work",
+    name: "Search projects",
   });
   const calendar = page.getByRole("region", {
     name: /Work timeline table/,

@@ -103,7 +103,7 @@ export function StravaConnectorControls({
             phase: "error",
             message:
               result.error ??
-              "Strava settings could not be checked. Open the row and try again.",
+              "Strava settings could not be checked. Reload Studio, then try again.",
           });
           setShowForm(true);
         }
@@ -113,7 +113,7 @@ export function StravaConnectorControls({
           setState({
             phase: "error",
             message:
-              "Strava settings could not be checked. Open the row and try again.",
+              "Strava settings could not be checked. Reload Studio, then try again.",
           });
           setShowForm(true);
         }
@@ -163,8 +163,8 @@ export function StravaConnectorControls({
       setShowForm(false);
       setMessage(
         environment === "local"
-          ? "Profile saved locally. Allow public use next; the profile link remains available if the optional feed cannot be framed."
-          : "Profile saved. Allow public use next; the profile link remains available if the optional feed cannot be framed.",
+          ? "Profile saved locally. Allow public use next. The profile link remains available if the feed fails."
+          : "Profile saved. Allow public use next. The profile link remains available if the feed fails.",
       );
       await refreshComposedView(
         environment === "local"
@@ -172,7 +172,9 @@ export function StravaConnectorControls({
           : "Strava profile saved. Allow public use next.",
       );
     } catch {
-      setMessage("Strava settings were not saved. Try again.");
+      setMessage(
+        "The response was interrupted. Check the saved Strava configuration before trying again.",
+      );
     } finally {
       setPending(null);
     }
@@ -180,7 +182,7 @@ export function StravaConnectorControls({
 
   async function verify(): Promise<void> {
     if (state.phase !== "ready" || !state.embedUrl) {
-      setMessage("Save an official Strava feed before verifying it.");
+      setMessage("No official feed is saved. Save one before verifying it.");
       return;
     }
     setPending("verify");
@@ -193,7 +195,7 @@ export function StravaConnectorControls({
       if (!response.ok || result.status !== "verified" || !result.checkedAt) {
         setMessage(
           result.error ??
-            "The feed could not be verified. The saved profile fallback is unchanged.",
+            "The feed could not be verified. The saved profile fallback is unchanged; try again later.",
         );
         return;
       }
@@ -212,12 +214,12 @@ export function StravaConnectorControls({
       setMessage(
         result.embedStatus === "available"
           ? "The feed passed the manual anonymous frame check."
-          : "The feed could not be framed. Visitors still receive the profile link.",
+          : "The feed could not be framed. Visitors receive the profile link instead.",
       );
       await refreshComposedView();
     } catch {
       setMessage(
-        "The feed could not be verified. The saved profile fallback is unchanged.",
+        "The feed could not be verified. The saved profile fallback is unchanged; try again later.",
       );
     } finally {
       setPending(null);
@@ -247,10 +249,10 @@ export function StravaConnectorControls({
       setProfileUrl("");
       setEmbed("");
       setShowForm(true);
-      setMessage("Strava disconnected and unpublished.");
+      setMessage("Strava disconnected. The saved settings were deleted and Move is unpublished.");
       await refreshComposedView();
     } catch {
-      setMessage("Strava could not be disconnected. Try again.");
+      setMessage("Strava could not be disconnected. Check the connection, then try again.");
     } finally {
       setPending(null);
     }
@@ -321,18 +323,18 @@ export function StravaConnectorControls({
             </p>
           ) : view.primaryAction === "record_public_permission" ? (
             <p className={styles.statusGuidance} role="status">
-              The profile is saved. Record public permission before showing it
-              on Move.
+              The profile is saved. Add public permission before showing it on
+              Move.
             </p>
           ) : state.phase === "ready" && state.embedStatus === "available" ? (
             <p className={styles.statusGuidance}>
-              The profile and optional feed are saved. Visitors load the feed
-              only after consent.
+              Profile and feed are saved. Visitors load the feed only after
+              consent.
             </p>
           ) : state.phase === "ready" ? (
             <p className={styles.statusGuidance}>
-              The profile is saved. Visitors use it whenever the optional feed
-              is unavailable.
+              The profile is saved. Visitors use it when the optional feed is
+              unavailable.
             </p>
           ) : (
             <p className={styles.statusGuidance}>

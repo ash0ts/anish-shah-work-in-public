@@ -14,11 +14,11 @@ export const dynamic = "force-dynamic";
 const sourcesDescription = SITE_COPY.sources["seo-description"];
 
 const metricThemeDescriptions = {
-  learning: "Enrollment and launch measures from three practical AI courses.",
-  product: "Rounded usage and adoption signals for the W&B MCP Server.",
+  learning: "Enrollment and launch measures for three AI courses.",
+  product: "Rounded usage measures for the W&B MCP Server.",
   programs:
-    "Bounded reach and supported-pipeline measures from public programs.",
-  archive: "Counts derived only from the normalized public archive.",
+    "Reach and supported-pipeline measures for public programs.",
+  archive: "Counts derived from published project records.",
 } as const;
 
 type SourceSearchParams = Record<
@@ -179,7 +179,7 @@ export default async function SourcesPage({
                           </dd>
                         </div>
                         <div>
-                          <dt>Source class</dt>
+                          <dt>Source</dt>
                           <dd>{metric.sourceLabel}</dd>
                         </div>
                       </dl>
@@ -217,9 +217,9 @@ export default async function SourcesPage({
           <p className={styles.eyebrow}>{SITE_COPY.sources["rules-eyebrow"]}</p>
           <h2 id="rules-title">{SITE_COPY.sources["rules-title"]}</h2>
           <p>
-            {bundle.sourceSummary.footprintRows} source observations resolve to{" "}
-            {bundle.workGroups.length} projects and series. Related records stay
-            searchable without inflating that count.
+            {bundle.sourceSummary.footprintRows} source records support{" "}
+            {bundle.workGroups.length} projects and series. Related records remain
+            searchable without being counted twice.
           </p>
         </header>
         <ol>

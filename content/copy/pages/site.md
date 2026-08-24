@@ -7,10 +7,10 @@ Anish Shah — Applied AI systems
 %s — Anish Shah
 
 ## root-description
-I build agent tooling, evaluation systems, open source, and technical education at Weights & Biases.
+I build agent tooling, evaluation systems, open source, and courses at Weights & Biases.
 
 ## social-description
-Agent systems, evaluation, open source, and technical education—with sources attached.
+Agent systems, evaluation, open source, and courses—with sources attached.
 
 ## header-wordmark
 Anish Shah
@@ -58,10 +58,10 @@ That page is not part of Anish Shah’s site.
 That page isn’t here.
 
 ## not-found-body
-Try the project index or return home.
+Try the Work calendar or return home.
 
 ## not-found-work-cta
-Browse projects
+Open Work
 
 ## not-found-home-cta
 Go home

@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0052 -->
 
 ## display-title
-Hugging Face Transformers for NLP
+NLP workflows with Hugging Face Transformers
 
 ## short-title
-Transformers for NLP
+Hugging Face NLP workflows
 
 ## summary
-A Hugging Face Transformers introduction showed how the library supports NLP workflows.
+Hugging Face Transformers organized the workflow for NLP applications.
 
 ## role-summary
-Article author
+Wrote the article

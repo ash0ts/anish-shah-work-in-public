@@ -162,6 +162,22 @@ test("voice contracts and the copy skill select voice, audit, fact-check, and sk
   assert.match(result.stdout, /owner-check every FACT-CHECK field/);
 });
 
+test("public-language ownership guard changes select copy validation", () => {
+  for (const pathName of [
+    "scripts/check-public-language-ownership.mjs",
+    "scripts/lib/public-language-ownership.mjs",
+    "tests/public-language-ownership.test.mjs",
+  ]) {
+    const result = plan(pathName);
+    assert.equal(result.status, 0, `${pathName}\n${output(result)}`);
+    assert.match(result.stdout, /- copy-deck/);
+    assert.match(result.stdout, /npm run copy:check/);
+    assert.match(result.stdout, /npm run copy:voice/);
+    assert.match(result.stdout, /npm run copy:test/);
+    assert.match(result.stdout, /npm run copy:audit/);
+  }
+});
+
 test("mixed dependency and copy changes retain copy diff and browser gates", () => {
   const result = plan("package.json", "content/copy/pages/home.md");
   assert.equal(result.status, 0, output(result));

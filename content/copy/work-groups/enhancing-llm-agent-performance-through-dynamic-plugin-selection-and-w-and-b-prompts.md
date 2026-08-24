@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0059 -->
 
 ## display-title
-Dynamic plugin selection for LLM agents
+LLM-agent performance through dynamic plugin selection
 
 ## short-title
-Dynamic plugin selection
+Dynamic plugins for LLM agents
 
 ## summary
-A guide explored dynamic plugin selection and W&B Prompts for stronger LLM-agent performance.
+The guide uses dynamic plugin selection and W&B Prompts to improve LLM-agent performance.
 
 ## role-summary
-Article author
+Wrote the guide

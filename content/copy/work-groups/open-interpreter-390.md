@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:ar-fp-0178 -->
 
 ## display-title
-Open Interpreter integration contribution
+W&B support for Open Interpreter
 
 ## short-title
-Open Interpreter pull request
+Open Interpreter integration
 
 ## summary
-An upstream change added W&B integration support to Open Interpreter.
+An Open Interpreter pull request contributes W&B integration support.
 
 ## role-summary
-Integration contributor
+Upstream contributor

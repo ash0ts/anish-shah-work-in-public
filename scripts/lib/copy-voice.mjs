@@ -11,6 +11,7 @@ const HYPE = /\b(?:best[- ]in[- ]class|category[- ]defining|cutting[- ]edge|game
 const EMOJI = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
 const GENERIC_OPENING = /^(?:a|an|the)\s+(?:public|technical|practical|hands-on)\b/iu;
 const FILLER = /\b(?:emerging|landscape|ecosystem|leverage|impactful|innovative|seamless|robust|storyteller|thought\s+leadership)\b/giu;
+const BLAND_VERB = /\b(?:anchored|connected|connects|explored|extended|framed|mapped|powered|reaches|shaped)\b/giu;
 const METRIC_NUMBER = /(?:[$€£]\s*\d|\b(?:USD|EUR|GBP)\s+\d|\b\d+(?:[,.]\d+)?\s*(?:%|percent\b|[KMB](?:\+)?(?=\s|$))|\b\d[\d,.]*\+?\s+(?:course\s+)?(?:enrollments?|registrants?|attendees?|users?|organizations?|accounts?|signups?|leads?|customers?|tool\s+calls?|pipeline|revenue|ARR)\b)/iu;
 const METRIC_PERIOD = /\b(?:as\s+of|through|from|between|during|across\s+tracked|in\s+20\d{2}|20\d{2}\s*(?:[-–—]|to)\s*20\d{2})\b/iu;
 const METRIC_LIMIT = /\b(?:internal\s+analytics|about|approximately|rounded|supported|same-day|program\s+reach|returned\s+order|enrollments?|not\s+(?:revenue|ARR|personal|unique|play\s+counts?))\b/iu;
@@ -243,6 +244,17 @@ function auditEntry(entry, errors, warnings, corpusCounts) {
       ),
     );
   }
+  const blandVerbs = [...new Set(value.match(BLAND_VERB) ?? [])];
+  if (surface !== "simulation" && blandVerbs.length) {
+    warnings.push(
+      issue(
+        "warning",
+        "bland-verb",
+        key,
+        `uses a vague verb: ${blandVerbs.join(", ")}; name the action or result`,
+      ),
+    );
+  }
   for (const sentence of sentences) {
     const sentenceWords = countCopyWords(sentence);
     if (sentenceWords > 30) {
@@ -266,11 +278,13 @@ function auditEntry(entry, errors, warnings, corpusCounts) {
       ),
     );
   }
-  for (const part of wordSegmenter.segment(value)) {
-    if (!part.isWordLike) continue;
-    const word = part.segment.toLocaleLowerCase("en-US");
-    if (REPEATED_CORPUS_WORDS.has(word)) {
-      corpusCounts.set(word, (corpusCounts.get(word) ?? 0) + 1);
+  if (surface !== "simulation") {
+    for (const part of wordSegmenter.segment(value)) {
+      if (!part.isWordLike) continue;
+      const word = part.segment.toLocaleLowerCase("en-US");
+      if (REPEATED_CORPUS_WORDS.has(word)) {
+        corpusCounts.set(word, (corpusCounts.get(word) ?? 0) + 1);
+      }
     }
   }
 }
@@ -354,6 +368,37 @@ function validateWorkGroupSummaryRolePairs(entries, warnings) {
         "summary-role-duplication",
         role.key,
         `repeats the summary instead of naming the role: ${overlap.join(", ")}`,
+      ),
+    );
+  }
+}
+
+function summaryOpening(value) {
+  return [...wordSegmenter.segment(value)]
+    .filter((part) => part.isWordLike)
+    .slice(0, 3)
+    .map((part) => part.segment.toLocaleLowerCase("en-US"))
+    .join(" ");
+}
+
+function validateRepeatedSummaryOpenings(entries, warnings) {
+  const byOpening = new Map();
+  for (const entry of entries) {
+    if (entry.surface !== "work-group" || entry.field !== "summary") continue;
+    const opening = summaryOpening(entry.value);
+    if (!opening) continue;
+    const matches = byOpening.get(opening) ?? [];
+    matches.push(entry.key);
+    byOpening.set(opening, matches);
+  }
+  for (const [opening, matches] of byOpening) {
+    if (matches.length < 2) continue;
+    warnings.push(
+      issue(
+        "warning",
+        "repeated-summary-opening",
+        "work-groups",
+        `“${opening}” opens ${matches.length} summaries: ${matches.join(", ")}`,
       ),
     );
   }
@@ -489,6 +534,7 @@ export function auditCopyVoice(entries) {
   validatePlayObjectNames(entries, errors);
   validateDuplicateSentences(entries, errors);
   validateWorkGroupSummaryRolePairs(entries, warnings);
+  validateRepeatedSummaryOpenings(entries, warnings);
   validatePublicSurfaceBudgets(entries, errors);
 
   const corpusThresholds = { public: 12, technical: 10, work: 12 };

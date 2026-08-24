@@ -56,7 +56,7 @@ export function TravelTripLog({
       <ScreenNavigation object={ROOM_OBJECT_BY_ID.travel} />
       <header className={styles.header}>
         <p>
-          <span>{trip.status === "completed" ? "Travel log" : `${trip.status} signal`}</span>
+          <span>{trip.status === "completed" ? "Travel log" : trip.status === "planned" ? "Planned trip" : "Current trip"}</span>
           <time dateTime={trip.period.start}>{periodLabel(trip)}</time>
         </p>
         <h1>{trip.title}</h1>
@@ -137,8 +137,8 @@ export function TravelTripLog({
       ) : (
         <section className={styles.noPhotos} aria-labelledby="trip-photo-title">
           <p>Public photo status</p>
-          <h2 id="trip-photo-title">This signal carries geography, not photographs.</h2>
-          <span>Planned and current trips stay deliberately broad until they are complete.</span>
+          <h2 id="trip-photo-title">No photos published yet.</h2>
+          <span>Planned and current trips keep locations broad and photos private.</span>
         </section>
       )}
 

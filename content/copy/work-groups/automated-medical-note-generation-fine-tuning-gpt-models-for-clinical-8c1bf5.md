@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0063 -->
 
 ## display-title
-Fine-tuning GPT models for clinical notes
+Clinical-note generation with fine-tuned GPT models
 
 ## short-title
-GPT fine-tuning for clinical notes
+Fine-tuning GPT for clinical notes
 
 ## summary
-A guide paired Azure OpenAI fine-tuning with W&B for clinical-note generation.
+Azure OpenAI fine-tuning and W&B supported a clinical-note generation example.
 
 ## role-summary
-Article author and example contributor
+Wrote the article and contributed the example

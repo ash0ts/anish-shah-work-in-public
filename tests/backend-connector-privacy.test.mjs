@@ -545,7 +545,7 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
   assert.match(failedResponse[1], /router\.refresh\(\)/);
   assert.match(
     panel,
-    /action === "refresh"[\s\S]*?The refresh request could not be completed\. No new snapshot was published; any previously accepted snapshot remains unchanged\.[\s\S]*?The request could not be completed\. Try again\./,
+    /action === "refresh"[\s\S]*?The refresh request could not be completed\. No new snapshot was saved; any previously accepted snapshot remains unchanged\.[\s\S]*?The request could not be completed\. Try again\./,
   );
   assert.match(
     panel,
@@ -598,7 +598,7 @@ test("Studio connector mutations preserve the page and give safe refresh guidanc
   );
   assert.match(
     helpers,
-    /The last refresh failed\. No new snapshot was published; any previously accepted snapshot remains unchanged\./,
+    /The last refresh failed\. No new snapshot was saved; any previously accepted snapshot remains unchanged\./,
   );
   assert.match(
     helpers,

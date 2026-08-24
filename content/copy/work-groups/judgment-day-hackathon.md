@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0021 -->
 
 ## display-title
-Judging the Judgment Day Hackathon
+Judgment Day Hackathon
 
 ## short-title
-Judgment Day
+Judgment Day Hackathon
 
 ## summary
-An in-person Judgment Day Hackathon with a documented judging role.
+Submitted projects were judged during the in-person Judgment Day Hackathon.
 
 ## role-summary
 Hackathon judge

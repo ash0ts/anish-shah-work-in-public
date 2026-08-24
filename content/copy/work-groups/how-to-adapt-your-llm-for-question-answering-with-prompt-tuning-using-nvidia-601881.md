@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0060 -->
 
 ## display-title
-Prompt-tuning LLMs for question answering
+Question-answering adaptation with NVIDIA NeMo
 
 ## short-title
-Prompt-tuning with NVIDIA NeMo
+NeMo prompt tuning for QA
 
 ## summary
-An implemented workflow adapted LLMs for question answering with NVIDIA NeMo prompt tuning and W&B.
+NVIDIA NeMo prompt tuning and W&B tracked a question-answering adaptation workflow.
 
 ## role-summary
-Article and repository author
+Wrote the article and owns the supporting repository

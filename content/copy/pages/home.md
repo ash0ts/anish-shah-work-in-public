@@ -1,10 +1,10 @@
 <!-- copy-page: home -->
 
 ## seo-title
-Applied AI systems that hold up after the demo
+Agent systems that hold up after the demo
 
 ## seo-description
-Agent tooling, evaluation systems, and technical learning programs developed at Weights & Biases.
+Agent tooling, evaluation systems, open source, and courses developed at Weights & Biases.
 
 ## identity-eyebrow
 Applied AI · New York · 2021—Now

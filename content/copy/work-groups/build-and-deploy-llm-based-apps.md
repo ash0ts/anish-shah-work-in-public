@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0006 -->
 
 ## display-title
-Building and deploying LLM applications
+LLM applications from build to deployment
 
 ## short-title
-Build and deploy LLM apps
+Building and deploying LLM apps
 
 ## summary
-Hands-on instruction took LLM applications from construction through deployment.
+Hands-on instruction moved LLM applications from initial build through deployment.
 
 ## role-summary
-Program organizer, instructor, and content author
+Organized the program, led instruction, and wrote the material

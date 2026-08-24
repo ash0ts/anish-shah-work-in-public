@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0025 -->
 
 ## display-title
-Evaluating LLM applications in practice
+Practical evaluation for LLM applications
 
 ## short-title
-Practical LLM evaluation
+LLM application checks
 
 ## summary
-A session translated LLM evaluation into practical application checks.
+LLM application evaluation is the subject of this session.
 
 ## role-summary
-Session speaker
+Presented the session

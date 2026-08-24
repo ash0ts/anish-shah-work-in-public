@@ -16,7 +16,7 @@ Built, taught, tested.
 One project per record. Talks, code, and recordings stay attached.
 
 ## search-label
-Search the work
+Search projects
 
 ## search-placeholder
 MCP, evaluation, agents, LangChain
@@ -49,13 +49,13 @@ When
 With
 
 ## detail-included
-Included here
+Part of this project
 
 ## detail-results
-Documented results
+Results
 
 ## detail-context
-Context only—not a direct result of this project.
+Program context—not attributed to this project.
 
 ## detail-sources
 Sources
@@ -64,7 +64,7 @@ Sources
 Talks, recordings, and code
 
 ## detail-related
-Related context
+Related work
 
 ## timeline-eyebrow
 Calendar

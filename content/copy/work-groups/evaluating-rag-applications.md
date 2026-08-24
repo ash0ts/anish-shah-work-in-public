@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0032 -->
 
 ## display-title
-Evaluating RAG applications
+RAG evaluation in practice
 
 ## short-title
-RAG evaluation
+Evaluating RAG systems
 
 ## summary
-A facilitated session broke RAG evaluation into practical system checks.
+A hosted session on evaluating retrieval-augmented generation applications.
 
 ## role-summary
-Host and co-facilitator
+Hosted and co-facilitated the session

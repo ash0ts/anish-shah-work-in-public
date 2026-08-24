@@ -140,10 +140,10 @@ export function StudioCollections({
   if (initialView.status !== "ready" || !approvals) {
     return (
       <div className={styles.inlineNotice}>
-        <strong>Collection controls need setup.</strong>
+        <strong>Collections are unavailable.</strong>
         <span>
-          Confirm the D1 binding and connector encryption key before managing
-          public collections.
+          Configure the D1 binding and connector encryption key, then reopen
+          Studio.
         </span>
       </div>
     );
@@ -157,7 +157,7 @@ export function StudioCollections({
           <span aria-hidden="true"> · </span>
           <span>{attentionCount} {attentionCount === 1 ? "needs" : "need"} attention</span>
         </p>
-        <small>Connections refresh only when you choose them here.</small>
+        <small>Refreshes run only when selected here.</small>
       </div>
 
       {attention.length > 0 ? (

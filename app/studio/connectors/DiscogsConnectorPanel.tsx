@@ -21,7 +21,7 @@ const meta: ProviderMeta = {
     { href: "https://support.discogs.com/hc/en-us/articles/360009334593-API-Terms-of-Use", label: "Review API terms" },
   ],
   summary:
-    "Authorize the owner collection, synchronize physical releases, then make a separate decision about public display.",
+    "Sync the owner’s physical releases, then choose whether to publish the catalog.",
   recovery:
     "A 401 requires reauthorization. Retry rate limits only after their wait period. Failed refreshes preserve the accepted catalog.",
 };
@@ -114,21 +114,21 @@ function DiscogsPresentationControls({
           setPublishCollection(config.publishCollection);
           return;
         }
-        setState({ phase: "error", message: result.error ?? "Discogs display settings could not be checked." });
+        setState({ phase: "error", message: result.error ?? "Discogs display settings could not be checked. Reload Studio, then try again." });
       })
       .catch(() => {
-        if (active) setState({ phase: "error", message: "Discogs display settings could not be checked." });
+        if (active) setState({ phase: "error", message: "Discogs display settings could not be checked. Reload Studio, then try again." });
       });
     return () => { active = false; };
   }, []);
 
   async function save(nextPublishCollection = publishCollection) {
     if (nextPublishCollection && !configured) {
-      setMessage("Authorize and refresh Discogs before publishing the catalog.");
+      setMessage("No Discogs snapshot is ready. Authorize and refresh before publishing.");
       return;
     }
     if (mode === "publish" && nextPublishCollection && !acknowledged) {
-      setMessage("Acknowledge the personal, noncommercial public display before publishing.");
+      setMessage("The noncommercial display terms are not acknowledged. Confirm them before publishing.");
       return;
     }
     setPending(true);
@@ -155,9 +155,9 @@ function DiscogsPresentationControls({
       setAcknowledged(false);
       const success = config.publishCollection
         ? environment === "local"
-          ? "Visible in the local sandbox only."
+          ? "The catalog is visible only in the local sandbox."
           : "The physical collection is published."
-        : "The Discogs collection is private.";
+        : "Discogs is private.";
       setMessage(success);
       await onUpdated(success);
     } catch {
@@ -187,7 +187,7 @@ function DiscogsPresentationControls({
       <div className={styles.spotifyPublicationLead}>
         <div>
           <p className={styles.spotifyPublicationLabel}>Public display</p>
-          <h4 id="discogs-display-title">Choose what leaves Studio.</h4>
+          <h4 id="discogs-display-title">Choose what appears publicly.</h4>
         </div>
         <dl>
           <div><dt>Collection</dt><dd>{state.config.publishCollection ? "Published" : "Private"}</dd></div>

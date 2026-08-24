@@ -248,7 +248,7 @@ export default async function StudioPage({
         <p>
           {isLocalStudio
             ? "Validate connector behavior and editorial changes against isolated local state before promoting them."
-            : "Review the public projection, make narrow editorial changes, and refresh personal streams without exposing private source data."}
+            : "Review what appears publicly, make narrow editorial changes, and refresh collections without exposing private source data."}
         </p>
       </header>
 

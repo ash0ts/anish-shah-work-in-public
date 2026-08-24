@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0031 -->
 
 ## display-title
-Fine-tuning GPT models for agent applications
+GPT model fine-tuning for agent applications
 
 ## short-title
-GPT fine-tuning for agents
+Fine-tuning GPT for agents
 
 ## summary
-A joint session covered fine-tuning GPT models for agent applications.
+GPT fine-tuning for agent applications was presented in a Microsoft Reactor session.
 
 ## role-summary
-Co-presenter with Gerard Woods
+Co-presented with Gerard Woods

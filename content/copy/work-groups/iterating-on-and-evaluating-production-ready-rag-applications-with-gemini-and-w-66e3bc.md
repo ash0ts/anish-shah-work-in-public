@@ -7,7 +7,7 @@ Evaluating production RAG with Gemini and Weave
 Production RAG with Gemini
 
 ## summary
-A workshop iterated on production RAG applications with Gemini and W&B Weave.
+Production-ready RAG iterations pair Gemini with W&B Weave evaluation.
 
 ## role-summary
 Meetup workshop presenter

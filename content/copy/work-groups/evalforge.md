@@ -1,13 +1,13 @@
 <!-- copy-record: group:products:evalforge -->
 
 ## display-title
-EvalForge: aligned evaluation criteria
+EvalForge: generating aligned evaluation criteria
 
 ## short-title
-EvalForge evaluation criteria
+EvalForge criteria generation
 
 ## summary
-EvalForge implements EvalGen for generating and aligning evaluation criteria.
+EvalForge implements EvalGen to generate and align evaluation criteria.
 
 ## role-summary
-Creator and implementer
+Created the implementation
