@@ -134,7 +134,7 @@
     "chrome-launcher": "1.2.1",
     "d3-geo": "3.1.1",
     "drizzle-kit": "0.31.10",
-    "eslint": "9.39.4",
+    "eslint": "10.9.0",
     "eslint-config-next": "16.2.12",
     "lighthouse": "13.4.1",
     "sharp": "0.35.3",
