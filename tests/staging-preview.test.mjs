@@ -1098,7 +1098,9 @@ test("sitemap always publishes enabled room routes and never exposes disabled Tr
   const previous = globalThis.__ANISH_CONNECTOR_TEST_ENV__;
   const sitemap = (await import("../app/sitemap.ts")).default;
   try {
-    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {};
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__ = {
+      TRAVEL_ATLAS_MODE: "disabled",
+    };
     const withoutTravel = await sitemap();
     assert.deepEqual(
       withoutTravel
