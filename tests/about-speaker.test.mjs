@@ -58,21 +58,28 @@ test("the speaker manifest is closed to the reviewed bucket and topics", () => {
 test("the speaker profile resolves reviewed labels and filtered Work links", () => {
   assert.deepEqual(aboutSpeakerProfileFrom(publicBundle), {
     bucketId: "talks-programs",
+    workHref: "/work?bucket=talks-programs#work-index",
     topics: [
       {
         id: "agent-systems",
         label: "Agent systems & tool interfaces",
+        description:
+          "Designing agent actions that are observable, bounded, and useful beyond a demo.",
         href: "/work?bucket=talks-programs&topic=agent-systems#work-index",
       },
       {
         id: "evaluation-observability",
         label: "Evaluation & observability",
+        description:
+          "Using traces, tests, and human review to turn model behavior into engineering decisions.",
         href:
           "/work?bucket=talks-programs&topic=evaluation-observability#work-index",
       },
       {
         id: "education-community",
         label: "Technical education & workshops",
+        description:
+          "Teaching fast-moving ML systems without sanding off the hard parts.",
         href:
           "/work?bucket=talks-programs&topic=education-community#work-index",
       },

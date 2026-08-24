@@ -482,7 +482,7 @@ function validatePublicSurfaceBudgets(entries, errors) {
   const wordBudgets = [
     {
       key: "about-body",
-      maximum: 55,
+      maximum: 100,
       entries: entriesForSurface(
         entries,
         "about",

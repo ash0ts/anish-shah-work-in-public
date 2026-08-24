@@ -260,13 +260,18 @@
 }
 
 .speakerBio {
+  display: grid;
+  gap: 0.85rem;
   max-width: 58ch;
-  margin: 0;
   font-size: clamp(1.05rem, 1.35vw, 1.3rem);
   font-variation-settings: "CASL" 0.24, "wght" 560;
   font-weight: 560;
   letter-spacing: -0.025em;
   line-height: 1.45;
+}
+
+.speakerBio p {
+  margin: 0;
 }
 
 .speakerTopics {
@@ -305,26 +310,46 @@
   min-height: 3.25rem;
   grid-template-columns: 1.65rem minmax(0, 1fr) auto;
   gap: 0.85rem;
-  align-items: center;
+  align-items: start;
   color: var(--blueprint-ink);
-  font-size: 0.92rem;
-  font-weight: 660;
+  padding: 0.85rem 0;
   text-decoration: none;
 }
 
 .topicIcon {
   width: 1.45rem;
   height: 1.45rem;
+  margin-top: 0.15rem;
   color: var(--work-blue);
 }
 
-.topicLink > span:last-child {
+.topicCopy {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.topicLabel {
+  font-size: 0.92rem;
+  font-weight: 660;
+}
+
+.topicDescription {
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  font-weight: 480;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.topicArrow {
+  margin-top: 0.1rem;
   color: var(--work-blue);
   transition: transform 160ms var(--ease-out);
 }
 
-.topicLink:hover > span:last-child,
-.topicLink:focus-visible > span:last-child {
+.topicLink:hover .topicArrow,
+.topicLink:focus-visible .topicArrow {
   transform: translate(0.18rem, -0.18rem);
 }
 
@@ -339,6 +364,7 @@
 }
 
 .copyButton,
+.speakerWorkLink,
 .speakerLinkedInLabel {
   display: inline-flex;
   min-height: 2.75rem;
@@ -352,6 +378,10 @@
   font-size: 0.8rem;
   font-weight: 720;
   text-decoration: none;
+}
+
+.speakerWorkLink {
+  gap: 0.7rem;
 }
 
 .copyButton {
@@ -515,7 +545,7 @@
   }
 
   .topicIcon,
-  .topicLink > span:last-child,
+  .topicArrow,
   .copyButton svg,
   .speakerLinkedInArrow {
     color: LinkText;

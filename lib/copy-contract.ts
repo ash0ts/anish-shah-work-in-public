@@ -81,19 +81,38 @@ export const COPY_PAGE_DEFINITIONS = {
     field("about", "work-cta", "editorial", 48),
     field("about", "speaker-eyebrow", "editorial", 60),
     field("about", "speaker-heading", "fact_check", 120),
-    field("about", "speaker-bio", "fact_check", 480, {
+    field("about", "speaker-bio", "fact_check", 900, {
       allowParagraphs: true,
     }),
     field("about", "speaker-topics-heading", "editorial", 80),
     field("about", "speaker-topic-agent-systems", "fact_check", 80),
     field(
       "about",
+      "speaker-topic-agent-systems-description",
+      "fact_check",
+      160,
+    ),
+    field(
+      "about",
       "speaker-topic-evaluation-observability",
       "fact_check",
       80,
     ),
+    field(
+      "about",
+      "speaker-topic-evaluation-observability-description",
+      "fact_check",
+      160,
+    ),
     field("about", "speaker-topic-education-community", "fact_check", 80),
+    field(
+      "about",
+      "speaker-topic-education-community-description",
+      "fact_check",
+      160,
+    ),
     field("about", "speaker-copy-cta", "editorial", 48),
+    field("about", "speaker-work-cta", "editorial", 48),
     field("about", "speaker-linkedin-cta", "editorial", 48),
   ],
   work: [

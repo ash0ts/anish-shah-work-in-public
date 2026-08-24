@@ -787,7 +787,7 @@ test("Home stays concise while About owns the bounded career chronology", async 
   const response = await fetch(`${BASE_URL}/about`, { redirect: "manual" });
   assert.equal(response.status, 200);
   const about = textFromMarkup(documentMarkup(await response.text()));
-  assert.match(about, /How the practice developed/i);
+  assert.match(about, /How the work developed/i);
   assert.match(about, /2021–Now/i);
   assert.match(about, /2017–2021/i);
   assert.match(about, /2016–2019/i);

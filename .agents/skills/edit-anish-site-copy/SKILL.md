@@ -55,9 +55,10 @@ Improve the site's language without changing its facts, structure, behavior, or 
 ### Edit with owner fact-check
 
 - Profile positioning and current-focus language.
-- About speaker bio and demonstrated speaker-topic language. The bio uses
+- About speaker bio and demonstrated speaker-topic labels and descriptions. The bio uses
   third person by design so organizers can reuse it directly; this is the one
-  exception to the personal first-person narrative voice.
+  exception to the personal first-person narrative voice. Keep it useful as a
+  standalone organizer bio and use short paragraphs when they improve scanning.
 - WorkGroup display titles, short titles, summaries, and role summaries.
 - Wording that mentions dates, organizations, roles, scope, attribution, product behavior, or technical capability.
 - An explicitly registered citation display label that preserves the immutable source title in accessible detail. No citation-label field is currently registered; request one through engineering before proposing this edit.

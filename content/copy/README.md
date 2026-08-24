@@ -6,12 +6,14 @@ visibility, ordering, connector policy, privacy language, or application
 behavior.
 
 `pages/about.md` owns the About biography, speaker-profile prose, headings,
-and calls to action. Biography, speaker bio, and speaker topic fields require
-owner fact-checking. The reviewed career presentation manifest—not the copy
+and calls to action. Biography, speaker bio, and speaker topic labels and
+descriptions require owner fact-checking. The reviewed career presentation manifest—not the copy
 deck—owns chronology periods, organizations, trajectory labels, and brand
 provenance. The speaker bio is the one deliberate third-person exception to
 the site's personal narrative voice because event organizers need copy that
-can be reused without rewriting it.
+can be reused without rewriting it. The speaker bio may use short paragraphs;
+the application copies those paragraphs, grounded topic descriptions, and the
+sanitized LinkedIn URL as one organizer-ready profile.
 `pages/play.md` owns only room, object, and Travel presentation framing.
 `pages/simulation.md` owns only the Simulation invitation, instructions,
 nonfactual encounter flavor, and metadata fields declared by the typed
