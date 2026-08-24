@@ -22,6 +22,22 @@ Preferred thesis pattern:
 
 Treat that wording as fact-check copy, not an immutable slogan.
 
+## About and speaker profile
+
+- Let the biography explain the progression from teaching and research through
+  production ML to agent systems. Do not repeat periods, employers, or
+  trajectory labels already supplied by the reviewed career manifest.
+- Keep the speaker bio in third person and ready to paste into an organizer's
+  program. It is the exception to the site's personal first-person voice.
+- Treat the speaker bio and three topic labels as fact-check fields. They may
+  summarize demonstrated work but may not add a title, credential, appearance
+  count, award, or booking claim.
+- Speaker topic links enter the existing Talks/Programs Work filters. Copy edits
+  may change their visible labels only; the manifest owns the topic IDs and
+  destinations.
+- Keep the eyebrow, topics heading, and CTA labels brief. The sanitized profile
+  owns the LinkedIn URL.
+
 ## Work index
 
 - Let the color calendar and search carry the structure.

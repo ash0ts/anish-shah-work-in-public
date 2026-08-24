@@ -122,7 +122,7 @@ flowchart LR
   curation["Reviewed curation and presentation inputs"] --> generator
   generator --> public["Generated sanitized public bundle"]
   public --> base["Canonical facts, IDs, evidence, metrics, and structure"]
-  home["Reviewed Home signal/rail manifest"] --> base
+  presentation["Reviewed Home, career, speaker, and organization manifests"] --> base
   copy["Git copy deck"] --> copygen["Strict parser and generated typed copy"] --> base
   base --> seed["Sanitized D1 public records"]
   studio["Protected Studio editorial decisions"] --> seed
@@ -138,7 +138,8 @@ Authority is field-specific:
 2. Reviewed presentation manifests own narrow protected mappings. In
    particular, `home-signal-rails.v1.json` binds three equal-weight signals to
    exact metric IDs and compact limits and binds four lines to approved topics
-   and code-native icons.
+   and code-native icons. The career and speaker manifests separately own
+   About chronology structure and speaker Work-filter destinations.
 3. Published D1 state owns allowlisted visibility, ordering, featured state,
    caveats, and metric wording.
 4. `content/copy/**` owns only declared page and WorkGroup presentation fields.
@@ -146,9 +147,11 @@ Authority is field-specific:
 `content/public/anish-content.public.v1.json` is generated deployable content;
 it is never an editing surface. Raw inputs and `content/private` stay outside
 public output. `CONTENT_VERSION` identifies canonical data, while
-`COPY_VERSION` identifies the reviewed copy contract, sources, parser, and
-Home signal/rail manifest. That manifest is also inventoried in the public
-content attestation; it is not a freelancer copy surface.
+`COPY_VERSION` identifies the reviewed copy contract, sources, parser, Home
+signal/rail manifest, and speaker-profile manifest. Those manifests are also
+inventoried in the public content attestation; they are not freelancer copy
+surfaces. Studio's owner-only copy report enumerates every page deck path and
+review class plus the retained D1 WorkGroup wording that Git copy supersedes.
 
 At runtime, `lib/server/public-content.ts` applies the Git-owned copy fields to
 the sanitized base and resolves the active D1 publication. The selector
@@ -215,7 +218,8 @@ There is no alternate Classic mode; only bounded legacy query redirects remain.
 
 The main public route groups are deliberately conventional: Home, About, Work
 and its detail pages, Sources, Privacy, Play and its objects, Travel trip pages,
-and the gated Simulation. About is a short, Git-owned professional chronology;
+and the gated Simulation. About combines Git-owned biography and reusable
+speaker prose with a reviewed professional chronology;
 Home remains the canonical `Person` identity and About references that identity
 through `ProfilePage` structured data. Studio is a separate owner plane, even
 though it ships in the same application.

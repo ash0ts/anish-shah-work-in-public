@@ -4,7 +4,7 @@
 
 - `content/copy/pages/site.md`: navigation, footer, global labels, and shared metadata wording.
 - `content/copy/pages/home.md`: homepage framing, signal/rail headings, calls to action, and homepage metadata. The signal values, compact limits, icons, and line/topic mapping are protected elsewhere.
-- `content/copy/pages/about.md`: concise biography, reviewed career chronology, calls to action, and About metadata.
+- `content/copy/pages/about.md`: concise biography, copyable speaker-profile prose, calls to action, and About metadata. The separate career manifest owns chronology periods, organizations, and trajectory labels.
 - `content/copy/pages/work.md`: Work archive introduction, search wording, and metadata.
 - `content/copy/pages/play.md`: room overview, seven object descriptions, Travel doorway/atlas framing, and Play metadata.
 - `content/copy/pages/simulation.md`: dormant Simulation introduction, CTA, nonfactual encounter flavor, instructions, and metadata. Editing it does not enable the route.
@@ -12,6 +12,17 @@
 - `content/copy/work-groups/<slug>.md`: one stable WorkGroup's display title, short title, summary, and role summary.
 
 Only edit the text between fixed headings. A field may be one line or multiple paragraphs according to the registry; validation reports the exact rule when a draft is too long or paragraph-incompatible.
+
+About's speaker fields divide cleanly by review class:
+
+- Fact-check: `speaker-heading`, `speaker-bio`,
+  `speaker-topic-agent-systems`,
+  `speaker-topic-evaluation-observability`, and
+  `speaker-topic-education-community`.
+- Editorial: `speaker-eyebrow`, `speaker-topics-heading`,
+  `speaker-copy-cta`, and `speaker-linkedin-cta`.
+
+The topic destination IDs and LinkedIn URL are not copy fields.
 
 ## Editorial Fields
 
@@ -32,7 +43,7 @@ Owner verification is required for:
 - Profile headline and summary.
 - WorkGroup display title, short title, summary, and role summary.
 - Career trajectory and methodology/counting prose.
-- About biography, chronology, periods, organizations, and relationship wording.
+- About biography, speaker bio, and demonstrated speaker-topic wording. The speaker bio deliberately uses third person so an organizer can reuse it directly.
 - Any statement naming dates, organizations, scope, attribution, product behavior, or technical capability.
 
 `npm run copy:diff -- --base <ref>` groups changed keys by risk and affected route. Treat `fact_check` as a review requirement, not a suggestion.

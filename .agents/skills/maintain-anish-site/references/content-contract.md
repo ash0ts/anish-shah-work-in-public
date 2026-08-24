@@ -21,13 +21,21 @@ Do not hand-edit generated bundles, schemas, attestations, or reports. Complete 
 
 `CONTENT_VERSION` identifies canonical data. `COPY_VERSION` hashes every copy
 source, field contract, parser/generator, and the reviewed
-`content/presentation/home-signal-rails.v1.json` manifest. The public content
-attestation also inventories that manifest. Record both versions in preview
+`content/presentation/home-signal-rails.v1.json` and
+`content/presentation/speaker-profile.v1.json` manifests. The public content
+attestation also inventories those manifests. Record both versions in preview
 metadata, owner health, release plans, and attestations.
 
 ## Copy Ownership
 
 Copywriters may directly edit declared narrative, framing, CTA, navigation, metadata, room flavor, and non-behavioral labels. WorkGroup/profile/methodology prose is fact-check risk and requires owner verification.
+
+About biography and speaker-profile prose live in the deck. The reusable
+speaker bio is intentionally third person and fact-check risk. Career periods,
+organizations, trajectory labels, and marks remain in `career.v1.json`; speaker
+bucket/topic IDs remain in `speaker-profile.v1.json`; LinkedIn remains in the
+sanitized public profile. Studio's copy-ownership report exposes these Git deck
+paths and review classes read-only.
 
 The copy deck cannot own metrics, evidence, dates, IDs, slugs, relationships,
 URLs, ordering, visibility, privacy/security/legal language, provider

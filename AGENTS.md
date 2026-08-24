@@ -33,7 +33,11 @@
   filtered Work calendar and Project index.
 - Keep the complete Work archive two-dimensional and server rendered. Its temporal overview is a semantic four-line-by-year color calendar with exact counts. Calendar, topic, search, organization, and filter selections all reveal the same flat Project index; individual project pages remain lean evidence leaves. Do not use a separate plot, Three.js, or WebGL for archive navigation.
 - Preserve an editorial, inspectable HTML experience when JavaScript or motion is unavailable.
-- Public copy is first-person, technically precise, and structured as outcome → mechanism → proof → meaning. Keep one claim per sentence, keep limits beside numbers, and avoid hype, rhetorical questions, or unsupported causality.
+- Public narrative uses first person only when authorship, a personal choice, or
+  a durable belief matters. The copyable About speaker bio is intentionally
+  third person. Keep language technically precise and structured as outcome →
+  mechanism → proof → meaning; keep one claim per sentence, limits beside
+  numbers, and avoid hype, rhetorical questions, or unsupported causality.
 - Treat the dependency-free closed seven-object contract, semantic `/play/<object>` routes, and object directory as authoritative. Derive routes, controls, focus targets, and smoke paths from that contract while keeping executable screen/provider/scene maps literal and parity-tested. The low-poly room is optional enhancement: it may not own provider or Travel content, preload connectors, geography, or media, or make any collection unreachable without WebGL. There is no Classic Play mode; retain only the permanent legacy `?stream=` redirects.
 - The v2.2 public, preview, and staging contract keeps Simulation dormant with
   `SIMULATION_EXPERIENCE_MODE=disabled` and

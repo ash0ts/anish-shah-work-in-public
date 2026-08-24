@@ -1,6 +1,6 @@
 interface:
   display_name: "Edit Anish Site Copy"
   short_description: "Edit site copy with its voice and fact boundaries"
-  default_prompt: "Use $edit-anish-site-copy to revise the approved Markdown copy deck in the site's first-person technical voice, identify fact-check fields, and move code or protected-data requests into an implementation request."
+  default_prompt: "Use $edit-anish-site-copy to revise the approved Markdown copy deck in the site's personal technical voice, preserve the third-person speaker-bio exception, identify fact-check fields, and move code or protected-data requests into an implementation request."
 policy:
   allow_implicit_invocation: true

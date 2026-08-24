@@ -90,6 +90,81 @@ test("About and Work load only approved first-party brand artwork", async ({
   expect(remoteImageRequests).toEqual([]);
 });
 
+test("the About speaker profile copies bounded visible text and preserves focus", async ({
+  browser,
+}) => {
+  const successContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  await successContext.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value) => {
+          globalThis.__copiedSpeakerProfile = value;
+        },
+      },
+    });
+  });
+  const successPage = await successContext.newPage();
+  await successPage.goto("/about", { waitUntil: "networkidle" });
+  const copyButton = successPage.getByRole("button", {
+    name: "Copy speaker profile",
+  });
+  await expect(copyButton).toBeVisible();
+  await copyButton.click();
+  await expect(copyButton).toBeFocused();
+  await expect(successPage.locator('p[role="status"]')).toHaveText(
+    "Speaker profile copied.",
+  );
+  const copied = await successPage.evaluate(
+    () => globalThis.__copiedSpeakerProfile,
+  );
+  expect(copied).toContain(
+    "Anish Shah builds agent systems, evaluation and observability workflows",
+  );
+  expect(copied).toContain("• Agent systems & tool interfaces");
+  expect(copied).toContain("• Evaluation & observability");
+  expect(copied).toContain("• Technical education & workshops");
+  expect(copied).toMatch(
+    /Contact on LinkedIn: https:\/\/www\.linkedin\.com\/in\/anish-shah\/?/u,
+  );
+  expect(copied).not.toMatch(
+    /mailto:|\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b|credential\s+id|street\s+address/iu,
+  );
+  await successContext.close();
+
+  const failureContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  await failureContext.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async () => {
+          throw new Error("clipboard_denied");
+        },
+      },
+    });
+  });
+  const failurePage = await failureContext.newPage();
+  await failurePage.goto("/about", { waitUntil: "networkidle" });
+  const failureButton = failurePage.getByRole("button", {
+    name: "Copy speaker profile",
+  });
+  await failureButton.click();
+  await expect(failureButton).toBeFocused();
+  await expect(failurePage.locator('p[role="status"]')).toHaveText(
+    "Copy failed. Select the profile text instead.",
+  );
+  await expect(
+    failurePage.getByText(
+      /Anish Shah builds agent systems, evaluation and observability workflows/,
+    ),
+  ).toBeVisible();
+  await failureContext.close();
+});
+
 test("the v2.2 public runtime keeps Simulation fully disabled", async ({
   page,
   request,
@@ -834,6 +909,19 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
   await page.goto("/play", { waitUntil: "load" });
   await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
   await expect(page.locator("iframe")).toHaveCount(0);
+
+  await page.goto("/about", { waitUntil: "load" });
+  await expect(
+    page.getByText(
+      /Anish Shah builds agent systems, evaluation and observability workflows/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("https://www.linkedin.com/in/anish-shah", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('button[hidden]')).toContainText(
+    "Copy speaker profile",
+  );
 
   await page.goto("/work", { waitUntil: "load" });
   const organizations = page.locator("#work-organizations");

@@ -24,5 +24,29 @@ How the work developed.
 ## work-cta
 See the work
 
-## linkedin-cta
-View LinkedIn
+## speaker-eyebrow
+Speaker profile
+
+## speaker-heading
+Talks grounded in the systems I build.
+
+## speaker-bio
+Anish Shah builds agent systems, evaluation and observability workflows, and technical education at Weights & Biases. His talks turn lessons from those systems into practical patterns for tracing behavior, testing AI applications, and designing tool interfaces people can inspect and control.
+
+## speaker-topics-heading
+Topics
+
+## speaker-topic-agent-systems
+Agent systems & tool interfaces
+
+## speaker-topic-evaluation-observability
+Evaluation & observability
+
+## speaker-topic-education-community
+Technical education & workshops
+
+## speaker-copy-cta
+Copy speaker profile
+
+## speaker-linkedin-cta
+Contact on LinkedIn

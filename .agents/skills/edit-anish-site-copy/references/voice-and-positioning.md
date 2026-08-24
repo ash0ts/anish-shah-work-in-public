@@ -2,7 +2,14 @@
 
 ## Core voice
 
-Write in Anish's first person. Address technically sophisticated readers without assuming they already know the archive.
+Use Anish's first person only when authorship, a personal choice, or a durable
+belief matters. Name the project, provider, or interface directly everywhere
+else. Address technically sophisticated readers without assuming they already
+know the archive.
+
+The copyable About speaker bio is the deliberate exception: write it in third
+person so an event organizer can reuse it without changing pronouns. Treat its
+biography and topic claims as fact-check copy, not promotional license.
 
 Use this sequence when it helps:
 
@@ -22,6 +29,11 @@ Not every field needs all four parts. A headline may carry the outcome while nea
 - Domain language where it adds precision: agents, evaluation, observability, traces, MCP, open source, technical education.
 - One claim per sentence.
 - Short enough that layout, labels, and evidence can do part of the explanation.
+- Concrete state and ownership when describing technical behavior: name the
+  browser, Worker, provider, snapshot, or person instead of hiding responsibility
+  behind “the system.”
+- Human consequence after technical mechanism: say what became easier to
+  inspect, decide, recover, or control.
 
 ## Avoid
 
@@ -32,6 +44,8 @@ Not every field needs all four parts. A headline may carry the outcome while nea
 - Repeating “public,” “work,” “body,” “form,” or “technical” when a concrete noun is available.
 - Restating the same title, summary, qualifier, or methodology in adjacent modules.
 - Raw importer notes, registration URLs, durations, replay status, or role-only fragments as summaries.
+- Whitepaper polish, generic AI language, dramatic fragments, and sentences
+  that sound clever while making the reader decode what happened.
 
 ## Vocabulary contract
 

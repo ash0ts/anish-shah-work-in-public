@@ -42,6 +42,33 @@ test("COPY_VERSION includes the reviewed Home signal and rail contract", async (
     "utf8",
   );
   assert.match(source, /content\/presentation\/home-signal-rails\.v1\.json/u);
+  assert.match(source, /content\/presentation\/speaker-profile\.v1\.json/u);
+});
+
+test("speaker copy keeps factual content in fact-check fields", async () => {
+  const deck = await buildCopyDeck(root);
+  const definitions = new Map(
+    COPY_PAGE_DEFINITIONS.about.map((definition) => [definition.key, definition]),
+  );
+  for (const key of [
+    "speaker-heading",
+    "speaker-bio",
+    "speaker-topic-agent-systems",
+    "speaker-topic-evaluation-observability",
+    "speaker-topic-education-community",
+  ]) {
+    assert.equal(definitions.get(key)?.risk, "fact_check", key);
+    assert.equal(typeof deck.pages.about[key], "string", key);
+  }
+  for (const key of [
+    "speaker-eyebrow",
+    "speaker-topics-heading",
+    "speaker-copy-cta",
+    "speaker-linkedin-cta",
+  ]) {
+    assert.equal(definitions.get(key)?.risk, "editorial", key);
+    assert.equal(typeof deck.pages.about[key], "string", key);
+  }
 });
 
 test("curated WorkGroup copy stays meaningful and free of importer residue", async () => {
@@ -438,7 +465,7 @@ test("copy ownership report enumerates deck paths and retained D1 wording safely
     },
   ]);
 
-  assert.equal(report.schemaVersion, "1.0");
+  assert.equal(report.schemaVersion, "1.1");
   assert.match(report.copyVersion, /^[a-f0-9]{16}$/u);
   assert.equal(
     report.records.length,
@@ -452,6 +479,32 @@ test("copy ownership report enumerates deck paths and retained D1 wording safely
     differingD1WordingCount: 1,
     missingD1RecordCount: report.records.length - 2,
   });
+  assert.equal(report.surfaceSummary.surfaceCount, 7);
+  assert.equal(
+    report.surfaceSummary.fieldCount,
+    Object.values(COPY_PAGE_DEFINITIONS).reduce(
+      (total, definitions) => total + definitions.length,
+      0,
+    ),
+  );
+  assert.equal(
+    report.surfaceSummary.riskCounts.editorial +
+      report.surfaceSummary.riskCounts.fact_check,
+    report.surfaceSummary.fieldCount,
+  );
+  const aboutSurface = report.surfaces.find(
+    (surface) => surface.id === "about",
+  );
+  assert.deepEqual(aboutSurface?.routeScopes, ["/about"]);
+  assert.equal(aboutSurface?.deckPath, "content/copy/pages/about.md");
+  assert.deepEqual(
+    aboutSurface?.fields.find((field) => field.key === "speaker-bio"),
+    { key: "speaker-bio", risk: "fact_check" },
+  );
+  assert.deepEqual(
+    aboutSurface?.fields.find((field) => field.key === "speaker-copy-cta"),
+    { key: "speaker-copy-cta", risk: "editorial" },
+  );
   assert.deepEqual(
     report.records.find((record) => record.id === matchingGroup.id),
     {
@@ -533,7 +586,9 @@ test("copy ownership API and Studio surface stay owner-only, read-only, and no-s
   assert.match(server, /buildCopyOwnershipReport\(result\.records\)/u);
   assert.doesNotMatch(server, /ensureSanitizedPublicRecords|INSERT|UPDATE|DELETE/u);
 
-  assert.match(component, /WorkGroup wording lives in Git\./u);
+  assert.match(component, /Public copy lives in Git\./u);
+  assert.match(component, /report\.surfaceSummary\.riskCounts\.editorial/u);
+  assert.match(component, /report\.surfaces\.map/u);
   assert.match(component, /Retained D1 values ignored/u);
   assert.match(component, /href="\/api\/studio\/copy-ownership"/u);
   assert.doesNotMatch(component, /<(?:input|textarea|select|button)\b/u);

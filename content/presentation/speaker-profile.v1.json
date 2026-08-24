@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "1.0",
+  "bucketId": "talks-programs",
+  "topicIds": [
+    "agent-systems",
+    "evaluation-observability",
+    "education-community"
+  ]
+}

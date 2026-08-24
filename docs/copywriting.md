@@ -57,7 +57,7 @@ These fields may be changed directly, subject to tone, length, layout, and
 accessibility review:
 
 - Home framing and CTA labels;
-- About headings and CTA labels;
+- About headings, speaker-profile labels, and CTA labels;
 - Work and Play introductions;
 - room overview and object flavor text;
 - Travel atlas framing and Simulation invitation, instructions, and nonfactual encounter flavor through declared fields;
@@ -72,7 +72,7 @@ These fields may be edited, but the owner must verify every factual implication
 before approval:
 
 - profile headline, summary, and current-focus language;
-- About biography, chronology summaries, dates, and organization relationships;
+- About biography, speaker bio, and speaker topics;
 - WorkGroup display title, short title, summary, and role summary;
 - career trajectory and bucket descriptions;
 - Sources methodology, counting-rule, and non-claim prose; and
@@ -81,6 +81,34 @@ before approval:
 `npm run copy:diff` reports changed keys and marks each `EDITORIAL` or
 `FACT-CHECK`. A fact-check label is a review requirement, not permission to
 change canonical facts.
+
+The About chronology is not a copy-deck surface. Its periods, organization
+names, trajectory labels, and brand references live in the reviewed
+`content/presentation/career.v1.json` manifest. Propose chronology changes as
+an engineering and fact-review request rather than adding new About fields.
+
+## Speaker-profile exception
+
+Most personal narrative uses Anish's first person only when authorship or a
+personal choice matters. The `about.speaker-bio` field deliberately uses third
+person so an event organizer can copy it without rewriting pronouns. Keep it
+compact, fact-checked, and grounded in the public Work archive.
+
+The three speaker-topic fields are also fact-check fields. They describe
+demonstrated subject areas and link into the existing Talks/Programs Work
+filters; they cannot create a credential, talk count, award, or new claim. The
+speaker eyebrow, topics heading, and CTA labels are editorial. The LinkedIn
+destination is resolved from the sanitized public profile and is not editable
+copy.
+
+| Review class | About fields |
+| --- | --- |
+| Fact-check | `speaker-heading`, `speaker-bio`, `speaker-topic-agent-systems`, `speaker-topic-evaluation-observability`, `speaker-topic-education-community` |
+| Editorial | `speaker-eyebrow`, `speaker-topics-heading`, `speaker-copy-cta`, `speaker-linkedin-cta` |
+
+The owner-only Studio copy report lists this page path, its route scope, and
+the current counts for both review classes. It is an inventory, not another
+editing surface.
 
 ## Protected: request, do not edit
 
