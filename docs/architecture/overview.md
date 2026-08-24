@@ -72,7 +72,8 @@ content or navigation. See
   synchronizes provider collections.
 - `content/` owns private-safe curation, generated public data, and the copy deck.
 - `drizzle/` is forward-only schema history.
-- `scripts/` owns deterministic generation, validation, preview, staging, and release evidence.
+- `scripts/` owns deterministic generation, validation, preview, staging, and
+  release evidence, including the ignored self-digested owner-local receipt.
 - `public/assets/travel/geography/` contains deterministic Natural Earth-derived
   country IDs and bounded admin-1 geometry; it contains no owner Travel data.
 

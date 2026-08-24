@@ -213,7 +213,7 @@ There is no alternate Classic mode; only bounded legacy query redirects remain.
 | `worker/**` | Origin/tier boundary, Access, security headers, limits, observability, cron | Security behavior belongs here, not only in route handlers |
 | `content/**` | Generated public data, reviewed curation, copy, presentation manifests | Never hand-edit generated or private artifacts |
 | `drizzle/**` | Ordered D1 schema history | Migrations are additive and immutable after application |
-| `scripts/**` | Generation, validation, environment plans, release controls | Plans may inspect; hosted mutation stays explicit and exact-SHA guarded |
+| `scripts/**` | Generation, validation, evidence receipts, environment plans, release controls | Local evidence is ignored and self-digested; hosted mutation stays explicit and exact-SHA guarded |
 | `tests/**` | Content, backend/security, rendered, environment, and browser contracts | Test public purity and failure behavior, not just success paths |
 
 The main public route groups are deliberately conventional: Home, About, Work
@@ -433,9 +433,17 @@ A production candidate has a stronger contract:
 
 1. Pin a clean pushed `release/<semver>` commit.
 2. Require exact-SHA evidence from Validate, Gitleaks, CodeQL, and Browser
-   Quality.
+   Quality. Four GitHub workflow runs are the default. When hosted minutes or
+   artifact storage are unavailable, an explicitly confirmed owner-local mode
+   runs Validate, Gitleaks, and Browser Quality directly and binds them in one
+   self-digested receipt; the pinned CodeQL action still runs on a disposable
+   AMD64 owner runner. Its Validate gate builds once, adds the reviewed
+   non-secret production configuration, and freezes the final artifact before
+   Gitleaks and Browser Quality.
 3. Build or retrieve one hashed immutable deployable artifact and reuse those
-   exact bytes for rendered, browser, bundle, planning, and release checks.
+   exact bytes for rendered, browser, bundle, planning, and release checks. In
+   owner-local mode the receipt, artifact manifest, clean pushed ref, and
+   commit SHA are reverified at every guarded release boundary.
 4. Generate an environment plan that verifies resource isolation, additive
    migrations, versions, feature-mode values, and the prior Worker checkpoint.
 5. Stage the candidate without immediately replacing the prior version, apply
@@ -446,6 +454,9 @@ A production candidate has a stronger contract:
 
 Release records include `RELEASE_VERSION`, `CONTENT_VERSION`, `COPY_VERSION`,
 `TRAVEL_ATLAS_MODE`, `SIMULATION_EXPERIENCE_MODE`, and `SIMULATION_AI_MODE`.
+They also identify the evidence mode; owner-local records include the safe
+receipt digest rather than invented workflow URLs for checks that did not run
+on GitHub.
 Worker rollback and D1 restoration are separate decisions: code can be
 re-promoted without assuming database state should move backward.
 

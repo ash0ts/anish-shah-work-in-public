@@ -43,7 +43,9 @@ if (upstream !== head) {
 }
 const validatedSha = required("RELEASE_VALIDATED_SHA");
 if (!/^[0-9a-f]{40}$/i.test(validatedSha) || validatedSha !== head) {
-  throw new Error("RELEASE_VALIDATED_SHA must be the exact 40-character HEAD validated by GitHub Actions.");
+  throw new Error(
+    "RELEASE_VALIDATED_SHA must be the exact 40-character HEAD validated by the selected release-evidence mode.",
+  );
 }
 
 const contentCheck = spawnSync(

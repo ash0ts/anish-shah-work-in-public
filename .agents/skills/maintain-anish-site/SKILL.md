@@ -119,5 +119,15 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Documentation changes must preserve the authority map in `docs/README.md`.
   Run `npm run docs:check`; when architecture ownership changes, update both
   `docs/architecture/codebase-tour.md` and the repository map in this skill.
-- Release-code edits select ordinary `npm run validate`. A clean pushed `release/<semver>` candidate may use the guarded staging workflow with all four exact-SHA workflow URLs. `npm run validate:release` and production mutation remain separately authorized.
+- Release-code edits select ordinary `npm run validate`. A clean, pushed
+  `release/<semver>` candidate uses four exact-SHA GitHub workflow runs for
+  isolated staging, and production normally uses the same evidence. If hosted
+  minutes or artifact storage block production, its explicit owner-local mode
+  may replace only Validate, Gitleaks, and Browser Quality with one
+  permission-restricted owner attestation from the exact pushed `origin/main`
+  head over the same immutable build; CodeQL remains an exact-SHA run of the
+  pinned GitHub action on the verified one-time AMD64 owner runner.
+  Production-candidate execution—standard
+  `npm run validate:release` or the explicit owner-local evidence command—and
+  production mutation remain separately authorized.
 - The helper never deploys, migrates hosted state, rotates credentials, or mutates Git.

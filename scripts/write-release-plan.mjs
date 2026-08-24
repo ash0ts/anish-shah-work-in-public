@@ -5,13 +5,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assertActiveActionsWorkflow,
-  assertRequiredValidationRuns,
+  assertOwnerLocalTrustedSource,
+  assertOwnerLocalEvidenceReceipt,
+  assertReleaseValidationEvidence,
   assertVerifiedActionsRun,
   githubRepositoryFromRemoteUrl,
+  githubActionsValidationEvidence,
   publicationCheckpointForPlan,
+  readOwnerLocalEvidenceReceipt,
+  RELEASE_EVIDENCE_MODES,
   REQUIRED_VALIDATION_RUNS,
+  selectedReleaseEvidenceMode,
   simulationReleaseRecord,
 } from "./lib/release-contract.mjs";
+import { verifyOwnerLocalCodeqlEvidence } from "./lib/owner-local-codeql.mjs";
+import { verifyOwnerLocalRemoteMain } from "./lib/owner-local-source.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
 import {
   RELEASE_BUILD_CHECKPOINT_PATH,
@@ -64,6 +72,12 @@ function isoDate(value, name) {
 }
 
 const head = git("rev-parse", "HEAD");
+const branch = git("branch", "--show-current");
+if (!branch) throw new Error("The release commit must be on a named branch.");
+const sourceRef = `refs/heads/${branch}`;
+const commitTimestamp = new Date(
+  git("show", "-s", "--format=%cI", head),
+).toISOString();
 if (git("status", "--porcelain=v1", "--untracked-files=all")) {
   throw new Error("A release plan requires a clean worktree.");
 }
@@ -80,6 +94,26 @@ if (upstreamSha !== head) {
   throw new Error("HEAD must be pushed to its configured upstream before release.");
 }
 const repository = configuredGithubRepository();
+
+const evidenceMode = selectedReleaseEvidenceMode();
+if (evidenceMode === RELEASE_EVIDENCE_MODES.ownerLocal) {
+  assertOwnerLocalTrustedSource({
+    head,
+    branch,
+    upstreamRef: git(
+      "rev-parse",
+      "--abbrev-ref",
+      "--symbolic-full-name",
+      "@{upstream}",
+    ),
+    upstreamSha,
+    repository: githubRepositoryFromRemoteUrl(
+      git("remote", "get-url", "--push", "origin"),
+    ),
+    worktreeStatus: "",
+  });
+  verifyOwnerLocalRemoteMain({ root, head });
+}
 
 const preflight = spawnSync(
   process.execPath,
@@ -123,12 +157,8 @@ const validationRequirements = REQUIRED_VALIDATION_RUNS.map(({
   workflowPath,
   env: validationEnvironmentNames.get(kind),
 }));
-const validationRuns = validationRequirements.map(({
-  kind,
-  env,
-  name,
-  workflowPath,
-}) => {
+
+function verifyGithubActionsRequirement({ kind, env, name, workflowPath }) {
   const url = new URL(required(env));
   if (
     url.protocol !== "https:" ||
@@ -138,7 +168,10 @@ const validationRuns = validationRequirements.map(({
     throw new Error(`${env} must be a GitHub Actions run URL.`);
   }
   const [, repositoryOwner, repositoryName, , , runId] = url.pathname.split("/");
-  if (`${repositoryOwner.toLowerCase()}/${repositoryName.toLowerCase()}` !== repository) {
+  if (
+    `${repositoryOwner.toLowerCase()}/${repositoryName.toLowerCase()}` !==
+    repository
+  ) {
     throw new Error(`${env} must belong to the configured upstream repository.`);
   }
   const result = spawnSync(
@@ -205,9 +238,20 @@ const validationRuns = validationRequirements.map(({
     event: evidence.event,
     ...workflowIdentity,
   };
-});
-assertRequiredValidationRuns(validationRuns, head, repository);
+}
 
+const validationRuns =
+  evidenceMode === RELEASE_EVIDENCE_MODES.ownerLocal
+    ? [
+        verifyOwnerLocalCodeqlEvidence({
+          root,
+          head,
+          repository,
+          url: required("RELEASE_CODEQL_URL"),
+          runnerLabel: required("RELEASE_CODEQL_RUNNER_LABEL"),
+        }),
+      ]
+    : validationRequirements.map(verifyGithubActionsRequirement);
 const migrationList = (process.env.RELEASE_MIGRATION_LIST ?? "")
   .split(",")
   .map((value) => value.trim())
@@ -286,11 +330,49 @@ const simulation = simulationReleaseRecord({
   approvalStateDigest: process.env.RELEASE_SIMULATION_APPROVAL_DIGEST,
 });
 
+const artifactEvidence = {
+  artifactSetSha256: deployableArtifactResult.manifest.artifactSetSha256,
+  deployableManifestSha256: sha256(deployableArtifactResult.bytes),
+  releaseBuildCheckpointSha256: sha256(releaseBuildCheckpointBytes),
+};
+let localReceipt;
+let localReceiptBytes;
+if (evidenceMode === RELEASE_EVIDENCE_MODES.ownerLocal) {
+  ({ receipt: localReceipt, receiptBytes: localReceiptBytes } =
+    await readOwnerLocalEvidenceReceipt(root));
+}
+const validationEvidence =
+  evidenceMode === RELEASE_EVIDENCE_MODES.githubActions
+    ? githubActionsValidationEvidence()
+    : assertOwnerLocalEvidenceReceipt(localReceipt, localReceiptBytes, {
+        head,
+        repository,
+        ref: sourceRef,
+        artifact: artifactEvidence,
+        notBefore: commitTimestamp,
+        notAfter: new Date().toISOString(),
+      });
+assertReleaseValidationEvidence(
+  validationEvidence,
+  validationRuns,
+  {
+    head,
+    repository,
+    ref: sourceRef,
+    artifact: artifactEvidence,
+    notBefore: commitTimestamp,
+    notAfter: new Date().toISOString(),
+    localReceipt,
+    localReceiptBytes,
+  },
+);
+
 const record = {
-  schemaVersion: "1.3",
+  schemaVersion: "1.4",
   preparedAt: isoDate(new Date().toISOString(), "preparedAt"),
   commitSha: head,
   repository,
+  sourceRef,
   releaseVersion,
   contentVersion: contentAttestation.contentVersion,
   travelAtlasMode,
@@ -310,6 +392,7 @@ const record = {
   },
   publicationCheckpoint,
   simulation,
+  validationEvidence,
   validationRuns,
   previousWorkerVersion: previousVersion,
   d1: {

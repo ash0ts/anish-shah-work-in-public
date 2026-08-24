@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { lstat, readFile } from "node:fs/promises";
+import path from "node:path";
+
 import { ROOM_OBJECT_CONTRACT } from "../../components/play/room-platform/room-object-contract.ts";
 
 export function exactMigrationNames(output) {
@@ -203,6 +207,372 @@ export const REQUIRED_VALIDATION_RUNS = Object.freeze([
   }),
 ]);
 
+export const RELEASE_EVIDENCE_MODES = Object.freeze({
+  githubActions: "github-actions",
+  ownerLocal: "owner-local",
+});
+
+export const CANONICAL_GITHUB_REPOSITORY =
+  "ash0ts/anish-shah-work-in-public";
+
+export const OWNER_LOCAL_CODEQL_RUNNER_LABEL_PATTERN =
+  /^anish-release-[a-f0-9]{12}$/u;
+
+export const OWNER_LOCAL_RELEASE_CONFIRMATION =
+  "I_ACCEPT_OWNER_LOCAL_RELEASE_EVIDENCE";
+
+export const LOCAL_RELEASE_EVIDENCE_PATH =
+  "dist/local-release-evidence.json";
+
+export const OWNER_LOCAL_TOOL_VERSIONS = Object.freeze({
+  node: "v24.18.0",
+  npm: "11.6.2",
+  gitleaks: "8.30.1",
+  playwright: "1.62.1",
+});
+
+export const OWNER_LOCAL_RESULTS = Object.freeze({
+  validate: Object.freeze({
+    kind: "validate",
+    name: "Validate",
+    command: "npm run validate:release:local",
+  }),
+  gitleaks: Object.freeze({
+    kind: "gitleaks",
+    name: "Gitleaks",
+    command: "gitleaks git --redact --no-banner .",
+  }),
+  browser: Object.freeze({
+    kind: "browser",
+    name: "Browser Quality",
+    command: "npm run browser:release:existing",
+  }),
+});
+
+export function selectedReleaseEvidenceMode(environment = process.env) {
+  const mode =
+    environment.RELEASE_EVIDENCE_MODE?.trim() ||
+    RELEASE_EVIDENCE_MODES.githubActions;
+  if (!Object.values(RELEASE_EVIDENCE_MODES).includes(mode)) {
+    throw new Error(
+      "RELEASE_EVIDENCE_MODE must be github-actions or owner-local.",
+    );
+  }
+  const confirmation = environment.RELEASE_OWNER_LOCAL_CONFIRMATION?.trim();
+  const codeqlRunnerLabel = environment.RELEASE_CODEQL_RUNNER_LABEL?.trim();
+  if (mode === RELEASE_EVIDENCE_MODES.ownerLocal) {
+    if (confirmation !== OWNER_LOCAL_RELEASE_CONFIRMATION) {
+      throw new Error(
+        `Owner-local evidence requires RELEASE_OWNER_LOCAL_CONFIRMATION=${OWNER_LOCAL_RELEASE_CONFIRMATION}.`,
+      );
+    }
+    for (const name of [
+      "RELEASE_VALIDATION_URL",
+      "RELEASE_GITLEAKS_URL",
+      "RELEASE_BROWSER_URL",
+    ]) {
+      if (environment[name]?.trim()) {
+        throw new Error(
+          `${name} must be unset when owner-local evidence is selected.`,
+        );
+      }
+    }
+    if (!OWNER_LOCAL_CODEQL_RUNNER_LABEL_PATTERN.test(codeqlRunnerLabel ?? "")) {
+      throw new Error(
+        "Owner-local evidence requires RELEASE_CODEQL_RUNNER_LABEL=anish-release-<12 lowercase hex>.",
+      );
+    }
+  } else if (confirmation || codeqlRunnerLabel) {
+    throw new Error(
+      "Owner-local confirmation and CodeQL runner label are valid only in owner-local evidence mode.",
+    );
+  }
+  return mode;
+}
+
+export function assertOwnerLocalTrustedSource({
+  head,
+  branch,
+  upstreamRef,
+  upstreamSha,
+  repository,
+  worktreeStatus = "",
+}) {
+  if (
+    !/^[a-f0-9]{40}$/u.test(head ?? "") ||
+    branch !== "main" ||
+    upstreamRef !== "origin/main" ||
+    upstreamSha !== head ||
+    repository !== CANONICAL_GITHUB_REPOSITORY ||
+    worktreeStatus
+  ) {
+    throw new Error(
+      "Owner-local release evidence requires a clean exact origin/main head of the canonical repository.",
+    );
+  }
+  return {
+    head,
+    ref: "refs/heads/main",
+    repository: CANONICAL_GITHUB_REPOSITORY,
+  };
+}
+
+const OWNER_LOCAL_RECEIPT_KEYS = Object.freeze([
+  "schemaVersion",
+  "mode",
+  "repository",
+  "ref",
+  "commitSha",
+  "completedAt",
+  "tools",
+  "artifact",
+  "results",
+  "payloadSha256",
+]);
+
+const OWNER_LOCAL_RESULT_KEYS = Object.freeze([
+  "kind",
+  "name",
+  "command",
+  "status",
+  "startedAt",
+  "completedAt",
+  "exitCode",
+  "outputSha256",
+  "artifactSetSha256",
+]);
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function exactObjectKeys(value, expected) {
+  return (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === expected.length &&
+    expected.every((key) => Object.hasOwn(value, key))
+  );
+}
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalize(value[key])]),
+    );
+  }
+  return value;
+}
+
+export function ownerLocalEvidencePayloadSha256(receipt) {
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) {
+    throw new Error("The owner-local release receipt is unreadable.");
+  }
+  const payload = { ...receipt };
+  delete payload.payloadSha256;
+  return sha256(JSON.stringify(canonicalize(payload)));
+}
+
+function canonicalIsoTimestamp(value, label) {
+  const parsed = new Date(value);
+  if (
+    typeof value !== "string" ||
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString() !== value
+  ) {
+    throw new Error(`${label} must be a canonical ISO timestamp.`);
+  }
+  return value;
+}
+
+function exactArtifactEvidence(value, expected) {
+  const keys = [
+    "artifactSetSha256",
+    "deployableManifestSha256",
+    "releaseBuildCheckpointSha256",
+  ];
+  return (
+    exactObjectKeys(value, keys) &&
+    keys.every(
+      (key) =>
+        /^[a-f0-9]{64}$/u.test(value[key]) && value[key] === expected?.[key],
+    )
+  );
+}
+
+/**
+ * Verify the owner-run release evidence without trusting a URL or a mutable
+ * console transcript. The receipt is exact-SHA/ref/repository bound, names
+ * three fixed commands, and binds every result to the same deployable bytes.
+ */
+export function assertOwnerLocalEvidenceReceipt(
+  receipt,
+  receiptBytes,
+  {
+    head,
+    repository,
+    ref,
+    artifact,
+    notBefore,
+    notAfter = new Date().toISOString(),
+  },
+) {
+  if (!exactObjectKeys(receipt, OWNER_LOCAL_RECEIPT_KEYS)) {
+    throw new Error("The owner-local release receipt has an unexpected shape.");
+  }
+  if (
+    receipt.schemaVersion !== "1.0" ||
+    receipt.mode !== RELEASE_EVIDENCE_MODES.ownerLocal ||
+    receipt.commitSha !== head ||
+    receipt.repository !== repository ||
+    receipt.repository !== CANONICAL_GITHUB_REPOSITORY ||
+    receipt.ref !== ref ||
+    receipt.ref !== "refs/heads/main"
+  ) {
+    throw new Error(
+      "The owner-local release receipt does not match the exact pushed SHA, trusted ref, and repository.",
+    );
+  }
+  if (
+    !exactObjectKeys(receipt.tools, Object.keys(OWNER_LOCAL_TOOL_VERSIONS)) ||
+    JSON.stringify(receipt.tools) !== JSON.stringify(OWNER_LOCAL_TOOL_VERSIONS)
+  ) {
+    throw new Error("The owner-local release receipt used an unpinned toolchain.");
+  }
+  if (!exactArtifactEvidence(receipt.artifact, artifact)) {
+    throw new Error(
+      "The owner-local release receipt does not match the exact deployable artifact.",
+    );
+  }
+  if (
+    !exactObjectKeys(receipt.results, Object.keys(OWNER_LOCAL_RESULTS)) ||
+    !/^[a-f0-9]{64}$/u.test(receipt.payloadSha256) ||
+    receipt.payloadSha256 !== ownerLocalEvidencePayloadSha256(receipt)
+  ) {
+    throw new Error("The owner-local release receipt is missing, stale, or mutated.");
+  }
+
+  const notBeforeTime = Date.parse(
+    canonicalIsoTimestamp(notBefore, "Owner-local receipt lower bound"),
+  );
+  const notAfterTime = Date.parse(
+    canonicalIsoTimestamp(notAfter, "Owner-local receipt upper bound"),
+  );
+  const artifactSetSha256 = receipt.artifact.artifactSetSha256;
+  let latestResultTime = 0;
+  for (const [resultKey, expected] of Object.entries(OWNER_LOCAL_RESULTS)) {
+    const result = receipt.results[resultKey];
+    if (
+      !exactObjectKeys(result, OWNER_LOCAL_RESULT_KEYS) ||
+      result.kind !== expected.kind ||
+      result.name !== expected.name ||
+      result.command !== expected.command ||
+      result.status !== "pass" ||
+      result.exitCode !== 0 ||
+      !/^[a-f0-9]{64}$/u.test(result.outputSha256) ||
+      result.artifactSetSha256 !== artifactSetSha256
+    ) {
+      throw new Error(
+        `The owner-local ${expected.name} result is not an exact successful artifact-bound gate.`,
+      );
+    }
+    const startedAt = canonicalIsoTimestamp(
+      result.startedAt,
+      `${expected.name} startedAt`,
+    );
+    const completedAt = canonicalIsoTimestamp(
+      result.completedAt,
+      `${expected.name} completedAt`,
+    );
+    if (
+      Date.parse(completedAt) < Date.parse(startedAt) ||
+      Date.parse(startedAt) < notBeforeTime ||
+      Date.parse(completedAt) > notAfterTime + 5 * 60 * 1000
+    ) {
+      throw new Error(
+        `The owner-local ${expected.name} result has a stale or invalid time range.`,
+      );
+    }
+    latestResultTime = Math.max(latestResultTime, Date.parse(completedAt));
+  }
+
+  const completedAt = canonicalIsoTimestamp(
+    receipt.completedAt,
+    "Owner-local receipt completedAt",
+  );
+  if (
+    Date.parse(completedAt) !== latestResultTime ||
+    latestResultTime < notBeforeTime ||
+    latestResultTime > notAfterTime + 5 * 60 * 1000
+  ) {
+    throw new Error("The owner-local release receipt is stale or has an invalid time range.");
+  }
+  if (
+    !Buffer.isBuffer(receiptBytes) ||
+    !receiptBytes.equals(
+      Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`, "utf8"),
+    )
+  ) {
+    throw new Error(
+      "The owner-local release receipt bytes are unavailable or noncanonical.",
+    );
+  }
+
+  return {
+    mode: RELEASE_EVIDENCE_MODES.ownerLocal,
+    ownerConfirmed: true,
+    receiptPath: LOCAL_RELEASE_EVIDENCE_PATH,
+    receiptSha256: sha256(receiptBytes),
+    payloadSha256: receipt.payloadSha256,
+    completedAt,
+    localResults: Object.keys(OWNER_LOCAL_RESULTS),
+    githubResults: ["codeql"],
+  };
+}
+
+export async function readOwnerLocalEvidenceReceipt(root) {
+  const receiptPath = path.join(root, LOCAL_RELEASE_EVIDENCE_PATH);
+  let metadata;
+  let receiptBytes;
+  try {
+    metadata = await lstat(receiptPath);
+    receiptBytes = await readFile(receiptPath);
+  } catch {
+    throw new Error(
+      `Owner-local release evidence is missing at ${LOCAL_RELEASE_EVIDENCE_PATH}.`,
+    );
+  }
+  if (
+    !metadata.isFile() ||
+    metadata.isSymbolicLink() ||
+    (metadata.mode & 0o777) !== 0o600
+  ) {
+    throw new Error(
+      "The owner-local release receipt must be a regular 0600 file.",
+    );
+  }
+  let receipt;
+  try {
+    receipt = JSON.parse(receiptBytes.toString("utf8"));
+  } catch {
+    throw new Error("The owner-local release receipt is unreadable.");
+  }
+  if (
+    !receiptBytes.equals(
+      Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`, "utf8"),
+    )
+  ) {
+    throw new Error(
+      "The owner-local release receipt is not in its canonical file form.",
+    );
+  }
+  return { receipt, receiptBytes };
+}
+
 export const RELEASE_BROWSER_WORKFLOW_PATH =
   REQUIRED_VALIDATION_RUNS.find(({ kind }) => kind === "browser").workflowPath;
 
@@ -301,14 +671,13 @@ export function githubRepositoryFromRemoteUrl(value) {
   return `${match[1].toLowerCase()}/${match[2].toLowerCase()}`;
 }
 
-export function assertRequiredValidationRuns(runs, head, repository) {
+function assertRequiredActionsRuns(runs, head, repository, requirements) {
   const required = new Map(
-    REQUIRED_VALIDATION_RUNS.map((definition) => [definition.kind, definition]),
+    requirements.map((definition) => [definition.kind, definition]),
   );
   if (!Array.isArray(runs) || runs.length !== required.size) {
-    throw new Error(
-      "Release evidence must contain Validate, Gitleaks, CodeQL, and Browser Quality runs.",
-    );
+    const names = requirements.map(({ name }) => name).join(", ");
+    throw new Error(`Release evidence must contain exactly: ${names}.`);
   }
   const urls = new Set();
   const workflowIds = new Set();
@@ -355,6 +724,115 @@ export function assertRequiredValidationRuns(runs, head, repository) {
   if (required.size > 0) {
     throw new Error("Release evidence is missing a required validation run.");
   }
+}
+
+export function assertRequiredValidationRuns(runs, head, repository) {
+  try {
+    return assertRequiredActionsRuns(
+      runs,
+      head,
+      repository,
+      REQUIRED_VALIDATION_RUNS,
+    );
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith("Release evidence must contain exactly:")
+    ) {
+      throw new Error(
+        "Release evidence must contain Validate, Gitleaks, CodeQL, and Browser Quality runs.",
+      );
+    }
+    throw error;
+  }
+}
+
+export function assertRequiredCodeqlValidationRun(
+  runs,
+  head,
+  repository,
+  expectedRunnerLabel,
+) {
+  const codeql = REQUIRED_VALIDATION_RUNS.filter(({ kind }) => kind === "codeql");
+  assertRequiredActionsRuns(runs, head, repository, codeql);
+  const runner = runs[0]?.runner;
+  const expectedRunnerKeys = [
+    "jobDatabaseId",
+    "jobName",
+    "jitLabel",
+    "labels",
+  ];
+  const labels = runner?.labels;
+  if (
+    runs[0]?.event !== "workflow_dispatch" ||
+    !exactObjectKeys(runner, expectedRunnerKeys) ||
+    !Number.isSafeInteger(runner.jobDatabaseId) ||
+    runner.jobDatabaseId < 1 ||
+    runner.jobName !== "analyze" ||
+    !OWNER_LOCAL_CODEQL_RUNNER_LABEL_PATTERN.test(runner.jitLabel ?? "") ||
+    (expectedRunnerLabel && runner.jitLabel !== expectedRunnerLabel) ||
+    !Array.isArray(labels) ||
+    JSON.stringify(labels) !== JSON.stringify([...new Set(labels)].sort()) ||
+    !["self-hosted", "linux", "x64", runner.jitLabel].every((label) =>
+      labels.includes(label),
+    )
+  ) {
+    throw new Error(
+      "Owner-local release evidence requires an exact-SHA workflow_dispatch CodeQL run on the exact disposable Linux x64 runner.",
+    );
+  }
+}
+
+export function githubActionsValidationEvidence() {
+  return {
+    mode: RELEASE_EVIDENCE_MODES.githubActions,
+    ownerConfirmed: false,
+    receiptPath: null,
+    receiptSha256: null,
+    payloadSha256: null,
+    completedAt: null,
+    localResults: [],
+    githubResults: REQUIRED_VALIDATION_RUNS.map(({ kind }) => kind),
+  };
+}
+
+export function assertReleaseValidationEvidence(
+  validationEvidence,
+  validationRuns,
+  {
+    head,
+    repository,
+    ref,
+    artifact,
+    notBefore,
+    notAfter,
+    localReceipt,
+    localReceiptBytes,
+  },
+) {
+  if (validationEvidence?.mode === RELEASE_EVIDENCE_MODES.githubActions) {
+    const expected = githubActionsValidationEvidence();
+    if (JSON.stringify(validationEvidence) !== JSON.stringify(expected)) {
+      throw new Error("The GitHub Actions validation-evidence record is malformed.");
+    }
+    assertRequiredValidationRuns(validationRuns, head, repository);
+    return expected;
+  }
+  if (validationEvidence?.mode !== RELEASE_EVIDENCE_MODES.ownerLocal) {
+    throw new Error("The release validation-evidence mode is missing or unsupported.");
+  }
+  assertRequiredCodeqlValidationRun(validationRuns, head, repository);
+  const verified = assertOwnerLocalEvidenceReceipt(
+    localReceipt,
+    localReceiptBytes,
+    { head, repository, ref, artifact, notBefore, notAfter },
+  );
+  if (JSON.stringify(validationEvidence) !== JSON.stringify(verified)) {
+    throw new Error(
+      "The owner-local release receipt is missing, stale, mutated, or does not match the release plan.",
+    );
+  }
+  return verified;
 }
 
 export function assertProductionDeployment(output, version) {

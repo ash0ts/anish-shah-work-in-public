@@ -9,13 +9,24 @@ import {
   assertReleaseMarker,
   assertProductionDeployment,
   assertRequiredValidationRuns,
+  assertOwnerLocalEvidenceReceipt,
+  assertReleaseValidationEvidence,
   assertVerifiedActionsRun,
   exactMigrationNames,
   exactVersionIds,
   githubRepositoryFromRemoteUrl,
+  githubActionsValidationEvidence,
+  LOCAL_RELEASE_EVIDENCE_PATH,
+  OWNER_LOCAL_RELEASE_CONFIRMATION,
+  OWNER_LOCAL_RESULTS,
+  OWNER_LOCAL_TOOL_VERSIONS,
+  ownerLocalEvidencePayloadSha256,
   parseRemoteReleaseMarker,
   publicationCheckpointForPlan,
   REQUIRED_VALIDATION_RUNS,
+  readOwnerLocalEvidenceReceipt,
+  RELEASE_EVIDENCE_MODES,
+  selectedReleaseEvidenceMode,
   requireExactUploadedVersion,
   requiredPlaySmokeTests,
   releaseTravelHealthMatches,
@@ -45,6 +56,63 @@ import {
   buildDeployableArtifactManifest,
   verifyDeployableArtifactManifest,
 } from "../scripts/lib/deployable-artifact-contract.mjs";
+
+function ownerLocalReceiptFixture({
+  head = "a".repeat(40),
+  repository = "ash0ts/anish-shah-work-in-public",
+  ref = "refs/heads/main",
+  artifactSetSha256 = "b".repeat(64),
+  deployableManifestSha256 = "c".repeat(64),
+  releaseBuildCheckpointSha256 = "d".repeat(64),
+} = {}) {
+  const timestamps = {
+    validate: ["2026-08-24T12:00:00.000Z", "2026-08-24T12:10:00.000Z"],
+    gitleaks: ["2026-08-24T12:10:01.000Z", "2026-08-24T12:11:00.000Z"],
+    browser: ["2026-08-24T12:11:01.000Z", "2026-08-24T12:30:00.000Z"],
+  };
+  const receipt = {
+    schemaVersion: "1.0",
+    mode: RELEASE_EVIDENCE_MODES.ownerLocal,
+    repository,
+    ref,
+    commitSha: head,
+    completedAt: timestamps.browser[1],
+    tools: { ...OWNER_LOCAL_TOOL_VERSIONS },
+    artifact: {
+      artifactSetSha256,
+      deployableManifestSha256,
+      releaseBuildCheckpointSha256,
+    },
+    results: Object.fromEntries(
+      Object.entries(OWNER_LOCAL_RESULTS).map(([key, definition], index) => [
+        key,
+        {
+          ...definition,
+          status: "pass",
+          startedAt: timestamps[key][0],
+          completedAt: timestamps[key][1],
+          exitCode: 0,
+          outputSha256: String(index + 1).repeat(64),
+          artifactSetSha256,
+        },
+      ]),
+    ),
+  };
+  receipt.payloadSha256 = ownerLocalEvidencePayloadSha256(receipt);
+  const receiptBytes = Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`);
+  return {
+    receipt,
+    receiptBytes,
+    expected: {
+      head,
+      repository,
+      ref,
+      artifact: receipt.artifact,
+      notBefore: "2026-08-24T11:59:00.000Z",
+      notAfter: "2026-08-24T12:31:00.000Z",
+    },
+  };
+}
 
 function validReleaseConfigFixture() {
   const head = "a".repeat(40);
@@ -698,6 +766,251 @@ test("release evidence requires four distinct exact-commit quality runs", () => 
     ),
     /exact active/,
   );
+});
+
+test("owner-local evidence binds three fixed gates to one exact artifact", () => {
+  const fixture = ownerLocalReceiptFixture();
+  const evidence = assertOwnerLocalEvidenceReceipt(
+    fixture.receipt,
+    fixture.receiptBytes,
+    fixture.expected,
+  );
+  assert.deepEqual(evidence, {
+    mode: "owner-local",
+    ownerConfirmed: true,
+    receiptPath: LOCAL_RELEASE_EVIDENCE_PATH,
+    receiptSha256: /^[a-f0-9]{64}$/u.test(evidence.receiptSha256)
+      ? evidence.receiptSha256
+      : null,
+    payloadSha256: fixture.receipt.payloadSha256,
+    completedAt: fixture.receipt.completedAt,
+    localResults: ["validate", "gitleaks", "browser"],
+    githubResults: ["codeql"],
+  });
+
+  for (const mutate of [
+    (receipt) => {
+      receipt.commitSha = "f".repeat(40);
+    },
+    (receipt) => {
+      receipt.ref = "refs/heads/codex/untrusted";
+    },
+    (receipt) => {
+      receipt.artifact.artifactSetSha256 = "e".repeat(64);
+    },
+    (receipt) => {
+      receipt.results.browser.status = "failed";
+    },
+    (receipt) => {
+      delete receipt.results.gitleaks;
+    },
+    (receipt) => {
+      receipt.tools.node = "v24.18.1";
+    },
+  ]) {
+    const changed = structuredClone(fixture.receipt);
+    mutate(changed);
+    assert.throws(
+      () =>
+        assertOwnerLocalEvidenceReceipt(
+          changed,
+          Buffer.from(`${JSON.stringify(changed, null, 2)}\n`),
+          fixture.expected,
+        ),
+      /owner-local/i,
+    );
+  }
+});
+
+test("owner-local evidence requires an explicit unambiguous owner selection", () => {
+  assert.equal(selectedReleaseEvidenceMode({}), "github-actions");
+  assert.equal(
+    selectedReleaseEvidenceMode({
+      RELEASE_EVIDENCE_MODE: "owner-local",
+      RELEASE_OWNER_LOCAL_CONFIRMATION: OWNER_LOCAL_RELEASE_CONFIRMATION,
+      RELEASE_CODEQL_RUNNER_LABEL: "anish-release-a1b2c3d4e5f6",
+    }),
+    "owner-local",
+  );
+  assert.throws(
+    () =>
+      selectedReleaseEvidenceMode({
+        RELEASE_EVIDENCE_MODE: "owner-local",
+        RELEASE_OWNER_LOCAL_CONFIRMATION: OWNER_LOCAL_RELEASE_CONFIRMATION,
+      }),
+    /requires RELEASE_CODEQL_RUNNER_LABEL/,
+  );
+  assert.throws(
+    () =>
+      selectedReleaseEvidenceMode({
+        RELEASE_EVIDENCE_MODE: "owner-local",
+        RELEASE_CODEQL_RUNNER_LABEL: "anish-release-a1b2c3d4e5f6",
+      }),
+    /requires RELEASE_OWNER_LOCAL_CONFIRMATION/,
+  );
+  assert.throws(
+    () =>
+      selectedReleaseEvidenceMode({
+        RELEASE_EVIDENCE_MODE: "owner-local",
+        RELEASE_OWNER_LOCAL_CONFIRMATION: OWNER_LOCAL_RELEASE_CONFIRMATION,
+        RELEASE_CODEQL_RUNNER_LABEL: "anish-release-a1b2c3d4e5f6",
+        RELEASE_BROWSER_URL:
+          "https://github.com/example/repo/actions/runs/123",
+      }),
+    /must be unset/,
+  );
+  assert.throws(
+    () =>
+      selectedReleaseEvidenceMode({
+        RELEASE_OWNER_LOCAL_CONFIRMATION: OWNER_LOCAL_RELEASE_CONFIRMATION,
+      }),
+    /valid only in owner-local/,
+  );
+});
+
+test("owner-local validation still requires one exact CodeQL Actions run", () => {
+  const fixture = ownerLocalReceiptFixture();
+  const localEvidence = assertOwnerLocalEvidenceReceipt(
+    fixture.receipt,
+    fixture.receiptBytes,
+    fixture.expected,
+  );
+  const codeqlDefinition = REQUIRED_VALIDATION_RUNS.find(
+    ({ kind }) => kind === "codeql",
+  );
+  const codeqlRun = {
+    kind: "codeql",
+    name: "CodeQL",
+    headSha: fixture.expected.head,
+    conclusion: "success",
+    url: "https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/103",
+    event: "workflow_dispatch",
+    workflowDatabaseId: 403,
+    workflowPath: codeqlDefinition.workflowPath,
+    workflowState: "active",
+    runner: {
+      jobDatabaseId: 504,
+      jobName: "analyze",
+      jitLabel: "anish-release-a1b2c3d4e5f6",
+      labels: [
+        "anish-release-a1b2c3d4e5f6",
+        "linux",
+        "self-hosted",
+        "x64",
+      ],
+    },
+  };
+  assert.deepEqual(
+    assertReleaseValidationEvidence(localEvidence, [codeqlRun], {
+      ...fixture.expected,
+      localReceipt: fixture.receipt,
+      localReceiptBytes: fixture.receiptBytes,
+    }),
+    localEvidence,
+  );
+  assert.throws(
+    () =>
+      assertReleaseValidationEvidence(localEvidence, [], {
+        ...fixture.expected,
+        localReceipt: fixture.receipt,
+        localReceiptBytes: fixture.receiptBytes,
+      }),
+    /CodeQL/,
+  );
+  assert.throws(
+    () =>
+      assertReleaseValidationEvidence(
+        localEvidence,
+        [{ ...codeqlRun, event: "push" }],
+        {
+          ...fixture.expected,
+          localReceipt: fixture.receipt,
+          localReceiptBytes: fixture.receiptBytes,
+        },
+      ),
+    /workflow_dispatch CodeQL/,
+  );
+  assert.throws(
+    () =>
+      assertReleaseValidationEvidence(
+        localEvidence,
+        [{
+          ...codeqlRun,
+          runner: { ...codeqlRun.runner, labels: ["linux", "x64"] },
+        }],
+        {
+          ...fixture.expected,
+          localReceipt: fixture.receipt,
+          localReceiptBytes: fixture.receiptBytes,
+        },
+      ),
+    /disposable Linux x64 runner/,
+  );
+  const changedBytes = Buffer.from(
+    `${JSON.stringify(fixture.receipt)}\n`,
+  );
+  assert.throws(
+    () =>
+      assertReleaseValidationEvidence(localEvidence, [codeqlRun], {
+        ...fixture.expected,
+        localReceipt: fixture.receipt,
+        localReceiptBytes: changedBytes,
+      }),
+    /unavailable or noncanonical/,
+  );
+});
+
+test("GitHub Actions remains the unambiguous default validation record", () => {
+  const head = "a".repeat(40);
+  const runs = REQUIRED_VALIDATION_RUNS.map((definition, index) => ({
+    ...definition,
+    headSha: head,
+    conclusion: "success",
+    url: `https://github.com/example/repo/actions/runs/${201 + index}`,
+    event: definition.kind === "browser" ? "workflow_dispatch" : "push",
+    workflowDatabaseId: 501 + index,
+    workflowState: "active",
+  }));
+  const evidence = githubActionsValidationEvidence();
+  assert.deepEqual(
+    assertReleaseValidationEvidence(evidence, runs, {
+      head,
+      repository: "example/repo",
+    }),
+    evidence,
+  );
+  assert.throws(
+    () =>
+      assertReleaseValidationEvidence(
+        { ...evidence, ownerConfirmed: true },
+        runs,
+        { head, repository: "example/repo" },
+      ),
+    /malformed/,
+  );
+});
+
+test("owner-local receipt reader rejects missing, symlinked, or broad files", async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "anish-local-evidence-"));
+  try {
+    await assert.rejects(
+      () => readOwnerLocalEvidenceReceipt(directory),
+      /missing/,
+    );
+    const fixture = ownerLocalReceiptFixture();
+    const receiptPath = path.join(directory, LOCAL_RELEASE_EVIDENCE_PATH);
+    mkdirSync(path.dirname(receiptPath), { recursive: true });
+    writeFileSync(receiptPath, fixture.receiptBytes, { mode: 0o644 });
+    await assert.rejects(
+      () => readOwnerLocalEvidenceReceipt(directory),
+      /regular 0600 file/,
+    );
+    rmSync(receiptPath);
+    writeFileSync(receiptPath, fixture.receiptBytes, { mode: 0o600 });
+    await assert.doesNotReject(() => readOwnerLocalEvidenceReceipt(directory));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("workflow evidence resolves to its fixed active workflow identity", () => {

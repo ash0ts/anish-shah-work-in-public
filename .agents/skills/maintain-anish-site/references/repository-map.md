@@ -106,6 +106,14 @@ Runtime precedence is: sanitized canonical facts and structure, then published D
   implementation and owner data intact for a separately reviewed activation.
 - Hosted tier configuration is exact and mutually exclusive. Fixture mode is preview-only; staging and production must fail closed on missing or inconsistent bindings.
 - Worker middleware—not a successful local page—owns production security behavior.
+- Four exact-SHA GitHub workflow runs are the normal release evidence. If
+  hosted minutes or artifact storage are unavailable, the explicit owner-local
+  path may run Validate, Gitleaks, and Browser Quality on the owner machine
+  from exact `origin/main` against one final prepared artifact. It writes only
+  an ignored mode-`0600` owner attestation; the pinned CodeQL action still runs
+  on the verified one-time AMD64 owner runner. Release guards re-query CodeQL
+  and bind the receipt digest, exact pushed ref, and final artifact through
+  attestation.
 
 ## Editing Discipline
 

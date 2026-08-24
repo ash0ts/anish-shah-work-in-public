@@ -4,14 +4,19 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  assertOwnerLocalTrustedSource,
   assertReleaseMarker,
-  assertRequiredValidationRuns,
+  assertReleaseValidationEvidence,
   assertProductionDeployment,
   assertSimulationReleaseRecord,
   githubRepositoryFromRemoteUrl,
   parseRemoteReleaseMarker,
+  readOwnerLocalEvidenceReceipt,
+  RELEASE_EVIDENCE_MODES,
   RELEASE_MARKER_QUERY,
 } from "./lib/release-contract.mjs";
+import { reverifyPlannedOwnerLocalCodeqlEvidence } from "./lib/owner-local-codeql.mjs";
+import { verifyOwnerLocalRemoteMain } from "./lib/owner-local-source.mjs";
 import { readVerifiedDeployableArtifactManifest } from "./lib/deployable-artifact-contract.mjs";
 import {
   RELEASE_BUILD_CHECKPOINT_PATH,
@@ -118,6 +123,9 @@ function isoDate(value, name) {
 }
 
 const head = git("rev-parse", "HEAD");
+const branch = git("branch", "--show-current");
+if (!branch) throw new Error("Release attestation requires a named branch.");
+const sourceRef = `refs/heads/${branch}`;
 if (git("status", "--porcelain=v1", "--untracked-files=all")) {
   throw new Error("Commit release records only from a clean worktree.");
 }
@@ -169,8 +177,9 @@ const triggerReceipt = JSON.parse(triggerReceiptBytes.toString("utf8"));
 const { copyVersion } = await buildCopyDeck(root);
 const releaseVersion = await readPackageReleaseVersion(root);
 if (
-  plan.schemaVersion !== "1.3" ||
+  plan.schemaVersion !== "1.4" ||
   plan.commitSha !== head ||
+  plan.sourceRef !== sourceRef ||
   plan.contentVersion !== contentAttestation.contentVersion ||
   plan.copyVersion !== copyVersion ||
   plan.releaseVersion !== releaseVersion ||
@@ -233,7 +242,54 @@ const repository = configuredGithubRepository();
 if (plan.repository !== repository) {
   throw new Error("The release plan does not match the configured upstream repository.");
 }
-assertRequiredValidationRuns(plan.validationRuns, head, repository);
+let localReceipt;
+let localReceiptBytes;
+if (plan.validationEvidence?.mode === RELEASE_EVIDENCE_MODES.ownerLocal) {
+  assertOwnerLocalTrustedSource({
+    head,
+    branch,
+    upstreamRef: git(
+      "rev-parse",
+      "--abbrev-ref",
+      "--symbolic-full-name",
+      "@{upstream}",
+    ),
+    upstreamSha: git("rev-parse", "@{upstream}"),
+    repository: githubRepositoryFromRemoteUrl(
+      git("remote", "get-url", "--push", "origin"),
+    ),
+    worktreeStatus: "",
+  });
+  verifyOwnerLocalRemoteMain({ root, head });
+  ({ receipt: localReceipt, receiptBytes: localReceiptBytes } =
+    await readOwnerLocalEvidenceReceipt(root));
+  reverifyPlannedOwnerLocalCodeqlEvidence({
+    root,
+    head,
+    repository,
+    validationRuns: plan.validationRuns,
+  });
+}
+assertReleaseValidationEvidence(
+  plan.validationEvidence,
+  plan.validationRuns,
+  {
+    head,
+    repository,
+    ref: sourceRef,
+    artifact: {
+      artifactSetSha256: deployableArtifactResult.manifest.artifactSetSha256,
+      deployableManifestSha256: sha256(deployableArtifactResult.bytes),
+      releaseBuildCheckpointSha256: sha256(releaseBuildCheckpointBytes),
+    },
+    notBefore: new Date(
+      git("show", "-s", "--format=%cI", head),
+    ).toISOString(),
+    notAfter: plan.preparedAt,
+    localReceipt,
+    localReceiptBytes,
+  },
+);
 if (
   !Array.isArray(plan.d1?.migrations) ||
   plan.d1.migrations.some(
@@ -276,10 +332,11 @@ assertReleaseMarker(finalPublication, {
 const finalDeployment = productionDeployment(currentVersion);
 
 const record = {
-  schemaVersion: "1.5",
+  schemaVersion: "1.6",
   releasedAt,
   smokeTestedAt,
   commitSha: head,
+  sourceRef,
   releaseVersion,
   contentVersion: plan.contentVersion,
   travelAtlasMode: plan.travelAtlasMode,
@@ -289,6 +346,7 @@ const record = {
   releaseBuildCheckpoint: plan.releaseBuildCheckpoint,
   publicationCheckpoint: plan.publicationCheckpoint,
   simulation,
+  validationEvidence: plan.validationEvidence,
   releasePublication: {
     status: finalPublication.status,
     releaseSha: finalPublication.details.releaseSha,

@@ -47,7 +47,7 @@ test("release:smoke:list derives IDs from the verified prepared plan", async () 
   await writeFile(
     path.join(root, "dist/release-plan.json"),
     `${JSON.stringify({
-      schemaVersion: "1.3",
+      schemaVersion: "1.4",
       commitSha,
       travelAtlasMode: "atlas-v1",
       checksums: { preparedWorkerConfigSha256: configSha256 },
