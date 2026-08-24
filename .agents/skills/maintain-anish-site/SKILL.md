@@ -40,6 +40,15 @@ Make the smallest coherent change while preserving the site's content, copy, pri
   metrics and compact limits and binds four lines to approved topic rails. Its
   IDs and limits participate in `COPY_VERSION` and the public attestation; the
   copy deck owns only the surrounding Home labels and prose.
+- `content/presentation/career.v1.json` owns About chronology periods,
+  organizations, trajectory labels, and brand references. The copy deck owns
+  the surrounding biography and speaker-profile prose.
+- `content/presentation/speaker-profile.v1.json` owns the speaker section's
+  Talks/Programs bucket and topic IDs. The copy deck owns its visible labels
+  and third-person reusable bio; the sanitized profile owns the LinkedIn URL.
+- Studio's owner-only copy report enumerates declared page deck paths, review
+  classes, and WorkGroup presentation ownership. It is diagnostic and
+  read-only; it never makes D1 wording authoritative over Git copy.
 - My Room 2001 is the authoritative Play experience. Its dependency-free closed seven-object contract, semantic routes, and HTML foundations own navigation and content; desktop and Pocket R3F rooms are optional enhancements. There is no Classic mode.
 - Derive routes, controls, focus targets, and smoke paths from the structural object contract. Keep screen imports, provider adapters, scene objects, and other executable maps literal, closed, and parity-tested.
 - Three.js/R3F may exist only under `components/play/room-3d/**` and `components/play/travel/**`, load only after their own intent/capability boundaries, and never own provider data, Travel photos, navigation semantics, or accessibility content.

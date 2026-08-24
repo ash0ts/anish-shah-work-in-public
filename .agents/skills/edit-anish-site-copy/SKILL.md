@@ -1,6 +1,6 @@
 ---
 name: edit-anish-site-copy
-description: Edit, review, simplify, or propose public-facing wording for the Anish Shah site through its Git-owned copy deck. Use for page headlines, summaries, calls to action, WorkGroup presentation copy, Play object language, metadata, empty states, evidence presentation, or copywriter PRs. Enforces the first-person technical voice, editorial versus fact-check risk classes, protected claims and source records, provider and privacy boundaries, and the engineering-request workflow for changes that cannot be made in copy alone.
+description: Edit, review, simplify, or propose public-facing wording for the Anish Shah site through its Git-owned copy deck. Use for page headlines, summaries, calls to action, WorkGroup presentation copy, Play object language, metadata, empty states, evidence presentation, speaker-profile prose, or copywriter PRs. Enforces the personal technical voice and its third-person speaker-bio exception, editorial versus fact-check risk classes, protected claims and source records, provider and privacy boundaries, and the engineering-request workflow for changes that cannot be made in copy alone.
 ---
 
 # Edit Anish Site Copy
@@ -24,6 +24,9 @@ Improve the site's language without changing its facts, structure, behavior, or 
    - Branch, pull-request, preview, and owner-review workflow: [pull-request-workflow.md](references/pull-request-workflow.md).
 5. Edit only the plain text beneath existing `## field-name` headings. Preserve each `copy-page` or `copy-record` marker and every field heading. Do not add Markdown links, HTML, JSX, code fences, templates, variables, URLs, or executable content.
 6. Keep one sentence or element responsible for one job. Remove repeated framing before adding new prose. CTA wording is editorial only when its destination and behavior stay unchanged. When language changes hierarchy or layout, also use `frontend-design` and route the request through engineering; loading that skill does not authorize copywriters to edit JSX, CSS, routes, or behavior.
+   For longer narrative fields, write like a builder recalling the work: name
+   the actor, concrete mechanism, consequence, and remaining limit. Do not
+   polish the opening and leave a generic whitepaper in the middle.
 7. Validate from the repository root:
 
    ```sh
@@ -50,11 +53,20 @@ Improve the site's language without changing its facts, structure, behavior, or 
 ### Edit with owner fact-check
 
 - Profile positioning and current-focus language.
+- About speaker bio and demonstrated speaker-topic language. The bio uses
+  third person by design so organizers can reuse it directly; this is the one
+  exception to the personal first-person narrative voice.
 - WorkGroup display titles, short titles, summaries, and role summaries.
 - Wording that mentions dates, organizations, roles, scope, attribution, product behavior, or technical capability.
 - An explicitly registered citation display label that preserves the immutable source title in accessible detail. No citation-label field is currently registered; request one through engineering before proposing this edit.
 
 For WorkGroup factual copy, resolve the `copy-record` stable ID against the sanitized public bundle. Record the canonical subject and evidence IDs that support the clause. If it cannot be resolved there, do not add it.
+
+The About career manifest owns chronology periods, organization names,
+trajectory labels, and brand references. Do not describe those values as
+copy-deck fields or duplicate them in the biography. Speaker-topic destinations
+are likewise manifest-owned; a copy edit may change only the declared visible
+label after fact-check review.
 
 ### Never change through copy
 

@@ -69,8 +69,7 @@
   margin-top: 0.35rem;
 }
 
-.primaryAction,
-.secondaryAction {
+.primaryAction {
   display: inline-flex;
   width: fit-content;
   min-height: 2.75rem;
@@ -82,22 +81,19 @@
   text-decoration: none;
 }
 
-.primaryAction span,
-.secondaryAction span {
+.primaryAction span {
   color: var(--work-blue);
   transition: transform 160ms var(--ease-out);
 }
 
 .primaryAction:hover span,
-.primaryAction:focus-visible span,
-.secondaryAction:hover span,
-.secondaryAction:focus-visible span {
+.primaryAction:focus-visible span {
   transform: translate(0.18rem, -0.18rem);
 }
 
 .career {
   min-width: 0;
-  padding: clamp(3.5rem, 7vw, 7rem) var(--gutter) clamp(4rem, 8vw, 8rem);
+  padding: clamp(3.5rem, 7vw, 7rem) var(--gutter) clamp(4rem, 7vw, 6.5rem);
 }
 
 .careerHeading {
@@ -202,6 +198,202 @@
   line-height: 1.5;
 }
 
+.speaker {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(15rem, 0.58fr) minmax(0, 1.42fr);
+  gap: clamp(2.5rem, 6vw, 6.5rem);
+  padding: clamp(3rem, 5vw, 4.75rem) var(--gutter) clamp(3.5rem, 6vw, 5.5rem);
+  border-top: 1px solid var(--blueprint-ink);
+}
+
+.speakerHeading,
+.speakerProfile,
+.speakerSelection,
+.speakerTopics {
+  min-width: 0;
+}
+
+.speakerHeading h2 {
+  max-width: 13ch;
+  margin: clamp(1.25rem, 2vw, 1.75rem) 0 0;
+  font-size: clamp(2.35rem, 4.2vw, 4.15rem);
+  font-variation-settings: "CASL" 0.66, "MONO" 0.02, "wght" 740;
+  font-weight: 740;
+  letter-spacing: -0.075em;
+  line-height: 0.9;
+  text-wrap: balance;
+}
+
+.speakerProfile {
+  align-self: start;
+  border-top: 1px solid var(--blueprint-ink);
+  border-bottom: 1px solid var(--blueprint-ink);
+}
+
+.speakerSelection {
+  position: relative;
+  padding: clamp(1.5rem, 2.5vw, 2.25rem) clamp(1.25rem, 2vw, 2rem) 0;
+}
+
+.speakerSelection::before,
+.speakerSelection::after {
+  position: absolute;
+  width: 1.35rem;
+  height: 1.35rem;
+  content: "";
+  pointer-events: none;
+}
+
+.speakerSelection::before {
+  top: 1rem;
+  left: 1rem;
+  border-top: 2px solid var(--work-blue);
+  border-left: 2px solid var(--work-blue);
+}
+
+.speakerSelection::after {
+  right: 1rem;
+  bottom: 1rem;
+  border-right: 2px solid var(--work-blue);
+  border-bottom: 2px solid var(--work-blue);
+}
+
+.speakerBio {
+  max-width: 58ch;
+  margin: 0;
+  font-size: clamp(1.05rem, 1.35vw, 1.3rem);
+  font-variation-settings: "CASL" 0.24, "wght" 560;
+  font-weight: 560;
+  letter-spacing: -0.025em;
+  line-height: 1.45;
+}
+
+.speakerTopics {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.32fr) minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2.5rem);
+  padding: clamp(1.25rem, 2vw, 1.75rem) 0 0;
+  border-top: 1px solid var(--hairline-strong);
+}
+
+.speakerTopics h3 {
+  margin: 0;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 620;
+  letter-spacing: 0.08em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.topicList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topicList li + li {
+  border-top: 1px solid var(--hairline);
+}
+
+.topicLink {
+  display: grid;
+  min-width: 0;
+  min-height: 3.25rem;
+  grid-template-columns: 1.65rem minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: center;
+  color: var(--blueprint-ink);
+  font-size: 0.92rem;
+  font-weight: 660;
+  text-decoration: none;
+}
+
+.topicIcon {
+  width: 1.45rem;
+  height: 1.45rem;
+  color: var(--work-blue);
+}
+
+.topicLink > span:last-child {
+  color: var(--work-blue);
+  transition: transform 160ms var(--ease-out);
+}
+
+.topicLink:hover > span:last-child,
+.topicLink:focus-visible > span:last-child {
+  transform: translate(0.18rem, -0.18rem);
+}
+
+.speakerActions {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.5rem;
+  align-items: center;
+  padding: clamp(1.25rem, 2vw, 1.75rem) 0 clamp(1.5rem, 2.5vw, 2.25rem);
+  border-top: 1px solid var(--hairline-strong);
+}
+
+.copyButton,
+.speakerLinkedInLabel {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.7rem;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  color: var(--blueprint-ink);
+  background: transparent;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 720;
+  text-decoration: none;
+}
+
+.copyButton {
+  padding: 0;
+  cursor: pointer;
+}
+
+.copyButton svg,
+.speakerLinkedInArrow {
+  width: 1rem;
+  height: 1rem;
+  color: var(--work-blue);
+}
+
+.speakerLinkedIn {
+  display: grid;
+  min-width: 0;
+  gap: 0.35rem;
+  color: var(--blueprint-ink);
+  text-decoration: none;
+}
+
+.speakerLinkedInUrl {
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.02em;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.speakerStatus {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 @media (max-width: 860px) {
   .introduction {
     grid-template-columns: 1fr;
@@ -222,6 +414,15 @@
 
   .careerHeading h2 {
     grid-column: 1;
+  }
+
+  .speaker {
+    grid-template-columns: 1fr;
+    gap: 2.25rem;
+  }
+
+  .speakerHeading h2 {
+    max-width: 13ch;
   }
 }
 
@@ -262,6 +463,38 @@
   .employerMark[data-artwork="true"] {
     width: 7.5rem;
   }
+
+  .speaker {
+    gap: 1.75rem;
+    padding-top: 2.75rem;
+  }
+
+  .speakerHeading h2 {
+    font-size: clamp(2.45rem, 11vw, 3.6rem);
+  }
+
+  .speakerSelection {
+    padding: 1.75rem 1.25rem;
+  }
+
+  .speakerSelection::before {
+    top: 0.65rem;
+    left: 0.35rem;
+  }
+
+  .speakerSelection::after {
+    right: 0.35rem;
+    bottom: 0.65rem;
+  }
+
+  .speakerTopics {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .topicLink {
+    min-height: 3rem;
+  }
 }
 
 @media (forced-colors: active) {
@@ -274,5 +507,17 @@
 
   .employerMark[data-artwork="true"] img {
     forced-color-adjust: none;
+  }
+
+  .speakerSelection::before,
+  .speakerSelection::after {
+    border-color: CanvasText;
+  }
+
+  .topicIcon,
+  .topicLink > span:last-child,
+  .copyButton svg,
+  .speakerLinkedInArrow {
+    color: LinkText;
   }
 }

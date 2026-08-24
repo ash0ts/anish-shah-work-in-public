@@ -10,7 +10,7 @@ request path, durable store, or progressive-enhancement boundary changes.
 ## Runtime Ownership
 
 - `app/`: Next/Vinext public routes and server-rendered foundations.
-- `app/about/**`: Git-owned professional chronology referencing the sanitized profile identity and reviewed career presentation manifest.
+- `app/about/**`: Git-owned biography and reusable speaker profile around a reviewed career chronology. The career and speaker manifests own IDs and destinations; the sanitized profile owns LinkedIn.
 - `app/play/**`: My Room overview plus seven semantic object routes.
 - `components/play/**`: object-screen shell and provider-specific Play UI.
 - `components/play/room-3d/**`: intent-gated Room and Pocket Room R3F runtime.
@@ -47,11 +47,14 @@ request path, durable store, or progressive-enhancement boundary changes.
   The manifest is attested and participates in `COPY_VERSION`, but remains
   outside the freelancer copy surface.
 - Career and Work-organization presentation manifests may map only to validated public IDs; they never add canonical facts or infer affiliation from organization names.
+- `content/presentation/speaker-profile.v1.json` binds the About speaker section
+  to one validated Talks/Programs bucket and three validated topic filters. It
+  does not own visible prose or create a new speaking claim.
 - `content/public/**`: generated, sanitized deployable artifacts; never hand-edit.
 - `content/copy/pages/**`: Git-owned page presentation prose.
 - `content/copy/work-groups/**`: Git-owned WorkGroup display/short titles, summaries, and role summaries, each bound to a stable sanitized ID.
 - `scripts/lib/copy-deck.mjs`: strict plain-text parser and generator.
-- `lib/copy.ts`, `lib/copy-contract.ts`, `lib/copy-ownership.ts`, `lib/copy-voice-contract.ts`: typed registry, runtime ownership, and deterministic public-voice policy.
+- `lib/copy.ts`, `lib/copy-contract.ts`, `lib/copy-ownership.ts`, `lib/copy-voice-contract.ts`: typed registry, runtime ownership, owner-only page/risk reporting, and deterministic public-voice policy.
 - `scripts/copy-voice-check.mjs` and `scripts/lib/copy-voice.mjs`: copy voice and claim-qualification audit tooling.
 - Generated copy modules are ignored build products. Copywriters commit only the source Markdown deck.
 
@@ -68,7 +71,10 @@ Runtime precedence is: sanitized canonical facts and structure, then published D
 - Filtered Work uses a flat list for one line and simple non-collapsible line
   headings across lines. `/work/[slug]` pages are compact canonical evidence
   leaves whose line and topic links return to the filtered Work view.
-- Public copy uses a first-person technical voice and the sequence outcome → mechanism → proof → meaning. Keep one claim per sentence and its qualifier adjacent.
+- Public narrative uses a personal technical voice when authorship or choice
+  matters and the sequence outcome → mechanism → proof → meaning. The copyable
+  About speaker bio deliberately uses third person. Keep one claim per sentence
+  and its qualifier adjacent.
 - The copy deck owns only allowlisted presentation prose. Sanitized canonical facts and D1 publication state remain authoritative for identity, metrics, evidence, visibility, ordering, and caveats.
 - Keep motion brief, interruptible, and nonessential. Do not use copy or presentation work to introduce film, autoplay, or scroll capture.
 

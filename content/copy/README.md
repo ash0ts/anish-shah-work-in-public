@@ -5,9 +5,13 @@ It cannot change facts, IDs, routes, URLs, metrics, evidence, relationships,
 visibility, ordering, connector policy, privacy language, or application
 behavior.
 
-`pages/about.md` owns the About biography and chronology summaries. Those
-fields require owner fact-checking; the periods, organization structure, and
-brand provenance remain in the reviewed career presentation manifest.
+`pages/about.md` owns the About biography, speaker-profile prose, headings,
+and calls to action. Biography, speaker bio, and speaker topic fields require
+owner fact-checking. The reviewed career presentation manifest—not the copy
+deck—owns chronology periods, organizations, trajectory labels, and brand
+provenance. The speaker bio is the one deliberate third-person exception to
+the site's personal narrative voice because event organizers need copy that
+can be reused without rewriting it.
 `pages/play.md` owns only room, object, and Travel presentation framing.
 `pages/simulation.md` owns only the Simulation invitation, instructions,
 nonfactual encounter flavor, and metadata fields declared by the typed

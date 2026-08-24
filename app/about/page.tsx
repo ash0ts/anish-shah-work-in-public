@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { HomeTopicIcon } from "@/components/HomeVisualIcons";
 import { aboutCareerPhases } from "@/lib/about-career";
+import { aboutSpeakerProfileFrom } from "@/lib/about-speaker";
 import { SITE_COPY } from "@/lib/copy";
 import { requestCspNonce } from "@/lib/server/csp";
 import { getPublicContentView } from "@/lib/server/public-content";
@@ -11,6 +13,7 @@ import {
   publicPageMetadata,
   safeJsonLd,
 } from "@/lib/seo";
+import { AboutSpeakerCopyButton } from "./AboutSpeakerCopyButton";
 import styles from "./about.module.css";
 
 export const dynamic = "force-dynamic";
@@ -46,8 +49,24 @@ export default async function AboutPage() {
   const nonce = await requestCspNonce();
   const { bundle } = await getPublicContentView();
   const phases = aboutCareerPhases();
+  const speakerProfile = aboutSpeakerProfileFrom(bundle);
   const linkedinUrl = publicLinkedInUrl(bundle.profile.links);
   const profileUrl = absoluteSiteUrl("/about");
+  const speakerProfileText =
+    speakerProfile.topics.length > 0
+      ? [
+          SITE_COPY.about["speaker-bio"],
+          "",
+          SITE_COPY.about["speaker-topics-heading"],
+          ...speakerProfile.topics.map((topic) => `• ${topic.label}`),
+          ...(linkedinUrl
+            ? [
+                "",
+                `${SITE_COPY.about["speaker-linkedin-cta"]}: ${linkedinUrl}`,
+              ]
+            : []),
+        ].join("\n")
+      : "";
   const structuredData = buildAboutStructuredData(
     profileUrl,
     SITE_COPY.about["seo-title"],
@@ -76,17 +95,6 @@ export default async function AboutPage() {
               {SITE_COPY.about["work-cta"]}
               <span aria-hidden="true">↗</span>
             </Link>
-            {linkedinUrl ? (
-              <a
-                className={styles.secondaryAction}
-                href={linkedinUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                {SITE_COPY.about["linkedin-cta"]}
-                <span aria-hidden="true">↗</span>
-              </a>
-            ) : null}
           </div>
         </div>
       </header>
@@ -126,6 +134,77 @@ export default async function AboutPage() {
           ))}
         </ol>
       </section>
+
+      {speakerProfile.topics.length > 0 ? (
+        <section className={styles.speaker} aria-labelledby="speaker-title">
+          <header className={styles.speakerHeading}>
+            <p className={styles.eyebrow}>
+              {SITE_COPY.about["speaker-eyebrow"]}
+            </p>
+            <h2 id="speaker-title">{SITE_COPY.about["speaker-heading"]}</h2>
+          </header>
+
+          <div className={styles.speakerProfile}>
+            <div className={styles.speakerSelection}>
+              <p className={styles.speakerBio}>
+                {SITE_COPY.about["speaker-bio"]}
+              </p>
+
+              <div className={styles.speakerTopics}>
+                <h3>{SITE_COPY.about["speaker-topics-heading"]}</h3>
+                <ul className={styles.topicList}>
+                  {speakerProfile.topics.map((topic) => (
+                    <li key={topic.id}>
+                      <Link
+                        className={styles.topicLink}
+                        href={topic.href}
+                        prefetch={false}
+                      >
+                        <HomeTopicIcon
+                          className={styles.topicIcon}
+                          topicId={topic.id}
+                        />
+                        <span>{topic.label}</span>
+                        <span aria-hidden="true">↗</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className={styles.speakerActions}>
+                <AboutSpeakerCopyButton
+                  className={styles.copyButton}
+                  label={SITE_COPY.about["speaker-copy-cta"]}
+                  profileText={speakerProfileText}
+                  statusClassName={styles.speakerStatus}
+                />
+                {linkedinUrl ? (
+                  <a
+                    className={styles.speakerLinkedIn}
+                    href={linkedinUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <span className={styles.speakerLinkedInLabel}>
+                      {SITE_COPY.about["speaker-linkedin-cta"]}
+                      <span
+                        aria-hidden="true"
+                        className={styles.speakerLinkedInArrow}
+                      >
+                        ↗
+                      </span>
+                    </span>
+                    <span className={styles.speakerLinkedInUrl}>
+                      {linkedinUrl}
+                    </span>
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }

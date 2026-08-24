@@ -18,6 +18,7 @@ const staticArtifactPaths = [
   "content/presentation/metric-groups.v1.json",
   "content/presentation/home-signal-rails.v1.json",
   "content/presentation/career.v1.json",
+  "content/presentation/speaker-profile.v1.json",
   "content/presentation/work-organizations.v1.json",
   "content/presentation/brand-assets.v1.json",
 ];

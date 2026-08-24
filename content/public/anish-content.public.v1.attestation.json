@@ -49,6 +49,11 @@
       "sha256": "a61b636e010d3b60c56cf5480904fb43cdbdfc6e2367151a2881a0352e220296"
     },
     {
+      "path": "content/presentation/speaker-profile.v1.json",
+      "bytes": 161,
+      "sha256": "100017695e6d214a9902e4de5ff2ed5322199bc07fbef4457f5bcdaaab4aa9d5"
+    },
+    {
       "path": "content/presentation/work-organizations.v1.json",
       "bytes": 10775,
       "sha256": "aca7c47925fcf347bd68657e5000ddf5aa9cba5a2701485f5011e0347b356406"

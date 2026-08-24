@@ -263,6 +263,12 @@ test("all public routes expose useful server-rendered content", async () => {
         /Weights &amp; Biases/i,
         /SAP &amp; Brilliant Hire by SAP/i,
         /Temple University/i,
+        /Speaker profile/i,
+        /Talks grounded in the systems I build/i,
+        /Agent systems &amp; tool interfaces/i,
+        /Evaluation &amp; observability/i,
+        /Technical education &amp; workshops/i,
+        /Copy speaker profile/i,
         /href="https:\/\/www\.linkedin\.com\/in\/anish-shah\/?"/i,
       ],
     },
@@ -356,7 +362,13 @@ test("About publishes a bounded career profile without resume-level private deta
   const html = await response.text();
   const main = documentMarkup(html).match(/<main\b[\s\S]*?<\/main>/i)?.[0] ?? "";
   assert.equal((main.match(/<h1\b/gi) ?? []).length, 1);
-  assert.match(main, /View LinkedIn/i);
+  assert.match(main, /Contact on LinkedIn/i);
+  assert.match(
+    main,
+    /Anish Shah builds agent systems, evaluation and observability workflows, and technical education at Weights &amp; Biases\./i,
+  );
+  assert.match(main, />https:\/\/www\.linkedin\.com\/in\/anish-shah<\/span>/i);
+  assert.match(main, /<button\b[^>]*\bhidden(?:="")?[^>]*>\s*Copy speaker profile/i);
   assert.doesNotMatch(
     main,
     /mailto:|\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b|\b\d{3}[-.)\s]+\d{3}[-.\s]+\d{4}\b|credential\s+id|certificate\s+id|street\s+address/i,

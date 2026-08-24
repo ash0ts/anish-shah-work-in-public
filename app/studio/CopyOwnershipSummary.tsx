@@ -18,12 +18,12 @@ export function CopyOwnershipSummary({
       <div className={styles.copyOwnershipIntro}>
         <div>
           <p className={styles.eyebrow}>Copy ownership</p>
-          <h3 id="copy-ownership-title">WorkGroup wording lives in Git.</h3>
+          <h3 id="copy-ownership-title">Public copy lives in Git.</h3>
         </div>
         <p>
-          The copy deck owns display titles, short titles, summaries, role
-          summaries, and optional Home wording. Studio still owns visibility,
-          order, caveats, and reviewed metric wording.
+          The copy deck owns declared page fields and WorkGroup presentation
+          wording. Studio still owns visibility, order, caveats, and reviewed
+          metric wording.
         </p>
       </div>
 
@@ -45,11 +45,47 @@ export function CopyOwnershipSummary({
           </dl>
 
           <div className={styles.copyOwnershipMeta}>
+            <span>Page surfaces</span>
+            <code>
+              {report.surfaceSummary.surfaceCount.toLocaleString()} surfaces ·{" "}
+              {report.surfaceSummary.fieldCount.toLocaleString()} fields
+            </code>
+            <span>Review classes</span>
+            <code>
+              {report.surfaceSummary.riskCounts.editorial.toLocaleString()} editorial
+              {" · "}
+              {report.surfaceSummary.riskCounts.fact_check.toLocaleString()} fact-check
+            </code>
             <span>Git-owned fields</span>
             <code>{report.records[0]?.gitOwnedFields.join(" · ")}</code>
             <span>Copy version</span>
             <code>{report.copyVersion}</code>
           </div>
+
+          <details className={styles.copyOwnershipDetails}>
+            <summary>
+              Review {report.surfaceSummary.surfaceCount.toLocaleString()} page
+              surface{report.surfaceSummary.surfaceCount === 1 ? "" : "s"}
+            </summary>
+            <ol>
+              {report.surfaces.map((surface) => (
+                <li key={surface.id}>
+                  <div>
+                    <strong>{surface.id}</strong>
+                    <code>{surface.deckPath}</code>
+                  </div>
+                  <span>
+                    {surface.riskCounts.editorial.toLocaleString()} editorial ·{" "}
+                    {surface.riskCounts.fact_check.toLocaleString()} fact-check
+                  </span>
+                  <p>
+                    {surface.routeScopes.join(" · ")} ·{" "}
+                    {surface.fieldCount.toLocaleString()} fields
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </details>
 
           <details className={styles.copyOwnershipDetails}>
             <summary>

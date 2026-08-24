@@ -176,6 +176,7 @@ test("the public content attestation hashes presentation manifests and deployed 
 
     const paths = first.artifacts.map((artifact) => artifact.path);
     assert.ok(paths.includes("content/presentation/career.v1.json"));
+    assert.ok(paths.includes("content/presentation/speaker-profile.v1.json"));
     assert.ok(paths.includes("content/presentation/work-organizations.v1.json"));
     assert.ok(paths.includes("content/presentation/brand-assets.v1.json"));
     assert.deepEqual(paths.slice(-2), [
@@ -211,6 +212,7 @@ test("the repository attestation records every reviewed organization asset's dep
   );
   for (const manifestPath of [
     "content/presentation/career.v1.json",
+    "content/presentation/speaker-profile.v1.json",
     "content/presentation/work-organizations.v1.json",
     "content/presentation/brand-assets.v1.json",
   ]) {
