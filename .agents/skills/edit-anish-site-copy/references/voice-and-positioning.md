@@ -20,6 +20,11 @@ Use this sequence when it helps:
 
 Not every field needs all four parts. A headline may carry the outcome while nearby metadata carries proof.
 
+For a larger pass, work in four rounds: fix the claim and structure; replace
+abstract nouns and vague verbs; cut repetition; then read the result aloud.
+Keep manual edits that already sound specific and human. Consistency is not a
+reason to sand every surface into the same sentence shape.
+
 ## Desired qualities
 
 - First-person, active, direct, and technically precise.
@@ -34,6 +39,8 @@ Not every field needs all four parts. A headline may carry the outcome while nea
   behind “the system.”
 - Human consequence after technical mechanism: say what became easier to
   inspect, decide, recover, or control.
+- Mild self-awareness is welcome in Play when it sharpens the object or action.
+  Speaker copy, Privacy, consent, and operational recovery use no humor.
 
 ## Avoid
 
@@ -46,6 +53,11 @@ Not every field needs all four parts. A headline may carry the outcome while nea
 - Raw importer notes, registration URLs, durations, replay status, or role-only fragments as summaries.
 - Whitepaper polish, generic AI language, dramatic fragments, and sentences
   that sound clever while making the reader decode what happened.
+- Vague verbs such as “mapped,” “connected,” “explored,” or “extended” when the
+  record supports a concrete action: traced, integrated, evaluated, taught,
+  published, or implemented.
+- Repeated template openings such as “A session…,” “A meetup talk…,” and “Two
+  upstream changes…”. Name the subject or mechanism first.
 
 ## Vocabulary contract
 
@@ -66,3 +78,4 @@ Before keeping a sentence, ask:
 - Is a factual clause supported by sanitized content?
 - Is its limit adjacent rather than buried elsewhere?
 - Can one nearby sentence or label be deleted now?
+- Does it still sound like a person explaining the work when read aloud?

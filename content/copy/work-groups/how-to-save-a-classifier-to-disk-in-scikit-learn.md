@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0058 -->
 
 ## display-title
-Persisting scikit-learn classifiers
+Saving and reloading scikit-learn classifiers
 
 ## short-title
-Persisting scikit-learn models
+Persisting scikit-learn classifiers
 
 ## summary
-A classifier-persistence guide covered saving and reloading scikit-learn models.
+Saving and reloading scikit-learn classifiers anchors this practical guide.
 
 ## role-summary
 Guide author

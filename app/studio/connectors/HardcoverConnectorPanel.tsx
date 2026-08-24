@@ -18,9 +18,9 @@ const meta: ProviderMeta = {
     },
   ],
   summary:
-    "Connect the owner library with a personal API token. Studio derives the public profile link from the authenticated account.",
+    "Connect the owner library with a personal API token. The authenticated account supplies the public profile link.",
   recovery:
-    "Tokens expire after one year and reset on January 1; Hardcover may also reset them during beta. If refresh returns 401, copy a current token, choose Replace credential, and refresh again. For rate limits, wait before retrying.",
+    "Tokens expire after one year and reset on January 1; Hardcover may also reset them during beta. A 401 needs a current token: replace the credential, then refresh. After a rate limit, wait before retrying.",
 };
 
 export function HardcoverConnectorPanel(props: ProviderPanelProps) {

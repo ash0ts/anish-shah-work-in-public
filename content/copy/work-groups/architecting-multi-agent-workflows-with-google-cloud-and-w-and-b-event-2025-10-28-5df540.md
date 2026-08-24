@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0048 -->
 
 ## display-title
-Multi-agent workflows with Google Cloud and W&B
+Multi-agent workflow architecture with Google Cloud and W&B
 
 ## short-title
-Multi-agent workflows
+Google Cloud multi-agent workflows
 
 ## summary
-A joint session mapped multi-agent workflows across Google Cloud and W&B.
+Multi-agent architecture with Google Cloud and W&B is taught in a joint session.
 
 ## role-summary
-Co-presenter with Ivan Nardini
+Co-presented with Ivan Nardini

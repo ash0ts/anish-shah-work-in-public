@@ -7,7 +7,7 @@ NYC AI Innovators meetup
 NYC AI Innovators
 
 ## summary
-A NYC AI Innovators meetup with a documented speaker and host role.
+Speaking and hosting came together for the NYC AI Innovators Meetup.
 
 ## role-summary
-Speaker; helped host the meetup
+Meetup speaker and host

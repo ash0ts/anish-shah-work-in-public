@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0071 -->
 
 ## display-title
-Practical questions about LLMOps
+Operating LLM applications in practice
 
 ## short-title
-LLMOps in practice
+Practical LLMOps
 
 ## summary
-An interview unpacked the practical demands of operating LLM applications.
+Operating LLM applications became the focus of a practical interview.
 
 ## role-summary
-Interview guest
+Joined as the interview guest

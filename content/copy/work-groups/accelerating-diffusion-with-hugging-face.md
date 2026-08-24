@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0069 -->
 
 ## display-title
-Accelerating diffusion-model workflows
+Faster diffusion workflows with Hugging Face
 
 ## short-title
-Diffusion with Hugging Face
+Hugging Face diffusion workflows
 
 ## summary
-A joint session mapped faster diffusion-model workflows with Hugging Face.
+Hugging Face tooling speeds diffusion workflows in a joint recording.
 
 ## role-summary
-Co-presenter with Zach Mueller and Suraj Patil
+Co-presented with Zach Mueller and Suraj Patil

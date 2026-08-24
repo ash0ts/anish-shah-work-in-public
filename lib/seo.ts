@@ -180,15 +180,15 @@ export function workMetadataDescription(
     if (cleaned.length <= maximumLength) return cleaned;
   } else if (!looksLikePlaceholder && cleaned) {
     const completeSummary = /[.!?]$/u.test(cleaned) ? cleaned : `${cleaned}.`;
-    const expanded = `${completeSummary} This page documents the role, public artifacts, and supporting sources.`;
+    const expanded = `${completeSummary} See the role, project materials, and sources.`;
     if (expanded.length >= minimumLength && expanded.length <= maximumLength) {
       return expanded;
     }
   }
 
-  const lead = `Explore Anish Shah’s work on ${title}, including its documented role, public artifacts, and supporting sources.`;
+  const lead = `Explore ${title}, including Anish Shah’s role, project materials, and supporting sources.`;
   if (lead.length >= minimumLength && lead.length <= maximumLength) return lead;
-  return "Explore this work through its documented role, public artifacts, related appearances, and supporting sources.";
+  return "Explore the role, project materials, related appearances, and supporting sources.";
 }
 
 export function safeJsonLd(value: unknown): string {

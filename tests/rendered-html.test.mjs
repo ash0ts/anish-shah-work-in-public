@@ -158,7 +158,7 @@ test("homepage renders four topic rails and one qualified signal circuit", async
 
   assert.match(
     html,
-    /<title>Applied AI systems that hold up after the demo — Anish Shah<\/title>/i,
+    /<title>Agent systems that hold up after the demo — Anish Shah<\/title>/i,
   );
   assert.match(markup, />Anish</);
   assert.match(markup, />Shah</);
@@ -258,7 +258,7 @@ test("all public routes expose useful server-rendered content", async () => {
       required: [
         /About · ML systems/i,
         /turn traces, evaluations, and tools into clearer next actions/i,
-        /How the work developed/i,
+        /How the practice developed/i,
         /2021–Now/i,
         /Weights &amp; Biases/i,
         /SAP &amp; Brilliant Hire by SAP/i,
@@ -278,7 +278,7 @@ test("all public routes expose useful server-rendered content", async () => {
         /Built, taught, tested\./i,
         /Choose a year and line\./i,
         /One project per record\. Talks, code, and recordings stay attached\./i,
-        /Search the work/i,
+        /Search projects/i,
         /name="bucket"/i,
         /name="topic"/i,
         /name="year"/i,
@@ -294,13 +294,13 @@ test("all public routes expose useful server-rendered content", async () => {
     },
     {
       path: "/work/wandb-mcp-server",
-      required: [/W&amp;B MCP Server/i, /Documented results/i, /Sources/i],
+      required: [/W&amp;B MCP Server/i, />Results</i, /Sources/i],
     },
     {
       path: "/play",
       required: [
         /The room behind the résumé\./i,
-        /The objects tell the rest/i,
+        /Anime, books, music, records, games, miles, and trips/i,
         />TV · Watch</i,
         />Bookshelf · Read</i,
         />Music player · Listen</i,
@@ -326,7 +326,13 @@ test("all public routes expose useful server-rendered content", async () => {
     },
     {
       path: "/privacy",
-      required: [/Personal data stays deliberately small/i, /Storage and retention/i],
+      required: [
+        /Privacy and collections/i,
+        /What is stored/i,
+        /What visitors load/i,
+        /Storage and deletion/i,
+        /Provider terms/i,
+      ],
     },
   ];
 
@@ -672,14 +678,14 @@ test("public pages expose canonical, social, and structured metadata", async () 
   assert.match(work, /"@type":"CreativeWork"/);
   assert.match(work, /"@type":"BreadcrumbList"/);
   const conciseWorkSummary =
-    "An MCP interface lets agents inspect W&amp;B experiments and traces. This page documents the role, public artifacts, and supporting sources.";
+    "Agents can inspect W&amp;B experiments and traces through the MCP interface. See the role, project materials, and sources.";
   const workDescription = work.match(
     /<meta\b(?=[^>]*\bname="description")(?=[^>]*\bcontent="([^"]+)")[^>]*>/i,
   )?.[1];
   assert.equal(workDescription, conciseWorkSummary);
   assert.match(
     work,
-    /"description":"An MCP interface lets agents inspect W&B experiments and traces\. This page documents the role, public artifacts, and supporting sources\."/,
+    /"description":"Agents can inspect W&B experiments and traces through the MCP interface\. See the role, project materials, and sources\."/,
   );
 });
 

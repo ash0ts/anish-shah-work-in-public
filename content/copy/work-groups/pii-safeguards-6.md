@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:ar-fp-0171 -->
 
 ## display-title
-PII detection safeguards contribution
+PII detection safeguards
 
 ## short-title
-PII evaluation safeguards
+PII safeguards contribution
 
 ## summary
-An evaluation report tested safeguards for detecting personally identifiable information.
+PII detection safeguards are proposed through a pull request.
 
 ## role-summary
-Report contributor
+Pull-request contributor

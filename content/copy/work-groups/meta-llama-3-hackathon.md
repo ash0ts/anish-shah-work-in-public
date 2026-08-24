@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0014 -->
 
 ## display-title
-Judging the Meta Llama 3 Hackathon
+Meta Llama 3 Hackathon
 
 ## short-title
 Llama 3 Hackathon
 
 ## summary
-An in-person hackathon evaluated projects built with Meta Llama 3.
+Projects built with Meta Llama 3 were evaluated at the in-person hackathon.
 
 ## role-summary
 Hackathon judge

@@ -70,6 +70,7 @@ test("Studio presents provider-local permission and one-time setup instead of a 
   assert.match(collections, /Collections needing attention/);
   assert.match(banner, /Finish permission setup/);
   assert.match(banner, /Future providers stay[\s\S]*private/);
+  assert.match(banner, /Future connections stay private/);
   assert.match(permission, /Allow public display and saved snapshots/);
   assert.match(permission, /Private reference/);
   assert.match(permission, /Permission confirmed/);
@@ -88,19 +89,26 @@ test("Studio presents provider-local permission and one-time setup instead of a 
   assert.match(generic, /Advanced \/ recovery/);
   assert.match(strava, /Advanced \/ recovery/);
   assert.match(strava, /Verify now/);
+  assert.match(
+    strava,
+    /Check the saved Strava configuration before trying again/,
+  );
 });
 
 test("OAuth callbacks focus their collection, announce the outcome, and clean callback parameters", async () => {
-  const [page, collections, generic] = await Promise.all([
+  const [page, collections, generic, helpers] = await Promise.all([
     source("app/studio/page.tsx"),
     source("app/studio/StudioCollections.tsx"),
     source("app/studio/connectors/ApiConnectorPanel.tsx"),
+    source("app/studio/connectors/helpers.ts"),
   ]);
 
   assert.match(page, /initialExpandedProvider/);
   assert.match(collections, /scrollIntoView/);
   assert.match(collections, /querySelector<HTMLElement>\("summary"\)\?\.focus\(\)/);
   assert.match(generic, /connection saved\. Allow public use next\./);
+  assert.match(helpers, /is authorized\. Continue setup below\./);
+  assert.doesNotMatch(helpers, /is authorized\. Refresh now/);
   assert.match(generic, /searchParams\.delete\("connector"\)/);
   assert.match(generic, /searchParams\.delete\("result"\)/);
   assert.match(generic, /window\.history\.state/);
@@ -124,6 +132,8 @@ test("the composed workspace preserves success announcements and advances focus"
   assert.match(collections, /data-studio-primary-action/);
   assert.match(generic, /focusAfterAction\.current = view\.primaryAction/);
   assert.match(generic, /data-studio-primary-action/);
+  assert.match(generic, /Snapshot updated/);
+  assert.doesNotMatch(generic, /Snapshot published/);
   assert.match(permission, /await onUpdated\(success\)/);
   assert.match(spotify, /await onUpdated\(success\)/);
   assert.match(discogs, /await onUpdated\(success\)/);

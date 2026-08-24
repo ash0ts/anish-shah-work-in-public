@@ -1,13 +1,13 @@
 <!-- copy-record: group:products:gpt-engineer -->
 
 ## display-title
-Two contributions to GPT Engineer
+GPT Engineer upstream contributions
 
 ## short-title
-GPT Engineer pull requests
+GPT Engineer contributions
 
 ## summary
-Two upstream changes extended GPT Engineer.
+The GPT Engineer contribution consists of two pull requests.
 
 ## role-summary
-Upstream contributor across two pull requests
+Contributed both upstream pull requests

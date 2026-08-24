@@ -27,7 +27,7 @@ export function StreamEmpty<T>({ state }: { state: ConnectorState<T> }) {
           ? SITE_COPY.play["loading-collection"]
           : state.status === "unavailable"
             ? state.message
-            : "This stream has not been published yet."}
+            : "This collection has not been published yet."}
       </p>
     </div>
   );

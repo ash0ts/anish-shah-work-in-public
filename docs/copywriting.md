@@ -110,6 +110,19 @@ The owner-only Studio copy report lists this page path, its route scope, and
 the current counts for both review classes. It is an inventory, not another
 editing surface.
 
+## Voice review
+
+For a full language pass, review the claim and structure first. Then replace
+abstract nouns and vague verbs with the actual actor and action, cut repeated
+framing, and read the result aloud. Keep strong existing copy rather than
+rewriting it for consistency alone.
+
+Avoid template openings such as “A session…,” “A meetup talk…,” and “Two
+upstream changes…”. Replace vague verbs such as “mapped,” “connected,”
+“explored,” and “extended” when the evidence supports a more exact mechanism.
+Mild personality belongs in Play; speaker copy, Privacy, consent, and recovery
+messages stay literal.
+
 ## Protected: request, do not edit
 
 The deck cannot change:

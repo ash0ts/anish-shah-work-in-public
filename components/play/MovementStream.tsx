@@ -71,7 +71,7 @@ export function MovementStream({
       <div className={styles.movementIntro}>
         <PanelHeading
           title="Outside, on purpose."
-          description="A cumulative public movement feed when Strava permits anonymous embedding, with the athlete profile always available."
+          description="Recent activity when Strava allows it; the profile link stays available."
         />
       </div>
       {show && state.payload.embed ? (
@@ -105,7 +105,7 @@ export function MovementStream({
       ) : (
         <div className={styles.stravaFallback}>
           <span>
-            <strong>The feed is not anonymously frameable right now.</strong>
+            <strong>Strava cannot show the feed here right now.</strong>
             <small>No third-party content was loaded.</small>
           </span>
           <a href={state.payload.profileUrl} rel="noreferrer" target="_blank">

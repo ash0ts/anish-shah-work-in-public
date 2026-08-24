@@ -7,7 +7,7 @@ Optimizing and evaluating agentic applications
 Evaluating agentic applications
 
 ## summary
-A co-led workshop applied evaluation to improving agentic AI applications.
+A co-led workshop on optimizing and evaluating agentic AI applications.
 
 ## role-summary
 Co-instructor with Sam Stowers

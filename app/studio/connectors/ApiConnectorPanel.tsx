@@ -171,7 +171,7 @@ export function ApiConnectorPanel({
 
   async function copyCallback(): Promise<void> {
     if (!registeredCallback) {
-      setMessage("Set SITE_URL to the exact origin and restart Studio first.");
+      setMessage("SITE_URL does not match this origin. Correct it, then restart Studio.");
       return;
     }
     setPending("copy");
@@ -180,7 +180,7 @@ export function ApiConnectorPanel({
       setMessage("Callback URL copied.");
     } catch {
       setMessage(
-        "Copy was unavailable. Select the callback URL and copy it manually.",
+        "The callback could not be copied. Select the URL and copy it manually.",
       );
     } finally {
       setPending(null);
@@ -189,7 +189,7 @@ export function ApiConnectorPanel({
 
   async function authorizeOAuthProvider(reuseStored: boolean): Promise<void> {
     if (!oauth || !registeredCallback) {
-      setMessage("Set SITE_URL to the exact origin and restart Studio first.");
+      setMessage("SITE_URL does not match this origin. Correct it, then restart Studio.");
       return;
     }
     if (!reuseStored && (!credentialId.trim() || !secret)) {
@@ -235,14 +235,14 @@ export function ApiConnectorPanel({
       );
       if (!destination) {
         setMessage(
-          "Studio received an invalid authorization destination. Nothing was opened.",
+          "The authorization destination was invalid. Nothing opened; check the provider setup.",
         );
         return;
       }
       setSecret("");
       setAuthorizationDestination(destination);
       setMessage(
-        `${oauthProviderTitle} authorization is ready. If it does not open automatically, use Continue to ${oauthProviderTitle} below.`,
+        `${oauthProviderTitle} authorization is ready. If it stays here, select Continue to ${oauthProviderTitle}.`,
       );
       window.location.assign(destination);
     } catch {
@@ -267,7 +267,7 @@ export function ApiConnectorPanel({
       !window.confirm(
         cancellingPendingAuthorization
           ? `Cancel the pending ${oauthProviderTitle} authorization? Its encrypted, single-use transaction will be deleted${environment === "local" ? " from this local sandbox." : "."}`
-          : `Disconnect ${meta.title}? Its encrypted credentials, snapshots, pending authorization, and sync history will be deleted${environment === "local" ? " from this local sandbox." : " and the stream will be unpublished."}`,
+          : `Disconnect ${meta.title}? Its encrypted credentials, snapshots, pending authorization, and sync history will be deleted${environment === "local" ? " from this local sandbox." : " and the collection will be unpublished."}`,
       )
     ) {
       return;
@@ -310,7 +310,7 @@ export function ApiConnectorPanel({
         }
         setMessage(
           responseRetryNotBefore
-            ? `Discogs is rate-limiting synchronization. Refresh becomes available after ${formatTimestamp(responseRetryNotBefore)}. No new snapshot was published; the last accepted snapshot remains unchanged.`
+            ? `Discogs rate-limited the refresh. Try again after ${formatTimestamp(responseRetryNotBefore)}. No new snapshot was saved; the previous snapshot is unchanged.`
             : result.error ?? `Request failed (${response.status}).`,
         );
         if (
@@ -335,8 +335,8 @@ export function ApiConnectorPanel({
         }
         setMessage(
           responseRetryNotBefore
-            ? `No provider request was made. Manual refresh becomes available after ${formatTimestamp(responseRetryNotBefore)}; the last accepted snapshot remains published.`
-            : "No provider request was made because this collection is not due for a manual refresh. The last accepted snapshot remains published.",
+            ? `The collection is not due, so no provider request was made. Refresh after ${formatTimestamp(responseRetryNotBefore)}; the saved snapshot remains published.`
+            : "The collection is not due, so no provider request was made. The saved snapshot remains published.",
         );
         focusAfterMutation.current = "primary";
         focusAfterAction.current = view.primaryAction;
@@ -365,17 +365,17 @@ export function ApiConnectorPanel({
       }
       setMessage(
         action === "save"
-          ? "Connection saved. Allow public use next."
+          ? "Connected. Allow public use next."
           : action === "disconnect"
             ? cancellingPendingAuthorization
-              ? `Pending ${oauthProviderTitle} authorization cancelled.`
-              : `${meta.title} disconnected. Its credentials, snapshots, and sync history were deleted${environment === "local" ? " from this sandbox." : "."}`
+              ? `${oauthProviderTitle} authorization cancelled. The pending transaction was deleted.`
+              : `${meta.title} disconnected. Credentials, snapshots, and sync history were deleted${environment === "local" ? " from this sandbox." : "."}`
             : result.status === "already_running"
-              ? "A refresh is already running."
+              ? "A refresh is already running. Check again in a moment."
               : result.status === "withheld"
                 ? result.message ??
-                  "Steam game details are not public, so the stream was unpublished."
-                : `${environment === "local" ? "Local sync" : "Sync"} complete${typeof result.itemCount === "number" ? ` · ${result.itemCount} items` : ""}.`,
+                  "Steam game details are not public, so Play was unpublished."
+                : `${environment === "local" ? "Local snapshot updated" : "Snapshot updated"}${typeof result.itemCount === "number" ? ` · ${result.itemCount} items` : ""}.`,
       );
       if (
         action === "refresh" &&
@@ -391,7 +391,7 @@ export function ApiConnectorPanel({
     } catch {
       setMessage(
         action === "refresh"
-          ? "The refresh request could not be completed. No new snapshot was published; any previously accepted snapshot remains unchanged."
+          ? "The refresh request could not be completed. No new snapshot was saved; any previously accepted snapshot remains unchanged."
           : "The request could not be completed. Try again.",
       );
     } finally {
@@ -428,13 +428,13 @@ export function ApiConnectorPanel({
   const guidance =
     view.primaryAction === "record_public_permission"
       ? view.publicState === "live"
-        ? "This collection remains live during the one-time setup. Record its permission before finishing setup."
-        : "The connection is saved. Record public permission before synchronizing this collection."
+        ? "This collection remains live during setup. Add its public permission before finishing setup."
+        : "The connection is saved. Add public permission before syncing."
       : view.primaryAction === "publish"
-        ? "The saved collection is private. Review the public display choice below."
+        ? "The saved collection is private. Review the display terms, then publish below."
         : view.primaryAction === "continue_authorization" &&
             !connector.canReuseOAuthClient
-          ? `The previous ${oauthProviderTitle} authorization was not completed. Re-enter the app credentials to replace that single-use request, or cancel it below.`
+          ? `${oauthProviderTitle} authorization did not finish. Re-enter the app credentials to replace the single-use request, or cancel it below.`
           : statusGuidance(
               {
                 ...connector,
@@ -731,11 +731,11 @@ export function ApiConnectorPanel({
           </div>
           <dl className={styles.connectorFacts}>
             <div>
-              <dt>You need</dt>
+              <dt>Required</dt>
               <dd>{meta.requirement}</dd>
             </div>
             <div>
-              <dt>Last successful sync</dt>
+              <dt>Last sync</dt>
               <dd>{formatTimestamp(connector.lastSyncedAt)}</dd>
             </div>
             <div>
@@ -790,7 +790,7 @@ export function ApiConnectorPanel({
                 </button>
               </div>
               <p>
-                Register this exact URL in {oauthProviderTitle}. Use a separate application for local and production.
+                Register this exact URL in {oauthProviderTitle}. Keep local and production applications separate.
                 {isSpotify && environment === "local"
                   ? " Spotify rejects localhost redirects, so this callback uses the explicit 127.0.0.1 loopback address."
                   : ""}
@@ -832,7 +832,7 @@ export function ApiConnectorPanel({
           ) : null}
           {advancedChildren}
           <p className={styles.recoveryText}>
-            <strong>If it needs attention</strong>
+            <strong>Recovery</strong>
             {meta.recovery}
           </p>
         </details>

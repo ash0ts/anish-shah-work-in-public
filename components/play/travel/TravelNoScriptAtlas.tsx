@@ -62,8 +62,8 @@ export function TravelNoScriptAtlas({
         id="travel-static-atlas"
       >
         <header>
-          <p>Text atlas · No JavaScript required</p>
-          <h2 id="travel-static-atlas-title">Published travel directory</h2>
+          <p>Travel directory · Works without JavaScript</p>
+          <h2 id="travel-static-atlas-title">Published trips</h2>
           <span>
             Follow a country to its regions and places, then open any trip log.
           </span>

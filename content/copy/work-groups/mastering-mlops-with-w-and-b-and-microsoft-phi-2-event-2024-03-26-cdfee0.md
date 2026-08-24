@@ -7,7 +7,7 @@ MLOps with W&B and Microsoft Phi-2
 MLOps with Phi-2
 
 ## summary
-A session connected W&B MLOps workflows with Microsoft Phi-2.
+W&B MLOps workflows meet Microsoft Phi-2 across a session and recording.
 
 ## role-summary
-Session speaker
+Session presenter

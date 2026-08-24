@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0040 -->
 
 ## display-title
-Building AI agents with MCP and protocols
+Agent-system design with MCP and related protocols
 
 ## short-title
-Agents with MCP and protocols
+MCP for agent systems
 
 ## summary
-A webinar mapped MCP and adjacent protocols onto agent-system design.
+MCP and adjacent protocols for agent-system design were explained in a webinar.
 
 ## role-summary
-Webinar speaker
+Presented the webinar

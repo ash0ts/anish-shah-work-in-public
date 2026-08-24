@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0033 -->
 
 ## display-title
-Evals and observability for production AI
+Production AI evaluation and observability
 
 ## short-title
-Production AI evaluation
+Evaluating production AI
 
 ## summary
-A workshop applied evaluation and observability to production AI systems.
+A workshop on evaluation and observability for production AI systems.
 
 ## role-summary
-Workshop instructor
+Presented the workshop

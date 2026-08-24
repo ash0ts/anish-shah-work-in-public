@@ -7,7 +7,7 @@ W&B logging and checkpoints for Lightning Fabric
 Lightning Fabric integration
 
 ## summary
-Three upstream changes added W&B logging and checkpoint support to Lightning Fabric.
+Three Lightning Fabric pull requests contribute W&B logging and checkpoint support.
 
 ## role-summary
-Upstream contributor across three pull requests
+Contributor across three upstream pull requests

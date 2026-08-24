@@ -7,7 +7,7 @@ Prompt engineering with LangChain and W&B
 Prompt engineering with LangChain
 
 ## summary
-Practical guidance connected prompt design with LangChain and W&B tracking.
+The guide instruments LangChain prompt workflows with W&B tracking.
 
 ## role-summary
 Guide author

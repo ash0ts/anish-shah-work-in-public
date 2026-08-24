@@ -112,8 +112,8 @@ export async function generateMetadata({
     return publicPageMetadata({
       title: fallbackQuery ?? "Work record",
       description: fallbackQuery
-        ? `Find the bodies of work connected to ${fallbackQuery}.`
-        : "This work record is not available in the public archive.",
+        ? `Find projects connected to ${fallbackQuery}.`
+        : "This project is not available.",
       path: `/work/${encodeURIComponent(slug)}`,
       noindex: true,
     });
@@ -357,7 +357,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                 className={styles.outcomes}
                 aria-labelledby="outcomes-title"
               >
-                <p className={styles.sectionLabel}>Direct outcomes</p>
+                <p className={styles.sectionLabel}>Direct results</p>
                 <h2 id="outcomes-title">{SITE_COPY.work["detail-results"]}</h2>
                 <MetricRows metrics={outcomes} />
               </section>
@@ -392,7 +392,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                 className={styles.context}
                 aria-labelledby="context-title"
               >
-                <h2 id="context-title">Wider program</h2>
+                <h2 id="context-title">Program context</h2>
                 <p className={styles.contextNote}>
                   {SITE_COPY.work["detail-context"]}
                 </p>
@@ -453,7 +453,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
             data-supporting-disclosure
           >
             <summary>
-              <span className={styles.sectionLabel}>Nested public forms</span>
+              <span className={styles.sectionLabel}>More from this project</span>
               <strong aria-level={2} id="appearances-title" role="heading">
                 {SITE_COPY.work["detail-materials"]}
               </strong>
@@ -486,7 +486,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
             data-supporting-disclosure
           >
             <summary>
-              <span className={styles.sectionLabel}>Related public context</span>
+              <span className={styles.sectionLabel}>Related work</span>
               <strong aria-level={2} id="related-context-title" role="heading">
                 {SITE_COPY.work["detail-related"]}
               </strong>
@@ -501,8 +501,8 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                   </div>
                   <h3>{item.displayTitle}</h3>
                   <p>
-                    Related context only. It is not counted as another form of
-                    this work.
+                    Related context only. It is not another version of this
+                    project.
                   </p>
                   <PublicArtifactLink item={item} />
                 </li>

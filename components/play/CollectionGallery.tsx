@@ -122,7 +122,7 @@ export function GalleryView({
         <span>
           {start}—{end} of {gallery.totalItems.toLocaleString()}
         </span>
-        <span>{busy ? "Updating view…" : SITE_COPY.play["view-browse-all"]}</span>
+        <span>{busy ? "Loading results…" : SITE_COPY.play["view-browse-all"]}</span>
       </div>
 
       {gallery.items.length ? (

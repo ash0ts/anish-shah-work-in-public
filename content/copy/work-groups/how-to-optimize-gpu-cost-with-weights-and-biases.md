@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0094 -->
 
 ## display-title
-Optimizing GPU cost with W&B
+GPU cost analysis with W&B
 
 ## short-title
-GPU cost with W&B
+GPU cost analysis
 
 ## summary
-A report showed how W&B can expose and optimize GPU cost.
+GPU cost analysis and optimization with W&B.
 
 ## role-summary
 Report author

@@ -21,7 +21,7 @@ export function PatternView({
       <div className={styles.pattern}>
         <PatternLead
           value={total.toLocaleString()}
-          label="titles in the public watch library"
+          label="titles in the watch library"
         />
         <Distribution title="Watch state" entries={payload.status} />
         <Distribution title="Recurring genres" entries={payload.genres} />
@@ -41,7 +41,7 @@ export function PatternView({
       <div className={styles.pattern}>
         <PatternLead
           value={total.toLocaleString()}
-          label="books in the public shelf"
+          label="books on the shelf"
         />
         <Distribution title="Reading state" entries={payload.status} />
         {payload.ratings?.length ? (
@@ -64,7 +64,7 @@ export function PatternView({
     <div className={styles.pattern}>
       <PatternLead
         value={payload.totals.publicGameCount.toLocaleString()}
-        label="games in the public library"
+        label="games in the library"
         aside={`${payload.totals.totalHoursRounded.toLocaleString()} rounded hours`}
       />
       {payload.playtime?.length ? (

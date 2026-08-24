@@ -46,7 +46,7 @@ export async function GET(request: Request, context: RouteContext) {
       {
         provider: candidate,
         status: "unavailable",
-        message: "This personal stream has not been published yet.",
+        message: "This public view has not been published yet.",
       },
       {
         status: 200,

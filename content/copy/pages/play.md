@@ -4,7 +4,7 @@
 Play — My Room, 2001
 
 ## seo-description
-Step into the room behind the résumé: anime, books, music, records, games, and miles, each collected in its own corner.
+Open a low-poly room for anime, books, music, records, games, movement, and travel.
 
 ## intro-eyebrow
 My Room · 2001
@@ -13,7 +13,7 @@ My Room · 2001
 The room behind the résumé.
 
 ## intro-summary
-The objects tell the rest: anime, books, music, records, games, miles, and places.
+Anime, books, music, records, games, miles, and trips—one object at a time.
 
 ## poster-still-label
 Room preview
@@ -25,7 +25,7 @@ Each object opens its own view
 Room directory
 
 ## directory-title
-Start with an object.
+Choose an object.
 
 ## room-opening-status
 Opening the room
@@ -34,10 +34,10 @@ Opening the room
 Room view
 
 ## room-return-title
-Rebuilding the room.
+Reopening the room.
 
 ## room-return-summary
-Placing the objects…
+Putting everything back…
 
 ## room-fallback-body
 Use the object directory below.
@@ -61,7 +61,7 @@ Browse all
 Loading the collection…
 
 ## collection-unavailable
-This collection is not available yet.
+This collection is unavailable right now.
 
 ## return-overview
 Back to overview
@@ -94,7 +94,7 @@ Search the public atlas
 No countries match that search.
 
 ## travel-loading-map
-Drawing the map…
+Drawing the globe…
 
 ## profile-myanimelist
 Open on MyAnimeList
@@ -127,7 +127,7 @@ My game library
 TV
 
 ## watch-description
-Returning anime, current watches, and the full shelf.
+Anime in progress, finished, and worth returning to.
 
 ## watch-screen-eyebrow
 Channel 11
@@ -151,7 +151,7 @@ Bedside Shelf
 Music player
 
 ## listen-description
-Spotify’s returned top tracks, kept in their original order.
+Spotify’s top tracks, one rank at a time.
 
 ## listen-screen-eyebrow
 Top Tracks
@@ -163,7 +163,7 @@ Pocket Player
 Record crate
 
 ## collect-description
-Records on the shelf, sorted by format and decade.
+Records on the shelf, grouped by format and decade.
 
 ## collect-screen-eyebrow
 Crate 01
@@ -175,7 +175,7 @@ Crate Archive
 Computer
 
 ## play-description
-Owned games, returning favorites, and rounded playtime.
+Games owned, revisited, and measured in rounded playtime.
 
 ## play-screen-eyebrow
 Desktop 01
@@ -187,7 +187,7 @@ Desktop Library
 Treadmill
 
 ## move-description
-Recent rides and runs, when Strava can show them.
+Recent rides and runs when Strava can show them.
 
 ## move-screen-eyebrow
 Cardio feed
@@ -208,7 +208,7 @@ Travel log
 Postcard Planet
 
 ## travel-screen-summary
-Turn the globe, open a country, and follow photographs back to the trips that made them.
+Turn the globe, choose a place, and open the trips and photographs attached to it.
 
 ## travel-seo-title
 Travel — Postcard Planet

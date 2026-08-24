@@ -118,7 +118,7 @@ async function loadSpotifyUrl(
       status: "unavailable",
       message:
         body.message ??
-        "This Spotify stream has not been published from the owner studio yet.",
+        "This Spotify collection has not been published yet.",
     };
   } catch (error) {
     if (signal.aborted) throw error;

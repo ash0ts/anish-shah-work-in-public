@@ -1,13 +1,13 @@
 <!-- copy-record: group:courses:agentic-llm-series -->
 
 ## display-title
-Fine-tuning and evaluating agentic LLMs
+Model adaptation and evaluation for agentic LLMs
 
 ## short-title
-Agentic LLM workshops
+Agentic LLM evaluation workshops
 
 ## summary
-A multi-session workshop connected model adaptation with evaluation for agentic use cases.
+Multiple workshops joined model adaptation with evaluation for agentic use cases.
 
 ## role-summary
-Speaker and co-instructor across the series
+Spoke and co-instructed across the series

@@ -99,7 +99,7 @@ export async function getCollectionScreenFoundation(
         message:
           "message" in snapshot
             ? snapshot.message
-            : "This personal stream has not been published yet.",
+            : "This public view has not been published yet.",
       },
     };
   }
@@ -202,7 +202,7 @@ export async function getSpotifyScreenFoundation(
   }
   return {
     status: "unavailable",
-    message: "This personal stream has not been published yet.",
+    message: "This public view has not been published yet.",
   };
 }
 
@@ -227,7 +227,7 @@ export async function getMovementScreenFoundation(
   if (result.status !== "ready") {
     return {
       status: "unavailable",
-      message: "This personal stream has not been published yet.",
+      message: "This public view has not been published yet.",
     };
   }
   return {

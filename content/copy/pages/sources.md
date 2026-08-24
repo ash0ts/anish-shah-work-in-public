@@ -40,25 +40,25 @@ Keep the limit beside the claim
 Each derived measure keeps its period, source, attribution, rounding, and caveat.
 
 ## claims-eyebrow
-Claims
+Numbers
 
 ## bibliography-eyebrow
 Sources
 
 ## bibliography-search-label
-Search sources
+Find a source
 
 ## bibliography-search-placeholder
 Project, claim, publisher, or title
 
 ## source-type-label
-Source type
+Type
 
 ## source-connected-label
-Connected to
+Supports
 
 ## source-link-label
-View source
+Open source
 
 ## source-kind-web
 Web page

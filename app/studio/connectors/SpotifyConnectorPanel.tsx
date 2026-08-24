@@ -30,9 +30,9 @@ const meta: ProviderMeta = {
     },
   ],
   summary:
-    "Authorize the owner account, synchronize Spotify-calculated Top Tracks, then make a separate decision about public display. Rankings are affinity—not play counts.",
+    "Sync Spotify-calculated Top Tracks, then choose whether to publish them. Rankings describe affinity—not play counts.",
   recovery:
-    "Development-mode apps require the app owner to keep Spotify Premium and the authorized account on the app allowlist. Spotify refresh tokens expire after six months; when Studio requests reauthorization, authorize again rather than retrying. Replace app credentials only when the registration changed, and respect Retry-After before retrying a rate limit.",
+    "Development mode requires Spotify Premium for the app owner and the authorized account on the allowlist. Refresh tokens expire after six months. When reauthorization is required, authorize again rather than retrying. Replace app credentials only if the registration changed, and respect Retry-After after a rate limit.",
 };
 
 type Props = ProviderPanelProps & {
@@ -130,7 +130,7 @@ function SpotifyPresentationControls({
           phase: "error",
           message:
             result.error ??
-            "Spotify display settings could not be checked. Reload Studio and try again.",
+            "Spotify display settings could not be checked. Reload Studio, then try again.",
         });
       })
       .catch(() => {
@@ -138,7 +138,7 @@ function SpotifyPresentationControls({
           setState({
             phase: "error",
             message:
-              "Spotify display settings could not be checked. Reload Studio and try again.",
+              "Spotify display settings could not be checked. Reload Studio, then try again.",
           });
         }
       });
@@ -149,12 +149,12 @@ function SpotifyPresentationControls({
 
   async function save(nextPublishTopTracks = publishTopTracks): Promise<void> {
     if (nextPublishTopTracks && !configured) {
-      setMessage("Authorize and refresh Spotify before publishing Top Tracks.");
+      setMessage("No Spotify snapshot is ready. Authorize and refresh before publishing.");
       return;
     }
     if (mode === "publish" && nextPublishTopTracks && !acknowledged) {
       setMessage(
-        "Acknowledge the public-display qualification before publishing.",
+        "The display qualification is not acknowledged. Confirm it before publishing.",
       );
       return;
     }
@@ -193,11 +193,11 @@ function SpotifyPresentationControls({
       setAcknowledged(false);
       const success = result.config.publishTopTracks
         ? environment === "local"
-          ? "Top Tracks enabled in the local sandbox only. Production still requires separate authorization and review."
-          : "Top Tracks published with the affinity qualification."
+          ? "Top Tracks are visible only in the local sandbox. Production still needs separate authorization and review."
+          : "Top Tracks are published with the affinity qualification."
         : result.config.fallbackEmbed
           ? "Top Tracks are private. The official Spotify fallback is available after visitor consent."
-          : "Spotify public display is off.";
+          : "Spotify is private.";
       setMessage(success);
       await onUpdated(success);
     } catch {
@@ -217,7 +217,7 @@ function SpotifyPresentationControls({
       <div className={styles.spotifyPublicationLead}>
         <div>
           <p className={styles.spotifyPublicationLabel}>Public display</p>
-          <h4 id="spotify-display-title">Choose what leaves Studio.</h4>
+          <h4 id="spotify-display-title">Choose what appears publicly.</h4>
         </div>
         {config ? (
           <dl>
@@ -267,7 +267,7 @@ function SpotifyPresentationControls({
               />
               <span>
                 Publish up to twelve Spotify-calculated affinity ranks per time
-                window. I will describe them as affinity—not plays, minutes,
+                window. These ranks describe affinity—not plays, minutes,
                 popularity, or a listener profile.
               </span>
             </label>
@@ -288,7 +288,7 @@ function SpotifyPresentationControls({
               />
             </label>
             <p className={styles.fieldHelp}>
-              Accepts an official Spotify track, album, or playlist URL or Embed.
+              Use an official Spotify track, album, or playlist URL or Embed.
               Visitors load it only after consent. Spotify controls playback
               availability and length.
             </p>
@@ -329,7 +329,7 @@ function SpotifyPresentationControls({
       <p className={styles.spotifyIsolationNote}>
         {environment === "local"
           ? "Local authorization, snapshots, fallback, and publication choice stay on this machine. None are included in the production handoff."
-          : "This production decision is independent of local Studio and can be revoked without disconnecting the app."}
+          : "This publication choice is separate from local Studio and can be revoked without disconnecting Spotify."}
       </p>
     </section>
   );

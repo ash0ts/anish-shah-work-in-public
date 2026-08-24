@@ -22,9 +22,9 @@ const meta: ProviderMeta = {
     },
   ],
   summary:
-    "Publish a bounded view of public game details: rounded totals and a short list of recent and top-played games.",
+    "Publish rounded library totals and a short list of recent and top-played games.",
   recovery:
-    "If visibility is required, make both Profile and Game details Public, then refresh. A private library is unpublished immediately; a disconnected stream is deleted.",
+    "To publish the library, make both Profile and Game details Public, then refresh. A private library is unpublished immediately; disconnecting deletes its data.",
 };
 
 type Props = ProviderPanelProps & {

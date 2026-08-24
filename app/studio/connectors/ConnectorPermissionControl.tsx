@@ -86,7 +86,7 @@ export function ConnectorPermissionControl({
   }): Promise<boolean> {
     if (!configurationRevision) {
       setMessage(
-        `${providerLabel} connection state changed. Review this provider before recording permission.`,
+        `${providerLabel} changed. Review the connection, then record permission.`,
       );
       return false;
     }
@@ -107,10 +107,10 @@ export function ConnectorPermissionControl({
     if (!response.ok) {
       const failure =
         result.reason === "reference"
-          ? `${providerLabel} needs a private permission reference.`
+          ? `${providerLabel} permission needs a private reference. Add one, then save again.`
           : result.reason === "stale_configuration"
-            ? `${providerLabel} connection changed. Review it and record permission again.`
-            : `${providerLabel} permission was not saved.`;
+            ? `${providerLabel} changed. Review the connection, then record permission again.`
+            : `${providerLabel} permission was not saved. Try again.`;
       setMessage(failure);
       if (result.reason === "stale_configuration") {
         await onUpdated(failure);
@@ -124,7 +124,7 @@ export function ConnectorPermissionControl({
     const data = new FormData(form);
     const approvedAt = approvalDateAtStartOfDayUtc(data.get("approvedAt"));
     if (!approvedAt) {
-      setMessage("Choose the date permission was confirmed.");
+      setMessage("The confirmation date is missing. Choose a date, then save again.");
       return;
     }
     const reference = data.get("reference");
@@ -141,12 +141,12 @@ export function ConnectorPermissionControl({
       });
       if (saved) {
         setEditing(false);
-        const success = `${providerLabel} may be displayed publicly and its saved snapshot may be retained. The reference remains encrypted.`;
+        const success = `${providerLabel} may appear publicly, and its saved snapshot may be retained. The reference remains encrypted.`;
         setMessage(success);
         await onUpdated(success);
       }
     } catch {
-      setMessage(`${providerLabel} permission was not saved.`);
+      setMessage(`${providerLabel} permission was not saved. Try again.`);
     } finally {
       setPending(null);
     }
@@ -173,7 +173,7 @@ export function ConnectorPermissionControl({
         await onUpdated(success);
       }
     } catch {
-      setMessage(`${providerLabel} permission was not changed.`);
+      setMessage(`${providerLabel} permission was not changed. Try again.`);
     } finally {
       setPending(null);
     }
@@ -183,7 +183,7 @@ export function ConnectorPermissionControl({
     <section className={styles.permissionControl} aria-labelledby={headingId}>
       <div className={styles.permissionHeading}>
         <div>
-          <p>Public permission</p>
+          <p>Public use</p>
           <h4 id={headingId}>Allow public display and saved snapshots</h4>
         </div>
         <span>{status}</span>
@@ -198,8 +198,8 @@ export function ConnectorPermissionControl({
           }}
         >
           <p>
-            Record where permission was confirmed. This private reference is
-            encrypted and cannot be retrieved later.
+            Record the confirmation source. The private reference is encrypted
+            and cannot be retrieved later.
           </p>
           <label>
             Private reference
@@ -264,7 +264,7 @@ export function ConnectorPermissionControl({
           <p>
             {approval?.enabled
               ? `Recorded ${new Date(approval.approvedAt).toLocaleDateString("en", { dateStyle: "medium" })}${approval.expiresAt ? ` · expires ${new Date(approval.expiresAt).toLocaleDateString("en", { dateStyle: "medium" })}` : " · no expiry"}.`
-              : "Public display is off. The connection and saved snapshot remain available in Studio."}
+              : "Public display is off. The connection and saved snapshot remain in Studio."}
           </p>
           <div className={styles.actionRow}>
             {needsRenewal ? (

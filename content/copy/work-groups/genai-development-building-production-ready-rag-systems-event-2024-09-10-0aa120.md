@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0019 -->
 
 ## display-title
-Building RAG systems for production
+RAG systems from prototype to production
 
 ## short-title
-Production-ready RAG
+Production RAG systems
 
 ## summary
-A webinar traced RAG systems from prototype toward production.
+A webinar and recording cover production-ready RAG systems.
 
 ## role-summary
-Webinar speaker
+Presented the webinar

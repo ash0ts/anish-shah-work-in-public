@@ -7,7 +7,7 @@ Reproducible AutoML with PyCaret, W&B, and Prefect
 Reproducible AutoML
 
 ## summary
-A session mapped reproducible AutoML experiments across PyCaret, W&B, and Prefect.
+PyCaret, W&B, and Prefect coordinate reproducible AutoML experiments.
 
 ## role-summary
 Listed session speaker

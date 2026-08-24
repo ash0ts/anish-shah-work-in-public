@@ -50,7 +50,8 @@
   padding-block: clamp(2.5rem, 7vw, 5rem);
 }
 
-.policy section {
+.policy section,
+.policySection {
   padding-block: 1.75rem;
   border-bottom: 1px solid var(--line, #d5dbe4);
 }

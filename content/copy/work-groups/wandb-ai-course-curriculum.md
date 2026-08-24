@@ -7,7 +7,7 @@ W&B AI curriculum: prompting, evaluation, and agents
 AI curriculum
 
 ## summary
-Three practical courses covered prompting, LLM evaluation, and agent engineering.
+Three practical courses teach prompting, LLM evaluation, and agent engineering.
 
 ## role-summary
-Instructor across three courses and open-source materials contributor
+Instructor across three courses; contributor to open-source materials

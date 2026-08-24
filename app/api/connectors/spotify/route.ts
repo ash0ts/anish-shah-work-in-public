@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     {
       provider: "spotify",
       status: "unavailable",
-      message: "This personal stream has not been published yet.",
+      message: "This public view has not been published yet.",
     },
     { headers: { "cache-control": "no-store" } },
   );

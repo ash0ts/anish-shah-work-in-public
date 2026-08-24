@@ -7,7 +7,7 @@ Tracing Azure OpenAI with W&B Weave
 Azure OpenAI with Weave
 
 ## summary
-A cookbook connected Azure OpenAI and Azure AI Studio traces to W&B Weave.
+Azure OpenAI and Azure AI Studio traces flow into W&B Weave.
 
 ## role-summary
 Cookbook author

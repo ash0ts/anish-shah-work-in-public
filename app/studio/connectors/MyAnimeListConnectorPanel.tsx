@@ -14,9 +14,9 @@ const meta: ProviderMeta = {
     },
   ],
   summary:
-    "Authorize the owner account through MyAnimeList. Studio stores the resulting tokens—not your password—and renews access automatically.",
+    "Connect the owner account. Studio stores the resulting tokens—never the password—and renews access automatically.",
   recovery:
-    "If authorization is denied, start it again. If Studio reports reauthorization required, authorize the stored app again; replace the app credentials only when the registration itself changed.",
+    "If authorization is denied, start again. When reauthorization is required, authorize the stored app; replace app credentials only if the registration changed.",
 };
 
 type Props = ProviderPanelProps & {

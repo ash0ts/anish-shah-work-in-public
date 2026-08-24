@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0024 -->
 
 ## display-title
-Improving AI evaluation workflows
+Optimizing AI evaluations
 
 ## short-title
-AI evaluation workflows
+AI evaluations
 
 ## summary
-A meetup talk examined how to improve AI evaluation workflows.
+AI evaluation workflows are examined for ways to improve.
 
 ## role-summary
 Meetup speaker

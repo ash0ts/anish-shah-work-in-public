@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0043 -->
 
 ## display-title
-Observing AI agents
+Agent observability in practice
 
 ## short-title
-Agent observability
+Observing AI agents
 
 ## summary
-An AI Innovators meetup talk on agent observability.
+Agent observability was presented at an AI Innovators meetup.
 
 ## role-summary
-AI Innovators meetup speaker
+Presented at AI Innovators

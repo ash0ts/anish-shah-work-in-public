@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0051 -->
 
 ## display-title
-Converting Hugging Face models for deployment
+Hugging Face model conversion for deployment
 
 ## short-title
-Hugging Face model deployment
+Converting Hugging Face models
 
 ## summary
-A coauthored comparison tested methods for converting and optimizing Hugging Face models for deployment.
+The comparison tested ways to convert and optimize Hugging Face models for deployment.
 
 ## role-summary
-Coauthor with Manan Goel
+Coauthored with Manan Goel

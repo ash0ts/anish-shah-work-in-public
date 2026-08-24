@@ -7,7 +7,7 @@ Evaluating PII detection guardrails
 PII detection guardrails
 
 ## summary
-A report evaluated guardrails for detecting personally identifiable information.
+PII guardrails are evaluated for detecting personally identifiable information.
 
 ## role-summary
 Report author

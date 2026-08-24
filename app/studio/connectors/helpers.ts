@@ -11,13 +11,13 @@ export const callbackResultMessages: Record<
   (provider: string) => string
 > = {
   connected: (provider) =>
-    `${provider} authorization is complete. Select Refresh now to verify the connection and create the sanitized snapshot.`,
+    `${provider} is authorized. Continue setup below.`,
   denied: (provider) =>
-    `${provider} authorization was denied. Nothing was connected; start authorization again when ready.`,
+    `${provider} authorization was denied. Start again when ready; nothing was connected.`,
   expired: () =>
     "The authorization attempt expired after ten minutes. Start a new authorization.",
   invalid_state: () =>
-    "The authorization response could not be verified. Start again from this Studio tab.",
+    "The authorization response could not be verified. Start again from this tab.",
   provider_unavailable: (provider) =>
     `${provider} is temporarily unavailable. Wait a few minutes, then start authorization again.`,
   rate_limited: (provider) =>
@@ -25,11 +25,11 @@ export const callbackResultMessages: Record<
   reauthorization_required: (provider) =>
     `${provider} rejected the prior authorization. Start authorization again with the owner account.`,
   token_exchange_failed: (provider) =>
-    `${provider} did not issue usable tokens. If the app registration changed, check its secret and exact callback; otherwise start again.`,
+    `${provider} did not issue usable tokens. Check the secret and exact callback if the app changed; otherwise start again.`,
   setup_required: () =>
-    "Studio could not finish authorization because encryption or the database is not ready. Resolve the setup notice and try again.",
+    "Encryption or the database is not ready. Resolve the setup notice, then try again.",
   forbidden: () =>
-    "The authorization response was not associated with the allowlisted owner. Sign in with the owner account and start again.",
+    "The authorization response did not match the allowlisted owner. Sign in with the owner account, then start again.",
 };
 
 export function connectorStatusLabel(
@@ -96,7 +96,7 @@ export function statusGuidance(
   if (!encryptionConfigured) {
     return environment === "local"
       ? "Add a local-only CONNECTOR_ENCRYPTION_KEY to .env.local, then restart npm run dev:studio."
-      : "Configure CONNECTOR_ENCRYPTION_KEY before connecting or refreshing.";
+      : "CONNECTOR_ENCRYPTION_KEY is missing. Configure it before connecting or refreshing.";
   }
   if (connector.provider === "steam" && !steamStorageCountries) {
     return environment === "local"
@@ -112,7 +112,7 @@ export function statusGuidance(
         : " Any previously accepted public snapshot remains unchanged.";
 
   if (connector.lastErrorCode === "account_changed") {
-    return "The authorized provider account changed. Data from the prior account was withheld. Save publication approval for this account, then refresh again.";
+    return "The provider account changed, so prior data is withheld. Add public permission for this account, then refresh.";
   }
 
   if (
@@ -134,29 +134,29 @@ export function statusGuidance(
   }
   if (connector.status === "setup_required") {
     return connector.configured
-      ? "A release gate is incomplete. Resolve the setup notice before refreshing."
+      ? "A release gate is incomplete. Resolve the setup notice, then refresh."
       : isOwnerOAuthProvider(connector)
         ? "Enter the app credentials, then authorize the owner account."
-        : "Enter the owner credential, then run the first refresh.";
+        : "Enter the owner credential, then refresh.";
   }
   if (connector.status === "never_synced") {
     return environment === "local"
-      ? "Connected in local D1. Run Refresh now to create the first local sanitized snapshot."
+      ? "Connected in local D1. Refresh now to create the first local snapshot."
       : connector.provider === "spotify" || connector.provider === "discogs"
-        ? "Connected. Run Refresh now to create the first sanitized snapshot; public display remains controlled below."
-        : "Connected. Run Refresh now to publish the first sanitized snapshot.";
+        ? "Connected. Refresh now to create the first snapshot; public display stays private until published below."
+        : "Connected. Refresh now to publish the first snapshot.";
   }
   if (connector.status === "healthy") {
     return environment === "local"
-      ? "The local snapshot is current. It has not been copied to production; future collection refreshes run only when you select Refresh now."
+      ? "The local snapshot is current and has not been copied to production. Refresh only when the collection changes."
       : connector.provider === "spotify"
-        ? "The sanitized snapshot is current. Public display remains controlled below; collection refreshes run only when you select Refresh now."
+        ? "The snapshot is current. Public display is controlled below; refresh only when the collection changes."
         : connector.provider === "discogs"
-          ? "The sanitized catalog is current. Public display remains controlled below; manual refresh becomes available after four hours."
-        : "The public snapshot is current. Collection refreshes run only when you select Refresh now.";
+          ? "The catalog is current. Public display is controlled below; another refresh becomes available after four hours."
+          : "The public snapshot is current. Refresh only when the collection changes.";
   }
   if (connector.status === "stale") {
-    return `The snapshot is due for refresh.${preservedSnapshot}`;
+    return `The saved snapshot is out of date. Refresh when ready.${preservedSnapshot}`;
   }
   if (connector.status === "syncing") {
     return "A refresh is already running. Check this panel again in a moment.";
@@ -172,7 +172,7 @@ export function statusGuidance(
       ? `The provider rate-limited the last request. Refresh becomes available after ${formatTimestamp(connector.retryNotBefore)}.${preservedSnapshot}`
       : `The provider rate-limited the last request. Wait before refreshing again.${preservedSnapshot}`;
   }
-  return "The last refresh failed. No new snapshot was published; any previously accepted snapshot remains unchanged.";
+  return "The last refresh failed. No new snapshot was saved; any previously accepted snapshot remains unchanged.";
 }
 
 export function formatTimestamp(value: string | null): string {

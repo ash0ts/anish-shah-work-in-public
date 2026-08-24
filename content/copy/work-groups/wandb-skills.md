@@ -4,10 +4,10 @@
 W&B Skills repository
 
 ## short-title
-W&B Skills contributions
+W&B Skills
 
 ## summary
-An upstream contribution extended the W&B Skills repository.
+A documented contribution to the W&B Skills repository.
 
 ## role-summary
-Upstream repository contributor
+Repository contributor

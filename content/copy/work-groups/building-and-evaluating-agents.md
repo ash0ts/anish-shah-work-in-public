@@ -1,13 +1,13 @@
 <!-- copy-record: group:talks:building-evaluating-agents -->
 
 ## display-title
-Building agents with evaluation in the loop
+Agent development with evaluation in the loop
 
 ## short-title
-Building and evaluating agents
+Agents with evaluation
 
 ## summary
-A conference session put evaluation inside the agent-development loop.
+Agent development stayed tied to evaluation throughout the conference session.
 
 ## role-summary
-Conference speaker
+Presented the conference session

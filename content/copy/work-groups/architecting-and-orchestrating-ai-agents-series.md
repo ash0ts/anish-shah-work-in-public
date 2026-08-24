@@ -1,13 +1,13 @@
 <!-- copy-record: group:talks:architecting-agents -->
 
 ## display-title
-Architecting and orchestrating AI agents
+Agent architecture and orchestration series
 
 ## short-title
-Architecting AI agents
+Agent architecture series
 
 ## summary
-A four-event series translated agent architecture and orchestration into reusable system patterns.
+Four sessions covered agent architecture and orchestration, including a Google-focused edition.
 
 ## role-summary
-Speaker and workshop lead across the series
+Speaker and workshop instructor across four sessions

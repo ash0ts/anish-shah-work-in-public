@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-0004 -->
 
 ## display-title
-NVIDIA Data Flywheel Blueprint contribution
+W&B support for NVIDIA Data Flywheel
 
 ## short-title
-NVIDIA Data Flywheel
+NVIDIA Data Flywheel contribution
 
 ## summary
-An upstream implementation added W&B support to NVIDIA's Data Flywheel Blueprint.
+An NVIDIA Data Flywheel Blueprint pull request contributes W&B support.
 
 ## role-summary
-Upstream implementation contributor
+Upstream contributor

@@ -7,7 +7,7 @@ Comparing Kedro, MLflow, and W&B
 Kedro, MLflow, and W&B
 
 ## summary
-An MLOps report compared Kedro, MLflow, and W&B through a Spotify project.
+Kedro, MLflow, and W&B are compared through a Spotify MLOps project.
 
 ## role-summary
 Report author

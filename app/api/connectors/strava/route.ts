@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       status: "unavailable",
       provider: "strava",
       code: result.reason,
-      message: "This personal stream has not been published yet.",
+      message: "This public view has not been published yet.",
     },
     {
       status: 200,

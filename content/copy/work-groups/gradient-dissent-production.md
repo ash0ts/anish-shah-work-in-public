@@ -1,13 +1,13 @@
 <!-- copy-record: group:talks:gradient-dissent -->
 
 ## display-title
-Producing Gradient Dissent
+Gradient Dissent transcripts and production
 
 ## short-title
-Gradient Dissent production
+Gradient Dissent archive production
 
 ## summary
-A production archive added transcripts plus Korean and Japanese translations to Gradient Dissent interviews.
+Interview production includes transcripts plus Korean and Japanese translations.
 
 ## role-summary
-Producer and transcriber
+Produced interviews and contributed transcripts

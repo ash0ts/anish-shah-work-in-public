@@ -45,8 +45,8 @@ function periodLabel(trip: TravelTripSummary): string {
 }
 
 function statusLabel(status: TravelTripSummary["status"]): string {
-  if (status === "planned") return "Planned signal";
-  if (status === "current") return "Transmitting now";
+  if (status === "planned") return "Planned trip";
+  if (status === "current") return "Current trip";
   return "Travel log";
 }
 
@@ -124,8 +124,8 @@ function TravelTripCard({
 function AtlasUnavailable({ message }: { message: string }) {
   return (
     <section className={styles.unavailable} data-travel-atlas-unavailable>
-      <p>Receiver status · No public transmission</p>
-      <h2>The atlas is folded away.</h2>
+      <p>Postcard Planet · Travel atlas</p>
+      <h2>The atlas is unavailable.</h2>
       <span>{message}</span>
       <Link href="/play">Choose another object</Link>
     </section>
@@ -314,7 +314,7 @@ export function PostcardPlanet({
       <section className={styles.console} aria-labelledby="travel-map-title">
         <header className={styles.consoleHeader}>
           <div>
-            <p>Receiver 07 · Public travel signal</p>
+            <p>Postcard Planet · Travel atlas</p>
             <h2 id="travel-map-title">{countryName}</h2>
           </div>
           <dl>
@@ -333,7 +333,7 @@ export function PostcardPlanet({
               <TravelGlobeGate
                 fallback={
                   <div className={styles.staticMap} data-travel-static-atlas>
-                    <span>Semantic atlas active</span>
+                    <span>Map directory ready</span>
                     <i aria-hidden="true" />
                     <p>Choose a country, region, or place from the directory.</p>
                   </div>
@@ -344,7 +344,7 @@ export function PostcardPlanet({
                   <Suspense
                     fallback={
                       <div className={styles.staticMap} role="status">
-                        <span>Building globe</span>
+                        <span>Preparing globe</span>
                         <i aria-hidden="true" />
                         <p>The complete atlas directory is already available.</p>
                       </div>
@@ -548,7 +548,7 @@ export function PostcardPlanet({
                     ))}
                   </ol>
                 ) : (
-                  <p className={styles.noPlaces}>No published place is pinned here yet.</p>
+                  <p className={styles.noPlaces}>No place is pinned here yet.</p>
                 )}
               </div>
             )}
@@ -562,7 +562,7 @@ export function PostcardPlanet({
               >
                 <p>
                   {selectedPlace.precision === "city_approximate"
-                    ? "Approximate public city pin"
+                    ? "Approximate city pin"
                     : `${selectedPlace.precision} pin`}
                 </p>
                 <h3 id="travel-place-inspector-title">{selectedPlace.label}</h3>
@@ -596,8 +596,8 @@ export function PostcardPlanet({
 
       <section className={styles.tripIndex} aria-labelledby="travel-trip-title">
         <header>
-          <p>{selectedPlace ? `Pinned location · ${selectedPlace.label}` : selectedCountryCode ? `Country log · ${countryName}` : "Complete travel log"}</p>
-          <h2 id="travel-trip-title">{selectedTrips.length ? `${selectedTrips.length} ${selectedTrips.length === 1 ? "story" : "stories"} in range` : "No published stories here yet"}</h2>
+          <p>{selectedPlace ? `Pinned place · ${selectedPlace.label}` : selectedCountryCode ? `Country · ${countryName}` : "All trips"}</p>
+          <h2 id="travel-trip-title">{selectedTrips.length ? `${selectedTrips.length} ${selectedTrips.length === 1 ? "trip" : "trips"}` : "No trips here yet"}</h2>
         </header>
         {selectedTrips.length ? (
           <div className={styles.tripGrid}>

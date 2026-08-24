@@ -7,7 +7,7 @@ Fine-tuning Azure OpenAI models with W&B
 Azure OpenAI model customization
 
 ## summary
-Two sessions connected Azure OpenAI model customization with W&B.
+Azure OpenAI Service fine-tuning with W&B was taught across two sessions.
 
 ## role-summary
-Speaker across both webinar sessions
+Presenter across both sessions

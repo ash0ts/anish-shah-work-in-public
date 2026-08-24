@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0095 -->
 
 ## display-title
-Deep learning and MLOps for MedSAM
+MedSAM development through an MLOps lens
 
 ## short-title
-MedSAM MLOps
+MedSAM development and MLOps
 
 ## summary
-A report connected MedSAM development with practical deep-learning and MLOps workflows.
+MedSAM grounded a report on deep-learning development and practical MLOps workflows.
 
 ## role-summary
-Report author
+Wrote the report

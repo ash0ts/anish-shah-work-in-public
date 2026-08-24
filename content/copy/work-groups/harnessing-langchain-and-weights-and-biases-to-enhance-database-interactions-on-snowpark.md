@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:wk-fp-0057 -->
 
 ## display-title
-LangChain database interactions on Snowpark
+Database interactions with LangChain on Snowpark
 
 ## short-title
-LangChain on Snowpark
+Snowpark database workflows
 
 ## summary
-A guide connected LangChain and W&B to database workflows on Snowpark.
+LangChain and W&B supported database-interaction workflows on Snowpark.
 
 ## role-summary
-Article author
+Wrote the guide

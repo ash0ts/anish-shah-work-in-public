@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:oc-fp-0020 -->
 
 ## display-title
-Fine-tuning and evaluating multimodal LLMs
+Multimodal LLM fine-tuning and evaluation
 
 ## short-title
-Multimodal LLM evaluation
+Evaluating multimodal LLMs
 
 ## summary
-A session linked multimodal LLM fine-tuning with evaluation.
+Multimodal LLM fine-tuning and evaluation shared one focused meetup session.
 
 ## role-summary
-Session speaker
+Presented the meetup session

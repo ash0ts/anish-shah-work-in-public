@@ -37,7 +37,7 @@ export function PermissionSetupBanner({
   async function finishSetup(): Promise<void> {
     if (
       !window.confirm(
-        "Finish permission setup? From this point forward, every configured provider must have a current permission record before it can appear publicly.",
+        "Finish setup? Every configured provider will need current public permission before it can appear publicly.",
       )
     ) {
       return;
@@ -62,16 +62,17 @@ export function PermissionSetupBanner({
           .map((provider) => connectorLabels[provider])
           .join(", ");
         setMessage(
-          `Add public permission for ${labels || "every configured provider"}, then try again.`,
+          `Public permission is missing for ${labels || "every configured provider"}. Add it, then try again.`,
         );
         return;
       }
-      const success = "Permission setup complete.";
+      const success =
+        "Permission setup complete. Future providers stay private until permission is added.";
       setMessage(success);
       await onUpdated(success);
     } catch {
       const uncertain =
-        "The response was interrupted. Studio is checking the current permission status.";
+        "The response was interrupted. Studio is checking permission status.";
       setMessage(uncertain);
       await onUpdated(uncertain);
     } finally {
@@ -87,8 +88,9 @@ export function PermissionSetupBanner({
           Finish permission setup · {readyCount} of {configured.length} ready
         </h3>
         <p>
-          Record permission for each connected collection. Future providers stay
-          private until their own permission is added.
+          Add public permission to every connected collection, then finish setup
+          once. Future connections stay private until their own permission is
+          added.
         </p>
       </div>
       {missing.length > 0 ? (
@@ -102,7 +104,7 @@ export function PermissionSetupBanner({
           ))}
         </ul>
       ) : (
-        <p className={styles.permissionReady}>Every connected collection is ready.</p>
+        <p className={styles.permissionReady}>All connected collections are ready.</p>
       )}
       <button
         type="button"

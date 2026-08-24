@@ -422,7 +422,7 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
     fugueMarkup.match(
       /<li\b[^>]*data-work-id="group:standalone:wk-fp-0161"[^>]*>[\s\S]*?<\/li>/i,
     )?.[0] ?? "";
-  assert.match(fugueRow, /<strong>Fugue agent experiments<\/strong>/i);
+  assert.match(fugueRow, /<strong>Fugue<\/strong>/i);
   assert.doesNotMatch(
     fugueRow,
     /<strong>Fugue: governed experiments for AI agents<\/strong>/i,
@@ -787,7 +787,7 @@ test("Home stays concise while About owns the bounded career chronology", async 
   const response = await fetch(`${BASE_URL}/about`, { redirect: "manual" });
   assert.equal(response.status, 200);
   const about = textFromMarkup(documentMarkup(await response.text()));
-  assert.match(about, /How the work developed/i);
+  assert.match(about, /How the practice developed/i);
   assert.match(about, /2021–Now/i);
   assert.match(about, /2017–2021/i);
   assert.match(about, /2016–2019/i);

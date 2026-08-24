@@ -1,13 +1,13 @@
 <!-- copy-record: group:standalone:ar-fp-0183 -->
 
 ## display-title
-Google Cloud Generative AI implementation
+W&B support for Google Cloud Generative AI
 
 ## short-title
-Google Cloud GenAI
+Google Cloud GenAI contribution
 
 ## summary
-An implementation added W&B support to Google Cloud's Generative AI repository.
+A Google Cloud Generative AI pull request contributes W&B support.
 
 ## role-summary
-Implementation contributor
+Contributed the implementation

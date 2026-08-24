@@ -26,7 +26,9 @@ Improve the site's language without changing its facts, structure, behavior, or 
 6. Keep one sentence or element responsible for one job. Remove repeated framing before adding new prose. CTA wording is editorial only when its destination and behavior stay unchanged. When language changes hierarchy or layout, also use `frontend-design` and route the request through engineering; loading that skill does not authorize copywriters to edit JSX, CSS, routes, or behavior.
    For longer narrative fields, write like a builder recalling the work: name
    the actor, concrete mechanism, consequence, and remaining limit. Do not
-   polish the opening and leave a generic whitepaper in the middle.
+   polish the opening and leave a generic whitepaper in the middle. Make four
+   passes: claim and structure; concrete nouns and verbs; repetition; then a
+   read-aloud check. Preserve strong manual copy instead of forcing churn.
 7. Validate from the repository root:
 
    ```sh
