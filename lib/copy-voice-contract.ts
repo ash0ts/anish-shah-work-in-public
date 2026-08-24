@@ -54,6 +54,9 @@ const PROFILE_BUDGETS = {
   cta: { maxWords: 6, maxSentences: 1 },
   period: { maxWords: 5, maxSentences: 1 },
   narrative: { maxWords: 45, maxSentences: 3 },
+  "about-narrative": { maxWords: 50, maxSentences: 3 },
+  "speaker-bio": { maxWords: 120, maxSentences: 6 },
+  "speaker-topic-description": { maxWords: 18, maxSentences: 1 },
   "work-title": { maxWords: 18, maxSentences: 1 },
   "work-short-title": { maxWords: 10, maxSentences: 1 },
   "work-summary": { minWords: 6, maxWords: 20, maxSentences: 2 },
@@ -67,6 +70,15 @@ const PROFILE_BUDGETS = {
 >;
 
 function profileForField(surface: string, key: string): CopyVoiceProfile {
+  if (surface === "about" && key === "speaker-bio") {
+    return "speaker-bio";
+  }
+  if (surface === "about" && key.startsWith("speaker-topic-") && key.endsWith("-description")) {
+    return "speaker-topic-description";
+  }
+  if (surface === "about" && (key === "body" || key === "current-focus")) {
+    return "about-narrative";
+  }
   if (surface === "work-group") {
     if (key === "display-title") return "work-title";
     if (key === "short-title") return "work-short-title";

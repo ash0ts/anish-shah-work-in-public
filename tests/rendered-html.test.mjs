@@ -258,7 +258,7 @@ test("all public routes expose useful server-rendered content", async () => {
       required: [
         /About · ML systems/i,
         /turn traces, evaluations, and tools into clearer next actions/i,
-        /How the practice developed/i,
+        /How the work developed/i,
         /2021–Now/i,
         /Weights &amp; Biases/i,
         /SAP &amp; Brilliant Hire by SAP/i,
@@ -268,7 +268,11 @@ test("all public routes expose useful server-rendered content", async () => {
         /Agent systems &amp; tool interfaces/i,
         /Evaluation &amp; observability/i,
         /Technical education &amp; workshops/i,
+        /Designing agent actions that are observable, bounded, and useful beyond a demo/i,
+        /Using traces, tests, and human review to turn model behavior into engineering decisions/i,
+        /Teaching fast-moving ML systems without sanding off the hard parts/i,
         /Copy speaker profile/i,
+        /Browse talks and workshops/i,
         /href="https:\/\/www\.linkedin\.com\/in\/anish-shah\/?"/i,
       ],
     },
@@ -372,6 +376,10 @@ test("About publishes a bounded career profile without resume-level private deta
   assert.match(
     main,
     /Anish Shah builds agent systems, evaluation and observability workflows, and technical education at Weights &amp; Biases\./i,
+  );
+  assert.match(
+    main,
+    /His path spans programming education, computer-vision research, analytics, recommendation systems, production ML, customer-facing ML support, and MLOps growth\./i,
   );
   assert.match(main, />https:\/\/www\.linkedin\.com\/in\/anish-shah<\/span>/i);
   assert.match(main, /<button\b[^>]*\bhidden(?:="")?[^>]*>\s*Copy speaker profile/i);

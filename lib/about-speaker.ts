@@ -30,19 +30,36 @@ export type SpeakerProfileManifest = {
 export type AboutSpeakerTopic = {
   id: SpeakerProfileTopicId;
   label: string;
+  description: string;
   href: string;
 };
 
 export type AboutSpeakerProfile = {
   bucketId: "talks-programs";
+  workHref: string;
   topics: AboutSpeakerTopic[];
 };
 
 const topicCopyKeys = {
-  "agent-systems": "speaker-topic-agent-systems",
-  "evaluation-observability": "speaker-topic-evaluation-observability",
-  "education-community": "speaker-topic-education-community",
-} as const satisfies Record<SpeakerProfileTopicId, keyof typeof SITE_COPY.about>;
+  "agent-systems": {
+    label: "speaker-topic-agent-systems",
+    description: "speaker-topic-agent-systems-description",
+  },
+  "evaluation-observability": {
+    label: "speaker-topic-evaluation-observability",
+    description: "speaker-topic-evaluation-observability-description",
+  },
+  "education-community": {
+    label: "speaker-topic-education-community",
+    description: "speaker-topic-education-community-description",
+  },
+} as const satisfies Record<
+  SpeakerProfileTopicId,
+  {
+    label: keyof typeof SITE_COPY.about;
+    description: keyof typeof SITE_COPY.about;
+  }
+>;
 
 function exactKeys(value: Record<string, unknown>, expected: readonly string[]) {
   return (
@@ -95,6 +112,13 @@ function speakerTopicHref(topicId: SpeakerProfileTopicId): string {
   return `/work?${parameters.toString()}#work-index`;
 }
 
+function speakerWorkHref(): string {
+  const parameters = new URLSearchParams({
+    bucket: speakerProfileManifest.bucketId,
+  });
+  return `/work?${parameters.toString()}#work-index`;
+}
+
 /**
  * Resolves speaker themes only when the active sanitized publication contains
  * at least one visible Talks/Programs record for that theme. Copy supplies the
@@ -109,6 +133,7 @@ export function aboutSpeakerProfileFrom(
 
   return {
     bucketId: speakerProfileManifest.bucketId,
+    workHref: speakerWorkHref(),
     topics: speakerProfileManifest.topicIds.flatMap((topicId) => {
       const visible = visibleTalks.some((record) =>
         workFacetsForRecord(record).theme.includes(topicId),
@@ -117,7 +142,9 @@ export function aboutSpeakerProfileFrom(
       return [
         {
           id: topicId,
-          label: SITE_COPY.about[topicCopyKeys[topicId]],
+          label: SITE_COPY.about[topicCopyKeys[topicId].label],
+          description:
+            SITE_COPY.about[topicCopyKeys[topicId].description],
           href: speakerTopicHref(topicId),
         },
       ];

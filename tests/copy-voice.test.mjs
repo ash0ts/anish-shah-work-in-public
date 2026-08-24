@@ -60,6 +60,33 @@ test("voice profiles apply deterministic field budgets", () => {
   assert.throws(() => assertCopyVoice(report), /field-budget/u);
 });
 
+test("About narrative and speaker fields use their reviewed long-form budgets", () => {
+  assert.deepEqual(copyVoicePolicyForField("about", "body"), {
+    voiceProfile: "about-narrative",
+    maxWords: 50,
+    maxSentences: 3,
+    professional: true,
+  });
+  assert.deepEqual(copyVoicePolicyForField("about", "speaker-bio"), {
+    voiceProfile: "speaker-bio",
+    maxWords: 120,
+    maxSentences: 6,
+    professional: true,
+  });
+  assert.deepEqual(
+    copyVoicePolicyForField(
+      "about",
+      "speaker-topic-agent-systems-description",
+    ),
+    {
+      voiceProfile: "speaker-topic-description",
+      maxWords: 18,
+      maxSentences: 1,
+      professional: true,
+    },
+  );
+});
+
 test("WorkGroup summaries must be meaningful and artifact-first", () => {
   for (const value of [
     "Author.",
@@ -188,13 +215,13 @@ test("surface budgets reject first-person drift and dense page copy", () => {
       key: "about.body",
       surface: "about",
       field: "body",
-      value: Array.from({ length: 40 }, () => "systems").join(" "),
+      value: Array.from({ length: 50 }, () => "systems").join(" "),
     }),
     entry({
       key: "about.current-focus",
       surface: "about",
       field: "current-focus",
-      value: Array.from({ length: 20 }, () => "evaluation").join(" "),
+      value: Array.from({ length: 51 }, () => "evaluation").join(" "),
     }),
   ]);
   assert(rules(denseAbout).includes("surface-word-budget"));

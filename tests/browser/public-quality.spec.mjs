@@ -123,9 +123,18 @@ test("the About speaker profile copies bounded visible text and preserves focus"
   expect(copied).toContain(
     "Anish Shah builds agent systems, evaluation and observability workflows",
   );
-  expect(copied).toContain("• Agent systems & tool interfaces");
-  expect(copied).toContain("• Evaluation & observability");
-  expect(copied).toContain("• Technical education & workshops");
+  expect(copied).toContain(
+    "His path spans programming education, computer-vision research, analytics, recommendation systems, production ML, customer-facing ML support, and MLOps growth.",
+  );
+  expect(copied).toContain(
+    "• Agent systems & tool interfaces — Designing agent actions that are observable, bounded, and useful beyond a demo.",
+  );
+  expect(copied).toContain(
+    "• Evaluation & observability — Using traces, tests, and human review to turn model behavior into engineering decisions.",
+  );
+  expect(copied).toContain(
+    "• Technical education & workshops — Teaching fast-moving ML systems without sanding off the hard parts.",
+  );
   expect(copied).toMatch(
     /Contact on LinkedIn: https:\/\/www\.linkedin\.com\/in\/anish-shah\/?/u,
   );
@@ -162,6 +171,15 @@ test("the About speaker profile copies bounded visible text and preserves focus"
       /Anish Shah builds agent systems, evaluation and observability workflows/,
     ),
   ).toBeVisible();
+  await expect(
+    failurePage.getByText(
+      "Designing agent actions that are observable, bounded, and useful beyond a demo.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  expect(
+    await failurePage.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(391);
   await failureContext.close();
 });
 
@@ -916,6 +934,15 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
       /Anish Shah builds agent systems, evaluation and observability workflows/,
     ),
   ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Using traces, tests, and human review to turn model behavior into engineering decisions.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Browse talks and workshops/u }),
+  ).toHaveAttribute("href", "/work?bucket=talks-programs#work-index");
   await expect(
     page.getByText("https://www.linkedin.com/in/anish-shah", { exact: true }),
   ).toBeVisible();

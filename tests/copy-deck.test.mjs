@@ -54,8 +54,11 @@ test("speaker copy keeps factual content in fact-check fields", async () => {
     "speaker-heading",
     "speaker-bio",
     "speaker-topic-agent-systems",
+    "speaker-topic-agent-systems-description",
     "speaker-topic-evaluation-observability",
+    "speaker-topic-evaluation-observability-description",
     "speaker-topic-education-community",
+    "speaker-topic-education-community-description",
   ]) {
     assert.equal(definitions.get(key)?.risk, "fact_check", key);
     assert.equal(typeof deck.pages.about[key], "string", key);
@@ -64,6 +67,7 @@ test("speaker copy keeps factual content in fact-check fields", async () => {
     "speaker-eyebrow",
     "speaker-topics-heading",
     "speaker-copy-cta",
+    "speaker-work-cta",
     "speaker-linkedin-cta",
   ]) {
     assert.equal(definitions.get(key)?.risk, "editorial", key);

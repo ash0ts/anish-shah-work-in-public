@@ -92,9 +92,10 @@ an engineering and fact-review request rather than adding new About fields.
 Most personal narrative uses Anish's first person only when authorship or a
 personal choice matters. The `about.speaker-bio` field deliberately uses third
 person so an event organizer can copy it without rewriting pronouns. Keep it
-compact, fact-checked, and grounded in the public Work archive.
+fact-checked, grounded in the public Work archive, and useful as a standalone
+organizer bio. Short paragraphs are allowed when they improve scanning.
 
-The three speaker-topic fields are also fact-check fields. They describe
+The three speaker-topic labels and descriptions are also fact-check fields. They describe
 demonstrated subject areas and link into the existing Talks/Programs Work
 filters; they cannot create a credential, talk count, award, or new claim. The
 speaker eyebrow, topics heading, and CTA labels are editorial. The LinkedIn
@@ -103,8 +104,8 @@ copy.
 
 | Review class | About fields |
 | --- | --- |
-| Fact-check | `speaker-heading`, `speaker-bio`, `speaker-topic-agent-systems`, `speaker-topic-evaluation-observability`, `speaker-topic-education-community` |
-| Editorial | `speaker-eyebrow`, `speaker-topics-heading`, `speaker-copy-cta`, `speaker-linkedin-cta` |
+| Fact-check | `speaker-heading`, `speaker-bio`, the three `speaker-topic-*` labels, and their three `speaker-topic-*-description` fields |
+| Editorial | `speaker-eyebrow`, `speaker-topics-heading`, `speaker-copy-cta`, `speaker-work-cta`, `speaker-linkedin-cta` |
 
 The owner-only Studio copy report lists this page path, its route scope, and
 the current counts for both review classes. It is an inventory, not another

@@ -17,10 +17,13 @@ About's speaker fields divide cleanly by review class:
 
 - Fact-check: `speaker-heading`, `speaker-bio`,
   `speaker-topic-agent-systems`,
+  `speaker-topic-agent-systems-description`,
   `speaker-topic-evaluation-observability`, and
-  `speaker-topic-education-community`.
+  `speaker-topic-evaluation-observability-description`,
+  `speaker-topic-education-community`, and
+  `speaker-topic-education-community-description`.
 - Editorial: `speaker-eyebrow`, `speaker-topics-heading`,
-  `speaker-copy-cta`, and `speaker-linkedin-cta`.
+  `speaker-copy-cta`, `speaker-work-cta`, and `speaker-linkedin-cta`.
 
 The topic destination IDs and LinkedIn URL are not copy fields.
 
@@ -43,7 +46,7 @@ Owner verification is required for:
 - Profile headline and summary.
 - WorkGroup display title, short title, summary, and role summary.
 - Career trajectory and methodology/counting prose.
-- About biography, speaker bio, and demonstrated speaker-topic wording. The speaker bio deliberately uses third person so an organizer can reuse it directly.
+- About biography, speaker bio, and demonstrated speaker-topic wording. The speaker bio deliberately uses third person so an organizer can reuse it directly; short paragraphs are allowed when they improve scanning.
 - Any statement naming dates, organizations, scope, attribution, product behavior, or technical capability.
 
 `npm run copy:diff -- --base <ref>` groups changed keys by risk and affected route. Treat `fact_check` as a review requirement, not a suggestion.

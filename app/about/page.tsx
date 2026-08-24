@@ -52,13 +52,19 @@ export default async function AboutPage() {
   const speakerProfile = aboutSpeakerProfileFrom(bundle);
   const linkedinUrl = publicLinkedInUrl(bundle.profile.links);
   const profileUrl = absoluteSiteUrl("/about");
+  const speakerBioParagraphs = SITE_COPY.about["speaker-bio"]
+    .split(/\n{2,}/u)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
   const speakerProfileText =
     speakerProfile.topics.length > 0
       ? [
           SITE_COPY.about["speaker-bio"],
           "",
           SITE_COPY.about["speaker-topics-heading"],
-          ...speakerProfile.topics.map((topic) => `• ${topic.label}`),
+          ...speakerProfile.topics.map(
+            (topic) => `• ${topic.label} — ${topic.description}`,
+          ),
           ...(linkedinUrl
             ? [
                 "",
@@ -146,9 +152,11 @@ export default async function AboutPage() {
 
           <div className={styles.speakerProfile}>
             <div className={styles.speakerSelection}>
-              <p className={styles.speakerBio}>
-                {SITE_COPY.about["speaker-bio"]}
-              </p>
+              <div className={styles.speakerBio}>
+                {speakerBioParagraphs.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
 
               <div className={styles.speakerTopics}>
                 <h3>{SITE_COPY.about["speaker-topics-heading"]}</h3>
@@ -164,8 +172,17 @@ export default async function AboutPage() {
                           className={styles.topicIcon}
                           topicId={topic.id}
                         />
-                        <span>{topic.label}</span>
-                        <span aria-hidden="true">↗</span>
+                        <span className={styles.topicCopy}>
+                          <span className={styles.topicLabel}>
+                            {topic.label}
+                          </span>
+                          <span className={styles.topicDescription}>
+                            {topic.description}
+                          </span>
+                        </span>
+                        <span aria-hidden="true" className={styles.topicArrow}>
+                          ↗
+                        </span>
                       </Link>
                     </li>
                   ))}
@@ -179,6 +196,14 @@ export default async function AboutPage() {
                   profileText={speakerProfileText}
                   statusClassName={styles.speakerStatus}
                 />
+                <Link
+                  className={styles.speakerWorkLink}
+                  href={speakerProfile.workHref}
+                  prefetch={false}
+                >
+                  {SITE_COPY.about["speaker-work-cta"]}
+                  <span aria-hidden="true">↗</span>
+                </Link>
                 {linkedinUrl ? (
                   <a
                     className={styles.speakerLinkedIn}
