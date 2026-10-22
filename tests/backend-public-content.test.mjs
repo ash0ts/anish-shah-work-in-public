@@ -220,10 +220,14 @@ test("canonical selectors expose explicit work groups without collection outcome
   assert.deepEqual(
     metricsForItemFrom(staticBundle, mcp).map((metric) => metric.key),
     [
-      "mcp_tool_calls",
+      "all_time_tool_calls",
       "mcp_users_and_organizations",
       "returning_user_share",
       "weekly_reengaged_users",
+      "average_weekly_active_identity_growth_pct",
+      "previously_observed_active_identity_pct",
+      "lifetime_recorded_identities",
+      "peak_observed_companies",
     ],
   );
   assert.equal(collectionMetricsFrom(staticBundle, "collection:events").length, 5);
