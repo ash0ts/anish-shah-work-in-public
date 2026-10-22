@@ -146,13 +146,20 @@ test("room reveal isolates its background while the robot transition runs", asyn
     .click();
   await expect(page.locator("[data-simulation-reveal-overlay]")).toBeVisible();
   await expect(page.locator("[data-room-runtime]")).toHaveAttribute("inert", "");
+  await expect(
+    page.locator("[data-simulation-reveal-overlay] button"),
+  ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.locator("[data-simulation-reveal-overlay]")).toHaveCount(0);
-  const revealControl = page.getByRole("link", {
+  const room = page.getByRole("dialog", { name: "Interactive room" });
+  await expect(room).toBeVisible();
+  const revealControl = room.getByRole("link", {
     name: "REVEAL THE SIMULATION",
-  }).first();
+  });
   await expect(revealControl).toBeFocused();
   await expect(revealControl).not.toHaveAttribute("aria-disabled", "true");
+  await expect(page).toHaveURL(/\/play$/);
+  await expect(room.locator("[data-room-stage-shell]")).toHaveCSS("opacity", "1");
 
   const runtime = page.locator("[data-room-runtime]");
   if (await runtime.count()) {
@@ -163,4 +170,8 @@ test("room reveal isolates its background while the robot transition runs", asyn
       "",
     );
   }
+  // Once the nested dialog is gone, Escape belongs to the room again.
+  await page.keyboard.press("Escape");
+  await expect(room).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Enter the room" })).toBeFocused();
 });
