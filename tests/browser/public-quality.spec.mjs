@@ -250,6 +250,15 @@ test("the v2.2 public runtime keeps Simulation fully disabled", async ({
     ).status(),
   ).toBe(404);
 
+  // A disabled route intentionally rejects before reading its body. Keep the
+  // next request on the same pooled client: older Wrangler proxies returned
+  // the 404, then killed the server while forwarding the following request.
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const rejected = await request.post("/api/simulation/turn", { data: {} });
+    expect(rejected.status()).toBe(404);
+    expect((await request.get("/")).status()).toBe(200);
+  }
+
   const loadedResources = await page.evaluate(() =>
     performance
       .getEntriesByType("resource")

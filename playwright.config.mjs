@@ -5,9 +5,9 @@ const packageVersion = JSON.parse(
   readFileSync(new URL("./package.json", import.meta.url), "utf8"),
 ).version;
 
-// Browser CI temporarily uses Wrangler 4.113 to avoid the later
-// ProxyController crash. Its bundled workerd supports dates through July 28;
-// this CLI-only override never changes the built or hosted Worker config.
+// Keep the browser-only runtime current enough to handle refused request bodies
+// without terminating ProxyController. Preserve the existing compatibility
+// date so updating this test tool does not change the Worker feature contract.
 const e2eCompatibilityDate = "2026-07-28";
 const playMode = "room";
 const defaultPort = 4174;

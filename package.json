@@ -143,7 +143,7 @@
     "vinext": "0.0.50",
     "vite": "8.3.5",
     "wrangler": "4.116.0",
-    "wrangler-e2e": "npm:wrangler@4.113.0"
+    "wrangler-e2e": "npm:wrangler@4.152.0"
   },
   "overrides": {
     "@babel/core": "7.29.7",
