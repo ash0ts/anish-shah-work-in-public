@@ -44,6 +44,7 @@ import {
 import { buildQualityReport } from "./report.mjs";
 import { writeOrCheck } from "./write-output.mjs";
 import { assertBundleIntegrity, assertPublicSafety } from "./validation.mjs";
+import { applyPortfolioUpdates } from "./updates.mjs";
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const SOURCE_ROOT = path.resolve(PROJECT_ROOT, "..");
@@ -55,6 +56,7 @@ const SOURCE_FILES = {
   impactMarkdown: path.join(SOURCE_ROOT, "anish_shah_impact_report_2021-2026.md"),
   curation: path.join(PROJECT_ROOT, "content/curation/content-v1.1.json"),
   workGroups: path.join(PROJECT_ROOT, "content/curation/work-groups.v1.json"),
+  portfolioUpdates: path.join(PROJECT_ROOT, "content/curation/portfolio-updates.v1.json"),
   metricGroups: path.join(PROJECT_ROOT, "content/presentation/metric-groups.v1.json"),
   claimUpgrades: path.join(
     PROJECT_ROOT,
@@ -100,6 +102,7 @@ export async function buildContent({ check = false } = {}) {
     workGroupSource,
     metricGroupSource,
     claimUpgradeSource,
+    updateSource,
   ] = await Promise.all([
     readFile(SOURCE_FILES.footprintCsv, "utf8"),
     readFile(SOURCE_FILES.footprintMarkdown, "utf8"),
@@ -109,32 +112,37 @@ export async function buildContent({ check = false } = {}) {
     readFile(SOURCE_FILES.workGroups, "utf8"),
     readFile(SOURCE_FILES.metricGroups, "utf8"),
     readFile(SOURCE_FILES.claimUpgrades, "utf8"),
+    readFile(SOURCE_FILES.portfolioUpdates, "utf8"),
   ]);
-  const curation = JSON.parse(curationSource);
-  const workGroupCuration = JSON.parse(workGroupSource);
+  const updates = JSON.parse(updateSource);
+  const { curation, workGroups: workGroupCuration } = applyPortfolioUpdates(
+    JSON.parse(curationSource), JSON.parse(workGroupSource), updates,
+  );
   const metricGroupPresentation = JSON.parse(metricGroupSource);
   const claimUpgrades = JSON.parse(claimUpgradeSource);
   if (curation.schemaVersion !== CURATION_SCHEMA_VERSION) {
     throw new Error(`Canonical curation schema must be ${CURATION_SCHEMA_VERSION}`);
   }
   const footprintRows = parseCsv(footprintCsv, path.basename(SOURCE_FILES.footprintCsv));
-  const impactRows = parseCsv(impactCsv, path.basename(SOURCE_FILES.impactCsv));
+  const historicalImpactRows = parseCsv(impactCsv, path.basename(SOURCE_FILES.impactCsv));
   if (footprintRows.length !== EXPECTED_FOOTPRINT_ROWS) {
     throw new Error(
       `Footprint row count changed: expected ${EXPECTED_FOOTPRINT_ROWS}, found ${footprintRows.length}`,
     );
   }
-  if (impactRows.length !== EXPECTED_IMPACT_ROWS) {
+  if (historicalImpactRows.length !== EXPECTED_IMPACT_ROWS) {
     throw new Error(
-      `Impact row count changed: expected ${EXPECTED_IMPACT_ROWS}, found ${impactRows.length}`,
+      `Impact row count changed: expected ${EXPECTED_IMPACT_ROWS}, found ${historicalImpactRows.length}`,
     );
   }
 
-  const recordedDates = impactRows
+  const impactRows = [...historicalImpactRows, ...updates.metricObservations];
+  const recordedDates = historicalImpactRows
     .map((row) => normalizeRecordedDate(row.date_recorded))
     .filter(Boolean)
     .sort();
-  const asOf = recordedDates.at(-1);
+  const legacyAsOf = recordedDates.at(-1);
+  const asOf = [legacyAsOf, updates.reviewedAt].sort().at(-1);
   const generatedAt = `${asOf}T00:00:00.000Z`;
   const sourceContents = [
     footprintCsv,
@@ -145,6 +153,7 @@ export async function buildContent({ check = false } = {}) {
     workGroupSource,
     metricGroupSource,
     claimUpgradeSource,
+    updateSource,
   ];
   const generatorFiles = (
     await readdir(path.join(PROJECT_ROOT, "scripts/content"), {
@@ -182,7 +191,7 @@ export async function buildContent({ check = false } = {}) {
     ...makeSupplementalItems(curation),
   ];
   assertUniqueItemSlugs(ownerItems);
-  const publicEvidence = buildPublicEvidence(ownerItems, asOf);
+  const publicEvidence = buildPublicEvidence(ownerItems, legacyAsOf, curation.supplementalItems);
   const organizations = buildOrganizations(footprintRows, curation);
   const relations = buildRelations(ownerItems, curation);
   const entities = buildCanonicalEntities(ownerItems, relations, curation);
@@ -223,10 +232,19 @@ export async function buildContent({ check = false } = {}) {
 
   const ownerSnapshots = [
     sourceSnapshot({
+      id: "snapshot:portfolio-updates-v1",
+      label: "Reviewed portfolio updates",
+      content: updateSource,
+      capturedAt: updates.reviewedAt,
+      rowCount: updates.items.length + updates.metricObservations.length,
+      access: "owner_private",
+      sourceFile: path.relative(PROJECT_ROOT, SOURCE_FILES.portfolioUpdates),
+    }),
+    sourceSnapshot({
       id: "snapshot:public-footprint-csv",
       label: "Public footprint inventory",
       content: footprintCsv,
-      capturedAt: asOf,
+      capturedAt: legacyAsOf,
       rowCount: footprintRows.length,
       access: "public_web",
       sourceFile: path.basename(SOURCE_FILES.footprintCsv),
@@ -235,7 +253,7 @@ export async function buildContent({ check = false } = {}) {
       id: "snapshot:public-footprint-markdown",
       label: "Public footprint research report",
       content: footprintMarkdown,
-      capturedAt: asOf,
+      capturedAt: legacyAsOf,
       sectionCount: footprintSections.length,
       access: "public_web",
       sourceFile: path.basename(SOURCE_FILES.footprintMarkdown),
@@ -244,8 +262,8 @@ export async function buildContent({ check = false } = {}) {
       id: "snapshot:impact-csv",
       label: "Owner impact metric ledger",
       content: impactCsv,
-      capturedAt: asOf,
-      rowCount: impactRows.length,
+      capturedAt: legacyAsOf,
+      rowCount: historicalImpactRows.length,
       access: "owner_private",
       sourceFile: path.basename(SOURCE_FILES.impactCsv),
     }),
@@ -253,7 +271,7 @@ export async function buildContent({ check = false } = {}) {
       id: "snapshot:impact-report-markdown",
       label: "Owner impact research report",
       content: impactMarkdown,
-      capturedAt: asOf,
+      capturedAt: legacyAsOf,
       sectionCount: impactSections.length,
       access: "owner_private",
       sourceFile: path.basename(SOURCE_FILES.impactMarkdown),
@@ -356,9 +374,17 @@ export async function buildContent({ check = false } = {}) {
       {
         id: "snapshot:public-footprint-inventory",
         label: "Public footprint inventory",
-        capturedAt: asOf,
+        capturedAt: legacyAsOf,
         rowCount: footprintRows.length,
         sectionCount: footprintSections.length,
+        access: "public_web",
+      },
+      {
+        id: "snapshot:public-portfolio-review",
+        label: "Reviewed portfolio additions",
+        capturedAt: updates.reviewedAt,
+        rowCount: updates.items.length,
+        sectionCount: null,
         access: "public_web",
       },
       {
@@ -376,7 +402,7 @@ export async function buildContent({ check = false } = {}) {
   const integrityPolicy = {
     countBy,
     expectedFootprintRows: EXPECTED_FOOTPRINT_ROWS,
-    expectedImpactRows: EXPECTED_IMPACT_ROWS,
+    expectedImpactRows: impactRows.length,
     approvedMetricCount: publicMetrics.length,
   };
   assertBundleIntegrity(ownerBundle, integrityPolicy);

@@ -137,6 +137,8 @@ export const COPY_PAGE_DEFINITIONS = {
     field("work", "detail-context", "fact_check", 80),
     field("work", "detail-sources", "editorial", 32),
     field("work", "detail-materials", "editorial", 80),
+    field("work", "detail-materials-private", "fact_check", 80),
+    field("work", "detail-status", "editorial", 32),
     field("work", "detail-related", "editorial", 48),
     field("work", "timeline-eyebrow", "editorial", 60),
     field("work", "timeline-title", "editorial", 100),
@@ -227,6 +229,8 @@ export const COPY_PAGE_DEFINITIONS = {
     field("sources", "intro-fallback", "fact_check", 320, { allowParagraphs: true }),
     field("sources", "rules-eyebrow", "editorial", 40),
     field("sources", "rules-title", "editorial", 100),
+    field("sources", "owner-reviewed-title", "fact_check", 100),
+    field("sources", "owner-reviewed-body", "fact_check", 450),
     ...[1, 3, 4].flatMap((index) => [
       field("sources", `rule-${index}-title`, "fact_check", 100),
       field("sources", `rule-${index}-body`, "fact_check", 320, {
@@ -295,4 +299,5 @@ export const WORK_GROUP_COPY_DEFINITIONS = [
   field("work-group", "short-title", "fact_check", 70),
   field("work-group", "summary", "fact_check", 500, { allowParagraphs: true }),
   field("work-group", "role-summary", "fact_check", 180),
+  field("work-group", "detail-note", "fact_check", 500, { required: false }),
 ] as const satisfies readonly CopyFieldDefinition[];

@@ -11,6 +11,11 @@
         "org:weights-and-biases-github"
       ],
       "workGroupIds": [
+        "group:portfolio:aria",
+        "group:portfolio:agent-lens-evaluation",
+        "group:portfolio:autoresearch-labs",
+        "group:portfolio:rl-fine-tuning-workshop",
+        "group:portfolio:demo-generation-tooling",
         "group:products:wandb-mcp",
         "group:products:evalforge",
         "group:standalone:wk-fp-0163",
@@ -209,8 +214,8 @@
       "name": "CoreWeave",
       "group": "presented-with-or-at",
       "secondaryGroups": [],
-      "sourceOrganizationIds": ["org:w-and-b-coreweave"],
-      "workGroupIds": ["group:talks:architecting-agents"],
+      "sourceOrganizationIds": ["org:w-and-b-coreweave", "org:coreweave"],
+      "workGroupIds": ["group:talks:architecting-agents", "group:portfolio:your-agent-learned-to-cheat"],
       "featuredOrder": 12,
       "brandAssetId": null
     },

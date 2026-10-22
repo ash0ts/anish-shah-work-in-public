@@ -9,7 +9,7 @@
 - `content/copy/pages/play.md`: room overview, seven object descriptions, Travel doorway/atlas framing, and Play metadata.
 - `content/copy/pages/simulation.md`: dormant Simulation introduction, CTA, nonfactual encounter flavor, instructions, and metadata. Editing it does not enable the route.
 - `content/copy/pages/sources.md`: Sources framing and approved methodology prose.
-- `content/copy/work-groups/<slug>.md`: one stable WorkGroup's display title, short title, summary, and role summary.
+- `content/copy/work-groups/<slug>.md`: one stable WorkGroup's display title, short title, summary, and role summary; optional fact-checked `detail-note` provides contribution or experiment limits inside Sources.
 
 Only edit the text between fixed headings. A field may be one line or multiple paragraphs according to the registry; validation reports the exact rule when a draft is too long or paragraph-incompatible.
 

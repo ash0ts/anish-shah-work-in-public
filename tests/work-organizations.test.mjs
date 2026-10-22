@@ -59,7 +59,7 @@ test("the curated organization contract resolves exactly the vetted 24 marks", (
   );
   assert.equal(
     resolved.find(({ id }) => id === "weights-biases")?.projectCount,
-    35,
+    40,
   );
   assert.equal(
     resolved.find(({ id }) => id === "google-cloud")?.projectCount,

@@ -20,7 +20,7 @@ export function assertBundleIntegrity(
   const expectedSummary = {
     footprintRows: expectedFootprintRows,
     impactRows: expectedImpactRows,
-    supplementalArtifacts: bundle.items.filter((item) => item.id.startsWith("item:md-")).length,
+    supplementalArtifacts: bundle.items.filter((item) => !item.id.startsWith("item:fp-")).length,
     publicItems: bundle.items.length,
     approvedMetricCount,
     footprintBackedUniqueWorks: bundle.entities.filter(

@@ -125,15 +125,15 @@ export function makeSupplementalItems(curation) {
         start,
         end: null,
         precision: start ? datePrecision(start) : "unknown",
-        basis: "publication_date",
+        basis: entry.dateBasis || "publication_date",
       },
       additionalDates: [],
       year: start ? Number(start.slice(0, 4)) : null,
       role: entry.role,
       organizationIds: entry.organization ? [makeOrganizationId(entry.organization)] : [],
-      location: { label: "GitHub", kind: "platform" },
+      location: entry.location || { label: "GitHub", kind: "platform" },
       status: entry.status,
-      urls: [{ kind: "primary", url: canonicalPublicUrl(entry.primaryUrl) }],
+      urls: entry.primaryUrl ? [{ kind: "primary", url: canonicalPublicUrl(entry.primaryUrl) }] : [],
       summary: entry.summary,
       topics: [...new Set(entry.topics)].sort(),
       durationSeconds: null,
@@ -176,7 +176,8 @@ function evidenceKind(url, itemType) {
   return "web_page";
 }
 
-export function buildPublicEvidence(items, capturedAt) {
+export function buildPublicEvidence(items, capturedAt, supplemental = []) {
+  const reviewed = new Map(supplemental.map((entry) => [entry.id, entry]));
   const evidenceByUrl = new Map();
   for (const item of items) {
     for (const entry of item.urls) {
@@ -191,13 +192,29 @@ export function buildPublicEvidence(items, capturedAt) {
           access: "public_web",
           url: entry.url,
           publisher: parsed.hostname.replace(/^www\./, ""),
-          capturedAt,
+          capturedAt: reviewed.get(item.id)?.capturedAt || capturedAt,
           verificationState: item.verificationState,
         });
       }
       item.evidenceIds.push(evidenceByUrl.get(normalized).id);
     }
     item.evidenceIds = [...new Set(item.evidenceIds)];
+    if (reviewed.get(item.id)?.materials === "not-public") {
+      item.evidenceIds.push("evidence:methodology:owner-reviewed-work");
+    }
+  }
+
+  if (items.some((item) => item.evidenceIds.includes("evidence:methodology:owner-reviewed-work"))) {
+    evidenceByUrl.set("methodology:owner-reviewed-work", {
+      id: "evidence:methodology:owner-reviewed-work",
+      title: "Owner-reviewed contributions — materials not public",
+      kind: "methodology",
+      access: "public_web",
+      url: "/sources#owner-reviewed-work",
+      publisher: "Anish Shah",
+      capturedAt: supplemental.map((entry) => entry.capturedAt).filter(Boolean).sort().at(-1) || capturedAt,
+      verificationState: "corroborated",
+    });
   }
 
   evidenceByUrl.set("methodology:internal-analytics", {

@@ -18,9 +18,13 @@
       "theme": "product",
       "title": "Product adoption",
       "order": 2,
-      "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+      "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
       "metricIds": [
-        "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+        "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+        "metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22",
+        "metric:project:wandb-mcp-server:returning-share:2026-10-22",
+        "metric:project:wandb-mcp-server:lifetime-identities:2026-10-22",
+        "metric:project:wandb-mcp-server:peak-companies:2026-10-22",
         "metric:project:wandb-mcp-server:audience:2026-06-11",
         "metric:project:wandb-mcp-server:returning-share:2026-06-11",
         "metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28"

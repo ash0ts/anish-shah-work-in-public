@@ -181,8 +181,14 @@ export function buildCanonicalEntities(items, relations, curation) {
         : memberItems.some((item) => item.type === "event" || item.type === "recording")
           ? "convene"
           : "build");
+    const explicitDateItem = forced?.representativeItemId
+      ? memberItems.find((item) => item.id === forced.representativeItemId)
+      : null;
+    if (forced?.representativeItemId && !explicitDateItem) {
+      throw new Error(`Representative date item is not a member: ${forced.id}`);
+    }
     const representativeItem =
-      primary.date.start
+      explicitDateItem || (primary.date.start
         ? primary
         : [...memberItems]
             .filter((item) => item.date.start)
@@ -190,7 +196,7 @@ export function buildCanonicalEntities(items, relations, curation) {
               (left, right) =>
                 (right.date.start || "").localeCompare(left.date.start || "") ||
                 left.id.localeCompare(right.id),
-            )[0] || primary;
+            )[0] || primary);
     const itemIds = memberItems.map((item) => item.id).sort();
     const entity = {
       id,

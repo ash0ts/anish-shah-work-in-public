@@ -237,7 +237,11 @@ test("canonical selectors expose explicit work groups without collection outcome
   assert(workIndex.every((entity) => entity.sourceBasis !== "supplemental"));
   assert.deepEqual(
     supplementalWorkEntriesFrom(staticBundle).map((entity) => entity.id),
-    ["entity:wk-0003"],
+    [
+      "entity:oc-up-0006", "entity:wk-up-0004", "entity:wk-up-0007",
+      "entity:wk-up-0009", "entity:wk-up-0001", "entity:wk-up-0008",
+      "entity:wk-0003",
+    ],
   );
 });
 

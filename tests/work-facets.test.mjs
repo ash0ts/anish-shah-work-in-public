@@ -29,7 +29,7 @@ const expectedDefinitionCounts = {
 };
 
 test("presentation facets use the compact reviewed vocabularies", () => {
-  assert.equal(records.length, 82);
+  assert.equal(records.length, 88);
   assert.equal(themeFacetDefinitions.length, expectedDefinitionCounts.theme);
   assert.equal(mediaFacetDefinitions.length, expectedDefinitionCounts.media);
   assert.equal(
@@ -92,24 +92,24 @@ test("facet counts are stable, multi-mapped, and select-ready", () => {
     );
 
   assert.deepEqual(optionCounts("theme"), {
-    "foundation-models": 26,
-    "ml-systems-infrastructure": 22,
+    "foundation-models": 29,
+    "ml-systems-infrastructure": 25,
     "open-source-ecosystems": 20,
-    "evaluation-observability": 17,
-    "agent-systems": 13,
-    "education-community": 9,
+    "evaluation-observability": 25,
+    "agent-systems": 19,
+    "education-community": 13,
     "retrieval-knowledge-systems": 4,
     "applied-ml": 3,
   });
   assert.deepEqual(optionCounts("media"), {
-    "live-session": 41,
-    publication: 24,
+    "live-session": 42,
+    publication: 28,
     "recorded-media": 24,
     software: 20,
-    course: 1,
+    course: 3,
   });
   assert.deepEqual(optionCounts("ecosystem"), {
-    "weights-biases": 49,
+    "weights-biases": 55,
     "open-source": 20,
     "events-communities": 13,
     "learning-media": 9,
@@ -117,13 +117,13 @@ test("facet counts are stable, multi-mapped, and select-ready", () => {
     microsoft: 7,
     "mlops-community": 5,
     nvidia: 4,
-    "data-compute-platforms": 3,
+    "data-compute-platforms": 6,
   });
   assert.deepEqual(optionCounts("contribution"), {
     "speaker-presenter": 30,
-    "author-coauthor": 21,
-    "builder-contributor": 16,
-    "instructor-educator": 10,
+    "author-coauthor": 22,
+    "builder-contributor": 18,
+    "instructor-educator": 13,
     "producer-reviewer": 3,
     "host-organizer": 2,
   });

@@ -44,3 +44,9 @@ WorkGroup files use a stable ID in their first line. The filename is readable,
 but the stable ID is the only join key. The four required fields control only
 public display wording. Home derives its line and topic navigation from the
 visible archive rather than selecting or renaming individual projects.
+
+The optional `detail-note` field adds a fact-checked contribution or experiment
+limit inside the project's collapsed Sources section. It is not a second
+summary, private evidence dump, or place for unreviewed metrics. Canonical status
+and artifact availability remain data-owned; missing private materials must not
+be represented as broken links.

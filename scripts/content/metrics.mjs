@@ -7,6 +7,11 @@ export const APPROVED_PUBLIC_DISPLAYS = new Set([
   "About half",
   "1K+",
   "200K+",
+  "745K+",
+  "76%",
+  "70%",
+  "≈4,800",
+  "30",
   "More than two-thirds",
   "Hundreds",
   "$4M+",
@@ -128,6 +133,7 @@ function titleFromMetricKey(key) {
 
 export function buildOwnerMetrics(rows, items, entities, curation, ownerEvidence, capturedAt) {
   const metrics = [];
+  let reviewedRow = 1;
   const evidenceById = new Map(ownerEvidence.map((evidence) => [evidence.id, evidence]));
 
   rows.forEach((row, index) => {
@@ -180,8 +186,9 @@ export function buildOwnerMetrics(rows, items, entities, curation, ownerEvidence
       unit: row.unit,
       evidenceIds: [evidenceId],
       sourceRecord: {
-        snapshotId: "snapshot:impact-csv",
-        row: index + 2,
+        snapshotId: row.source_system === "owner_review" ? "snapshot:portfolio-updates-v1" : "snapshot:impact-csv",
+        // Rows in the reviewed metric list are independent of the legacy CSV.
+        row: row.source_system === "owner_review" ? ++reviewedRow : index + 2,
         fingerprint,
       },
     });
@@ -297,8 +304,8 @@ export function buildPublicMetrics(impactRows, items, entities, claimUpgrades) {
       category: "product",
       key: "mcp_users_and_organizations",
       displayValue: "1K+",
-      label: "MCP users across 1K+ organizations",
-      qualifier: "Rounded launch-period adoption snapshot.",
+      label: "MCP users across 1K+ W&B organizations",
+      qualifier: "Rounded cumulative users and W&B organizations through June 11, 2026. Organizations are not distinct companies or currently active accounts.",
       period: { start: "2026-03", end: "2026-06-11", asOf: "2026-06-11", label: "Launch period" },
       scope: "work",
       attribution: "direct",
@@ -480,6 +487,15 @@ export function buildPublicMetrics(impactRows, items, entities, claimUpgrades) {
       throw new Error(`Tool-call public claim ${replacement.id} cannot use currency formatting`);
     }
     definitions.splice(index, 1, replacement);
+  }
+
+  for (const addition of claimUpgrades.additions || []) {
+    if (addition.publicationState !== "public" || definitions.some((entry) => entry.id === addition.id) ||
+        !addition.period?.asOf || !addition.qualifier || !addition.sourceLabel ||
+        !addition.selectors?.length) {
+      throw new Error("A new public metric requires a unique dated, qualified, source-backed claim");
+    }
+    definitions.push(addition);
   }
 
   return definitions.map((definition) => {

@@ -13,6 +13,15 @@
 
 Do not hand-edit generated bundles, schemas, attestations, or reports. Complete regeneration requires owner-held inputs; a clean clone can build the site but cannot truthfully recreate source migration history.
 
+Use `content/curation/portfolio-updates.v1.json` for reviewed additions after
+the original migration. Preserve existing IDs, slugs, aliases, and dated
+observations. Declare the review date, source/date basis, status, and optional
+public artifact URL. Merge, review, and article-update dates are not release
+dates. Owner-approved internal work uses a public description and methodology
+source; private corroboration never enters this input or generated output.
+Keep unresolved metrics in PR review notes, not public bundles. Dated additions
+and active-claim replacements go through the existing metric projector.
+
 ## Presentation Precedence
 
 1. The sanitized canonical bundle supplies facts, IDs, relations, metrics, evidence, URLs, and structure.

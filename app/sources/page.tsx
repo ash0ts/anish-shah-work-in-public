@@ -217,7 +217,7 @@ export default async function SourcesPage({
           <p className={styles.eyebrow}>{SITE_COPY.sources["rules-eyebrow"]}</p>
           <h2 id="rules-title">{SITE_COPY.sources["rules-title"]}</h2>
           <p>
-            {bundle.sourceSummary.footprintRows} source records support{" "}
+            {bundle.sourceSummary.publicItems} source records support{" "}
             {bundle.workGroups.length} projects and series. Related records remain
             searchable without being counted twice.
           </p>
@@ -237,6 +237,10 @@ export default async function SourcesPage({
             </li>
           ))}
         </ol>
+        <details id="owner-reviewed-work">
+          <summary>{SITE_COPY.sources["owner-reviewed-title"]}</summary>
+          <p>{SITE_COPY.sources["owner-reviewed-body"]}</p>
+        </details>
       </section>
 
       <SourcesIndex

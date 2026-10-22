@@ -63,6 +63,12 @@ Sources
 ## detail-materials
 Talks, recordings, and code
 
+## detail-materials-private
+Materials not public
+
+## detail-status
+Status
+
 ## detail-related
 Related work
 

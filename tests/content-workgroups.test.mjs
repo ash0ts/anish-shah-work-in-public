@@ -30,7 +30,7 @@ const entitiesById = new Map(
 
 test("public WorkGroups compress the archive into four stable buckets", () => {
   assert.equal(publicBundle.schemaVersion, "1.2");
-  assert.equal(publicBundle.workGroups.length, 82);
+  assert.equal(publicBundle.workGroups.length, 88);
   assert.deepEqual(
     Object.fromEntries(
       [
@@ -45,10 +45,10 @@ test("public WorkGroups compress the archive into four stable buckets", () => {
       ]),
     ),
     {
-      "products-open-source": 14,
-      "courses-learning": 3,
-      "writing-research": 22,
-      "talks-programs": 43,
+      "products-open-source": 16,
+      "courses-learning": 5,
+      "writing-research": 23,
+      "talks-programs": 44,
     },
   );
   assert.equal(
@@ -63,7 +63,7 @@ test("every eligible entity belongs to exactly one WorkGroup", () => {
       entity.publicationState === "public" &&
       entity.countability === "unique_work",
   );
-  assert.equal(eligible.length, 100);
+  assert.equal(eligible.length, 106);
   const memberships = new Map();
   for (const group of publicBundle.workGroups) {
     assert(group.memberEntityIds.includes(group.primaryEntityId), group.id);
@@ -245,7 +245,7 @@ test("featured groups are ranked only within their bucket", () => {
 });
 
 test("metric presentation groups use the selected replacement checkpoints", () => {
-  assert.equal(publicBundle.metrics.length, 13);
+  assert.equal(publicBundle.metrics.length, 17);
   assert.deepEqual(
     publicBundle.metricGroups.map((group) => group.theme),
     ["learning", "product", "programs", "archive"],
@@ -253,7 +253,7 @@ test("metric presentation groups use the selected replacement checkpoints", () =
   assert.equal(
     publicBundle.metricGroups.find((group) => group.theme === "product")
       ?.leadMetricId,
-    "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+    "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
   );
   assert.equal(
     publicBundle.metricGroups.find((group) => group.theme === "programs")
@@ -271,7 +271,7 @@ test("metric presentation groups use the selected replacement checkpoints", () =
   const calls = publicBundle.metrics.find(
     (metric) =>
       metric.id ===
-      "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+      "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
   );
   assert.deepEqual(
     {
@@ -284,15 +284,15 @@ test("metric presentation groups use the selected replacement checkpoints", () =
       evidence: calls?.publicEvidenceIds,
     },
     {
-      displayValue: "200K+",
-      label: "MCP tool calls through July 29, 2026",
+      displayValue: "745K+",
+      label: "cumulative MCP tool calls",
       qualifier:
-        "Rounded down from the July 29 internal analytics checkpoint; direct project usage, not revenue.",
+        "Owner-validated cumulative tool calls, not HTTP requests or sessions. Direct project usage, not revenue; review date is not a measurement cutoff.",
       period: {
-        start: "2026-03-29",
-        end: "2026-07-29",
-        asOf: "2026-07-29",
-        label: "Through July 29, 2026",
+        start: null,
+        end: null,
+        asOf: "2026-10-22",
+        label: "Owner-reviewed October 22, 2026",
       },
       scope: "work",
       attribution: "direct",

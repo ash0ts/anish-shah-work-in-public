@@ -21,6 +21,12 @@ Method
 ## rules-title
 Three rules.
 
+## owner-reviewed-title
+Owner-reviewed contributions
+
+## owner-reviewed-body
+Owner-reviewed entries describe curricula or internal tooling whose materials are not public; they are not independently inspectable source code. Status distinguishes developed material, merged implementation, and delivered work. Private records and repository links stay private.
+
 ## rule-1-title
 Count each project once
 

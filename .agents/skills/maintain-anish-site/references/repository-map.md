@@ -41,6 +41,9 @@ request path, durable store, or progressive-enhancement boundary changes.
 ## Content and Copy Ownership
 
 - `content/curation/**` and `content/presentation/**`: reviewed canonical grouping and protected presentation inputs.
+- `content/curation/portfolio-updates.v1.json` and `scripts/content/updates.mjs`:
+  additive, owner-reviewed projects and metric observations. Preserve stable
+  IDs and immutable legacy inputs; private corroboration never enters this file.
 - `content/presentation/home-signal-rails.v1.json`: exact Home metric IDs,
   compact limits, code-native icon IDs, and four bucket/topic rail mappings.
   Runtime counts derive from visible WorkGroups; hidden work never contributes.
@@ -52,7 +55,9 @@ request path, durable store, or progressive-enhancement boundary changes.
   does not own visible prose or create a new speaking claim.
 - `content/public/**`: generated, sanitized deployable artifacts; never hand-edit.
 - `content/copy/pages/**`: Git-owned page presentation prose.
-- `content/copy/work-groups/**`: Git-owned WorkGroup display/short titles, summaries, and role summaries, each bound to a stable sanitized ID.
+- `content/copy/work-groups/**`: Git-owned WorkGroup display/short titles,
+  summaries, role summaries, and optional fact-checked detail notes, each bound
+  to a stable sanitized ID.
 - `scripts/lib/copy-deck.mjs`: strict plain-text parser and generator.
 - `lib/copy.ts`, `lib/copy-contract.ts`, `lib/copy-ownership.ts`, `lib/copy-voice-contract.ts`: typed registry, runtime ownership, owner-only page/risk reporting, and deterministic public-voice policy.
 - `scripts/copy-voice-check.mjs` and `scripts/lib/copy-voice.mjs`: copy voice and claim-qualification audit tooling.

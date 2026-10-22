@@ -1,15 +1,15 @@
 {
   "schemaVersion": "1.2",
-  "contentVersion": "9ec1fdd9a3ff0a5b",
-  "generatedAt": "2026-07-30T00:00:00.000Z",
+  "contentVersion": "792f0c3cdfc7570e",
+  "generatedAt": "2026-10-22T00:00:00.000Z",
   "sourceSummary": {
     "footprintRows": 184,
-    "impactRows": 85,
-    "supplementalArtifacts": 2,
-    "publicItems": 186,
-    "approvedMetricCount": 13,
+    "impactRows": 90,
+    "supplementalArtifacts": 18,
+    "publicItems": 202,
+    "approvedMetricCount": 17,
     "footprintBackedUniqueWorks": 99,
-    "supplementalUniqueWorks": 1
+    "supplementalUniqueWorks": 7
   },
   "profile": {
     "id": "person:anish-shah",
@@ -71,6 +71,10 @@
     {
       "id": "org:class-central",
       "name": "Class Central"
+    },
+    {
+      "id": "org:coreweave",
+      "name": "CoreWeave"
     },
     {
       "id": "org:datatalksclub",
@@ -9749,6 +9753,782 @@
       "featured": false,
       "canonicalEntityId": "entity:wk-0003",
       "entityRole": "primary"
+    },
+    {
+      "id": "item:up-0001",
+      "legacyIds": [
+        "portfolio-update:2026:aria-engineering"
+      ],
+      "slug": "aria-engineering",
+      "slugAliases": [],
+      "type": "technical_report",
+      "title": "ARIA engineering contribution",
+      "displayTitle": "ARIA engineering contribution",
+      "shortTitle": "ARIA engineering contribution",
+      "date": {
+        "start": "2026",
+        "end": null,
+        "precision": "year",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Engineering contributor",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "",
+        "kind": "unknown"
+      },
+      "status": "Engineering contribution; supporting articles published",
+      "urls": [],
+      "summary": "Implemented durable streaming, recovery, cross-tab chat state, and conversation-history improvements across the backend and frontend.",
+      "topics": [
+        "agents",
+        "evaluation",
+        "mlops",
+        "weave"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:methodology:owner-reviewed-work"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-up-0001",
+      "entityRole": "primary"
+    },
+    {
+      "id": "item:up-0002",
+      "legacyIds": [
+        "portfolio-update:2026:what-is-aria-and-how-did-we-build-it"
+      ],
+      "slug": "what-is-aria-and-how-did-we-build-it",
+      "slugAliases": [],
+      "type": "article",
+      "title": "What Is ARIA, and How Did We Build It?",
+      "displayTitle": "What Is ARIA, and How Did We Build It?",
+      "shortTitle": "What Is ARIA, and How Did We Build It?",
+      "date": {
+        "start": "2026-09-25",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Contributing writer; published byline: The CoreWeave Team",
+      "organizationIds": [
+        "org:coreweave"
+      ],
+      "location": {
+        "label": "Online",
+        "kind": "platform"
+      },
+      "status": "Published article",
+      "urls": [
+        {
+          "kind": "primary",
+          "url": "https://coreweave.com/blog/what-is-aria-and-how-did-we-build-it"
+        }
+      ],
+      "summary": "Explains ARIA's durable turns, persisted state, and recovery. The published article carries The CoreWeave Team byline.",
+      "topics": [
+        "agents",
+        "mlops"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:web:8bf245427207e0c1"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-up-0001",
+      "entityRole": "component"
+    },
+    {
+      "id": "item:up-0003",
+      "legacyIds": [
+        "portfolio-update:2026:how-we-benchmark-aria"
+      ],
+      "slug": "how-we-benchmark-aria",
+      "slugAliases": [],
+      "type": "article",
+      "title": "How We Benchmark ARIA—and Why It Runs on Weave",
+      "displayTitle": "How We Benchmark ARIA—and Why It Runs on Weave",
+      "shortTitle": "How We Benchmark ARIA—and Why It Runs on Weave",
+      "date": {
+        "start": "2026-08-24",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Author",
+      "organizationIds": [
+        "org:coreweave"
+      ],
+      "location": {
+        "label": "Online",
+        "kind": "platform"
+      },
+      "status": "Published article",
+      "urls": [
+        {
+          "kind": "primary",
+          "url": "https://www.coreweave.com/blog/how-we-benchmark-aria--and-why-it-runs-on-weave"
+        }
+      ],
+      "summary": "Describes production-aligned tasks and distinct checks for correctness, trajectories, and reference answers.",
+      "topics": [
+        "agents",
+        "evaluation",
+        "weave"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:web:109063f0ea4615b8"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-up-0001",
+      "entityRole": "component"
+    },
+    {
+      "id": "item:up-0004",
+      "legacyIds": [
+        "portfolio-update:2026:where-agent-lens-insights-come-from"
+      ],
+      "slug": "where-agent-lens-insights-come-from",
+      "slugAliases": [],
+      "type": "technical_report",
+      "title": "Where Do Agent Lens Insights Come From?",
+      "displayTitle": "Where Do Agent Lens Insights Come From?",
+      "shortTitle": "Where Do Agent Lens Insights Come From?",
+      "date": {
+        "start": "2026-09-24",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Author",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "Online",
+        "kind": "platform"
+      },
+      "status": "Published study; article updated September 24, 2026; synthetic workload",
+      "urls": [
+        {
+          "kind": "primary",
+          "url": "https://forge.coreweave.com/wandb/wandb/agent-lens-fc/reports/Where-Do-Agent-Lens-Insights-Come-From--VmlldzoxNzk5OTk0NA=="
+        }
+      ],
+      "summary": "Traces a synthetic retail workload from failures to Insights clusters; the study uses fictional accounts, not customer traffic.",
+      "topics": [
+        "agents",
+        "evaluation",
+        "weave"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:web:bf5e6de69b5a7133"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-up-0004",
+      "entityRole": "primary"
+    },
+    {
+      "id": "item:up-0005",
+      "legacyIds": [
+        "portfolio-update:2026:jev-gemma-agent-lens"
+      ],
+      "slug": "jev-gemma-agent-lens",
+      "slugAliases": [],
+      "type": "technical_report",
+      "title": "We Benchmarked Jev Against Gemma Inside Agent Lens",
+      "displayTitle": "We Benchmarked Jev Against Gemma Inside Agent Lens",
+      "shortTitle": "We Benchmarked Jev Against Gemma Inside Agent Lens",
+      "date": {
+        "start": "2026-09-24",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Author",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "Online",
+        "kind": "platform"
+      },
+      "status": "Published study; article updated September 24, 2026; bounded comparison",
+      "urls": [
+        {
+          "kind": "primary",
+          "url": "https://forge.coreweave.com/wandb/wandb/agent-lens-fc/reports/We-Benchmarked-Jev-Against-Gemma-Inside-Agent-Lens--VmlldzoxNzk5OTk1MA=="
+        }
+      ],
+      "summary": "Compares judges on one frozen agent workload. Thresholds and output formats differ; the result is not a production deployment decision.",
+      "topics": [
+        "agents",
+        "evaluation",
+        "weave"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:web:0ea669b962bfc085"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-up-0004",
+      "entityRole": "component"
+    },
+    {
+      "id": "item:up-0006",
+      "legacyIds": [
+        "portfolio-update:2026:your-agent-learned-to-cheat"
+      ],
+      "slug": "your-agent-learned-to-cheat",
+      "slugAliases": [],
+      "type": "event",
+      "title": "Your Agent Learned to Cheat: Catching and Fixing Shortcuts",
+      "displayTitle": "Your Agent Learned to Cheat: Catching and Fixing Shortcuts",
+      "shortTitle": "Your Agent Learned to Cheat: Catching and Fixing Shortcuts",
+      "date": {
+        "start": "2026-10-01",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Lab co-developer and co-instructor with Lorenzo Balderrama Porras",
+      "organizationIds": [
+        "org:coreweave"
+      ],
+      "location": {
+        "label": "Online",
+        "kind": "platform"
+      },
+      "status": "Delivered at Fully Connected",
+      "urls": [
+        {
+          "kind": "primary",
+          "url": "https://www.coreweave.com/fully-connected-sessions/your-agent-learned-to-cheat-catching-and-fixing-shortcuts-lab07"
+        }
+      ],
+      "summary": "Follow reward shortcuts in agent traces, repair the test, and compare behavior across real reinforcement-learning snapshots.",
+      "topics": [
+        "agents",
+        "education",
+        "evaluation",
+        "fine-tuning",
+        "weave"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:web:cfb072a879ec122f"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:oc-up-0006",
+      "entityRole": "primary"
+    },
+    {
+      "id": "item:up-0007",
+      "legacyIds": [
+        "portfolio-update:2026:autoresearch-labs"
+      ],
+      "slug": "autoresearch-labs",
+      "slugAliases": [],
+      "type": "course",
+      "title": "AutoResearch labs",
+      "displayTitle": "AutoResearch labs",
+      "shortTitle": "AutoResearch labs",
+      "date": {
+        "start": "2026-07-27",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Curriculum developer",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "",
+        "kind": "unknown"
+      },
+      "status": "Curriculum merged July 27, 2026; delivery not claimed",
+      "urls": [],
+      "summary": "Two labs teach traced experiments and budgeted research loops, with notebooks, validators, datasets, and facilitator guides.",
+      "topics": [
+        "agents",
+        "education",
+        "evaluation",
+        "fine-tuning"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:methodology:owner-reviewed-work"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-up-0007",
+      "entityRole": "primary"
+    },
+    {
+      "id": "item:up-0008",
+      "legacyIds": [
+        "portfolio-update:2026:rl-fine-tuning-workshop"
+      ],
+      "slug": "rl-fine-tuning-workshop",
+      "slugAliases": [],
+      "type": "course",
+      "title": "RL fine-tuning workshop",
+      "displayTitle": "RL fine-tuning workshop",
+      "shortTitle": "RL fine-tuning workshop",
+      "date": {
+        "start": "2026",
+        "end": null,
+        "precision": "year",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Curriculum developer",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "",
+        "kind": "unknown"
+      },
+      "status": "Curriculum developed; materials not public",
+      "urls": [],
+      "summary": "Hands-on curriculum combines model training, evaluation, and tracing; public rollout is not claimed.",
+      "topics": [
+        "education",
+        "evaluation",
+        "fine-tuning",
+        "weave"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:methodology:owner-reviewed-work"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-up-0008",
+      "entityRole": "primary"
+    },
+    {
+      "id": "item:up-0009",
+      "legacyIds": [
+        "portfolio-update:2026:demo-generation-tooling"
+      ],
+      "slug": "demo-generation-tooling",
+      "slugAliases": [],
+      "type": "technical_report",
+      "title": "Demo-generation tooling",
+      "displayTitle": "Demo-generation tooling",
+      "shortTitle": "Demo-generation tooling",
+      "date": {
+        "start": "2026-03-24",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Internal tooling contributor",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "",
+        "kind": "unknown"
+      },
+      "status": "Implementation merged March 24, 2026; internal tooling",
+      "urls": [],
+      "summary": "An internal editor combines slide editing, rendering, and PDF export; a public product rollout is not claimed.",
+      "topics": [
+        "education",
+        "mlops"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:methodology:owner-reviewed-work"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-up-0009",
+      "entityRole": "primary"
+    },
+    {
+      "id": "item:up-0010",
+      "legacyIds": [
+        "portfolio-update:2026:wandb-mcp-release-0-4-3"
+      ],
+      "slug": "wandb-mcp-release-0-4-3",
+      "slugAliases": [],
+      "type": "open_source_pr",
+      "title": "release: v0.4.3",
+      "displayTitle": "release: v0.4.3",
+      "shortTitle": "release: v0.4.3",
+      "date": {
+        "start": "2026-10-16",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Release contributor",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "GitHub",
+        "kind": "platform"
+      },
+      "status": "Release changes merged October 16, 2026",
+      "urls": [
+        {
+          "kind": "primary",
+          "url": "https://github.com/wandb/wandb-mcp-server/pull/170"
+        }
+      ],
+      "summary": "Restores attribution and improves configuration, tool compatibility, and dependency security. Merge does not establish rollout to every deployment.",
+      "topics": [
+        "agents",
+        "mcp",
+        "mlops",
+        "open-source"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:web:536ba1566e2f4f59"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-0001",
+      "entityRole": "implementation"
+    },
+    {
+      "id": "item:up-0011",
+      "legacyIds": [
+        "portfolio-update:2026:mcp-helm-deployment-contract"
+      ],
+      "slug": "mcp-helm-deployment-contract",
+      "slugAliases": [],
+      "type": "open_source_pr",
+      "title": "feat(operator-wandb): ship the MCP 0.4 chart contract",
+      "displayTitle": "feat(operator-wandb): ship the MCP 0.4 chart contract",
+      "shortTitle": "feat(operator-wandb): ship the MCP 0.4 chart contract",
+      "date": {
+        "start": "2026-09-21",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Contributor",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "GitHub",
+        "kind": "platform"
+      },
+      "status": "Merged September 21, 2026",
+      "urls": [
+        {
+          "kind": "primary",
+          "url": "https://github.com/wandb/helm-charts/pull/684"
+        }
+      ],
+      "summary": "Adds typed tool profiles, access modes, in-cluster routing, and deployment controls to the Helm chart.",
+      "topics": [
+        "mcp",
+        "mlops",
+        "open-source"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:web:d5218f85cc030faa"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-0001",
+      "entityRole": "component"
+    },
+    {
+      "id": "item:up-0012",
+      "legacyIds": [
+        "portfolio-update:2026:skill-bench-controller"
+      ],
+      "slug": "skill-bench-controller",
+      "slugAliases": [],
+      "type": "open_source_pr",
+      "title": "feat: move skillbench controller into skills repo",
+      "displayTitle": "feat: move skillbench controller into skills repo",
+      "shortTitle": "feat: move skillbench controller into skills repo",
+      "date": {
+        "start": "2026-06-04",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Contributor",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "GitHub",
+        "kind": "platform"
+      },
+      "status": "Merged June 4, 2026",
+      "urls": [
+        {
+          "kind": "primary",
+          "url": "https://github.com/wandb/skills/pull/38"
+        }
+      ],
+      "summary": "Adds a maintainer-triggered evaluation controller, scorecards, and task-level comparisons without claiming a performance improvement.",
+      "topics": [
+        "agents",
+        "evaluation",
+        "open-source"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:web:f6f29259b065623f"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-fp-0163",
+      "entityRole": "implementation"
+    },
+    {
+      "id": "item:up-0013",
+      "legacyIds": [
+        "portfolio-update:2026:wandb-skills-reference-helpers"
+      ],
+      "slug": "wandb-skills-reference-helpers",
+      "slugAliases": [],
+      "type": "open_source_pr",
+      "title": "W&B Skills #51",
+      "displayTitle": "W&B Skills #51",
+      "shortTitle": "W&B Skills #51",
+      "date": {
+        "start": "2026-10-12",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Contributor",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "GitHub",
+        "kind": "platform"
+      },
+      "status": "Merged October 12, 2026",
+      "urls": [
+        {
+          "kind": "primary",
+          "url": "https://github.com/wandb/skills/pull/51"
+        }
+      ],
+      "summary": "Maintains skill references and helper scripts for W&B workflows, including automation, sweeps, launch, and Agent Lens.",
+      "topics": [
+        "agents",
+        "evaluation",
+        "open-source"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:web:e3f65fbb1c461635"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-fp-0163",
+      "entityRole": "implementation"
+    },
+    {
+      "id": "item:up-0014",
+      "legacyIds": [
+        "portfolio-update:2026:why-i-built-fugue"
+      ],
+      "slug": "why-i-built-fugue",
+      "slugAliases": [],
+      "type": "article",
+      "title": "Why I Built Fugue: Controlled Experiments for Agent Systems",
+      "displayTitle": "Why I Built Fugue: Controlled Experiments for Agent Systems",
+      "shortTitle": "Why I Built Fugue: Controlled Experiments for Agent Systems",
+      "date": {
+        "start": "2026-08-24",
+        "end": null,
+        "precision": "day",
+        "basis": "publication_date"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Author",
+      "organizationIds": [
+        "org:coreweave"
+      ],
+      "location": {
+        "label": "Online",
+        "kind": "platform"
+      },
+      "status": "Published article; technical preview",
+      "urls": [
+        {
+          "kind": "primary",
+          "url": "https://coreweave.com/blog/why-i-built-fugue-controlled-experiments-for-agent-systems"
+        }
+      ],
+      "summary": "Introduces an open-source technical preview for fixed tasks, bounded budgets, human approval, and reconciled experiment evidence.",
+      "topics": [
+        "agents",
+        "evaluation",
+        "open-source",
+        "weave"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:web:722c43747d5036be"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-fp-0161",
+      "entityRole": "component"
+    },
+    {
+      "id": "item:up-0015",
+      "legacyIds": [
+        "portfolio-update:2026:fugue-study-console-prototype"
+      ],
+      "slug": "fugue-study-console-prototype",
+      "slugAliases": [],
+      "type": "technical_report",
+      "title": "Study Console prototype",
+      "displayTitle": "Study Console prototype",
+      "shortTitle": "Study Console prototype",
+      "date": {
+        "start": "2026",
+        "end": null,
+        "precision": "year",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Prototype contributor",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "",
+        "kind": "unknown"
+      },
+      "status": "Internal prototype; not a released product",
+      "urls": [],
+      "summary": "Internal prototype work organized experiment configuration, results, and Weave traces; it did not become a released product.",
+      "topics": [
+        "agents",
+        "evaluation",
+        "weave"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:methodology:owner-reviewed-work"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-fp-0161",
+      "entityRole": "component"
+    },
+    {
+      "id": "item:up-0016",
+      "legacyIds": [
+        "portfolio-update:2026:hosted-mcp-engineering"
+      ],
+      "slug": "hosted-mcp-engineering",
+      "slugAliases": [],
+      "type": "technical_report",
+      "title": "Hosted MCP engineering contribution",
+      "displayTitle": "Hosted MCP engineering contribution",
+      "shortTitle": "Hosted MCP engineering contribution",
+      "date": {
+        "start": "2026",
+        "end": null,
+        "precision": "year",
+        "basis": "unknown"
+      },
+      "additionalDates": [],
+      "year": 2026,
+      "role": "Engineering contributor",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "location": {
+        "label": "",
+        "kind": "unknown"
+      },
+      "status": "Engineering contribution; public server and chart changes linked",
+      "urls": [],
+      "summary": "Implemented Multi Tenant Cloud and Dedicated support, configuration fixes, telemetry, and compatibility repairs, including Claude Desktop connections and run-history results.",
+      "topics": [
+        "agents",
+        "evaluation",
+        "mcp",
+        "mlops"
+      ],
+      "durationSeconds": null,
+      "publicationState": "public",
+      "verificationState": "corroborated",
+      "evidenceIds": [
+        "evidence:methodology:owner-reviewed-work"
+      ],
+      "featured": false,
+      "canonicalEntityId": "entity:wk-0001",
+      "entityRole": "component"
     }
   ],
   "entities": [
@@ -13521,6 +14301,49 @@
       "verificationState": "verified"
     },
     {
+      "id": "entity:oc-up-0006",
+      "slug": "your-agent-learned-to-cheat",
+      "slugAliases": [],
+      "kind": "occurrence",
+      "title": "Your Agent Learned to Cheat: Catching and Fixing Shortcuts",
+      "displayTitle": "Your Agent Learned to Cheat",
+      "shortTitle": "Your Agent Learned to Cheat",
+      "summary": "A hands-on lab traces reward shortcuts, repairs tests, and compares agent behavior.",
+      "practice": "convene",
+      "representativeDate": {
+        "start": "2026-10-01",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "year": 2026,
+      "role": "Lab co-developer and co-instructor with Lorenzo Balderrama Porras",
+      "organizationIds": [
+        "org:coreweave"
+      ],
+      "topics": [
+        "agents",
+        "education",
+        "evaluation",
+        "fine-tuning",
+        "weave"
+      ],
+      "primaryItemId": "item:up-0006",
+      "itemIds": [
+        "item:up-0006"
+      ],
+      "parentEntityIds": [],
+      "countability": "unique_work",
+      "sourceBasis": "supplemental",
+      "childCounts": {
+        "items": 1,
+        "occurrences": 1,
+        "artifacts": 0
+      },
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
       "id": "entity:pg-0001",
       "slug": "google-cloud-startup-school-2025",
       "slugAliases": [],
@@ -13880,8 +14703,11 @@
       "id": "entity:wk-0001",
       "slug": "wandb-mcp-server",
       "slugAliases": [
+        "hosted-mcp-engineering",
         "introducing-the-w-and-b-mcp-server-an-agent-native-interface-for-your-753d84",
-        "introducing-the-w-and-b-mcp-server-an-agent-native-interface-for-your-experiments-and-tr"
+        "introducing-the-w-and-b-mcp-server-an-agent-native-interface-for-your-experiments-and-tr",
+        "mcp-helm-deployment-contract",
+        "wandb-mcp-release-0-4-3"
       ],
       "kind": "work",
       "title": "wandb-mcp-server",
@@ -13903,21 +14729,26 @@
       ],
       "topics": [
         "agents",
+        "evaluation",
         "mcp",
+        "mlops",
         "open-source"
       ],
       "primaryItemId": "item:fp-0162",
       "itemIds": [
         "item:fp-0064",
-        "item:fp-0162"
+        "item:fp-0162",
+        "item:up-0010",
+        "item:up-0011",
+        "item:up-0016"
       ],
       "parentEntityIds": [],
       "countability": "unique_work",
-      "sourceBasis": "footprint",
+      "sourceBasis": "mixed",
       "childCounts": {
-        "items": 2,
+        "items": 5,
         "occurrences": 0,
-        "artifacts": 1
+        "artifacts": 3
       },
       "publicationState": "public",
       "verificationState": "verified"
@@ -15326,7 +16157,10 @@
     {
       "id": "entity:wk-fp-0161",
       "slug": "fugue",
-      "slugAliases": [],
+      "slugAliases": [
+        "fugue-study-console-prototype",
+        "why-i-built-fugue"
+      ],
       "kind": "work",
       "title": "fugue",
       "displayTitle": "Fugue — governed experiments for AI agents",
@@ -15342,20 +16176,27 @@
       "year": 2026,
       "role": "Repository owner",
       "organizationIds": [
-        "org:github"
+        "org:coreweave",
+        "org:github",
+        "org:weights-and-biases"
       ],
       "topics": [
-        "open-source"
+        "agents",
+        "evaluation",
+        "open-source",
+        "weave"
       ],
       "primaryItemId": "item:fp-0161",
       "itemIds": [
-        "item:fp-0161"
+        "item:fp-0161",
+        "item:up-0014",
+        "item:up-0015"
       ],
       "parentEntityIds": [],
       "countability": "unique_work",
-      "sourceBasis": "footprint",
+      "sourceBasis": "mixed",
       "childCounts": {
-        "items": 1,
+        "items": 3,
         "occurrences": 0,
         "artifacts": 1
       },
@@ -15365,7 +16206,10 @@
     {
       "id": "entity:wk-fp-0163",
       "slug": "wandb-skills",
-      "slugAliases": [],
+      "slugAliases": [
+        "skill-bench-controller",
+        "wandb-skills-reference-helpers"
+      ],
       "kind": "work",
       "title": "wandb/skills",
       "displayTitle": "W&B Skills",
@@ -15381,25 +16225,248 @@
       "year": 2026,
       "role": "Contributor",
       "organizationIds": [
+        "org:weights-and-biases",
         "org:weights-and-biases-github"
       ],
       "topics": [
+        "agents",
+        "evaluation",
         "open-source"
       ],
       "primaryItemId": "item:fp-0163",
       "itemIds": [
-        "item:fp-0163"
+        "item:fp-0163",
+        "item:up-0012",
+        "item:up-0013"
       ],
       "parentEntityIds": [],
       "countability": "unique_work",
-      "sourceBasis": "footprint",
+      "sourceBasis": "mixed",
       "childCounts": {
-        "items": 1,
+        "items": 3,
         "occurrences": 0,
-        "artifacts": 1
+        "artifacts": 3
       },
       "publicationState": "public",
       "verificationState": "verified"
+    },
+    {
+      "id": "entity:wk-up-0001",
+      "slug": "aria",
+      "slugAliases": [
+        "aria-engineering",
+        "how-we-benchmark-aria",
+        "what-is-aria-and-how-did-we-build-it"
+      ],
+      "kind": "work",
+      "title": "ARIA engineering contribution",
+      "displayTitle": "ARIA: durable conversations and evaluation",
+      "shortTitle": "ARIA",
+      "summary": "Durable streaming, recovery, and conversation state for agent workflows, with production-aligned evaluations.",
+      "practice": "build",
+      "representativeDate": {
+        "start": "2026",
+        "end": null,
+        "precision": "year",
+        "basis": "unknown"
+      },
+      "year": 2026,
+      "role": "Engineering contributor",
+      "organizationIds": [
+        "org:coreweave",
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "agents",
+        "evaluation",
+        "mlops",
+        "weave"
+      ],
+      "primaryItemId": "item:up-0001",
+      "itemIds": [
+        "item:up-0001",
+        "item:up-0002",
+        "item:up-0003"
+      ],
+      "parentEntityIds": [],
+      "countability": "unique_work",
+      "sourceBasis": "supplemental",
+      "childCounts": {
+        "items": 3,
+        "occurrences": 0,
+        "artifacts": 0
+      },
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "entity:wk-up-0004",
+      "slug": "agent-lens-evaluation",
+      "slugAliases": [
+        "jev-gemma-agent-lens",
+        "where-agent-lens-insights-come-from"
+      ],
+      "kind": "work",
+      "title": "Where Do Agent Lens Insights Come From?",
+      "displayTitle": "Agent Lens: failure analysis and judge evaluation",
+      "shortTitle": "Agent Lens studies",
+      "summary": "Controlled studies inspect failure clusters and compare judge behavior on a fixed agent workload.",
+      "practice": "build",
+      "representativeDate": {
+        "start": "2026-09-24",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "year": 2026,
+      "role": "Author",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "agents",
+        "evaluation",
+        "weave"
+      ],
+      "primaryItemId": "item:up-0004",
+      "itemIds": [
+        "item:up-0004",
+        "item:up-0005"
+      ],
+      "parentEntityIds": [],
+      "countability": "unique_work",
+      "sourceBasis": "supplemental",
+      "childCounts": {
+        "items": 2,
+        "occurrences": 0,
+        "artifacts": 0
+      },
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "entity:wk-up-0007",
+      "slug": "autoresearch-labs",
+      "slugAliases": [],
+      "kind": "work",
+      "title": "AutoResearch labs",
+      "displayTitle": "AutoResearch labs",
+      "shortTitle": "AutoResearch labs",
+      "summary": "Two curricula teach traced experiments and budgeted research loops with notebooks, validators, and facilitator guides.",
+      "practice": "teach",
+      "representativeDate": {
+        "start": "2026-07-27",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "year": 2026,
+      "role": "Curriculum developer",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "agents",
+        "education",
+        "evaluation",
+        "fine-tuning"
+      ],
+      "primaryItemId": "item:up-0007",
+      "itemIds": [
+        "item:up-0007"
+      ],
+      "parentEntityIds": [],
+      "countability": "unique_work",
+      "sourceBasis": "supplemental",
+      "childCounts": {
+        "items": 1,
+        "occurrences": 0,
+        "artifacts": 0
+      },
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "entity:wk-up-0008",
+      "slug": "rl-fine-tuning-workshop",
+      "slugAliases": [],
+      "kind": "work",
+      "title": "RL fine-tuning workshop",
+      "displayTitle": "RL fine-tuning workshop",
+      "shortTitle": "RL fine-tuning workshop",
+      "summary": "Hands-on curriculum combines model training, evaluation, and tracing; public rollout is not claimed.",
+      "practice": "teach",
+      "representativeDate": {
+        "start": "2026",
+        "end": null,
+        "precision": "year",
+        "basis": "unknown"
+      },
+      "year": 2026,
+      "role": "Curriculum developer",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "education",
+        "evaluation",
+        "fine-tuning",
+        "weave"
+      ],
+      "primaryItemId": "item:up-0008",
+      "itemIds": [
+        "item:up-0008"
+      ],
+      "parentEntityIds": [],
+      "countability": "unique_work",
+      "sourceBasis": "supplemental",
+      "childCounts": {
+        "items": 1,
+        "occurrences": 0,
+        "artifacts": 0
+      },
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "entity:wk-up-0009",
+      "slug": "demo-generation-tooling",
+      "slugAliases": [],
+      "kind": "work",
+      "title": "Demo-generation tooling",
+      "displayTitle": "Demo-generation tooling",
+      "shortTitle": "Demo-generation tooling",
+      "summary": "An internal editor supports slide editing, rendering, and PDF export.",
+      "practice": "build",
+      "representativeDate": {
+        "start": "2026-03-24",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "year": 2026,
+      "role": "Internal tooling contributor",
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "education",
+        "mlops"
+      ],
+      "primaryItemId": "item:up-0009",
+      "itemIds": [
+        "item:up-0009"
+      ],
+      "parentEntityIds": [],
+      "countability": "unique_work",
+      "sourceBasis": "supplemental",
+      "childCounts": {
+        "items": 1,
+        "occurrences": 0,
+        "artifacts": 0
+      },
+      "publicationState": "public",
+      "verificationState": "corroborated"
     }
   ],
   "workGroups": [
@@ -15407,8 +16474,11 @@
       "id": "group:products:wandb-mcp",
       "slug": "wandb-mcp-server",
       "slugAliases": [
+        "hosted-mcp-engineering",
         "introducing-the-w-and-b-mcp-server-an-agent-native-interface-for-your-753d84",
-        "introducing-the-w-and-b-mcp-server-an-agent-native-interface-for-your-experiments-and-tr"
+        "introducing-the-w-and-b-mcp-server-an-agent-native-interface-for-your-experiments-and-tr",
+        "mcp-helm-deployment-contract",
+        "wandb-mcp-release-0-4-3"
       ],
       "title": "W&B MCP Server",
       "shortTitle": "W&B MCP Server",
@@ -15424,7 +16494,10 @@
       "contextEntityIds": [],
       "itemIds": [
         "item:fp-0064",
-        "item:fp-0162"
+        "item:fp-0162",
+        "item:up-0010",
+        "item:up-0011",
+        "item:up-0016"
       ],
       "period": {
         "start": "2026-05-21",
@@ -15440,12 +16513,16 @@
       ],
       "topics": [
         "agents",
+        "evaluation",
         "mcp",
+        "mlops",
         "open-source"
       ],
       "formats": [
         "article",
-        "open_source_repo"
+        "technical_report",
+        "open_source_repo",
+        "open_source_pr"
       ],
       "publicationState": "public",
       "verificationState": "verified"
@@ -15540,7 +16617,10 @@
     {
       "id": "group:standalone:wk-fp-0161",
       "slug": "fugue",
-      "slugAliases": [],
+      "slugAliases": [
+        "fugue-study-console-prototype",
+        "why-i-built-fugue"
+      ],
       "title": "Fugue — governed experiments for AI agents",
       "shortTitle": "Fugue",
       "summary": "Repository owner.",
@@ -15554,7 +16634,9 @@
       "programEntityIds": [],
       "contextEntityIds": [],
       "itemIds": [
-        "item:fp-0161"
+        "item:fp-0161",
+        "item:up-0014",
+        "item:up-0015"
       ],
       "period": {
         "start": "2026-07-08",
@@ -15565,21 +16647,71 @@
       "yearStart": 2026,
       "yearEnd": 2026,
       "organizationIds": [
-        "org:github"
+        "org:coreweave",
+        "org:github",
+        "org:weights-and-biases"
       ],
       "topics": [
-        "open-source"
+        "agents",
+        "evaluation",
+        "open-source",
+        "weave"
       ],
       "formats": [
+        "article",
+        "technical_report",
         "open_source_repo"
       ],
       "publicationState": "public",
       "verificationState": "verified"
     },
     {
+      "id": "group:portfolio:demo-generation-tooling",
+      "slug": "demo-generation-tooling",
+      "slugAliases": [],
+      "title": "Demo-generation tooling",
+      "shortTitle": "Demo-generation tooling",
+      "summary": "An internal editor supports slide editing, rendering, and PDF export.",
+      "roleSummary": "Internal tooling contributor; implementation merged",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-up-0009",
+      "memberEntityIds": [
+        "entity:wk-up-0009"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:up-0009"
+      ],
+      "period": {
+        "start": "2026-03-24",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "education",
+        "mlops"
+      ],
+      "formats": [
+        "technical_report"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
       "id": "group:standalone:wk-fp-0163",
       "slug": "wandb-skills",
-      "slugAliases": [],
+      "slugAliases": [
+        "skill-bench-controller",
+        "wandb-skills-reference-helpers"
+      ],
       "title": "W&B Skills",
       "shortTitle": "W&B Skills",
       "summary": "Contributor.",
@@ -15593,7 +16725,9 @@
       "programEntityIds": [],
       "contextEntityIds": [],
       "itemIds": [
-        "item:fp-0163"
+        "item:fp-0163",
+        "item:up-0012",
+        "item:up-0013"
       ],
       "period": {
         "start": "2026-03-03",
@@ -15604,16 +16738,70 @@
       "yearStart": 2026,
       "yearEnd": 2026,
       "organizationIds": [
+        "org:weights-and-biases",
         "org:weights-and-biases-github"
       ],
       "topics": [
+        "agents",
+        "evaluation",
         "open-source"
       ],
       "formats": [
-        "open_source_repo"
+        "open_source_repo",
+        "open_source_pr"
       ],
       "publicationState": "public",
       "verificationState": "verified"
+    },
+    {
+      "id": "group:portfolio:aria",
+      "slug": "aria",
+      "slugAliases": [
+        "aria-engineering",
+        "how-we-benchmark-aria",
+        "what-is-aria-and-how-did-we-build-it"
+      ],
+      "title": "ARIA: durable conversations and evaluation",
+      "shortTitle": "ARIA",
+      "summary": "Durable streaming, recovery, and conversation state for agent workflows, with production-aligned evaluations.",
+      "roleSummary": "Streaming, recovery, and conversation-state contributor",
+      "bucket": "products-open-source",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-up-0001",
+      "memberEntityIds": [
+        "entity:wk-up-0001"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:up-0001",
+        "item:up-0002",
+        "item:up-0003"
+      ],
+      "period": {
+        "start": "2026",
+        "end": null,
+        "precision": "year",
+        "basis": "unknown"
+      },
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "organizationIds": [
+        "org:coreweave",
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "agents",
+        "evaluation",
+        "mlops",
+        "weave"
+      ],
+      "formats": [
+        "article",
+        "technical_report"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
     },
     {
       "id": "group:standalone:wk-0004",
@@ -16155,6 +17343,90 @@
       "verificationState": "corroborated"
     },
     {
+      "id": "group:portfolio:autoresearch-labs",
+      "slug": "autoresearch-labs",
+      "slugAliases": [],
+      "title": "AutoResearch labs",
+      "shortTitle": "AutoResearch labs",
+      "summary": "Two curricula teach traced experiments and budgeted research loops with notebooks, validators, and facilitator guides.",
+      "roleSummary": "Curriculum developer; materials not public",
+      "bucket": "courses-learning",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-up-0007",
+      "memberEntityIds": [
+        "entity:wk-up-0007"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:up-0007"
+      ],
+      "period": {
+        "start": "2026-07-27",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "agents",
+        "education",
+        "evaluation",
+        "fine-tuning"
+      ],
+      "formats": [
+        "course"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "group:portfolio:rl-fine-tuning-workshop",
+      "slug": "rl-fine-tuning-workshop",
+      "slugAliases": [],
+      "title": "RL fine-tuning workshop",
+      "shortTitle": "RL fine-tuning workshop",
+      "summary": "Hands-on curriculum combines model training, evaluation, and tracing; public rollout is not claimed.",
+      "roleSummary": "Curriculum developer; materials not public",
+      "bucket": "courses-learning",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-up-0008",
+      "memberEntityIds": [
+        "entity:wk-up-0008"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:up-0008"
+      ],
+      "period": {
+        "start": "2026",
+        "end": null,
+        "precision": "year",
+        "basis": "unknown"
+      },
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "education",
+        "evaluation",
+        "fine-tuning",
+        "weave"
+      ],
+      "formats": [
+        "course"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
+    },
+    {
       "id": "group:writing:wandbot",
       "slug": "wandbot-gpt-4-powered-chat-support",
       "slugAliases": [
@@ -16297,6 +17569,51 @@
       ],
       "publicationState": "public",
       "verificationState": "verified"
+    },
+    {
+      "id": "group:portfolio:agent-lens-evaluation",
+      "slug": "agent-lens-evaluation",
+      "slugAliases": [
+        "jev-gemma-agent-lens",
+        "where-agent-lens-insights-come-from"
+      ],
+      "title": "Agent Lens: failure analysis and judge evaluation",
+      "shortTitle": "Agent Lens studies",
+      "summary": "Controlled studies inspect failure clusters and compare judge behavior on a fixed agent workload.",
+      "roleSummary": "Study author",
+      "bucket": "writing-research",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:wk-up-0004",
+      "memberEntityIds": [
+        "entity:wk-up-0004"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:up-0004",
+        "item:up-0005"
+      ],
+      "period": {
+        "start": "2026-09-24",
+        "end": null,
+        "precision": "day",
+        "basis": "unknown"
+      },
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "organizationIds": [
+        "org:weights-and-biases"
+      ],
+      "topics": [
+        "agents",
+        "evaluation",
+        "weave"
+      ],
+      "formats": [
+        "technical_report"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
     },
     {
       "id": "group:standalone:wk-fp-0099",
@@ -17249,6 +18566,49 @@
       ],
       "publicationState": "public",
       "verificationState": "verified"
+    },
+    {
+      "id": "group:portfolio:your-agent-learned-to-cheat",
+      "slug": "your-agent-learned-to-cheat",
+      "slugAliases": [],
+      "title": "Your Agent Learned to Cheat",
+      "shortTitle": "Your Agent Learned to Cheat",
+      "summary": "A hands-on lab traces reward shortcuts, repairs tests, and compares agent behavior.",
+      "roleSummary": "Lab co-developer and co-instructor",
+      "bucket": "talks-programs",
+      "featuredOrder": null,
+      "primaryEntityId": "entity:oc-up-0006",
+      "memberEntityIds": [
+        "entity:oc-up-0006"
+      ],
+      "programEntityIds": [],
+      "contextEntityIds": [],
+      "itemIds": [
+        "item:up-0006"
+      ],
+      "period": {
+        "start": "2026-10-01",
+        "end": null,
+        "precision": "day",
+        "basis": "event_date"
+      },
+      "yearStart": 2026,
+      "yearEnd": 2026,
+      "organizationIds": [
+        "org:coreweave"
+      ],
+      "topics": [
+        "agents",
+        "education",
+        "evaluation",
+        "fine-tuning",
+        "weave"
+      ],
+      "formats": [
+        "event"
+      ],
+      "publicationState": "public",
+      "verificationState": "corroborated"
     },
     {
       "id": "group:standalone:oc-fp-0049",
@@ -19050,18 +20410,18 @@
       ]
     },
     {
-      "id": "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+      "id": "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
       "subjectId": "entity:wk-0001",
       "category": "product",
-      "key": "mcp_tool_calls",
-      "displayValue": "200K+",
-      "label": "MCP tool calls through July 29, 2026",
-      "qualifier": "Rounded down from the July 29 internal analytics checkpoint; direct project usage, not revenue.",
+      "key": "all_time_tool_calls",
+      "displayValue": "745K+",
+      "label": "cumulative MCP tool calls",
+      "qualifier": "Owner-validated cumulative tool calls, not HTTP requests or sessions. Direct project usage, not revenue; review date is not a measurement cutoff.",
       "period": {
-        "start": "2026-03-29",
-        "end": "2026-07-29",
-        "asOf": "2026-07-29",
-        "label": "Through July 29, 2026"
+        "start": null,
+        "end": null,
+        "asOf": "2026-10-22",
+        "label": "Owner-reviewed October 22, 2026"
       },
       "scope": "work",
       "attribution": "direct",
@@ -19071,9 +20431,9 @@
         "collection",
         "sources"
       ],
-      "sourceLabel": "Internal analytics",
+      "sourceLabel": "Owner-reviewed analytics",
       "publicationState": "public",
-      "verificationState": "corroborated",
+      "verificationState": "verified",
       "publicEvidenceIds": [
         "evidence:methodology:internal-analytics"
       ]
@@ -19084,8 +20444,8 @@
       "category": "product",
       "key": "mcp_users_and_organizations",
       "displayValue": "1K+",
-      "label": "MCP users across 1K+ organizations",
-      "qualifier": "Rounded launch-period adoption snapshot.",
+      "label": "MCP users across 1K+ W&B organizations",
+      "qualifier": "Rounded cumulative users and W&B organizations through June 11, 2026. Organizations are not distinct companies or currently active accounts.",
       "period": {
         "start": "2026-03",
         "end": "2026-06-11",
@@ -19324,6 +20684,114 @@
       "publicEvidenceIds": [
         "evidence:methodology:public-footprint"
       ]
+    },
+    {
+      "id": "metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "average_weekly_active_identity_growth_pct",
+      "displayValue": "76%",
+      "label": "growth in average weekly active identities in Multi Tenant Cloud",
+      "qualifier": "Average weekly active identities rose from 368.5 (April 19–May 16) to 649 (September 13–October 10), using consistent identity handling. Rounded growth; not unique people or growth attributable solely to one contributor.",
+      "period": {
+        "start": "2026-04-19",
+        "end": "2026-10-10",
+        "asOf": "2026-10-22",
+        "label": "April 19–May 16 vs. September 13–October 10, 2026"
+      },
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "sources"
+      ],
+      "sourceLabel": "Owner-reviewed analytics",
+      "publicationState": "public",
+      "verificationState": "verified",
+      "publicEvidenceIds": [
+        "evidence:methodology:internal-analytics"
+      ]
+    },
+    {
+      "id": "metric:project:wandb-mcp-server:returning-share:2026-10-22",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "previously_observed_active_identity_pct",
+      "displayValue": "70%",
+      "label": "active identities previously observed within the dashboard window",
+      "qualifier": "Of active identities in October 4–10, 70% appeared in an earlier observed week within the same dashboard window. Returning use, not cohort retention or verified repeat users.",
+      "period": {
+        "start": "2026-10-04",
+        "end": "2026-10-10",
+        "asOf": "2026-10-22",
+        "label": "October 4–10, 2026"
+      },
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "sources"
+      ],
+      "sourceLabel": "Owner-reviewed analytics",
+      "publicationState": "public",
+      "verificationState": "verified",
+      "publicEvidenceIds": [
+        "evidence:methodology:internal-analytics"
+      ]
+    },
+    {
+      "id": "metric:project:wandb-mcp-server:lifetime-identities:2026-10-22",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "lifetime_recorded_identities",
+      "displayValue": "≈4,800",
+      "label": "cumulative recorded MCP identities",
+      "qualifier": "Approximately 4,800 identities ever recorded interacting with MCP. Identities are not verified distinct people; review date is not a measurement cutoff.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-10-22",
+        "label": "Owner-reviewed October 22, 2026"
+      },
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "sources"
+      ],
+      "sourceLabel": "Owner-reviewed analytics",
+      "publicationState": "public",
+      "verificationState": "verified",
+      "publicEvidenceIds": [
+        "evidence:methodology:internal-analytics"
+      ]
+    },
+    {
+      "id": "metric:project:wandb-mcp-server:peak-companies:2026-10-22",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "peak_observed_companies",
+      "displayValue": "30",
+      "label": "companies at the observed usage peak",
+      "qualifier": "Owner-validated company-level aggregate at an observed peak, not a current count, customer count, endorsement, or verified key-workflow adoption. Review date is not the peak date.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-10-22",
+        "label": "Owner-reviewed October 22, 2026"
+      },
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "sources"
+      ],
+      "sourceLabel": "Owner-reviewed analytics",
+      "publicationState": "public",
+      "verificationState": "verified",
+      "publicEvidenceIds": [
+        "evidence:methodology:internal-analytics"
+      ]
     }
   ],
   "metricGroups": [
@@ -19344,9 +20812,13 @@
       "theme": "product",
       "title": "Product adoption",
       "order": 2,
-      "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+      "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
       "metricIds": [
-        "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+        "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+        "metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22",
+        "metric:project:wandb-mcp-server:returning-share:2026-10-22",
+        "metric:project:wandb-mcp-server:lifetime-identities:2026-10-22",
+        "metric:project:wandb-mcp-server:peak-companies:2026-10-22",
         "metric:project:wandb-mcp-server:audience:2026-06-11",
         "metric:project:wandb-mcp-server:returning-share:2026-06-11",
         "metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28"
@@ -19386,6 +20858,16 @@
       "url": "/sources#internal-analytics",
       "publisher": "anishshah.dev",
       "capturedAt": "2026-07-30",
+      "verificationState": "corroborated"
+    },
+    {
+      "id": "evidence:methodology:owner-reviewed-work",
+      "title": "Owner-reviewed contributions — materials not public",
+      "kind": "methodology",
+      "access": "public_web",
+      "url": "/sources#owner-reviewed-work",
+      "publisher": "Anish Shah",
+      "capturedAt": "2026-10-22",
       "verificationState": "corroborated"
     },
     {
@@ -19499,6 +20981,16 @@
       "verificationState": "listed_unconfirmed"
     },
     {
+      "id": "evidence:web:0ea669b962bfc085",
+      "title": "We Benchmarked Jev Against Gemma Inside Agent Lens",
+      "kind": "web_page",
+      "access": "public_web",
+      "url": "https://forge.coreweave.com/wandb/wandb/agent-lens-fc/reports/We-Benchmarked-Jev-Against-Gemma-Inside-Agent-Lens--VmlldzoxNzk5OTk1MA==",
+      "publisher": "forge.coreweave.com",
+      "capturedAt": "2026-10-22",
+      "verificationState": "corroborated"
+    },
+    {
       "id": "evidence:web:10764fad2f656c6d",
       "title": "Build and Deploy LLM-Based Apps",
       "kind": "web_page",
@@ -19507,6 +20999,16 @@
       "publisher": "linkedin.com",
       "capturedAt": "2026-07-30",
       "verificationState": "verified"
+    },
+    {
+      "id": "evidence:web:109063f0ea4615b8",
+      "title": "How We Benchmark ARIA—and Why It Runs on Weave",
+      "kind": "web_page",
+      "access": "public_web",
+      "url": "https://www.coreweave.com/blog/how-we-benchmark-aria--and-why-it-runs-on-weave",
+      "publisher": "coreweave.com",
+      "capturedAt": "2026-10-22",
+      "verificationState": "corroborated"
     },
     {
       "id": "evidence:web:144f0c115bd3bd7d",
@@ -20059,6 +21561,16 @@
       "verificationState": "corroborated"
     },
     {
+      "id": "evidence:web:536ba1566e2f4f59",
+      "title": "release: v0.4.3",
+      "kind": "repository",
+      "access": "public_web",
+      "url": "https://github.com/wandb/wandb-mcp-server/pull/170",
+      "publisher": "github.com",
+      "capturedAt": "2026-10-22",
+      "verificationState": "corroborated"
+    },
+    {
       "id": "evidence:web:542cbd894c15e65e",
       "title": "Agent Observability",
       "kind": "web_page",
@@ -20299,6 +21811,16 @@
       "verificationState": "verified"
     },
     {
+      "id": "evidence:web:722c43747d5036be",
+      "title": "Why I Built Fugue: Controlled Experiments for Agent Systems",
+      "kind": "web_page",
+      "access": "public_web",
+      "url": "https://coreweave.com/blog/why-i-built-fugue-controlled-experiments-for-agent-systems",
+      "publisher": "coreweave.com",
+      "capturedAt": "2026-10-22",
+      "verificationState": "corroborated"
+    },
+    {
       "id": "evidence:web:7336c39821d94d10",
       "title": "LLM Agent Fine-Tuning: Enhancing Task Automation with W&B",
       "kind": "video",
@@ -20527,6 +22049,16 @@
       "publisher": "wandb.ai",
       "capturedAt": "2026-07-30",
       "verificationState": "verified"
+    },
+    {
+      "id": "evidence:web:8bf245427207e0c1",
+      "title": "What Is ARIA, and How Did We Build It?",
+      "kind": "web_page",
+      "access": "public_web",
+      "url": "https://coreweave.com/blog/what-is-aria-and-how-did-we-build-it",
+      "publisher": "coreweave.com",
+      "capturedAt": "2026-10-22",
+      "verificationState": "corroborated"
     },
     {
       "id": "evidence:web:8e26586c6b84bbdc",
@@ -20909,6 +22441,16 @@
       "verificationState": "verified"
     },
     {
+      "id": "evidence:web:bf5e6de69b5a7133",
+      "title": "Where Do Agent Lens Insights Come From?",
+      "kind": "web_page",
+      "access": "public_web",
+      "url": "https://forge.coreweave.com/wandb/wandb/agent-lens-fc/reports/Where-Do-Agent-Lens-Insights-Come-From--VmlldzoxNzk5OTk0NA==",
+      "publisher": "forge.coreweave.com",
+      "capturedAt": "2026-10-22",
+      "verificationState": "corroborated"
+    },
+    {
       "id": "evidence:web:c05997dbe0209daa",
       "title": "LangChain #9771",
       "kind": "repository",
@@ -21049,6 +22591,16 @@
       "verificationState": "verified"
     },
     {
+      "id": "evidence:web:cfb072a879ec122f",
+      "title": "Your Agent Learned to Cheat: Catching and Fixing Shortcuts",
+      "kind": "web_page",
+      "access": "public_web",
+      "url": "https://www.coreweave.com/fully-connected-sessions/your-agent-learned-to-cheat-catching-and-fixing-shortcuts-lab07",
+      "publisher": "coreweave.com",
+      "capturedAt": "2026-10-22",
+      "verificationState": "corroborated"
+    },
+    {
       "id": "evidence:web:d0411f47757a19e2",
       "title": "AI Customization: Fine-Tuning Azure OpenAI Service Models — BRK101",
       "kind": "web_page",
@@ -21087,6 +22639,16 @@
       "publisher": "github.com",
       "capturedAt": "2026-07-30",
       "verificationState": "verified"
+    },
+    {
+      "id": "evidence:web:d5218f85cc030faa",
+      "title": "feat(operator-wandb): ship the MCP 0.4 chart contract",
+      "kind": "repository",
+      "access": "public_web",
+      "url": "https://github.com/wandb/helm-charts/pull/684",
+      "publisher": "github.com",
+      "capturedAt": "2026-10-22",
+      "verificationState": "corroborated"
     },
     {
       "id": "evidence:web:d55e2f3e57ff37e4",
@@ -21177,6 +22739,16 @@
       "publisher": "github.com",
       "capturedAt": "2026-07-30",
       "verificationState": "verified"
+    },
+    {
+      "id": "evidence:web:e3f65fbb1c461635",
+      "title": "W&B Skills #51",
+      "kind": "repository",
+      "access": "public_web",
+      "url": "https://github.com/wandb/skills/pull/51",
+      "publisher": "github.com",
+      "capturedAt": "2026-10-22",
+      "verificationState": "corroborated"
     },
     {
       "id": "evidence:web:e6c0adb5b4ae82b5",
@@ -21309,6 +22881,16 @@
       "verificationState": "verified"
     },
     {
+      "id": "evidence:web:f6f29259b065623f",
+      "title": "feat: move skillbench controller into skills repo",
+      "kind": "repository",
+      "access": "public_web",
+      "url": "https://github.com/wandb/skills/pull/38",
+      "publisher": "github.com",
+      "capturedAt": "2026-10-22",
+      "verificationState": "corroborated"
+    },
+    {
       "id": "evidence:web:fa307652a9e7f438",
       "title": "Gradient Dissent Transcriptions",
       "kind": "web_page",
@@ -21377,6 +22959,14 @@
       "rationale": "The source inventory identifies this repository as the implementation artifact."
     },
     {
+      "id": "relation:implements:66f2098265a5e8e1",
+      "fromId": "item:up-0012",
+      "toId": "item:fp-0163",
+      "predicate": "implements",
+      "confidence": "high",
+      "rationale": "Pull request belongs to the repository."
+    },
+    {
       "id": "relation:implements:6f0079afef6c8820",
       "fromId": "item:fp-0158",
       "toId": "item:fp-0060",
@@ -21393,12 +22983,28 @@
       "rationale": "The source inventory identifies this repository as the implementation artifact."
     },
     {
+      "id": "relation:implements:8e45487341a049ad",
+      "fromId": "item:up-0013",
+      "toId": "item:fp-0163",
+      "predicate": "implements",
+      "confidence": "high",
+      "rationale": "Pull request belongs to the repository."
+    },
+    {
       "id": "relation:implements:b39ed4cb0127efd1",
       "fromId": "item:fp-0162",
       "toId": "item:fp-0064",
       "predicate": "implements",
       "confidence": "high",
       "rationale": "The source inventory identifies this repository as the implementation artifact."
+    },
+    {
+      "id": "relation:implements:e74854d5c8631c58",
+      "fromId": "item:up-0010",
+      "toId": "item:fp-0162",
+      "predicate": "implements",
+      "confidence": "high",
+      "rationale": "Pull request belongs to the repository."
     },
     {
       "id": "relation:mirror_of:0268fdf22e998311",
@@ -21917,7 +23523,11 @@
         "item:fp-0164",
         "item:fp-0165",
         "item:fp-0166",
-        "item:fp-0167"
+        "item:fp-0167",
+        "item:up-0006",
+        "item:up-0007",
+        "item:up-0008",
+        "item:up-0009"
       ],
       "metricIds": []
     },
@@ -21964,7 +23574,16 @@
         "item:fp-0135",
         "item:fp-0136",
         "item:fp-0137",
-        "item:fp-0138"
+        "item:fp-0138",
+        "item:up-0001",
+        "item:up-0002",
+        "item:up-0003",
+        "item:up-0004",
+        "item:up-0005",
+        "item:up-0009",
+        "item:up-0014",
+        "item:up-0015",
+        "item:up-0016"
       ],
       "metricIds": []
     },
@@ -21975,7 +23594,9 @@
       "itemIds": [
         "item:fp-0065",
         "item:fp-0066",
-        "item:fp-0067"
+        "item:fp-0067",
+        "item:up-0007",
+        "item:up-0008"
       ],
       "metricIds": [
         "metric:courses:enrollments:2026-07-30",
@@ -22043,7 +23664,8 @@
         "item:fp-0046",
         "item:fp-0047",
         "item:fp-0048",
-        "item:fp-0049"
+        "item:fp-0049",
+        "item:up-0006"
       ],
       "metricIds": [
         "metric:events:pipeline-supported:2024-2025",
@@ -22087,13 +23709,21 @@
         "item:fp-0183",
         "item:fp-0184",
         "item:md-0001",
-        "item:md-0002"
+        "item:md-0002",
+        "item:up-0010",
+        "item:up-0011",
+        "item:up-0012",
+        "item:up-0013"
       ],
       "metricIds": [
-        "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+        "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
         "metric:project:wandb-mcp-server:audience:2026-06-11",
         "metric:project:wandb-mcp-server:returning-share:2026-06-11",
-        "metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28"
+        "metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28",
+        "metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22",
+        "metric:project:wandb-mcp-server:returning-share:2026-10-22",
+        "metric:project:wandb-mcp-server:lifetime-identities:2026-10-22",
+        "metric:project:wandb-mcp-server:peak-companies:2026-10-22"
       ]
     },
     {
@@ -22193,10 +23823,18 @@
       "access": "public_web"
     },
     {
+      "id": "snapshot:public-portfolio-review",
+      "label": "Reviewed portfolio additions",
+      "capturedAt": "2026-10-22",
+      "rowCount": 16,
+      "sectionCount": null,
+      "access": "public_web"
+    },
+    {
       "id": "snapshot:public-claims-review",
       "label": "Rounded impact claim review",
-      "capturedAt": "2026-07-30",
-      "rowCount": 13,
+      "capturedAt": "2026-10-22",
+      "rowCount": 17,
       "sectionCount": null,
       "access": "public_web"
     }

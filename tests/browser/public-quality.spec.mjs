@@ -4,6 +4,50 @@ import { expect, test } from "@playwright/test";
 const routes = ["/", "/about", "/work", "/play", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
 
+test("October projects retain semantic evidence and honest nonpublic-material states", async ({ browser }) => {
+  test.setTimeout(60_000);
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  const auditContext = await browser.newContext();
+  const auditPage = await auditContext.newPage();
+  const projects = [
+    ["aria", "ARIA: durable conversations and evaluation", false],
+    ["agent-lens-evaluation", "Agent Lens: failure analysis and judge evaluation", false],
+    ["your-agent-learned-to-cheat", "Your Agent Learned to Cheat", false],
+    ["autoresearch-labs", "AutoResearch labs", true],
+    ["rl-fine-tuning-workshop", "RL fine-tuning workshop", true],
+    ["demo-generation-tooling", "Demo-generation tooling", true],
+  ];
+  for (const [slug, title, nonpublic] of projects) {
+    const response = await page.goto(`/work/${slug}`);
+    expect(response.status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
+    if (nonpublic) {
+      await expect(page.getByText("Materials not public", { exact: true })).toBeVisible();
+      await expect(page.locator("main > header").getByRole("link", { name: /Open|Read|Watch/ })).toHaveCount(0);
+      await expect(page.getByText("Status", { exact: true })).toBeVisible();
+    }
+    const html = await response.text();
+    expect(html).not.toMatch(/slack\.com\/archives|hex\.tech|github\.com\/(?:wandb\/(?:core|ai-sidequests|demo_gen)|ash0ts\/workshop)(?:\/|")|\/Users\//i);
+    for (const width of [320, 390, 768, 1024, 1440, 1920]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect((await pageOverflow(page)).documentWidth).toBeLessThanOrEqual(width + 1);
+    }
+    // Axe injects JavaScript; inspect separately without weakening the no-JS path.
+    await auditPage.goto(`/work/${slug}`, { waitUntil: "networkidle" });
+    const axe = await new AxeBuilder({ page: auditPage }).include("main").analyze();
+    expect(axe.violations).toEqual([]);
+  }
+  await page.goto("/work/agent-lens-evaluation");
+  await page.locator("details > summary").filter({ hasText: "Sources" }).click();
+  await expect(page.getByText(/Thresholds and output formats differ/)).toBeVisible();
+  await page.goto("/sources#owner-reviewed-work");
+  await page.locator("#owner-reviewed-work > summary").click();
+  await expect(page.getByText(/not independently inspectable source code/)).toBeVisible();
+  await context.close();
+  await auditContext.close();
+});
+
 async function pageOverflow(page) {
   return page.evaluate(() => {
     const limit = window.innerWidth + 1;
@@ -121,19 +165,19 @@ test("the About speaker profile copies bounded visible text and preserves focus"
     () => globalThis.__copiedSpeakerProfile,
   );
   expect(copied).toContain(
-    "Anish Shah builds agent systems, evaluation and observability workflows",
+    "Anish Shah builds agent infrastructure and evaluation workflows",
   );
   expect(copied).toContain(
-    "His path spans programming education, computer-vision research, analytics, recommendation systems, production ML, customer-facing ML support, and MLOps growth.",
+    "His path spans programming education, computer-vision research, analytics, recommendation systems, and production ML.",
   );
   expect(copied).toContain(
-    "• Agent systems & tool interfaces — Designing agent actions that are observable, bounded, and useful beyond a demo.",
+    "• Agent systems & tool interfaces — Building tool interfaces and recoverable conversations, with examples from MCP and ARIA.",
   );
   expect(copied).toContain(
-    "• Evaluation & observability — Using traces, tests, and human review to turn model behavior into engineering decisions.",
+    "• Evaluation & observability — Tracing failures, testing judges, and checking what an agent evaluation can establish.",
   );
   expect(copied).toContain(
-    "• Technical education & workshops — Teaching fast-moving ML systems without sanding off the hard parts.",
+    "• Technical education & workshops — Hands-on labs in reward shortcuts, fine-tuning, and traced experiment loops.",
   );
   expect(copied).toMatch(
     /Contact on LinkedIn: https:\/\/www\.linkedin\.com\/in\/anish-shah\/?/u,
@@ -168,12 +212,12 @@ test("the About speaker profile copies bounded visible text and preserves focus"
   );
   await expect(
     failurePage.getByText(
-      /Anish Shah builds agent systems, evaluation and observability workflows/,
+      /Anish Shah builds agent infrastructure and evaluation workflows/,
     ),
   ).toBeVisible();
   await expect(
     failurePage.getByText(
-      "Designing agent actions that are observable, bounded, and useful beyond a demo.",
+      "Building tool interfaces and recoverable conversations, with examples from MCP and ARIA.",
       { exact: true },
     ),
   ).toBeVisible();
@@ -931,12 +975,12 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
   await page.goto("/about", { waitUntil: "load" });
   await expect(
     page.getByText(
-      /Anish Shah builds agent systems, evaluation and observability workflows/,
+      /Anish Shah builds agent infrastructure and evaluation workflows/,
     ),
   ).toBeVisible();
   await expect(
     page.getByText(
-      "Using traces, tests, and human review to turn model behavior into engineering decisions.",
+      "Tracing failures, testing judges, and checking what an agent evaluation can establish.",
       { exact: true },
     ),
   ).toBeVisible();

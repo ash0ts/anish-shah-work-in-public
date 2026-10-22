@@ -70,6 +70,166 @@
           "date": "2026-07-29"
         }
       ]
+    },
+    {
+      "replacesMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+      "id": "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "all_time_tool_calls",
+      "displayValue": "745K+",
+      "label": "cumulative MCP tool calls",
+      "qualifier": "Owner-validated cumulative tool calls, not HTTP requests or sessions. Direct project usage, not revenue; review date is not a measurement cutoff.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-10-22",
+        "label": "Owner-reviewed October 22, 2026"
+      },
+      "sourceLabel": "Owner-reviewed analytics",
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "homepage",
+        "collection",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified",
+      "selectors": [
+        {
+          "item": "W&B MCP Server",
+          "metric": "all_time_tool_calls",
+          "date": "2026-10-22"
+        }
+      ]
+    }
+  ],
+  "additions": [
+    {
+      "id": "metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "average_weekly_active_identity_growth_pct",
+      "displayValue": "76%",
+      "label": "growth in average weekly active identities in Multi Tenant Cloud",
+      "qualifier": "Average weekly active identities rose from 368.5 (April 19–May 16) to 649 (September 13–October 10), using consistent identity handling. Rounded growth; not unique people or growth attributable solely to one contributor.",
+      "period": {
+        "start": "2026-04-19",
+        "end": "2026-10-10",
+        "asOf": "2026-10-22",
+        "label": "April 19–May 16 vs. September 13–October 10, 2026"
+      },
+      "sourceLabel": "Owner-reviewed analytics",
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified",
+      "selectors": [
+        {
+          "item": "W&B MCP Server",
+          "metric": "average_weekly_active_identity_growth_pct",
+          "date": "2026-10-22"
+        }
+      ]
+    },
+    {
+      "id": "metric:project:wandb-mcp-server:returning-share:2026-10-22",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "previously_observed_active_identity_pct",
+      "displayValue": "70%",
+      "label": "active identities previously observed within the dashboard window",
+      "qualifier": "Of active identities in October 4–10, 70% appeared in an earlier observed week within the same dashboard window. Returning use, not cohort retention or verified repeat users.",
+      "period": {
+        "start": "2026-10-04",
+        "end": "2026-10-10",
+        "asOf": "2026-10-22",
+        "label": "October 4–10, 2026"
+      },
+      "sourceLabel": "Owner-reviewed analytics",
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified",
+      "selectors": [
+        {
+          "item": "W&B MCP Server",
+          "metric": "previously_observed_active_identity_pct",
+          "date": "2026-10-22"
+        }
+      ]
+    },
+    {
+      "id": "metric:project:wandb-mcp-server:lifetime-identities:2026-10-22",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "lifetime_recorded_identities",
+      "displayValue": "≈4,800",
+      "label": "cumulative recorded MCP identities",
+      "qualifier": "Approximately 4,800 identities ever recorded interacting with MCP. Identities are not verified distinct people; review date is not a measurement cutoff.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-10-22",
+        "label": "Owner-reviewed October 22, 2026"
+      },
+      "sourceLabel": "Owner-reviewed analytics",
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified",
+      "selectors": [
+        {
+          "item": "W&B MCP Server",
+          "metric": "lifetime_recorded_identities",
+          "date": "2026-10-22"
+        }
+      ]
+    },
+    {
+      "id": "metric:project:wandb-mcp-server:peak-companies:2026-10-22",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "peak_observed_companies",
+      "displayValue": "30",
+      "label": "companies at the observed usage peak",
+      "qualifier": "Owner-validated company-level aggregate at an observed peak, not a current count, customer count, endorsement, or verified key-workflow adoption. Review date is not the peak date.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-10-22",
+        "label": "Owner-reviewed October 22, 2026"
+      },
+      "sourceLabel": "Owner-reviewed analytics",
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified",
+      "selectors": [
+        {
+          "item": "W&B MCP Server",
+          "metric": "peak_observed_companies",
+          "date": "2026-10-22"
+        }
+      ]
     }
   ]
 }

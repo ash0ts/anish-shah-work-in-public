@@ -53,14 +53,14 @@ test("public bundle preserves the complete footprint inventory", () => {
   assert.match(publicBundle.contentVersion, /^[a-f0-9]{16}$/);
   assert.deepEqual(publicBundle.sourceSummary, {
     footprintRows: 184,
-    impactRows: 85,
-    supplementalArtifacts: 2,
-    publicItems: 186,
-    approvedMetricCount: 13,
+    impactRows: 90,
+    supplementalArtifacts: 18,
+    publicItems: 202,
+    approvedMetricCount: 17,
     footprintBackedUniqueWorks: 99,
-    supplementalUniqueWorks: 1,
+    supplementalUniqueWorks: 7,
   });
-  assert.equal(publicBundle.items.length, 186);
+  assert.equal(publicBundle.items.length, 202);
   assert.equal(
     publicBundle.items.filter((item) => item.id.startsWith("item:fp-")).length,
     184,
@@ -69,23 +69,23 @@ test("public bundle preserves the complete footprint inventory", () => {
     publicBundle.items.filter((item) => item.id.startsWith("item:md-")).length,
     2,
   );
-  assert.equal(publicBundle.metrics.length, 13);
-  assert.equal(publicBundle.workGroups.length, 82);
+  assert.equal(publicBundle.metrics.length, 17);
+  assert.equal(publicBundle.workGroups.length, 88);
   assert.equal(publicBundle.metricGroups.length, 4);
-  assert.equal(publicBundle.evidence.length, 198);
+  assert.equal(publicBundle.evidence.length, 209);
 
   const expectedCategories = {
-    article: 15,
-    course: 3,
-    event: 49,
+    article: 18,
+    course: 5,
+    event: 50,
     external_reference: 24,
     mirror: 12,
-    open_source_pr: 22,
+    open_source_pr: 26,
     open_source_repo: 8,
     producer_credit: 4,
     profile: 6,
     recording: 23,
-    technical_report: 9,
+    technical_report: 15,
     translation: 11,
   };
   const actualCategories = Object.fromEntries(
@@ -176,7 +176,7 @@ test("stable IDs and typed references resolve", () => {
   ]);
 
   for (const item of publicBundle.items) {
-    assert.match(item.id, /^item:(?:fp|md)-\d{4}$/);
+    assert.match(item.id, /^item:(?:fp|md|up)-\d{4}$/);
     assert(item.legacyIds.length >= 1, item.id);
     assert(entityIds.has(item.canonicalEntityId), item.canonicalEntityId);
   }
@@ -339,7 +339,7 @@ test("public metrics have explicit scope and never imply collection inheritance"
     publicBundle.metrics.filter((metric) =>
       metric.displaySurfaces.includes("item_detail"),
     ).length,
-    7,
+    11,
   );
   assert(
     publicBundle.metrics
@@ -374,7 +374,7 @@ test("known public URL correction is present and superseded Play narrative is ab
 
 test("owner bundle retains source accounting when available", { skip: !existsSync(OWNER_PATH) }, () => {
   const ownerBundle = JSON.parse(readFileSync(OWNER_PATH, "utf8"));
-  assert.equal(ownerBundle.items.length, 186);
+  assert.equal(ownerBundle.items.length, 202);
   assert.equal(
     ownerBundle.items.filter(
       (item) => item.sourceRecord?.snapshotId === "snapshot:public-footprint-csv",
@@ -383,9 +383,9 @@ test("owner bundle retains source accounting when available", { skip: !existsSyn
   );
   assert.equal(
     ownerBundle.metrics.filter((metric) => Object.hasOwn(metric, "sourceRecord")).length,
-    85,
+    90,
   );
-  assert.equal(ownerBundle.sourceSnapshots.length, 8);
+  assert.equal(ownerBundle.sourceSnapshots.length, 9);
   assert(ownerBundle.groupingLedger);
   assert(ownerBundle.items.every((item) => item.sourceRecord?.fingerprint));
   assert.deepEqual(ownerBundle.sourceSummary, publicBundle.sourceSummary);
