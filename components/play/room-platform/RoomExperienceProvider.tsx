@@ -704,7 +704,9 @@ export function RoomExperienceProvider({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      // A nested dialog owns its Escape before the room's window listener.
+      // Closing both would unmount its return-focus target.
+      if (event.defaultPrevented || event.key !== "Escape") return;
       if (routeObject(pathname)) {
         event.preventDefault();
         returnToRoom();

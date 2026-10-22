@@ -437,12 +437,16 @@ async function findAllInteractiveRoomPoints(page) {
   const deadline = Date.now() + ROOM_POINTER_SEARCH_DEADLINE_MS;
 
   for (const { id } of objects) {
+    if (points.has(id)) continue;
     for (const point of likelyRoomPoints(bounds, id)) {
       if (Date.now() >= deadline) break;
-      const hit = await stableRoomHit(page, stage, point, id);
+      // Anchors are search hints, not expected raycast results. Keep every
+      // stable real hit: a different projection can put the treadmill near
+      // the globe hint. Discarding it wastes the bounded search deadline.
+      const hit = await stableRoomHit(page, stage, point);
       if (hit) {
-        points.set(id, hit);
-        break;
+        if (!points.has(hit.id)) points.set(hit.id, hit);
+        if (hit.id === id) break;
       }
     }
   }

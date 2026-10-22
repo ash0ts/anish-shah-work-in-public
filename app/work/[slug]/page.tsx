@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { publicBundle } from "@/lib/content";
-import { SITE_COPY } from "@/lib/copy";
+import { SITE_COPY, workGroupCopyFor } from "@/lib/copy";
 import { isKnownUnavailablePublicUrl } from "@/lib/public-url-health";
 import {
   findWorkGroupBySlugFrom,
@@ -168,6 +168,11 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
     .map((id) => entityById.get(id))
     .filter((entity) => Boolean(entity));
   const evidence = evidenceForItems(bundle, items);
+  const detailNote = workGroupCopyFor(group.id)?.detailNote;
+  const primaryArtifact = [primary, ...items].find((item) =>
+    item.urls.some(({ url }) => !isKnownUnavailablePublicUrl(url)),
+  ) ?? primary;
+  const ownerReviewed = primary.evidenceIds.includes("evidence:methodology:owner-reviewed-work");
   const directSubjects = new Set([
     group.id,
     ...group.memberEntityIds,
@@ -244,7 +249,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
         name: group.title,
         headline: group.shortTitle,
         description: workMetadataDescription(group.title, group.summary),
-        dateCreated: group.period.start ?? undefined,
+        dateCreated: group.period.basis === "unknown" ? undefined : group.period.start ?? undefined,
         creator: {
           "@type": "Person",
           "@id": `${absoluteSiteUrl("/")}#anish-shah`,
@@ -310,12 +315,13 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
         <h1>{group.title}</h1>
         <div className={styles.intro}>
           <p>{group.summary}</p>
-          <PublicArtifactLink item={primary} primary />
+          <PublicArtifactLink item={primaryArtifact} primary />
         </div>
       </header>
 
       <dl className={styles.facts} aria-label="Work facts">
         <Fact label={SITE_COPY.work["detail-role"]} value={group.roleSummary} />
+        {ownerReviewed ? <Fact label={SITE_COPY.work["detail-status"]} value={primary.status} /> : null}
         <Fact
           label={SITE_COPY.work["detail-period"]}
           value={formatGroupPeriod(group)}
@@ -414,6 +420,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                   </strong>
                   <i aria-hidden="true">{evidence.length}</i>
                 </summary>
+                {detailNote ? <p>{detailNote}</p> : null}
                 <ol>
                   {evidence.map((source) => (
                     <li key={source.id}>
@@ -612,7 +619,9 @@ function PublicArtifactLink({
   if (!url) {
     return (
       <span className={styles.historicalLink}>
-        Historical source unavailable
+        {item.evidenceIds.includes("evidence:methodology:owner-reviewed-work")
+          ? SITE_COPY.work["detail-materials-private"]
+          : "Historical source unavailable"}
       </span>
     );
   }

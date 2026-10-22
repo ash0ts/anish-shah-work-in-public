@@ -14,7 +14,7 @@ const releaseVersion = JSON.parse(
   await readFile(path.join(root, "package.json"), "utf8"),
 ).version;
 // Keep this in lockstep with Playwright. This is a test-process override for
-// Wrangler 4.113's bundled workerd, not a production configuration value.
+// the browser-only workerd, not a production configuration value.
 const e2eCompatibilityDate = "2026-07-28";
 const lighthousePort = 4174;
 const baseUrl = `http://127.0.0.1:${lighthousePort}`;

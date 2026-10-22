@@ -22,7 +22,7 @@
   ],
   "metricIds": [
     "metric:courses:enrollments:2026-07-30",
-    "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+    "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
     "metric:events:pipeline-supported:2024-2025",
     "metric:event:fully-connected-sf:reach:2024"
   ],

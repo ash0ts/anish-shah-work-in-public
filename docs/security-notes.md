@@ -1,7 +1,7 @@
 # Security maintenance notes
 
 > Checked-in dependency and workflow state in this document was last reviewed
-> on **2026-08-12**. GitHub billing, feature availability, and live repository
+> on **2026-10-22**. GitHub billing, feature availability, and live repository
 > settings are mutable account state; recheck them in GitHub before relying on
 > them for a release or collaborator-access decision.
 
@@ -33,9 +33,22 @@
   for the checked-in PNG, JPEG, GIF, WebP, SVG, BMP, and ICO formats used by
   the build. Vulnerable formats fail closed and focused tests enforce that
   boundary. This is a reviewed local replacement, not an ignored advisory.
-- The lockfile resolves `js-yaml` to the official `4.3.1` release, which
-  replaces the vulnerable ordered-map duplicate check with bounded `Set`
-  membership. Its registry integrity is pinned in `package-lock.json`.
+- The lockfile resolves `js-yaml` to the official `4.3.2` release, retaining
+  the linear ordered-map duplicate check and fixing empty-merge resource
+  accounting. Registry integrity is pinned in `package-lock.json`.
+- October's dependency repair keeps Next on 16.x, React/RSC on 19.2.x, and
+  Vite on 8.x. Patched Sharp, Undici, URI/YAML/glob utilities, source-map, and
+  browser-compatibility data are resolved in the lockfile. Do not substitute
+  an npm-suggested framework downgrade or relax the audit gate.
+- `braces` has no upstream fix for
+  [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
+  as of the review date. Build/lint consumers use the MIT-licensed local
+  `vendor/braces-bounded` patch. It enforces a non-overridable depth limit in
+  parsing and every recursive walker, including supplied ASTs and parent
+  chains. Its README records upstream integrity, original file hashes, the
+  precise delta, and the removal criterion. Security tests run malicious
+  patterns in a timeout-bounded subprocess and verify ordinary downstream
+  glob behavior. This replaces vulnerable code; it is not an audit exception.
 - GitHub's Dependency Review action requires GitHub Advanced Security for a
   private repository, which is not enabled for this project. CI therefore runs
   `npm run security:audit` on every change, blocking all runtime advisories and

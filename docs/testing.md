@@ -214,7 +214,12 @@ stress, and room-review captures belong to the separate manual stability soak.
 
 The local browser harness uses the pinned `wrangler-e2e` alias only. Production
 build and deployment continue using the repository’s production Wrangler
-version. Browser jobs wait for semantic room readiness with a 15-second SLO and
+version. The browser pin includes upstream ProxyWorker recovery for a lost
+local connection; the older pin could terminate the entire server after an
+unread request body. Keep rejected-body and subsequent-navigation assertions:
+do not hide failures with a server restart or functional-test retry. See
+[the upstream proxy investigation](https://github.com/cloudflare/workers-sdk/issues/15203)
+(last verified 2026-10-22). Browser jobs wait for semantic room readiness with a 15-second SLO and
 capture diagnostic state on failure.
 
 Run the manually dispatched Browser stability workflow only after changing the

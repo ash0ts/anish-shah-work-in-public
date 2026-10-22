@@ -8,6 +8,7 @@ import {
   type MouseEvent,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -32,7 +33,7 @@ export function RevealSimulationControl({
   const navigationStarted = useRef(false);
 
   const stopTransition = useCallback(() => {
-    for (const animation of animations.current) animation.cancel();
+    for (const animation of animations.current) animation.revert();
     animations.current = [];
     if (completionTimer.current) clearTimeout(completionTimer.current);
     completionTimer.current = null;
@@ -40,7 +41,7 @@ export function RevealSimulationControl({
 
   useEffect(() => stopTransition, [stopTransition]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!transitioning) return;
     const obscured = document.querySelectorAll<HTMLElement>(
       "[data-room-overview], [data-room-runtime], body > .skip-link, body > header, body > .site-frame > footer",
@@ -56,11 +57,8 @@ export function RevealSimulationControl({
       element.setAttribute("aria-hidden", "true");
     }
     document.documentElement.style.overflow = "hidden";
-    const frame = requestAnimationFrame(() => {
-      cancelControl.current?.focus({ preventScroll: true });
-    });
+    cancelControl.current?.focus({ preventScroll: true });
     return () => {
-      cancelAnimationFrame(frame);
       document.documentElement.style.overflow = previousOverflow;
       for (const { element, inert, ariaHidden } of previousAttributes) {
         if (inert) element.setAttribute("inert", "");
@@ -105,9 +103,14 @@ export function RevealSimulationControl({
     setTransitioning(true);
     playCue("simulation-reveal");
     router.prefetch("/simulation");
+  };
 
-    requestAnimationFrame(() => {
-      if (reduced) {
+  useEffect(() => {
+    if (!transitioning) return;
+    // Start only after React has committed the portal. Scheduling from the
+    // click can race that commit and mistake a pending overlay for failure.
+    const frame = requestAnimationFrame(() => {
+      if (reducedMotion) {
         completionTimer.current = setTimeout(navigate, 180);
         return;
       }
@@ -158,11 +161,16 @@ export function RevealSimulationControl({
       ];
       completionTimer.current = setTimeout(navigate, 940);
     });
-  };
+    return () => {
+      cancelAnimationFrame(frame);
+      stopTransition();
+    };
+  }, [navigate, reducedMotion, stopTransition, transitioning]);
 
   const containFocus = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
+      event.stopPropagation();
       cancel();
       return;
     }

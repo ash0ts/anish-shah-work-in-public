@@ -43,7 +43,11 @@ test("public metrics expose reviewed display copy, never exact value fields", ()
     "7K+",
     "About half",
     "1K+",
-    "200K+",
+    "745K+",
+    "76%",
+    "70%",
+    "≈4,800",
+    "30",
     "More than two-thirds",
     "Hundreds",
     "$4M+",
@@ -53,7 +57,7 @@ test("public metrics expose reviewed display copy, never exact value fields", ()
     "49",
     "19+",
   ]);
-  assert.equal(publicBundle.metrics.length, 13);
+  assert.equal(publicBundle.metrics.length, 17);
   for (const metric of publicBundle.metrics) {
     assert.equal(typeof metric.displayValue, "string");
     assert(publicDisplays.has(metric.displayValue), metric.displayValue);
@@ -72,13 +76,13 @@ test("selected public measure revisions stay rounded and omit exact source figur
   const calls = publicBundle.metrics.find(
     (metric) =>
       metric.id ===
-      "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+      "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
   );
   const pipeline = publicBundle.metrics.find(
     (metric) => metric.id === "metric:events:pipeline-supported:2024-2025",
   );
-  assert.equal(calls?.displayValue, "200K+");
-  assert.equal(calls?.period.asOf, "2026-07-29");
+  assert.equal(calls?.displayValue, "745K+");
+  assert.equal(calls?.period.asOf, "2026-10-22");
   assert(!calls.displayValue.includes("$"));
   assert.equal(pipeline?.displayValue, "$4M+");
   assert.equal(pipeline?.period.label, "2024–2025");

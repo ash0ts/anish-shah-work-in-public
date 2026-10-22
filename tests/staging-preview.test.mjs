@@ -1876,7 +1876,7 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.doesNotMatch(hostedConfiguration, /2026-07-28/);
   assert.equal(
     packageJson.devDependencies["wrangler-e2e"],
-    "npm:wrangler@4.113.0",
+    "npm:wrangler@4.152.0",
   );
   assert.equal(
     packageJson.scripts["validate:release"],

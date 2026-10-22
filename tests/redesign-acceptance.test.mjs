@@ -222,7 +222,7 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   assert.equal(occurrences(visible, "See the work"), 1);
   assert.equal(occurrences(visible, "7K+"), 1);
   assert.equal(occurrences(visible, "$4M+"), 1);
-  assert.equal(occurrences(visible, "200K+"), 1);
+  assert.equal(occurrences(visible, "745K+"), 1);
   assert.equal(occurrences(visible, "More than two-thirds"), 0);
   assert.equal(occurrences(visible, "About half"), 0);
   assert.equal(

@@ -59,7 +59,7 @@ const reviewedSignals = [
   {
     id: "deployed",
     theme: "product",
-    metricId: "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+    metricId: "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
     iconId: "tool-interface",
     compactLimit: "Direct project usage · not revenue",
   },
@@ -104,7 +104,7 @@ const reviewedRails = [
     topicIds: [
       "foundation-models",
       "ml-systems-infrastructure",
-      "retrieval-knowledge-systems",
+      "evaluation-observability",
     ],
   },
   {

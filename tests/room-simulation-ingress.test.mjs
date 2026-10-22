@@ -69,6 +69,8 @@ test("the robot and memory-wafer reveal is bounded, cancellable, and reduced-mot
   assert.match(control, /playCue\("simulation-reveal"\)/);
   assert.match(control, /\[data-room-overview\], \[data-room-runtime\]/);
   assert.match(control, /document\.documentElement\.style\.overflow = "hidden"/);
-  assert.match(control, /animation\.cancel\(\)/);
+  // Cancellation must also restore the room's transformed inline styles.
+  // Browser coverage checks the restored opacity, focus, and Escape ownership.
+  assert.match(control, /animation\.revert\(\)/);
   assert.match(control, /clearTimeout\(completionTimer\.current\)/);
 });

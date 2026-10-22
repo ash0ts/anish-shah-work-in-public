@@ -136,7 +136,7 @@ test("the complete deck obeys public first-person and density budgets", async ()
   assert.deepEqual(report.errors, []);
 
   const summaries = Object.values(deck.workGroups).map((group) => group.summary);
-  assert.equal(summaries.length, 82);
+  assert.equal(summaries.length, 88);
   assert(
     summaries.every(
       (summary) =>
@@ -168,7 +168,7 @@ test("the complete deck obeys public first-person and density budgets", async ()
     ),
   );
   const proofMetrics = [
-    "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+    "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
     "metric:courses:enrollments:2026-07-30",
     "metric:events:pipeline-supported:2024-2025",
   ];

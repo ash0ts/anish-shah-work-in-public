@@ -253,6 +253,7 @@ export async function readCopyDeck(root) {
       shortTitle: values["short-title"],
       summary: values.summary,
       roleSummary: values["role-summary"],
+      ...(values["detail-note"] ? { detailNote: values["detail-note"] } : {}),
     };
     sourceFiles.push({ path: relativePath, source });
   }

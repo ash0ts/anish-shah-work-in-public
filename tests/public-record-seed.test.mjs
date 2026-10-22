@@ -281,14 +281,14 @@ test("canonical editorial slugs belong to WorkGroups, not their nested forms", (
     })),
   ];
 
-  assert.equal(publicBundle.items.length, 186);
-  assert.equal(publicBundle.workGroups.length, 82);
-  assert.equal(nestedItemIds.size, 157);
-  assert.equal(originalCollisions.length, 65);
+  assert.equal(publicBundle.items.length, 202);
+  assert.equal(publicBundle.workGroups.length, 88);
+  assert.equal(nestedItemIds.size, 173);
+  assert.equal(originalCollisions.length, 69);
   assert.equal(
     records.slice(0, publicBundle.items.length).filter(({ slug }) => slug === null)
       .length,
-    157,
+    173,
   );
   const expectedRecordCount =
     publicBundle.items.length +

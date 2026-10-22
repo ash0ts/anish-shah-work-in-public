@@ -81,11 +81,11 @@ const { homeTopicRailsFrom } = await tsImport(
 
 test("Home resolves every public WorkGroup into one of four lines", () => {
   assert.equal(bundle.schemaVersion, "1.2");
-  assert.equal(bundle.workGroups.length, 82);
+  assert.equal(bundle.workGroups.length, 88);
   const publicGroups = bundle.workGroups.filter(
     (group) => group.publicationState === "public",
   );
-  assert.equal(publicGroups.length, 82);
+  assert.equal(publicGroups.length, 88);
   assert.deepEqual(
     Object.fromEntries(
       [
@@ -99,10 +99,10 @@ test("Home resolves every public WorkGroup into one of four lines", () => {
       ]),
     ),
     {
-      "products-open-source": 14,
-      "courses-learning": 3,
-      "writing-research": 22,
-      "talks-programs": 43,
+      "products-open-source": 16,
+      "courses-learning": 5,
+      "writing-research": 23,
+      "talks-programs": 44,
     },
   );
   assert(
@@ -269,7 +269,7 @@ test("Work pairs flat filtered results with a semantic line-by-year color calend
 
 test("Home signal circuit resolves three reviewed qualified metric IDs", () => {
   for (const metricId of [
-    "metric:project:wandb-mcp-server:tool-calls:2026-07-29",
+    "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
     "metric:courses:enrollments:2026-07-30",
     "metric:events:pipeline-supported:2024-2025",
   ]) {

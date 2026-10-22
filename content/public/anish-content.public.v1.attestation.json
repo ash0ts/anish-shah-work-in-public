@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0",
-  "contentVersion": "9ec1fdd9a3ff0a5b",
-  "generatedAt": "2026-07-30T00:00:00.000Z",
+  "contentVersion": "792f0c3cdfc7570e",
+  "generatedAt": "2026-10-22T00:00:00.000Z",
   "artifacts": [
     {
       "path": "content/public/anish-content.public.v1.json",
-      "bytes": 673050,
-      "sha256": "06833d6f0fae7c539120d025d93ff1e3453ba27ceb14252006e7e52bc7073729"
+      "bytes": 723144,
+      "sha256": "1d03af78bcefcd8d752c4508f2d49fe7b2a58204c6cf85c0f184f2b8da402ace"
     },
     {
       "path": "content/schema/anish-content.schema.json",
@@ -25,8 +25,8 @@
     },
     {
       "path": "content/curation/public-claim-upgrades.v1.json",
-      "bytes": 2290,
-      "sha256": "d2b89fc1ad4b3c0c158b49635ae88cf7c17a6c42913e6474a9323591c17e4788"
+      "bytes": 7828,
+      "sha256": "9674db245072378b0b2b32b179c2a5336c989ddc11a30045c2b60b1a91f81026"
     },
     {
       "path": "content/curation/work-groups.v1.json",
@@ -34,14 +34,19 @@
       "sha256": "dc5f38cf0fba3a6f80b805fcdef8a5cedf8507403cdd4e9d47601f675119099e"
     },
     {
+      "path": "content/curation/portfolio-updates.v1.json",
+      "bytes": 28577,
+      "sha256": "158bfdf74064b7de79726a39d660c0c47779fd53acf7d74400302d73b3c35a87"
+    },
+    {
       "path": "content/presentation/metric-groups.v1.json",
-      "bytes": 1700,
-      "sha256": "9f1d59591325c53883164b8a47a1ef1b3ac4918e15a31cd0f64fe0694473acd8"
+      "bytes": 1988,
+      "sha256": "cb11e7bf86a04e9656606fceafbb9532d1cfe5320a8e47d47e6589406626f17d"
     },
     {
       "path": "content/presentation/home-signal-rails.v1.json",
-      "bytes": 1557,
-      "sha256": "5dc907cb908f7134167955832b194b21ece13c435cd5a50b89efd8b20c45cd2d"
+      "bytes": 1554,
+      "sha256": "91e84f2cd6fad7d3d98a8f1dfb4ece7a19e875408d72853b3ea16ad46446b558"
     },
     {
       "path": "content/presentation/career.v1.json",
@@ -55,8 +60,8 @@
     },
     {
       "path": "content/presentation/work-organizations.v1.json",
-      "bytes": 10775,
-      "sha256": "aca7c47925fcf347bd68657e5000ddf5aa9cba5a2701485f5011e0347b356406"
+      "bytes": 11067,
+      "sha256": "a85e1e8610598d761209c667ae0647d3ade7335345691febdd512e37d5974fe6"
     },
     {
       "path": "content/presentation/brand-assets.v1.json",
@@ -90,28 +95,28 @@
     }
   ],
   "generator": {
-    "moduleCount": 12,
-    "sha256": "51b28c467c07cabf7d909e5046269dbf3dd0a6d04ce264d56441350da052dc21"
+    "moduleCount": 13,
+    "sha256": "7ecb1431d71dde520f40ffa40ce67f0b681743bd3e0f63994548693810c6b397"
   },
   "counts": {
-    "items": 186,
-    "entities": 137,
-    "workGroups": 82,
-    "metrics": 13,
+    "items": 202,
+    "entities": 143,
+    "workGroups": 88,
+    "metrics": 17,
     "metricGroups": 4,
-    "evidence": 198,
-    "relations": 64,
+    "evidence": 209,
+    "relations": 67,
     "collections": 9,
     "narratives": 5,
-    "sourceSnapshots": 2
+    "sourceSnapshots": 3
   },
   "sourceSummary": {
     "footprintRows": 184,
-    "impactRows": 85,
-    "supplementalArtifacts": 2,
-    "publicItems": 186,
-    "approvedMetricCount": 13,
+    "impactRows": 90,
+    "supplementalArtifacts": 18,
+    "publicItems": 202,
+    "approvedMetricCount": 17,
     "footprintBackedUniqueWorks": 99,
-    "supplementalUniqueWorks": 1
+    "supplementalUniqueWorks": 7
   }
 }

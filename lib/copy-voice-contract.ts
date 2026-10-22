@@ -84,6 +84,7 @@ function profileForField(surface: string, key: string): CopyVoiceProfile {
     if (key === "short-title") return "work-short-title";
     if (key === "summary") return "work-summary";
     if (key === "role-summary") return "work-role-summary";
+    if (key === "detail-note") return "narrative";
     return "role";
   }
   if (surface === "play" && /^(?:watch|read|listen|collect|play|move|travel)-title$/u.test(key)) {

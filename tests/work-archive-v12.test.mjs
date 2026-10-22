@@ -92,12 +92,12 @@ test("the archive indexes public WorkGroups while keeping context-only observati
   );
   const residual = publicItems.filter((item) => !nestedItemIds.has(item.id));
 
-  assert.equal(records.length, 82);
+  assert.equal(records.length, 88);
   assert.deepEqual(
     new Set(records.map((record) => record.id)),
     new Set(publicBundle.workGroups.map((group) => group.id)),
   );
-  assert.equal(nestedItemIds.size, 157);
+  assert.equal(nestedItemIds.size, 173);
   assert.equal(residual.length, 29);
   assert.deepEqual(
     Object.fromEntries(
@@ -393,10 +393,10 @@ test("the archive paginates exactly 24 canonical works while preserving order", 
 test("the color calendar has four semantic rows, six years, and exact archive counts", () => {
   const years = [2021, 2022, 2023, 2024, 2025, 2026];
   const expected = {
-    "products-open-source": [0, 1, 4, 4, 2, 3],
-    "courses-learning": [0, 0, 0, 2, 2, 0],
-    "writing-research": [1, 4, 9, 7, 0, 1],
-    "talks-programs": [1, 2, 10, 19, 11, 1],
+    "products-open-source": [0, 1, 4, 4, 2, 5],
+    "courses-learning": [0, 0, 0, 2, 2, 2],
+    "writing-research": [1, 4, 9, 7, 0, 2],
+    "talks-programs": [1, 2, 10, 19, 11, 2],
   };
 
   assert.equal(workBuckets.length, 4);
@@ -430,8 +430,8 @@ test("the color calendar has four semantic rows, six years, and exact archive co
       ]),
     ),
     {
-      "products-open-source": [0, 2, 3, 3, 2, 2],
-      "courses-learning": [0, 0, 0, 2, 2, 0],
+      "products-open-source": [0, 2, 3, 3, 2, 3],
+      "courses-learning": [0, 0, 0, 2, 2, 2],
       "writing-research": [2, 3, 4, 4, 0, 2],
       "talks-programs": [2, 2, 4, 5, 4, 2],
     },
@@ -590,7 +590,7 @@ test("Work source renders a paginated four-line index and semantic color calenda
   assert.match(detailSource, /<dt>\{label\}<\/dt>/);
   assert.match(detailSource, /href=\{bucketHref\}/);
   assert.match(detailSource, /workThemeFacetLabel\(topic\)/);
-  assert.match(detailSource, /<PublicArtifactLink item=\{primary\} primary \/>/);
+  assert.match(detailSource, /<PublicArtifactLink item=\{primaryArtifact\} primary \/>/);
 
   assert.match(
     source,

@@ -192,7 +192,7 @@ test("homepage renders four topic rails and one qualified signal circuit", async
       /<a\b[^>]*href="\/work\?bucket=[^"]+(?:&amp;|&)topic=[^"]+#work-index"/g,
     ) ?? []).length <= 12,
   );
-  for (const value of ["200K+", "7K+", "$4M+"]) {
+  for (const value of ["745K+", "7K+", "$4M+"]) {
     assert.match(
       text,
       new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
@@ -215,10 +215,10 @@ test("homepage renders four topic rails and one qualified signal circuit", async
   assert.match(text, /Enrollments · not unique learners/i);
   assert.match(text, /Supported pipeline · not revenue/i);
   assert.match(html, /Internal analytics/i);
-  assert.match(html, /July 29 internal analytics checkpoint/i);
+  assert.match(html, /Owner-validated cumulative tool calls/i);
   assert.match(html, /Enrollments, not unique learners/i);
   assert.match(html, /not revenue, closed ARR, or personal attribution/i);
-  for (const checkpoint of ["2026-07-29", "2026-07-30", "2025-10-01"]) {
+  for (const checkpoint of ["2026-10-22", "2026-07-30", "2025-10-01"]) {
     assert.match(html, new RegExp(`as of ${checkpoint}`, "i"));
   }
   assert.doesNotMatch(text, /Tool use followed the MCP server launch/i);
@@ -268,9 +268,9 @@ test("all public routes expose useful server-rendered content", async () => {
         /Agent systems &amp; tool interfaces/i,
         /Evaluation &amp; observability/i,
         /Technical education &amp; workshops/i,
-        /Designing agent actions that are observable, bounded, and useful beyond a demo/i,
-        /Using traces, tests, and human review to turn model behavior into engineering decisions/i,
-        /Teaching fast-moving ML systems without sanding off the hard parts/i,
+        /Building tool interfaces and recoverable conversations, with examples from MCP and ARIA/i,
+        /Tracing failures, testing judges, and checking what an agent evaluation can establish/i,
+        /Hands-on labs in reward shortcuts, fine-tuning, and traced experiment loops/i,
         /Copy speaker profile/i,
         /Browse talks and workshops/i,
         /href="https:\/\/www\.linkedin\.com\/in\/anish-shah\/?"/i,
@@ -323,7 +323,7 @@ test("all public routes expose useful server-rendered content", async () => {
         /What the numbers mean/i,
         /id="public-footprint"/i,
         /id="internal-analytics"/i,
-        /13(?:\s|<!--.*?-->)*claims, each with its limit/i,
+        /17(?:\s|<!--.*?-->)*claims, each with its limit/i,
         /Count each project once/i,
         /id="bibliography"/i,
       ],
@@ -375,11 +375,11 @@ test("About publishes a bounded career profile without resume-level private deta
   assert.match(main, /Contact on LinkedIn/i);
   assert.match(
     main,
-    /Anish Shah builds agent systems, evaluation and observability workflows, and technical education at Weights &amp; Biases\./i,
+    /Anish Shah builds agent infrastructure and evaluation workflows at Weights &amp; Biases, part of CoreWeave\./i,
   );
   assert.match(
     main,
-    /His path spans programming education, computer-vision research, analytics, recommendation systems, production ML, customer-facing ML support, and MLOps growth\./i,
+    /His path spans programming education, computer-vision research, analytics, recommendation systems, and production ML\./i,
   );
   assert.match(main, />https:\/\/www\.linkedin\.com\/in\/anish-shah<\/span>/i);
   assert.match(main, /<button\b[^>]*\bhidden(?:="")?[^>]*>\s*Copy speaker profile/i);
@@ -394,9 +394,9 @@ test("Sources paginates the complete searchable bibliography 24 rows at a time",
   const compactMarkup = documentMarkup(compactHtml);
   const sourceText = visibleText(compactHtml);
   for (const value of [
-    "184",
-    "82",
-    "198",
+    "202",
+    "88",
+    "209",
     "13",
     "Claims",
     "Method",
@@ -686,14 +686,14 @@ test("public pages expose canonical, social, and structured metadata", async () 
   assert.match(work, /"@type":"CreativeWork"/);
   assert.match(work, /"@type":"BreadcrumbList"/);
   const conciseWorkSummary =
-    "Agents can inspect W&amp;B experiments and traces through the MCP interface. See the role, project materials, and sources.";
+    "Agent access to experiments and traces, with hosted deployment support, compatibility fixes, and usage instrumentation.";
   const workDescription = work.match(
     /<meta\b(?=[^>]*\bname="description")(?=[^>]*\bcontent="([^"]+)")[^>]*>/i,
   )?.[1];
   assert.equal(workDescription, conciseWorkSummary);
   assert.match(
     work,
-    /"description":"Agents can inspect W&B experiments and traces through the MCP interface\. See the role, project materials, and sources\."/,
+    /"description":"Agent access to experiments and traces, with hosted deployment support, compatibility fixes, and usage instrumentation\."/,
   );
 });
 

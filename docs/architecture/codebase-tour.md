@@ -153,6 +153,15 @@ inventoried in the public content attestation; they are not freelancer copy
 surfaces. Studio's owner-only copy report enumerates every page deck path and
 review class plus the retained D1 WorkGroup wording that Git copy supersedes.
 
+Reviewed portfolio additions enter through
+`content/curation/portfolio-updates.v1.json`, not edits to the four immutable
+source files. `scripts/content/updates.mjs` checks additive identities, explicit
+date bases, optional public artifacts, and dated aggregate observations before
+normalization. Internal contributions expose only approved descriptions and a
+method note; no private repository link is needed to render an honest project
+page. Active metric replacements preserve the historical owner observations.
+An owner review date does not become a publication date or measurement cutoff.
+
 At runtime, `lib/server/public-content.ts` applies the Git-owned copy fields to
 the sanitized base and resolves the active D1 publication. The selector
 validates snapshot shape, base content version, record identity, public

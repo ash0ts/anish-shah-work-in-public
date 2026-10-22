@@ -64,14 +64,14 @@ test("the speaker profile resolves reviewed labels and filtered Work links", () 
         id: "agent-systems",
         label: "Agent systems & tool interfaces",
         description:
-          "Designing agent actions that are observable, bounded, and useful beyond a demo.",
+          "Building tool interfaces and recoverable conversations, with examples from MCP and ARIA.",
         href: "/work?bucket=talks-programs&topic=agent-systems#work-index",
       },
       {
         id: "evaluation-observability",
         label: "Evaluation & observability",
         description:
-          "Using traces, tests, and human review to turn model behavior into engineering decisions.",
+          "Tracing failures, testing judges, and checking what an agent evaluation can establish.",
         href:
           "/work?bucket=talks-programs&topic=evaluation-observability#work-index",
       },
@@ -79,7 +79,7 @@ test("the speaker profile resolves reviewed labels and filtered Work links", () 
         id: "education-community",
         label: "Technical education & workshops",
         description:
-          "Teaching fast-moving ML systems without sanding off the hard parts.",
+          "Hands-on labs in reward shortcuts, fine-tuning, and traced experiment loops.",
         href:
           "/work?bucket=talks-programs&topic=education-community#work-index",
       },

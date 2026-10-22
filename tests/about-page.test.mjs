@@ -69,7 +69,7 @@ test("the About copy deck carries one bounded, copyable speaker profile", async 
   );
   assert.match(
     source,
-    /## speaker-bio\nAnish Shah builds agent systems, evaluation and observability workflows, and technical education at Weights & Biases\. His work focuses on what happens after an AI demo: tracing behavior, testing whether an application works, designing tool interfaces people can inspect, and deciding where human review belongs\.\n\nHis path spans programming education, computer-vision research, analytics, recommendation systems, production ML, customer-facing ML support, and MLOps growth\. That range shapes talks that connect system design to the practical decisions teams face when they build and operate AI applications\. He uses concrete implementations and public work to explain what worked, what failed, and which conclusions the evidence can actually support\.(?:\n|$)/u,
+    /## speaker-bio\nAnish Shah builds agent infrastructure and evaluation workflows at Weights & Biases, part of CoreWeave\. His engineering contributions span the W&B MCP Server's deployment and reliability, ARIA's streaming and recovery, and controlled studies of agent behavior\. His talks use that work to explain how to trace failures, test tool interfaces, and decide what the evidence supports\.\n\nHis path spans programming education, computer-vision research, analytics, recommendation systems, and production ML\. He develops hands-on curricula and co-taught Fully Connected's Your Agent Learned to Cheat lab, where participants traced reward shortcuts and repaired the tests that missed them\. He brings concrete implementations, experimental limits, and the engineering decisions behind them into each session\.(?:\n|$)/u,
   );
   assert.match(
     source,
@@ -77,7 +77,7 @@ test("the About copy deck carries one bounded, copyable speaker profile", async 
   );
   assert.match(
     source,
-    /## speaker-topic-agent-systems-description\nDesigning agent actions that are observable, bounded, and useful beyond a demo\./u,
+    /## speaker-topic-agent-systems-description\nBuilding tool interfaces and recoverable conversations, with examples from MCP and ARIA\.(?:\n|$)/u,
   );
   assert.match(
     source,
@@ -85,7 +85,7 @@ test("the About copy deck carries one bounded, copyable speaker profile", async 
   );
   assert.match(
     source,
-    /## speaker-topic-evaluation-observability-description\nUsing traces, tests, and human review to turn model behavior into engineering decisions\./u,
+    /## speaker-topic-evaluation-observability-description\nTracing failures, testing judges, and checking what an agent evaluation can establish\.(?:\n|$)/u,
   );
   assert.match(
     source,
@@ -93,7 +93,7 @@ test("the About copy deck carries one bounded, copyable speaker profile", async 
   );
   assert.match(
     source,
-    /## speaker-topic-education-community-description\nTeaching fast-moving ML systems without sanding off the hard parts\./u,
+    /## speaker-topic-education-community-description\nHands-on labs in reward shortcuts, fine-tuning, and traced experiment loops\.(?:\n|$)/u,
   );
   assert.match(source, /## speaker-copy-cta\nCopy speaker profile/u);
   assert.match(source, /## speaker-work-cta\nBrowse talks and workshops/u);
@@ -111,7 +111,7 @@ test("the About narrative keeps the approved career progression", async () => {
   );
   assert.match(
     source,
-    /## current-focus\nAt Weights & Biases, I moved from customer-facing ML support into MLOps growth and then agent systems\. The work now centers on evaluation and observability, tool interfaces, bounded execution, and human review\. Lessons that survive contact with real systems become open-source software, courses, talks, and workshops\./u,
+    /## current-focus\nAt Weights & Biases, part of CoreWeave, I contribute to MCP deployment and reliability, ARIA's streaming and recovery, and evaluations that inspect agent behavior\. Lessons from that work become open-source tools, articles, courses, and hands-on workshops\.(?:\n|$)/u,
   );
   assert.match(source, /## career-heading\nHow the work developed\./u);
 });

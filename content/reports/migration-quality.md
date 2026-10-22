@@ -1,6 +1,6 @@
 # Canonical content migration quality report
 
-Generated from four immutable source files plus reviewed canonical and presentation curation. Content version: `9ec1fdd9a3ff0a5b`.
+Generated from four immutable source files plus reviewed canonical and presentation curation. Content version: `792f0c3cdfc7570e`.
 
 ## Source accounting
 
@@ -8,12 +8,13 @@ Generated from four immutable source files plus reviewed canonical and presentat
 |---|---:|---:|---:|
 | Public footprint CSV | 184 | 184 | 184 |
 | Impact metrics CSV | 61 | 85 | 85 |
+| Reviewed metric additions | — | 5 | 5 |
 | Public footprint Markdown | — | 13 level-two sections | 13 owner narrative blocks |
 | Impact report Markdown | — | 10 level-two sections | 10 owner narrative blocks |
 
-The impact CSV has **24 more rows** than the plan baseline. The importer keeps all current rows and treats the file as the authority.
+The impact CSV has **24 more rows** than the plan baseline. The importer preserves those immutable observations; separately reviewed aggregate additions do not rewrite the CSV.
 
-The canonical bundle also contains **2 reviewed public artifacts** sourced from explicit links in the supplied Markdown, without changing or replacing any footprint observation.
+The canonical bundle also contains **18 reviewed supplemental records** from the supplied Markdown and versioned portfolio updates. Owner-reviewed descriptions may have no public materials; they never expose private links or masquerade as public code. Original footprint observations are unchanged.
 
 ## Footprint inventory
 
@@ -42,7 +43,7 @@ The canonical bundle also contains **2 reviewed public artifacts** sourced from 
 | Predicate | Generated |
 |---|---:|
 | derivative_of | 1 |
-| implements | 4 |
+| implements | 7 |
 | mirror_of | 12 |
 | part_of | 9 |
 | recording_of | 20 |
@@ -53,25 +54,25 @@ Recording relations require a unique best typed match across URL role, date, exa
 
 ## Canonical entities
 
-- Entity groups: 137 (artifact 40, occurrence 52, program 8, work 37).
+- Entity groups: 143 (artifact 40, occurrence 53, program 8, work 42).
 - Source observations keep stable opaque IDs and retain their legacy IDs and route aliases.
 - Work, occurrence, artifact, and program groupings preserve every source item; representations and context records remain inspectable without inflating unique-work views.
 
 ## Public WorkGroups
 
-- Public WorkGroups: 82 (courses-learning 3, products-open-source 14, talks-programs 43, writing-research 22).
+- Public WorkGroups: 88 (courses-learning 5, products-open-source 16, talks-programs 44, writing-research 23).
 - Every public `unique_work` entity belongs to exactly one WorkGroup, including the reviewed EvalForge supplemental work.
 - Explicit curation groups related courses, workshop editions, regional broadcasts, repeated talk deliveries, pull-request families, and production credits without changing canonical entity IDs or legacy routes.
 - Remaining eligible entities receive deterministic standalone groups; context entities never become standalone WorkGroups.
-- Owner-only grouping ledger decisions: program_sibling 2, reference_only 30, same_occurrence_representation 31, same_story 11, standalone 71.
+- Owner-only grouping ledger decisions: program_sibling 2, reference_only 30, same_occurrence_representation 31, same_story 11, standalone 77.
 - Duplicate titles and URLs alone never create a grouping; the ledger requires explicit curation, typed relations, or deterministic standalone classification.
 
 ## Publication projection
 
-- Owner bundle: 186 items (184 footprint observations + 2 reviewed Markdown artifacts), 85 exact metric observations plus 13 reviewed public projections, 215 evidence records, and 23 source narrative blocks.
-- Public bundle: 186 public items, 137 canonical entities, 82 WorkGroups, 13 rounded or derived public measures in 4 presentation groups, 198 public evidence records, and 9 collections.
-- Exact metric observations remain only in the ignored owner bundle.
-- The July MCP usage checkpoint and the cross-year tracked-program total replace their older public headline checkpoints; exact source values remain owner-only.
+- Owner bundle: 202 items (184 footprint observations + 18 reviewed supplemental records), 90 exact metric observations plus 17 reviewed public projections, 227 evidence records, and 23 source narrative blocks.
+- Public bundle: 202 public items, 143 canonical entities, 88 WorkGroups, 17 rounded or derived public measures in 4 presentation groups, 209 public evidence records, and 9 collections.
+- Legacy exact metric observations remain only in the ignored owner bundle. The versioned update input contains only owner-approved, public-safe aggregates.
+- Dated active-claim replacements select the Home MCP checkpoint and cross-year program total without deleting older owner observations. October review dates are not invented measurement cutoffs.
 - Public metrics contain display strings and qualifiers, never raw numeric value fields.
 - Internal evidence URLs, source excerpts, local paths, and source hashes are excluded from public output.
 
@@ -80,7 +81,7 @@ Public measure records:
 - `metric:courses:enrollments:2026-07-30`
 - `metric:courses:same-day-account-share:2026-07-30`
 - `metric:course:llm-apps-evaluation:launch-signups:2025-01-10`
-- `metric:project:wandb-mcp-server:tool-calls:2026-07-29`
+- `metric:project:wandb-mcp-server:tool-calls:2026-10-22`
 - `metric:project:wandb-mcp-server:audience:2026-06-11`
 - `metric:project:wandb-mcp-server:returning-share:2026-06-11`
 - `metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28`
@@ -90,6 +91,10 @@ Public measure records:
 - `metric:event:fully-connected-sf:reach:2024`
 - `metric:archive:event-references:2026-07`
 - `metric:archive:recording-hours:2026-07`
+- `metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22`
+- `metric:project:wandb-mcp-server:returning-share:2026-10-22`
+- `metric:project:wandb-mcp-server:lifetime-identities:2026-10-22`
+- `metric:project:wandb-mcp-server:peak-companies:2026-10-22`
 
 ## Private or excluded metric families
 
@@ -99,6 +104,7 @@ The following source metric families remain exact only in the owner bundle unles
 - `analyst_interactions`
 - `attendees`
 - `attributed_qo_pipeline_arr`
+- `average_weekly_active_identity_growth_pct`
 - `avg_calls_per_user`
 - `campaign_leads_all_courses`
 - `completions_tracked`
@@ -118,11 +124,14 @@ The following source metric families remain exact only in the owner bundle unles
 - `join_date`
 - `launch_signups_first_36_hours`
 - `leads`
+- `lifetime_recorded_identities`
 - `named_accounts_supported`
 - `official_nvidia_blueprint`
 - `open_source_release`
+- `peak_observed_companies`
 - `pipeline_supported_usd`
 - `pod_ownership`
+- `previously_observed_active_identity_pct`
 - `production_tool_call_events_30d`
 - `registered_tools`
 - `registrants`
@@ -145,10 +154,10 @@ Completion floors, paid-organization associations, aggregate course-campaign lea
 
 ## Verification checks
 
-- Stable opaque source-observation IDs are unique across all 186 items; legacy IDs and old route slugs remain aliases.
+- Stable opaque source-observation IDs are unique across all 202 items; legacy IDs and old route slugs remain aliases.
 - Every organization, entity, evidence, relation, collection, and metric subject reference resolves.
 - Every WorkGroup member, context entity, item, organization, and metric presentation reference resolves.
-- All 184 footprint rows and 85 impact rows retain source-row fingerprints in the owner bundle.
+- All 184 footprint rows and 90 impact rows retain source-row fingerprints in the owner bundle.
 - Tool-call display values are validated against currency prefixes.
 - Item-detail metrics require an explicit item or canonical-entity subject; collection metrics are never inherited implicitly.
 - The public projection contains only `public` publication states and `public_web` evidence.

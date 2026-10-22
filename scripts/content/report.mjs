@@ -61,6 +61,8 @@ export function buildQualityReport({
   const ownerExactMetricCount = ownerBundle.metrics.filter((metric) =>
     Object.hasOwn(metric, "sourceRecord"),
   ).length;
+  const reviewedMetricCount = impactRows.filter((row) => row.source_system === "owner_review").length;
+  const legacyMetricCount = impactRows.length - reviewedMetricCount;
   const footprintItemCount = ownerBundle.items.filter(
     (item) => item.sourceRecord?.snapshotId === "snapshot:public-footprint-csv",
   ).length;
@@ -94,13 +96,14 @@ Generated from four immutable source files plus reviewed canonical and presentat
 | Source | Plan baseline | Current parsed | Accounted |
 |---|---:|---:|---:|
 | Public footprint CSV | ${expectedFootprintRows} | ${footprintRows.length} | ${footprintItemCount} |
-| Impact metrics CSV | ${planBaselineImpactRows} | ${impactRows.length} | ${ownerExactMetricCount} |
+| Impact metrics CSV | ${planBaselineImpactRows} | ${legacyMetricCount} | ${legacyMetricCount} |
+| Reviewed metric additions | — | ${reviewedMetricCount} | ${reviewedMetricCount} |
 | Public footprint Markdown | — | ${footprintSections.length} level-two sections | ${footprintSections.length} owner narrative blocks |
 | Impact report Markdown | — | ${impactSections.length} level-two sections | ${impactSections.length} owner narrative blocks |
 
-The impact CSV has **${impactRows.length - planBaselineImpactRows} more rows** than the plan baseline. The importer keeps all current rows and treats the file as the authority.
+The impact CSV has **${legacyMetricCount - planBaselineImpactRows} more rows** than the plan baseline. The importer preserves those immutable observations; separately reviewed aggregate additions do not rewrite the CSV.
 
-The canonical bundle also contains **${supplementalItemCount} reviewed public artifacts** sourced from explicit links in the supplied Markdown, without changing or replacing any footprint observation.
+The canonical bundle also contains **${supplementalItemCount} reviewed supplemental records** from the supplied Markdown and versioned portfolio updates. Owner-reviewed descriptions may have no public materials; they never expose private links or masquerade as public code. Original footprint observations are unchanged.
 
 ## Footprint inventory
 
@@ -140,10 +143,10 @@ Recording relations require a unique best typed match across URL role, date, exa
 
 ## Publication projection
 
-- Owner bundle: ${ownerBundle.items.length} items (${footprintItemCount} footprint observations + ${supplementalItemCount} reviewed Markdown artifacts), ${ownerExactMetricCount} exact metric observations plus ${publicBundle.metrics.length} reviewed public projections, ${ownerBundle.evidence.length} evidence records, and ${ownerBundle.narratives.length} source narrative blocks.
+- Owner bundle: ${ownerBundle.items.length} items (${footprintItemCount} footprint observations + ${supplementalItemCount} reviewed supplemental records), ${ownerExactMetricCount} exact metric observations plus ${publicBundle.metrics.length} reviewed public projections, ${ownerBundle.evidence.length} evidence records, and ${ownerBundle.narratives.length} source narrative blocks.
 - Public bundle: ${publicBundle.items.length} public items, ${publicBundle.entities.length} canonical entities, ${publicBundle.workGroups.length} WorkGroups, ${publicBundle.metrics.length} rounded or derived public measures in ${publicBundle.metricGroups.length} presentation groups, ${publicBundle.evidence.length} public evidence records, and ${publicBundle.collections.length} collections.
-- Exact metric observations remain only in the ignored owner bundle.
-- The July MCP usage checkpoint and the cross-year tracked-program total replace their older public headline checkpoints; exact source values remain owner-only.
+- Legacy exact metric observations remain only in the ignored owner bundle. The versioned update input contains only owner-approved, public-safe aggregates.
+- Dated active-claim replacements select the Home MCP checkpoint and cross-year program total without deleting older owner observations. October review dates are not invented measurement cutoffs.
 - Public metrics contain display strings and qualifiers, never raw numeric value fields.
 - Internal evidence URLs, source excerpts, local paths, and source hashes are excluded from public output.
 

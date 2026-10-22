@@ -19,6 +19,25 @@ Never hand-edit the generated public JSON. Stable IDs, aliases, relations,
 WorkGroups, metric subjects, and evidence are canonical-data concerns, not copy
 deck or Studio concerns.
 
+Reviewed additions live in `content/curation/portfolio-updates.v1.json`.
+The versioned input carries an explicit review date, item date basis and status,
+optional public artifact URL, stable entity/group memberships, and dated metric
+observations. It extends the archive without editing the four original inputs.
+Merge or article-update dates use an unknown date basis with an explicit status;
+they are not relabelled as publication or delivery dates. Review freshness never
+backdates or advances an older observation.
+
+Approved internal contributions use public owner-authored descriptions and a
+method note, not private repository URLs or corroborating excerpts. Pages with
+no public artifact say “Materials not public.” Supporting articles, labs, and
+pull requests remain inside one project. Optional fact-checked `detail-note`
+copy explains contribution boundaries in the existing Sources disclosure.
+
+Metric additions and active-claim replacements require dated observations,
+reviewed display values, units, scope, attribution, qualifiers, and source
+selectors. Replacement changes the active public claim, not the historical
+owner observations. Unresolved measurements stay out of deployable content.
+
 ## Copy deck
 
 `content/copy/` is the only freelancer-facing wording surface. Its fixed-field
