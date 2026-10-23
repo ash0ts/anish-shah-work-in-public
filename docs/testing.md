@@ -234,6 +234,14 @@ media authorization, upload bounds, EXIF removal, atomic publication, and the
 disabled-mode 404/sitemap boundary. Preview uses synthetic Travel data and has
 no R2 binding.
 
+The pinned Vinext 0.0.50 entry generator reads a stale `searchParamsObject`
+property during page preflight; the collector returns `pageSearchParams`.
+`build/vinext-page-query-compat.ts` corrects that single generated virtual-entry
+access so preflight, metadata, and rendering see the same query. It fails closed
+if the upstream expression changes. Review and remove the shim when upgrading
+Vinext; never patch installed packages or deployable output. The Travel review
+fixtures exercise non-default query selection through real HTTP requests.
+
 Simulation browser coverage must exercise both Action and Tactical completion,
 the semantic no-JavaScript dossier, reduced-motion/forced-colors/Save-Data
 fallbacks, and authored completion during a total model outage. Assert that:
