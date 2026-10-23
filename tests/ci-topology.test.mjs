@@ -284,6 +284,16 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.doesNotMatch(soak, /runs-on: ubuntu-latest/u);
 });
 
+test("preview cleanup accepts supported Node majors without parsing the CLI v prefix", async () => {
+  const cleanup = await text(".github/workflows/preview-cleanup.yml");
+  const match = cleanup.match(/run: node -e '([^'\n]+)'/u);
+  assert.ok(match, "Cleanup must check its Node runtime without installing dependencies.");
+  for (const [version, status] of [["18.20.0", 1], ["20.0.0", 0], ["22.16.0", 0], ["24.18.0", 0], ["invalid", 1]]) {
+    const result = spawnSync(process.execPath, ["-e", `Object.defineProperty(process.versions, "node", { value: ${JSON.stringify(version)} });\n${match[1]}`], { encoding: "utf8" });
+    assert.equal(result.status, status, `${version}: ${result.stderr}`);
+  }
+});
+
 test("code previews are opt-in and janitor work is weekly and dependency-free", async () => {
   const [deploy, cleanup, copyValidation, copyPreview] = await Promise.all([
     text(".github/workflows/preview-deploy.yml"),
