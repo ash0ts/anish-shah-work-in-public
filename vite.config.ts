@@ -2,6 +2,7 @@ import vinext from "vinext";
 import { defineConfig, loadEnv } from "vite";
 import hostingConfig from "./.openai/hosting.json" with { type: "json" };
 import { sites } from "./build/sites-vite-plugin.ts";
+import { vinextPageQueryCompat } from "./build/vinext-page-query-compat.ts";
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
@@ -119,6 +120,7 @@ export default defineConfig(async ({ command, mode }) => {
     },
     plugins: [
       vinext(),
+      vinextPageQueryCompat(),
       sites(),
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },

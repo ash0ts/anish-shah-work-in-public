@@ -5,9 +5,33 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import yaml from "js-yaml";
+import { vinextPageQueryCompat } from "../build/vinext-page-query-compat.ts";
 
 const require = createRequire(import.meta.url);
 const braces = require("braces");
+
+test("pinned Vinext preflight preserves query values and repeated parameters", async () => {
+  const entry = await readFile(new URL("../node_modules/vinext/dist/entries/app-rsc-entry.js", import.meta.url), "utf8");
+  const collector = await readFile(new URL("../node_modules/vinext/dist/server/app-page-head.js", import.meta.url), "utf8");
+  const broken = "__collectAppPageSearchParams(searchParams).searchParamsObject";
+  assert.equal(entry.split(broken).length, 2);
+  assert.match(collector, /return \{\s*hasSearchParams,\s*pageSearchParams\s*\}/);
+  const plugin = vinextPageQueryCompat();
+  const expression = `return ${broken};`;
+  const transformed = plugin.transform(expression, "\0virtual:vinext-rsc-entry");
+  const values = Object.assign(Object.create(null), {
+    fixture: "long-caption", pageSize: "24", tag: ["city", "night"],
+  });
+  const evaluate = new Function("__collectAppPageSearchParams", "searchParams", transformed.code);
+  const query = new URLSearchParams("fixture=long-caption&pageSize=24&tag=city&tag=night");
+  assert.equal(evaluate((input) => {
+    assert.equal(input, query);
+    return { hasSearchParams: true, pageSearchParams: values };
+  }, query), values);
+  assert.equal(plugin.transform(expression, "/app/page.tsx"), null);
+  assert.throws(() => plugin.transform("upstream changed", "\0virtual:vinext-rsc-entry"), /review the pinned/);
+  assert.throws(() => plugin.transform(expression + expression, "\0virtual:vinext-rsc-entry"), /review the pinned/);
+});
 
 test("the build resolves the reviewed local braces patch, not an advisory waiver", async () => {
   const manifest = require("braces/package.json");

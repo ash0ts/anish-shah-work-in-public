@@ -43,6 +43,21 @@ async function captureJpeg(page, filename) {
   });
 }
 
+async function openCollectionScreen(page, id, parameters) {
+  const response = await page.goto(`/play/${id}?${parameters}`, {
+    waitUntil: "domcontentloaded",
+  });
+  expect(response?.status()).toBe(200);
+  const screen = page.locator("main[data-room-screen]");
+  // The semantic heading precedes the animated surface, so it remains readable
+  // throughout the match cut and when the enhancement is unavailable.
+  await expect(screen.getByRole("heading", { level: 1 })).toHaveText(/\S+/);
+  await expect(
+    screen.locator(`[data-match-cut-object="${id}"]`),
+  ).toHaveCount(1);
+  await settleRoomScreen(page);
+}
+
 test.describe("My Room 2001 visual review evidence", () => {
   test.skip(!capture, "Run npm run capture:room-review to create review evidence.");
 
@@ -137,26 +152,14 @@ test.describe("My Room 2001 visual review evidence", () => {
       for (const scenario of scenarios) {
         const parameters = new URLSearchParams({ fixture: scenario });
         if (id === "collect") parameters.set("view", "gallery");
-        await page.goto(`/play/${id}?${parameters}`, {
-          waitUntil: "domcontentloaded",
-        });
-        await expect(
-          page.locator(`[data-match-cut-object="${id}"] h1`),
-        ).toHaveText(/\S+/);
-        await settleRoomScreen(page);
+        await openCollectionScreen(page, id, parameters);
         await captureJpeg(page, `${id}-${scenario}-desktop.jpg`);
       }
 
       await page.setViewportSize({ width: 390, height: 844 });
       const mobileParameters = new URLSearchParams({ fixture: "ready" });
       if (id === "collect") mobileParameters.set("view", "gallery");
-      await page.goto(`/play/${id}?${mobileParameters}`, {
-        waitUntil: "domcontentloaded",
-      });
-      await expect(
-        page.locator(`[data-match-cut-object="${id}"] h1`),
-      ).toHaveText(/\S+/);
-      await settleRoomScreen(page);
+      await openCollectionScreen(page, id, mobileParameters);
       await captureJpeg(page, `${id}-ready-mobile.jpg`);
     });
   }
@@ -186,7 +189,7 @@ test.describe("My Room 2001 visual review evidence", () => {
     await settleRoomScreen(page);
     await expect(page.locator("[data-travel-trip]")).toHaveCount(0);
     await expect(
-      page.getByRole("heading", { name: "No published stories here yet" }),
+      page.getByRole("heading", { name: "No trips here yet", exact: true }),
     ).toBeVisible();
     await captureJpeg(page, "travel-empty-desktop.jpg");
 
@@ -195,7 +198,7 @@ test.describe("My Room 2001 visual review evidence", () => {
     });
     await settleRoomScreen(page);
     await expect(page.locator("[data-travel-trip]")).toHaveCount(1);
-    await expect(page.getByText("Planned signal", { exact: true })).toBeVisible();
+    await expect(page.getByText("Planned trip", { exact: true })).toBeVisible();
     await expect(page.locator("[data-travel-trip] img")).toHaveCount(0);
     await captureJpeg(page, "travel-planned-desktop.jpg");
 
@@ -225,12 +228,14 @@ test.describe("My Room 2001 visual review evidence", () => {
     await expect(newYork).toHaveAttribute("aria-pressed", "true");
     await captureJpeg(page, "travel-admin1-new-york-desktop.jpg");
 
-    await page.goto(
+    const longCaptionResponse = await page.goto(
       "/play/travel/trips/long-caption-preview?fixture=long-caption",
       { waitUntil: "domcontentloaded" },
     );
+    expect(longCaptionResponse?.status()).toBe(200);
     await settleRoomScreen(page);
     await expect(page.locator("[data-travel-trip-log]")).toBeVisible();
+    await expect(page).toHaveTitle(/A postcard with enough context/);
     await expect(
       page.getByText(/The light changed while the street kept moving/),
     ).toBeVisible();
@@ -242,10 +247,11 @@ test.describe("My Room 2001 visual review evidence", () => {
         missingResponses.push(response.status());
       }
     });
-    await page.goto(
+    const missingMediaResponse = await page.goto(
       "/play/travel/trips/missing-media-preview?fixture=missing-media",
       { waitUntil: "networkidle" },
     );
+    expect(missingMediaResponse?.status()).toBe(200);
     await settleRoomScreen(page);
     await expect(page.locator("[data-travel-trip-log] img")).toHaveCount(1);
     expect(missingResponses).toContain(404);
