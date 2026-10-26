@@ -163,7 +163,7 @@ jobs:
           needs.classify.outputs.requires_build == 'true' ||
           (needs.classify.outputs.lane == 'backend' &&
           contains(github.event.pull_request.labels.*.name, 'preview'))
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pr-build-${{ env.PR_SOURCE_SHA }}
           path: dist
@@ -186,7 +186,7 @@ jobs:
       - name: Set up repository toolchain
         uses: ./.github/actions/setup-repository
       - name: Download the validated PR build
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: pr-build-${{ env.PR_SOURCE_SHA }}
           path: dist
@@ -203,7 +203,7 @@ jobs:
         run: node scripts/ci/run-browser-scopes.mjs
       - name: Upload browser failure evidence
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pr-browser-failure-${{ env.PR_SOURCE_SHA }}
           path: |
