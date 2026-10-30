@@ -10,6 +10,28 @@ import { vinextPageQueryCompat } from "../build/vinext-page-query-compat.ts";
 const require = createRequire(import.meta.url);
 const braces = require("braces");
 
+test("bounded Zod collections reject oversized input before parsing elements", () => {
+  const { z } = require("zod");
+  let parsed = 0;
+  const element = z.preprocess((value) => {
+    parsed += 1;
+    return value;
+  }, z.string());
+  for (const [schema, input] of [
+    [z.array(element).max(2), [0, 1, 2]],
+    [z.set(element).max(2), new Set([0, 1, 2])],
+    [z.map(z.string(), element).max(2), new Map([["a", 0], ["b", 1], ["c", 2]])],
+  ]) {
+    const result = schema.safeParse(input);
+    assert.equal(result.success, false);
+    assert.equal(result.error.issues.length, 1);
+    assert.equal(result.error.issues[0].code, "too_big");
+  }
+  assert.equal(parsed, 0);
+  assert.deepEqual(z.array(element).max(2).parse(["ok"]), ["ok"]);
+  assert.equal(parsed, 1);
+});
+
 test("pinned Vinext preflight preserves query values and repeated parameters", async () => {
   const entry = await readFile(new URL("../node_modules/vinext/dist/entries/app-rsc-entry.js", import.meta.url), "utf8");
   const collector = await readFile(new URL("../node_modules/vinext/dist/server/app-page-head.js", import.meta.url), "utf8");

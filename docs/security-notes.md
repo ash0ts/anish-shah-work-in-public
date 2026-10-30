@@ -1,7 +1,7 @@
 # Security maintenance notes
 
 > Checked-in dependency and workflow state in this document was last reviewed
-> on **2026-10-22**. GitHub billing, feature availability, and live repository
+> on **2026-10-30**. GitHub billing, feature availability, and live repository
 > settings are mutable account state; recheck them in GitHub before relying on
 > them for a release or collaborator-access decision.
 
@@ -25,8 +25,11 @@
   snapshots, approvals, and history immediately.
 - `npm run security:audit` fails on any runtime advisory or any high/critical
   full-tree advisory. The remaining development-only moderate advisories are
-  inherited through Drizzle Kit’s retired esbuild loader; Drizzle Kit is never
-  shipped in the Worker runtime and `npm audit --omit=dev` must remain clean.
+  inherited through Drizzle Kit’s retired esbuild loader and Vinext's optional
+  Satori image-generation tooling. Neither is shipped in the Worker runtime;
+  `npm audit --omit=dev` must remain clean. This site does not render user-supplied
+  markup through Satori. Review upstream compatible patches without accepting
+  npm's suggested unrelated framework change.
 - Vinext declares `image-size@2.0.2`, whose archived upstream has unpatched
   infinite-loop advisories for ICNS, HEIF/AVIF, and JXL. The lockfile replaces
   it with `vendor/image-size-safe`, a bounded, dependency-free metadata reader
@@ -40,6 +43,13 @@
   Vite on 8.x. Patched Sharp, Undici, URI/YAML/glob utilities, source-map, and
   browser-compatibility data are resolved in the lockfile. Do not substitute
   an npm-suggested framework downgrade or relax the audit gate.
+- The October 30 release repair pins Undici `7.30.1`, fast-uri `3.1.9`, and
+  Zod 4 consumers to `4.6.6`. Zod's [upstream bounded-collection fix](https://github.com/colinhacks/zod/pull/6652)
+  is exercised by a regression test that rejects oversized input before element
+  parsing. Lighthouse's compatible Puppeteer 25 dependency resolves to `25.13.0`,
+  removing the old Chromium BiDi dependency on unpatched Zod 3. See the
+  [Undici advisory](https://github.com/nodejs/undici/security/advisories/GHSA-2m5v-pch6-74hx)
+  and [fast-uri advisory](https://github.com/fastify/fast-uri/security/advisories/GHSA-w74x-v6f9-j3xg).
 - `braces` has no upstream fix for
   [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
   as of the review date. Build/lint consumers use the MIT-licensed local
