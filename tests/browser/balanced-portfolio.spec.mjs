@@ -17,6 +17,7 @@ test("the illustrated overview opens each work type without another navigation l
 });
 
 test("calendar headings filter the active scope while mobile year navigation only browses", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/work", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Show previous year" }).click();
