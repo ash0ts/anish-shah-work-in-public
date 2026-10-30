@@ -1,5 +1,4 @@
 import type {
-  HomeRailIconId,
   HomeSignalIconId,
 } from "@/lib/home-presentation";
 import type { ThemeFacetId } from "@/lib/work-facets";
@@ -47,49 +46,6 @@ export function HomeSignalIcon({
       <rect x="5" y="8" width="22" height="16" rx="2" />
       <path d="M10 13h12M10 18h7M21 18h1M16 5v3M16 24v3" />
       <circle cx="8" cy="13" r=".7" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-export function HomeRailIcon({
-  className,
-  iconId,
-}: IconProps & { iconId: HomeRailIconId }) {
-  if (iconId === "learning-loop") {
-    return (
-      <svg {...sharedProps} className={className}>
-        <path d="M7 9.5 16 5l9 4.5-9 4.5z" />
-        <path d="M10 12v7c2.8 2.5 9.2 2.5 12 0v-7M25 10v8" />
-        <path d="M7 25h18" />
-      </svg>
-    );
-  }
-  if (iconId === "research-trace") {
-    return (
-      <svg {...sharedProps} className={className}>
-        <path d="M6 25 13 7h6l7 18M10 17h12" />
-        <circle cx="8" cy="25" r="2" />
-        <circle cx="24" cy="25" r="2" />
-        <circle cx="16" cy="7" r="2" />
-      </svg>
-    );
-  }
-  if (iconId === "program-broadcast") {
-    return (
-      <svg {...sharedProps} className={className}>
-        <path d="M11 24V8l12-3v16" />
-        <circle cx="8" cy="24" r="3" />
-        <circle cx="20" cy="21" r="3" />
-        <path d="M25.5 10c2 1.4 2 3.6 0 5M28 7.5c4.2 3.2 4.2 7.8 0 11" />
-      </svg>
-    );
-  }
-  return (
-    <svg {...sharedProps} className={className}>
-      <circle cx="7" cy="16" r="3" />
-      <circle cx="25" cy="8" r="3" />
-      <circle cx="25" cy="24" r="3" />
-      <path d="M10 15 22 9M10 17l12 6M7 7v6M7 19v6" />
     </svg>
   );
 }

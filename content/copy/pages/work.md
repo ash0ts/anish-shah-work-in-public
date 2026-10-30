@@ -24,6 +24,18 @@ MCP, evaluation, agents, LangChain
 ## filter-submit
 Show projects
 
+## filter-work-type
+Work type
+
+## filter-all-types
+All work types
+
+## filter-topic
+Topic
+
+## filter-all-topics
+All topics
+
 ## index-default-heading
 Selected projects
 
@@ -76,13 +88,13 @@ Related work
 Calendar
 
 ## timeline-title
-Choose a year and line.
+Work over time.
 
 ## timeline-summary
-Color marks the line. Darker cells contain more projects.
+Choose a cell to see projects. Color marks the work type; darker cells contain more projects.
 
 ## timeline-caption
-Projects by line and year
+Projects by work type and year
 
 ## organizations-control-label
 Organizations
@@ -136,37 +148,37 @@ Contributed to
 Presented with or at
 
 ## bucket-1-title
-Agent systems & open source
+Software & tools
 
 ## bucket-1-short-title
-Systems
+Software & tools
 
 ## bucket-1-statement
 Agent interfaces, integrations, and evaluation tools for ML workflows.
 
 ## bucket-2-title
-Technical education
+Courses & labs
 
 ## bucket-2-short-title
-Education
+Courses & labs
 
 ## bucket-2-statement
 Courses and workshops on prompting, evaluation, fine-tuning, and agent design.
 
 ## bucket-3-title
-Research, writing & implementations
+Research & writing
 
 ## bucket-3-short-title
-Research
+Research & writing
 
 ## bucket-3-statement
 Articles and working implementations that make agent behavior, evaluation, and model systems easier to inspect.
 
 ## bucket-4-title
-Talks, workshops & programs
+Talks & programs
 
 ## bucket-4-short-title
-Programs
+Talks & programs
 
 ## bucket-4-statement
 Talks and live sessions on agent architecture, model adaptation, and evaluation.

@@ -191,10 +191,10 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   const visible = defaultVisibleHomeText(html);
   const bodiesSection =
     markup.match(
-      /<section\b[^>]*aria-labelledby="lines-of-work-title"[\s\S]*?<\/section>/i,
+      /<nav\b[^>]*aria-labelledby="home-work-title"[\s\S]*?<\/nav>/i,
     )?.[0] ?? "";
   const workLines = [
-    ...bodiesSection.matchAll(/<li\b[^>]*data-work-line(?:="[^"]*")?[^>]*>/gi),
+    ...bodiesSection.matchAll(/<li\b[^>]*data-bucket="[^"]*"[^>]*>/gi),
   ];
   const workLinks = [
     ...bodiesSection.matchAll(/<a\b[^>]*href="\/work\/([^"?#]+)"/gi),
@@ -211,13 +211,13 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   ];
 
   assert(
-    wordCount(visible) <= 140,
-    `Default Home contains ${wordCount(visible)} visible words; budget is 140`,
+    wordCount(visible) <= 130,
+    `Default Home contains ${wordCount(visible)} visible words; budget is 130`,
   );
   assert.equal(workLines.length, 4);
   assert.equal(workLinks.length, 0);
   assert.equal(bucketLinks.length, 4);
-  assert(topicLinks.length > 0 && topicLinks.length <= 12);
+  assert.equal(topicLinks.length, 0);
   assert.doesNotMatch(bodiesSection, /<details\b|<summary\b/i);
   assert.equal(occurrences(visible, "See the work"), 1);
   assert.equal(occurrences(visible, "7K+"), 1);
@@ -278,7 +278,7 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   assert.equal((calendarBody.match(/<td\b/g) ?? []).length, 24);
   assert.match(
     calendar,
-    /Projects by line and year/i,
+    /Projects by work type and year/i,
   );
   assert.doesNotMatch(calendar, /public[- ]form|artifact count|formCount/i);
   assert.match(calendar, /data-density="[1-5]"/i);
@@ -287,7 +287,7 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
     /href="\/work\?bucket=products-open-source(?:&amp;|&)year=202[1-6]#work-index"/i,
   );
   assert.equal((markup.match(/<input\b[^>]*type="search"/gi) ?? []).length, 1);
-  for (const name of ["bucket", "topic", "year", "format"]) {
+  for (const name of ["bucket", "topic", "format"]) {
     assert.match(markup, new RegExp(`<select\\b[^>]*name="${name}"`, "i"));
   }
   assert.doesNotMatch(markup, /<select\b[^>]*name="(?:organization|role)"/i);
@@ -295,7 +295,7 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
     markup,
     /<details\b[^>]*id="work-more-filters"[\s\S]*?<select\b[^>]*name="format"/i,
   );
-  assert.match(markup, />Line of work<|>Topic<|>Year<|>Format</i);
+  assert.match(markup, />Work type<|>Topic<|>Format</i);
 
   const selectedPages = await Promise.all([
     renderHtml("/work?year=2024"),
@@ -360,12 +360,12 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   );
   assert.match(
     bucketMarkup,
-    /id="work-index-title"[^>]*>Agent systems &amp; open source</i,
+    /id="work-index-title"[^>]*>Software &amp; tools</i,
   );
   assert.doesNotMatch(bucketMarkup, /data-work-line=|data-work-body=/i);
   assert.match(
     bucketMarkup,
-    /aria-label="Remove Agent systems &amp; open source bucket filter"/i,
+    /aria-label="Remove Software &amp; tools work type filter"/i,
   );
 
   const topicMarkup = documentMarkup(
@@ -384,7 +384,7 @@ test("Work keeps the four-line calendar primary and paginates canonical work", a
   );
   assert.match(
     combinedMarkup,
-    /id="work-index-title"[^>]*>Agent systems · Agent systems &amp; open source</i,
+    /id="work-index-title"[^>]*>Agent systems · Software &amp; tools</i,
   );
   assert.doesNotMatch(combinedMarkup, /data-work-line=|data-work-body=/i);
 

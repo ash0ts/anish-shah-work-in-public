@@ -20,6 +20,14 @@ export function AboutSpeakerCopyButton({
 
   useEffect(() => {
     buttonRef.current?.removeAttribute("hidden");
+    const openLinkedProfile = () => {
+      if (window.location.hash !== "#speaker-title") return;
+      const details = document.getElementById("speaker-profile");
+      if (details instanceof HTMLDetailsElement) details.open = true;
+    };
+    openLinkedProfile();
+    window.addEventListener("hashchange", openLinkedProfile);
+    return () => window.removeEventListener("hashchange", openLinkedProfile);
   }, []);
 
   async function copyProfile() {
@@ -28,6 +36,8 @@ export function AboutSpeakerCopyButton({
       await navigator.clipboard.writeText(profileText);
       setStatus("Speaker profile copied.");
     } catch {
+      const details = document.getElementById("speaker-profile");
+      if (details instanceof HTMLDetailsElement) details.open = true;
       setStatus("Copy failed. Select the profile text instead.");
     }
   }

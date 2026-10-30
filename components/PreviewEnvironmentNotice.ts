@@ -9,7 +9,6 @@ export function PreviewEnvironmentNotice() {
         {
           "aria-label": previewNotice,
           className: "preview-environment-notice",
-          role: "status",
         },
         createElement(
           "span",

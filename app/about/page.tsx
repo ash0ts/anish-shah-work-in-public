@@ -144,14 +144,15 @@ export default async function AboutPage() {
       {speakerProfile.topics.length > 0 ? (
         <section className={styles.speaker} aria-labelledby="speaker-title">
           <header className={styles.speakerHeading}>
-            <p className={styles.eyebrow}>
+            <h2 className={styles.eyebrow} id="speaker-title">
               {SITE_COPY.about["speaker-eyebrow"]}
-            </p>
-            <h2 id="speaker-title">{SITE_COPY.about["speaker-heading"]}</h2>
+            </h2>
           </header>
 
           <div className={styles.speakerProfile}>
-            <div className={styles.speakerSelection}>
+            <details className={styles.speakerDisclosure} id="speaker-profile">
+              <summary>{SITE_COPY.about["speaker-heading"]}</summary>
+              <div className={styles.speakerSelection}>
               <div className={styles.speakerBio}>
                 {speakerBioParagraphs.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
@@ -189,6 +190,8 @@ export default async function AboutPage() {
                 </ul>
               </div>
 
+              </div>
+            </details>
               <div className={styles.speakerActions}>
                 <AboutSpeakerCopyButton
                   className={styles.copyButton}
@@ -226,7 +229,6 @@ export default async function AboutPage() {
                   </a>
                 ) : null}
               </div>
-            </div>
           </div>
         </section>
       ) : null}

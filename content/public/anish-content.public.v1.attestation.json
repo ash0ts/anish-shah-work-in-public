@@ -44,9 +44,9 @@
       "sha256": "cb11e7bf86a04e9656606fceafbb9532d1cfe5320a8e47d47e6589406626f17d"
     },
     {
-      "path": "content/presentation/home-signal-rails.v1.json",
-      "bytes": 1554,
-      "sha256": "91e84f2cd6fad7d3d98a8f1dfb4ece7a19e875408d72853b3ea16ad46446b558"
+      "path": "content/presentation/home-overview.v2.json",
+      "bytes": 1074,
+      "sha256": "2e9a5eaac794c5dd3b604e2967b51fc197894e3e25d94a75289fa832424143d8"
     },
     {
       "path": "content/presentation/career.v1.json",

@@ -201,9 +201,9 @@
 .speaker {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(15rem, 0.58fr) minmax(0, 1.42fr);
-  gap: clamp(2.5rem, 6vw, 6.5rem);
-  padding: clamp(3rem, 5vw, 4.75rem) var(--gutter) clamp(3.5rem, 6vw, 5.5rem);
+  grid-template-columns: minmax(10rem, 0.45fr) minmax(0, 1.55fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  padding: clamp(2rem, 4vw, 3rem) var(--gutter);
   border-top: 1px solid var(--blueprint-ink);
 }
 
@@ -215,15 +215,21 @@
 }
 
 .speakerHeading h2 {
-  max-width: 13ch;
-  margin: clamp(1.25rem, 2vw, 1.75rem) 0 0;
-  font-size: clamp(2.35rem, 4.2vw, 4.15rem);
-  font-variation-settings: "CASL" 0.66, "MONO" 0.02, "wght" 740;
-  font-weight: 740;
-  letter-spacing: -0.075em;
-  line-height: 0.9;
-  text-wrap: balance;
+  margin: 0;
+  padding-top: 1rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
 }
+
+.speakerDisclosure > summary {
+  padding: 1rem 0;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
+  font-weight: 650;
+}
+
+.speakerDisclosure:not([open]) > .speakerSelection { display: none; }
 
 .speakerProfile {
   align-self: start;
@@ -233,7 +239,7 @@
 
 .speakerSelection {
   position: relative;
-  padding: clamp(1.5rem, 2.5vw, 2.25rem) clamp(1.25rem, 2vw, 2rem) 0;
+  padding: clamp(1.5rem, 2.5vw, 2.25rem) clamp(1.25rem, 2vw, 2rem);
 }
 
 .speakerSelection::before,
@@ -451,9 +457,6 @@
     gap: 2.25rem;
   }
 
-  .speakerHeading h2 {
-    max-width: 13ch;
-  }
 }
 
 @media (max-width: 600px) {
@@ -499,9 +502,6 @@
     padding-top: 2.75rem;
   }
 
-  .speakerHeading h2 {
-    font-size: clamp(2.45rem, 11vw, 3.6rem);
-  }
 
   .speakerSelection {
     padding: 1.75rem 1.25rem;

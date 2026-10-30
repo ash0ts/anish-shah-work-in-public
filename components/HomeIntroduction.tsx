@@ -1,15 +1,19 @@
 import Link from "next/link";
 import { SITE_COPY } from "@/lib/copy";
 import styles from "./HomeIntroduction.module.css";
+import { HomeWorkOverview } from "./HomeWorkOverview";
+import type { HomeWorkArea } from "@/lib/home-presentation";
 
 type HomeIntroductionProps = {
   headline: string;
   summary: string;
+  areas: HomeWorkArea[];
 };
 
 export function HomeIntroduction({
   headline,
   summary,
+  areas,
 }: HomeIntroductionProps) {
   return (
     <section
@@ -23,7 +27,6 @@ export function HomeIntroduction({
           <span>Anish</span>
           <span>Shah</span>
         </h1>
-      </div>
       <div className={styles.copy}>
         <p className={styles.headline}>{headline}</p>
         <p className={styles.summary}>{summary}</p>
@@ -31,6 +34,8 @@ export function HomeIntroduction({
           {SITE_COPY.home["primary-cta"]} <span aria-hidden="true">↗</span>
         </Link>
       </div>
+      </div>
+      <HomeWorkOverview areas={areas} />
     </section>
   );
 }

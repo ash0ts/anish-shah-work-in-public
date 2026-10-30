@@ -104,8 +104,8 @@ copy.
 
 | Review class | About fields |
 | --- | --- |
-| Fact-check | `speaker-heading`, `speaker-bio`, the three `speaker-topic-*` labels, and their three `speaker-topic-*-description` fields |
-| Editorial | `speaker-eyebrow`, `speaker-topics-heading`, `speaker-copy-cta`, `speaker-work-cta`, `speaker-linkedin-cta` |
+| Fact-check | `speaker-bio`, the three `speaker-topic-*` labels, and their three `speaker-topic-*-description` fields |
+| Editorial | `speaker-heading`, `speaker-eyebrow`, `speaker-topics-heading`, `speaker-copy-cta`, `speaker-work-cta`, `speaker-linkedin-cta` |
 
 The owner-only Studio copy report lists this page path, its route scope, and
 the current counts for both review classes. It is an inventory, not another
@@ -129,8 +129,8 @@ messages stay literal.
 The deck cannot change:
 
 - metric value, label, qualifier, period, scope, attribution, or evidence;
-- Home signal compact limits, metric/icon IDs, line/topic IDs, and ordering in
-  `content/presentation/home-signal-rails.v1.json`;
+- Home signal compact limits, metric/icon IDs, bucket/illustration IDs, and ordering in
+  `content/presentation/home-overview.v2.json`;
 - IDs, slugs, aliases, URLs, relationships, WorkGroup membership, order,
   visibility, or featured state;
 - dates, evidence/bibliography records, source titles, or canonical data;
@@ -198,7 +198,7 @@ npm run dev
 `.generated/site-copy.ts` is ignored, regenerated before development/tests/
 builds, and must never be committed or edited. `COPY_VERSION` deterministically
 hashes every deck file, the field contract, parser/generator, and reviewed Home
-signal/rail manifest. It appears in preview metadata, owner health, release
+signal/overview manifest. It appears in preview metadata, owner health, release
 plans, and attestations; canonical `CONTENT_VERSION` is separate. The same Home
 manifest is also inventoried in the public content attestation.
 

@@ -69,7 +69,7 @@
 
 .filterForm {
   display: grid;
-  grid-template-columns: minmax(15rem, 0.9fr) minmax(21rem, 1.35fr) auto auto;
+  grid-template-columns: minmax(15rem, 1.2fr) minmax(12rem, 0.8fr) auto auto;
   gap: 0.75rem;
   align-items: stretch;
   min-width: 0;
@@ -116,7 +116,7 @@
 .primaryFilters {
   display: grid;
   min-width: 0;
-  grid-template-columns: repeat(3, minmax(6.5rem, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   border: 1px solid var(--blueprint-ink, #17223b);
 }
 
@@ -499,7 +499,7 @@
   .primaryFilters {
     grid-column: 1 / -1;
     grid-row: 2;
-    grid-template-columns: repeat(3, minmax(5.5rem, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .moreFilters {
@@ -597,7 +597,7 @@
   .primaryFilters {
     grid-column: 1 / -1;
     grid-row: 2;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .primaryFilters .select {
@@ -609,7 +609,7 @@
   }
 
   .primaryFilters .select select {
-    min-height: 1.75rem;
+    min-height: 2.75rem;
     font-size: 0.78rem;
   }
 

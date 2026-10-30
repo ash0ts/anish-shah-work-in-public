@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "signals": [
     {
       "id": "deployed",
@@ -23,42 +23,22 @@
       "compactLimit": "Supported pipeline · not revenue"
     }
   ],
-  "rails": [
+  "areas": [
     {
       "bucketId": "products-open-source",
-      "iconId": "tool-node",
-      "topicIds": [
-        "agent-systems",
-        "evaluation-observability",
-        "open-source-ecosystems"
-      ]
+      "illustrationId": "terminal"
     },
     {
       "bucketId": "courses-learning",
-      "iconId": "learning-loop",
-      "topicIds": [
-        "agent-systems",
-        "foundation-models",
-        "evaluation-observability"
-      ]
+      "illustrationId": "notebook"
     },
     {
       "bucketId": "writing-research",
-      "iconId": "research-trace",
-      "topicIds": [
-        "foundation-models",
-        "ml-systems-infrastructure",
-        "evaluation-observability"
-      ]
+      "illustrationId": "study"
     },
     {
       "bucketId": "talks-programs",
-      "iconId": "program-broadcast",
-      "topicIds": [
-        "agent-systems",
-        "education-community",
-        "ml-systems-infrastructure"
-      ]
+      "illustrationId": "presentation"
     }
   ]
 }

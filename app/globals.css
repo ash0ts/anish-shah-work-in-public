@@ -273,7 +273,7 @@ code {
   }
 
   .preview-environment-notice {
-    top: 0.65rem;
+    top: calc(var(--header-height) + 0.25rem);
     max-width: calc(100vw - 12rem);
     padding: 0.3rem 0.4rem;
     font-size: 0.625rem;
@@ -290,6 +290,14 @@ code {
 
   body {
     font-size: 16px;
+  }
+}
+
+@media (forced-colors: active) {
+  .preview-environment-notice {
+    color: CanvasText;
+    background: Canvas;
+    border-color: CanvasText;
   }
 }
 

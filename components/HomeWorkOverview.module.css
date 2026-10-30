@@ -1,0 +1,81 @@
+.overview {
+  min-width: 0;
+  align-self: center;
+}
+
+.overview h2 {
+  margin: 0 0 1rem;
+  font-family: var(--font-mono);
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  font-weight: 550;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.areas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.6rem 2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.areas li { --area-accent: var(--work-blue); min-width: 0; }
+.areas li[data-bucket="courses-learning"] { --area-accent: #9b6100; }
+.areas li[data-bucket="writing-research"] { --area-accent: #b43264; }
+.areas li[data-bucket="talks-programs"] { --area-accent: #08715e; }
+
+.areas a {
+  display: grid;
+  min-width: 0;
+  min-height: 44px;
+  gap: 0.45rem;
+  color: var(--blueprint-ink);
+  text-decoration: none;
+}
+
+.areas svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: transform 160ms var(--ease-out);
+}
+
+.baseline { opacity: 0.22; }
+.wash { fill: var(--area-accent); fill-opacity: 0.12; stroke: none; }
+.paper { fill: var(--trace-white); }
+.accent { stroke: var(--area-accent); }
+
+.label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  font-family: var(--font-display);
+  font-size: clamp(0.95rem, 1.3vw, 1.2rem);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.label > span { color: var(--area-accent); }
+.areas a:hover .label, .areas a:focus-visible .label { color: var(--area-accent); }
+.areas a:hover svg, .areas a:focus-visible svg { transform: translateY(-3px); }
+
+@media (max-width: 600px) {
+  .areas { gap: 1.2rem 1rem; }
+}
+@media (max-width: 300px) {
+  .areas { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .areas svg { transition: none; }
+  .areas a:hover svg, .areas a:focus-visible svg { transform: none; }
+}
+@media (forced-colors: active) {
+  .wash { fill: none; }
+  .paper { fill: Canvas; }
+  .accent, .label > span { color: LinkText; stroke: LinkText; }
+}

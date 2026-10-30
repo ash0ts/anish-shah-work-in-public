@@ -1297,6 +1297,7 @@ test("RSC presentation reads hosted tier from Cloudflare runtime bindings", asyn
       nosnippet: true,
     });
     const notice = renderToStaticMarkup(PreviewEnvironmentNotice());
+    assert.doesNotMatch(notice, /role="status"/);
     assert.match(notice, /Synthetic preview data · PR #42/);
     assert.match(notice, /Synthetic · PR #42/);
     assert.deepEqual(robotsModule.default(), {

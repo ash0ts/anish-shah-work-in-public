@@ -47,7 +47,7 @@ Improve the site's language without changing its facts, structure, behavior, or 
 
 ### Edit directly
 
-- Page framing, section introductions, calls to action, nonbehavioral labels, search placeholders, no-results text, and 404 wording. On Home this includes the signal/rail headings and method CTA, not the protected signal or rail mapping.
+- Page framing, section introductions, calls to action, nonbehavioral labels, search placeholders, no-results text, and 404 wording. On Home this includes the signal/overview headings and method CTA, not the protected signal or overview mapping.
 - Play object flavor text, including the Globe/Travel doorway. Literal object names and categories are fixed by the seven-object registry.
 - Dormant Simulation introduction, CTA, nonfactual encounter flavor, and accessibility-friendly instructions through declared `content/copy/pages/simulation.md` fields. Editing them does not expose the disabled route or authorize activation.
 - SEO and social descriptions when they remain consistent with visible copy and structured data.
@@ -74,8 +74,8 @@ label after fact-check review.
 ### Never change through copy
 
 - Metric values, labels, qualifiers, periods, scope, attribution, source labels, or evidence associations.
-- The reviewed `home-signal-rails.v1.json` metric IDs, compact limits, icon IDs,
-  bucket IDs, topic IDs, and ordering. They require an engineering change,
+- The reviewed `home-overview.v2.json` metric IDs, compact limits, icon IDs,
+  bucket IDs, illustration IDs, and ordering. They require an engineering change,
   owner review, `COPY_VERSION`, and attestation updates.
 - IDs, slugs, aliases, routes, links, ordering, visibility, relationships, group membership, or featured state.
 - Source titles, publishers, URLs, event dates, bibliography records, generated bundles, schemas, attestations, or private inputs.

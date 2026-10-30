@@ -19,19 +19,19 @@
   human-readable `docs/architecture/codebase-tour.md` and the maintenance
   skill's repository map.
 - Metric, source, privacy, provider-policy, route, stable-ID, and programmatic accessibility wording remains owner-guarded. Put desired changes in an implementation request instead of smoothing away a required fact or behavior.
-- Treat `content/presentation/home-signal-rails.v1.json` as reviewed, protected
+- Treat `content/presentation/home-overview.v2.json` as reviewed, protected
   presentation data. Its metric IDs, compact limits, icon IDs, bucket IDs, and
-  topic IDs are not copy-deck fields. Keep it in `COPY_VERSION` and the public
+  illustration IDs are not copy-deck fields. Keep it in `COPY_VERSION` and the public
   content attestation whenever its contract changes.
 - Travel may use advanced R3F, shaders, geographic interaction, and owner-side image processing only under `components/play/travel/**`, the selection-only globe prop in `components/play/room-3d/**`, and `app/studio/travel/**`. Travel remains semantic HTML first and may not introduce WebGL navigation elsewhere.
 
 ## Project creative direction
 
-- Home presents one equal-weight, three-node signal circuit and four line/topic
-  rails. Never scale a signal by its value, select a representative project for
-  a line, or add a topic/category route; every rail links into the existing
-  filtered Work calendar and Project index.
-- Keep the complete Work archive two-dimensional and server rendered. Its temporal overview is a semantic four-line-by-year color calendar with exact counts. Calendar, topic, search, organization, and filter selections all reveal the same flat Project index; individual project pages remain lean evidence leaves. Do not use a separate plot, Three.js, or WebGL for archive navigation.
+- Home presents one equal-weight, three-node signal circuit and an illustrated
+  overview of four equally prominent work types. Overview links enter the existing
+  bucket-filtered Work index; topics and counts belong in Work, not Home. Do not
+  scale signals by value, select representative projects, or add category routes.
+- Keep the complete Work archive two-dimensional and server rendered. Its temporal overview is a semantic four-work-type-by-year color calendar with exact counts. Calendar, topic, search, organization, and filter selections all reveal the same flat Project index; individual project pages remain lean evidence leaves. Do not use a separate plot, Three.js, or WebGL for archive navigation.
 - Preserve an editorial, inspectable HTML experience when JavaScript or motion is unavailable.
 - Public narrative uses first person only when authorship, a personal choice, or
   a durable belief matters. The copyable About speaker bio is intentionally

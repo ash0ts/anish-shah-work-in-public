@@ -25,10 +25,10 @@ How the work developed.
 See the work
 
 ## speaker-eyebrow
-Speaker profile
+For event organizers
 
 ## speaker-heading
-Talks grounded in the systems I build.
+Read speaker profile
 
 ## speaker-bio
 Anish Shah builds agent infrastructure and evaluation workflows at Weights & Biases, part of CoreWeave. His engineering contributions span the W&B MCP Server's deployment and reliability, ARIA's streaming and recovery, and controlled studies of agent behavior. His talks use that work to explain how to trace failures, test tool interfaces, and decide what the evidence supports.

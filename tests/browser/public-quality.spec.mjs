@@ -152,6 +152,7 @@ test("the About speaker profile copies bounded visible text and preserves focus"
   });
   const successPage = await successContext.newPage();
   await successPage.goto("/about", { waitUntil: "networkidle" });
+  await expect(successPage.locator("#speaker-profile")).not.toHaveAttribute("open", "");
   const copyButton = successPage.getByRole("button", {
     name: "Copy speaker profile",
   });
@@ -185,6 +186,13 @@ test("the About speaker profile copies bounded visible text and preserves focus"
   expect(copied).not.toMatch(
     /mailto:|\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b|credential\s+id|street\s+address/iu,
   );
+  await successPage.goto("/about#speaker-title", { waitUntil: "networkidle" });
+  await expect(successPage.locator("#speaker-profile")).toHaveAttribute("open", "");
+  await successPage.locator("#speaker-profile > summary").click();
+  await expect(successPage.locator("#speaker-profile")).not.toHaveAttribute("open", "");
+  await successPage.evaluate(() => { window.location.hash = ""; });
+  await successPage.evaluate(() => { window.location.hash = "speaker-title"; });
+  await expect(successPage.locator("#speaker-profile")).toHaveAttribute("open", "");
   await successContext.close();
 
   const failureContext = await browser.newContext({
@@ -461,9 +469,9 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
   });
   await expect(search).toBeVisible();
   await expect(
-    page.getByRole("combobox", { name: "Line of work" }),
-  ).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Year" })).toBeVisible();
+    page.getByRole("combobox", { name: "Work type" }),
+  ).toBeHidden();
+  await expect(page.getByRole("combobox", { name: "Year" })).toHaveCount(0);
   await expect(page.getByRole("combobox", { name: "Topic" })).toBeVisible();
   await expect(calendar).toBeVisible();
   const calendarBounds = await calendar.boundingBox();
@@ -526,8 +534,8 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("combobox", { name: "Format" })).toBeVisible();
   await expect(
-    dialog.getByRole("combobox", { name: "Line of work" }),
-  ).toHaveCount(0);
+    dialog.getByRole("combobox", { name: "Work type" }),
+  ).toBeVisible();
   await dialog.getByRole("button", { name: "Close filters" }).click();
   await expect(filters).toBeFocused();
 
@@ -571,7 +579,7 @@ test("mobile Work keeps search, calendar years, and filter-sheet focus synchroni
 
   await calendar
     .getByRole("link", {
-      name: /projects in Agent systems & open source, 2024/,
+      name: /projects in Software & tools, 2024/,
     })
     .click();
   await expect(page).toHaveURL(
@@ -982,6 +990,7 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
   await expect(page.locator("iframe")).toHaveCount(0);
 
   await page.goto("/about", { waitUntil: "load" });
+  await page.locator("#speaker-profile > summary").click();
   await expect(
     page.getByText(
       /Anish Shah builds agent infrastructure and evaluation workflows/,

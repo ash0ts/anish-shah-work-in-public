@@ -61,7 +61,7 @@ reason to sand every surface into the same sentence shape.
 
 ## Vocabulary contract
 
-- Four archive categories: **lines of work**.
+- Four archive categories: **work types**.
 - A grouped record: **work**, **project**, **course**, or **series**, chosen by what it is.
 - Nested records: **talks**, **recordings**, **translations**, **code**, or **artifacts**.
 - Evidence records: **sources**.

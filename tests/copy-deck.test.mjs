@@ -41,7 +41,7 @@ test("COPY_VERSION includes the reviewed Home signal and rail contract", async (
     path.join(root, "scripts/lib/copy-deck.mjs"),
     "utf8",
   );
-  assert.match(source, /content\/presentation\/home-signal-rails\.v1\.json/u);
+  assert.match(source, /content\/presentation\/home-overview\.v2\.json/u);
   assert.match(source, /content\/presentation\/speaker-profile\.v1\.json/u);
 });
 
@@ -51,7 +51,6 @@ test("speaker copy keeps factual content in fact-check fields", async () => {
     COPY_PAGE_DEFINITIONS.about.map((definition) => [definition.key, definition]),
   );
   for (const key of [
-    "speaker-heading",
     "speaker-bio",
     "speaker-topic-agent-systems",
     "speaker-topic-agent-systems-description",
