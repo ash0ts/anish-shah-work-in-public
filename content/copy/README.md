@@ -42,8 +42,8 @@ ignored and must never be edited or committed.
 
 WorkGroup files use a stable ID in their first line. The filename is readable,
 but the stable ID is the only join key. The four required fields control only
-public display wording. Home derives its line and topic navigation from the
-visible archive rather than selecting or renaming individual projects.
+public display wording. Home's four illustrated work types link to the visible
+archive without counts, topic shortcuts, or representative-project selections.
 
 The optional `detail-note` field adds a fact-checked contribution or experiment
 limit inside the project's collapsed Sources section. It is not a second

@@ -35,9 +35,9 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Canonical facts and structure come from immutable source inputs, reviewed curation, and the generated sanitized public bundle.
 - Git-owned presentation prose comes from `content/copy/**`. For copy-only work, use `$edit-anish-site-copy`; never move metrics, evidence, privacy, provider policy, routes, or behavior into that deck.
 - Published D1 state owns allowlisted visibility, ordering, caveats, and metric wording. `PUBLICATION_CACHE` KV is the validated last-known-good production fallback.
-- `content/presentation/home-signal-rails.v1.json` is reviewed protected
+- `content/presentation/home-overview.v2.json` is reviewed protected
   presentation data. It binds the three equal-weight Home signals to exact
-  metrics and compact limits and binds four lines to approved topic rails. Its
+  metrics and compact limits and binds four work types to original illustrations. Its
   IDs and limits participate in `COPY_VERSION` and the public attestation; the
   copy deck owns only the surrounding Home labels and prose.
 - `content/presentation/career.v1.json` owns About chronology periods,
@@ -112,9 +112,9 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Simulation APIs, persistence, campaign, Gateway, or provider-approval work requires focused Simulation security, migration, UI, privacy, and browser checks. Preserve both Action and Tactical completion plus authored outage fallback.
 - Room registry changes require seven-key parity, zero overview data reads, direct-route source isolation, desktop/Pocket input tests, and disabled-feature reachability tests.
 - Copy changes require copy parsing, voice/audit, owner fact-check, diff, rendered, metadata, and browser checks. Skill and docs changes require their dedicated validators.
-- Home signal/rail changes require manifest validation, content attestation,
+- Home signal/overview changes require manifest validation, content attestation,
   `COPY_VERSION`, rendered Home/Work behavior, and affected browser checks.
-  Preserve equal signal geometry and route every bucket/topic rail into the
+  Preserve equal signal geometry and route every illustrated work type into the
   existing Work calendar and flat Project index.
 - Documentation changes must preserve the authority map in `docs/README.md`.
   Run `npm run docs:check`; when architecture ownership changes, update both

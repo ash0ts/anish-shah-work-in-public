@@ -62,10 +62,10 @@ test("the About copy deck carries one bounded, copyable speaker profile", async 
     new URL("../content/copy/pages/about.md", import.meta.url),
     "utf8",
   );
-  assert.match(source, /## speaker-eyebrow\nSpeaker profile/u);
+  assert.match(source, /## speaker-eyebrow\nFor event organizers/u);
   assert.match(
     source,
-    /## speaker-heading\nTalks grounded in the systems I build\./u,
+    /## speaker-heading\nRead speaker profile/u,
   );
   assert.match(
     source,

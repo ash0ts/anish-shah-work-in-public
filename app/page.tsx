@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { BodiesOfWork } from "@/components/BodiesOfWork";
 import { HomeIntroduction } from "@/components/HomeIntroduction";
 import { ImpactEvidence } from "@/components/ImpactEvidence";
 import { homepageImpactTracksFrom } from "@/lib/home-impact";
-import { homeTopicRailsFrom } from "@/lib/home-presentation";
+import { homeWorkAreasFrom } from "@/lib/home-presentation";
 import { getPublicContentView } from "@/lib/server/public-content";
 import { requestCspNonce } from "@/lib/server/csp";
 import {
@@ -27,7 +26,7 @@ export const metadata: Metadata = publicPageMetadata({
 export default async function Home() {
   const nonce = await requestCspNonce();
   const { bundle } = await getPublicContentView();
-  const rails = homeTopicRailsFrom(bundle);
+  const areas = homeWorkAreasFrom(bundle);
   const impactTracks = homepageImpactTracksFrom(bundle);
   const profileUrl = absoluteSiteUrl("/");
   const structuredData = buildHomeStructuredData(bundle, profileUrl);
@@ -43,8 +42,8 @@ export default async function Home() {
       <HomeIntroduction
         headline={bundle.profile.headline}
         summary={bundle.profile.summary}
+        areas={areas}
       />
-      <BodiesOfWork rails={rails} />
       <ImpactEvidence tracks={impactTracks} />
     </main>
   );

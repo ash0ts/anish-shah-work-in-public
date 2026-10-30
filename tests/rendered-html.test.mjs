@@ -151,7 +151,7 @@ function initiallyVisibleText(html) {
   return visibleText(markup);
 }
 
-test("homepage renders four topic rails and one qualified signal circuit", async () => {
+test("homepage renders four illustrated work types and one qualified signal circuit", async () => {
   const html = await renderHtml("/");
   const markup = documentMarkup(html);
   const text = visibleText(html);
@@ -166,18 +166,18 @@ test("homepage renders four topic rails and one qualified signal circuit", async
     text,
     /I build the systems that make AI agents useful after the demo/i,
   );
-  assert.match(text, /evaluation, observability, and tool interfaces/i);
+  assert.match(text, /Building tools, investigating agent behavior/i);
   for (const line of [
-    "Agent systems & open source",
-    "Technical education",
-    "Research, writing & implementations",
-    "Talks, workshops & programs",
+    "Software & tools",
+    "Courses & labs",
+    "Research & writing",
+    "Talks & programs",
   ]) {
     assert.match(text, new RegExp(line.replaceAll("&", "&(?:amp;)?"), "i"));
   }
   assert.match(html, /See the work/i);
-  assert.match(html, /Lines of work/i);
-  assert.equal((markup.match(/data-work-line=/g) ?? []).length, 4);
+  assert.match(markup, /data-work-overview/);
+  assert.equal((markup.match(/<li[^>]+data-bucket=/g) ?? []).length, 4);
   assert.equal(
     (markup.match(/<a\b[^>]*href="\/work\/[^"]+"/g) ?? []).length,
     0,
@@ -190,7 +190,7 @@ test("homepage renders four topic rails and one qualified signal circuit", async
   assert(
     (markup.match(
       /<a\b[^>]*href="\/work\?bucket=[^"]+(?:&amp;|&)topic=[^"]+#work-index"/g,
-    ) ?? []).length <= 12,
+    ) ?? []).length === 0,
   );
   for (const value of ["745K+", "7K+", "$4M+"]) {
     assert.match(
@@ -264,7 +264,7 @@ test("all public routes expose useful server-rendered content", async () => {
         /SAP &amp; Brilliant Hire by SAP/i,
         /Temple University/i,
         /Speaker profile/i,
-        /Talks grounded in the systems I build/i,
+        /For event organizers/i,
         /Agent systems &amp; tool interfaces/i,
         /Evaluation &amp; observability/i,
         /Technical education &amp; workshops/i,
@@ -280,17 +280,17 @@ test("all public routes expose useful server-rendered content", async () => {
       path: "/work",
       required: [
         /Built, taught, tested\./i,
-        /Choose a year and line\./i,
+        /Work over time\./i,
         /One project per record\. Talks, code, and recordings stay attached\./i,
         /Search projects/i,
         /name="bucket"/i,
         /name="topic"/i,
         /name="year"/i,
         /name="format"/i,
-        /Agent systems &amp; open source/i,
-        /Technical education/i,
-        /Research, writing &amp; implementations/i,
-        /Talks, workshops &amp; programs/i,
+        /Software &amp; tools/i,
+        /Courses &amp; labs/i,
+        /Research &amp; writing/i,
+        /Talks &amp; programs/i,
         /Browse all(?:\s|<!--.*?-->)+organizations/i,
         />Organizations</i,
         /href="\/work\?organization=google-cloud#work-index"/i,

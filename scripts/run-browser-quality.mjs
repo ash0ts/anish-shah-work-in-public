@@ -238,7 +238,7 @@ async function runReleaseBrowserGate() {
       releasePlaywrightCommand({
         port: 4174,
         segment: "release-public",
-        arguments_: ["tests/browser/public-quality.spec.mjs"],
+        arguments_: ["tests/browser/public-quality.spec.mjs", "tests/browser/balanced-portfolio.spec.mjs"],
       }),
       releasePlaywrightCommand({
         port: 4181,
@@ -331,7 +331,7 @@ if (
   runPlaywright({
     port: 4174,
     segment: "public",
-    arguments_: ["tests/browser/public-quality.spec.mjs"],
+    arguments_: ["tests/browser/public-quality.spec.mjs", "tests/browser/balanced-portfolio.spec.mjs"],
   }) !== 0
 ) {
   failed = true;

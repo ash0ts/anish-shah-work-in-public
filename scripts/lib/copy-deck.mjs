@@ -263,7 +263,7 @@ export async function readCopyDeck(root) {
 
 export async function copyVersionForDeck(root, sourceFiles) {
   const implementationPaths = [
-    "content/presentation/home-signal-rails.v1.json",
+    "content/presentation/home-overview.v2.json",
     "content/presentation/speaker-profile.v1.json",
     "lib/copy-contract.ts",
     "lib/copy-voice-contract.ts",

@@ -136,9 +136,8 @@ Authority is field-specific:
 1. The sanitized canonical bundle owns facts, stable IDs, routes, relations,
    evidence, metrics, and structure.
 2. Reviewed presentation manifests own narrow protected mappings. In
-   particular, `home-signal-rails.v1.json` binds three equal-weight signals to
-   exact metric IDs and compact limits and binds four lines to approved topics
-   and code-native icons. The career and speaker manifests separately own
+   particular, `home-overview.v2.json` binds three equal-weight signals to
+   exact metric IDs and compact limits and binds four work types to original code-native illustrations. The career and speaker manifests separately own
    About chronology structure and speaker Work-filter destinations.
 3. Published D1 state owns allowlisted visibility, ordering, featured state,
    caveats, and metric wording.
@@ -148,7 +147,7 @@ Authority is field-specific:
 it is never an editing surface. Raw inputs and `content/private` stay outside
 public output. `CONTENT_VERSION` identifies canonical data, while
 `COPY_VERSION` identifies the reviewed copy contract, sources, parser, Home
-signal/rail manifest, and speaker-profile manifest. Those manifests are also
+signal/overview manifest, and speaker-profile manifest. Those manifests are also
 inventoried in the public content attestation; they are not freelancer copy
 surfaces. Studio's owner-only copy report enumerates every page deck path and
 review class plus the retained D1 WorkGroup wording that Git copy supersedes.
@@ -233,16 +232,20 @@ Home remains the canonical `Person` identity and About references that identity
 through `ProfilePage` structured data. Studio is a separate owner plane, even
 though it ships in the same application.
 
-Home compresses its evidence into one semantic, equal-weight three-node signal
-circuit and four icon-led line/topic rails. Signal value never controls
-geometry. Rails contain no representative project and create no topic route;
-their counts derive from visible WorkGroups and their links enter the existing
-filtered Work calendar and Project index.
+Home presents one original SVG/HTML overview of four equally prominent work
+kinds, followed by the equal-weight signal circuit. Software & tools, Courses &
+labs, Research & writing, and Talks & programs link directly to the existing
+bucket-filtered archive. Home has no project counts or topic rails; signal
+geometry is never scaled by value.
 
-Work's calendar remains primary. Calendar, Home rail, search, organization, and
-filter selections reveal one Project index. One-line results are flat;
-cross-line results use non-collapsible line headings. Canonical project pages
-are lean evidence leaves whose line and topic links return to that same index.
+Work keeps Search and Topic visible, with Work type and Format on demand.
+Calendar year headings filter the existing scope; mobile year pagers only change
+which column is visible. The calendar, overview, search, and organizations all
+lead to one conditional, flat Project index. Existing query IDs remain stable.
+About keeps the personal narrative and chronology visible, with the reusable
+speaker bio and themes in a native disclosure. Copy and contact actions remain
+visible, and the speaker anchor expands the material after hydration.
+
 The organization resolver remains a reviewed presentation layer rather than a
 relationship inference engine: hidden or empty work is removed before counts
 and links render, and unsupported brand artwork falls back to visible text.

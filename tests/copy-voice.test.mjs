@@ -163,7 +163,7 @@ test("the complete deck obeys public first-person and density budgets", async ()
   );
   const homePresentation = JSON.parse(
     await readFile(
-      path.join(root, "content/presentation/home-signal-rails.v1.json"),
+      path.join(root, "content/presentation/home-overview.v2.json"),
       "utf8",
     ),
   );

@@ -123,7 +123,6 @@ export default async function WorkPage({
       count: allWorks.filter((work) => work.bucket === bucket.id).length,
     })),
     topics: countWorkFacetOptions(allWorks, "theme"),
-    years: availableYears(allWorks),
     formats: countWorkFacetOptions(allWorks, "media"),
   };
   const activeFilterCount = [
@@ -134,7 +133,7 @@ export default async function WorkPage({
     query.organization,
     query.role,
   ].filter(Boolean).length;
-  const secondaryFilterCount = query.format ? 1 : 0;
+  const secondaryFilterCount = [query.bucket, query.format].filter(Boolean).length;
   const hasScopedResults = Boolean(
     query.query || activeFilterCount || query.practice,
   );
@@ -203,6 +202,7 @@ export default async function WorkPage({
             {query.role ? (
               <input name="role" type="hidden" value={query.role} />
             ) : null}
+            <input name="year" type="hidden" value={query.year} />
             <label className={styles.search}>
               <span id="work-search-title">{SITE_COPY.work["search-label"]}</span>
               <input
@@ -215,22 +215,8 @@ export default async function WorkPage({
 
             <div className={styles.primaryFilters}>
               <FilterSelect
-                allLabel="All lines"
-                label="Line of work"
-                name="bucket"
-                value={query.bucket}
-                options={options.buckets}
-              />
-              <FilterSelect
-                allLabel="All years"
-                label="Year"
-                name="year"
-                value={query.year}
-                options={options.years}
-              />
-              <FilterSelect
-                allLabel="All topics"
-                label="Topic"
+                allLabel={SITE_COPY.work["filter-all-topics"]}
+                label={SITE_COPY.work["filter-topic"]}
                 name="topic"
                 value={query.topic}
                 options={options.topics}
@@ -240,7 +226,7 @@ export default async function WorkPage({
             <details
               className={styles.moreFilters}
               id="work-more-filters"
-              open={Boolean(query.format)}
+              open={Boolean(query.bucket || query.format)}
             >
               <summary>
                 More filters
@@ -249,6 +235,13 @@ export default async function WorkPage({
                   : ""}
               </summary>
               <div className={styles.secondaryFilters}>
+                <FilterSelect
+                  allLabel={SITE_COPY.work["filter-all-types"]}
+                  label={SITE_COPY.work["filter-work-type"]}
+                  name="bucket"
+                  value={query.bucket}
+                  options={options.buckets}
+                />
                 <FilterSelect
                   allLabel="All formats"
                   label="Format"
@@ -441,7 +434,7 @@ function ActiveScope({
           {filters.map((filter) => (
             <li key={filter.key}>
               <Link
-                aria-label={`Remove ${filter.label} ${filter.key} filter`}
+                aria-label={`Remove ${filter.label} ${filter.key === "bucket" ? SITE_COPY.work["filter-work-type"].toLowerCase() : filter.key} filter`}
                 href={
                   filter.href === "/work"
                     ? filter.href
@@ -609,33 +602,6 @@ function FilterSelect({
       </select>
     </label>
   );
-}
-
-function availableYears(records: WorkArchiveRecord[]) {
-  const years = [
-    ...new Set(
-      records.flatMap((work) => {
-        const start = work.yearStart ?? work.yearEnd;
-        const end = work.yearEnd ?? work.yearStart;
-        if (start === null || end === null) return [];
-        return Array.from(
-          { length: Math.max(end - start + 1, 1) },
-          (_, index) => start + index,
-        );
-      }),
-    ),
-  ].sort((left, right) => right - left);
-  return years.map((year) => ({
-    value: String(year),
-    label: String(year),
-    count: records.filter((work) => activeInYear(work, year)).length,
-  }));
-}
-
-function activeInYear(work: WorkArchiveRecord, year: number) {
-  const start = work.yearStart ?? work.yearEnd;
-  const end = work.yearEnd ?? work.yearStart;
-  return start !== null && end !== null && year >= start && year <= end;
 }
 
 function periodLabel(work: WorkArchiveRecord) {

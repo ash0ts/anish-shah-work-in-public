@@ -3,7 +3,7 @@
 ## Editable Sources
 
 - `content/copy/pages/site.md`: navigation, footer, global labels, and shared metadata wording.
-- `content/copy/pages/home.md`: homepage framing, signal/rail headings, calls to action, and homepage metadata. The signal values, compact limits, icons, and line/topic mapping are protected elsewhere.
+- `content/copy/pages/home.md`: homepage framing, signal/overview headings, calls to action, and homepage metadata. The signal values, compact limits, icons, and bucket/illustration mapping are protected elsewhere.
 - `content/copy/pages/about.md`: concise biography, copyable speaker-profile prose, calls to action, and About metadata. The separate career manifest owns chronology periods, organizations, and trajectory labels.
 - `content/copy/pages/work.md`: Work archive introduction, search wording, and metadata.
 - `content/copy/pages/play.md`: room overview, seven object descriptions, Travel doorway/atlas framing, and Play metadata.
@@ -15,14 +15,14 @@ Only edit the text between fixed headings. A field may be one line or multiple p
 
 About's speaker fields divide cleanly by review class:
 
-- Fact-check: `speaker-heading`, `speaker-bio`,
+- Fact-check: `speaker-bio`,
   `speaker-topic-agent-systems`,
   `speaker-topic-agent-systems-description`,
   `speaker-topic-evaluation-observability`, and
   `speaker-topic-evaluation-observability-description`,
   `speaker-topic-education-community`, and
   `speaker-topic-education-community-description`.
-- Editorial: `speaker-eyebrow`, `speaker-topics-heading`,
+- Editorial: `speaker-heading`, `speaker-eyebrow`, `speaker-topics-heading`,
   `speaker-copy-cta`, `speaker-work-cta`, and `speaker-linkedin-cta`.
 
 The topic destination IDs and LinkedIn URL are not copy fields.
@@ -65,6 +65,6 @@ The marker binds a human-readable file to a stable sanitized record. Changing it
 
 Literal Play object names are also structural. The copy deck exposes their fields so generation stays centralized, but validation pins them to TV, Bookshelf, Music player, Record crate, Computer, Treadmill, and Globe. Edit the adjacent descriptions and screen framing instead.
 
-Home's protected `content/presentation/home-signal-rails.v1.json` is not an
+Home's protected `content/presentation/home-overview.v2.json` is not an
 editable copy source. Request changes to its metric IDs, compact limits, icon
-IDs, bucket/topic IDs, or ordering through engineering and owner review.
+IDs, bucket/illustration IDs, or ordering through engineering and owner review.

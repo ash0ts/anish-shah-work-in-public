@@ -80,10 +80,17 @@ export function WorkTimeline({ query, records }: WorkTimelineProps) {
           </caption>
           <thead>
             <tr>
-              <th scope="col">Line of work</th>
+              <th scope="col">{SITE_COPY.work["filter-work-type"]}</th>
               {years.map((year) => (
                 <th data-timeline-year={year} key={year} scope="col">
-                  {year}
+                  <Link
+                    prefetch={false}
+                    aria-label={`Show projects from ${year}`}
+                    aria-current={query.year === String(year) ? "page" : undefined}
+                    href={`${workArchiveHref(query, { year, page: null })}#work-index`}
+                  >
+                    {year}<span aria-hidden="true"> ↗</span>
+                  </Link>
                 </th>
               ))}
             </tr>

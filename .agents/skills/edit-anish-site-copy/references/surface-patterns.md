@@ -4,15 +4,16 @@ Treat the typed copy-field registry as the source of truth for exact field names
 
 ## Home
 
-- Keep initially visible Home copy at or below roughly 140 words.
+- Keep initially visible Home copy at or below 130 words.
 - Use one thesis, one supporting sentence, and one primary call to action.
 - Present one equal-weight three-node signal circuit. Compact nodes show icon,
   value, label, and reviewed short limit; native disclosures retain the full
   period, scope, attribution, qualifier, and exact Sources link.
-- Present four lines of work as icon-led topic rails. Each line links to its
-  filtered Work view and offers up to three approved topic filters with counts.
-  Do not select, feature, or name a representative Home project.
-- Treat compact signal limits and line/topic/icon mappings as protected
+- Present one illustrated overview with four equally prominent work types:
+  Software & tools, Courses & labs, Research & writing, and Talks & programs.
+  Each area links to its existing bucket-filtered Work view. Keep counts and
+  cross-cutting topics in Work; no representative-project selection or new route.
+- Treat compact signal limits and bucket/illustration mappings as protected
   presentation data, not editable copy.
 - Remove duplicate trajectory, current-focus, archive-accounting, and methodology modules rather than rewriting all of them.
 
@@ -27,6 +28,10 @@ Treat that wording as fact-check copy, not an immutable slogan.
 - Let the biography explain the progression from teaching and research through
   production ML to agent systems. Do not repeat periods, employers, or
   trajectory labels already supplied by the reviewed career manifest.
+- Present the approved bio and themes in a native, initially collapsed
+  **Read speaker profile** disclosure under **For event organizers**. Keep copy,
+  talks, and contact actions visible. The existing speaker anchor opens the
+  disclosure; clipboard failure reveals selectable text without moving focus.
 - Keep the speaker bio in third person and ready to paste into an organizer's
   program. It may use short paragraphs and is the exception to the site's
   personal first-person voice.
@@ -43,13 +48,15 @@ Treat that wording as fact-check copy, not an immutable slogan.
 
 - Let the color calendar and search carry the structure.
 - Keep the Work overview free of first-person framing.
-- Keep line, year, and topic filters visible; put secondary filters behind one disclosure.
-- Send Home rails, calendar cells, search, organizations, and filters to the
+- Keep Search and Topic visible. Put Work type and Format under More filters.
+- Use calendar year-heading links for year filtering, not a Year dropdown.
+  Mobile year pagers change only the visible column, not the active filter.
+- Send Home overview links, calendar cells, search, organizations, and filters to the
   same Project index. The unfiltered overview does not show that index.
-- Use a compact active-scope strip with independently removable line, topic,
+- Use a compact active-scope strip with independently removable work-type, topic,
   year, and organization filters.
-- Render one selected line as a flat list. For cross-line searches, use simple
-  non-collapsible line headings rather than nested disclosure wrappers.
+- Render one selected work type as a flat list. For cross-type searches, use simple
+  non-collapsible work-type headings rather than nested disclosure wrappers.
 - Write result rows as period + short title + either role or medium.
 - If a child title matched, use one compact “Matched: …” note and still link to the canonical parent.
 - Do not repeat form counts, category explanations, or archive totals in every row.

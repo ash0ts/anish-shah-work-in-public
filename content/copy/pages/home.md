@@ -13,16 +13,16 @@ Applied AI · New York · 2021—Now
 I build the systems that make AI agents useful after the demo.
 
 ## profile-summary
-Evaluation, observability, and tool interfaces—shared through open source and courses.
+Building tools, investigating agent behavior, and sharing the lessons through courses and talks.
 
 ## primary-cta
 See the work
 
 ## selected-eyebrow
-Lines of work
+Work types
 
 ## selected-heading
-Choose a line, then a topic.
+How the work takes shape.
 
 ## impact-eyebrow
 Selected signals

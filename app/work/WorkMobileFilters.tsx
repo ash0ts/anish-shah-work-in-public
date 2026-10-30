@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useRef } from "react";
 import styles from "./work.module.css";
+import { SITE_COPY } from "@/lib/copy";
 
 type FilterOption = {
   count: number;
@@ -15,6 +16,7 @@ type WorkMobileFiltersProps = {
   fallbackFiltersId: string;
   formId: string;
   options: {
+    buckets: FilterOption[];
     formats: FilterOption[];
   };
   query: {
@@ -40,8 +42,10 @@ export function WorkMobileFilters({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const primaryValueRefs = useRef<
-    Record<"bucket" | "q" | "topic" | "year", HTMLInputElement | null>
-  >({ bucket: null, q: null, topic: null, year: null });
+    Record<"q" | "topic" | "year", HTMLInputElement | null>
+  >({ q: null, topic: null, year: null });
+  const bucketRef = useRef<HTMLSelectElement>(null);
+  const formatRef = useRef<HTMLSelectElement>(null);
   const headingId = useId();
 
   useEffect(() => {
@@ -72,7 +76,7 @@ export function WorkMobileFilters({
   const openDialog = () => {
     const form = document.getElementById(formId);
     if (form instanceof HTMLFormElement) {
-      for (const name of ["q", "bucket", "topic", "year"] as const) {
+      for (const name of ["q", "topic", "year"] as const) {
         const source = form.elements.namedItem(name);
         const destination = primaryValueRefs.current[name];
         if (
@@ -82,6 +86,10 @@ export function WorkMobileFilters({
         ) {
           destination.value = source.value;
         }
+      }
+      for (const [name, ref] of [["bucket", bucketRef], ["format", formatRef]] as const) {
+        const source = form.elements.namedItem(name);
+        if (source instanceof HTMLSelectElement && ref.current) ref.current.value = source.value;
       }
     }
     dialogRef.current?.showModal();
@@ -133,14 +141,6 @@ export function WorkMobileFilters({
               type="hidden"
             />
             <input
-              defaultValue={query.bucket}
-              name="bucket"
-              ref={(node) => {
-                primaryValueRefs.current.bucket = node;
-              }}
-              type="hidden"
-            />
-            <input
               defaultValue={query.topic}
               name="topic"
               ref={(node) => {
@@ -166,11 +166,20 @@ export function WorkMobileFilters({
               <input name="role" type="hidden" value={query.role} />
             ) : null}
             <MobileFilterSelect
+              allLabel={SITE_COPY.work["filter-all-types"]}
+              label={SITE_COPY.work["filter-work-type"]}
+              name="bucket"
+              options={options.buckets}
+              value={query.bucket}
+              selectRef={bucketRef}
+            />
+            <MobileFilterSelect
               allLabel="All formats"
               label="Format"
               name="format"
               options={options.formats}
               value={query.format}
+              selectRef={formatRef}
             />
             <div className={styles.mobileFilterActions}>
               <button type="submit">Show work</button>
@@ -189,17 +198,19 @@ function MobileFilterSelect({
   name,
   options,
   value,
+  selectRef,
 }: {
   allLabel: string;
   label: string;
   name: string;
   options: FilterOption[];
   value: string;
+  selectRef?: React.Ref<HTMLSelectElement>;
 }) {
   return (
     <label className={styles.mobileSelect}>
       <span>{label}</span>
-      <select defaultValue={value} name={name}>
+      <select defaultValue={value} name={name} ref={selectRef}>
         <option value="">{allLabel}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>

@@ -467,7 +467,7 @@ test("timeline cell links preserve active query filters while selecting body and
   assert.equal(url.searchParams.has("page"), false);
 });
 
-test("Work source renders a paginated four-line index and semantic color calendar", async () => {
+test("Work source renders a paginated work-type index and semantic color calendar", async () => {
   const [
     source,
     timeline,
@@ -502,7 +502,7 @@ test("Work source renders a paginated four-line index and semantic color calenda
   assert.match(source, /data-work-line=\{bucket\.id\}/);
   assert.doesNotMatch(source, /data-work-body|<details[\s\S]{0,200}styles\.body/);
   assert.match(source, /<ActiveScope/);
-  assert.match(source, /Remove \$\{filter\.label\} \$\{filter\.key\} filter/);
+  // Accessible filter-chip labels are covered by rendered and browser tests.
   assert.match(source, />Change filters</);
   assert.match(source, /<WorkTimeline query=\{query\} records=\{timelineRecords\}/);
   assert.match(source, /countWorkFacetOptions\(allWorks, "theme"\)/);
@@ -521,7 +521,7 @@ test("Work source renders a paginated four-line index and semantic color calenda
     source,
     /from\s+["'](?:three|@react-three\/)|import\(["'](?:three|@react-three\/)/,
   );
-  for (const name of ["bucket", "topic", "year", "format"]) {
+  for (const name of ["bucket", "topic", "format"]) {
     assert.match(source, new RegExp(`<FilterSelect[\\s\\S]{0,240}name="${name}"`));
   }
   assert.doesNotMatch(
@@ -582,9 +582,9 @@ test("Work source renders a paginated four-line index and semantic color calenda
   assert.match(mobileFilters, /action="\/work#work-index"/);
   assert.match(mobileFilters, /triggerRef\.current\?\.focus\(\)/);
   assert.doesNotMatch(mobileFilters, /name="(?:bucket|topic|year)"[\s\S]{0,120}<select/);
-  assert.match(source, /allLabel="All lines"[\s\S]*label="Line of work"[\s\S]*name="bucket"/);
-  assert.match(source, /allLabel="All years"[\s\S]*label="Year"[\s\S]*name="year"/);
-  assert.match(source, /allLabel="All topics"[\s\S]*label="Topic"[\s\S]*name="topic"/);
+  assert.match(source, /SITE_COPY\.work\["filter-work-type"\][\s\S]*name="bucket"/);
+  assert.match(source, /<input name="year" type="hidden" value=\{query\.year\}/);
+  assert.match(source, /SITE_COPY\.work\["filter-topic"\][\s\S]*name="topic"/);
   assert.match(css, /\.mobileFilterDialog::backdrop/);
   assert.match(detailSource, /<dl className=\{styles\.facts\}/);
   assert.match(detailSource, /<dt>\{label\}<\/dt>/);
@@ -594,7 +594,7 @@ test("Work source renders a paginated four-line index and semantic color calenda
 
   assert.match(
     source,
-    /id="work-more-filters"[\s\S]{0,100}open=\{Boolean\(query\.format\)\}/,
+    /id="work-more-filters"[\s\S]{0,100}open=\{Boolean\(query\.bucket \|\| query\.format\)\}/,
     "Format should open server-side when that filter is active",
   );
   assert.doesNotMatch(source, /WorkFilterBehavior/);

@@ -1,10 +1,9 @@
 .introduction {
   display: grid;
   min-width: 0;
-  min-height: min(39rem, calc(100svh - var(--header-height)));
-  grid-template-columns: minmax(0, 1.55fr) minmax(18rem, 0.45fr);
-  gap: clamp(2rem, 7vw, 8rem);
-  align-items: end;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(2rem, 6vw, 6rem);
+  align-items: center;
   padding: clamp(2.5rem, 5vw, 5rem) var(--gutter)
     clamp(1.35rem, 2.5vw, 2.25rem);
   border-bottom: 1px solid var(--blueprint-ink);
@@ -16,7 +15,7 @@
 }
 
 .identity > p {
-  margin: 0 0 clamp(1.5rem, 4vw, 3.75rem);
+  margin: 0 0 clamp(1.5rem, 3vw, 2.5rem);
   color: var(--work-blue);
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -30,7 +29,7 @@
   max-width: 100%;
   margin: 0;
   font-family: var(--font-kinetic);
-  font-size: clamp(5.25rem, 13.6vw, 13.5rem);
+  font-size: clamp(4.5rem, 9vw, 9rem);
   font-variation-settings: "CASL" 0.88, "MONO" 0, "wght" 780;
   font-weight: 780;
   letter-spacing: -0.105em;
@@ -54,6 +53,7 @@
   gap: 0.82rem;
   align-self: end;
   padding-bottom: 0.2rem;
+  margin-top: 2.2rem;
 }
 
 .headline,
@@ -102,7 +102,7 @@
   transform: translate(0.2rem, -0.2rem);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 760px) {
   .introduction {
     min-height: auto;
     grid-template-columns: 1fr;
@@ -115,7 +115,7 @@
   }
 
   .identity h1 {
-    font-size: clamp(5rem, 21vw, 10rem);
+    font-size: clamp(4.5rem, 17vw, 7rem);
     line-height: 0.69;
   }
 

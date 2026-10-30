@@ -90,6 +90,15 @@
   text-transform: uppercase;
 }
 
+.frame thead th:has(a) { padding: 0; }
+.frame thead th > a {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.58rem;
+}
+
 .frame thead th:first-child {
   position: sticky;
   z-index: 3;

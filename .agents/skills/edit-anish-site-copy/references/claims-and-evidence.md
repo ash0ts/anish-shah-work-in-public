@@ -18,7 +18,7 @@ Metric values, labels, qualifiers, periods, scope, attribution, display permissi
 
 Home's short signal limits are reviewed summaries of those complete claim
 contracts. They live with exact metric and icon IDs in
-`content/presentation/home-signal-rails.v1.json`; do not edit them through the
+`content/presentation/home-overview.v2.json`; do not edit them through the
 copy deck. The expandable node must retain the full canonical qualifier,
 period, scope, attribution, and Sources link.
 

@@ -41,7 +41,7 @@ const [
     "utf8",
   ),
   readFile(
-    path.join(projectRoot, "components/BodiesOfWork.tsx"),
+    path.join(projectRoot, "components/HomeWorkOverview.tsx"),
     "utf8",
   ),
   readFile(path.join(projectRoot, "lib/work-groups.ts"), "utf8"),
@@ -63,7 +63,7 @@ const [
   readFile(
     path.join(
       projectRoot,
-      "content/presentation/home-signal-rails.v1.json",
+      "content/presentation/home-overview.v2.json",
     ),
     "utf8",
   ).then(JSON.parse),
@@ -74,7 +74,7 @@ const [
   readFile(path.join(projectRoot, "package.json"), "utf8").then(JSON.parse),
 ]);
 const copyDeck = await buildCopyDeck(projectRoot);
-const { homeTopicRailsFrom } = await tsImport(
+const { homeWorkAreasFrom } = await tsImport(
   "../lib/home-presentation.ts",
   import.meta.url,
 );
@@ -118,59 +118,36 @@ test("Home resolves every public WorkGroup into one of four lines", () => {
   );
 });
 
-test("Home is a semantic four-line topic index without representative projects", () => {
-  assert.match(homeSource, /<HomeIntroduction/);
-  assert.match(homeSource, /<BodiesOfWork rails=/);
-  assert.match(bodySource, /data-work-line/);
-  assert.match(bodySource, /rails\.map/);
-  assert.match(bodySource, /rail\.topics\.map/);
-  assert.equal(
-    copyDeck.pages.home["selected-heading"],
-    "Choose a line, then a topic.",
-  );
-  assert.match(bodySource, /SITE_COPY\.home\["selected-heading"\]/u);
-  assert.match(bodySource, /href=\{rail\.href\}/);
-  assert.match(bodySource, /href=\{topic\.href\}/);
-  assert.doesNotMatch(bodySource, /href=\{`\/work\/\$\{/);
-  assert.doesNotMatch(bodySource, /homeTitle|homeRole|group\.slug/);
-  assert.doesNotMatch(bodySource, /<details|<summary/);
-  assert.doesNotMatch(bodySource, /bucket\.number|padStart/);
-  assert.doesNotMatch(bodySource, /canvas|three|webgl/i);
+test("Home uses one semantic illustrated overview with four filter entry points", () => {
+  assert.match(homeSource, /areas=\{areas\}/);
+  assert.match(introductionSource, /<HomeWorkOverview areas=/);
+  assert.match(bodySource, /data-work-overview/);
+  assert.match(bodySource, /areas\.map/);
+  assert.match(bodySource, /href=\{area\.href\}/);
+  assert.doesNotMatch(bodySource, /projectCount|topicCount|representative|group\.slug/);
+  assert.doesNotMatch(bodySource, /<canvas|three|webgl/i);
 });
 
-test("Home rail and topic counts exclude hidden WorkGroups", () => {
-  const visibleRails = homeTopicRailsFrom(bundle);
-  const hiddenBundle = structuredClone(bundle);
-  const hiddenGroup = hiddenBundle.workGroups.find(
-    (group) => group.bucket === "products-open-source",
-  );
-  assert(hiddenGroup);
-  hiddenGroup.publicationState = "hidden";
-
-  const hiddenRails = homeTopicRailsFrom(hiddenBundle);
-  const visibleLine = visibleRails.find(
-    (rail) => rail.id === "products-open-source",
-  );
-  const hiddenLine = hiddenRails.find(
-    (rail) => rail.id === "products-open-source",
-  );
-  assert(visibleLine && hiddenLine);
-  assert.equal(hiddenLine.projectCount, visibleLine.projectCount - 1);
-  assert(
-    hiddenLine.topics.every(
-      (topic) =>
-        topic.count <=
-        (visibleLine.topics.find(({ id }) => id === topic.id)?.count ?? 0),
-    ),
-  );
-  assert(
-    hiddenLine.topics.some(
-      (topic) =>
-        topic.count <
-        (visibleLine.topics.find(({ id }) => id === topic.id)?.count ?? 0),
-    ),
-    "at least one reviewed topic count should lose the hidden project",
-  );
+test("overview entry points resolve the same visible archive, without exposed counts", async () => {
+  const { workArchiveRecordsFrom } = await tsImport("../lib/work-index.ts", import.meta.url);
+  const { filterWorkArchiveRecords, parseWorkArchiveQuery } = await tsImport("../lib/work-archive-query.ts", import.meta.url);
+  const areas = homeWorkAreasFrom(bundle);
+  assert.equal(areas.length, 4);
+  for (const area of areas) {
+    assert.deepEqual(Object.keys(area).sort(), ["href", "id", "illustrationId", "title"]);
+    const query = parseWorkArchiveQuery(Object.fromEntries(new URL(area.href, "https://example.com").searchParams));
+    const found = filterWorkArchiveRecords(workArchiveRecordsFrom(bundle), query);
+    assert(found.length > 0);
+    assert(found.every(record => record.bucket === area.id));
+  }
+  const hidden = structuredClone(bundle);
+  const first = hidden.workGroups.find(group => group.bucket === areas[0].id);
+  first.publicationState = "hidden";
+  assert(!workArchiveRecordsFrom(hidden).some(record => record.id === first.id));
+  for (const group of hidden.workGroups) {
+    if (group.bucket === areas[0].id) group.publicationState = "hidden";
+  }
+  assert(!homeWorkAreasFrom(hidden).some(area => area.id === areas[0].id));
 });
 
 test("Home and Work share one expert-facing four-body taxonomy", () => {
@@ -178,10 +155,10 @@ test("Home and Work share one expert-facing four-body taxonomy", () => {
     (index) => copyDeck.pages.work[`bucket-${index}-title`],
   );
   for (const label of [
-    "Agent systems & open source",
-    "Technical education",
-    "Research, writing & implementations",
-    "Talks, workshops & programs",
+    "Software & tools",
+    "Courses & labs",
+    "Research & writing",
+    "Talks & programs",
   ]) {
     assert(bucketTitles.includes(label), label);
   }
@@ -192,7 +169,7 @@ test("Home and Work share one expert-facing four-body taxonomy", () => {
   assert.doesNotMatch(workGroupsSource, /title: "Talks \/ Programs"/);
   assert.doesNotMatch(workGroupsSource, /homepageWorkBuckets/);
   assert.deepEqual(
-    homePresentationManifest.rails.map(({ bucketId }) => bucketId),
+    homePresentationManifest.areas.map(({ bucketId }) => bucketId),
     [
       "products-open-source",
       "courses-learning",
@@ -305,7 +282,7 @@ test("Home signal circuit resolves three reviewed qualified metric IDs", () => {
 });
 
 test("Home presentation mapping is closed, ordered, and rejects unreviewed changes", () => {
-  assert.equal(homePresentationManifest.schemaVersion, "1.0");
+  assert.equal(homePresentationManifest.schemaVersion, "2.0");
   assert.deepEqual(
     homePresentationManifest.signals.map(
       ({ id, theme, iconId, compactLimit }) => ({
@@ -336,13 +313,10 @@ test("Home presentation mapping is closed, ordered, and rejects unreviewed chang
       },
     ],
   );
-  assert.equal(
-    homePresentationManifest.rails.flatMap(({ topicIds }) => topicIds).length,
-    12,
-  );
+  assert.equal(homePresentationManifest.areas.length, 4);
   assert.match(homePresentationSource, /home_signal_spec_unreviewed/);
   assert.match(homePresentationSource, /home_signal_order_invalid/);
-  assert.match(homePresentationSource, /home_rail_order_invalid/);
+  assert.match(homePresentationSource, /home_area_spec_unreviewed/);
 });
 
 test("the superseded chapter-stack and Three.js implementation is gone", () => {

@@ -44,8 +44,8 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `content/curation/portfolio-updates.v1.json` and `scripts/content/updates.mjs`:
   additive, owner-reviewed projects and metric observations. Preserve stable
   IDs and immutable legacy inputs; private corroboration never enters this file.
-- `content/presentation/home-signal-rails.v1.json`: exact Home metric IDs,
-  compact limits, code-native icon IDs, and four bucket/topic rail mappings.
+- `content/presentation/home-overview.v2.json`: exact Home metric IDs,
+  compact limits, code-native icon IDs, and four bucket/illustration mappings.
   Runtime counts derive from visible WorkGroups; hidden work never contributes.
   The manifest is attested and participates in `COPY_VERSION`, but remains
   outside the freelancer copy surface.
@@ -69,13 +69,14 @@ Runtime precedence is: sanitized canonical facts and structure, then published D
 
 - `frontend-design` is the only creative skill and is required when public-language work changes layout, interaction, or hierarchy.
 - Work stays a two-dimensional, server-rendered semantic color calendar; copy changes do not authorize a second archive or WebGL navigation.
-- Home uses one equal-weight three-node signal circuit and four general
-  bucket/topic rails. There is no representative-project or WandBot-specific
-  Home selection. All Home rails, calendar cells, search, organization marks,
-  and filters converge on the same Work Project index.
-- Filtered Work uses a flat list for one line and simple non-collapsible line
-  headings across lines. `/work/[slug]` pages are compact canonical evidence
-  leaves whose line and topic links return to the filtered Work view.
+- Home uses one equal-weight three-node signal circuit and one four-area SVG/HTML
+  overview. Work-type labels and illustration IDs lead directly to bucket-filtered
+  Work; topics and counts remain in the archive. No representative projects or
+  new category routes. Work offers Search and Topic first, Work type and Format
+  on demand, and year filtering through calendar headings.
+- Filtered Work uses a flat list for one work type and simple non-collapsible
+  headings across types. `/work/[slug]` pages are compact canonical evidence
+  leaves whose work-type and topic links return to the filtered Work view.
 - Public narrative uses a personal technical voice when authorship or choice
   matters and the sequence outcome → mechanism → proof → meaning. The copyable
   About speaker bio deliberately uses third person. Keep one claim per sentence

@@ -5,7 +5,7 @@
 1. Four owner-held CSV/Markdown inputs are immutable observations.
 2. `content/curation/content-v1.1.json` owns stable observations, aliases, relations, corrections, and conservative grouping.
 3. `content/curation/work-groups.v1.json` owns WorkGroup membership and structure.
-4. Reviewed claim, metric, and Home signal/rail presentation files own
+4. Reviewed claim, metric, and Home signal/overview presentation files own
    approved quantitative claims, compact limits, icon identities, and
    bucket/topic navigation.
 5. `scripts/build-content.mjs` deterministically generates owner/public bundles, schema, report, and attestation.
@@ -30,7 +30,7 @@ and active-claim replacements go through the existing metric projector.
 
 `CONTENT_VERSION` identifies canonical data. `COPY_VERSION` hashes every copy
 source, field contract, parser/generator, and the reviewed
-`content/presentation/home-signal-rails.v1.json` and
+`content/presentation/home-overview.v2.json` and
 `content/presentation/speaker-profile.v1.json` manifests. The public content
 attestation also inventories those manifests. Record both versions in preview
 metadata, owner health, release plans, and attestations.
@@ -49,7 +49,7 @@ paths and review classes read-only.
 The copy deck cannot own metrics, evidence, dates, IDs, slugs, relationships,
 URLs, ordering, visibility, privacy/security/legal language, provider
 attribution/policy, connector payloads, states, behavior, generated data, or
-the Home signal/rail mapping and compact limits. Those belong in a proposal or
+the Home signal/overview mapping and compact limits. Those belong in a proposal or
 linked engineering change. Use `$edit-anish-site-copy` for copy-only work.
 
 The parser rejects unknown/duplicate/missing headings, altered stable-ID markers, HTML, JSX, scripts, code fences, embedded links, control characters, private paths/domains, and field-length violations. Copy renders as plain React text; Markdown is never interpreted.
