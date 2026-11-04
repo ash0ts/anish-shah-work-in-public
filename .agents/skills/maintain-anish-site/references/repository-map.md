@@ -23,7 +23,7 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `app/api/connectors/**`: public reads, exact OAuth callbacks, and retained compatibility redirects—not new owner mutations.
 - `lib/server/http/**`: thin, reusable authenticated request handlers.
 - `lib/server/connectors/**`: provider contracts, clients, credentials, OAuth, refresh locks, public projectors, snapshots, audit, and retention.
-- `lib/server/strava-config.ts`: separate official-embed configuration, not the generic connector repository.
+- `lib/server/strava-config.ts`: stable official-embed facade, separate from the generic connector repository. `lib/server/strava/` owns parsing, actual-origin framing policy, manual verification, persistence, and public projection. Header diagnostics are owner-only and never claim visual success.
 - `lib/server/travel/**`: Postcard Planet drafts, policy, public projection, versioned publication, retention, uploads, and media authorization. Public atlas and paginated trip projectors stay narrower than stored publication records.
 - `app/studio/travel/**` and `app/api/studio/travel/**`: owner-only Travel Desk and writes. Exact GPS and original filenames remain browser-local intake suggestions and never enter public state.
 - `lib/server/simulation/**`: bounded session, budget, approval, grounding, and model-gateway contracts.

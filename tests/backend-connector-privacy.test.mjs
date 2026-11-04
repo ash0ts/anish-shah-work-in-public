@@ -491,7 +491,7 @@ test("Studio documents setup, replacement, and official provider sources", async
   assert.match(guide, /profile feed|weekly summary/i);
   assert.match(guide, /profile-link fallback|profile link fallback/i);
   assert.match(guide, /does not fetch, copy, aggregate, or custom-visualize/);
-  assert.match(controls, /anonymous frame check/);
+  assert.match(controls, /successful HTTP response is not visual verification/);
   assert.match(controls, /Use only Strava-generated values/);
 });
 

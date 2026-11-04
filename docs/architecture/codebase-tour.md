@@ -330,6 +330,12 @@ Studio save validates and stores the public profile and optional official feed;
 never recheck Strava remotely, and verification is not required to retain its
 profile-link fallback.
 
+The `lib/server/strava-config.ts` facade keeps its callers stable while
+`lib/server/strava/` separates parsing, framing-policy evaluation, bounded
+verification, persistence, and exact public projection. Only save/Verify calls
+the provider. Owner diagnostics describe headers, not visual success; the
+consent-gated browser path remains the final feed check.
+
 This design favors privacy, predictable provider load, and inspectable owner
 intent over minute-by-minute freshness. It also makes stale and unavailable
 states part of the public contract rather than errors to hide.

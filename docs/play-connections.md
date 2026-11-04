@@ -478,7 +478,7 @@ later rather than repeatedly refreshing.
 
 Strava uses neither an API credential nor a custom API visualization.
 The supported embed instructions and generated-path expectations were last
-verified against Strava's official documentation on **2026-08-05**.
+verified against Strava's official documentation on **2026-11-04**.
 
 1. Follow Strava’s [official embed instructions](https://support.strava.com/en-us/articles/15402053-sharing-your-activities-and-routes-with-a-strava-embed).
 2. In Studio’s Move panel, enter the public athlete URL, such as
@@ -486,12 +486,14 @@ verified against Strava's official documentation on **2026-08-05**.
 3. If Strava offers a recent profile feed or weekly summary, paste its complete
    generated iframe. Keep the tokenized URL exactly as Strava generated it.
 4. Select **Save Strava settings**. Studio makes one anonymous, no-redirect
-   health check and records whether the iframe is currently frameable.
+   header check against this site's actual origin. **Headers allow embedding**
+   means only that HTTP and framing policy permit the attempt—not that the
+   feed has been visually verified.
    **Verify now** repeats that check only when the owner explicitly requests it.
 5. Record **Allow public use**. This authorizes the saved configuration but does
    not run another health check.
-6. Open Move on `/play`. If the check passed, choose to load third-party
-   content; otherwise verify the prominent athlete-profile link.
+6. Open `/play/move`. If headers permit embedding, choose **Load public Strava
+   feed** and inspect the feed. Otherwise use the athlete-profile link.
 Studio never executes pasted markup. It recognizes only exact generated
 `www.strava.com/athletes/.../latest-rides/...`, `activity-summary`, numeric
 `strava-embeds.com` activity, or route embed paths. Private-share query parameters, unrelated
@@ -499,6 +501,17 @@ paths, non-HTTPS URLs, URL credentials, ports, fragments, and unrecognized
 iframe attributes are rejected. If a profile feed redirects to sign-in or
 blocks framing, the widget remains visible only to the owner for recovery and
 Play uses the public profile-link fallback. Replacing it requires no deployment.
+
+Advanced diagnostics distinguish invalid or retired embed formats, redirects,
+provider failures, and framing restrictions. Retired activity embeds under
+`/activities/.../embed/...` need fresh code from Strava's share menu; valid
+profile-feed embeds are not classified as retired. Enforced CSP
+`frame-ancestors` takes precedence over X-Frame-Options, and multiple enforced
+policies must all allow this site's origin. Report-only policies do not grant
+permission. No check follows redirects or bypasses a provider restriction.
+
+Diagnostics are owner-only. Their saved HTTP result is never labelled a visual
+verification, and public reads neither expose it nor repeat the request.
 
 The public site does not fetch, copy, aggregate, or custom-visualize Strava API
 data. Reading the public Strava configuration never performs a remote health

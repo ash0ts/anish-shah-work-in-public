@@ -331,6 +331,7 @@ test("Strava stores a checked feed but publishes only a same-origin-safe project
   );
   assert.deepEqual(Object.keys(stored).sort(), [
     "checkedAt",
+    "diagnostic",
     "embedKind",
     "embedStatus",
     "embedUrl",
@@ -354,6 +355,8 @@ test("Strava stores a checked feed but publishes only a same-origin-safe project
   assert.equal(published.config.embedStatus, "available");
   assert.equal(published.config.embed.embedUrl, PROFILE_FEED);
   assert.equal(JSON.stringify(published).includes("owner@example.com"), false);
+  assert.equal(JSON.stringify(published).includes("diagnostic"), false);
+  assert.equal(stored.diagnostic.visuallyVerified, false);
 });
 
 test("Strava reuses a same-widget health check for twelve hours", async () => {
