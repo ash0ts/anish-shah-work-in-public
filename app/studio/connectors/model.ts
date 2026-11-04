@@ -49,6 +49,7 @@ export type DiscogsExtendedDisplayApproval = {
 };
 
 export type ApiResult = {
+  diagnostic?: import("@/lib/server/strava/types").StravaDiagnostic;
   authorizationUrl?: string;
   callbackUrl?: string;
   checkedAt?: string | null;

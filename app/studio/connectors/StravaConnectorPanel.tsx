@@ -11,6 +11,8 @@ import { ConnectorPermissionControl } from "./ConnectorPermissionControl";
 import { formatTimestamp, responseJson } from "./helpers";
 import type { ApiResult, Environment } from "./model";
 import { studioConnectorActionLabel } from "./action-label";
+import { stravaDiagnosticLabel } from "./strava-diagnostic-label";
+import type { StravaDiagnostic } from "@/lib/server/strava/types";
 
 type StravaState =
   | { phase: "loading" }
@@ -23,6 +25,7 @@ type StravaState =
       embedStatus: "available" | "unavailable";
       checkedAt: string | null;
       updatedAt: string | null;
+      diagnostic?: StravaDiagnostic | null;
     };
 
 type Props = {
@@ -80,6 +83,7 @@ export function StravaConnectorControls({
             embedStatus?: "available" | "unavailable";
             checkedAt?: string | null;
             updatedAt?: string;
+            diagnostic?: StravaDiagnostic | null;
           };
         };
         if (!active) return;
@@ -91,6 +95,7 @@ export function StravaConnectorControls({
             embedStatus: result.payload.embedStatus ?? "unavailable",
             checkedAt: result.payload.checkedAt ?? null,
             updatedAt: result.payload.updatedAt ?? null,
+            diagnostic: result.payload.diagnostic,
           });
           setProfileUrl(result.payload.profileUrl);
           setEmbed(result.payload.embedUrl ?? "");
@@ -157,6 +162,7 @@ export function StravaConnectorControls({
           result.embedStatus === "available" ? "available" : "unavailable",
         checkedAt: result.checkedAt ?? null,
         updatedAt: result.updatedAt ?? null,
+        diagnostic: result.diagnostic,
       });
       setProfileUrl(String(result.profileUrl));
       setEmbed(typeof result.embedUrl === "string" ? result.embedUrl : "");
@@ -208,14 +214,11 @@ export function StravaConnectorControls({
                   ? "available"
                   : "unavailable",
               checkedAt: result.checkedAt ?? null,
+              diagnostic: result.diagnostic,
             }
           : current,
       );
-      setMessage(
-        result.embedStatus === "available"
-          ? "The feed passed the manual anonymous frame check."
-          : "The feed could not be framed. Visitors receive the profile link instead.",
-      );
+      setMessage(stravaDiagnosticLabel(result.diagnostic));
       await refreshComposedView();
     } catch {
       setMessage(
@@ -436,6 +439,10 @@ export function StravaConnectorControls({
 
               <details className={styles.connectorAdvanced}>
                 <summary>Advanced / recovery</summary>
+                {state.embedUrl ? <p className={styles.recoveryText}>
+                  {stravaDiagnosticLabel(state.diagnostic)}
+                  {" "}A successful HTTP response is not visual verification.
+                </p> : null}
                 <div className={styles.currentConfig}>
                   <span>Saved profile</span>
                   <code>{state.profileUrl}</code>

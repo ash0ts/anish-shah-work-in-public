@@ -7,6 +7,7 @@ import { readBoundedJsonBody } from "@/lib/server/request-security";
 import {
   deleteStravaPublicConfig,
   getStravaPortableConfig,
+  getStravaOwnerDiagnostics,
   getStravaPublicConfig,
   saveStravaPublicConfig,
   verifyStoredStravaPublicConfig,
@@ -16,9 +17,10 @@ export async function stravaConfigGet(): Promise<Response> {
   const authorization = await authorizeOwnerApi();
   if (!authorization.ok) return authorization.response;
   try {
-    const [portable, published] = await Promise.all([
+    const [portable, published, diagnostics] = await Promise.all([
       getStravaPortableConfig(),
       getStravaPublicConfig(undefined, { bypassPublicationApproval: true }),
+      getStravaOwnerDiagnostics(),
     ]);
     if (!portable || published.status !== "ready") {
       return Response.json(
@@ -33,7 +35,7 @@ export async function stravaConfigGet(): Promise<Response> {
         payload: {
           ...portable,
           embedStatus: published.config.embedStatus,
-          checkedAt: published.config.embed?.checkedAt ?? null,
+          ...diagnostics,
           updatedAt: published.config.updatedAt,
         },
       },
@@ -68,6 +70,8 @@ export async function stravaConfigPut(request: Request): Promise<Response> {
     const result = await saveStravaPublicConfig(
       parsed.value,
       authorization.user.email,
+      undefined,
+      new URL(request.url).origin,
     );
     if ("ok" in result && !result.ok) {
       return Response.json(
@@ -110,6 +114,8 @@ export async function stravaVerifyPost(request: Request): Promise<Response> {
   try {
     const result = await verifyStoredStravaPublicConfig(
       authorization.user.email,
+      undefined,
+      new URL(request.url).origin,
     );
     const error =
       result.status === "not_configured"
