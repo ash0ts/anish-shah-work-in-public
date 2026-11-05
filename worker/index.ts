@@ -6,7 +6,7 @@ import {
 } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 import { pruneConnectorRetention } from "../lib/server/connectors/repository";
-import { pruneSimulationRetention } from "../lib/server/simulation/repository";
+import { pruneSimulationRetention } from "../lib/server/simulation/retention";
 import { pruneTravelRetention } from "../lib/server/travel";
 import { authenticateRequest, isSitesRuntime } from "./access";
 import { publicationAvailabilityResponse } from "./publication-fallback";

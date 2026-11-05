@@ -7,7 +7,7 @@
 - `content/copy/pages/about.md`: concise biography, copyable speaker-profile prose, calls to action, and About metadata. The separate career manifest owns chronology periods, organizations, and trajectory labels.
 - `content/copy/pages/work.md`: Work archive introduction, search wording, and metadata.
 - `content/copy/pages/play.md`: room overview, seven object descriptions, Travel doorway/atlas framing, and Play metadata.
-- `content/copy/pages/simulation.md`: dormant Simulation introduction, CTA, nonfactual encounter flavor, instructions, and metadata. Editing it does not enable the route.
+- `content/copy/pages/simulation.md`: owner-preview 4N1SH introduction, CTA, nonfactual scene flavor, prompts, and metadata. Editing it does not enable the route.
 - `content/copy/pages/sources.md`: Sources framing and approved methodology prose.
 - `content/copy/work-groups/<slug>.md`: one stable WorkGroup's display title, short title, summary, and role summary; optional fact-checked `detail-note` provides contribution or experiment limits inside Sources.
 

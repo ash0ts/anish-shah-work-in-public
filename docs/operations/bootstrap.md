@@ -52,48 +52,23 @@ explicitly approved rotation:
 npx --no-install wrangler secret put CONNECTOR_ENCRYPTION_KEY --config dist/server/wrangler.public.json
 npx --no-install wrangler secret put RATE_LIMIT_SALT --config dist/server/wrangler.public.json
 npx --no-install wrangler secret put SIMULATION_SESSION_HMAC_KEY --config dist/server/wrangler.public.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_ACCOUNT_ID --config dist/server/wrangler.public.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_ID --config dist/server/wrangler.public.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_TOKEN --config dist/server/wrangler.public.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_BYOK_ALIAS --config dist/server/wrangler.public.json
 ```
 
 Never rotate `CONNECTOR_ENCRYPTION_KEY` during an ordinary release. Bootstrap
 changes need their own recovery notes and are not covered by the recurring
 [production release plan](./release.md).
 
-Create a production-only Cloudflare AI Gateway and store the Anthropic key
-there under the configured BYOK alias. The Worker must never receive the
-Anthropic key directly. In the Gateway dashboard:
-
-- disable prompt/response logging and payload collection;
-- disable response caching;
-- configure DLP to block likely secrets and sensitive values;
-- configure content Guardrails for visitor and model text;
-- set a hard spend limit consistent with the application daily-call ceiling;
-  and
-- confirm the Gateway token is scoped only to the production Gateway.
-
-The Worker also requests no payload logging, no cache, one Gateway attempt, and
-a bounded timeout on every model call. Those request flags do not replace the
-Gateway-wide controls. Staging uses a different Gateway, token, BYOK alias,
-provider key, budget, and session key.
+The current conversation preview does not use AI Gateway or Anthropic BYOK.
+Production stays disabled. Do not provision model credentials for production.
 
 ### Two-release simulation bootstrap
 
-The first production deployment that introduces simulation persistence must
-keep `SIMULATION_EXPERIENCE_MODE=disabled` and apply the reviewed additive
-`0006_public_model_simulation.sql` migration. After that disabled release is
-healthy, enter provider approvals through owner-only Studio. Only then prepare
-a second, no-migration activation release with `campaign-v1` and live AI. This
-ordering prevents a release plan from claiming approvals before their protected
-table exists.
-
-A no-migration `coming-soon` release may follow the infrastructure release
-before campaign approval. It exposes the semantic doorway and server-rendered
-placeholder while keeping every Simulation API unavailable. It must use
-`SIMULATION_AI_MODE=authored-only`, carry no approval variables, stay noindexed,
-and remain absent from the sitemap.
+Apply the existing reviewed migration chain before using local or separately
+authorized staging owner preview. Never edit applied migration 0006 or delete
+historical approval records. The new conversation uses those session tables and
+encrypted editorial settings without a migration. Google setup and processing
+permissions are entered only in that environment's Studio. Public activation
+requires a separate policy/eligibility review, not a second automatic release.
 
 ### First Travel activation
 
@@ -139,15 +114,12 @@ acceptance.
 - Dedicated `CONNECTOR_ENCRYPTION_KEY`, `RATE_LIMIT_SALT`, and
   `SIMULATION_SESSION_HMAC_KEY` secrets.
 - A staging Access application and audience.
-- A staging-only Cloudflare AI Gateway, Gateway token, Anthropic BYOK alias,
-  daily spend cap, DLP rules, and content Guardrails.
+- Optional owner-preview Gemini setup saved through staging Studio, with a
+  separate key, paid-service review, Google permissions, and hard call budgets.
 
-The staging Gateway must not share an ID, token, BYOK alias, budget, or provider
-key with production. Disable prompt/response logging and response caching in the
-Gateway dashboard. The Worker also sends per-request no-payload-log,
-skip-cache, one-attempt, and bounded-timeout controls; the dashboard settings
-remain the environment-wide safety net. Verify those controls before entering
-any provider approval in staging Studio.
+No production model key, approval record, or transcript is copied into staging.
+The direct Worker adapter has no Gateway DLP claim; see the
+[conversation safeguards](../architecture/meet-me-simulation.md).
 
 The Access application protects `staging.anish-shah-is.online/*` with the exact
 owner email. Add more-specific applications that bypass the Access login page
@@ -192,22 +164,15 @@ npx --no-install wrangler secret put CONNECTOR_ENCRYPTION_KEY --config dist/serv
 npx --no-install wrangler secret put RATE_LIMIT_SALT --config dist/server/wrangler.staging.json
 ```
 
-Set Simulation secrets against only the staging configuration before the
-later `campaign-v1` activation. Enter values interactively; never echo, commit,
-or place them in the release plan:
+Set only the independent session HMAC key before an authorized owner preview:
 
 ```bash
 npx --no-install wrangler secret put SIMULATION_SESSION_HMAC_KEY --config dist/server/wrangler.staging.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_ACCOUNT_ID --config dist/server/wrangler.staging.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_ID --config dist/server/wrangler.staging.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_TOKEN --config dist/server/wrangler.staging.json
-npx --no-install wrangler secret put SIMULATION_GATEWAY_BYOK_ALIAS --config dist/server/wrangler.staging.json
 ```
 
-Use the owner-only Simulation section in staging Studio to enable only
-providers whose permission record covers both `game_display` and `llm_context`.
-References and notes remain protected D1 fields; release evidence uses only
-provider names and the one-way approval-state digest.
+Use staging Studio's Gemini setup after the disabled release is healthy.
+Saving a key or enabling owner preview does not authorize public AI. Collection
+processing needs separate Google permission; Strava and Travel remain excluded.
 
 Staging Studio does not render production handoff controls, and staging routes
 cannot issue, accept, stage, or apply a production promotion code. Local and
@@ -223,14 +188,11 @@ For the first deployment to a staging database that does not yet have migration
 upload, stage, bootstrap, checkpoint, and promote that infrastructure-only
 version without approval variables by following [Staging releases](./staging.md).
 
-Then enter provider approvals and author/publish an owner-reviewed Travel
-snapshot in staging Studio. Wait for the offset maintenance cron to record a
-current Travel cleanup heartbeat. Choose the reviewed public state for the next
-no-migration release: `coming-soon` publishes only the noindexed
-server-rendered doorway, while `campaign-v1` activates the live campaign and
-requires sanitized approval values. This two-release bootstrap avoids inventing
-approval evidence or atlas state before their protected tables and media
-boundary exist. Keep both disabled variables set for every guarded command in
+Then author/publish an owner-reviewed Travel snapshot in staging Studio and
+wait for the cleanup heartbeat. Travel may later use `atlas-v1` after acceptance.
+A separately approved `conversation-v2` staging review remains owner-only and
+starts with authored archive search; Studio controls private model setup.
+Keep both disabled variables set for every guarded command in
 the first release; changing either makes the prepared configuration fail
 closed. Owner Travel Desk writes remain available while the public atlas route
 is disabled.

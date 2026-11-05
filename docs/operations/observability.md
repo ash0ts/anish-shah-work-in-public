@@ -17,7 +17,7 @@ incident easier to search.
 The owner-only `GET /api/studio/health` endpoint reports only release SHA,
 content version, copy version, canonical-origin readiness, migration state,
 retention heartbeat, sanitized connector status, and bounded simulation health.
-Simulation health contains campaign/AI/provider/model settings, configured
+Simulation health contains conversation/AI/provider/model settings, configured
 state, coarse fallback rate, daily count/cap, last successful generation time,
 approved provider names, and a one-way approval-state digest. It contains no
 approval references, prompts, responses, visitor identifiers, free text, model
@@ -32,12 +32,9 @@ the exact owner allowlist and is always `private, no-store`.
 - Confirm `/api/studio/health` matches the deployed SHA, `CONTENT_VERSION`, and
   `COPY_VERSION`, and has
   a current retention heartbeat.
-- In `coming-soon` mode, confirm owner health reports the mode as unconfigured
-  and that model-call/session counters do not change from public visits. Stored
-  owner approvals may remain in D1, but the release plan carries none and the
-  placeholder cannot use them. When the campaign is enabled, confirm Gateway readiness, the planned provider
-  names/digest, and the configured daily model ceiling. Investigate fallback
-  rate changes without adding prompt or response logging.
+- Production conversation stays disabled. Owner-preview health reports the
+  pinned Google model, safe setup state, call counters, and permission digest.
+  Never add prompt or response logging to diagnose a fallback.
 - Inspect Studio connector health. Refresh a configured provider only when the
   owner deliberately intends to synchronize it; neither observation nor public
   traffic performs that action.
@@ -62,10 +59,8 @@ health signals. The hourly cron performs retention and cleanup only; it never
 calls a provider collection API. Strava remote health checks occur only on
 Studio save or **Verify now**.
 Simulation budget counters and the coarse fallback bucket are the primary model
-health signals. Cloudflare AI Gateway prompt/response logging and response
-caching remain disabled; do not enable them during debugging. Use request IDs,
-safe status codes, authored-fallback counters, DLP/Guardrail events, and
-Gateway aggregate cost/latency instead.
+health signals. The direct Gemini adapter does not use Gateway. Inspect safe
+status classes, request IDs, budget counts, and owner health—not payloads.
 
 ## Escalation conditions
 
@@ -76,7 +71,7 @@ Gateway aggregate cost/latency instead.
 - retention heartbeat older than three hours
 - sudden artwork proxy rejection/rate-limit spikes
 - D1 migration mismatch or failed publication reconciliation
-- simulation Gateway unexpectedly unconfigured while `campaign-v1` is active,
+- owner-preview Gemini unexpectedly unconfigured,
   approval digest drift, daily cap exhaustion, or sustained elevated/high
   authored fallback
 

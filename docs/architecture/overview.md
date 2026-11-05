@@ -83,8 +83,8 @@ content or navigation. See
 | --- | --- | --- | --- |
 | Local | Local D1 and local-only secrets | Real, with local registrations | No |
 | PR preview | None; sanitized content + synthetic fixtures | None | No |
-| Staging | Dedicated D1/KV/R2/secrets/Access/apps/Gateway | Real, staging-only | No |
-| Production | Production D1/KV/R2/secrets/Access/apps/Gateway | Real, production-only | Yes |
+| Staging | Dedicated D1/KV/R2/secrets/Access/apps | Real, staging-only | No |
+| Production | Production D1/KV/R2/secrets/Access/apps | Real, production-only; conversation disabled | Yes |
 
 Code may move between tiers; credentials, tokens, snapshots, D1 rows, KV
 envelopes, encryption keys, and publication approval do not. The private OpenAI

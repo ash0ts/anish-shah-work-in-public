@@ -130,12 +130,9 @@ function scheduleCue(runtime: AudioRuntime, id: ExperienceCueId) {
 }
 
 function experiencePath(pathname: string): boolean {
-  return (
-    pathname === "/play" ||
-    pathname.startsWith("/play/") ||
-    pathname === "/simulation" ||
-    pathname.startsWith("/simulation/")
-  );
+  // The authored personal-internet slice has no audio cues. Do not offer a
+  // nonfunctional global toggle or cover its mobile workspace dock.
+  return pathname === "/play" || pathname.startsWith("/play/");
 }
 
 export function ExperienceAudioProvider({ children }: { children: ReactNode }) {

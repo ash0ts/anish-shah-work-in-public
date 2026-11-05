@@ -1,68 +1,93 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { SimulationComingSoon } from "@/components/simulation/SimulationComingSoon";
+import { Network } from "@/components/simulation/network/Network";
 import { SITE_COPY } from "@/lib/copy";
 import { publicPageMetadata } from "@/lib/seo";
 import { simulationExperienceMode } from "@/lib/server/simulation/mode";
-import styles from "./simulation.module.css";
+import { runtimeValue } from "@/lib/server/runtime-env";
+import { getPublicContentView } from "@/lib/server/public-content";
+import { authorizeOwnerApi } from "@/lib/server/owner-auth";
+import { personalInternetFrom } from "@/lib/server/simulation/conversation/workspace";
+import { readSimulationCatalog } from "@/lib/server/simulation/conversation/catalog";
+import { pageCatalog } from "@/lib/simulation/network/catalog-contract";
+import { headers } from "next/headers";
+import {
+  hasNetworkAccess,
+  readNetworkAccess,
+} from "@/lib/server/simulation/conversation/access";
+import { NetworkGate } from "@/components/simulation/NetworkGate";
+import { readGeminiConfiguration } from "@/lib/server/simulation/conversation/settings";
 
 export const dynamic = "force-dynamic";
-
 export function generateMetadata(): Metadata {
-  const mode = simulationExperienceMode();
   return publicPageMetadata({
     title: SITE_COPY.simulation["seo-title"],
-    description:
-      mode === "coming-soon"
-        ? SITE_COPY.simulation["coming-soon-seo-description"]
-        : SITE_COPY.simulation["seo-description"],
+    description: SITE_COPY.simulation["seo-description"],
     path: "/simulation",
-    noindex: mode !== "campaign-v1",
+    noindex: true,
   });
 }
-
-export default async function SimulationPage() {
-  const mode = simulationExperienceMode();
-  if (mode === "disabled") notFound();
-
-  if (mode === "coming-soon") {
-    return (
-      <main className={`site-main ${styles.page}`} id="main">
-        <SimulationComingSoon />
-      </main>
-    );
+export default async function SimulationPage({
+  searchParams,
+}: { searchParams?: Promise<{ access?: string }> } = {}) {
+  if (simulationExperienceMode() !== "conversation-v2") notFound();
+  const synthetic = runtimeValue("DEPLOYMENT_TIER") === "preview";
+  const denied = (await searchParams)?.access === "denied";
+  let geminiReady = false;
+  let passwordProtected = false;
+  if (!synthetic) {
+    const gate = await readNetworkAccess();
+    if (
+      gate ||
+      ["production", "staging"].includes(runtimeValue("DEPLOYMENT_TIER") ?? "")
+    ) {
+      if (!(await hasNetworkAccess((await headers()).get("cookie") ?? "")))
+        return (
+          <main id="main">
+            <NetworkGate denied={denied} />
+          </main>
+        );
+      passwordProtected = true;
+    } else if (!(await authorizeOwnerApi()).ok)
+      return (
+        <main id="main">
+          <NetworkGate denied={denied} />
+        </main>
+      );
+    const config = await readGeminiConfiguration();
+    geminiReady =
+      config.tested && config.enabled && (await authorizeOwnerApi()).ok;
   }
-
-  const [
-    { SimulationCampaign },
-    { SimulationDossier },
-    { resolveSimulationDossier },
-    { getPublicContentView },
-  ] = await Promise.all([
-    import("@/components/simulation/SimulationCampaign"),
-    import("@/components/simulation/SimulationDossier"),
-    import("@/components/simulation/resolve-dossier"),
-    import("@/lib/server/public-content"),
-  ]);
-
-  const publication = await getPublicContentView();
-  const dossier = resolveSimulationDossier(
-    publication.bundle,
-    publication.source,
+  const { bundle } = await getPublicContentView();
+  const { catalog, featuredIds } = personalInternetFrom(bundle);
+  const previewWork = catalog.map((item) => ({
+    ...item,
+    domain: "work" as const,
+    version: "synthetic",
+    updatedAt: null,
+    stale: false,
+    provenance: "Synthetic preview Work archive",
+  }));
+  previewWork.sort(
+    (a, b) =>
+      Number(featuredIds.includes(b.id)) - Number(featuredIds.includes(a.id)),
   );
-
-  if (dossier.scenes.length !== 4 || dossier.facts.length < 8) notFound();
-
+  const initial = synthetic
+    ? {
+        ...pageCatalog(previewWork, "work", "", 1),
+        fixture: true,
+      }
+    : await readSimulationCatalog("work");
   return (
-    <main className={`site-main ${styles.page}`} id="main">
-      <SimulationCampaign dossier={dossier} />
-      <noscript>
-        <style>{`[data-simulation-interactive] { display: none !important; }`}</style>
-        <p className={styles.noScriptNotice}>
-          {SITE_COPY.simulation["noscript-summary"]}
-        </p>
-      </noscript>
-      <SimulationDossier dossier={dossier} />
+    <main id="main">
+      <Network
+        initial={initial}
+        featuredIds={featuredIds}
+        synthetic={synthetic}
+        previewWork={synthetic ? previewWork : []}
+        geminiReady={geminiReady}
+        passwordProtected={passwordProtected}
+      />
     </main>
   );
 }

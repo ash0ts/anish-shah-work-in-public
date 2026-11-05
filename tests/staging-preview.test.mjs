@@ -138,7 +138,7 @@ test("staging config uses only isolated resources and exact noindex-ready bounda
   assert.equal(config.vars.RELEASE_VERSION, releaseVersion);
   assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "disabled");
   assert.equal(config.vars.SIMULATION_AI_MODE, "authored-only");
-  assert.equal(config.vars.SIMULATION_MODEL, "claude-sonnet-5");
+  assert.equal(config.vars.SIMULATION_MODEL, "gemini-3.6-flash");
   assert.equal(config.compatibility_date, "2026-07-30");
   assert.equal(config.vars.TRAVEL_ATLAS_MODE, "atlas-v1");
   assert.deepEqual(config.r2_buckets, [
@@ -206,14 +206,14 @@ test("staging can apply simulation persistence with the campaign disabled first"
         contentVersion,
         releaseVersion,
       ),
-    /disabled, coming-soon, or campaign-v1/,
+    /disabled or conversation-v2/,
   );
 });
 
-test("staging can publish the simulation doorway without enabling the campaign", () => {
+test("staging can prepare owner-only conversation without enabling model calls", () => {
   const environment = {
     ...stagingEnvironment(),
-    STAGING_SIMULATION_EXPERIENCE_MODE: "coming-soon",
+    STAGING_SIMULATION_EXPERIENCE_MODE: "conversation-v2",
   };
   const expected = expectedStagingCoordinates(
     environment,
@@ -222,7 +222,7 @@ test("staging can publish the simulation doorway without enabling the campaign",
   );
   const config = stagingConfiguration(generatedBase(), expected);
   assert.doesNotThrow(() => assertStagingConfiguration(config, expected));
-  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "coming-soon");
+  assert.equal(config.vars.SIMULATION_EXPERIENCE_MODE, "conversation-v2");
   assert.equal(config.vars.SIMULATION_AI_MODE, "authored-only");
   assert.equal(config.vars.TRAVEL_ATLAS_MODE, "atlas-v1");
 });
@@ -1051,8 +1051,8 @@ test("staging callbacks alone bypass identity while preview remains fully gated"
     simulationExperienceBoundaryResponse(
       "/simulation",
       "coming-soon",
-    ),
-    null,
+    )?.status,
+    404,
   );
   assert.equal(
     simulationExperienceBoundaryResponse(
@@ -1066,7 +1066,7 @@ test("staging callbacks alone bypass identity while preview remains fully gated"
       new Request("https://pr-42.anish-shah-is.online/simulation"),
       "/simulation",
       "preview",
-      "campaign-v1",
+      "conversation-v2",
     ),
     null,
   );
@@ -1849,7 +1849,7 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.match(runner, /ROOM_CAPTURE_VISUALS: "0"/);
   assert.match(runner, /segment: "release-public"/);
   assert.doesNotMatch(runner, /segment: "release-simulation-fallbacks"/);
-  assert.match(runner, /simulationExperienceMode: "campaign-v1"/);
+  assert.match(runner, /simulationExperienceMode: "conversation-v2"/);
   assert.match(runner, /BROWSER_SIMULATION_EXPERIENCE_MODE/);
   assert.match(runner, /remaining release checks were cancelled/);
   assert.match(config, /process\.env\.BROWSER_QUALITY_PORT/);

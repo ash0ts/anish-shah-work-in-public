@@ -16,7 +16,7 @@ node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run --base or
 | public app/components/CSS/SEO | typecheck, lint, build, rendered tests; browser checks for responsive/interactive work |
 | connectors, Studio, OAuth | typecheck, content/backend/security tests, exact public projector and provider-failure coverage; prove zero provider data calls from public reads/callbacks/saves/cron, one attempt per Studio refresh, and last-known-good preservation |
 | Travel atlas, Travel Desk, geography, uploads/media, or room-globe integration | `travel:geography:check`, backend and rendered tests, clean local D1 migration, Travel security coverage, and full browser gate |
-| Simulation campaign, session, Gateway, Action/Tactical, or shared audio | same-change Simulation regression coverage for server/privacy work; backend/security and rendered tests, bundle scan, exact runtime/privacy coverage, and full browser gate; verify authored fallback and gesture gating |
+| Conversation, session, Gemini settings/permissions, or shared audio | same-change Simulation regression coverage for server/privacy work; backend/security and rendered tests, bundle scan, exact runtime/privacy coverage, and full browser gate; verify authored fallback and gesture gating |
 | Simulation mode disabled | rendered, sitemap, API, bundle, and Play ingress checks; prove route/APIs are 404, sitemap/control are absent, and Play loads no Simulation chunk |
 | Worker/auth/CSP/publication/security | backend/security tests, build, bundle scan, dependency audit |
 | D1 migrations | clean local migration plus relevant backend/content tests; never edit an applied migration |
@@ -94,8 +94,8 @@ development check.
 - Public UI/copy: affected routes at 320, 390, 768, 1024, 1440, and 1920px; long copy; owner verification for every fact-check field; claim qualification; 200–400% zoom; keyboard/focus; reduced motion; forced colors; metadata/JSON-LD; no JavaScript.
 - My Room: zero connector reads on `/play`, one provider per object route, intent-gated R3F, drag/click discrimination, Back/Escape/focus restoration, static capability fallbacks.
 - Travel: zero Travel reads on `/play`, semantic country/region/place parity, click-versus-drag behavior, no-JavaScript/WebGL fallbacks, planned/current publication limits, metadata stripping, active-snapshot media authorization, and immediate unpublish behavior.
-- Simulation: Action/Tactical completion parity, authored fallback, optional-text privacy, bounded sessions/budgets, output rejection, and gesture-gated audio.
-- Simulation incident: read-only Gateway logging/cache/DLP/Guardrails verification, sanitized containment evidence, authorized payload-deletion confirmation when needed, and fresh regression coverage before live mode returns.
+- Conversation: sourced discoveries, archive fallback, ephemeral text, bounded sessions/budgets, output-ID validation, revocation, and owner-only setup.
+- Conversation incident: inspect sanitized counters, configuration, permission state, and application screening/output/replay guards. Disable owner preview before containment; never collect transcripts or keys as evidence. Follow the owner-authorized incident runbook before re-enabling it.
 - Studio/OAuth: logged out, non-owner, owner, origin/body guards, denial/expiry/replay/wrong owner, refresh/replacement/disconnect, sanitized errors, honest complete/already-running/not-due/rate-limited/failure states, and Strava save/Verify-only health checks.
 - Environments: preview fixtures only, staging isolation/noindex, production exact host/Access, private Sites unchanged.
 - Release: follow the canonical runbook's registry-derived required smoke set

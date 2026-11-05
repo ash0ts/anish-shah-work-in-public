@@ -15,7 +15,9 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `components/play/**`: object-screen shell and provider-specific Play UI.
 - `components/play/room-3d/**`: intent-gated Room and Pocket Room R3F runtime.
 - `components/play/travel/**`: Postcard Planet semantic atlas and the only full-globe R3F boundary.
-- `app/simulation/**` and `components/simulation/**`: semantic campaign shell, Tactical mode, and the narrowly scoped Action Canvas bridge.
+- `app/simulation/**` and `components/simulation/network/**`: private Phaser world and optional battles, React discovery chips, persistent companion, messenger and journal. One game instance loads only here; HTML Step mode shares the pure rules in `lib/simulation/network/battle.ts`.
+- `lib/server/simulation/conversation/access.ts`: hashed invitation password and revision-bound one-hour access cookies. Hosted page/API access fails closed without the gate. Invitations never grant Studio or live Gemini access; exact owner authentication remains separate. `archive-tools.ts` exposes only bounded read/search/metadata comparison; every paid step claims budget and revalidates sources.
+- `lib/simulation/network/machine.ts` owns world, encounter and interface transitions. `lib/server/simulation/conversation/catalog.ts` projects visible Work and explicitly approved saved items in bounded pages. No refresh or model call occurs through exploration. Game-display and Google-processing scopes remain distinct. Decorative paths and fictional programs establish no real relationships.
 - `app/studio/**`: owner-only operational interface. Connector rows consume a
   composed connection/permission/snapshot/publication view and expose one next
   action; Git-owned copy is shown read-only here.
@@ -26,7 +28,7 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `lib/server/strava-config.ts`: separate official-embed configuration, not the generic connector repository.
 - `lib/server/travel/**`: Postcard Planet drafts, policy, public projection, versioned publication, retention, uploads, and media authorization. Public atlas and paginated trip projectors stay narrower than stored publication records.
 - `app/studio/travel/**` and `app/api/studio/travel/**`: owner-only Travel Desk and writes. Exact GPS and original filenames remain browser-local intake suggestions and never enter public state.
-- `lib/server/simulation/**`: bounded session, budget, approval, grounding, and model-gateway contracts.
+- `lib/server/simulation/**`: bounded session, budget, approval, grounding, and direct Gemini contracts.
 - `worker/**`: host/tier enforcement, Cloudflare Access, CSP, headers, throttling, request correlation, and retention/cleanup maintenance. Cron must never synchronize provider collections.
 - `drizzle/**`: ordered immutable D1 migrations.
 - `tests/**`: content, copy, backend/security, rendered, environment, and browser acceptance.

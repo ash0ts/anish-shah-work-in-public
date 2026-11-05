@@ -69,6 +69,31 @@
       "sha256": "29baf2dc55dd3b452ce1a2287d7cd858c86e56c46bda200b90debc0e81880d5f"
     },
     {
+      "path": "content/presentation/simulation.v1.json",
+      "bytes": 1414,
+      "sha256": "975d7da146d991d50b1e5cf7a89aeb8585a5f4eb0878e389688534e13a28ba61"
+    },
+    {
+      "path": "public/assets/simulation/network-cast-v1.webp",
+      "bytes": 683046,
+      "sha256": "4771b35971edd5e4cfcba8f9e7f61f123c22b321eba6d81c45e92cb2a57264aa"
+    },
+    {
+      "path": "public/assets/simulation/network-props-v1.webp",
+      "bytes": 121588,
+      "sha256": "759d3e2a702d071c719cddd2f8d968484d4c8f80bf73497b61fc032e08510066"
+    },
+    {
+      "path": "lib/simulation/network/characters.ts",
+      "bytes": 1297,
+      "sha256": "25390b18d6cfdcabbf84c855a18bf1f4a73cda28cce761632107383cb2b214b5"
+    },
+    {
+      "path": "lib/simulation/network/battle.ts",
+      "bytes": 11496,
+      "sha256": "042fde07bc66347116468fe3e111939a4967f5b7f97627ebf146445b1d3e0d7b"
+    },
+    {
       "path": "public/assets/organizations/ai-tinkerers.438086e46304.svg",
       "bytes": 6801,
       "sha256": "438086e46304f36e99fc4aec7bd4eb2f979b18d95dba0a2056a01e006dc33ce3"

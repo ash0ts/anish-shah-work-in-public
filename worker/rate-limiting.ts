@@ -143,7 +143,7 @@ export function requiresConfiguredRateLimit(
     pathname === DISCOGS_PUBLIC_READ_PATH &&
     (!rateLimitSaltReady || !env.ARTWORK_RATE_LIMITER);
   const simulationMissingConfig =
-    env.SIMULATION_EXPERIENCE_MODE === "campaign-v1" &&
+    env.SIMULATION_EXPERIENCE_MODE === "conversation-v2" &&
     pathname.startsWith(SIMULATION_API_PREFIX) &&
     (!rateLimitSaltReady || !env.SIMULATION_RATE_LIMITER);
   const travelMediaMissingConfig =
@@ -170,7 +170,7 @@ export async function throttleSimulationApi(
   pathname = new URL(request.url).pathname,
 ): Promise<Response | null> {
   if (
-    env.SIMULATION_EXPERIENCE_MODE !== "campaign-v1" ||
+    env.SIMULATION_EXPERIENCE_MODE !== "conversation-v2" ||
     !pathname.startsWith(SIMULATION_API_PREFIX)
   ) {
     return null;

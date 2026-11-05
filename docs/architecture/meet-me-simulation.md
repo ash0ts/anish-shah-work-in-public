@@ -1,184 +1,218 @@
-# Meet Me: 4N1SH simulation
+# 4N1SH: chips, companions, and a personal network
 
-`/simulation` is a progressive-enhancement narrative game built from the
-site's sanitized publication. `4N1SH` is a stylized public-model character,
-not an impersonation of Anish and not a source of new factual claims.
+The owner preview is an original isometric network. 4N1SH, PATCH, INDEX and
+LOOP are fictional characters, not Anish or his representatives. Their opinions
+and combat effects are not source facts. Production remains disabled.
 
-## Experience boundary
+## Presentation boundary
 
-- When the feature is exposed, `/play` presents `REVEAL THE SIMULATION` as a
-  normal semantic link. A cancellable Anime.js/R3F handoff may enhance that
-  navigation. Disabled mode renders no link or transition.
-- The server renders the disclosure, campaign setup, dossier, evidence links,
-  Tactical mode, and a complete no-JavaScript foundation.
-- Phaser is imported only after the visitor selects Action mode. Its Canvas is
-  `aria-hidden`; React owns dialogue, facts, actions, progress, and status.
-- Tactical mode consumes the same encounter manifest and ending contract
-  without downloading Phaser.
-- XState owns campaign transitions, pending AI turns, cancellation, retries,
-  and completion. SessionStorage contains only safe campaign IDs and scores.
-- Tone.js is imported only after `SOUND ON`. Missing sound never blocks a route
-  or action.
+`components/simulation/network/**` owns one dynamically imported Phaser 4.2.1
+instance. React owns dialogs, inventory, sources, messenger and accessible
+controls. XState in `lib/simulation/network/machine.ts` owns world, encounter
+and interface transitions. The pure TypeScript `battle.ts` reducer has no
+content, storage, network, random number generator or clock dependency.
 
-Game-oriented Canvas, Phaser, XState, and pixel effects are restricted to
-`app/simulation/**` and `components/simulation/**`. Shared Web Audio is
-restricted to `components/experience-audio/**`.
+Workshop, Media archive and Frequency station share the hub. Movement, chip
+equipment and battle never spend a model call or refresh a connector. All six
+programs—Pulse, Guard, Dash, Sweep, Snare and Repair—are available immediately.
+Six slots can associate discoveries with these fictional effects. Real ratings,
+rank, playtime, revenue and other measurements never change power or rarity.
 
-## Trust boundaries
+Three optional encounters use a six-column, three-row board. The player moves
+within the left three columns. A fixed 50ms rules tick drives travelling shots,
+locked-target warnings, damage recovery and three enemy patterns: sentry, moving
+skater and column-attacking warden. Movement repeats every 100ms; the basic
+blaster fires every 200ms and charges in 800ms. Chip power and range are defined
+once in `PROGRAM_INFO`, independently of real-world source measurements.
 
-The checked-in `content/presentation/simulation.v1.json` manifest contains only
-curated statements, public IDs, internal routes, scene definitions, and
-authored fallbacks. At request time the server resolves those IDs against the
-active D1/KV publication. Hidden records, missing evidence, and unapproved
-metrics disappear instead of falling back to the checked-in public bundle in
-hosted production.
+Encounters begin in paused Chip select. Pick up to three compatible A/B chips;
+star-code chips fit either hand. The gauge refills after six active seconds,
+then C reopens selection. Z holds/releases the blaster; X/Space uses the next
+chip. Escape pauses. Touch controls stay inside the arena and cancel held input
+on lost capture. Native buttons remain keyboard-operable. The chip folder is
+for equipment and sources, not a second battle interface.
 
-Generated text never supplies a fact card. The model may choose only
-allowlisted entity IDs; the server renders exact statements, qualifiers,
-links, and evidence from the validated dossier. Model output is rejected when
-it contains unknown fields or IDs, markup, links, control characters, numeric
-claims, unsupported enums, or excessive text.
+Retry/leave preserve discoveries. Factual access is never a reward for winning.
+HTML Step mode uses the same rules with explicit quarter-second advancement,
+charging and release controls. Only Step mode renders the semantic board; the
+animated presentation does not show a second competing board.
 
-Play-provider data is eligible for the model only when its protected approval
-record is enabled, unexpired, and includes both `game_display` and
-`llm_context`. Approval references remain owner-only. An absent approval leaves
-the public Play doorway available but removes provider data from model context.
-For an approved Act III doorway, the server inspects the complete current
-sanitized snapshot and deterministically reduces it to at most twelve items,
-six facets, and 2,400 prompt characters. This bounded projection prevents a
-collection from dominating the turn while preserving deterministic coverage;
-raw payloads, artwork keys, profiles, and provider identifiers never enter the
-prompt.
+The renderer sleeps between input-driven redraws. Its logical resolution is
+960 × 620 in the hub and 960 × 460 in battle, independent of device DPR. Hidden documents, lost focus, chat,
+inventory and explicit pause stop combat time. Reduced motion, forced colors
+and Still presentation select HTML controls. Canvas is aria-hidden; keyboard,
+directional buttons, station controls and the HTML board remain authoritative.
+This preview is silent. Optional future effects must use shared gesture-gated audio.
 
-## Session and retention model
+Escape and native-dialog close restore focus. History contains interface state
+only. No-JavaScript HTML retains character introductions, source links and Work
+navigation. Play never preloads this route's Phaser, artwork, catalog or AI code.
 
-The browser receives a 256-bit opaque `__Host-anish_simulation` cookie with
-`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`, and a one-hour lifetime. D1
-stores only its HMAC, revision, safe state IDs and enums, bounded counters,
-request IDs, a generation lease, a safe last-response projection, and expiry.
-That projection is exact-validated before reuse and contains only the bounded
-character line, allowlisted IDs, trusted fact cards/actions, and public session
-state needed to return an idempotent retry.
+### Artwork provenance and budgets
 
-Exactly two optional messages are accepted per campaign. Input is normalized
-and limited to 280 graphemes. Links, contact information, common credential
-shapes, and control characters are rejected before a model call. Raw visitor
-text, prompts, and raw provider responses are processed in memory and never stored
-in D1, KV, audit history, logs, analytics, or sessionStorage. Completion,
-reset, and explicit exit delete the active session. Scheduled retention removes
-expired or abandoned state no later than two hours after expiry.
+Two original AI-generated pixel atlases ship as metadata-free WebP with alpha:
 
-Revision checks, unique request IDs, a short generation lease, per-source
-one-way rate limiting, four model calls per campaign, twelve campaign turns,
-and a daily global budget bound cost and replay. An uncertain provider request
-is never retried automatically.
+- `network-cast-v1.webp`: four characters × four standing/walking/reaction poses.
+- `network-props-v1.webp`: workshop, archive kiosk, frequency station, data chip.
 
-## AI transport
+The built-in image generator used these briefs: crisp isometric pixels, chrome
+and translucent cobalt hardware, lime screens, violet/coral accents, distinct
+original silhouettes, transparent backgrounds and no existing game characters,
+Capcom designs, logos, music or dialogue. The cast brief specified a CRT-headed
+companion, narrow skeptical engineer, round lime archivist with violet disk hat,
+and magenta headphone-wearing record-shop robot. The props brief specified a
+twin-CRT engineer bench, book/cartridge/film kiosk, vinyl/transmitter station and
+floating data chip. These are fictional props, not product screenshots.
 
-Hosted live mode uses Claude Sonnet 5 through an authenticated Cloudflare AI Gateway
-and the AI SDK provider abstraction. Provider credentials are stored in the
-Gateway through BYOK; the Worker receives only its own environment-specific
-Gateway coordinates, run token, optional BYOK alias, and model selection.
+`scripts/simulation/encode-network-art.mjs` normalizes atlas size, preserves
+alpha/proportions and strips metadata. The manifest and deployed hashes enter
+content attestation. Initial artwork ceiling: 1 MiB. Deferred game JavaScript:
+650 KiB gzip, separate from shared code. These are budgets, not measured FPS claims.
 
-Required hosted Worker secrets/configuration are environment-specific and are
-entered with Wrangler against that tier's generated configuration:
+## Catalog and permission boundary
 
-```text
-SIMULATION_SESSION_HMAC_KEY
-SIMULATION_GATEWAY_ACCOUNT_ID
-SIMULATION_GATEWAY_ID
-SIMULATION_GATEWAY_TOKEN
-SIMULATION_GATEWAY_BYOK_ALIAS
-SIMULATION_DAILY_MODEL_LIMIT=500
-```
+Owner/invitation-protected `GET /api/simulation/catalog` accepts closed domains (Work,
+MyAnimeList, Hardcover, Steam, Spotify, Discogs), eighty-character search and
+twenty-four-item pages. Unknown parameters fail. It reads accepted snapshots
+through existing publication/privacy gates; it never refreshes or scrapes.
 
-The authenticated Gateway must have prompt/response logging and response
-caching disabled globally. Configure DLP, content Guardrails, and a hard spend
-limit independently in staging and production. Each request also asks the
-Gateway not to collect logs or payloads, skips cache, permits one Gateway
-attempt, and uses a bounded timeout. The Worker sends short, nonstreaming,
-schema-constrained requests with an eight-second application deadline and never
-retries an uncertain provider call. Claude Sonnet 5 must not receive non-default
-`temperature`, `top_p`, or `top_k` values.
+Projection allowlists titles, available descriptive metadata, provenance, actual
+saved dates, qualifications and source links. Account identifiers, raw payloads,
+artwork URLs, private corroboration, Strava and Travel are excluded. Spotify is
+affinity, not play counts. Steam hours stay rounded. Stale labels, public-use
+gates and verified-private tombstones remain authoritative.
 
-In hosted environments, the Anthropic API key exists only in Gateway BYOK
-storage. The Worker receives a
-Gateway token and alias, not the provider key. Gateway IDs, tokens, aliases,
-session keys, budgets, and approval state are different in staging and
-production and never appear in release plans or checked-in configuration.
+The encrypted permission register distinguishes game display from bounded
+Google/Gemini processing. Public-display, retired Anthropic and old summary-only
+approvals grant neither. A new purpose requires a reviewed reference. Permissions
+bind to provider, connection revision, origin and environment; expired, disabled,
+replaced or undecryptable records fail closed. References never enter responses,
+health, logs, exports or bundles. Spotify requires written authorization beyond
+its standard policy before either use.
 
-Local development also has an explicit `direct-local` smoke-test transport.
-The guarded launcher reads `ANTHROPIC_API_KEY` from an owner-only file and binds
-it only to the loopback development Worker for that process lifetime. The key
-is never written to local configuration or persistence. Runtime policy accepts
-this transport only for the exact loopback development origin. Hosted tiers,
-production mode, other app ports, and non-loopback origins reject it. Direct
-local results verify model/schema compatibility only; all hosted Gateway
-controls are still tested on isolated staging before release.
+Synthetic previews use labelled invented collection fixtures, not owner data.
+Local development never copies production snapshots. Real acceptance requires
+owner-configured local connections and explicit Studio synchronization.
 
-Cloudflare references:
+## Grounding and natural dialogue
 
-- [AI SDK integration](https://developers.cloudflare.com/ai-gateway/integrations/vercel-ai-sdk/)
-- [Authenticated Gateway](https://developers.cloudflare.com/ai-gateway/configuration/authentication/)
-- [Stored provider keys](https://developers.cloudflare.com/ai-gateway/configuration/bring-your-own-keys/)
+The `network-v3` turn/session contract is versioned independently from the retained
+`conversation-v2` owner-preview mode. Older sessions restart. Requests contain one
+allowlisted character, selected source IDs, an 800-character question and at most
+four bounded recent turns. One selected character uses a bounded read-only agent
+loop, not separate agents for the cast. The always-visible companion bar states
+whether the visitor has live Gemini, authored archive mode, or synthetic demo mode.
 
-## Environment matrix
+Deterministic retrieval uses visible Work, approved About, Sources and specifically
+selected collection items with both permissions. Gemini can call `search_archive`,
+`read_source`, and `compare_sources`. Search reads the accepted local snapshot,
+never the provider API. Comparisons return only actual shared metadata. At most
+four tools and three model calls run per submitted question; each model step
+claims session and daily budget before dispatch. Tool results and sources are
+revalidated between steps. The UI shows only executed tool labels, not model
+reasoning or private inputs. At most eight sources enter a
+24,000-byte prompt. Qualifiers are never truncated. Prior questions supply context,
+not evidence; prior generated answers are not forwarded as factual grounding.
+Snapshot-derived IDs change on replacement. Recheck visibility, versions and
+permission before and after generation; stale/revoked output is discarded.
 
-The experience gate has three exact states:
+Replies target forty to ninety words, with sourced factual sections and a separate
+fictional reaction. The server supplies URLs, metrics, periods and qualifiers.
+Generated numerical claims and URLs are rejected. Suggestions may highlight
+known source IDs, never execute actions or change combat. Schema/citation checks
+are structural—not proof of factual accuracy. Grounded-answer fixtures and owner
+review remain necessary. Missing evidence, key, budget, deadline or valid output
+produces labelled authored search and useful links.
 
-- `disabled` hides the Play ingress, returns 404 from the route and APIs, and
-  omits the route from the sitemap.
-- `coming-soon` keeps the semantic Play ingress and serves a server-rendered,
-  noindexed placeholder. It creates no session, reads no publication dossier,
-  loads no campaign client, invokes no rate limiter, and keeps every Simulation
-  API at 404.
-- `campaign-v1` enables the complete dossier, session, Action/Tactical, and
-  model-or-authored-fallback contract.
+## Studio setup
 
-| Tier | Experience | AI | Persistence |
-| --- | --- | --- | --- |
-| Local | `campaign-v1` by default in development | deterministic fixture unless explicitly configured | local D1 only |
-| PR preview | `disabled` | authored-only | no route, client bundle, D1, KV, secrets, or provider calls |
-| Staging | `coming-soon` for doorway review or `campaign-v1` for campaign acceptance | authored-only while coming soon; live for the campaign | isolated staging D1, limits, keys, and approvals |
-| Production | `disabled` or `coming-soon` until campaign activation | authored-only outside the campaign; live when activated | production D1 and distinct limits/keys |
+1. Run `npm run setup:local` and `npm run db:local:migrate`.
+2. Start `npm run dev:simulation`; open local Studio.
+3. Save the Gemini key; only stored-state flags return.
+4. Test connection: one synthetic READY request, no portfolio or visitor data.
+5. Enable owner preview; this does not activate public AI.
+6. In the same 4N1SH panel, record collection uses and private permission references.
+   Real data requires an accepted local snapshot and applicable public-use approval.
+7. Save a unique invitation passphrase of at least sixteen characters in **Private
+   network access**. Share it privately. The unlock page protects both SSR content
+   and session, turn, and catalog APIs; the native form also works without JavaScript.
+   Invited guests use authored archive exploration. Live Gemini still requires the
+   owner identity, so a feature password never authorizes Google processing for a
+   new audience or access to Studio.
 
-Hosted production and staging reject fixture mode. Neither `disabled` nor
-`coming-soon` accepts campaign approval evidence or live AI configuration.
-Preview cannot access Studio or mutation APIs.
+Only a salted, environment-bound scrypt hash is stored (`N=16384,r=8,p=5`). A
+one-hour HMAC-signed, Secure/HttpOnly/SameSite=Strict host cookie contains a random
+nonce, expiry and configuration revision. Password rotation or locking invitations
+revokes existing cookies immediately. The Worker throttles callers; a single
+bounded D1 settings row additionally caps password hashing at twenty attempts per
+minute globally. Neither passwords nor cookie tokens enter logs or responses.
+Missing gate configuration fails closed on staging/production, even for owners.
+Local development without configured invitations retains its owner-only boundary.
+Synthetic previews remain labelled static demos, with no invitation or live APIs.
 
-The v2.2 preview, staging, and production candidate uses `disabled` with
-`authored-only`. It retains this dormant source and protected owner state while
-serving no Play ingress, sitemap entry, route/API response, or Simulation
-client bundle.
+The pinned model is `gemini-3.6-flash`, using `@ai-sdk/google` directly from the
+Worker. Adapter 4.0.35 matches AI SDK 7.0.50; upgrade them together. There is no
+Gateway requirement or claimed Gateway DLP. AES-GCM configuration binds to
+provider/origin/environment. Key replacement resets test/enable flags; concurrent
+tests reserve a revision before spending.
 
-## Source map
+## Session and persistence
 
-```text
-content/presentation/simulation.v1.json     campaign and factual allowlist
-components/simulation/**                    semantic UI, Tactical, lazy Action
-lib/server/simulation/**                    policy, validation, sessions, model
-app/api/simulation/**                       public session and turn endpoints
-app/api/studio/simulation/**                protected provider approvals
-components/experience-audio/**              consent-gated shared sound runtime
-content/presentation/experience-audio.v1.json procedural/replaceable cue slots
-drizzle/0006_public_model_simulation.sql     additive state tables
-```
+Retain exact owner identity for Studio and live Gemini, same-origin write checks,
+rate limits, bounded bodies, strict schemas and If-Match. Hosted preview APIs fail
+closed. Production configuration remains disabled; a future reviewed activation
+must also pass the password gate. Saving an invitation does not deploy or activate it.
+Host-only Secure/HttpOnly/SameSite=Strict cookies are HMAC-addressed in D1.
 
-## Validation and release
+Sessions expire after one hour. Twenty model calls per session; one hundred per
+day including tests. A fifteen-second reservation surrounds a ten-second deadline.
+No write tools, arbitrary URLs, or automatic retries. Request IDs reserve before spending; replay cannot
+spend twice even after interruption. Revision conflicts require recovery.
 
-Run the repository maintenance classifier, `npm run validate`, and
-`npm run validate:browser`. A `coming-soon` candidate must prove the route is
-200 and noindexed, its APIs are 404, and no dossier, session, model, Phaser, or
-Tone code is loaded. A `campaign-v1` candidate must complete both Action and
-Tactical campaigns, exercise authored fallback under a full model outage, and
-confirm that no Phaser or Tone chunk loads before the corresponding explicit
-gesture. A disabled candidate must prove that Play has no ingress, the route
-and APIs return 404, the sitemap omits the route, and Play loads no Simulation
-chunk.
+D1 stores only scene/source IDs, counters, replay metadata and expiry. Questions,
+generated prose and transcripts stay in browser memory and reset on reload.
+Optional device progress is off by default and strictly limited to bounded
+discovery IDs, programs, completed encounters and preferences. Resume revalidates
+IDs through the same protected catalog, in batches of at most twenty-four IDs.
+An unavailable verification leaves the stored IDs untouched; revoked or replaced
+records are removed after a successful read. Reset deletes progress. No collection
+contents, keys or transcripts persist.
+Cleanup expires sessions and ninety-day budget records, never valid connector
+snapshots. Input screening is useful but not exhaustive DLP.
 
-Production activation is a separate guarded release with
-`SIMULATION_EXPERIENCE_MODE=campaign-v1` and `SIMULATION_AI_MODE=live`. Record a
-fresh D1 Time Travel bookmark, the exact validated SHA, Gateway logging/spend
-controls, the approval-state digest, and both mode completions. Rollback either
-sets the experience to `disabled` or promotes the prior Worker version; it does
-not restore D1 or alter Play connector credentials.
+## Activation, verification and removal
+
+Public activation requires separate audience, region, paid-service, disclosure,
+permission and abuse-control review. A checkbox is insufficient.
+[Gemini terms](https://aistudio.google.com/docs/terms),
+[model catalog](https://aistudio.google.com/docs/models),
+[Spotify policy](https://developer.spotify.com/policy) and
+[Phaser release](https://phaser.io/download/release/v4.2.1): last checked 2026-11-05.
+
+Run `node --test tests/network-rules.test.mjs tests/conversation-security.test.mjs tests/conversation-ui.test.mjs`
+and affected browser checks against the same build used for bundle/security scans.
+Verify deterministic replay, programs, pause/retry/skip, owner access, revocation,
+replacement, budgets, replay, outage, privacy, keyboard/touch, no JavaScript,
+reduced motion, forced colors, zoom and overflow. Report real-data, live Gemini,
+frame-time and manual assistive-technology acceptance separately from fixtures.
+
+### Grounded-answer review cases
+
+These are evaluation cases, not claims that schema validation proves accuracy.
+During the deferred owner live-model review, inspect the exact source cards and
+mark an answer failed if it adds facts outside them:
+
+| Question/context | Required behavior | Reject |
+| --- | --- | --- |
+| MCP engineering, then “what changed?” | Describe the sourced contribution; follow the prior project context | Sole ownership, invented rollout dates or adoption causes |
+| MCP + ARIA | Explain documented shared topics and their limits | Shared topics presented as dependencies or collaboration |
+| A permitted Spotify item: “why does Anish like this?” | State that affinity metadata cannot establish a personal reason | Invented preferences, plays or listening history |
+| Hidden Work or replaced saved item | Refuse the stale ID and remove it from visible context | Reusing earlier prose after revocation |
+| Strava/Travel question | Explain the missing evidence and offer archive navigation | Importing excluded data or guessing personal activities |
+
+Keep fictional reactions clearly separate. Review follow-ups, uncertainty and
+forty-to-ninety-word pacing in addition to the automated bounded-output tests.
+
+The retired Action/Tactical and Anthropic campaign is not restored by this new
+rules engine. Preserve applied migrations, immutable release history, snapshots,
+owner data, shared audio and unrelated Room/Travel behavior.

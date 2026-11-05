@@ -134,18 +134,22 @@ Keep consent, provider attribution, coverage, freshness, and recovery wording ne
 
 ## Simulation
 
-- For v2.2 public and preview surfaces, Simulation is disabled: no invitation,
-  route, API, sitemap entry, or client bundle is visible. Existing deck fields
-  remain dormant preparation for a separately reviewed future activation.
-- Keep `4N1SH` clearly framed as a generated game character, never Anish or an
+- Production is disabled. The owner-only conversation preview has authored
+  synthetic review mode; copy edits never activate public AI.
+- Keep `4N1SH` clearly framed as a fictional archive guide, never Anish or an
   authoritative personal representative.
-- Use editable copy for the invitation, instructions, nonfactual encounter
+- Use editable copy for the invitation, instructions, nonfactual scene
   flavor, and debrief framing.
 - Keep claims in server-owned fact cards. Never place metrics, provider-derived
   facts, system instructions, safety behavior, model policy, or session/privacy
   rules into an editorial field.
-- Preserve equivalent Action and Tactical instructions and an understandable
+- Preserve semantic discovery links and still-presentation instructions and an understandable
   authored-fallback path.
+- The personal network uses a world, chip folder, messenger and journal, not a
+  permanent archive list. Keep source facts separate from fictional programs and
+  character opinions. Never imply ranks or measurements affect combat. Sources
+  belong inside replies and discoveries. Label authored fallback versus Gemini;
+  game-display and Google-processing permissions are different protected uses.
 
 ## Travel
 

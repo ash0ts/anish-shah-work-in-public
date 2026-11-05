@@ -1,19 +1,14 @@
-import type {
-  CopyFieldDefinition,
-  CopyPageId,
-} from "@/types/copy";
+import type { CopyFieldDefinition, CopyPageId } from "@/types/copy";
 import { copyVoicePolicyForField } from "./copy-voice-contract.ts";
-import {
-  SIMULATION_ACTION_COPY_IDS,
-  SIMULATION_CURIOSITY_COPY_IDS,
-} from "./simulation/campaign-copy-contract.ts";
 
 function field(
   surface: string,
   key: string,
   risk: CopyFieldDefinition["risk"],
   maxLength: number,
-  options: Partial<Pick<CopyFieldDefinition, "required" | "allowParagraphs">> = {},
+  options: Partial<
+    Pick<CopyFieldDefinition, "required" | "allowParagraphs">
+  > = {},
 ): CopyFieldDefinition {
   return {
     key,
@@ -47,7 +42,9 @@ export const COPY_PAGE_DEFINITIONS = {
     field("site", "not-found-meta-description", "editorial", 160),
     field("site", "not-found-code", "editorial", 80),
     field("site", "not-found-title", "editorial", 100),
-    field("site", "not-found-body", "editorial", 320, { allowParagraphs: true }),
+    field("site", "not-found-body", "editorial", 320, {
+      allowParagraphs: true,
+    }),
     field("site", "not-found-work-cta", "editorial", 48),
     field("site", "not-found-home-cta", "editorial", 48),
   ],
@@ -56,7 +53,9 @@ export const COPY_PAGE_DEFINITIONS = {
     field("home", "seo-description", "editorial", 160),
     field("home", "identity-eyebrow", "fact_check", 80),
     field("home", "profile-headline", "fact_check", 180),
-    field("home", "profile-summary", "fact_check", 320, { allowParagraphs: true }),
+    field("home", "profile-summary", "fact_check", 320, {
+      allowParagraphs: true,
+    }),
     field("home", "primary-cta", "editorial", 48),
     field("home", "selected-eyebrow", "editorial", 60),
     field("home", "selected-heading", "editorial", 120),
@@ -92,12 +91,7 @@ export const COPY_PAGE_DEFINITIONS = {
       "fact_check",
       160,
     ),
-    field(
-      "about",
-      "speaker-topic-evaluation-observability",
-      "fact_check",
-      80,
-    ),
+    field("about", "speaker-topic-evaluation-observability", "fact_check", 80),
     field(
       "about",
       "speaker-topic-evaluation-observability-description",
@@ -120,7 +114,9 @@ export const COPY_PAGE_DEFINITIONS = {
     field("work", "seo-description", "editorial", 160),
     field("work", "masthead-eyebrow", "fact_check", 80),
     field("work", "masthead-title", "editorial", 120),
-    field("work", "masthead-summary", "fact_check", 320, { allowParagraphs: true }),
+    field("work", "masthead-summary", "fact_check", 320, {
+      allowParagraphs: true,
+    }),
     field("work", "search-label", "editorial", 80),
     field("work", "search-placeholder", "editorial", 100),
     field("work", "filter-submit", "editorial", 40),
@@ -230,7 +226,9 @@ export const COPY_PAGE_DEFINITIONS = {
     field("sources", "seo-description", "fact_check", 160),
     field("sources", "intro-eyebrow", "editorial", 40),
     field("sources", "intro-title", "editorial", 100),
-    field("sources", "intro-fallback", "fact_check", 320, { allowParagraphs: true }),
+    field("sources", "intro-fallback", "fact_check", 320, {
+      allowParagraphs: true,
+    }),
     field("sources", "rules-eyebrow", "editorial", 40),
     field("sources", "rules-title", "editorial", 100),
     field("sources", "owner-reviewed-title", "fact_check", 100),
@@ -255,46 +253,37 @@ export const COPY_PAGE_DEFINITIONS = {
     field("sources", "source-kind-method", "editorial", 32),
   ],
   simulation: [
+    field("simulation", "conversation-title", "editorial", 100),
+    field("simulation", "network-eyebrow", "editorial", 100),
+    field("simulation", "network-folder", "editorial", 100),
+    field("simulation", "network-workshop", "editorial", 100),
+    field("simulation", "network-media", "editorial", 100),
+    field("simulation", "network-frequency", "editorial", 100),
+    field("simulation", "network-program-heading", "editorial", 100),
+    field("simulation", "network-discoveries", "editorial", 100),
+    field("simulation", "network-encounters", "editorial", 100),
+    field("simulation", "network-first-contact", "editorial", 100),
+    field("simulation", "network-crosswire", "editorial", 100),
+    field("simulation", "network-glitch", "editorial", 100),
+    field("simulation", "network-resume", "editorial", 100),
+    field("simulation", "network-pause", "editorial", 100),
     field("simulation", "seo-title", "editorial", 70),
     field("simulation", "seo-description", "editorial", 160),
-    field("simulation", "coming-soon-seo-description", "editorial", 160),
     field("simulation", "ingress-label", "editorial", 100),
-    field("simulation", "ingress-cta", "editorial", 48),
-    field("simulation", "transition-eyebrow", "editorial", 60),
+    field("simulation", "ingress-cta", "editorial", 100),
+    field("simulation", "transition-eyebrow", "editorial", 100),
     field("simulation", "transition-title", "editorial", 100),
     field("simulation", "transition-summary", "editorial", 240, {
       allowParagraphs: true,
     }),
-    field("simulation", "transition-cancel-cta", "editorial", 48),
-    field("simulation", "coming-soon-eyebrow", "editorial", 80),
-    field("simulation", "coming-soon-title", "editorial", 140),
-    field("simulation", "coming-soon-summary", "editorial", 320, {
-      allowParagraphs: true,
-    }),
-    field("simulation", "coming-soon-status", "editorial", 80),
-    field("simulation", "coming-soon-room-cta", "editorial", 48),
-    field("simulation", "coming-soon-work-cta", "editorial", 48),
-    field("simulation", "boot-eyebrow", "editorial", 80),
-    field("simulation", "boot-title", "editorial", 120),
-    field("simulation", "boot-summary", "editorial", 320, {
-      allowParagraphs: true,
-    }),
-    field("simulation", "start-cta", "editorial", 48),
-    field("simulation", "noscript-summary", "editorial", 320, {
-      allowParagraphs: true,
-    }),
-    field("simulation", "dossier-eyebrow", "editorial", 60),
-    field("simulation", "dossier-title", "editorial", 100),
-    field("simulation", "dossier-summary", "editorial", 320, {
-      allowParagraphs: true,
-    }),
-    ...SIMULATION_ACTION_COPY_IDS.flatMap((action) => [
-      field("simulation", `action-${action}-label`, "editorial", 60),
-      field("simulation", `action-${action}-hint`, "editorial", 180),
-    ]),
-    ...SIMULATION_CURIOSITY_COPY_IDS.map((curiosity) =>
-      field("simulation", `curiosity-${curiosity}`, "editorial", 180),
-    ),
+    field("simulation", "transition-cancel-cta", "editorial", 100),
+    field("simulation", "still-label", "editorial", 100),
+    field("simulation", "leave-label", "editorial", 100),
+    field("simulation", "ask-label", "editorial", 100),
+    field("simulation", "question-label", "editorial", 100),
+    field("simulation", "journal-label", "editorial", 100),
+    field("simulation", "chat-label", "editorial", 100),
+    field("simulation", "preview-notes", "editorial", 100),
   ],
 } as const satisfies Record<CopyPageId, readonly CopyFieldDefinition[]>;
 

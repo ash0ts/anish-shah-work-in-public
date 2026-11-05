@@ -49,29 +49,23 @@ Replace the Cloudflare secret and verify protected writes, OAuth callbacks,
 promotion import, and artwork requests. Salt rotation invalidates only ephemeral
 bucket identity, not connector credentials.
 
-### Simulation Gateway, BYOK alias, or session key
+### Conversation key, session, or processing permission
 
-Contain a simulation-only incident by promoting a known disabled Worker version
-or preparing a guarded disabled release; keep Work and Play online. Revoke the
-affected Gateway token or stored Anthropic key in that environment only, then
-replace the Gateway token/alias or `SIMULATION_SESSION_HMAC_KEY` as appropriate.
-Never copy the staging credential into production or enable Gateway payload
-logging to investigate. A session-key rotation invalidates existing opaque
-simulation sessions; retention can remove their unusable HMAC rows. It does not
-require connector disconnection, provider-approval deletion, D1 restore, or a
-Play publication change.
+Disable owner preview in the affected environment; keep archive search, Work,
+and Play available. Replace a compromised Gemini key through Studio and revoke
+it in the provider console after explicit owner authorization. Never copy a
+staging key into production or enable payload logging for diagnosis.
 
-If spend or daily-call limits are exhausted without credential compromise,
-leave the authored fallback active, inspect only aggregate Gateway and owner
-health counters, and correct the limit or request pattern through a reviewed
-release. Do not replay uncertain model calls.
+Session-key rotation invalidates opaque sessions, not connector credentials or
+public snapshots. Retention removes unusable rows. If budgets are exhausted,
+retain archive fallback and inspect coarse call/fallback counts; do not replay
+uncertain paid requests. Fix the request pattern through reviewed code.
 
-### Simulation provider approval
-
-Disable or remove the affected provider approval through owner-only Studio.
-This removes that provider from model context without deleting its public Play
-snapshot. A changed provider list or approval digest invalidates any pending
-simulation activation plan; generate a new plan rather than editing evidence.
+Disable the affected Google-processing permission in Studio. The next turn
+reprojects sources and removes revoked collection cards from conversation
+history. Public-display permission and connector snapshots remain unchanged.
+Provider-side deletion, key rotation, and hosted feature changes require
+separate auditable authorization.
 
 ### Cloudflare Access
 

@@ -5,6 +5,8 @@ description: Edit, review, simplify, or propose public-facing wording for the An
 
 # Edit Anish Site Copy
 
+For 4N1SH, distinguish fictional character reactions and game effects from source facts. Characters never speak as Anish. Do not edit permission, provenance, saved-date, processing, budget, or recovery wording as ordinary personality copy. The chip-folder labels use the Simulation deck; combat rules and character identities are protected presentation contracts.
+
 Improve the site's language without changing its facts, structure, behavior, or trust boundaries.
 
 ## Workflow
@@ -49,7 +51,8 @@ Improve the site's language without changing its facts, structure, behavior, or 
 
 - Page framing, section introductions, calls to action, nonbehavioral labels, search placeholders, no-results text, and 404 wording. On Home this includes the signal/overview headings and method CTA, not the protected signal or overview mapping.
 - Play object flavor text, including the Globe/Travel doorway. Literal object names and categories are fixed by the seven-object registry.
-- Dormant Simulation introduction, CTA, nonfactual encounter flavor, and accessibility-friendly instructions through declared `content/copy/pages/simulation.md` fields. Editing them does not expose the disabled route or authorize activation.
+- Owner-preview 4N1SH introduction, CTA, nonfactual scene flavor, and accessibility-friendly instructions through declared `content/copy/pages/simulation.md` fields. Editing them does not expose the disabled route or authorize activation.
+- Personal-internet object reactions and trail labels may be playful. Preserve the authored-demo label and fictional-guide disclosure. Shared topic/source wording must not become a collaboration or causality claim; project descriptions remain the active archive's facts.
 - SEO and social descriptions when they remain consistent with visible copy and structured data.
 
 ### Edit with owner fact-check

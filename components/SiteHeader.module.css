@@ -217,8 +217,8 @@
   .navigation[data-enhanced="true"] a[aria-current="page"],
   .navigation a[aria-current="page"] {
     border: 2px solid Highlight;
-    color: HighlightText;
-    background: Highlight;
+    color: CanvasText;
+    background: Canvas;
     forced-color-adjust: none;
   }
 }

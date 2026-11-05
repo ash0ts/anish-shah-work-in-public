@@ -25,7 +25,7 @@ environment isolated.
 
 The deployed application is a Vinext build running inside one Cloudflare
 Worker. The Worker is the security and environment boundary; the App Router is
-the page and API boundary; D1, KV, R2, Images, provider APIs, and AI Gateway have
+the page and API boundary; D1, KV, R2, Images, provider APIs, and owner-preview Gemini have
 distinct responsibilities.
 
 ```mermaid
@@ -41,7 +41,7 @@ flowchart LR
   app -. "when Travel is configured" .-> r2["Private R2: temporary uploads and stripped Travel media"]
   app -. "explicit Studio refresh only" .-> providers["Personal-service APIs"]
   oauth["OAuth providers"] -->|"public callback with bound state"| edge
-  app -. "bounded live Simulation turn only" .-> gateway["Tier-isolated AI Gateway"]
+  app -. "bounded live Simulation turn only" .-> gateway["Google Gemini · owner preview"]
   repo["Reviewed Git content and copy"] --> build["Validated immutable build"] --> worker
 ```
 
@@ -209,14 +209,14 @@ There is no alternate Classic mode; only bounded legacy query redirects remain.
 | --- | --- | --- |
 | `app/**` | App Router pages, metadata, route composition, thin API exports | Keep route files thin and server-render semantic foundations |
 | `app/play/**` | Play overview, six connector routes, and Travel routes | `/play` reads no collections; each direct route loads one source |
-| `app/simulation/**` | Simulation route gate and server-rendered campaign foundation | Disabled and coming-soon modes must not initialize campaign state |
+| `app/simulation/**` | Owner-only conversation and server-rendered sources | Production disabled; previews never initialize sessions |
 | `app/studio/**` | Owner operational UI, composed connector lifecycle, and Travel Desk | Connector rows expose one next action; Git copy is read-only and mutations use protected APIs |
 | `app/api/studio/**` | Canonical owner reads and writes | Same-origin, Access, owner allowlist, bounded exact validation |
 | `app/api/connectors/**` | Public reads, exact OAuth callbacks, compatibility redirects | No new owner mutation authority and no collection fetch on read |
 | `components/**` | Public UI, Play screens, room, Travel, Simulation, shared audio | Rich runtimes stay scoped, lazy, accessible, and nonessential |
 | `lib/server/connectors/**` | Credentials, OAuth, provider clients, locks, snapshots, projectors | Explicit owner refresh is the only collection-fetch authority |
 | `lib/server/travel/**` | Travel policy, drafts, projection, publication, media, retention | Travel remains separate from connectors and exact locations stay private |
-| `lib/server/simulation/**` | Campaign policy, sessions, budgets, approvals, grounding, Gateway | Facts are server-owned; raw visitor/model text is never persisted |
+| `lib/server/simulation/**` | Conversation sessions, budgets, encrypted Google setup and grounding | Facts are server-owned; raw visitor/model text is never persisted |
 | `lib/server/public-content*` | Publication selection, validation, and fallback | Checked-in content is not an automatic hosted fallback |
 | `worker/**` | Origin/tier boundary, Access, security headers, limits, observability, cron | Security behavior belongs here, not only in route handlers |
 | `content/**` | Generated public data, reviewed curation, copy, presentation manifests | Never hand-edit generated or private artifacts |
@@ -370,46 +370,40 @@ for media and geography details.
 
 ## Simulation boundary
 
-The Simulation has three exact experience modes: `disabled`, `coming-soon`,
-and `campaign-v1`. These are configuration contracts, not statements about
-which mode any hosted environment currently serves.
+The private `conversation-v2` preview hosts a dynamically loaded Phaser network,
+with React/XState inventory, sources, dialogue and accessible HTML Step mode.
+Three original areas and four fictional companions introduce visible Work and
+specifically approved accepted collections. Pure TypeScript battle rules are
+independent of content, measurements and model output. Production remains disabled.
 
-The v2.2 preview, staging, and production candidate selects `disabled` with
-`authored-only`. In that mode Play renders no ingress, the sitemap omits the
-route, `/simulation` and its public APIs return 404, and Play loads no
-Simulation client chunk. The source and protected owner state remain dormant
-for a separately reviewed future activation.
+Exploration never refreshes providers or calls a model. The bounded, protected
+catalog projects twenty-four items per request. Game display and Google processing
+require separate encrypted permissions; legacy summary approvals grant neither.
+Strava, Travel, account identifiers and private evidence stay excluded.
 
-In the complete campaign:
+Natural dialogue uses the versioned `network-v3` contract. Current visible sources
+and bounded recent questions supply context. Generated sections cite allowlisted
+IDs; links, metrics and qualifiers are server-resolved. Visibility, snapshot
+versions and permissions are checked again after generation. Structural output
+checks are not proof of factual accuracy; grounded-answer evaluation and owner
+review remain required.
 
-- the server resolves a checked-in encounter manifest against the active
-  sanitized publication;
-- XState owns campaign transitions, while the React controller owns request
-  queuing, cancellation, and browser lifecycle;
-- Tactical mode stays semantic React UI;
-- Phaser is imported only after Action mode is selected;
-- Tone/Web Audio is imported and started only after an explicit `SOUND ON`
-  gesture; and
-- the no-JavaScript dossier and evidence remain readable without game code.
-
-A session cookie contains a random opaque token; D1 stores only its HMAC,
-revision, allowlisted state, bounded counters, request IDs, a short generation
-lease, expiry, and an exact-validated response projection for idempotency. Raw
-optional visitor text, prompts, and raw provider responses remain in memory and
-never enter D1, KV, audit records, logs, analytics, or session storage.
-
-Each turn validates the action and optional text, reserves the expected session
-revision, resolves facts from the active publication, checks any owner-only
-provider approval, applies per-session and daily budgets, and optionally calls
-an environment-specific AI Gateway. Model output can select only allowlisted
-IDs and enums; trusted fact cards are rendered from server-owned data. Timeout,
-provider failure, budget exhaustion, missing approval, or invalid output uses
-the complete authored fallback.
-
-This design spends more code on validation and fallback than on prompting. The
-tradeoff is deliberate: generated prose may add texture, but it cannot become a
-new factual authority. See [Meet Me: 4N1SH simulation](./meet-me-simulation.md)
-for the complete session and transport contract.
+Studio provides Save Gemini key → Test connection → Enable owner preview.
+Its invitation-password control stores an environment-bound scrypt hash. Signed,
+one-hour host cookies protect the page and all feature APIs, but never grant Studio
+access or guest Gemini processing. Rotation revokes invitations. Hosted activation
+fails closed without a gate; production remains disabled pending review.
+Gemini can search/read/compare approved archive material through at most four
+read-only tools and three model steps per turn. Each step claims budget and checks
+current visibility, configuration and permission. Only completed operation labels
+return to the UI. The persistent companion remains available during optional battles.
+One-hour sessions permit twenty calls, with a site-wide daily limit of one hundred,
+a ten-second deadline and no retry. Persistence contains bounded IDs and counters,
+never questions or generated prose. Device progress is opt-in and ID-only.
+There is no Gateway: application screening, output validation, replay protection,
+budgets and owner access are the actual safeguards.
+See [4N1SH network architecture](./meet-me-simulation.md) for setup, artwork,
+performance budgets and verification.
 
 ## Environment isolation
 
@@ -420,15 +414,15 @@ contract; it does not report which optional feature mode is live.
 | Context | Purpose | State and network boundary |
 | --- | --- | --- |
 | Local | Development and owner setup | Loopback, local D1 and local-only configuration; no hosted identity assumptions |
-| PR preview | Review code and presentation safely | Access-protected synthetic fixtures; no D1, KV, R2, Studio, OAuth, provider calls, Gateway, secrets, or cron |
-| Staging | Validate the real hosted shape | Must use dedicated Worker, D1, KV, R2, Images, rate limits, Access, provider registrations, and Gateway resources; globally noindexed |
+| PR preview | Review code and presentation safely | Access-protected synthetic fixtures; no D1, KV, R2, Studio, OAuth, provider calls, Gemini, secrets, or cron |
+| Staging | Validate the real hosted shape | Must use dedicated Worker, D1, KV, R2, Images, rate limits, Access, provider registrations, and encrypted model settings; globally noindexed |
 | Production | Serve the owner-controlled public site | Must use separate production resources and Access-protected owner surfaces; exact-SHA release guard |
 | Private Sites reference | Recovery and visual reference | Private and isolated; never a public proxy or production rollback target |
 
 Feature modes are generated into each environment's exact configuration. They
 must not be inferred from another tier or copied with its data. Local and hosted
 D1, KV, R2 objects, encryption keys, OAuth material, connector snapshots,
-Simulation approvals, and Gateway coordinates remain isolated.
+Simulation approvals, and encrypted model settings remain isolated.
 
 The cost is duplicated setup and more explicit release evidence. The benefit is
 that preview convenience, staging tests, and local experimentation cannot
@@ -498,7 +492,7 @@ schedule are part of operational confidence.
   migration discipline.
 - [Postcard Planet travel atlas](../travel-atlas.md) covers Travel geography,
   media processing, and fallback behavior.
-- [Meet Me: 4N1SH simulation](./meet-me-simulation.md) covers campaign,
+- [Meet Me: 4N1SH simulation](./meet-me-simulation.md) covers conversation,
   session, grounding, and AI transport policy.
 
 When tracing a change, start at the authority listed in the repository map,

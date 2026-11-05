@@ -22,6 +22,11 @@ const staticArtifactPaths = [
   "content/presentation/speaker-profile.v1.json",
   "content/presentation/work-organizations.v1.json",
   "content/presentation/brand-assets.v1.json",
+  "content/presentation/simulation.v1.json",
+  "public/assets/simulation/network-cast-v1.webp",
+  "public/assets/simulation/network-props-v1.webp",
+  "lib/simulation/network/characters.ts",
+  "lib/simulation/network/battle.ts",
 ];
 
 const brandAssetManifestPath =

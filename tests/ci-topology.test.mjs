@@ -245,7 +245,7 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
     runner.match(/async function runReleaseBrowserGate\(\)[\s\S]*?^\}/mu)?.[0] ?? "",
     /simulation-quality\.spec\.mjs/u,
   );
-  assert.match(runner, /simulationExperienceMode: "campaign-v1"/u);
+  assert.match(runner, /simulationExperienceMode: "conversation-v2"/u);
   assert.match(runner, /BROWSER_SIMULATION_EXPERIENCE_MODE/u);
   assert.match(runner, /spawnSync\("ps", \["-axo", "pid=,ppid=,pgid="\]/u);
   assert.match(runner, /process\.kill\(-groupId, name\)/u);
@@ -256,7 +256,7 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(runner, /timeoutMs: 3 \* 60_000/u);
   assert.match(playwrightConfig, /const inspectorPort = port \+ 5_000/u);
   assert.match(playwrightConfig, /BROWSER_SIMULATION_EXPERIENCE_MODE/u);
-  assert.match(playwrightConfig, /"disabled", "campaign-v1"/u);
+  assert.match(playwrightConfig, /"disabled", "conversation-v2"/u);
   assert.match(playwrightConfig, /--inspector-port \$\{inspectorPort\}/u);
   assert.equal(
     webkitConfig.use.launchOptions,

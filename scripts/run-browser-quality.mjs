@@ -365,34 +365,10 @@ if (
 }
 
 if (scope === "all" || scope === "simulation") {
-  if (
-    runPlaywright({
-      port: 4180,
-      segment: "simulation-core",
-      simulationExperienceMode: "campaign-v1",
-      arguments_: [
-        "tests/browser/simulation-quality.spec.mjs",
-        "--grep-invert",
-        "without JavaScript|room reveal",
-      ],
-    }) !== 0
-  ) {
-    failed = true;
-  }
-  if (
-    runPlaywright({
-      port: 4186,
-      segment: "simulation-fallbacks",
-      simulationExperienceMode: "campaign-v1",
-      arguments_: [
-        "tests/browser/simulation-quality.spec.mjs",
-        "--grep",
-        "without JavaScript|room reveal",
-      ],
-    }) !== 0
-  ) {
-    failed = true;
-  }
+  if (runPlaywright({ port: 4180, segment: "conversation",
+    simulationExperienceMode: "conversation-v2",
+    arguments_: ["tests/browser/conversation-quality.spec.mjs"],
+  }) !== 0) failed = true;
 }
 
 const roomShardCount = 5;

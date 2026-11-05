@@ -20,7 +20,7 @@ import { runtimeValue } from "@/lib/server/runtime-env";
 import { CopyOwnershipSummary } from "./CopyOwnershipSummary";
 import { EditorialRecords } from "./EditorialRecords";
 import { PlayPromotionControls } from "./PlayPromotionControls";
-import { SimulationProviderApprovals } from "./SimulationProviderApprovals";
+import { GeminiSetup } from "./GeminiSetup";
 import { StudioCollections } from "./StudioCollections";
 import { TravelDeskEntry } from "./travel/TravelDeskEntry";
 import styles from "./studio.module.css";
@@ -321,8 +321,8 @@ export default async function StudioPage({
       <TravelDeskEntry atlasMode={runtimeValue("TRAVEL_ATLAS_MODE") ?? null} />
 
       {overview.status !== "database_setup_required" &&
-      runtimeValue("SIMULATION_EXPERIENCE_MODE") !== "disabled" ? (
-        <SimulationProviderApprovals />
+      runtimeValue("SIMULATION_EXPERIENCE_MODE") === "conversation-v2" ? (
+        <GeminiSetup />
       ) : null}
 
       {overview.status === "database_setup_required" ? (
