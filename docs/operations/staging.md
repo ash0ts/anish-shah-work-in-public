@@ -114,10 +114,7 @@ export STAGING_GITLEAKS_URL='https://github.com/ash0ts/anish-shah-work-in-public
 export STAGING_CODEQL_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 export STAGING_BROWSER_URL='https://github.com/ash0ts/anish-shah-work-in-public/actions/runs/<id>'
 
-# For campaign-v1 only, copy these sanitized values from owner-only health.
-# Leave both unset for disabled or coming-soon.
-export STAGING_SIMULATION_APPROVED_PROVIDERS='<comma-separated simulation.approvedProviders>'
-export STAGING_SIMULATION_APPROVAL_DIGEST='<simulation.providerApprovalDigest>'
+# Legacy Simulation approval variables must remain unset.
 
 npm run staging:plan
 npm run staging:migrate
@@ -126,13 +123,10 @@ export STAGING_WORKER_VERSION='<uploaded staging version>'
 npm run staging:stage
 ```
 
-Leave the two simulation approval variables unset for `disabled` and
-`coming-soon`. They are mandatory only for `campaign-v1`. An `atlas-v1`
-checkpoint requires an active Travel publication and current cleanup heartbeat.
-`staging:plan` rejects an enabled campaign without
-at least one approved provider name and a 64-character sanitized digest. It
-records the campaign version, experience mode, AI mode, provider, model,
-provider names, and digest—never approval references or credentials.
+Leave legacy Simulation approval variables unset. Google-processing permissions
+stay in Studio, not the deployment plan. An `atlas-v1` checkpoint requires an
+active Travel publication and current cleanup heartbeat. Plans include only
+safe configuration identifiers, never permission references or credentials.
 
 For an authenticated owner checkpoint, pass a short-lived staging Access JWT
 without printing or storing it:
@@ -182,18 +176,11 @@ activates the staging KV pointer. Both operations are idempotent for an
 already-current release. The following checkpoint refuses a stale general
 retention heartbeat or a missing/mismatched KV pointer. The exact staging
 origin and configuration guard keep these commands separate from production.
-For a `campaign-v1` checkpoint, the live Gateway must be configured and the
-runtime campaign/model settings plus current approval names and digest must
-match the ignored staging plan. A changed or expired approval therefore stops
-the candidate instead of silently changing model context. The initial disabled
-infrastructure release does not require Gateway credentials or approvals. A
-`coming-soon` checkpoint requires `/simulation` to return 200 with the global
-staging noindex headers while all `/api/simulation/**` routes return 404; it
-also requires health to report the campaign unconfigured and public visits not
-to change model-call or session state. Existing protected approval rows may
-remain stored, but they are not release evidence or runtime input in this mode.
-Unless a reviewed staging override is added later, the application daily model
-ceiling remains the runtime default of 500 calls.
+For a `conversation-v2` owner preview, all production/public APIs remain closed.
+Use Studio's synthetic key test and private enable step only after the owner
+approves this isolated environment. The daily model ceiling is one hundred
+calls; public-display approvals do not grant Google-processing permission.
+No Gateway resource or payload logging is required or claimed.
 
 The staging plan records `RELEASE_VERSION`, `CONTENT_VERSION`, `COPY_VERSION`,
 configuration and deployable-artifact hashes, four validation
@@ -217,7 +204,7 @@ automated browser:
   never be copied to production;
 - My Room capability fallbacks and semantic navigation work without WebGL;
 - Pocket Room entry, swipe/tap separation, Back/Escape, and focus restoration work;
-- Simulation completes in Action and Tactical modes with live-model and authored-fallback paths, bounded sessions, budgets, and rejected unsafe output;
+- Owner-only conversation resolves current sources with archive fallback, bounded sessions/budgets, replay protection, and rejected unsafe output;
 - Postcard Planet supports semantic and 3D country/region/pin selection, metadata-free upload, atomic publish/unpublish, media authorization, and cleanup;
 - Studio health, publication checkpoint, noindex headers, and private/no-store
   caching are correct; and

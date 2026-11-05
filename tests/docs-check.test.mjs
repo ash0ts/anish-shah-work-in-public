@@ -356,7 +356,7 @@ test("release documentation preserves the two-phase staging and current naming c
   assert.match(release, /require\('\.\/package\.json'\)\.version/);
   assert.match(release, /npm run --silent release:smoke:list/);
   assert.doesNotMatch(release, /release:smoke:list -- --travel-atlas-mode/);
-  assert.match(testing, /schema-validated safe response projection/);
+  assert.match(testing, /Questions and provider responses must not/);
   assert.match(audio, /Read · Bedside Shelf/);
   assert.doesNotMatch(audioManifest, /Borrowed Shelf/);
   for (const pathname of [

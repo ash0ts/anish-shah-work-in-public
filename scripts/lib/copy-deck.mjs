@@ -51,7 +51,7 @@ const PROTECTED_PROVIDER_POLICY_LANGUAGE = /\b(?:OAuth|access\s+tokens?|refresh\
 const PROTECTED_DATA_BEHAVIOR = /(?:\b(?:stores?|retains?|logs?|deletes?|sends?|transmits?|shares?|processes?)\b(?:\s+[\p{L}-]+){0,6}\s+\b(?:data|tokens?|credentials?|prompts?|responses?|answers?|messages?|visitor\s+text)\b|\b(?:data|tokens?|credentials?|prompts?|responses?|answers?|messages?|visitor\s+text)\b(?:\s+[\p{L}-]+){0,6}\s+\b(?:stored|retained|logged|deleted|sent|transmitted|shared|processed)\b)/iu;
 const PROTECTED_TRAVEL_PRECISION = /\b(?:exact\s+(?:GPS|location|coordinates?)|live\s+location|real[- ]time\s+location|precise\s+coordinates?|latitude|longitude|current\s+whereabouts)\b/iu;
 const PROTECTED_SIMULATION_IDENTITY = /\b(?:authoritative|official|faithful|exact|real)\s+(?:digital\s+)?(?:representative|copy|version|twin)\b|\b4N1SH\s+is\s+Anish\b/iu;
-const PROTECTED_SIMULATION_SYSTEM = /\b(?:system\s+prompt|provider\s+approval|daily\s+(?:model\s+)?budget|session\s+(?:expiry|retention)|Anthropic|Cloudflare\s+AI\s+Gateway)\b/iu;
+const PROTECTED_SIMULATION_SYSTEM = /\b(?:system\s+prompt|provider\s+approval|daily\s+(?:model\s+)?budget|session\s+(?:expiry|retention)|Gemini|Google|Anthropic|Cloudflare\s+AI\s+Gateway)\b/iu;
 
 function failure(file, message) {
   throw new Error(`${file}: ${message}`);
@@ -265,6 +265,7 @@ export async function copyVersionForDeck(root, sourceFiles) {
   const implementationPaths = [
     "content/presentation/home-overview.v2.json",
     "content/presentation/speaker-profile.v1.json",
+    "content/presentation/simulation.v1.json",
     "lib/copy-contract.ts",
     "lib/copy-voice-contract.ts",
     "scripts/lib/copy-deck.mjs",

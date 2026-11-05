@@ -100,27 +100,12 @@ if (publicSiteUrl !== PUBLIC_SITE_ORIGIN) {
 }
 const simulationExperienceMode =
   process.env.SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
-if (
-  simulationExperienceMode !== "disabled" &&
-  simulationExperienceMode !== "coming-soon" &&
-  simulationExperienceMode !== "campaign-v1"
-) {
-  throw new Error(
-    "SIMULATION_EXPERIENCE_MODE must be disabled, coming-soon, or campaign-v1.",
-  );
+if (simulationExperienceMode !== "disabled") {
+  throw new Error("Production conversation must remain disabled pending separate public activation review.");
 }
-const simulationAiMode =
-  process.env.SIMULATION_AI_MODE?.trim() ||
-  (simulationExperienceMode === "campaign-v1" ? "live" : "authored-only");
-if (
-  !["live", "authored-only"].includes(simulationAiMode) ||
-  (simulationExperienceMode === "campaign-v1" && simulationAiMode !== "live") ||
-  (simulationExperienceMode !== "campaign-v1" &&
-    simulationAiMode !== "authored-only")
-) {
-  throw new Error(
-    "Production simulation must be disabled or coming-soon with authored-only, or campaign-v1 with live AI.",
-  );
+const simulationAiMode = process.env.SIMULATION_AI_MODE?.trim() || "authored-only";
+if (simulationAiMode !== "authored-only") {
+  throw new Error("Production conversation must use authored-only mode.");
 }
 const travelAtlasMode = process.env.TRAVEL_ATLAS_MODE?.trim() || "disabled";
 if (travelAtlasMode !== "disabled" && travelAtlasMode !== "atlas-v1") {
@@ -222,8 +207,8 @@ config.vars = {
   DEPLOYMENT_TIER: "production",
   SIMULATION_EXPERIENCE_MODE: simulationExperienceMode,
   SIMULATION_AI_MODE: simulationAiMode,
-  SIMULATION_PROVIDER: "anthropic",
-  SIMULATION_MODEL: "claude-sonnet-5",
+  SIMULATION_PROVIDER: "google",
+  SIMULATION_MODEL: "gemini-3.6-flash",
   TRAVEL_ATLAS_MODE: travelAtlasMode,
 };
 config.observability = {

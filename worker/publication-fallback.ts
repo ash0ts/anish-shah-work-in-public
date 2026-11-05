@@ -14,7 +14,7 @@ function isContentBackedPublicPath(
     pathname === "/play" ||
     pathname === "/play/" ||
     pathname.startsWith("/play/") ||
-    (simulationExperienceMode === "campaign-v1" &&
+    (simulationExperienceMode === "conversation-v2" &&
       (pathname === "/simulation" || pathname === "/simulation/")) ||
     pathname === "/sources" ||
     pathname === "/sources/" ||

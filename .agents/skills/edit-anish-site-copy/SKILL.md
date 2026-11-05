@@ -49,7 +49,7 @@ Improve the site's language without changing its facts, structure, behavior, or 
 
 - Page framing, section introductions, calls to action, nonbehavioral labels, search placeholders, no-results text, and 404 wording. On Home this includes the signal/overview headings and method CTA, not the protected signal or overview mapping.
 - Play object flavor text, including the Globe/Travel doorway. Literal object names and categories are fixed by the seven-object registry.
-- Dormant Simulation introduction, CTA, nonfactual encounter flavor, and accessibility-friendly instructions through declared `content/copy/pages/simulation.md` fields. Editing them does not expose the disabled route or authorize activation.
+- Owner-preview 4N1SH introduction, CTA, nonfactual scene flavor, and accessibility-friendly instructions through declared `content/copy/pages/simulation.md` fields. Editing them does not expose the disabled route or authorize activation.
 - SEO and social descriptions when they remain consistent with visible copy and structured data.
 
 ### Edit with owner fact-check

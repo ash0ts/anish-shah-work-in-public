@@ -6,7 +6,6 @@ import {
   getPublicTravelAtlas,
   travelAtlasEnabled,
 } from "../lib/server/travel";
-import { simulationExperienceMode } from "../lib/server/simulation/mode";
 import { getPublicContentView } from "../lib/server/public-content";
 import { workArchiveRecordsFrom } from "../lib/work-index";
 
@@ -75,16 +74,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.4,
   }));
 
-  const simulationRoutes: MetadataRoute.Sitemap = simulationExperienceMode() === "campaign-v1"
-    ? [
-        {
-          url: `${baseUrl}/simulation`,
-          lastModified,
-          changeFrequency: "monthly",
-          priority: 0.5,
-        },
-      ]
-    : [];
   const atlas = travelEnabled ? await getPublicTravelAtlas() : null;
   const tripRoutes: MetadataRoute.Sitemap =
     atlas?.status === "ready"
@@ -99,7 +88,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...publicRoutes,
     ...playRoutes,
-    ...simulationRoutes,
     ...tripRoutes,
     ...workRoutes,
   ];

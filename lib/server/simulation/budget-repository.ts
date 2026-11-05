@@ -57,7 +57,7 @@ export async function recordSimulationGenerationSuccess(
     .prepare(
       `INSERT INTO maintenance_state (
          key, status, details_json, checked_at, updated_at
-       ) VALUES ('simulation_generation', 'healthy', '{"provider":"anthropic"}', ?, ?)
+       ) VALUES ('simulation_generation', 'healthy', '{"provider":"google"}', ?, ?)
        ON CONFLICT(key) DO UPDATE SET
          status = excluded.status,
          details_json = excluded.details_json,

@@ -3,10 +3,6 @@ import type {
   CopyPageId,
 } from "@/types/copy";
 import { copyVoicePolicyForField } from "./copy-voice-contract.ts";
-import {
-  SIMULATION_ACTION_COPY_IDS,
-  SIMULATION_CURIOSITY_COPY_IDS,
-} from "./simulation/campaign-copy-contract.ts";
 
 function field(
   surface: string,
@@ -255,9 +251,17 @@ export const COPY_PAGE_DEFINITIONS = {
     field("sources", "source-kind-method", "editorial", 32),
   ],
   simulation: [
+    field("simulation", "conversation-eyebrow", "editorial", 60),
+    field("simulation", "conversation-title", "editorial", 100),
+    field("simulation", "conversation-summary", "editorial", 240),
+    field("simulation", "conversation-desk", "editorial", 140),
+    field("simulation", "conversation-archive", "editorial", 140),
+    field("simulation", "conversation-doorway", "editorial", 140),
+    field("simulation", "prompt-tools", "editorial", 60),
+    field("simulation", "prompt-evaluation", "editorial", 60),
+    field("simulation", "prompt-teaching", "editorial", 60),
     field("simulation", "seo-title", "editorial", 70),
     field("simulation", "seo-description", "editorial", 160),
-    field("simulation", "coming-soon-seo-description", "editorial", 160),
     field("simulation", "ingress-label", "editorial", 100),
     field("simulation", "ingress-cta", "editorial", 48),
     field("simulation", "transition-eyebrow", "editorial", 60),
@@ -266,35 +270,6 @@ export const COPY_PAGE_DEFINITIONS = {
       allowParagraphs: true,
     }),
     field("simulation", "transition-cancel-cta", "editorial", 48),
-    field("simulation", "coming-soon-eyebrow", "editorial", 80),
-    field("simulation", "coming-soon-title", "editorial", 140),
-    field("simulation", "coming-soon-summary", "editorial", 320, {
-      allowParagraphs: true,
-    }),
-    field("simulation", "coming-soon-status", "editorial", 80),
-    field("simulation", "coming-soon-room-cta", "editorial", 48),
-    field("simulation", "coming-soon-work-cta", "editorial", 48),
-    field("simulation", "boot-eyebrow", "editorial", 80),
-    field("simulation", "boot-title", "editorial", 120),
-    field("simulation", "boot-summary", "editorial", 320, {
-      allowParagraphs: true,
-    }),
-    field("simulation", "start-cta", "editorial", 48),
-    field("simulation", "noscript-summary", "editorial", 320, {
-      allowParagraphs: true,
-    }),
-    field("simulation", "dossier-eyebrow", "editorial", 60),
-    field("simulation", "dossier-title", "editorial", 100),
-    field("simulation", "dossier-summary", "editorial", 320, {
-      allowParagraphs: true,
-    }),
-    ...SIMULATION_ACTION_COPY_IDS.flatMap((action) => [
-      field("simulation", `action-${action}-label`, "editorial", 60),
-      field("simulation", `action-${action}-hint`, "editorial", 180),
-    ]),
-    ...SIMULATION_CURIOSITY_COPY_IDS.map((curiosity) =>
-      field("simulation", `curiosity-${curiosity}`, "editorial", 180),
-    ),
   ],
 } as const satisfies Record<CopyPageId, readonly CopyFieldDefinition[]>;
 

@@ -1,0 +1,270 @@
+.experience {
+  color: #eae8dc;
+  background: #141515;
+  min-height: 80svh;
+  padding: 1rem clamp(1rem, 3vw, 3rem) 3rem;
+  font-family: var(--font-body);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-block: 1px solid #696b66;
+  padding: 0.75rem 0;
+  font: 12px var(--font-mono);
+  letter-spacing: 0.08em;
+}
+.toolbar div,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.experience button,
+.toolbar a {
+  min-height: 44px;
+  padding: 0.7rem 1rem;
+  border: 1px solid #aaa99d;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: none;
+}
+.experience button:hover,
+.toolbar a:hover {
+  background: #eae8dc;
+  color: #141515;
+}
+.experience :focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(19rem, 1fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  padding: 2rem 0;
+  align-items: start;
+}
+.scene {
+  position: relative;
+  min-width: 0;
+  border-bottom: 1px solid #696b66;
+}
+.scene img {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+.sceneLabel {
+  padding: 1rem 0;
+  font: 13px var(--font-mono);
+}
+.sceneLabel p {
+  max-width: 34ch;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0.6rem 0;
+}
+.dialogue {
+  min-width: 0;
+}
+.portrait {
+  display: inline-block;
+  vertical-align: middle;
+  width: 32px;
+  height: 32px;
+  margin-right: 0.6rem;
+  background: url("/assets/simulation/keeper-reaction.svg") 0 0/128px 32px
+    no-repeat;
+  image-rendering: pixelated;
+}
+.portrait[data-reacting="true"] {
+  animation: keeper-reaction 480ms steps(4) 1;
+}
+@keyframes keeper-reaction {
+  to {
+    background-position: -128px 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .portrait[data-reacting="true"] {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .portrait {
+    display: none;
+  }
+}
+.eyebrow {
+  font: 11px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #bcbcb0;
+}
+.dialogue h1 {
+  font-size: clamp(2rem, 3.7vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  margin: 0.75rem 0 1rem;
+}
+.dialogue > p {
+  max-width: 46ch;
+  line-height: 1.6;
+}
+.disclosure,
+.privacy {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #bcbcb0;
+}
+.dialogue label {
+  display: block;
+  font: 12px var(--font-mono);
+  margin: 1.5rem 0 0.6rem;
+}
+.dialogue textarea {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 6rem;
+  background: #202322;
+  border: 1px solid #aaa99d;
+  color: #fff;
+  font: 16px var(--font-body);
+  padding: 0.8rem;
+  resize: vertical;
+}
+.actions {
+  margin: 0.75rem 0;
+}
+.actions button:first-child {
+  background: #eae8dc;
+  color: #141515;
+}
+.prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font: 12px var(--font-mono);
+  margin: 1.25rem 0;
+}
+.experience a {
+  color: inherit;
+  text-underline-offset: 4px;
+}
+.status {
+  font-size: 13px;
+  min-height: 1.4em;
+}
+.experience summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0.7rem 0;
+}
+.results {
+  border-top: 1px solid #696b66;
+  padding-top: 1rem;
+  scroll-margin-top: 6rem;
+}
+.results header {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.results h2 {
+  font-size: clamp(1.5rem, 2vw, 2rem);
+}
+.results header span {
+  font: 12px var(--font-mono);
+  white-space: nowrap;
+}
+.results ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 0;
+  gap: 1.5rem;
+  list-style: none;
+}
+.results li {
+  min-width: 0;
+  border-top: 1px solid #696b66;
+  padding-top: 1rem;
+  overflow-wrap: anywhere;
+}
+.results h3 {
+  font-size: 1.15rem;
+  line-height: 1.4;
+}
+.results p {
+  line-height: 1.6;
+  font-size: 14px;
+}
+.limit {
+  border-left: 2px solid #aaa99d;
+  padding-left: 0.7rem;
+}
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1rem 0;
+  }
+  .scene img {
+    max-height: 18svh;
+    object-fit: cover;
+    object-position: center 38%;
+  }
+  .sceneLabel {
+    padding: 0.6rem 0;
+  }
+  .sceneLabel p {
+    font-size: 12px;
+    margin: 0.4rem 0;
+  }
+  .results ul {
+    grid-template-columns: 1fr;
+  }
+  .toolbar {
+    flex-wrap: wrap;
+  }
+  .dialogue h1 {
+    font-size: 2rem;
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+  .results header {
+    align-items: start;
+    flex-direction: column;
+    gap: 0;
+  }
+}
+@media (forced-colors: active) {
+  .scene img {
+    display: none;
+  }
+  .experience,
+  .dialogue textarea {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .eyebrow,
+  .disclosure,
+  .privacy {
+    color: CanvasText;
+  }
+  .experience button,
+  .toolbar a,
+  .actions button:first-child {
+    border: 1px solid ButtonText;
+    color: ButtonText;
+    background: ButtonFace;
+  }
+  .experience :focus-visible {
+    outline-color: Highlight;
+  }
+}

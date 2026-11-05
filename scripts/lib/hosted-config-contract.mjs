@@ -194,16 +194,16 @@ export function expectedStagingCoordinates(environment, contentVersion, packageV
   const simulationExperienceMode =
     environment.STAGING_SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
   if (
-    !new Set(["disabled", "coming-soon", "campaign-v1"]).has(
+    !new Set(["disabled", "conversation-v2"]).has(
       simulationExperienceMode,
     )
   ) {
     throw new Error(
-      "STAGING_SIMULATION_EXPERIENCE_MODE must be disabled, coming-soon, or campaign-v1.",
+      "STAGING_SIMULATION_EXPERIENCE_MODE must be disabled or conversation-v2.",
     );
   }
   const simulationAiMode =
-    simulationExperienceMode === "campaign-v1" ? "live" : "authored-only";
+    "authored-only";
   const travelAtlasMode =
     environment.STAGING_TRAVEL_ATLAS_MODE?.trim() || "atlas-v1";
   if (!new Set(["disabled", "atlas-v1"]).has(travelAtlasMode)) {
@@ -355,8 +355,8 @@ export function stagingConfiguration(base, expected) {
       DEPLOYMENT_TIER: "staging",
       SIMULATION_EXPERIENCE_MODE: expected.simulationExperienceMode,
       SIMULATION_AI_MODE: expected.simulationAiMode,
-      SIMULATION_PROVIDER: "anthropic",
-      SIMULATION_MODEL: "claude-sonnet-5",
+      SIMULATION_PROVIDER: "google",
+      SIMULATION_MODEL: "gemini-3.6-flash",
       TRAVEL_ATLAS_MODE: expected.travelAtlasMode,
     },
     observability: {

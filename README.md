@@ -10,8 +10,8 @@ source, research implementations, and public programs from 2021 onward.
 - `/play` is [My Room, 2001](./docs/architecture/my-room-2001.md): a semantic
   seven-object directory. Its six connector routes and `/play/travel` remain
   reachable without WebGL or JavaScript.
-- `/simulation` is a feature-gated public-model doorway or the full
-  Action/Tactical campaign.
+- `/simulation` is an owner-only pixel conversation preview with sourced
+  discoveries and private Gemini setup. Public production remains disabled.
 - `/sources`, `/privacy`, and owner-only `/studio` expose methodology,
   privacy terms, and protected operations.
 

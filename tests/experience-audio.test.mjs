@@ -190,38 +190,7 @@ test("official Spotify players duck and restore the shared experience bus", asyn
   assert.match(fallback, /playCue\("listen-open-close"\)/);
 });
 
-test("simulation cues follow deterministic campaign and arena transitions", async () => {
-  const [campaign, arena] = await Promise.all([
-    import(
-      "../components/simulation/campaign/campaign-audio.ts"
-    ),
-    source("components/simulation/ActionArena.tsx"),
-  ]);
-  assert.deepEqual(
-    ["boot", "act1Wave", "act2Wave", "act3Wave", "bossWave", "ending"].map(
-      campaign.campaignAudioCueForState,
-    ),
-    [
-      "simulation-boot",
-      "simulation-act-1",
-      "simulation-act-2",
-      "simulation-act-3",
-      "simulation-boss",
-      "simulation-ending",
-    ],
-  );
-  assert.equal(campaign.campaignAudioCueForState("act1Debrief"), null);
-  assert.deepEqual(
-    ["near-miss", "hit", "evidence", "recalibrate"].map(
-      campaign.arenaFeedbackAudioCue,
-    ),
-    [
-      "simulation-near-miss",
-      "simulation-hit",
-      "simulation-evidence",
-      "simulation-recalibrate",
-    ],
-  );
-  assert.match(arena, /feedbackRef\.current\?\.\("near-miss"\)/);
-  assert.match(arena, /this\.time\.now - this\.lastNearMissAt >= 700/);
+test("conversation is silent and leaves the shared gesture-gated audio runtime unchanged", async () => {
+  const ui = await source("components/simulation/Conversation.tsx");
+  assert.doesNotMatch(ui, /AudioContext|Tone|playCue|new Audio|autoplay/);
 });

@@ -272,16 +272,17 @@ test("Travel media mutations require behavior-level security coverage", () => {
 });
 
 test("Simulation server and test changes select privacy, rendered, bundle, and browser gates", () => {
-  const uncovered = plan("lib/server/simulation/provider.ts");
+  const uncovered = plan("lib/server/simulation/conversation/provider.ts");
   assert.equal(uncovered.status, 1);
   assert.match(
     output(uncovered),
-    /Simulation API, session, Gateway, or privacy code changed without a Simulation backend\/security regression test/,
+    /Simulation API, session, provider, or privacy code changed without a conversation security\/migration regression test/,
   );
 
   const covered = plan(
-    "lib/server/simulation/provider.ts",
-    "tests/simulation-backend.test.mjs",
+    "lib/server/simulation/conversation/provider.ts",
+    "app/api/studio/simulation/configuration/route.ts",
+    "tests/conversation-security.test.mjs",
   );
   assert.equal(covered.status, 0, output(covered));
   assert.match(covered.stdout, /- simulation/);
@@ -297,9 +298,9 @@ test("Simulation server and test changes select privacy, rendered, bundle, and b
       command,
     );
   }
-  assert.match(covered.stdout, /Gateway prompt\/response logging and caching are disabled/);
+  assert.match(covered.stdout, /application screening, source-ID validation, replay and budget guards/);
 
-  const regressionOnly = plan("tests/simulation-backend.test.mjs");
+  const regressionOnly = plan("tests/conversation-security.test.mjs");
   assert.equal(regressionOnly.status, 0, output(regressionOnly));
   assert.match(regressionOnly.stdout, /- simulation/);
   assert.match(regressionOnly.stdout, /npm run test:backend/);

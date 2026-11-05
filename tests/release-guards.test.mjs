@@ -207,8 +207,8 @@ function validReleaseConfigFixture() {
         DEPLOYMENT_TIER: "production",
         SIMULATION_EXPERIENCE_MODE: expected.simulationExperienceMode,
         SIMULATION_AI_MODE: expected.simulationAiMode,
-        SIMULATION_PROVIDER: "anthropic",
-        SIMULATION_MODEL: "claude-sonnet-5",
+        SIMULATION_PROVIDER: "google",
+        SIMULATION_MODEL: "gemini-3.6-flash",
         TRAVEL_ATLAS_MODE: expected.travelAtlasMode,
       },
       observability: {
@@ -331,22 +331,12 @@ test("release preflight rejects a configuration that weakens production boundari
         { ...environment, SIMULATION_EXPERIENCE_MODE: "experimental" },
         { head: expected.head, contentVersion: expected.contentVersion, packageVersion: expected.releaseVersion },
       ),
-    /disabled, coming-soon, or campaign-v1/,
+    /must remain disabled/,
   );
-  const comingSoon = expectedPublicReleaseConfig(
-    {
-      ...environment,
-      SIMULATION_EXPERIENCE_MODE: "coming-soon",
-      SIMULATION_AI_MODE: "authored-only",
-    },
-    {
-      head: expected.head,
-      contentVersion: expected.contentVersion,
-      packageVersion: expected.releaseVersion,
-    },
-  );
-  assert.equal(comingSoon.simulationExperienceMode, "coming-soon");
-  assert.equal(comingSoon.simulationAiMode, "authored-only");
+  for (const mode of ["coming-soon", "campaign-v1", "conversation-v2"]) {
+    assert.throws(() => expectedPublicReleaseConfig({ ...environment, SIMULATION_EXPERIENCE_MODE: mode },
+      { head: expected.head, contentVersion: expected.contentVersion, packageVersion: expected.releaseVersion }), /must remain disabled/);
+  }
   assert.throws(
     () =>
       expectedPublicReleaseConfig(
@@ -361,7 +351,7 @@ test("release preflight rejects a configuration that weakens production boundari
           packageVersion: expected.releaseVersion,
         },
       ),
-    /disabled or coming-soon production simulation must use authored-only/,
+    /must remain disabled/,
   );
   assert.throws(
     () =>
@@ -373,7 +363,7 @@ test("release preflight rejects a configuration that weakens production boundari
         },
         { head: expected.head, contentVersion: expected.contentVersion, packageVersion: expected.releaseVersion },
       ),
-    /enabled production simulation must use live AI/,
+    /must remain disabled/,
   );
   assert.throws(
     () =>

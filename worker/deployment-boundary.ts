@@ -43,11 +43,9 @@ function isSimulationPath(pathname: string): boolean {
 
 function isPreviewDisabledPath(
   pathname: string,
-  simulationExperienceMode: string | undefined,
 ): boolean {
   return (
-    (simulationExperienceMode !== "campaign-v1" &&
-      isSimulationPath(pathname)) ||
+    isSimulationPath(pathname) ||
     pathname === "/studio" ||
     pathname.startsWith("/studio/") ||
     pathname === "/api/studio" ||
@@ -73,26 +71,12 @@ function disabledSimulationResponse(): Response {
   });
 }
 
-/**
- * Fail closed before throttling or body parsing when the hosted release does
- * not expose the campaign. The coming-soon page may remain visible, but its
- * session APIs stay unavailable until campaign-v1 is active.
- */
+/** Disabled and retired modes fail closed before parsing or throttling. */
 export function simulationExperienceBoundaryResponse(
   pathname: string,
   simulationExperienceMode: string | undefined,
 ): Response | null {
-  const apiPath =
-    pathname === "/api/simulation" || pathname.startsWith("/api/simulation/");
-  const disabledPage =
-    simulationExperienceMode !== "coming-soon" &&
-    (pathname === "/simulation" || pathname === "/simulation/");
-  if (
-    simulationExperienceMode !== "campaign-v1" &&
-    (apiPath || disabledPage)
-  ) {
-    return disabledSimulationResponse();
-  }
+  if (simulationExperienceMode !== "conversation-v2" && isSimulationPath(pathname)) return disabledSimulationResponse();
   return null;
 }
 
@@ -104,15 +88,16 @@ export function hostedDeploymentBoundaryResponse(
 ): Response | null {
   if (tier !== "preview") return null;
   if (
-    simulationExperienceMode === "campaign-v1" &&
-    isSimulationPath(pathname)
+    simulationExperienceMode === "conversation-v2" &&
+    (pathname === "/simulation" || pathname === "/simulation/") &&
+    (request.method === "GET" || request.method === "HEAD")
   ) {
     return null;
   }
   if (pathname.startsWith("/api/connector-artwork/")) {
     return neutralPreviewArtwork();
   }
-  if (isPreviewDisabledPath(pathname, simulationExperienceMode)) {
+  if (isPreviewDisabledPath(pathname)) {
     return disabledPreviewResponse();
   }
   if (request.method !== "GET" && request.method !== "HEAD") {

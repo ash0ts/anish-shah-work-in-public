@@ -6,7 +6,7 @@
 - When a copy request needs layout, interaction, hierarchy, a destination, a new field, or protected wording, record it as an implementation request. The owner may adopt it through `$maintain-anish-site`; once code changes, the PR leaves the trusted copy-only lane.
 - For visual, interaction, or hierarchy changes, also use `frontend-design`; it remains the sole creative/design skill for this site.
 - Do not use Field Notes, film, video-story, Remotion, canvas-film, technical-analysis-animation, autoplay, or scroll hijacking. Three.js is allowed only inside the intent-gated `/play` room runtime under `components/play/room-3d/**` and the Postcard Planet globe under `components/play/travel/**`; it remains prohibited for Home, Work, Sources, Studio, and archive navigation.
-- The `/simulation` campaign has one narrow technology exception: Phaser, XState, game-oriented Canvas effects, and pixel-art rendering may be used only under `app/simulation/**` and `components/simulation/**`. Tone.js and Web Audio may be used only behind an explicit user gesture under `components/experience-audio/**`. These dependencies must remain dynamically loaded, must not enter unrelated route bundles, and must preserve semantic DOM, Tactical/no-JavaScript parity, reduced-motion behavior, and silent operation until `SOUND ON`.
+- The owner-only `/simulation` conversation uses semantic React, XState, CSS sprites, and brief Anime.js feedback. No Phaser, combat Canvas, idle loop, or autoplay. Gemini selects current source IDs; facts stay server-owned. Google processing needs separate permission; Strava/Travel stay excluded. Shared audio remains gesture-gated.
 - Treat `content/public/anish-content.public.v1.json` as generated deployable content, not a hand-edited source. Raw CSV/Markdown inputs and `content/private` must remain outside deployed assets and public output.
 - New owner mutations use `/api/studio/**`; public connector routes are read-only except tightly bounded OAuth callbacks and retained compatibility redirects.
 - Keep local, synthetic preview, isolated staging, production, and private Sites-reference state distinct. Only the audited one-time promotion flow may transfer reviewed Hardcover, Steam, and Strava setup from local to production; never move D1/KV data, encryption keys, OAuth material, snapshots, or publication approvals across environments.
@@ -41,8 +41,4 @@
   Prefer concrete actors and verbs, read longer copy aloud, and reserve mild
   personality for Play—not speaker, Privacy, consent, or recovery text.
 - Treat the dependency-free closed seven-object contract, semantic `/play/<object>` routes, and object directory as authoritative. Derive routes, controls, focus targets, and smoke paths from that contract while keeping executable screen/provider/scene maps literal and parity-tested. The low-poly room is optional enhancement: it may not own provider or Travel content, preload connectors, geography, or media, or make any collection unreachable without WebGL. There is no Classic Play mode; retain only the permanent legacy `?stream=` redirects.
-- The v2.2 public, preview, and staging contract keeps Simulation dormant with
-  `SIMULATION_EXPERIENCE_MODE=disabled` and
-  `SIMULATION_AI_MODE=authored-only`. Disabled means no Play ingress, sitemap
-  entry, public route/API access, or Play-loaded Simulation bundle. Retain the
-  source for a separately reviewed future activation.
+- Production keeps `SIMULATION_EXPERIENCE_MODE=disabled` and `SIMULATION_AI_MODE=authored-only`. The `conversation-v2` preview is owner-only; synthetic previews use authored sources without APIs. Saving a key or editing copy never authorizes public activation. Preserve migrations, immutable releases, and owner data.

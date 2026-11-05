@@ -69,6 +69,31 @@
       "sha256": "29baf2dc55dd3b452ce1a2287d7cd858c86e56c46bda200b90debc0e81880d5f"
     },
     {
+      "path": "content/presentation/simulation.v1.json",
+      "bytes": 603,
+      "sha256": "ef6b763df8a8b17b33ff9a3b6768e4ab4cede9d91c0d2cc3e6255529b1db0399"
+    },
+    {
+      "path": "public/assets/simulation/conversation-desk.webp",
+      "bytes": 484448,
+      "sha256": "4f1ede3657f85fbbc18c9b029e1c17f6596e0c2e1a4cb9928ec973cc2ec0ac05"
+    },
+    {
+      "path": "public/assets/simulation/conversation-archive.webp",
+      "bytes": 607690,
+      "sha256": "d2a947d3fd8aff379e7840b49935fe3d7eb0419ad24836cf2d9f1a58769c3408"
+    },
+    {
+      "path": "public/assets/simulation/conversation-doorway.webp",
+      "bytes": 547688,
+      "sha256": "d7fca6d5fdaab1791b4d49edf4384cf8ba219b58ea4fe7993fcb1782a2363af7"
+    },
+    {
+      "path": "public/assets/simulation/keeper-reaction.svg",
+      "bytes": 526,
+      "sha256": "b08afb14da640719c6c9976bf34cf7c9be69013e40258ea94ffae39ce4bd207a"
+    },
+    {
       "path": "public/assets/organizations/ai-tinkerers.438086e46304.svg",
       "bytes": 6801,
       "sha256": "438086e46304f36e99fc4aec7bd4eb2f979b18d95dba0a2056a01e006dc33ce3"

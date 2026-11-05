@@ -41,7 +41,7 @@ If authentication expired, run `npx --no-install wrangler login`, then repeat
 `whoami`. Never use `NODE_TLS_REJECT_UNAUTHORIZED=0`, disable TLS validation,
 or copy a corporate CA certificate into this repository.
 
-One-time Cloudflare resources, durable secrets, Gateway controls, and the
+One-time Cloudflare resources, durable secrets, model boundaries, and the
 initial Simulation/Travel schema activation sequence belong in
 [Hosted infrastructure bootstrap](./bootstrap.md). Confirm that work is complete
 before starting a recurring production release; do not provision or rotate
@@ -171,26 +171,16 @@ There is no hosted Classic flag or fallback. The release plan records
 `RELEASE_VERSION` and also computes `COPY_VERSION` from the copy deck and parser
 contract. `COPY_VERSION` is distinct from canonical-data `CONTENT_VERSION`.
 
-For an enabled campaign release, use
-`SIMULATION_EXPERIENCE_MODE=campaign-v1` and `SIMULATION_AI_MODE=live` before
-building. Hosted production rejects fixture mode and rejects an enabled
-campaign that is not live. These non-secret values are embedded in the exact
-Worker configuration and cannot be changed after validation without rebuilding
-and replanning the release.
+Current production preparation rejects all live or retired Simulation modes.
 
 For a release that keeps Simulation fully unavailable, use
 `SIMULATION_EXPERIENCE_MODE=disabled` with
 `SIMULATION_AI_MODE=authored-only`; the Play ingress, route, sitemap entry,
 public APIs, and client bundle must remain absent.
 
-For a public placeholder release instead, use:
-
-```bash
-export SIMULATION_EXPERIENCE_MODE='coming-soon'
-export SIMULATION_AI_MODE='authored-only'
-```
-
-Do not set provider-approval variables for that mode. A guarded release may
+Retired coming-soon/campaign modes are rejected by new production preparation.
+Conversation remains disabled pending separate public-activation review. Leave
+Simulation approval variables unset. A guarded release may
 select `TRAVEL_ATLAS_MODE=atlas-v1` only with an owner-reviewed active Travel
 snapshot and explicit visual acceptance. Follow
 [Hosted infrastructure bootstrap](./bootstrap.md) when the target tier has not
@@ -230,20 +220,10 @@ contracts. If the currently deployed version does not expose this endpoint, use
 `none`, `none`, and `0` for the three publication inputs below and explicitly
 plan the application-mediated bootstrap.
 
-For an enabled simulation candidate, also read owner-only
-`GET /api/studio/health` from production before planning. Copy only:
-
-```text
-simulation.approvedProviders
-simulation.providerApprovalDigest
-```
-
-The provider list contains only currently enabled, unexpired approvals with
-both `game_display` and `llm_context`. The digest is a one-way hash of the safe
-approval projection. Do not copy approval references, timestamps, contacts,
-notes, Studio responses, or provider data into a shell, plan, or issue. If the
-list is empty or the digest is unavailable, leave production disabled and fix
-the protected approval state first.
+Production conversation stays disabled. Owner health must report the pinned
+Google model, authored-only state, and no public ingress. Key or permission
+details never enter release plans. Historical campaign release records remain
+immutable audit evidence, not permission to reactivate their runtime.
 
 ## 3. Write the pre-release plan
 
@@ -278,17 +258,9 @@ rejects them so local checks cannot masquerade as GitHub runs. If this is a new
 shell, repeat that section's owner-local environment block exactly, but do not
 rerun the evidence command.
 
-For a `campaign-v1` release only, set these before `release:plan`:
-
-```bash
-export RELEASE_SIMULATION_APPROVED_PROVIDERS='<comma-separated simulation.approvedProviders>'
-export RELEASE_SIMULATION_APPROVAL_DIGEST='<simulation.providerApprovalDigest>'
-```
-
-Leave both unset while Simulation is `disabled` or `coming-soon`.
-
-After setting the common coordinates, exactly one evidence-mode block, and any
-enabled-Simulation approval values, write the plan:
+Leave `RELEASE_SIMULATION_APPROVED_PROVIDERS` and
+`RELEASE_SIMULATION_APPROVAL_DIGEST` unset. After setting the common coordinates
+and exactly one evidence-mode block, write the plan:
 
 ```bash
 npm run release:plan
@@ -304,56 +276,10 @@ reviewed pending migration. Replace the empty value only with exact
 remote-pending filenames; do not include an already-applied, absent-from-Git,
 or unreviewed file.
 
-A `campaign-v1` release plan requires at least one allowlisted provider name
-and a 64-character approval digest. Disabled and coming-soon plans reject stale
-approval variables. The plan records only campaign version, experience/AI
-mode, provider/model, sorted provider names, and the digest; it has no field for
-approval references or secrets. Initial feature-schema migration ordering is
-owned by [Hosted infrastructure bootstrap](./bootstrap.md).
-
-`release:plan` refuses a dirty worktree or a SHA mismatch. In the default mode,
-it asks the authenticated GitHub CLI to verify that all four distinct Actions
-runs belong to this repository, use the expected active workflow names and
-paths, target exact `HEAD`, and concluded successfully. Browser Quality must be
-a `workflow_dispatch` run. URLs alone are not trusted. In owner-local mode, it
-performs the same GitHub verification for CodeQL and independently verifies the
-receipt's schema, mode, repository, trusted ref, SHA, pinned tools, timestamps,
-three fixed successful commands, payload self-digest, mode-`0600` file, and
-artifact hashes. The plan records:
-
-- the validated commit SHA and evidence mode;
-- either all four GitHub Actions identities and URLs, or the three local result
-  identities, safe receipt digest, and exact CodeQL identity and URL;
-- explicit `RELEASE_VERSION`, `CONTENT_VERSION`, and `COPY_VERSION`;
-- the public content version and exact sanitized bundle SHA-256;
-- the deployable artifact-set hash, file count, byte count, and manifest hash;
-- the prior Worker version;
-- the pre-migration D1 Time Travel bookmark and migration list; and
-- the exact simulation campaign/model settings plus sanitized approval names
-  and one-way approval-state digest; and
-- checksums for the content attestation and prepared Worker configuration.
-
-It also verifies that `HEAD` is pushed to the branch's configured upstream and
-records a SHA-256 for every named migration. For a release with no migrations,
-set `RELEASE_MIGRATION_LIST=''`; the recorded list will be empty.
-
-If the checkpoint is absent, drifted, or based on a different content version,
-explicitly select the audited, application-mediated bootstrap before creating
-the plan:
-
-```bash
-export RELEASE_PREDEPLOY_BOOTSTRAP=1
-npm run release:plan
-```
-
-The plan records `predeploy_bootstrap_required`. This authorizes only the new
-Worker's audited public-content projector while that version is staged at 0%.
-It does not authorize manual SQL, direct KV writes, a checked-in-bundle import,
-or public traffic to the candidate.
-
-Keep `dist/release-plan.json` intact through deployment and smoke testing. It is
-ignored because it is a release-machine checkpoint, not repository state. Do
-not hand-edit it.
+Current conversation plans carry the version, disabled mode, pinned Google model,
+and no legacy approval variables. Historical campaign attestations remain
+immutable and readable; their old approval model cannot activate this runtime.
+Feature-schema ordering belongs in [bootstrap](./bootstrap.md).
 
 ## 4. Understand the staged publication checkpoint
 
@@ -435,7 +361,7 @@ reference, or provider collection data. Through
 `Cloudflare-Workers-Version-Overrides`, the snippet:
 
 1. verifies `/api/studio/health` reached the candidate SHA/content version and
-   that campaign version, experience/AI mode, provider/model, Gateway readiness,
+   that campaign version, experience/AI mode, provider/model, disabled state,
    approved provider names, and approval digest exactly match the plan;
 2. calls the audited, empty-body Publish route only when the plan recorded
    `predeploy_bootstrap_required`;
@@ -491,16 +417,14 @@ the base set:
 7. `owner_health`: owner-only `GET /api/studio/health` reports the validated
    release SHA, content version, `COPY_VERSION`, expected latest migration, non-stale
    retention heartbeat, sanitized connector status, and the planned simulation
-   contract. For an enabled campaign, Gateway readiness, provider names, and
+   contract. For disabled conversation, the pinned model, absent ingress, and
    approval digest match the plan.
-8. `simulation_experience`: when disabled, the ingress is absent and route/APIs
+8. `simulation_experience`: the ingress is absent and route/APIs
    return their documented unavailable behavior. When coming soon, the ingress
    and noindexed server-rendered route are public, the sitemap omits it, every
    Simulation API is unavailable, and no dossier, session, model, Phaser, or
-   Tone code loads. With `campaign-v1`, `/simulation` and the sitemap entry are
-   public, Action and Tactical both complete, exactly two optional text moments
-   are enforced, AI outage completes through authored fallback, and no
-   prompt/response or visitor text appears in logs or storage.
+   conversation code loads. Retired campaign modes cannot be activated.
+
 9. `canonical_apex`: the apex is the sole content-serving production origin and
    public HTML, metadata, sitemap, robots, and structured data use it.
 10. `www_redirect`: representative `www` paths and queries permanently redirect

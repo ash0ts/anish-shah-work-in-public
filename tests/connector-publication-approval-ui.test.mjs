@@ -143,7 +143,7 @@ test("disabled Simulation approvals stay out of routine Studio", async () => {
   const page = await source("app/studio/page.tsx");
   assert.match(
     page,
-    /runtimeValue\("SIMULATION_EXPERIENCE_MODE"\) !== "disabled"/,
+    /runtimeValue\("SIMULATION_EXPERIENCE_MODE"\) === "conversation-v2"/,
   );
 });
 

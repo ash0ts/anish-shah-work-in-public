@@ -302,12 +302,12 @@ const authOrOAuthChanged = paths.some((value) =>
 const securityTestChanged = paths.some(
   (value) =>
     !deleted.has(value) &&
-    /^tests\/(?:backend|security|cloudflare|travel-(?:backend|security)|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
+    /^tests\/(?:backend|security|cloudflare|conversation-security|travel-(?:backend|security)|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
 );
 const securityTestsDeleted = paths.filter(
   (value) =>
     deleted.has(value) &&
-    /^tests\/(?:backend|security|cloudflare|travel-(?:backend|security)|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
+    /^tests\/(?:backend|security|cloudflare|conversation-security|travel-(?:backend|security)|content-.*(?:connector|oauth|strava)|play-promotion)/.test(value),
 );
 if (securityTestsDeleted.length > 0 && !securityTestChanged) {
   violations.push(
@@ -419,8 +419,8 @@ const simulationChanged = paths.some((value) =>
     /^components\/simulation\//,
     /^content\/presentation\/simulation(?:\.|\/)/,
     /^lib\/(?:server\/)?simulation\//,
-    /^scripts\/(?:run-local-simulation-live|simulation-)/,
-    /^tests\/simulation(?:-|\/)/,
+    /^scripts\/simulation(?:-|\/)/,
+    /^tests\/(?:simulation|conversation)(?:-|\/)/,
     /^types\/simulation\.ts$/,
   ]),
 );
@@ -433,13 +433,13 @@ const simulationSensitiveChanged = paths.some((value) =>
 const simulationRegressionChanged = paths.some(
   (value) =>
     !deleted.has(value) &&
-    /^tests\/simulation-(?:backend|migrations|play-grounding)\.test\.mjs$/.test(
+    /^tests\/(?:conversation-security|simulation-migrations)\.test\.mjs$/.test(
       value,
     ),
 );
 if (simulationSensitiveChanged && !simulationRegressionChanged) {
   violations.push(
-    "Simulation API, session, Gateway, or privacy code changed without a Simulation backend/security regression test in the same change.",
+    "Simulation API, session, provider, or privacy code changed without a conversation security/migration regression test in the same change.",
   );
 }
 
@@ -619,7 +619,7 @@ if (simulationChanged) {
   addCheck("npm run bundle:scan");
   addCheck("npm run browser:simulation:existing");
   notes.push(
-    "For Simulation incidents, verify AI Gateway prompt/response logging and caching are disabled before changing hosted configuration; preserve only sanitized incident evidence and follow the owner-authorized deletion/containment runbook.",
+    "For conversation incidents, verify application screening, source-ID validation, replay and budget guards; preserve only sanitized incident evidence and follow the owner-authorized containment runbook. Never claim Gateway protection.",
   );
 }
 if (securityOrReleaseChanged) {

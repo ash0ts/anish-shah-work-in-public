@@ -96,53 +96,16 @@ and privacy contracts, backend authorization/security, the production build,
 rendered routes, bundle/privacy closure, and dependency advisories. The build is
 created once inside the command and reused by its candidate checks.
 
-Local development runs the Meet Me campaign with deterministic authored model
-fixtures. It must not need Cloudflare or Anthropic credentials:
+Local 4N1SH uses the owner-only conversation preview. Run `npm run setup:local`
+and `npm run db:local:migrate`, then `npm run dev:simulation`. Archive search
+works without a provider key. Studio owns **Save Gemini key → Test connection →
+Enable owner preview**. Never put a Gemini key in fixtures, environment files,
+or CI. Setup generates the separate `SIMULATION_SESSION_HMAC_KEY`.
 
-```bash
-SIMULATION_EXPERIENCE_MODE=campaign-v1 \
-SIMULATION_AI_MODE=fixture \
-npm run dev:studio
-```
-
-To inspect the public placeholder contract locally, use:
-
-```bash
-SIMULATION_EXPERIENCE_MODE=coming-soon \
-SIMULATION_AI_MODE=authored-only \
-npm run dev:studio
-```
-
-That route must render without creating a session, reading the dossier, or
-loading campaign code; `/api/simulation/**` remains unavailable.
-
-To smoke-test real Claude behavior locally, keep the provider key in an existing
-owner-only environment file and pass that file to the guarded launcher:
-
-```bash
-npm run dev:simulation:live -- \
-  --env-file '/absolute/path/to/permission-restricted/.env'
-```
-
-The launcher reads only `ANTHROPIC_API_KEY`, removes every variable declared by
-that shared file from the child environment, and binds the key only to the
-loopback development Worker for that process lifetime. The key is never copied
-into `.env.local`, Git, D1, the browser, or a build artifact. The direct
-transport is accepted only for an exact `http://localhost:3000` development
-origin; preview, staging, production, non-loopback origins, and
-`NODE_ENV=production` fail closed. Stop it with Control-C. A generated turn is labeled
-`Generated reaction · facts supplied by server` in the opponent panel.
-
-This direct local smoke test proves model compatibility and the authored fallback. It
-is not release evidence for Cloudflare AI Gateway, Gateway logging/DLP,
-Guardrails, BYOK, hosted rate limiting, provider approvals, or spend controls.
-Those remain staging acceptance requirements.
-
-`npm run setup:local` creates a missing ignored
-`SIMULATION_SESSION_HMAC_KEY` alongside the other local-only security values
-without printing any of them. Apply the normal local migration command before
-testing sessions. Never put a Gateway token, BYOK alias, provider key, or hosted
-approval record in a fixture or checked-in environment file.
+See [the conversation architecture](./architecture/meet-me-simulation.md) for
+limits, collection permissions, and the distinction between mocked transport
+coverage and a real account connection test. Production remains disabled;
+synthetic previews make no model requests.
 
 Before release, collect Validate, Gitleaks, CodeQL, and Browser Quality evidence
 for the same full 40-character pushed SHA. Four manually dispatched workflows
@@ -242,34 +205,19 @@ if the upstream expression changes. Review and remove the shim when upgrading
 Vinext; never patch installed packages or deployable output. The Travel review
 fixtures exercise non-default query selection through real HTTP requests.
 
-Simulation browser coverage must exercise both Action and Tactical completion,
-the semantic no-JavaScript dossier, reduced-motion/forced-colors/Save-Data
-fallbacks, and authored completion during a total model outage. Assert that:
-
-- `/simulation` is absent when the feature is disabled;
-- `/simulation` is a noindexed server-only placeholder and every Simulation API
-  remains unavailable in `coming-soon` mode;
-- Tactical never downloads Phaser;
-- Action downloads Phaser only after the visitor selects it;
-- Tone.js is absent until `SOUND ON`;
-- raw free-text requests, prompts, and provider/model responses never appear in
-  stored state, logs, rendered HTML, or artifacts; the server may retain only
-  its schema-validated safe response projection for bounded idempotent replay;
-  and
-- a model timeout, invalid schema, DLP block, Guardrail block, exhausted budget,
-  or missing Gateway configuration resolves to authored dialogue.
-
-The focused backend and release suites are:
+Conversation coverage checks sourced questions, discoveries, still presentation,
+no-JavaScript links, reduced motion, forced colors, and responsive overflow.
+Security tests cover encryption, replay, revisions, budgets, expiry, invalid IDs,
+provider failure, and prompt bounds. Questions and provider responses must not
+enter stored state, logs, or artifacts.
 
 ```bash
-node --test tests/simulation-backend.test.mjs
-node --test tests/release-guards.test.mjs tests/staging-preview.test.mjs
+node --test tests/conversation-security.test.mjs tests/conversation-ui.test.mjs
+npm run browser:simulation:existing
 ```
 
-Release-quality live AI testing happens only on isolated staging after its
-Gateway, spend cap, DLP/Guardrails, provider approvals, session key, D1, and
-rate limiter are configured. A successful direct local smoke test, fixture, or
-PR preview is not hosted live-model evidence.
+Live Gemini remains owner-only. A synthetic connection test is not public
+audience/region/privacy approval and never activates production.
 
 ## CI and exact-SHA release evidence
 

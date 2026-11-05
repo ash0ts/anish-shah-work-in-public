@@ -34,9 +34,9 @@ remote health request.
 ## Four-Tier Isolation
 
 - Local: loopback-only owner fallback, local D1/secrets, no hosted identity assumptions.
-- PR preview: synthetic sanitized fixtures, no D1/KV/R2/Studio/OAuth/provider network/AI Gateway/cron/secrets, Access-protected and globally noindexed.
-- Staging: dedicated Worker, D1, KV, R2, rate limits, Access audience, secrets, callbacks, provider registrations, and Simulation Gateway. It never imports production state.
-- Production: apex-only host, production D1/KV/R2/Access/secrets, separate Simulation Gateway, and exact-SHA release guard.
+- PR preview: synthetic sanitized fixtures, no D1/KV/R2/Studio/OAuth/provider network/Gemini/cron/secrets, Access-protected and globally noindexed.
+- Staging: dedicated Worker, D1, KV, R2, rate limits, Access audience, secrets, callbacks, provider registrations, and encrypted model settings. It never imports production state.
+- Production: apex-only host, production D1/KV/R2/Access/secrets, separate encrypted model settings, and exact-SHA release guard.
 - Private Sites deployment: reference/recovery only; it is not a production rollback target.
 
 Local promotion may transfer only reviewed, explicitly portable provider setup over HTTPS. It never transfers snapshots, encryption keys, OAuth-provider credentials/tokens, or publication approvals. No staging/production transfer exists.
@@ -114,17 +114,17 @@ Ordinary release-code changes run `npm run validate`. Only a clean, pushed, appr
 
 An explicit request to stage a named release candidate authorizes only the enumerated staging train for that exact SHA: guarded plan, listed additive migrations, immutable upload, staging traffic change, bootstrap, checkpoint, smoke checks, and rollback if acceptance fails. It never authorizes production traffic, production migrations, secret rotation, provider reauthorization, or copying production state. Stop before any mutation whose resource, migration list, evidence URL, or prior-version checkpoint differs from the approved plan.
 
-## Simulation Gateway Incident Response
+## Conversation Provider Incident Response
 
 For suspected prompt/response logging, caching, or data-loss-prevention failure:
 
-1. Diagnose read-only first: verify the configured staging or production Gateway, payload-logging state, cache state, DLP/Guardrails, model alias, budgets, and sanitized application health. Do not retrieve or reproduce prompt bodies.
+1. Diagnose read-only first: verify the owner-preview Gemini setup, paid-service configuration, model pin, budgets, and sanitized application health. Do not retrieve or reproduce prompt bodies.
 2. Contain by disabling `SIMULATION_EXPERIENCE_MODE` or selecting authored-only behavior through an explicitly authorized hosted configuration change. Do not silently switch providers or weaken the fallback.
 3. Preserve only sanitized evidence: request IDs, release SHA, coarse time window, configuration-state booleans, affected call count, and provider response class. Never copy captured prompts, responses, visitor text, Access assertions, or identifiers into issues, logs, or release artifacts.
-4. If a provider or Gateway retained payloads, use its owner console and documented deletion controls after explicit authorization; record only the deletion request/reference and completion state.
+4. If a provider retained payloads, use its owner console and documented deletion controls after explicit authorization; record only the deletion request/reference and completion state.
 5. Add a behavior-level regression test for the causal code or configuration contract, run Simulation backend/privacy, rendered, bundle, and browser gates, and require fresh exact-SHA release evidence before reenabling live mode.
 
-Investigation authority is not mutation authority. Changing Gateway logging, provider keys, budgets, secrets, or hosted feature state remains a separately auditable owner action.
+Investigation authority is not mutation authority. Changing provider settings, keys, budgets, secrets, or hosted feature state remains a separately auditable owner action.
 
 Before an authorized release:
 

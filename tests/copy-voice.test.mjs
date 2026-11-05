@@ -342,7 +342,7 @@ test("protected wording cannot be hidden inside an editable copy field", () => {
     ["home", "primary-cta", "Browse ARR results"],
     ["play", "listen-description", "Spotify refreshes access after visitor consent."],
     ["play", "travel-seo-description", "Browse exact GPS coordinates and a live location for each trip."],
-    ["simulation", "boot-summary", "Meet an authoritative digital representative that retains every answer."],
+    ["simulation", "conversation-summary", "Meet an authoritative digital representative that retains every answer."],
   ];
 
   for (const [surface, key, value] of probes) {

@@ -37,13 +37,13 @@ const persistedState =
   `.wrangler/browser-quality-${playMode}`;
 const simulationExperienceMode =
   process.env.BROWSER_SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
-if (!new Set(["disabled", "campaign-v1"]).has(simulationExperienceMode)) {
+if (!new Set(["disabled", "conversation-v2"]).has(simulationExperienceMode)) {
   throw new Error(
-    "BROWSER_SIMULATION_EXPERIENCE_MODE must be disabled or campaign-v1.",
+    "BROWSER_SIMULATION_EXPERIENCE_MODE must be disabled or conversation-v2.",
   );
 }
 const simulationAiMode =
-  simulationExperienceMode === "campaign-v1" ? "fixture" : "authored-only";
+  "authored-only";
 const previewRuntimeVariables =
   ` --var DEPLOYMENT_TIER:preview --var PREVIEW_PR_NUMBER:1 --var SITE_URL:https://pr-1.anish-shah-is.online --var PRODUCTION_SITE_URL:https://anish-shah-is.online --var PUBLIC_CONTENT_MODE:static_preview --var RELEASE_VERSION:${packageVersion} --var SIMULATION_EXPERIENCE_MODE:${simulationExperienceMode} --var SIMULATION_AI_MODE:${simulationAiMode} --var SIMULATION_PROVIDER:fixture --var SIMULATION_MODEL:authored-fixture-v1 --var TRAVEL_ATLAS_MODE:atlas-v1`;
 

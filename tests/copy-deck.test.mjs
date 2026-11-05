@@ -265,70 +265,14 @@ test("editable Play flavor copy excludes guarded provider-policy literals", asyn
   assert.match(travel, /SITE_COPY\.play\["travel-search-placeholder"\]/u);
 });
 
-test("Simulation presentation copy is deck-owned while model disclosures remain guarded", async () => {
-  const [
-    deck,
-    campaignManifest,
-    simulationPage,
-    simulationComingSoon,
-    campaignCopy,
-  ] = await Promise.all([
-    buildCopyDeck(root),
-    readFile(
-      path.join(root, "content/presentation/simulation.v1.json"),
-      "utf8",
-    ),
-    readFile(path.join(root, "app/simulation/page.tsx"), "utf8"),
-    readFile(
-      path.join(root, "components/simulation/SimulationComingSoon.tsx"),
-      "utf8",
-    ),
-    readFile(
-      path.join(root, "components/simulation/campaign/campaign-copy.ts"),
-      "utf8",
-    ),
-  ]);
-
-  assert.equal(deck.pages.simulation["ingress-cta"], "Reveal the simulation");
-  assert.equal(
-    deck.pages.simulation["boot-title"],
-    "Beat the model’s first answer.",
-  );
-  assert.match(simulationPage, /SITE_COPY\.simulation\["seo-title"\]/u);
-  assert.match(
-    simulationPage,
-    /SITE_COPY\.simulation\["coming-soon-seo-description"\]/u,
-  );
-  assert.match(simulationPage, /SITE_COPY\.simulation\["noscript-summary"\]/u);
-  assert.equal(
-    deck.pages.simulation["coming-soon-status"],
-    "Campaign status · Coming soon",
-  );
-  for (const key of [
-    "coming-soon-eyebrow",
-    "coming-soon-title",
-    "coming-soon-summary",
-    "coming-soon-room-cta",
-    "coming-soon-work-cta",
-    "coming-soon-status",
-  ]) {
-    assert.match(
-      simulationComingSoon,
-      new RegExp(`SITE_COPY\\.simulation\\["${key}"\\]`, "u"),
-    );
-  }
-  assert.equal(deck.pages.simulation["action-probe-label"], "Probe");
-  assert.match(campaignCopy, /SIMULATION_ACTION_COPY_IDS\.map/u);
-  assert.match(campaignCopy, /SITE_COPY\.simulation\[`action-\$\{action\}-hint`\]/u);
-  assert.doesNotMatch(campaignCopy, /Ask what evidence could prove/u);
-
-  const simulationCopy = await readFile(
-    path.join(root, "content/copy/pages/simulation.md"),
-    "utf8",
-  );
-  const manifest = JSON.parse(campaignManifest);
-  assert.doesNotMatch(simulationCopy, /not Anish and can be wrong/iu);
-  assert.match(manifest.persona.disclosure, /not Anish and can be wrong/iu);
+test("conversation flavor is deck-owned while data handling remains protected", async () => {
+  const deck = await buildCopyDeck(root);
+  assert.equal(deck.pages.simulation["ingress-cta"], "Talk to 4N1SH");
+  assert.equal(deck.pages.simulation["conversation-title"], "Something here remembers the work.");
+  assert.equal(deck.pages.simulation["boot-title"], undefined);
+  const messages = await readFile(path.join(root, "lib/simulation/conversation-messages.ts"), "utf8");
+  assert.match(messages, /fictional/);
+  assert.match(messages, /Google/);
 });
 
 test("fresh-clone lifecycle generates ignored copy before application checks", async () => {
@@ -400,7 +344,7 @@ test("editable 404 copy is typed, rendered, and reported against the 404 surface
     "all-play-routes",
   );
   assert.equal(
-    manifest.find((entry) => entry.key === "simulation.boot-title")?.route,
+    manifest.find((entry) => entry.key === "simulation.conversation-title")?.route,
     "/simulation",
   );
 });

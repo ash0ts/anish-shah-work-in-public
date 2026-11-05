@@ -158,42 +158,11 @@ export function expectedPublicReleaseConfig(env, { head, contentVersion, package
   }
   const simulationExperienceMode =
     env.SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
-  if (
-    simulationExperienceMode !== "disabled" &&
-    simulationExperienceMode !== "coming-soon" &&
-    simulationExperienceMode !== "campaign-v1"
-  ) {
-    throw new Error(
-      "SIMULATION_EXPERIENCE_MODE must be disabled, coming-soon, or campaign-v1.",
-    );
+  if (simulationExperienceMode !== "disabled") {
+    throw new Error("Production conversation must remain disabled pending separate public activation review.");
   }
-  const simulationAiMode =
-    env.SIMULATION_AI_MODE?.trim() ||
-    (simulationExperienceMode === "campaign-v1" ? "live" : "authored-only");
-  if (
-    simulationAiMode !== "live" &&
-    simulationAiMode !== "authored-only"
-  ) {
-    throw new Error(
-      "Production SIMULATION_AI_MODE must be live or authored-only.",
-    );
-  }
-  if (
-    simulationExperienceMode === "campaign-v1" &&
-    simulationAiMode !== "live"
-  ) {
-    throw new Error(
-      "An enabled production simulation must use live AI with authored fallback.",
-    );
-  }
-  if (
-    simulationExperienceMode !== "campaign-v1" &&
-    simulationAiMode !== "authored-only"
-  ) {
-    throw new Error(
-      "A disabled or coming-soon production simulation must use authored-only mode.",
-    );
-  }
+  const simulationAiMode = env.SIMULATION_AI_MODE?.trim() || "authored-only";
+  if (simulationAiMode !== "authored-only") throw new Error("Production conversation must use authored-only mode.");
   const travelAtlasMode = env.TRAVEL_ATLAS_MODE?.trim() || "disabled";
   if (travelAtlasMode !== "disabled" && travelAtlasMode !== "atlas-v1") {
     throw new Error("TRAVEL_ATLAS_MODE must be disabled or atlas-v1.");
@@ -234,8 +203,8 @@ export function assertPublicReleaseConfig(config, expected) {
     DEPLOYMENT_TIER: "production",
     SIMULATION_EXPERIENCE_MODE: expected.simulationExperienceMode,
     SIMULATION_AI_MODE: expected.simulationAiMode,
-    SIMULATION_PROVIDER: "anthropic",
-    SIMULATION_MODEL: "claude-sonnet-5",
+    SIMULATION_PROVIDER: "google",
+    SIMULATION_MODEL: "gemini-3.6-flash",
     TRAVEL_ATLAS_MODE: expected.travelAtlasMode,
   };
   const exactVars =

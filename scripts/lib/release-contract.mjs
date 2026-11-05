@@ -54,6 +54,14 @@ export function simulationReleaseRecord({
   if (!/^[A-Za-z0-9._-]{1,64}$/.test(String(campaignVersion ?? ""))) {
     throw new Error("The simulation campaign version is invalid.");
   }
+  // Historical release records remain readable; new conversation candidates
+  // cannot borrow the retired campaign's public-live authorization.
+  if (campaignVersion === "conversation-v2") {
+    if (!["disabled", "conversation-v2"].includes(experienceMode) || aiMode !== "authored-only" || provider !== "google" || model !== "gemini-3.6-flash" || exactSimulationProviderNames(approvedProviders).length || approvalStateDigest) {
+      throw new Error("Conversation candidates require owner-only/authored configuration without public AI approvals.");
+    }
+    return { campaignVersion, experienceMode, aiMode, provider, model, approvedProviders: [], approvalStateDigest: null };
+  }
   if (!new Set(["disabled", "coming-soon", "campaign-v1"]).has(experienceMode)) {
     throw new Error("The simulation experience mode is invalid.");
   }

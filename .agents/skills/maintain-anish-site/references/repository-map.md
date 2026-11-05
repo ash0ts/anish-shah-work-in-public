@@ -15,7 +15,7 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `components/play/**`: object-screen shell and provider-specific Play UI.
 - `components/play/room-3d/**`: intent-gated Room and Pocket Room R3F runtime.
 - `components/play/travel/**`: Postcard Planet semantic atlas and the only full-globe R3F boundary.
-- `app/simulation/**` and `components/simulation/**`: semantic campaign shell, Tactical mode, and the narrowly scoped Action Canvas bridge.
+- `app/simulation/**` and `components/simulation/**`: owner-only semantic conversation, three pixel scenes, and authored sources.
 - `app/studio/**`: owner-only operational interface. Connector rows consume a
   composed connection/permission/snapshot/publication view and expose one next
   action; Git-owned copy is shown read-only here.
@@ -26,7 +26,7 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `lib/server/strava-config.ts`: separate official-embed configuration, not the generic connector repository.
 - `lib/server/travel/**`: Postcard Planet drafts, policy, public projection, versioned publication, retention, uploads, and media authorization. Public atlas and paginated trip projectors stay narrower than stored publication records.
 - `app/studio/travel/**` and `app/api/studio/travel/**`: owner-only Travel Desk and writes. Exact GPS and original filenames remain browser-local intake suggestions and never enter public state.
-- `lib/server/simulation/**`: bounded session, budget, approval, grounding, and model-gateway contracts.
+- `lib/server/simulation/**`: bounded session, budget, approval, grounding, and direct Gemini contracts.
 - `worker/**`: host/tier enforcement, Cloudflare Access, CSP, headers, throttling, request correlation, and retention/cleanup maintenance. Cron must never synchronize provider collections.
 - `drizzle/**`: ordered immutable D1 migrations.
 - `tests/**`: content, copy, backend/security, rendered, environment, and browser acceptance.

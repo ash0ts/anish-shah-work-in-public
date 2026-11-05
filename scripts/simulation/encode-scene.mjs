@@ -1,0 +1,10 @@
+import sharp from "sharp";
+import path from "node:path";
+import { mkdir } from "node:fs/promises";
+const [scene, source] = process.argv.slice(2);
+if (!["desk", "archive", "doorway"].includes(scene) || !source) throw new Error("Usage: node scripts/simulation/encode-scene.mjs <desk|archive|doorway> <source.png>");
+const directory = path.resolve("public/assets/simulation");
+await mkdir(directory, { recursive: true });
+const output = path.join(directory, `conversation-${scene}.webp`);
+await sharp(source).resize(1536, 1024, { fit: "inside", withoutEnlargement: true }).webp({ quality: 82, effort: 6 }).toFile(output);
+console.log(`Encoded ${scene} without metadata.`);

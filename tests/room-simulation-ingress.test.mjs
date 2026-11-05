@@ -28,7 +28,7 @@ test("the simulation ingress is gated and lazy-isolated from disabled Play", asy
   assert.match(control, /href="\/simulation"/);
   assert.match(control, /prefetch=\{false\}/);
   assert.match(control, /SITE_COPY\.simulation\["ingress-cta"\]/);
-  assert.match(copy, /## ingress-cta\s+Reveal the simulation/u);
+  assert.match(copy, /## ingress-cta\s+Talk to 4N1SH/u);
   assert.match(control, /event\.preventDefault\(\)/);
   assert.match(control, /event\.metaKey/);
   assert.match(control, /event\.ctrlKey/);
@@ -57,7 +57,7 @@ test("the robot and memory-wafer reveal is bounded, cancellable, and reduced-mot
   assert.match(control, /data-simulation-robot/);
   assert.match(control, /data-simulation-memory-wafer/);
   assert.match(control, /SITE_COPY\.simulation\["transition-cancel-cta"\]/);
-  assert.match(copy, /## transition-cancel-cta\s+Cancel dive/u);
+  assert.match(copy, /## transition-cancel-cta\s+Stay in the room/u);
   assert.match(control, /prefers-reduced-motion: reduce/);
   assert.match(control, /setTimeout\(navigate, 180\)/);
   assert.match(control, /setTimeout\(navigate, 940\)/);
