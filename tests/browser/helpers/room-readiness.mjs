@@ -78,7 +78,7 @@ export async function expectRoomReady(
   } = {},
 ) {
   const deadline = Date.now() + timeout;
-  const room = page.getByRole("dialog", { name: "Interactive room" });
+  const room = page.getByRole("main", { name: "Interactive room" });
 
   try {
     if (expectedTier) {
@@ -114,4 +114,11 @@ export async function expectRoomReady(
   }
 
   return room;
+}
+
+/** Direct entry is the default; the explicit directory offers a semantic return link. */
+export async function openRoomIfNeeded(page) {
+  const entry = page.getByRole("link", { name: "Open 3D room", exact: true });
+  if (await entry.isVisible()) await entry.click();
+  return expectRoomReady(page);
 }

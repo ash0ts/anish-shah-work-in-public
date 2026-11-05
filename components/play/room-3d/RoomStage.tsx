@@ -206,8 +206,11 @@ export function RoomStage({
   selectedId,
 }: RoomStageProps) {
   const [failed, setFailed] = useState(false);
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
+  const handleAssetsLoaded = useCallback(() => setAssetsLoaded(true), []);
   const [hoveredId, setHoveredId] = useState<RoomObjectId | null>(null);
   const [projection, setProjection] = useState<RoomProjection>(initialProjection);
+  const [projectionReason, setProjectionReason] = useState("initial");
   const readySent = useRef(false);
   const projectionStable = useRef(false);
   const sceneSettled = useRef(false);
@@ -251,7 +254,8 @@ export function RoomStage({
     reportReadyIfStable();
   }, [reportReadyIfStable]);
 
-  const downgradeProjection = useCallback(() => {
+  const downgradeProjection = useCallback((reason = "render-error") => {
+    setProjectionReason(reason);
     clearInitializationWatchdog();
     try {
       window.sessionStorage.setItem(FISHEYE_SESSION_DOWNGRADE_KEY, "1");
@@ -269,14 +273,14 @@ export function RoomStage({
   }, [clearInitializationWatchdog, onHoverChange]);
 
   useEffect(() => {
-    if (projection !== "fisheye" || readySent.current) return;
+    if (!assetsLoaded || projection !== "fisheye" || readySent.current) return;
     clearInitializationWatchdog();
     initializationWatchdog.current = window.setTimeout(
-      downgradeProjection,
+      () => downgradeProjection("initialization-timeout"),
       2_000,
     );
     return clearInitializationWatchdog;
-  }, [clearInitializationWatchdog, downgradeProjection, projection]);
+  }, [assetsLoaded, clearInitializationWatchdog, downgradeProjection, projection]);
 
   const handleHoverChange = useCallback(
     (id: RoomObjectId | null) => {
@@ -294,6 +298,7 @@ export function RoomStage({
       focusedId={focusedId}
       onHoverChange={handleHoverChange}
       onSettled={handleSceneSettled}
+      onAssetsLoaded={handleAssetsLoaded}
       onRotationChange={onRotationChange}
       objectIds={objectIds}
       onSelect={onSelect}
@@ -321,6 +326,7 @@ export function RoomStage({
         data-room-hovered-object={hoveredId ?? undefined}
         data-room-poster-stage
         data-projection={projection}
+        data-projection-reason={projectionReason}
       >
         <Canvas
           aria-hidden="true"
@@ -355,8 +361,8 @@ export function RoomStage({
           {projectedRoom}
           {projection === "fisheye" ? (
             <FisheyeFrameMonitor
-              key={projection}
-              onPerformanceMiss={downgradeProjection}
+              key={`${projection}-${assetsLoaded}`}
+              onPerformanceMiss={() => downgradeProjection("slow-frames")}
               onStable={handleStableFrame}
             />
           ) : (

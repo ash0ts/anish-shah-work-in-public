@@ -14,6 +14,13 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `app/play/**`: My Room overview plus seven semantic object routes.
 - `components/play/**`: object-screen shell and provider-specific Play UI.
 - `components/play/room-3d/**`: intent-gated Room and Pocket Room R3F runtime.
+- `components/play/room-platform/room-entry-policy.ts`, `room-history.ts`,
+  `useRoomFocus.ts`, and `useRoomTransitions.ts`: direct-entry policy, history,
+  focus, and transitions. Play navigation supplies intent; `?view=directory`
+  explicitly opts out. Keep the poster and semantic controls usable while loading.
+- `scripts/room/**`: reproducible first-party diorama geometry and optimized GLB
+  generation. Keep `diorama.generated.json` and the content-hashed asset in sync;
+  retain baked lighting, local Meshopt decoding, and Pocket runtime budgets.
 - `components/play/travel/**`: Postcard Planet semantic atlas and the only full-globe R3F boundary.
 - `app/simulation/**` and `components/simulation/**`: semantic campaign shell, Tactical mode, and the narrowly scoped Action Canvas bridge.
 - `app/studio/**`: owner-only operational interface. Connector rows consume a

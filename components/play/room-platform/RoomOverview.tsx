@@ -11,10 +11,12 @@ export function RoomOverview({
   fixture,
   simulationEnabled = false,
   travelEnabled = false,
+  directory = false,
 }: {
   fixture?: PreviewFixtureScenario;
   simulationEnabled?: boolean;
   travelEnabled?: boolean;
+  directory?: boolean;
 }) {
   const objects = travelEnabled
     ? ROOM_OBJECTS
@@ -26,14 +28,11 @@ export function RoomOverview({
       id="main"
     >
       <header className={styles.intro}>
-        <p>{SITE_COPY.play["intro-eyebrow"]}</p>
         <h1>{SITE_COPY.play["intro-title"]}</h1>
         <div>
-          <p>{SITE_COPY.play["intro-summary"]}</p>
-          <RoomEntryControl />
+          <RoomEntryControl directory={directory} href={routeWithPreviewFixture("/play", fixture)} />
           {simulationEnabled ? (
             <div className={styles.simulationIngress}>
-              <p>{SITE_COPY.simulation["ingress-label"]}</p>
               <RevealSimulationControl />
             </div>
           ) : null}
@@ -49,11 +48,11 @@ export function RoomOverview({
           <picture>
             <source
               media="(max-width: 767px)"
-              srcSet="/assets/play/my-room-2001-neutral-mobile.27b17548d9bf.avif"
+              srcSet="/assets/play/my-room-2001-neutral-mobile.8880dbc26073.avif"
               type="image/avif"
             />
             <source
-              srcSet="/assets/play/my-room-2001-neutral.01c6f825bbc1.avif"
+              srcSet="/assets/play/my-room-2001-neutral.b7e935988f08.avif"
               type="image/avif"
             />
             <img
@@ -63,32 +62,26 @@ export function RoomOverview({
               height="1000"
               loading="eager"
               sizes="(max-width: 767px) calc(100vw - 2rem), 60vw"
-              src="/assets/play/my-room-2001-neutral.00d2bc80d8dc.webp"
-              srcSet="/assets/play/my-room-2001-neutral-mobile.95603956f4ee.webp 640w, /assets/play/my-room-2001-neutral.00d2bc80d8dc.webp 1600w"
+              src="/assets/play/my-room-2001-neutral.66de435d1349.webp"
+              srcSet="/assets/play/my-room-2001-neutral-mobile.e3f64d04815d.webp 640w, /assets/play/my-room-2001-neutral.66de435d1349.webp 1600w"
               width="1600"
             />
           </picture>
-          <p>
-            <span>{SITE_COPY.play["poster-still-label"]}</span>
-            <b>{SITE_COPY.play["poster-capable-label"]}</b>
-          </p>
         </div>
         <nav className={styles.directory} aria-labelledby="room-directory-title">
           <header>
-            <p>{SITE_COPY.play["directory-eyebrow"]}</p>
             <h2 id="room-directory-title">{SITE_COPY.play["directory-title"]}</h2>
           </header>
           <ol>
-            {objects.map((object, index) => (
+            {objects.map((object) => (
               <li key={object.id}>
                 <Link
                   data-room-object-link={object.id}
                   href={routeWithPreviewFixture(object.route, fixture)}
                   prefetch={false}
                 >
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <strong>{object.roomLabel}</strong>
-                  <small>{object.description}</small>
+                  <strong>{object.object}</strong>
+                  <small>{object.label}</small>
                   <b aria-hidden="true">↗</b>
                 </Link>
               </li>

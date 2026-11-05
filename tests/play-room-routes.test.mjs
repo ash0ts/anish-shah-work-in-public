@@ -179,7 +179,7 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
     roomReview,
     screens,
   ] = await Promise.all([
-    source("components/play/room-platform/RoomExperienceProvider.tsx"),
+    Promise.all(["RoomExperienceProvider.tsx", "room-history.ts", "useRoomFocus.ts", "useRoomTransitions.ts"].map(file => source(`components/play/room-platform/${file}`))).then(parts => parts.join("\n")),
     source("components/play/room-platform/RoomRuntime.tsx"),
     source("components/play/room-platform/RoomEntryControl.tsx"),
     source("tests/browser/helpers/room-readiness.mjs"),
@@ -236,7 +236,7 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
     ),
   );
   assert.match(provider, /Returned to the room/);
-  assert.match(provider, /data-room-return-status/);
+  assert.doesNotMatch(provider, /data-room-return-status|aria-modal/);
   assert.match(provider, /Returning to the room/);
   assert.match(provider, /requestAnimationFrame\(navigate\)/);
   assert.match(runtime, /const presenting = room\.objectRouteActive && !returning/);
@@ -251,20 +251,20 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
       .length,
     4,
   );
-  assert.match(entry, /if \(room\.fallbackReason\)/);
+  assert.match(entry, /shouldOpenRoom/);
   assert.match(readiness, /ROOM_READY_TIMEOUT_MS = 15_000/);
   assert.match(readiness, /data-room-ready", "true"/);
   assert.match(readiness, /roomReadinessDiagnostics/);
   assert.match(readiness, /data-room-transition-phase/);
   assert.match(
     roomQuality,
-    /import \{ expectRoomReady \} from "\.\/helpers\/room-readiness\.mjs"/,
+    /import \{ expectRoomReady, openRoomIfNeeded \} from "\.\/helpers\/room-readiness\.mjs"/,
   );
   assert.match(roomQuality, /context: "starting the slow-return scenario"/);
   assert.match(roomQuality, /context: "completing the slow room return"/);
   assert.match(
     roomReview,
-    /import \{ expectRoomReady \} from "\.\/helpers\/room-readiness\.mjs"/,
+    /import \{ expectRoomReady, openRoomIfNeeded \} from "\.\/helpers\/room-readiness\.mjs"/,
   );
   assert.match(roomReview, /context: "capturing room review evidence"/);
   for (const screen of screens) assert.match(screen, /data-room-screen/);
