@@ -159,7 +159,7 @@ test("Tone remains behind explicit consent and outside non-experience routes", a
   assert.match(provider, /await tone\.start\(\)/);
   assert.match(provider, /onClick=\{\(\) => void setEnabled\(status !== "on"\)\}/);
   assert.match(provider, /pathname === "\/play"/);
-  assert.match(provider, /pathname === "\/simulation"/);
+  assert.doesNotMatch(provider, /pathname === "\/simulation"/);
   assert.match(provider, /disposeRuntime\(runtime\.current\)/);
   assert.match(provider, /embeddedControlCount === 0/);
   assert.match(provider, /data-experience-audio-placement=\{placement\}/);

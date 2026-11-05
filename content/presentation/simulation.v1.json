@@ -1,26 +1,27 @@
 {
-  "schemaVersion": "2.0",
+  "schemaVersion": "3.0",
   "campaignVersion": "conversation-v2",
   "persona": {
     "displayName": "4N1SH",
     "disclosure": "A fictional archive guide, not Anish or his representative."
   },
-  "scenes": [
-    "desk",
-    "archive",
-    "doorway"
-  ],
+  "workspace": {
+    "stage": "authored-visual-slice",
+    "objectIds": [
+      "group:products:wandb-mcp",
+      "group:portfolio:autoresearch-labs",
+      "group:portfolio:agent-lens-evaluation",
+      "group:portfolio:your-agent-learned-to-cheat",
+      "group:portfolio:aria",
+      "group:standalone:wk-fp-0161"
+    ],
+    "maxArtifactWindows": 2
+  },
   "provider": "google",
   "model": "gemini-3.6-flash",
   "audience": "owner-preview",
   "artwork": {
-    "format": "webp",
-    "width": 1536,
-    "height": 1024,
-    "paths": [
-      "/assets/simulation/conversation-desk.webp",
-      "/assets/simulation/conversation-archive.webp",
-      "/assets/simulation/conversation-doorway.webp"
-    ]
+    "format": "first-party-svg",
+    "paths": ["/assets/simulation/companion.svg"]
   }
 }

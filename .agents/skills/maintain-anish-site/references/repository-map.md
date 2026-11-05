@@ -15,7 +15,8 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `components/play/**`: object-screen shell and provider-specific Play UI.
 - `components/play/room-3d/**`: intent-gated Room and Pocket Room R3F runtime.
 - `components/play/travel/**`: Postcard Planet semantic atlas and the only full-globe R3F boundary.
-- `app/simulation/**` and `components/simulation/**`: owner-only semantic conversation, three pixel scenes, and authored sources.
+- `app/simulation/**` and `components/simulation/**`: owner-only personal-internet workspace, artifact windows, messenger, and journal. The current authored visual slice makes no model requests.
+- `lib/simulation/workspace-machine.ts` owns exploration and optional-trail state; `lib/server/simulation/conversation/workspace.ts` projects visible projects and exact topic/source relationships. Do not infer affiliations from decorative connections.
 - `app/studio/**`: owner-only operational interface. Connector rows consume a
   composed connection/permission/snapshot/publication view and expose one next
   action; Git-owned copy is shown read-only here.

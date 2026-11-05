@@ -53,6 +53,7 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Derive routes, controls, focus targets, and smoke paths from the structural object contract. Keep screen imports, provider adapters, scene objects, and other executable maps literal, closed, and parity-tested.
 - Three.js/R3F may exist only under `components/play/room-3d/**` and `components/play/travel/**`, load only after their own intent/capability boundaries, and never own provider data, Travel photos, navigation semantics, or accessibility content.
 - The owner-only 4N1SH conversation uses React, XState, CSS sprites, and Anime.js. Keep Google setup encrypted/environment-bound with separate collection permission. Reproject sources per turn; persist IDs/counters only. No Phaser, idle loop, public activation, or Strava/Travel grounding.
+- Approve the personal-internet visual slice before completing live dialogue. Its Open/Connect/Ask mechanics use visible project IDs and exact shared topics/sources; authored replies must stay labelled. Keep two desktop artifact windows at most and one mobile workspace; no transcript history persistence.
 - Tone/Web Audio is gesture-gated under `components/experience-audio/**`; missing audio is silent and never blocks interaction.
 - Connector collection synchronization is owner-triggered only. Public reads,
   OAuth callbacks, credential saves, and scheduled maintenance must not fetch or

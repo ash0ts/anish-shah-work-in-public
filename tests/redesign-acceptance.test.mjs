@@ -887,6 +887,11 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
       file: "components/play/travel/TravelGlobe.module.css",
       selector: ".canvas",
     },
+    {
+      // A one-pixel live status region, not an overflow-masked layout surface.
+      file: "components/simulation/Conversation.module.css",
+      selector: ".srOnly",
+    },
   ]);
   const timelineCss = await readFile(
     path.join(PROJECT_ROOT, "app/work/WorkTimeline.module.css"),

@@ -23,10 +23,8 @@ const staticArtifactPaths = [
   "content/presentation/work-organizations.v1.json",
   "content/presentation/brand-assets.v1.json",
   "content/presentation/simulation.v1.json",
-  "public/assets/simulation/conversation-desk.webp",
-  "public/assets/simulation/conversation-archive.webp",
-  "public/assets/simulation/conversation-doorway.webp",
-  "public/assets/simulation/keeper-reaction.svg",
+  "public/assets/simulation/companion.svg",
+  "components/simulation/ObjectSprite.tsx",
 ];
 
 const brandAssetManifestPath =

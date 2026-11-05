@@ -1,52 +1,148 @@
 <!-- copy-page: simulation -->
 
-## conversation-eyebrow
-4N1SH · An archive with opinions
-
 ## conversation-title
-Something here remembers the work.
+A strange personal internet.
 
 ## conversation-summary
-Ask a question. Follow the evidence. The door may not lead where it used to.
-
-## conversation-desk
-The keeper has filed everything except the explanation.
-
-## conversation-archive
-One drawer opens. Several others pretend they were always there.
-
-## conversation-doorway
-Three discoveries. No personality test. The door leads back to the work.
+Open something. See where it leads.
 
 ## prompt-tools
-MCP tool interfaces
-
-## prompt-evaluation
-Evaluation and failure analysis
+Show me the tools
 
 ## prompt-teaching
-Courses and workshops
+Find a workshop
 
 ## seo-title
 Meet 4N1SH
 
 ## seo-description
-Ask a fictional archive keeper about tools, evaluations, and teaching. Follow sourced discoveries through a monochrome pixel mystery.
+Open objects, find documented connections, and explore the work with 4N1SH, a fictional guide inhabiting a strange personal internet.
 
 ## ingress-label
-An archive keeper is waiting.
+Something small lives in the links.
 
 ## ingress-cta
 Talk to 4N1SH
 
 ## transition-eyebrow
-Archive 02
+Personal internet
 
 ## transition-title
-The archive is open.
+You found the other window.
 
 ## transition-summary
-A fictional keeper, with sources for every answer.
+Tools, notebooks, loose ends. Pick something up.
 
 ## transition-cancel-cta
 Stay in the room
+
+## still-label
+Still presentation
+
+## leave-label
+Leave
+
+## trail-label
+Optional trail
+
+## trail-open
+Open an object
+
+## trail-connect
+Find a connection
+
+## trail-ask
+Ask about it
+
+## trail-complete
+See your discoveries
+
+## trail-finished
+A little trail through the work. Keep these links, or wander somewhere else.
+
+## wall-note
+Objects may contain rabbit holes.
+
+## workspace-stamp
+handmade / not a simulation of you
+
+## reaction-idle
+Psst. The objects open.
+
+## reaction-open
+That one has a paper trail.
+
+## reaction-connect
+A thread worth pulling.
+
+## project-link
+Open project
+
+## selected-label
+Selected
+
+## select-label
+Select to connect
+
+## ask-label
+Ask 4N1SH
+
+## reset-window
+Reset position
+
+## connect-label
+Connect
+
+## connect-instruction
+Use + to choose two objects.
+
+## connection-found
+A documented thread.
+
+## connection-missing
+No documented connection.
+
+## ask-pair
+Ask about this pair
+
+## browse-label
+Browse the whole archive
+
+## search-label
+Find a project or topic
+
+## messenger-welcome
+You can pick things up here. Open an object, or choose a pair and see what holds them together. Most of the wires are metaphorical.
+
+## sources-label
+Sources
+
+## attached-label
+On the desk
+
+## prompt-connection
+How do these connect?
+
+## prompt-object
+Explain this project
+
+## question-label
+Ask about the work
+
+## journal-label
+Journal
+
+## journal-intro
+Things you opened, threads you followed.
+
+## journal-empty
+Nothing collected yet. The objects are a good place to start.
+
+## explore-label
+Explore
+
+## chat-label
+Chat
+
+## preview-notes
+About this preview

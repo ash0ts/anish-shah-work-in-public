@@ -1,38 +1,42 @@
 # 4N1SH: conversation and evidence
 
-4N1SH is a fictional archive keeper, not Anish or his representative. The owner
-preview replaces the retired Action/Tactical campaign with three monochrome
-scenes: desk, archive, and doorway. Questions and three suggested discoveries
-lead to current sources; inspecting three distinct sources opens the doorway.
-There is no score, visitor assessment, timed combat, or idle loop.
+4N1SH is a fictional companion, not Anish or his representative. The owner
+preview is a colorful personal internet: tools become terminals, curricula
+become notebooks, research becomes documents, and talks become posters.
+The current checkpoint is an **authored visual slice**, not live AI dialogue.
+Approve its desktop/mobile interaction before completing generative replies.
+Production remains disabled. There is no score, assessment, or idle loop.
 
 ## Presentation boundary
 
-React server-renders the introduction, fixed discovery links, and sources.
-XState tracks request state; CSS sprites and Anime.js provide brief
-interaction-driven feedback. Still presentation, reduced motion, and forced
-colors suppress decorative motion. No-JavaScript visitors follow ordinary
-source links. Questions never enter URL queries.
+React server-renders six reviewed objects and a complete, collapsed archive.
+Without JavaScript they are ordinary project links. XState owns opening,
+two-object selection, documented connections, messenger context, the journal,
+and the optional open → connect → ask trail. Opening and connecting never spend
+a model call. In this slice, submitting a question also stays entirely local.
 
-Scene artwork is original generated illustration, not a real portrait or product
-screenshot. Three metadata-free 1536×1024 WebP scenes load only on this route.
-A first-party four-frame SVG keeper reacts once per completed interaction.
-The Play utility stays outside both canvases, never replaces Games, and never
-preloads conversation, model code, or data.
+`workspace.ts` projects only active visible Work records. `personal-internet.ts`
+intersects exact topic/source IDs; it does not infer affiliation or causality.
+Hidden records cannot enter the initial objects, search, counts, or connections.
+The manifest owns the small starting selection, not new project facts.
+
+Desktop permits two artifact windows and one messenger or journal. Anime.js
+bounds draggable headers inside the workspace; ordinary close, reset-position,
+select, and ask buttons provide alternatives. Mobile uses one active Explore,
+Chat, or Journal surface and never shrinks desktop windows. Back/Forward store
+only interface IDs; transcript text stays in memory. Escape restores focus.
+Still presentation, reduced motion, forced colors, and hidden documents stop
+decorative feedback. Play never preloads this route's art or model code.
 
 ### Artwork provenance and budgets
 
-The three scenes were created for this project with OpenAI image generation on
-2026-11-04. Direction: original paper-masked archive keeper, monochrome ink and
-dither, impossible archive geometry, no real person, brand, text, gore, or flash.
-Desk, archive, and doorway are variations of the same fictional setting.
-The small reaction sprite is first-party SVG, not an external character asset.
-
-`scripts/simulation/encode-scene.mjs` encodes a reviewed source PNG as metadata-free
-WebP (quality 82, effort 6); it never puts the source's machine path in output.
-Desk is 484,448 bytes, archive 607,690, doorway 547,688: 1,639,826 bytes total,
-loaded one scene at a time. EXIF, XMP, and ICC fields are absent. Exact deployed
-hashes live in the generated public-content attestation, not duplicated prose.
+`ObjectSprite.tsx` contains original inline SVG object drawings, not product
+screenshots or borrowed game assets. `companion.svg` is a first-party four-frame
+pixel sprite sheet. Both are inventoried in the public-content attestation.
+The superseded three WebP scenes and their encoder have no consumers and are
+removed. No new runtime dependency, Canvas, physics engine, or remote art loads.
+Measure the route chunk and asset bytes from the same candidate build used by
+browser checks; preserve those results in the PR review notes.
 
 ## Grounding and truth
 
@@ -43,11 +47,15 @@ ceiling is 24,000 bytes. Oversized context falls back without truncating
 qualifiers. Travel, private corroboration, account IDs, artwork URLs, raw provider
 payloads, and unapproved collections are excluded.
 
-Google selects up to three current evidence IDs. It cannot supply prose, URLs,
+The retained backend currently lets Google select up to three evidence IDs. It cannot supply prose, URLs,
 metrics, qualifiers, or new facts. The server resolves those IDs against a fresh
 catalog after the request. Unsupported or malformed output returns archive
 results. Previous visible cards are pruned on every completed turn. This
-extractive design favors inspectable answers over improvisation.
+extractive endpoint is not called by the new visual slice. After visual approval,
+natural dialogue requires a versioned turn contract, bounded browser-held
+context, sourced answer sections, server-owned links/metrics/qualifiers,
+allowlisted UI suggestions, and grounded-answer evaluation. Schema/citation
+validation alone must not be described as factual validation.
 
 Collection summaries require separate encrypted Google-processing permission
 for each provider. Public-display and retired Anthropic approvals do not count.
@@ -63,6 +71,10 @@ or undecryptable records fail closed. Strava and Travel are not eligible.
    material enters this request.
 5. Enable owner preview. This changes only the private conversation setting.
 6. Optionally record collection-processing permission under Advanced / recovery.
+
+No key is needed to review the current workspace. Its messenger is explicitly
+labelled **Authored demo · no AI requests** even when a key is already stored.
+The existing setup/test endpoints are retained, not automatically invoked.
 
 The pinned model is `gemini-3.6-flash`, through `@ai-sdk/google` directly from
 the Worker. There is no Gateway requirement or claimed Gateway DLP protection.

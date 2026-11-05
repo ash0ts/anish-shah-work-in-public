@@ -375,7 +375,14 @@ pixel artwork, and brief CSS/Anime.js feedback. Production is disabled and the
 route never appears in the sitemap. Action/Tactical and Phaser are removed;
 applied migrations and historical owner data remain.
 
-Current visible sources supply every fact and link. Gemini selects only validated
+The current visual checkpoint is a personal-internet workspace: open projects
+as bounded artifact windows, connect exact shared topics/sources, and ask an
+explicitly labelled authored messenger. XState owns exploration, selection,
+connections, conversation, journal, and an optional trail. Mobile uses one
+workspace at a time. This slice makes no model calls, even with a stored key.
+Approve the visual interaction before completing natural generative dialogue.
+
+Current visible sources supply every fact and link. The retained backend selects only validated
 evidence IDs; the server reprojects them after generation. Google-processing
 collection permission is separate from public-display approval. Strava, Travel,
 private evidence, account IDs, and raw provider payloads remain excluded.
