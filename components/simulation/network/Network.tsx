@@ -18,6 +18,8 @@ import {
 import {
   ENCOUNTERS,
   PROGRAMS,
+  TICK_MS,
+  CUSTOM_TICKS,
   type Program,
 } from "@/lib/simulation/network/battle";
 import {
@@ -45,6 +47,7 @@ import {
 } from "@/lib/simulation/network/visibility";
 import { BattleControls } from "./BattleControls";
 import { FolderPanel } from "./FolderPanel";
+import { CustomPanel } from "./CustomPanel";
 import { fixtureCatalog } from "@/lib/simulation/network/fixtures";
 import styles from "./Network.module.css";
 const copy = SITE_COPY.simulation;
@@ -89,7 +92,7 @@ export function Network({
   const [state, send] = useMachine(networkMachine);
   const context = state.context,
     fighting = state.matches("battling"),
-    panel = ["folder", "dialogue", "detail", "journal"].find((name) =>
+    panel = ["custom", "folder", "dialogue", "detail", "journal"].find((name) =>
       state.matches(name as "folder"),
     );
   const [catalog, setCatalog] = useState<Discovery[]>(initial.items),
@@ -105,7 +108,9 @@ export function Network({
     [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Exchange[]>([]),
     [sending, setSending] = useState(false);
-  const [queue, setQueue] = useState<Program[]>(["Pulse", "Guard", "Sweep"]);
+  const [queue, setQueue] = useState<Program[]>(["Pulse", "Guard", "Repair"]);
+  const heldDirections = useRef(new Map<string, [number, number]>());
+  const arena = useRef<HTMLElement>(null);
   const [highlightIds, setHighlightIds] = useState<string[]>([]);
   const ready = useSyncExternalStore(
     subscribe,
@@ -127,6 +132,7 @@ export function Network({
   );
   const character = CHARACTERS[context.character];
   const activeBattle = context.battle;
+  const inEncounter = activeBattle !== null;
   useEffect(() => {
     refs.current = { context, catalog, messages, panel };
   }, [context, catalog, messages, panel]);
@@ -151,7 +157,7 @@ export function Network({
       const target = event.state?.networkPanel;
       if (
         target &&
-        ["FOLDER", "CHAT", "JOURNAL", "INSPECT"].includes(target.type)
+        ["CUSTOM", "FOLDER", "CHAT", "JOURNAL", "INSPECT"].includes(target.type)
       ) {
         if (
           target.type !== "INSPECT" ||
@@ -174,6 +180,7 @@ export function Network({
     };
   }, [send]);
   useEffect(() => {
+    if (panel) heldDirections.current.clear();
     if (panel) {
       if (!dialog.current?.open) dialog.current?.showModal();
       dialogTitle.current?.focus();
@@ -182,6 +189,16 @@ export function Network({
       focusOrigin.current?.focus();
     }
   }, [panel]);
+  useEffect(() => {
+    if (!fighting) heldDirections.current.clear();
+    else arena.current?.focus({ preventScroll: true });
+  }, [fighting]);
+  useEffect(() => {
+    if (inEncounter) {
+      arena.current?.scrollIntoView({ block: "start", behavior: "instant" });
+      if (!panel) arena.current?.focus({ preventScroll: true });
+    }
+  }, [inEncounter, panel]);
   useEffect(() => {
     if (
       !fighting ||
@@ -192,9 +209,16 @@ export function Network({
     )
       return;
     const timer = setInterval(() => {
-      if (!document.hidden && document.hasFocus())
+      if (!document.hidden && document.hasFocus()) {
+        const direction = [...heldDirections.current.values()].at(-1);
+        if (direction)
+          send({
+            type: "BATTLE",
+            action: { type: "move", dx: direction[0], dy: direction[1] },
+          });
         send({ type: "BATTLE", action: { type: "step" } });
-    }, 1200);
+      }
+    }, TICK_MS);
     return () => clearInterval(timer);
   }, [fighting, stepMode, still, capability, activeBattle?.outcome, send]);
   useEffect(() => {
@@ -249,7 +273,15 @@ export function Network({
     context.completed,
     stepMode,
   ]);
-  function open(type: "FOLDER" | "CHAT" | "JOURNAL" | "INSPECT", id?: string) {
+  function open(
+    type: "CUSTOM" | "FOLDER" | "CHAT" | "JOURNAL" | "INSPECT",
+    id?: string,
+  ) {
+    if (
+      type === "CUSTOM" &&
+      (!activeBattle || activeBattle.custom < CUSTOM_TICKS)
+    )
+      return;
     if (!panel && !focusOrigin.current?.isConnected)
       focusOrigin.current =
         document.activeElement instanceof HTMLElement
@@ -501,6 +533,9 @@ export function Network({
     }
   }
   const details = selected.at(-1);
+  const selectedPrograms = queue.filter((program) =>
+    context.equipped.some((slot) => slot.program === program),
+  );
   const shared =
     selected.length === 2
       ? selected[0].topics.filter((t) =>
@@ -558,11 +593,27 @@ export function Network({
         </div>
       </header>
       <section
+        ref={arena}
         className={styles.viewport}
+        data-encounter={inEncounter}
+        data-step={inEncounter && (stepMode || still || !capability)}
         aria-label="Personal network world"
         tabIndex={0}
         onKeyDown={(event) => {
-          if (event.target !== event.currentTarget || panel) return;
+          if (
+            panel ||
+            (event.target !== event.currentTarget && !inEncounter) ||
+            (event.target instanceof Element &&
+              event.target.matches("input, select, textarea"))
+          )
+            return;
+          if (inEncounter && event.key === "Escape") {
+            event.preventDefault();
+            send({ type: state.matches("paused") ? "CLOSE" : "PAUSE" });
+            return;
+          }
+          // Space still activates focused native controls, not a combat shortcut.
+          if (event.key === " " && event.target !== event.currentTarget) return;
           const directions: Record<string, [number, number]> = {
             ArrowUp: [0, -1],
             w: [0, -1],
@@ -575,9 +626,23 @@ export function Network({
           };
           if (directions[event.key]) {
             event.preventDefault();
-            walk(...directions[event.key]);
+            if (!event.repeat) walk(...directions[event.key]);
+            if (fighting)
+              heldDirections.current.set(event.key, directions[event.key]);
           }
-          if (event.key === "Enter" || event.key === " ") {
+          if (fighting && event.key.toLowerCase() === "z") {
+            event.preventDefault();
+            if (!event.repeat)
+              send({ type: "BATTLE", action: { type: "charge", held: true } });
+          }
+          if (fighting && event.key.toLowerCase() === "c") {
+            event.preventDefault();
+            if (!event.repeat) open("CUSTOM");
+          }
+          if (
+            (fighting && ["x", " "].includes(event.key.toLowerCase())) ||
+            (!inEncounter && ["Enter", " "].includes(event.key))
+          ) {
             event.preventDefault();
             if (fighting) send({ type: "BATTLE", action: { type: "use" } });
             else {
@@ -592,30 +657,63 @@ export function Network({
             }
           }
         }}
+        onKeyUp={(event) => {
+          heldDirections.current.delete(event.key);
+          if (fighting && event.key.toLowerCase() === "z") {
+            event.preventDefault();
+            send({ type: "BATTLE", action: { type: "charge", held: false } });
+          }
+        }}
+        onBlur={(event) => {
+          if (
+            !event.currentTarget.contains(event.relatedTarget as Node | null)
+          ) {
+            heldDirections.current.clear();
+            if (fighting) send({ type: "PAUSE" });
+          }
+        }}
       >
-        <div className={styles.zoneLabels}>
-          <button disabled={!ready} onClick={() => visit("patch")}>
-            01 / {copy["network-workshop"]}
-          </button>
-          <button disabled={!ready} onClick={() => visit("index")}>
-            02 / {copy["network-media"]}
-          </button>
-          <button disabled={!ready} onClick={() => visit("loop")}>
-            03 / {copy["network-frequency"]}
-          </button>
-        </div>
-        {ready && capability && !still ? (
+        {!inEncounter && (
+          <div className={styles.zoneLabels}>
+            <button disabled={!ready} onClick={() => visit("patch")}>
+              01 / {copy["network-workshop"]}
+            </button>
+            <button disabled={!ready} onClick={() => visit("index")}>
+              02 / {copy["network-media"]}
+            </button>
+            <button disabled={!ready} onClick={() => visit("loop")}>
+              03 / {copy["network-frequency"]}
+            </button>
+          </div>
+        )}
+        {ready && capability && !still && (!inEncounter || !stepMode) ? (
           <World
             view={{
               position: context.position,
               battle: activeBattle,
-              fighting,
-              paused: !!panel || state.matches("paused"),
+              fighting: inEncounter,
+              paused:
+                !!panel ||
+                state.matches("paused") ||
+                (inEncounter && !fighting),
               character: context.character,
               chips: catalog.map(({ id, domain }) => ({ id, domain })),
               highlightIds,
             }}
-            move={(x, y) => send({ type: "WALK", x, y })}
+            move={(x, y) => {
+              if (fighting && activeBattle) {
+                const dx = x - activeBattle.player.x,
+                  dy = y - activeBattle.player.y;
+                send({
+                  type: "BATTLE",
+                  action: {
+                    type: "move",
+                    dx: Math.abs(dx) > Math.abs(dy) ? Math.sign(dx) : 0,
+                    dy: Math.abs(dx) > Math.abs(dy) ? 0 : Math.sign(dy),
+                  },
+                });
+              } else send({ type: "WALK", x, y });
+            }}
             meet={(id) => {
               visit(id);
             }}
@@ -625,7 +723,7 @@ export function Network({
               setStepMode(true);
             }}
           />
-        ) : (
+        ) : !inEncounter ? (
           <div className={styles.staticWorld}>
             {CHARACTER_IDS.map((id) => (
               <button
@@ -642,6 +740,18 @@ export function Network({
               </button>
             ))}
           </div>
+        ) : null}
+        {inEncounter && activeBattle && (
+          <BattleControls
+            activeBattle={activeBattle}
+            stepMode={stepMode}
+            setStepMode={setStepMode}
+            capability={capability}
+            still={still}
+            send={send}
+            open={open}
+            paused={!fighting}
+          />
         )}
         {state.matches("paused") && (
           <div className={styles.paused}>
@@ -651,88 +761,78 @@ export function Network({
             </button>
           </div>
         )}
-        <div className={styles.worldFooter}>
-          <span>
-            {fighting
-              ? `GLITCH / ${activeBattle?.encounter.toUpperCase()}`
-              : "ARROWS / WASD · TAP TO WALK · ENTER TO INSPECT"}
-          </span>
-          <span>{context.discoveries.length} DISCOVERED</span>
-        </div>
-      </section>
-      <div className={styles.controlDeck}>
-        <div className={styles.companion}>
-          <Portrait
-            character={context.character}
-            reaction={selected.length > 0}
-          />
-          <div>
-            <label htmlFor="network-character">Companion</label>
-            <select
-              id="network-character"
-              value={context.character}
-              onChange={(event) =>
-                send({
-                  type: "MEET",
-                  character: event.target.value as CharacterId,
-                })
-              }
-            >
-              {CHARACTER_IDS.map((id) => (
-                <option key={id} value={id}>
-                  {CHARACTERS[id].name}
-                </option>
-              ))}
-            </select>
-            <p>
-              {notice ||
-                (selected.length ? character.reaction : character.greeting)}
-            </p>
+        {!inEncounter && (
+          <div className={styles.worldFooter}>
+            <span>ARROWS / WASD · TAP TO WALK · ENTER TO INSPECT</span>
+            <span>{context.discoveries.length} DISCOVERED</span>
           </div>
-        </div>
-        <div className={styles.dpad} aria-label="Directional controls">
-          {(
-            [
-              [0, -1, "↑", "Up"],
-              [-1, 0, "←", "Left"],
-              [0, 1, "↓", "Down"],
-              [1, 0, "→", "Right"],
-            ] as const
-          ).map(([dx, dy, icon, label]) => (
-            <button
-              key={label}
-              disabled={!ready || !!panel || state.matches("paused")}
-              aria-label={label}
-              onClick={() => walk(dx, dy)}
-            >
-              {icon}
+        )}
+      </section>
+      {!inEncounter && (
+        <div className={styles.controlDeck}>
+          <div className={styles.companion}>
+            <Portrait
+              character={context.character}
+              reaction={selected.length > 0}
+            />
+            <div>
+              <label htmlFor="network-character">Companion</label>
+              <select
+                id="network-character"
+                value={context.character}
+                onChange={(event) =>
+                  send({
+                    type: "MEET",
+                    character: event.target.value as CharacterId,
+                  })
+                }
+              >
+                {CHARACTER_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {CHARACTERS[id].name}
+                  </option>
+                ))}
+              </select>
+              <p>
+                {notice ||
+                  (selected.length ? character.reaction : character.greeting)}
+              </p>
+            </div>
+          </div>
+          <div className={styles.dpad} aria-label="Directional controls">
+            {(
+              [
+                [0, -1, "↑", "Up"],
+                [-1, 0, "←", "Left"],
+                [0, 1, "↓", "Down"],
+                [1, 0, "→", "Right"],
+              ] as const
+            ).map(([dx, dy, icon, label]) => (
+              <button
+                key={label}
+                disabled={!ready || !!panel || state.matches("paused")}
+                aria-label={label}
+                onClick={() => walk(dx, dy)}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
+          <nav className={styles.dock} aria-label="Network tools">
+            <button disabled={!ready} onClick={() => open("FOLDER")}>
+              <span aria-hidden="true">▣</span>{" "}
+              <span>{copy["network-folder"]}</span>
             </button>
-          ))}
+            <button disabled={!ready} onClick={() => open("CHAT")}>
+              <span aria-hidden="true">↗</span>{" "}
+              <span>{copy["chat-label"]}</span>
+            </button>
+            <button disabled={!ready} onClick={() => open("JOURNAL")}>
+              <span aria-hidden="true">▤</span>{" "}
+              <span>{copy["journal-label"]}</span>
+            </button>
+          </nav>
         </div>
-        <nav className={styles.dock} aria-label="Network tools">
-          <button disabled={!ready} onClick={() => open("FOLDER")}>
-            <span aria-hidden="true">▣</span>{" "}
-            <span>{copy["network-folder"]}</span>
-          </button>
-          <button disabled={!ready} onClick={() => open("CHAT")}>
-            <span aria-hidden="true">↗</span> <span>{copy["chat-label"]}</span>
-          </button>
-          <button disabled={!ready} onClick={() => open("JOURNAL")}>
-            <span aria-hidden="true">▤</span>{" "}
-            <span>{copy["journal-label"]}</span>
-          </button>
-        </nav>
-      </div>
-      {fighting && activeBattle && (
-        <BattleControls
-          activeBattle={activeBattle}
-          stepMode={stepMode}
-          setStepMode={setStepMode}
-          capability={capability}
-          still={still}
-          send={send}
-          open={open}
-        />
       )}
       <details className={styles.encounters}>
         <summary>
@@ -795,25 +895,38 @@ export function Network({
       >
         <header className={styles.panelBar}>
           <h2 id="network-panel-title" ref={dialogTitle} tabIndex={-1}>
-            {panel === "folder"
-              ? copy["network-folder"]
-              : panel === "dialogue"
-                ? `${character.name} / messenger`
-                : panel === "journal"
-                  ? "Discoveries"
-                  : "Discovery chip"}
+            {panel === "custom"
+              ? "CHIP SELECT"
+              : panel === "folder"
+                ? copy["network-folder"]
+                : panel === "dialogue"
+                  ? `${character.name} / messenger`
+                  : panel === "journal"
+                    ? "Discoveries"
+                    : "Discovery chip"}
           </h2>
           <button onClick={close} aria-label="Close panel">
             ×
           </button>
         </header>
+        {panel === "custom" && (
+          <CustomPanel
+            programs={context.equipped.map((slot) => slot.program)}
+            selected={selectedPrograms}
+            setSelected={setQueue}
+            confirm={() => {
+              send({
+                type: "BATTLE",
+                action: { type: "load", programs: selectedPrograms },
+              });
+              close();
+            }}
+          />
+        )}
         {panel === "folder" && (
           <FolderPanel
             context={context}
             catalog={catalog}
-            activeBattle={activeBattle}
-            queue={queue}
-            setQueue={setQueue}
             domain={domain}
             load={load}
             search={search}
@@ -823,7 +936,6 @@ export function Network({
             synthetic={synthetic}
             send={send}
             open={open}
-            close={close}
           />
         )}
         {panel === "detail" && details && (

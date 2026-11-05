@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { Battle } from "@/lib/simulation/network/battle";
 import type { CharacterId } from "@/lib/simulation/network/characters";
+import { combatCell, drawBattle } from "./battle-renderer";
 export type WorldView = {
   position: { x: number; y: number };
   battle: Battle | null;
@@ -63,13 +64,13 @@ export function createNetworkRenderer(
         parent.dataset.renderFrames = String(++frames);
       });
       this.input.on("pointerup", (p: Phaser.Input.Pointer) => {
-        if (
-          current.paused ||
-          current.fighting ||
-          gestureCancelled ||
-          p.getDistance() > 12
-        )
+        if (current.paused || gestureCancelled || p.getDistance() > 12) return;
+        if (current.fighting) {
+          const cell = combatCell(p.x, p.y);
+          if (cell.x >= 0 && cell.x < 3 && cell.y >= 0 && cell.y < 3)
+            move(cell.x, cell.y);
           return;
+        }
         const x = Math.round(((p.x - 480) / 47 + (p.y - 92) / 25) / 2);
         const y = Math.round(((p.y - 92) / 25 - (p.x - 480) / 47) / 2);
         if (x < 0 || x > 8 || y < 0 || y > 8) return;
@@ -111,7 +112,13 @@ export function createNetworkRenderer(
     game.loop.wake();
     clearTimeout(gestureTimer);
     gestureTimer = setTimeout(() => {
-      if (!disposed) game.loop.sleep();
+      if (
+        !disposed &&
+        (!current.fighting ||
+          current.paused ||
+          current.battle?.outcome !== "active")
+      )
+        game.loop.sleep();
     }, 600);
   };
   parent.addEventListener("pointerdown", wake);
@@ -163,6 +170,9 @@ export function createNetworkRenderer(
   }
   function draw(animate: boolean) {
     if (!scene || disposed) return;
+    const height = current.fighting ? 460 : 620;
+    if (game.scale.gameSize.height !== height)
+      game.scale.setGameSize(960, height);
     game.loop.wake();
     const from = playerSprite?.active
       ? { x: playerSprite.x, y: playerSprite.y }
@@ -178,53 +188,7 @@ export function createNetworkRenderer(
       g.fillRect((i * 163 + 29) % 960, (i * 97 + 13) % 620, i % 7 ? 1 : 2, 2);
     }
     if (current.fighting && current.battle) {
-      const b = current.battle;
-      for (let y = 0; y < 3; y++)
-        for (let x = 0; x < 6; x++) {
-          const danger = b.danger.some((c) => c.x === x && c.y === y);
-          g.fillStyle(
-            danger
-              ? b.phase === "warning"
-                ? 0xc57a1b
-                : 0xb5265c
-              : x < 3
-                ? 0x214e9f
-                : 0x643b86,
-          );
-          g.fillRoundedRect(100 + x * 126, 230 + y * 78, 118, 70, 6);
-          g.lineStyle(2, danger ? 0xffec90 : 0x9cc7f8, 0.8);
-          g.strokeRoundedRect(100 + x * 126, 230 + y * 78, 118, 70, 6);
-        }
-      const avatar = s.add
-        .sprite(
-          158 + b.player.x * 126,
-          260 + b.player.y * 78,
-          "cast",
-          b.event === "moved" ? 1 : 0,
-        )
-        .setDisplaySize(110, 110)
-        .setOrigin(0.5, 0.8);
-      const enemyX = 158 + b.enemy.x * 126,
-        enemyY = 254 + b.enemy.y * 78;
-      g.fillStyle(0xf7c4ff);
-      g.fillTriangle(
-        enemyX,
-        enemyY - 44,
-        enemyX - 34,
-        enemyY + 17,
-        enemyX + 34,
-        enemyY + 17,
-      );
-      g.fillStyle(0x311344);
-      g.fillRect(enemyX - 12, enemyY - 5, 7, 9);
-      g.fillRect(enemyX + 7, enemyY - 5, 7, 9);
-      if (animate)
-        s.tweens.add({
-          targets: avatar,
-          y: avatar.y - 9,
-          duration: 90,
-          yoyo: true,
-        });
+      playerSprite = drawBattle(s, current.battle, from, !current.paused);
     } else {
       for (let y = 0; y < 9; y++)
         for (let x = 0; x < 9; x++) {
@@ -294,7 +258,12 @@ export function createNetworkRenderer(
       }
     }
     // Render the final pose, then park the engine. React owns combat time.
-    s.time.delayedCall(animate ? 230 : 40, () => game.loop.sleep());
+    if (
+      !current.fighting ||
+      current.paused ||
+      current.battle?.outcome !== "active"
+    )
+      s.time.delayedCall(animate ? 230 : 40, () => game.loop.sleep());
   }
   return {
     update(view) {

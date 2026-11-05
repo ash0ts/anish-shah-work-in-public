@@ -40,6 +40,7 @@
 }
 .network button:hover:not(:disabled) {
   background: var(--lime);
+  color: var(--ink);
 }
 .network button:disabled {
   opacity: 0.55;
@@ -518,21 +519,420 @@
   margin-bottom: 20px;
 }
 .battleControls {
-  max-width: 1000px;
-  margin: 24px auto;
-  padding: 20px;
-  background: #d5e0f1;
-  border: 1px solid #6b85b0;
-  border-radius: 12px;
+  position: relative;
+  padding: calc(47.9167% + 64px) 20px 12px;
+  color: #ecf3ff;
+  pointer-events: none;
 }
-.battleStatus {
-  display: flex;
-  flex-wrap: wrap;
+.battleControls button,
+.battleControls input,
+.battleControls label {
+  pointer-events: auto;
+}
+.viewport[data-encounter="true"] {
+  max-width: 1000px;
+  max-height: none;
+  scroll-margin-top: 12px;
+  border-radius: 14px;
+}
+.viewport[data-encounter="true"] .canvasHost {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 960 / 460;
+}
+.battleControls[data-static="true"] {
+  padding-top: 88px;
+}
+.battleHud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 74px;
+  display: grid;
+  grid-template-columns: 150px 1fr 70px;
   gap: 22px;
-  margin-bottom: 15px;
+  padding: 12px 22px;
+  background: #121d39;
+  border-bottom: 2px solid #43649b;
+  font-family: ui-monospace, monospace;
+}
+.hp {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+.hp small,
+.enemyCount small {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: #bacded;
+}
+.hp strong {
+  font-size: 28px;
+  line-height: 1;
+  color: #caff73;
+}
+.hp strong span {
+  font-size: 12px;
+  color: #bacded;
+}
+.hp meter {
+  width: 100%;
+  height: 5px;
+}
+.customGauge {
+  align-self: center;
+}
+.customGauge div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+.customGauge progress {
+  width: 100%;
+  height: 14px;
+  accent-color: #ccff73;
+}
+.enemyCount {
+  display: flex;
+  flex-direction: column;
+  align-items: end;
+}
+.enemyCount strong {
+  font-size: 28px;
+}
+.loadedChips {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  min-height: 40px;
   font:
-    14px ui-monospace,
+    12px ui-monospace,
     monospace;
+}
+.loadedChips > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1c2f52;
+  border: 1px solid #5e81b3;
+  padding: 8px;
+}
+.loadedChips [data-next="true"] {
+  border-color: #d5ff80;
+  box-shadow: inset 3px 0 #d5ff80;
+}
+.loadedChips i {
+  font-style: normal;
+  font-size: 22px;
+}
+.loadedChips small {
+  color: #c3d8fa;
+}
+.battleInputs {
+  display: grid;
+  grid-template-columns: 146px 1fr 1fr 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+.battleInputs button {
+  margin: 0;
+  touch-action: none;
+  min-height: 48px;
+}
+.battleInputs > button {
+  background: #17366a;
+  color: #f1f6ff;
+  border: 2px solid #7096c5;
+  box-shadow: 0 4px #050b1e;
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+.battleInputs > button small {
+  font:
+    10px ui-monospace,
+    monospace;
+  letter-spacing: 0.04em;
+}
+.battleInputs > button strong {
+  font-size: 15px;
+}
+.battleInputs > .useChipButton {
+  background: #d1ff78;
+  color: #172522;
+  border-color: #e9ffbe;
+}
+.battleInputs > .customButton {
+  background: #8064bb;
+  border-color: #baace1;
+}
+.battleInputs button:disabled {
+  opacity: 0.5;
+}
+.blasterButton progress {
+  width: 70%;
+  height: 5px;
+  accent-color: #ffde83;
+}
+.battleDpad {
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
+  grid-template-rows: 44px 44px;
+  gap: 3px;
+}
+.battleDpad button {
+  background: #c8dcf3;
+  color: #12294e;
+  border: 1px solid #7495b4;
+  border-radius: 6px;
+  font-size: 22px;
+  min-height: 0;
+  padding: 0;
+}
+.battleDpad button:first-child {
+  grid-column: 2;
+}
+.battleDpad button:nth-child(2) {
+  grid-column: 1;
+}
+.battleOptions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+  font:
+    11px ui-monospace,
+    monospace;
+}
+.battleOptions button {
+  background: transparent;
+  color: #c9dcff;
+  padding: 6px;
+  border: 0;
+  box-shadow: none;
+  min-height: 44px;
+  text-decoration: underline;
+}
+.battleOptions label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.battleOutcome {
+  position: absolute;
+  z-index: 4;
+  inset: 80px 12% auto;
+  padding: 26px;
+  background: #132448f2;
+  border: 2px solid #d5ff80;
+  box-shadow: 0 15px 60px #0009;
+  text-align: center;
+  pointer-events: auto;
+}
+.battleOutcome h2 {
+  color: #e3ffad;
+  font-size: clamp(24px, 4vw, 44px);
+  margin: 12px 0;
+}
+.battleOutcome p {
+  color: #d2e1fc;
+}
+.battleOutcome button {
+  margin: 5px;
+}
+.customPanel {
+  padding: 4px 20px 22px;
+}
+.customChips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.customChips button {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px;
+  text-align: left;
+  min-width: 0;
+  padding: 12px;
+  border: 2px solid #5a729f;
+  border-radius: 9px;
+  background: #e2ebf7;
+  color: #152744;
+}
+.customChips button[aria-pressed="true"] {
+  border-color: #254ce0;
+  box-shadow: inset 0 0 0 2px #254ce0;
+  background: #d2f6a0;
+}
+.customChips button:disabled {
+  opacity: 0.42;
+}
+.chipArt {
+  grid-column: 1/-1;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  background: repeating-linear-gradient(0deg, #203b68 0 2px, #294f8a 2px 5px);
+  color: #e1ff9a;
+  font:
+    48px ui-monospace,
+    monospace;
+  border-radius: 5px;
+}
+.chipCode {
+  position: absolute;
+  top: 17px;
+  left: 17px;
+  color: #fff;
+  font:
+    20px ui-monospace,
+    monospace;
+  z-index: 1;
+}
+.chipPower {
+  font:
+    12px ui-monospace,
+    monospace;
+  font-weight: bold;
+}
+.customChips small {
+  grid-column: 1/-1;
+  min-height: 36px;
+  font-size: 12px;
+}
+.chipOrder {
+  grid-column: 1/-1;
+  font:
+    10px ui-monospace,
+    monospace;
+  text-transform: uppercase;
+}
+.customFooter {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 20px;
+}
+.customFooter > div {
+  flex: 1;
+}
+.customFooter p {
+  margin: 5px 0;
+  font-size: 12px;
+}
+.customFooter .battleStart {
+  background: #193c8b;
+  color: white;
+  padding: 16px 22px;
+}
+.combatHelp {
+  font:
+    12px/1.6 ui-monospace,
+    monospace;
+}
+@media (max-width: 600px) {
+  .battleControls {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+  .battleHud {
+    grid-template-columns: 85px 1fr 42px;
+    gap: 10px;
+    padding: 12px;
+  }
+  .customGauge div {
+    font-size: 9px;
+  }
+  .battleInputs {
+    grid-template-columns: 136px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+  }
+  .battleInputs > .customButton {
+    grid-column: 2/4;
+    flex-direction: row;
+    min-height: 44px;
+  }
+  .battleInputs > button {
+    padding-inline: 4px;
+  }
+  .battleInputs > .customButton small {
+    display: none;
+  }
+  .battleInputs > button strong {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .battleInputs > button small {
+    font-size: 9px;
+  }
+  .battleDpad {
+    grid-row: 1/3;
+    grid-template-columns: repeat(3, 44px);
+    grid-template-rows: 44px 44px;
+    align-content: center;
+    gap: 2px;
+  }
+  .loadedChips {
+    font-size: 10px;
+    gap: 4px;
+  }
+  .loadedChips > span {
+    padding: 5px;
+    gap: 5px;
+  }
+  .loadedChips i {
+    font-size: 16px;
+  }
+  .battleOptions {
+    gap: 7px;
+  }
+  .customPanel {
+    padding: 0 10px 16px;
+  }
+  .customChips {
+    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .customChips button {
+    padding: 8px;
+  }
+  .customFooter {
+    flex-wrap: wrap;
+  }
+  .customFooter > div {
+    flex-basis: 100%;
+  }
+  .battleOutcome {
+    inset: 80px 5% auto;
+    padding: 16px;
+  }
+}
+@media (forced-colors: active) {
+  .battleControls,
+  .battleHud {
+    background: Canvas;
+    color: CanvasText;
+  }
+  .battleControls strong,
+  .battleControls small,
+  .battleOptions button {
+    color: CanvasText;
+  }
+  .customChips button[aria-pressed="true"] {
+    outline: 3px solid Highlight;
+  }
 }
 .board {
   display: grid;
@@ -575,20 +975,6 @@
   }
   .board {
     max-width: 560px;
-  }
-  .battleControls {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-  }
-  .battleStatus {
-    grid-column: 1/-1;
-  }
-  .battleControls > label {
-    grid-column: 1/-1;
-  }
-  .battleControls > .actions {
-    align-content: center;
   }
 }
 @media (max-width: 800px) {
@@ -721,9 +1107,6 @@
   }
   .actions button {
     font-size: 12px;
-  }
-  .battleControls {
-    padding: 12px;
   }
   .board {
     gap: 3px;

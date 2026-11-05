@@ -18,13 +18,27 @@ programs—Pulse, Guard, Dash, Sweep, Snare and Repair—are available immediate
 Six slots can associate discoveries with these fictional effects. Real ratings,
 rank, playtime, revenue and other measurements never change power or rarity.
 
-Three optional encounters use a six-column, three-row board and telegraphed
-attacks. Opening the folder pauses combat and allows a hand of up to three
-programs. Retry/skip preserve discoveries. Factual access is never a reward for
-winning. HTML Step mode and Phaser use the same deterministic rules.
+Three optional encounters use a six-column, three-row board. The player moves
+within the left three columns. A fixed 50ms rules tick drives travelling shots,
+locked-target warnings, damage recovery and three enemy patterns: sentry, moving
+skater and column-attacking warden. Movement repeats every 100ms; the basic
+blaster fires every 200ms and charges in 800ms. Chip power and range are defined
+once in `PROGRAM_INFO`, independently of real-world source measurements.
+
+Encounters begin in paused Chip select. Pick up to three compatible A/B chips;
+star-code chips fit either hand. The gauge refills after six active seconds,
+then C reopens selection. Z holds/releases the blaster; X/Space uses the next
+chip. Escape pauses. Touch controls stay inside the arena and cancel held input
+on lost capture. Native buttons remain keyboard-operable. The chip folder is
+for equipment and sources, not a second battle interface.
+
+Retry/leave preserve discoveries. Factual access is never a reward for winning.
+HTML Step mode uses the same rules with explicit quarter-second advancement,
+charging and release controls. Only Step mode renders the semantic board; the
+animated presentation does not show a second competing board.
 
 The renderer sleeps between input-driven redraws. Its logical resolution is
-960 × 620, independent of device DPR. Hidden documents, lost focus, chat,
+960 × 620 in the hub and 960 × 460 in battle, independent of device DPR. Hidden documents, lost focus, chat,
 inventory and explicit pause stop combat time. Reduced motion, forced colors
 and Still presentation select HTML controls. Canvas is aria-hidden; keyboard,
 directional buttons, station controls and the HTML board remain authoritative.

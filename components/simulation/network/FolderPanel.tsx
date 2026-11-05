@@ -1,11 +1,10 @@
 "use client";
 import type { ActorRefFrom, SnapshotFrom } from "xstate";
-import type { Dispatch, SetStateAction } from "react";
 import type { networkMachine } from "@/lib/simulation/network/machine";
 import {
   PROGRAMS,
   type Program,
-  type Battle,
+  PROGRAM_INFO,
 } from "@/lib/simulation/network/battle";
 import {
   CATALOG_DOMAINS,
@@ -13,7 +12,6 @@ import {
   type CatalogPage,
   type Discovery,
 } from "@/lib/simulation/network/catalog-contract";
-import { PROGRAM_EFFECTS } from "@/lib/simulation/network/characters";
 import { SITE_COPY } from "@/lib/copy";
 import styles from "./Network.module.css";
 const copy = SITE_COPY.simulation;
@@ -28,9 +26,6 @@ const domainLabels: Record<CatalogDomain, string> = {
 export function FolderPanel({
   context,
   catalog,
-  activeBattle,
-  queue,
-  setQueue,
   domain,
   load,
   search,
@@ -40,13 +35,9 @@ export function FolderPanel({
   synthetic,
   send,
   open,
-  close,
 }: {
   context: SnapshotFrom<typeof networkMachine>["context"];
   catalog: Discovery[];
-  activeBattle: Battle | null;
-  queue: Program[];
-  setQueue: Dispatch<SetStateAction<Program[]>>;
   domain: CatalogDomain;
   load(domain: CatalogDomain, q?: string, page?: number): Promise<void>;
   search: string;
@@ -56,7 +47,6 @@ export function FolderPanel({
   synthetic: boolean;
   send: ActorRefFrom<typeof networkMachine>["send"];
   open(type: "INSPECT", id: string): void;
-  close(): void;
 }) {
   return (
     <div className={styles.folder}>
@@ -92,42 +82,10 @@ export function FolderPanel({
                 {catalog.find((item) => item.id === slot.discoveryId)?.title ??
                   "Original program chip"}
               </small>
-              <span>Game effect: {PROGRAM_EFFECTS[slot.program]}</span>
+              <span>Game effect: {PROGRAM_INFO[slot.program].effect}</span>
             </div>
           ))}
         </div>
-        {activeBattle?.outcome === "active" && (
-          <fieldset>
-            <legend>Choose up to three for this hand</legend>
-            {context.equipped.map((slot, index) => (
-              <label key={index}>
-                <input
-                  type="checkbox"
-                  checked={queue.includes(slot.program)}
-                  onChange={(e) =>
-                    setQueue((current) =>
-                      e.target.checked
-                        ? [...new Set([...current, slot.program])].slice(0, 3)
-                        : current.filter((p) => p !== slot.program),
-                    )
-                  }
-                />
-                {slot.program}
-              </label>
-            ))}
-            <button
-              onClick={() => {
-                send({
-                  type: "BATTLE",
-                  action: { type: "load", programs: queue },
-                });
-                close();
-              }}
-            >
-              Load hand & resume
-            </button>
-          </fieldset>
-        )}
       </section>
       <section>
         <h3>{copy["network-discoveries"]}</h3>

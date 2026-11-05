@@ -115,7 +115,7 @@ test("all five fixture collections page on demand; exploration and authored chat
     ),
   ).toEqual([]);
 });
-test("all encounters share Step rules, pause in the folder, retry and skip without losing discoveries", async ({
+test("all encounters begin in paused chip selection and share explicit Step rules", async ({
   page,
 }) => {
   await ready(page);
@@ -127,6 +127,12 @@ test("all encounters share Step rules, pause in the folder, retry and skip witho
     "3. Network glitch",
   ]) {
     await button(page, name).click();
+    await expect(page.getByRole("dialog")).toContainText("Time is stopped");
+    await expect(page.locator("[data-battle-tick]")).toHaveAttribute(
+      "data-battle-tick",
+      "0",
+    );
+    await button(page, "Battle start →").click();
     const battle = page.getByRole("region", { name: "Battle controls" });
     await expect(battle.getByLabel("Step mode")).toBeChecked();
     await expect(
@@ -136,17 +142,142 @@ test("all encounters share Step rules, pause in the folder, retry and skip witho
     ).toHaveCount(18);
     await button(page, "Use Pulse").click();
     await expect(button(page, "Use Guard")).toBeDisabled();
-    await button(page, "Advance one step").click();
+    await button(page, "Advance ¼ second").click();
+    await button(page, "Advance ¼ second").click();
     await expect(button(page, "Use Guard")).toBeEnabled();
-    await button(page, "Load programs · pauses battle").click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await button(page, "Load hand & resume").click();
-    await expect(battle).toBeVisible();
+    await button(page, "Start charging").click();
+    for (let i = 0; i < 4; i++) await button(page, "Advance ¼ second").click();
+    await expect(battle.getByLabel("Charge", { exact: true })).toHaveAttribute(
+      "value",
+      "16",
+    );
+    await button(page, "Release shot").click();
+    await expect(battle.getByLabel("Charge", { exact: true })).toHaveAttribute(
+      "value",
+      "0",
+    );
     await button(page, "Retry").click();
-    await expect(battle).toContainText("YOU 12/12");
+    await button(page, "Battle start →").click();
+    await expect(battle.getByLabel("Health", { exact: true })).toHaveAttribute(
+      "value",
+      "100",
+    );
     await button(page, "Leave battle").click();
     await expect(battle).not.toBeVisible();
   }
+});
+for (const width of [320, 390, 1440]) {
+  test(`one battle arena, reachable controls and accessible chip selection at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await ready(page);
+    await page.getByText("Optional encounters · 0/3", { exact: true }).click();
+    await button(page, "2. Crossed wires").click();
+    await fits(page);
+    await button(page, "Clear").click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: /B Dash/ }).click();
+    await expect(
+      dialog.getByRole("button", { name: /A Pulse/ }),
+    ).toBeDisabled();
+    await dialog.getByRole("button", { name: /B Sweep/ }).click();
+    await dialog.getByRole("button", { name: /Repair/ }).click();
+    expect(
+      (await new AxeBuilder({ page }).include("dialog").analyze()).violations,
+    ).toEqual([]);
+    await page.screenshot({ path: `.playwright/chip-select-${width}.png` });
+    await button(page, "Battle start →").click();
+    await expect(
+      page.getByRole("group", { name: "Six-column three-row battle board" }),
+    ).toHaveCount(0);
+    await expect(page.locator("[data-network-canvas] canvas")).toHaveCount(1);
+    const battle = page.getByRole("region", { name: "Battle controls" });
+    const area = await battle.boundingBox();
+    const canvas = await page
+      .locator("[data-network-canvas] canvas")
+      .boundingBox();
+    const blaster = await button(page, "Blaster").boundingBox();
+    expect(blaster.y).toBeGreaterThanOrEqual(canvas.y + canvas.height);
+    expect(area.y).toBeGreaterThanOrEqual(-1);
+    expect(area.y + area.height).toBeLessThan(901);
+    for (const name of ["Up", "Down", "Left", "Right", "Blaster"]) {
+      const box = await battle
+        .getByRole("button", { name, exact: true })
+        .boundingBox();
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    await fits(page);
+    await page.screenshot({ path: `.playwright/battle-${width}.png` });
+    await button(page, "Pause battle").click();
+    expect(
+      (await new AxeBuilder({ page }).include("main").analyze()).violations,
+    ).toEqual([]);
+  });
+}
+test("live combat charges, cancels, pauses on Escape and refills the Custom gauge only during play", async ({
+  page,
+}) => {
+  const requests = [];
+  page.on("request", (r) => requests.push(r.url()));
+  await ready(page);
+  await page.getByText("Optional encounters · 0/3", { exact: true }).click();
+  await button(page, "1. First contact").click();
+  await button(page, "Battle start →").click();
+  const arena = page.getByRole("region", {
+    name: "Personal network world",
+    exact: true,
+  });
+  const battle = page.getByRole("region", { name: "Battle controls" });
+  await expect(arena).toBeFocused();
+  await page.keyboard.down("z");
+  await expect(battle.getByLabel("Charge", { exact: true })).toHaveAttribute(
+    "value",
+    "16",
+  );
+  await page.keyboard.press("Escape");
+  await page.keyboard.up("z");
+  await expect(battle.getByLabel("Charge", { exact: true })).toHaveAttribute(
+    "value",
+    "0",
+  );
+  const tick = await battle.getAttribute("data-battle-tick");
+  await page.waitForTimeout(350);
+  await expect(battle).toHaveAttribute("data-battle-tick", tick);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("[data-state=battling]")).toBeVisible();
+  await expect(
+    battle.getByLabel("Chip gauge", { exact: true }),
+  ).toHaveAttribute("value", "120", { timeout: 9000 });
+  await page.keyboard.press("c");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  const frozen = await battle.getAttribute("data-battle-tick");
+  await page.waitForTimeout(350);
+  await expect(battle).toHaveAttribute("data-battle-tick", frozen);
+  await button(page, "Battle start →").click();
+  await expect(
+    battle.getByLabel("Chip gauge", { exact: true }),
+  ).not.toHaveAttribute("value", "120");
+  await arena.focus();
+  await page.keyboard.down("z");
+  await expect(battle.getByLabel("Charge", { exact: true })).toHaveAttribute(
+    "value",
+    "16",
+  );
+  await page.keyboard.up("z");
+  await expect(battle.getByLabel("Charge", { exact: true })).toHaveAttribute(
+    "value",
+    "0",
+  );
+  await button(page, "Pause battle").click();
+  await arena.getByRole("button", { name: "Resume", exact: true }).click();
+  await expect(arena).toBeFocused();
+  expect(
+    requests.filter((url) =>
+      /api\/simulation|googleapis|api\/connectors/.test(url),
+    ),
+  ).toEqual([]);
 });
 test("progress is opt-in, ID-only, bounded, restored and reset", async ({
   page,

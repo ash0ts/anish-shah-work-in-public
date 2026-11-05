@@ -36,11 +36,3 @@ export const CHARACTERS = {
       "Excellent sleeve energy. That is my fictional opinion, by the way.",
   },
 } as const;
-export const PROGRAM_EFFECTS = {
-  Pulse: "4 damage along your row.",
-  Guard: "Block the next hit.",
-  Dash: "Cross your side; block the next hit.",
-  Sweep: "2 damage across all rows.",
-  Snare: "1 damage; hold the glitch for three cycles.",
-  Repair: "Restore 4 health, up to 12.",
-} as const;

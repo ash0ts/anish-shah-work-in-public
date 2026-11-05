@@ -26,6 +26,7 @@ const staticArtifactPaths = [
   "public/assets/simulation/network-cast-v1.webp",
   "public/assets/simulation/network-props-v1.webp",
   "lib/simulation/network/characters.ts",
+  "lib/simulation/network/battle.ts",
 ];
 
 const brandAssetManifestPath =

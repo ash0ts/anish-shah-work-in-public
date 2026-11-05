@@ -85,8 +85,13 @@
     },
     {
       "path": "lib/simulation/network/characters.ts",
-      "bytes": 1594,
-      "sha256": "664ba85238289058802583a5b4f60a0c298bcb48bf3e84d3d4c9b59782fb3101"
+      "bytes": 1297,
+      "sha256": "25390b18d6cfdcabbf84c855a18bf1f4a73cda28cce761632107383cb2b214b5"
+    },
+    {
+      "path": "lib/simulation/network/battle.ts",
+      "bytes": 11496,
+      "sha256": "042fde07bc66347116468fe3e111939a4967f5b7f97627ebf146445b1d3e0d7b"
     },
     {
       "path": "public/assets/organizations/ai-tinkerers.438086e46304.svg",

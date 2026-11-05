@@ -3,6 +3,7 @@ import {
   battleStep,
   startBattle,
   PROGRAMS,
+  CUSTOM_TICKS,
   type Battle,
   type BattleAction,
   type Encounter,
@@ -23,6 +24,8 @@ type Event =
   | { type: "MEET"; character: CharacterId }
   | { type: "INSPECT"; id: string }
   | { type: "FOLDER" }
+  | { type: "CUSTOM" }
+  | { type: "EXIT_BATTLE" }
   | { type: "CHAT" }
   | { type: "JOURNAL" }
   | { type: "CLOSE" }
@@ -44,6 +47,12 @@ type Event =
 export const networkMachine = setup({
   types: {} as { context: Context; events: Event },
   actions: {
+    cancelCharge: assign(({ context }) => ({
+      battle: context.battle
+        ? { ...context.battle, charging: false, charge: 0 }
+        : null,
+    })),
+    exitBattle: assign({ battle: null }),
     walk: assign(({ context, event }) =>
       event.type === "WALK"
         ? {
@@ -130,22 +139,34 @@ export const networkMachine = setup({
     MEET: { actions: "meet" },
     EQUIP: { actions: "equip" },
     RESTORE: { actions: "restore" },
-    ENCOUNTER: { target: ".battling", actions: "encounter" },
-    FOLDER: ".folder",
-    CHAT: ".dialogue",
-    JOURNAL: ".journal",
-    PAUSE: ".paused",
+    ENCOUNTER: { target: ".custom", actions: "encounter" },
+    CUSTOM: {
+      guard: ({ context }) =>
+        context.battle?.outcome === "active" &&
+        context.battle.custom >= CUSTOM_TICKS,
+      target: ".custom",
+      actions: "cancelCharge",
+    },
+    EXIT_BATTLE: { target: ".exploring", actions: "exitBattle" },
+    FOLDER: { target: ".folder", actions: "cancelCharge" },
+    CHAT: { target: ".dialogue", actions: "cancelCharge" },
+    JOURNAL: { target: ".journal", actions: "cancelCharge" },
+    PAUSE: { target: ".paused", actions: "cancelCharge" },
     INSPECT: { target: ".detail", actions: "inspect" },
   },
   states: {
-    exploring: { on: { WALK: { actions: "walk" } } },
-    battling: { on: { BATTLE: { actions: "battle" } } },
-    folder: {
+    custom: {
       on: {
         BATTLE: {
           guard: ({ event }) => event.action.type === "load",
           actions: "battle",
         },
+      },
+    },
+    exploring: { on: { WALK: { actions: "walk" } } },
+    battling: { on: { BATTLE: { actions: "battle" } } },
+    folder: {
+      on: {
         CLOSE: [
           {
             guard: ({ context }) => context.battle?.outcome === "active",
