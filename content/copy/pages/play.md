@@ -6,23 +6,8 @@ Play — My Room, 2001
 ## seo-description
 Open a low-poly room for anime, books, music, records, games, movement, and travel.
 
-## intro-eyebrow
-My Room · 2001
-
 ## intro-title
-The room behind the résumé.
-
-## intro-summary
-Anime, books, music, records, games, miles, and trips—one object at a time.
-
-## poster-still-label
-Room preview
-
-## poster-capable-label
-Each object opens its own view
-
-## directory-eyebrow
-Room directory
+My Room, 2001
 
 ## directory-title
 Choose an object.
@@ -30,23 +15,20 @@ Choose an object.
 ## room-opening-status
 Opening the room
 
-## room-return-eyebrow
-Room view
+## room-open-control
+Open 3D room
 
-## room-return-title
-Reopening the room.
-
-## room-return-summary
-Putting everything back…
+## room-directory-control
+Objects list
 
 ## room-fallback-body
-Use the object directory below.
+Every object opens without 3D.
 
 ## pocket-stage-opening
 Opening the room
 
 ## pocket-stage-placing
-Folding out the objects
+Placing objects
 
 ## pocket-stage-ready
 Room ready

@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "assetPath": "/assets/play/diorama.6f9fb15b1cd2.glb",
+  "sha256": "6f9fb15b1cd26bcf69b2626361b2cd0d12886536e59012bdfd55a60ba510a11e",
+  "bytes": 135332,
+  "triangles": 13212,
+  "drawCalls": 15,
+  "materials": 1,
+  "props": {
+    "watch": {
+      "position": [
+        -3.22,
+        0.56,
+        -2.82
+      ],
+      "rotation": 0.18,
+      "scale": 1.12,
+      "hit": [
+        0,
+        1.12,
+        0
+      ],
+      "size": [
+        1.72,
+        2.12,
+        1
+      ]
+    },
+    "read": {
+      "position": [
+        -0.35,
+        0,
+        -2.94
+      ],
+      "rotation": 0,
+      "scale": 1.06,
+      "hit": [
+        0,
+        1.5,
+        0
+      ],
+      "size": [
+        2.08,
+        3.05,
+        0.86
+      ]
+    },
+    "listen": {
+      "position": [
+        -1.28,
+        0,
+        -0.42
+      ],
+      "rotation": 0.16,
+      "scale": 1.2,
+      "hit": [
+        0,
+        1.05,
+        0
+      ],
+      "size": [
+        1.18,
+        1.85,
+        0.88
+      ]
+    },
+    "collect": {
+      "position": [
+        -2.82,
+        0,
+        1.54
+      ],
+      "rotation": 0.12,
+      "scale": 1.08,
+      "hit": [
+        0,
+        0.68,
+        0
+      ],
+      "size": [
+        1.7,
+        1.42,
+        1.32
+      ]
+    },
+    "play": {
+      "position": [
+        1.48,
+        0,
+        1.12
+      ],
+      "rotation": 0.22,
+      "scale": 0.92,
+      "hit": [
+        -0.04,
+        1.48,
+        0
+      ],
+      "size": [
+        2.45,
+        1.92,
+        1.28
+      ]
+    },
+    "move": {
+      "position": [
+        3.48,
+        0,
+        -1.95
+      ],
+      "rotation": 0.12,
+      "scale": 1.12,
+      "hit": [
+        0,
+        1.12,
+        -0.34
+      ],
+      "size": [
+        1.58,
+        2.22,
+        2.68
+      ]
+    },
+    "travel": {
+      "position": [
+        1.48,
+        0,
+        -2.75
+      ],
+      "rotation": -0.08,
+      "scale": 0.94,
+      "hit": [
+        0,
+        1.45,
+        0
+      ],
+      "size": [
+        1.45,
+        2.55,
+        1.35
+      ]
+    }
+  }
+}

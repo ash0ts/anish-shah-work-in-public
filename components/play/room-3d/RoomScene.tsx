@@ -11,32 +11,10 @@ import {
   type RoomApproachRigHandle,
 } from "./RoomApproachRig";
 import { RoomInteractionController } from "./RoomInteractionController";
-import {
-  BeigeComputer,
-  CardioTelevision,
-  PostcardGlobe,
-  PocketPlayer,
-  ReadingShelf,
-  RecordCrate,
-  RoomShell,
-  WatchTelevision,
-} from "./RoomProceduralObjects";
+import { DioramaObjects } from "./DioramaObjects";
 import type { RoomRotation } from "./room-math";
 import type { RoomApproachPoseId } from "./room-approach";
 import { ROOM_PALETTE } from "./room-palette";
-
-const ROOM_SCENE_OBJECT_BY_ID = {
-  watch: WatchTelevision,
-  read: ReadingShelf,
-  listen: PocketPlayer,
-  collect: RecordCrate,
-  play: BeigeComputer,
-  move: CardioTelevision,
-  travel: PostcardGlobe,
-} as const satisfies Record<
-  RoomObjectId,
-  typeof WatchTelevision
->;
 
 export type RoomSceneProps = {
   approachPoseId: RoomApproachPoseId | null;
@@ -44,6 +22,7 @@ export type RoomSceneProps = {
   onHoverChange?: (id: RoomObjectId | null) => void;
   onInteractionActiveChange?: (active: boolean) => void;
   onSettled?: () => void;
+  onAssetsLoaded?: () => void;
   objectIds?: readonly RoomObjectId[];
   onRotationChange: (rotation: RoomRotation) => void;
   onSelect: (id: RoomObjectId) => void;
@@ -58,6 +37,7 @@ export function RoomScene({
   onHoverChange,
   onInteractionActiveChange,
   onSettled,
+  onAssetsLoaded,
   objectIds = ROOM_OBJECT_IDS,
   onRotationChange,
   onSelect,
@@ -102,15 +82,9 @@ export function RoomScene({
     motionRig.current?.previewRotation(nextRotation);
   }, []);
 
-  const isActive = (id: RoomObjectId) =>
-    id === hoveredId || id === focusedId || id === selectedId;
-
   return (
     <>
       <color attach="background" args={[ROOM_PALETTE.backdrop]} />
-      <ambientLight color="#fff6ee" intensity={0.9} />
-      <hemisphereLight args={["#fff7ec", "#796f9c", 1.1]} />
-      <directionalLight color="#ffe3c2" intensity={1.25} position={[5, 8, 6]} />
 
       <RoomApproachRig
         approachPoseId={approachPoseId}
@@ -122,17 +96,8 @@ export function RoomScene({
           position={presentation === "pocket" ? [0, -0.8, 0] : [0, -0.55, 0]}
           scale={presentation === "pocket" ? 0.92 : 1}
         >
-          <RoomShell registerOccluder={registerOccluder} />
-          {objectIds.map((id) => {
-            const SceneObject = ROOM_SCENE_OBJECT_BY_ID[id];
-            return (
-              <SceneObject
-                active={isActive(id)}
-                key={id}
-                registerHitTarget={registerHitTarget}
-              />
-            );
-          })}
+          <DioramaObjects objectIds={objectIds} focusedId={focusedId} hoveredId={hoveredId}
+            selectedId={selectedId} registerHitTarget={registerHitTarget} registerOccluder={registerOccluder} onLoaded={onAssetsLoaded} />
           <RoomInteractionController
             disabled={selectedId !== null}
             hitTargets={hitTargets}

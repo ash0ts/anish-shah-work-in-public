@@ -76,14 +76,14 @@ function RoomPosterFallback({
     >
       <picture>
         <source
-          srcSet="/assets/play/my-room-2001-neutral.01c6f825bbc1.avif"
+          srcSet="/assets/play/my-room-2001-neutral.b7e935988f08.avif"
           type="image/avif"
         />
         <img
           alt=""
           decoding="async"
           height="1000"
-          src="/assets/play/my-room-2001-neutral.00d2bc80d8dc.webp"
+          src="/assets/play/my-room-2001-neutral.66de435d1349.webp"
           width="1600"
         />
       </picture>
@@ -93,31 +93,6 @@ function RoomPosterFallback({
       </p>
     </div>
   );
-}
-
-const CAPABILITY_MESSAGES: Record<string, string> = {
-  checking: "Checking this device for the interactive room.",
-  "coarse-pointer": "The still room is easier to use with this pointer.",
-  "document-hidden": "The still room paused while this page was in the background.",
-  "forced-colors": "The still room respects this high-contrast display mode.",
-  "narrow-viewport": "The still room is composed for this screen size.",
-  "reduced-motion": "The still room respects reduced-motion preferences.",
-  "save-data": "The still room avoids the 3D download while Save-Data is on.",
-  "webgl2-unavailable": "The still room is available without WebGL.",
-  zoomed: "The still room remains readable at this zoom level.",
-};
-
-function capabilityDetail(capability: RoomCapabilityResult | null) {
-  if (!capability || capability.reasons.length === 0) {
-    return SITE_COPY.play["room-fallback-body"];
-  }
-  return capability.reasons
-    .map(
-      (reason) =>
-        CAPABILITY_MESSAGES[reason] ??
-        SITE_COPY.play["room-fallback-body"],
-    )
-    .join(" ");
 }
 
 export function RoomRuntime() {
@@ -237,28 +212,6 @@ export function RoomRuntime() {
         ? SITE_COPY.play["room-opening-status"]
         : SITE_COPY.play["pocket-stage-placing"];
 
-  const containFocus = (event: React.KeyboardEvent<HTMLElement>) => {
-    if (event.key !== "Tab" || presenting) return;
-    const runtime = runtimeRef.current;
-    if (!runtime) return;
-    const controls = [
-      ...runtime.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
-      ),
-    ].filter((element) => !element.hasAttribute("inert"));
-    if (!controls.length) return;
-    const first = controls[0];
-    const last = controls.at(-1) ?? first;
-    const active = document.activeElement;
-    if (event.shiftKey && (active === first || !runtime.contains(active))) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && (active === last || !runtime.contains(active))) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
-
   const trackCanvasTouch = (event: ReactPointerEvent<HTMLElement>) => {
     if (event.pointerType !== "touch" || !event.isPrimary) return;
     if (event.target instanceof HTMLCanvasElement) {
@@ -308,8 +261,9 @@ export function RoomRuntime() {
       aria-hidden={blocked || undefined}
       aria-busy={returning || undefined}
       aria-label="Interactive room"
-      aria-modal="true"
       className={styles.runtime}
+      id="room-main"
+      tabIndex={-1}
       data-room-ready={ready ? "true" : "false"}
       data-pocket-entry-phase={pocket ? pocketEntryPhase : undefined}
       data-room-presentation-tier={capability.tier}
@@ -319,12 +273,11 @@ export function RoomRuntime() {
       data-returning={returning || undefined}
       inert={blocked}
       onClickCapture={suppressRetargetedCanvasClick}
-      onKeyDown={containFocus}
       onPointerCancelCapture={finishCanvasTouch}
       onPointerDownCapture={trackCanvasTouch}
       onPointerUpCapture={finishCanvasTouch}
       ref={runtimeRef}
-      role="dialog"
+      role="main"
     >
       <p
         aria-atomic="true"
@@ -336,17 +289,17 @@ export function RoomRuntime() {
         {room.statusMessage}
       </p>
       <div className={styles.runtimeBar}>
-        <span>
+        <h1>
           {pocket ? "Pocket Room, 2001" : "My Room, 2001"}
           <small data-room-boot-status>{bootStatus}</small>
-        </span>
+        </h1>
         <div className={styles.runtimeActions}>
           <button
             data-room-runtime-entry-focus
             onClick={room.exitRoom}
             type="button"
           >
-            Leave room
+            {SITE_COPY.play["room-directory-control"]}
           </button>
           {room.simulationEnabled ? (
             <Suspense fallback={null}>
@@ -399,7 +352,7 @@ export function RoomRuntime() {
           </RoomRuntimeBoundary>
         ) : (
           <RoomPosterFallback
-            detail={capabilityDetail(capability)}
+            detail={SITE_COPY.play["room-fallback-body"]}
             title="The room is staying still on this device."
           />
         )}

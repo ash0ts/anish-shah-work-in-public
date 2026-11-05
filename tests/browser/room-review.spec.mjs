@@ -2,7 +2,7 @@ import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test } from "@playwright/test";
-import { expectRoomReady } from "./helpers/room-readiness.mjs";
+import { expectRoomReady, openRoomIfNeeded } from "./helpers/room-readiness.mjs";
 
 const capture = process.env.ROOM_CAPTURE_VISUALS === "1";
 const reviewDirectory = path.resolve(".playwright/room-review");
@@ -96,7 +96,7 @@ test.describe("My Room 2001 visual review evidence", () => {
       quality: 82,
     });
 
-    await page.getByRole("button", { name: "Enter the room" }).click();
+    await openRoomIfNeeded(page);
     const room = await expectRoomReady(page, {
       context: "capturing room review evidence",
       expectedTier: "desktop-fisheye",

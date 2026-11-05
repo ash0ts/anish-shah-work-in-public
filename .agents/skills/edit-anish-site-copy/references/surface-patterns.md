@@ -93,7 +93,9 @@ Do not restate the same limitation in accounting, non-claim, rule, caveat, and c
 
 ## Play
 
-Use one literal object name and one personal description per doorway. The
+Play opens directly into the eligible room. Keep Objects list available; do not
+restore an introductory doorway or duplicate entrance prose. Use literal object
+names in the room and descriptions beside the collection they introduce. The
 literal name makes the room navigable; it is not the title of the experience
 behind that object:
 

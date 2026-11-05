@@ -58,6 +58,7 @@ export default async function PlayPage({
 
   return (
     <RoomOverview
+      directory={query.view === "directory"}
       fixture={fixture}
       simulationEnabled={simulationExperienceVisible()}
       travelEnabled={travelAtlasEnabled()}
