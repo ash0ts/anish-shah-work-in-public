@@ -370,13 +370,13 @@ for media and geography details.
 
 ## Simulation boundary
 
-The owner-only `conversation-v2` preview hosts a dynamically loaded Phaser network,
+The private `conversation-v2` preview hosts a dynamically loaded Phaser network,
 with React/XState inventory, sources, dialogue and accessible HTML Step mode.
 Three original areas and four fictional companions introduce visible Work and
 specifically approved accepted collections. Pure TypeScript battle rules are
 independent of content, measurements and model output. Production remains disabled.
 
-Exploration never refreshes providers or calls a model. The bounded, owner-only
+Exploration never refreshes providers or calls a model. The bounded, protected
 catalog projects twenty-four items per request. Game display and Google processing
 require separate encrypted permissions; legacy summary approvals grant neither.
 Strava, Travel, account identifiers and private evidence stay excluded.
@@ -389,6 +389,14 @@ checks are not proof of factual accuracy; grounded-answer evaluation and owner
 review remain required.
 
 Studio provides Save Gemini key → Test connection → Enable owner preview.
+Its invitation-password control stores an environment-bound scrypt hash. Signed,
+one-hour host cookies protect the page and all feature APIs, but never grant Studio
+access or guest Gemini processing. Rotation revokes invitations. Hosted activation
+fails closed without a gate; production remains disabled pending review.
+Gemini can search/read/compare approved archive material through at most four
+read-only tools and three model steps per turn. Each step claims budget and checks
+current visibility, configuration and permission. Only completed operation labels
+return to the UI. The persistent companion remains available during optional battles.
 One-hour sessions permit twenty calls, with a site-wide daily limit of one hundred,
 a ten-second deadline and no retry. Persistence contains bounded IDs and counters,
 never questions or generated prose. Device progress is opt-in and ID-only.

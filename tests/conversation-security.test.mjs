@@ -7,6 +7,14 @@ register("./conversation-http-loader.mjs", import.meta.url);
 const settings = await import(
   "../lib/server/simulation/conversation/settings.ts"
 );
+const access = await import("../lib/server/simulation/conversation/access.ts");
+const { POST: unlock } = await import("../app/api/simulation/access/route.ts");
+const { PUT: saveAccess } = await import(
+  "../app/api/studio/simulation/access/route.ts"
+);
+const { createArchiveTools } = await import(
+  "../lib/server/simulation/conversation/archive-tools.ts"
+);
 const sessions = await import(
   "../lib/server/simulation/conversation/sessions.ts"
 );
@@ -697,7 +705,7 @@ test("synthetic connection test carries no archive, visitor or collection materi
   }
 });
 
-test("preview APIs and production mode fail closed; retired campaigns cannot reopen", () =>
+test("preview APIs fail closed; retired campaigns cannot reopen; production mode still needs feature access", () =>
   withDatabase(async () => {
     for (const mode of ["campaign-v1", "coming-soon", "disabled", undefined]) {
       globalThis.__ANISH_CONNECTOR_TEST_ENV__.SIMULATION_EXPERIENCE_MODE = mode;
@@ -712,7 +720,7 @@ test("preview APIs and production mode fail closed; retired campaigns cannot reo
       "conversation-v2";
     assert.equal(simulationExperienceMode(), "conversation-v2");
     globalThis.__ANISH_CONNECTOR_TEST_ENV__.DEPLOYMENT_TIER = "production";
-    assert.equal(simulationExperienceMode(), "disabled");
+    assert.equal(simulationExperienceMode(), "conversation-v2");
     for (const pathname of [
       "/api/simulation/session",
       "/api/simulation/turn",
@@ -862,7 +870,7 @@ test("HTTP owner setup rejects anonymous, non-owner, CSRF, oversize, unknown fie
           .status,
         409,
       );
-      for (const tier of ["preview", "production"]) {
+      for (const tier of ["preview"]) {
         globalThis.__ANISH_CONNECTOR_TEST_ENV__.DEPLOYMENT_TIER = tier;
         assert.equal(
           (await handleConversationSetup(request({ enabled: true }), "save"))
@@ -873,6 +881,321 @@ test("HTTP owner setup rejects anonymous, non-owner, CSRF, oversize, unknown fie
     } finally {
       delete globalThis.__CONVERSATION_TEST_USER__;
     }
+  }));
+
+test("password gate hashes secrets, rejects tampering, expires and revokes invitations without granting Studio", () =>
+  withDatabase(async (database) => {
+    Object.assign(globalThis.__ANISH_CONNECTOR_TEST_ENV__, {
+      SIMULATION_EXPERIENCE_MODE: "conversation-v2",
+      SIMULATION_SESSION_HMAC_KEY: Buffer.alloc(32, 7).toString("base64"),
+      OWNER_EMAILS: "owner@example.com",
+    });
+    const password = "a synthetic invitation for tests only";
+    const request = (path, body, headers = {}) =>
+      new Request(`http://localhost:3000${path}`, {
+        method: "POST",
+        headers: {
+          origin: "http://localhost:3000",
+          "content-type": "application/json",
+          ...headers,
+        },
+        body: JSON.stringify(body),
+      });
+    assert.equal(
+      (
+        await catalogGet(
+          new Request("http://localhost:3000/api/simulation/catalog"),
+        )
+      ).status,
+      401,
+    );
+    assert.equal(
+      (
+        await saveAccess(
+          request(
+            "/api/studio/simulation/access",
+            { password },
+            { "if-match": "0" },
+          ),
+        )
+      ).status,
+      401,
+    );
+    const result = await access.saveNetworkAccess(
+      { password },
+      0,
+      "owner@example.com",
+    );
+    assert.deepEqual(result, {
+      revision: 1,
+      passwordStored: true,
+      enabled: true,
+    });
+    const rows = JSON.stringify(
+      database.sqlite.prepare("SELECT * FROM editorial_settings").all(),
+    );
+    assert(!rows.includes(password));
+    assert(!JSON.stringify(result).includes("hash"));
+    assert.equal(
+      (
+        await unlock(
+          request(
+            "/api/simulation/access",
+            { password },
+            { origin: "https://foreign.invalid" },
+          ),
+        )
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await unlock(
+          request("/api/simulation/access", {
+            password: "not the real invitation",
+          }),
+        )
+      ).status,
+      401,
+    );
+    const response = await unlock(
+      request("/api/simulation/access", { password }),
+    );
+    assert.equal(response.status, 200);
+    const form = await unlock(
+      new Request("http://localhost:3000/api/simulation/access", {
+        method: "POST",
+        headers: {
+          origin: "http://localhost:3000",
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ password }),
+      }),
+    );
+    assert.equal(form.status, 303);
+    assert.equal(form.headers.get("location"), "/simulation");
+    assert(!form.headers.get("location").includes(password));
+    const cookie = response.headers.get("set-cookie");
+    assert.match(cookie, /^__Host-anish_network_access=/);
+    assert.match(cookie, /HttpOnly; Secure; SameSite=Strict/);
+    assert.equal(await access.hasNetworkAccess(cookie), true);
+    assert.equal(
+      await access.hasNetworkAccess(cookie, Date.now() + 3600001),
+      false,
+    );
+    assert.equal(
+      await access.hasNetworkAccess(cookie.replace(/=\d/, "=9")),
+      false,
+    );
+    assert.equal(
+      (
+        await catalogGet(
+          new Request("http://localhost:3000/api/simulation/catalog", {
+            headers: { cookie },
+          }),
+        )
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await handleConversationSetup(
+          request(
+            "/api/studio/simulation/configuration",
+            { enabled: true },
+            { cookie, "if-match": "0" },
+          ),
+          "save",
+        )
+      ).status,
+      401,
+    );
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__.SITE_URL = "http://localhost:4000";
+    assert.equal(await access.hasNetworkAccess(cookie), false);
+    globalThis.__ANISH_CONNECTOR_TEST_ENV__.SITE_URL = "http://localhost:3000";
+    await access.saveNetworkAccess(
+      { password: "a different synthetic invitation" },
+      1,
+      "owner@example.com",
+    );
+    assert.equal(await access.hasNetworkAccess(cookie), false);
+    const next = await access.unlockNetwork("a different synthetic invitation");
+    await access.saveNetworkAccess({ enabled: false }, 2, "owner@example.com");
+    assert.equal(await access.hasNetworkAccess(next), false);
+    assert.equal(
+      (
+        await catalogGet(
+          new Request("http://localhost:3000/api/simulation/catalog", {
+            headers: { cookie: next },
+          }),
+        )
+      ).status,
+      401,
+    );
+    await assert.rejects(
+      access.saveNetworkAccess({ password: "short" }, 3, "owner@example.com"),
+      { code: "password_invalid" },
+    );
+    const lock = await unlock(
+      request("/api/simulation/access", { lock: true }),
+    );
+    assert.match(lock.headers.get("set-cookie"), /Max-Age=0/);
+  }));
+
+test("hosted feature fails closed without a password even for the owner; guessing is globally bounded", () =>
+  withDatabase(async () => {
+    Object.assign(globalThis.__ANISH_CONNECTOR_TEST_ENV__, {
+      SIMULATION_EXPERIENCE_MODE: "conversation-v2",
+      SIMULATION_SESSION_HMAC_KEY: Buffer.alloc(32, 7).toString("base64"),
+      DEPLOYMENT_TIER: "production",
+      OWNER_EMAILS: "owner@example.com",
+    });
+    globalThis.__CONVERSATION_TEST_USER__ = { email: "owner@example.com" };
+    try {
+      assert.equal(
+        (
+          await catalogGet(
+            new Request("https://example.com/api/simulation/catalog"),
+          )
+        ).status,
+        401,
+      );
+      for (let i = 0; i < 20; i++)
+        await assert.rejects(
+          access.unlockNetwork("synthetic invalid password"),
+          { code: "access_denied" },
+        );
+      await assert.rejects(access.unlockNetwork("synthetic invalid password"), {
+        code: "access_limited",
+      });
+    } finally {
+      delete globalThis.__CONVERSATION_TEST_USER__;
+    }
+  }));
+
+test("Gemini actually uses a bounded read tool and each model step claims budget", async () => {
+  const original = globalThis.fetch;
+  const candidate = conversationSources(bundle)[0];
+  let calls = 0,
+    claims = 0,
+    reads = 0;
+  const archive = {
+    claim: async () => {
+      claims++;
+      return true;
+    },
+    revalidate: async () => true,
+    search: async () => [],
+    read: async () => {
+      reads++;
+      return [candidate];
+    },
+    compare: async () => ({ sources: [], sharedMetadata: [] }),
+    sources: () => [candidate],
+    operations: [],
+  };
+  globalThis.fetch = async () => {
+    calls++;
+    return Response.json({
+      candidates: [
+        {
+          content: {
+            role: "model",
+            parts:
+              calls === 1
+                ? [
+                    {
+                      functionCall: {
+                        name: "read_source",
+                        args: { id: candidate.id },
+                      },
+                    },
+                  ]
+                : [
+                    {
+                      text: JSON.stringify({
+                        sections: [
+                          {
+                            text: "The source describes inspectable tool interfaces.",
+                            sourceIds: [candidate.id],
+                          },
+                        ],
+                        reaction: "I brought a magnifying glass.",
+                        highlightIds: [candidate.id],
+                      }),
+                    },
+                  ],
+          },
+          finishReason: "STOP",
+        },
+      ],
+      usageMetadata: {
+        promptTokenCount: 1,
+        candidatesTokenCount: 1,
+        totalTokenCount: 2,
+      },
+    });
+  };
+  try {
+    const result = await provider.generateGroundedDialogue(
+      "synthetic-test-only",
+      "Explain this project",
+      [candidate],
+      "patch",
+      [],
+      AbortSignal.timeout(3000),
+      archive,
+    );
+    assert.ok(result);
+    assert.equal(calls, 2);
+    assert.equal(claims, 2);
+    assert.equal(reads, 1);
+    assert.deepEqual(archive.operations, ["Source read"]);
+    archive.claim = async () => false;
+    await assert.rejects(
+      provider.generateGroundedDialogue(
+        "synthetic-test-only",
+        "Explain this project",
+        [candidate],
+        "patch",
+        [],
+        AbortSignal.timeout(3000),
+        archive,
+      ),
+    );
+    assert.equal(calls, 2, "no provider call after denied budget");
+    archive.revalidate = async () => false;
+    await assert.rejects(
+      provider.generateGroundedDialogue(
+        "synthetic-test-only",
+        "Explain this project",
+        [candidate],
+        "patch",
+        [],
+        AbortSignal.timeout(3000),
+        archive,
+      ),
+    );
+    assert.equal(calls, 2, "no provider call after source revocation");
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("archive tools withhold unknown sources and detect changed evidence", () =>
+  withDatabase(async () => {
+    const initial = conversationSources(bundle).slice(0, 2);
+    let visible = initial;
+    const archive = createArchiveTools(
+      initial,
+      async (ids) => visible.filter((source) => ids.includes(source.id)),
+      async () => true,
+    );
+    assert.equal(await archive.revalidate(), true);
+    assert.deepEqual(await archive.read("private:unknown"), []);
+    visible = [initial[0]];
+    assert.equal(await archive.revalidate(), false);
+    assert.deepEqual(await archive.read(initial[1].id), []);
   }));
 
 test("HTTP session and manual turns work without Gemini, preserve revisions, and never store text", () =>

@@ -5,16 +5,22 @@ import {
   type Program,
 } from "@/lib/simulation/network/battle";
 import styles from "./Network.module.css";
+import { ChipVisual } from "./ChipVisual";
+import type { Discovery } from "@/lib/simulation/network/catalog-contract";
 export function CustomPanel({
   programs,
   selected,
   setSelected,
   confirm,
+  equipped,
+  catalog,
 }: {
   programs: Program[];
   selected: Program[];
   setSelected(value: Program[]): void;
   confirm(): void;
+  equipped: Array<{ program: Program; discoveryId: string | null }>;
+  catalog: Discovery[];
 }) {
   const options = [...new Set(programs)];
   return (
@@ -25,6 +31,11 @@ export function CustomPanel({
       </p>
       <div className={styles.customChips}>
         {options.map((program) => {
+          const discovery = catalog.find(
+            (item) =>
+              item.id ===
+              equipped.find((slot) => slot.program === program)?.discoveryId,
+          );
           const info = PROGRAM_INFO[program],
             index = selected.indexOf(program),
             next =
@@ -34,6 +45,7 @@ export function CustomPanel({
           return (
             <button
               key={program}
+              aria-label={`${info.code === "*" ? "★" : info.code} ${program}${discovery ? ` · ${discovery.title}` : ""} · ${info.effect}`}
               aria-pressed={index >= 0}
               disabled={index < 0 && !compatibleHand(next)}
               onClick={() => setSelected(next)}
@@ -41,10 +53,9 @@ export function CustomPanel({
               <span className={styles.chipCode}>
                 {info.code === "*" ? "★" : info.code}
               </span>
-              <span className={styles.chipArt} aria-hidden="true">
-                {info.icon}
-              </span>
-              <strong>{program}</strong>
+              <ChipVisual program={program} discovery={discovery} />
+              <strong>{discovery?.title ?? program}</strong>
+              <span>Game program · {program}</span>
               <span className={styles.chipPower}>{info.power}</span>
               <small>{info.effect}</small>
               <span className={styles.chipOrder}>

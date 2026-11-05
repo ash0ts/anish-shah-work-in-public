@@ -57,6 +57,7 @@ type Exchange = RecentTurn & {
   source: string;
   reaction: string;
   cards: ConversationReply["cards"];
+  operations?: string[];
 };
 function Portrait({
   character,
@@ -83,11 +84,15 @@ export function Network({
   featuredIds,
   synthetic,
   previewWork,
+  geminiReady = false,
+  passwordProtected = false,
 }: {
   initial: CatalogPage;
   featuredIds: string[];
   synthetic: boolean;
   previewWork: Discovery[];
+  geminiReady?: boolean;
+  passwordProtected?: boolean;
 }) {
   const [state, send] = useMachine(networkMachine);
   const context = state.context,
@@ -319,7 +324,7 @@ export function Network({
           : "work";
     setSearch("");
     void load(domain);
-    open("FOLDER");
+    open("CHAT");
   }
   async function load(nextDomain: CatalogDomain, q = "", number = 1) {
     const sequence = ++fetchSequence.current;
@@ -345,6 +350,10 @@ export function Network({
         `/api/simulation/catalog?${new URLSearchParams({ domain: nextDomain, q, page: String(number) })}`,
         { cache: "no-store" },
       );
+      if (response.status === 401) {
+        window.location.replace("/simulation");
+        return;
+      }
       if (!response.ok) throw new Error("catalog");
       const data = (await response.json()) as CatalogPage;
       if (sequence !== fetchSequence.current) return;
@@ -465,6 +474,12 @@ export function Network({
           signal: controller.signal,
         });
         if (!response.ok) {
+          if (response.status === 401) {
+            setMessages([]);
+            setCatalog([]);
+            window.location.replace("/simulation");
+            return;
+          }
           sessionRevision.current = null;
           if (response.status === 409) {
             setMessages([]);
@@ -504,6 +519,7 @@ export function Network({
               character: context.character,
               source: "Gemini · sourced reply",
               cards: data.cards,
+              operations: data.operations,
             }
           : authored(text, data.cards, data.status);
       }
@@ -592,6 +608,47 @@ export function Network({
           </Link>
         </div>
       </header>
+      <section
+        className={styles.companionLink}
+        aria-label="Companion connection"
+      >
+        <Portrait character={context.character} />
+        <div>
+          <strong>
+            {character.name} /{" "}
+            {synthetic
+              ? "Authored demo · no Gemini"
+              : geminiReady
+                ? "Gemini connected · owner preview"
+                : "Archive mode · Gemini not connected for this visitor"}
+          </strong>
+          <p>
+            {synthetic
+              ? "This preview demonstrates the game. Connect Gemini in local Studio to test real conversation."
+              : geminiReady
+                ? "Ask a question. Your companion can search, read sources, and compare documented connections."
+                : "Explore saved discoveries and authored answers. The owner can connect Gemini in Studio."}
+          </p>
+        </div>
+        <button disabled={!ready} onClick={() => open("CHAT")}>
+          {copy["chat-label"]} ↗
+        </button>
+        {passwordProtected && (
+          <button
+            onClick={async () => {
+              const response = await fetch("/api/simulation/access", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ lock: true }),
+              });
+              if (response.ok) window.location.replace("/simulation");
+              else setNotice("Could not lock the network. Try again.");
+            }}
+          >
+            Lock network
+          </button>
+        )}
+      </section>
       <section
         ref={arena}
         className={styles.viewport}
@@ -912,6 +969,8 @@ export function Network({
         {panel === "custom" && (
           <CustomPanel
             programs={context.equipped.map((slot) => slot.program)}
+            equipped={context.equipped}
+            catalog={catalog}
             selected={selectedPrograms}
             setSelected={setQueue}
             confirm={() => {
@@ -997,6 +1056,7 @@ export function Network({
         {panel === "dialogue" && (
           <div className={styles.chat}>
             <p>{CONVERSATION_MESSAGES.processing}</p>
+            <button onClick={() => open("FOLDER")}>Browse this station</button>
             <p>
               {selected.length
                 ? `Attached: ${selected.map((item) => item.title).join(" + ")}`
@@ -1015,6 +1075,9 @@ export function Network({
                     {CHARACTERS[m.character].name} · {m.source}
                   </small>
                   <p>{m.answer}</p>
+                  {m.operations && m.operations.length > 0 && (
+                    <small>Used: {m.operations.join(" → ")}</small>
+                  )}
                   <p className={styles.reaction}>
                     Fictional reaction: {m.reaction}
                   </p>

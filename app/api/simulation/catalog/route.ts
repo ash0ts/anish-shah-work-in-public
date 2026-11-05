@@ -3,11 +3,11 @@ import { readSimulationCatalog } from "@/lib/server/simulation/conversation/cata
 import {
   CONVERSATION_HEADERS,
   conversationFailure,
-  conversationOwner,
+  conversationAccess,
 } from "@/lib/server/simulation/conversation/http";
 export async function GET(request: Request) {
   try {
-    const owner = await conversationOwner(request);
+    const owner = await conversationAccess(request);
     if (!owner.ok) return owner.response;
     const query = catalogQuery(new URL(request.url));
     if (!query)

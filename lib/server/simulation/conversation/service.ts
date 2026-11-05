@@ -9,6 +9,7 @@ import {
 } from "@/lib/simulation/conversation-contract";
 import { getPublicContentView } from "../../public-content";
 import { runtimeValue } from "../../runtime-env";
+import { authorizeOwnerApi } from "../../owner-auth";
 import {
   claimSimulationDailyBudget,
   recordSimulationFallback,
@@ -24,6 +25,8 @@ import { resolveSavedSources } from "./catalog";
 import type { CharacterId } from "@/lib/simulation/network/characters";
 import { conversationSources } from "./grounding";
 import { generateGroundedDialogue } from "./provider";
+import { createArchiveTools } from "./archive-tools";
+import { hasNetworkAccess, readNetworkAccess } from "./access";
 import {
   conversationInputAllowed,
   conversationSourceAllowed,
@@ -154,6 +157,8 @@ export async function submitConversation(
   let source: ConversationReply["source"] = replay ? "replayed" : "archive";
   let status: ConversationReply["status"] = "answered";
   let dialogue: ConversationReply["dialogue"];
+  let operations: string[] = [];
+  let usedSources: ConversationSource[] = [];
   if (replay || turn.inspectId) {
     selected = session.state.lastSourceIds.length
       ? session.state.lastSourceIds
@@ -178,28 +183,59 @@ export async function submitConversation(
       .slice(0, CONVERSATION_LIMITS.responseCards)
       .map((card) => card.id);
     if (!selected.length) status = "no_evidence";
-    else {
+    {
       const config = await readGeminiConfiguration();
       const key =
-        config.enabled && config.tested ? await decryptGeminiKey(config) : null;
+        config.enabled && config.tested && (await authorizeOwnerApi()).ok
+          ? await decryptGeminiKey(config)
+          : null;
       if (key) {
-        const sessionBudget = await claimConversationCall(database, session);
-        const dailyBudget =
-          sessionBudget &&
-          (await claimSimulationDailyBudget(
-            database,
-            CONVERSATION_LIMITS.dailyCalls,
-          ));
-        if (!dailyBudget) status = "budget";
-        else {
+        let calls = session.calls;
+        let budgetExhausted = false;
+        const archive = createArchiveTools(
+          candidates.slice(0, 4),
+          activeConversationSources,
+          async () => {
+            if (
+              (await readNetworkAccess()) &&
+              !(await hasNetworkAccess(request.headers.get("cookie") ?? ""))
+            )
+              throw new ConversationError("password_required", 401);
+            if ((await readGeminiConfiguration()).revision !== config.revision)
+              return false;
+            const allowed = await claimConversationCall(database, {
+              ...session,
+              calls,
+            });
+            if (!allowed) {
+              budgetExhausted = true;
+              return false;
+            }
+            calls++;
+            const daily = await claimSimulationDailyBudget(
+              database,
+              CONVERSATION_LIMITS.dailyCalls,
+            );
+            if (!daily) budgetExhausted = true;
+            return daily;
+          },
+        );
+        const revalidateSources = archive.revalidate;
+        archive.revalidate = async () =>
+          (await readGeminiConfiguration()).revision === config.revision &&
+          (!(await readNetworkAccess()) ||
+            (await hasNetworkAccess(request.headers.get("cookie") ?? ""))) &&
+          (await revalidateSources());
+        {
           try {
             const result = await generateGroundedDialogue(
               key,
               turn.message,
-              candidates,
+              archive.sources(),
               turn.character,
               turn.context,
               AbortSignal.timeout(CONVERSATION_LIMITS.deadlineMilliseconds),
+              archive,
             );
             if (result === null) status = "unavailable";
             else {
@@ -210,17 +246,29 @@ export async function submitConversation(
                 ),
               ].slice(0, 3);
               source = "gemini";
+              status = "answered";
               if (!selected.length) status = "no_evidence";
             }
           } catch {
-            status = "unavailable";
+            status = budgetExhausted ? "budget" : "unavailable";
           }
+          usedSources = archive.sources();
+          operations = archive.operations;
         }
       }
     }
   }
   // Reproject after generation: revocation or hiding during a request wins.
-  const fresh = await activeConversationSources(requestedIds);
+  if (
+    (await readNetworkAccess()) &&
+    !(await hasNetworkAccess(request.headers.get("cookie") ?? ""))
+  )
+    throw new ConversationError("password_required", 401);
+  for (const item of usedSources) byId.set(item.id, item);
+  const fresh = await activeConversationSources([
+    ...requestedIds,
+    ...usedSources.map((item) => item.id),
+  ]);
   const freshById = new Map(fresh.map((card) => [card.id, card]));
   if (
     dialogue &&
@@ -269,6 +317,6 @@ export async function submitConversation(
     visibleIds: fresh.map((card) => card.id),
     cards,
     status,
-    ...(dialogue ? { dialogue } : {}),
+    ...(dialogue ? { dialogue, operations } : {}),
   };
 }

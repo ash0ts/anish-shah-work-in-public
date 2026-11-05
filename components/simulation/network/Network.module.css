@@ -779,23 +779,14 @@
 .customChips button:disabled {
   opacity: 0.42;
 }
-.chipArt {
-  grid-column: 1/-1;
-  height: 60px;
-  display: grid;
-  place-items: center;
-  background: repeating-linear-gradient(0deg, #203b68 0 2px, #294f8a 2px 5px);
-  color: #e1ff9a;
-  font:
-    48px ui-monospace,
-    monospace;
-  border-radius: 5px;
-}
 .chipCode {
   position: absolute;
   top: 17px;
   left: 17px;
   color: #fff;
+  background: #14283e;
+  padding: 2px 6px;
+  border-radius: 3px;
   font:
     20px ui-monospace,
     monospace;
@@ -1168,5 +1159,100 @@
     scroll-behavior: auto !important;
     animation: none !important;
     transition: none !important;
+  }
+}
+.accessGate {
+  max-width: 36rem;
+  margin: 8vh auto;
+  padding: 24px;
+  border: 2px solid #295dff;
+  background: #edf3ff;
+  color: #152239;
+}
+.accessGate form {
+  display: grid;
+  gap: 12px;
+}
+.accessGate input,
+.accessGate button {
+  min-height: 48px;
+  min-width: 0;
+  font: inherit;
+  padding: 10px;
+}
+.companionLink {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  border-bottom: 2px solid #2b4370;
+  background: #e0ebf8;
+  color: #14283e;
+}
+.companionLink > div {
+  flex: 1;
+  min-width: 0;
+}
+.companionLink p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.companionLink button {
+  min-height: 44px;
+}
+.discoveryArt {
+  display: grid;
+  justify-items: center;
+  width: 100%;
+  color: #0d507d;
+  background: linear-gradient(135deg, #c4f5f0, #91b9fa);
+  border: 1px solid currentColor;
+  grid-column: 1 / -1;
+}
+.discoveryArt svg {
+  display: block;
+  width: min(100%, 160px);
+  height: auto;
+}
+.discoveryArt > span {
+  font: 10px var(--font-mono, monospace);
+  padding: 3px;
+  letter-spacing: 0.1em;
+}
+.discoveryArt[data-program="Guard"],
+.discoveryArt[data-program="Repair"] {
+  color: #275700;
+  background: linear-gradient(135deg, #ebffb5, #a9d6a8);
+}
+.discoveryArt[data-program="Sweep"],
+.discoveryArt[data-program="Snare"] {
+  color: #61285f;
+  background: linear-gradient(135deg, #ffd7ea, #b5b3f7);
+}
+.slot > strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .companionLink {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+  }
+  .companionLink > div {
+    flex-basis: 70%;
+  }
+  .companionLink > .portrait {
+    display: none;
+  }
+}
+@media (forced-colors: active) {
+  .accessGate,
+  .companionLink,
+  .discoveryArt {
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
   }
 }

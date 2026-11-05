@@ -71,7 +71,7 @@ content attestation. Initial artwork ceiling: 1 MiB. Deferred game JavaScript:
 
 ## Catalog and permission boundary
 
-Owner-only `GET /api/simulation/catalog` accepts closed domains (Work,
+Owner/invitation-protected `GET /api/simulation/catalog` accepts closed domains (Work,
 MyAnimeList, Hardcover, Steam, Spotify, Discogs), eighty-character search and
 twenty-four-item pages. Unknown parameters fail. It reads accepted snapshots
 through existing publication/privacy gates; it never refreshes or scrapes.
@@ -99,10 +99,18 @@ owner-configured local connections and explicit Studio synchronization.
 The `network-v3` turn/session contract is versioned independently from the retained
 `conversation-v2` owner-preview mode. Older sessions restart. Requests contain one
 allowlisted character, selected source IDs, an 800-character question and at most
-four bounded recent turns. One model call serves the selected character.
+four bounded recent turns. One selected character uses a bounded read-only agent
+loop, not separate agents for the cast. The always-visible companion bar states
+whether the visitor has live Gemini, authored archive mode, or synthetic demo mode.
 
 Deterministic retrieval uses visible Work, approved About, Sources and specifically
-selected collection items with both permissions. At most eight sources enter a
+selected collection items with both permissions. Gemini can call `search_archive`,
+`read_source`, and `compare_sources`. Search reads the accepted local snapshot,
+never the provider API. Comparisons return only actual shared metadata. At most
+four tools and three model calls run per submitted question; each model step
+claims session and daily budget before dispatch. Tool results and sources are
+revalidated between steps. The UI shows only executed tool labels, not model
+reasoning or private inputs. At most eight sources enter a
 24,000-byte prompt. Qualifiers are never truncated. Prior questions supply context,
 not evidence; prior generated answers are not forwarded as factual grounding.
 Snapshot-derived IDs change on replacement. Recheck visibility, versions and
@@ -125,6 +133,22 @@ produces labelled authored search and useful links.
 5. Enable owner preview; this does not activate public AI.
 6. In the same 4N1SH panel, record collection uses and private permission references.
    Real data requires an accepted local snapshot and applicable public-use approval.
+7. Save a unique invitation passphrase of at least sixteen characters in **Private
+   network access**. Share it privately. The unlock page protects both SSR content
+   and session, turn, and catalog APIs; the native form also works without JavaScript.
+   Invited guests use authored archive exploration. Live Gemini still requires the
+   owner identity, so a feature password never authorizes Google processing for a
+   new audience or access to Studio.
+
+Only a salted, environment-bound scrypt hash is stored (`N=16384,r=8,p=5`). A
+one-hour HMAC-signed, Secure/HttpOnly/SameSite=Strict host cookie contains a random
+nonce, expiry and configuration revision. Password rotation or locking invitations
+revokes existing cookies immediately. The Worker throttles callers; a single
+bounded D1 settings row additionally caps password hashing at twenty attempts per
+minute globally. Neither passwords nor cookie tokens enter logs or responses.
+Missing gate configuration fails closed on staging/production, even for owners.
+Local development without configured invitations retains its owner-only boundary.
+Synthetic previews remain labelled static demos, with no invitation or live APIs.
 
 The pinned model is `gemini-3.6-flash`, using `@ai-sdk/google` directly from the
 Worker. Adapter 4.0.35 matches AI SDK 7.0.50; upgrade them together. There is no
@@ -134,20 +158,22 @@ tests reserve a revision before spending.
 
 ## Session and persistence
 
-Retain exact owner identity, same-origin write checks, rate limits, bounded bodies,
-strict schemas and If-Match. Hosted preview APIs and production fail closed.
+Retain exact owner identity for Studio and live Gemini, same-origin write checks,
+rate limits, bounded bodies, strict schemas and If-Match. Hosted preview APIs fail
+closed. Production configuration remains disabled; a future reviewed activation
+must also pass the password gate. Saving an invitation does not deploy or activate it.
 Host-only Secure/HttpOnly/SameSite=Strict cookies are HMAC-addressed in D1.
 
 Sessions expire after one hour. Twenty model calls per session; one hundred per
 day including tests. A fifteen-second reservation surrounds a ten-second deadline.
-No tools or automatic retries. Request IDs reserve before spending; replay cannot
+No write tools, arbitrary URLs, or automatic retries. Request IDs reserve before spending; replay cannot
 spend twice even after interruption. Revision conflicts require recovery.
 
 D1 stores only scene/source IDs, counters, replay metadata and expiry. Questions,
 generated prose and transcripts stay in browser memory and reset on reload.
 Optional device progress is off by default and strictly limited to bounded
 discovery IDs, programs, completed encounters and preferences. Resume revalidates
-IDs through the same owner catalog, in batches of at most twenty-four IDs.
+IDs through the same protected catalog, in batches of at most twenty-four IDs.
 An unavailable verification leaves the stored IDs untouched; revoked or replaced
 records are removed after a successful read. Reset deletes progress. No collection
 contents, keys or transcripts persist.

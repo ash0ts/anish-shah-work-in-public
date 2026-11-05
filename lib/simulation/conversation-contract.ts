@@ -21,6 +21,7 @@ export type ConversationReply = {
   visibleIds: string[];
   cards: ConversationSource[];
   dialogue?: { sections: DialogueSection[]; reaction: string; highlightIds: string[] };
+  operations?: string[];
   status: "answered" | "no_evidence" | "screened" | "budget" | "unavailable";
 };
 export const CONVERSATION_LIMITS = {

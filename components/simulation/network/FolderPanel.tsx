@@ -14,6 +14,7 @@ import {
 } from "@/lib/simulation/network/catalog-contract";
 import { SITE_COPY } from "@/lib/copy";
 import styles from "./Network.module.css";
+import { ChipVisual } from "./ChipVisual";
 const copy = SITE_COPY.simulation;
 const domainLabels: Record<CatalogDomain, string> = {
   work: "Workshop",
@@ -60,6 +61,14 @@ export function FolderPanel({
           {context.equipped.map((slot, index) => (
             <div key={index} className={styles.slot}>
               <span>0{index + 1}</span>
+              <ChipVisual
+                program={slot.program}
+                discovery={catalog.find((item) => item.id === slot.discoveryId)}
+              />
+              <strong>
+                {catalog.find((item) => item.id === slot.discoveryId)?.title ??
+                  `${slot.program} / program chip`}
+              </strong>
               <label>
                 Program
                 <select
@@ -78,10 +87,9 @@ export function FolderPanel({
                   ))}
                 </select>
               </label>
-              <small>
-                {catalog.find((item) => item.id === slot.discoveryId)?.title ??
-                  "Original program chip"}
-              </small>
+              {!slot.discoveryId && (
+                <small>Inspect a discovery below to attach its identity.</small>
+              )}
               <span>Game effect: {PROGRAM_INFO[slot.program].effect}</span>
             </div>
           ))}

@@ -18,6 +18,7 @@ import {
   writeGeminiConfiguration,
 } from "./settings";
 import { testGeminiConnection } from "./provider";
+import { readNetworkAccess, accessSummary } from "./access";
 import {
   googlePermissionSummaries,
   permissionInput,
@@ -43,6 +44,7 @@ export async function handleConversationSetup(
           await readGeminiConfiguration(),
         ),
         permissions: await googlePermissionSummaries(),
+        access: accessSummary(await readNetworkAccess()),
       });
     const revision = requestRevision(request);
     const body = await readBoundedJsonBody(request, { maxBytes: 2_048 });

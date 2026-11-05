@@ -9,6 +9,7 @@ import {
 import { CONVERSATION_VERSION } from "@/lib/simulation/conversation-contract";
 import { ConversationError } from "./settings";
 import { CHARACTER_IDS } from "@/lib/simulation/network/characters";
+import { hasNetworkAccess, readNetworkAccess } from "./access";
 import {
   currentConversation,
   endConversation,
@@ -34,11 +35,10 @@ export function requestRevision(request: Request) {
   return Number(raw);
 }
 export async function conversationOwner(request: Request, write = false) {
-  // Hosted public activation is deliberately unavailable in this release.
+  // Studio configuration always retains exact owner authentication.
   const tier = runtimeValue("DEPLOYMENT_TIER");
   if (
     tier === "preview" ||
-    tier === "production" ||
     runtimeValue("SIMULATION_EXPERIENCE_MODE") !== "conversation-v2"
   )
     throw new ConversationError("not_found", 404);
@@ -54,6 +54,30 @@ export async function conversationOwner(request: Request, write = false) {
       result.response.headers.set(name, value);
   }
   return result;
+}
+/** Invitations grant this feature only, never Studio or its configuration. */
+export async function conversationAccess(request: Request, write = false) {
+  const tier = runtimeValue("DEPLOYMENT_TIER");
+  if (
+    tier === "preview" ||
+    runtimeValue("SIMULATION_EXPERIENCE_MODE") !== "conversation-v2"
+  )
+    throw new ConversationError("not_found", 404);
+  if (
+    write &&
+    (request.headers.get("origin") !== new URL(request.url).origin ||
+      rejectCrossOriginWrite(request))
+  )
+    throw new ConversationError("same_origin_required", 403);
+  const gate = await readNetworkAccess();
+  if (gate || tier === "production" || tier === "staging") {
+    if (!(await hasNetworkAccess(request.headers.get("cookie") ?? "")))
+      throw new ConversationError("password_required", 401);
+    return { ok: true as const };
+  }
+  // Unconfigured development retains the existing owner boundary; it is never
+  // an anonymous bypass. Once saved, even the owner exercises the gate.
+  return conversationOwner(request, write);
 }
 const sessionInput = z
   .object({ version: z.literal(CONVERSATION_VERSION) })
@@ -94,7 +118,7 @@ export async function handleConversation(
   action: "get" | "start" | "end" | "turn",
 ) {
   try {
-    const owner = await conversationOwner(request, action !== "get");
+    const owner = await conversationAccess(request, action !== "get");
     if (!owner.ok) return owner.response;
     if (action === "get")
       return Response.json(await currentConversation(request), {

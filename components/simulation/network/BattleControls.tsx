@@ -26,7 +26,7 @@ export function BattleControls({
   capability: boolean;
   still: boolean;
   send: ActorRefFrom<typeof networkMachine>["send"];
-  open(type: "CUSTOM"): void;
+  open(type: "CUSTOM" | "CHAT"): void;
   paused: boolean;
 }) {
   const held = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -260,6 +260,7 @@ export function BattleControls({
         <button onClick={() => send({ type: "EXIT_BATTLE" })}>
           Leave battle
         </button>
+        <button onClick={() => open("CHAT")}>Ask companion</button>
         <span className={styles.srOnly} role="status">
           {b.outcome !== "active"
             ? b.event

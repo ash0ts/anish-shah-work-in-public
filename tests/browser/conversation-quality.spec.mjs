@@ -86,6 +86,40 @@ test("catalog paging, source inspection, equipment, pair metadata and focus rest
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(button(page, "Chip folder")).toBeFocused();
+  await page.getByText("Optional encounters · 0/3", { exact: true }).click();
+  await button(page, "1. First contact").click();
+  await expect(dialog.getByRole("button", { name: /A Pulse/ })).toContainText(
+    /MCP/i,
+  );
+  await close(page);
+});
+test("companion is explicit about authored mode and stays reachable during combat", async ({
+  page,
+}) => {
+  await ready(page);
+  await expect(
+    page.getByRole("region", { name: "Companion connection" }),
+  ).toContainText("Authored demo · no Gemini");
+  await page.getByText("Optional encounters · 0/3", { exact: true }).click();
+  await button(page, "1. First contact").click();
+  await button(page, "Battle start →").click();
+  await button(page, "Ask companion").click();
+  const tick = await page
+    .locator("[data-battle-tick]")
+    .getAttribute("data-battle-tick");
+  await page
+    .getByLabel("Ask about this discovery", { exact: true })
+    .fill("What does MCP do?");
+  await button(page, "Send question").click();
+  await expect(page.getByRole("log")).toContainText("Authored archive reply");
+  await expect(page.locator("[data-battle-tick]")).toHaveAttribute(
+    "data-battle-tick",
+    tick,
+  );
+  await close(page);
+  await expect(
+    page.getByRole("region", { name: "Battle controls" }),
+  ).toBeVisible();
 });
 test("all five fixture collections page on demand; exploration and authored chat spend nothing", async ({
   page,
@@ -393,6 +427,8 @@ test("touch navigation and station controls work at 390px", async ({
   const page = await context.newPage();
   await ready(page);
   await button(page, "02 / Media archive").tap();
+  await expect(page.getByRole("dialog")).toContainText("INDEX / messenger");
+  await button(page, "Browse this station").tap();
   await expect(page.getByRole("dialog")).toContainText("26 discoveries");
   await close(page);
   await button(page, "Down").tap();

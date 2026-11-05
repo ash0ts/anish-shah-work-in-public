@@ -36,6 +36,11 @@ const errors: Record<string, string> = {
 };
 export function GeminiSetup() {
   const [config, setConfig] = useState<Configuration | null>(null);
+  const [access, setAccess] = useState<{
+    revision: number;
+    passwordStored: boolean;
+    enabled: boolean;
+  } | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,6 +53,7 @@ export function GeminiSetup() {
     const data = await response.json();
     setConfig(data.configuration);
     setPermissions(data.permissions);
+    setAccess(data.access);
   }
   useEffect(() => {
     const controller = new AbortController();
@@ -62,6 +68,7 @@ export function GeminiSetup() {
       .then((data) => {
         setConfig(data.configuration);
         setPermissions(data.permissions);
+        setAccess(data.access);
       })
       .catch(() => {
         if (!controller.signal.aborted)
@@ -102,13 +109,15 @@ export function GeminiSetup() {
       if (data.configuration) setConfig(data.configuration);
       else await refresh();
       setMessage(
-        data.test === "passed"
-          ? "Connection verified. Enable owner preview when ready."
-          : data.test === "failed"
-            ? "The connection test failed. Check the key, model access, and billing, then test again."
-            : data.test === "budget"
-              ? "The daily model budget is used. Test again tomorrow."
-              : "Saved. Public access has not changed.",
+        data.access
+          ? "Invitation updated. Previous guest sessions were revoked."
+          : data.test === "passed"
+            ? "Connection verified. Enable owner preview when ready."
+            : data.test === "failed"
+              ? "The connection test failed. Check the key, model access, and billing, then test again."
+              : data.test === "budget"
+                ? "The daily model budget is used. Test again tomorrow."
+                : "Saved. Public access has not changed.",
       );
       return true;
     } catch {
@@ -246,6 +255,66 @@ export function GeminiSetup() {
       </div>
       {config ? (
         <div>
+          <fieldset>
+            <legend>Private network access</legend>
+            <p>
+              {access?.enabled
+                ? "Password required. Changing it revokes every existing invitation session."
+                : "Set an invitation password before sharing this preview."}{" "}
+              Studio still requires owner sign-in. Invited guests get archive
+              exploration; live Gemini remains owner-only until audience and
+              processing review.
+            </p>
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (!access) return;
+                const form = event.currentTarget;
+                const password = String(
+                  new FormData(form).get("password") ?? "",
+                );
+                if (await mutate("access", { password }, access.revision))
+                  form.reset();
+              }}
+            >
+              <label>
+                {access?.passwordStored
+                  ? "Replace invitation password"
+                  : "Invitation password"}
+                <input
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={16}
+                  maxLength={128}
+                  required
+                />
+              </label>
+              <p>
+                Use a unique passphrase of at least 16 characters. It is hashed,
+                never returned, and grants access for one hour.
+              </p>
+              <button disabled={busy || !access}>
+                Save invitation password
+              </button>
+            </form>
+            {access?.passwordStored && (
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void mutate(
+                    "access",
+                    { enabled: !access.enabled },
+                    access.revision,
+                  )
+                }
+              >
+                {access.enabled
+                  ? "Lock all invitations"
+                  : "Reopen password access"}
+              </button>
+            )}
+          </fieldset>
           {!config.keyStored ? (
             <form onSubmit={saveKey}>
               <label>
