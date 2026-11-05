@@ -888,15 +888,14 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
       selector: ".canvas",
     },
     {
-      // A one-pixel live status region, not an overflow-masked layout surface.
-      file: "components/simulation/Conversation.module.css",
-      selector: ".srOnly",
+      // The fixed-resolution decorative game has a bounded viewport; text is HTML outside it.
+      file: "components/simulation/network/Network.module.css",
+      selector: ".viewport",
     },
     {
-      // Rounded CRT boundary clips the decorative scan, not a fixed-height
-      // text area. The screen expands with content; viewport tests verify reflow.
-      file: "components/simulation/MediaConsole.module.css",
-      selector: ".screen",
+      // A one-pixel live status region, not an overflow-masked layout surface.
+      file: "components/simulation/network/Network.module.css",
+      selector: ".srOnly",
     },
   ]);
   const timelineCss = await readFile(

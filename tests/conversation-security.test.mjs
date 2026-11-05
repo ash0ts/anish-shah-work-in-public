@@ -28,6 +28,12 @@ const { claimSimulationDailyBudget } = await import(
 const provider = await import(
   "../lib/server/simulation/conversation/provider.ts"
 );
+const { projectSavedDiscoveries } = await import(
+  "../lib/server/simulation/conversation/catalog.ts"
+);
+const { GET: catalogGet } = await import(
+  "../app/api/simulation/catalog/route.ts"
+);
 const cookies = await import("../lib/server/simulation/session-crypto.ts");
 const { simulationExperienceMode } = await import(
   "../lib/server/simulation/mode.ts"
@@ -109,6 +115,192 @@ async function withDatabase(run) {
     database.sqlite.close();
   }
 }
+
+test("game-display and Gemini purposes are separate; legacy summaries cannot broaden silently", () =>
+  withDatabase(async (database) => {
+    database.sqlite
+      .prepare(
+        "INSERT INTO connector_credentials (provider, ciphertext, iv, key_version, credential_label) VALUES ('spotify', 'synthetic', 'synthetic', 'v1', 'synthetic')",
+      )
+      .run();
+    const input = {
+      provider: "spotify",
+      reference: "Reviewed game display only",
+      approvedAt: "2026-01-01T00:00:00.000Z",
+      expiresAt: null,
+      enabled: true,
+      purposes: ["game_display"],
+    };
+    await permissions.saveGooglePermission(input, 0, "owner@example.com");
+    assert.deepEqual(
+      await permissions.verifiedGooglePermissions(database, "game_display"),
+      ["spotify"],
+    );
+    assert.deepEqual(await permissions.verifiedGooglePermissions(database), []);
+    await assert.rejects(
+      permissions.saveGooglePermission(
+        {
+          ...input,
+          reference: undefined,
+          purposes: ["game_display", "google_gemini_processing"],
+        },
+        1,
+        "owner@example.com",
+      ),
+      /reference_required/,
+    );
+    database.sqlite
+      .prepare(
+        "UPDATE editorial_settings SET value_json = json_remove(json_set(value_json, '$.scope', 'collection_summary_processing'), '$.purposes') WHERE key LIKE 'simulation:google-permission:%'",
+      )
+      .run();
+    assert.deepEqual(
+      await permissions.verifiedGooglePermissions(database, "game_display"),
+      [],
+    );
+    assert.deepEqual(await permissions.verifiedGooglePermissions(database), []);
+  }));
+
+test("saved catalog projection is item-level, versioned, timestamped and excludes raw identifiers/artwork", async () => {
+  const base = {
+    syncedAt: "2026-10-01T00:00:00.000Z",
+    profileUrl: "https://example.test/private-account",
+    secret: "never-project",
+    library: [
+      {
+        id: "12",
+        title: "A real saved title",
+        status: "reading",
+        artwork: "https://example.test/private.jpg",
+        email: "private@example.test",
+      },
+    ],
+  };
+  const rows = await projectSavedDiscoveries("hardcover", base, true);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].updatedAt, base.syncedAt);
+  assert.equal(rows[0].stale, true);
+  assert(!JSON.stringify(rows).includes("private"));
+  assert(!JSON.stringify(rows).includes("never-project"));
+  assert.match(rows[0].id, /^saved:hardcover:/);
+  const replaced = await projectSavedDiscoveries(
+    "hardcover",
+    { ...base, syncedAt: "2026-10-02T00:00:00.000Z" },
+    false,
+  );
+  assert.notEqual(rows[0].id, replaced[0].id);
+  const tracks = await projectSavedDiscoveries(
+    "spotify",
+    {
+      syncedAt: base.syncedAt,
+      windows: {
+        short_term: {
+          tracks: [
+            {
+              id: "example",
+              title: "Track",
+              artists: [{ id: "hidden", name: "Artist" }],
+              playCount: 999999,
+            },
+          ],
+        },
+      },
+    },
+    true,
+  );
+  assert.match(tracks[0].limit, /affinity, not play counts/);
+  assert(!JSON.stringify(tracks).includes("999999"));
+  const steam = await projectSavedDiscoveries(
+    "steam",
+    {
+      syncedAt: base.syncedAt,
+      library: [{ appId: "10", title: "Game", totalHoursRounded: 23.2 }],
+    },
+    true,
+  );
+  assert.match(steam[0].text, /23 hours \(rounded\)/);
+});
+
+test("natural dialogue rejects unsourced facts, injected fields, invented numbers and external URLs", () => {
+  const candidates = conversationSources(bundle).slice(0, 4),
+    id = candidates[0].id;
+  const good = {
+    sections: [
+      {
+        text: "This source describes the implementation and keeps its limits beside the claim.",
+        sourceIds: [id],
+      },
+    ],
+    reaction: "A tidy little evidence trail.",
+    highlightIds: [id],
+  };
+  assert(provider.validateGroundedDialogue(good, candidates));
+  for (const bad of [
+    {
+      ...good,
+      sections: [{ text: "Invented claim", sourceIds: ["hidden:source"] }],
+    },
+    {
+      ...good,
+      sections: [{ text: "It reached 900 million users", sourceIds: [id] }],
+    },
+    { ...good, reaction: "Go to https://evil.test" },
+    { ...good, action: "navigate" },
+    {
+      ...good,
+      sections: candidates.map((c) => ({ text: "Claim", sourceIds: [c.id] })),
+    },
+  ])
+    assert.equal(provider.validateGroundedDialogue(bad, candidates), null);
+});
+
+test("catalog GET is owner-only, bounded, read-only and never requests a provider", () =>
+  withDatabase(async () => {
+    Object.assign(globalThis.__ANISH_CONNECTOR_TEST_ENV__, {
+      SIMULATION_EXPERIENCE_MODE: "conversation-v2",
+      OWNER_EMAILS: "owner@example.com",
+    });
+    const original = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = async () => {
+      calls++;
+      throw new Error("No external calls allowed");
+    };
+    try {
+      delete globalThis.__CONVERSATION_TEST_USER__;
+      assert.equal(
+        (
+          await catalogGet(
+            new Request("http://localhost:3000/api/simulation/catalog"),
+          )
+        ).status,
+        401,
+      );
+      globalThis.__CONVERSATION_TEST_USER__ = { email: "owner@example.com" };
+      assert.equal(
+        (
+          await catalogGet(
+            new Request(
+              "http://localhost:3000/api/simulation/catalog?domain=strava",
+            ),
+          )
+        ).status,
+        400,
+      );
+      const response = await catalogGet(
+        new Request(
+          "http://localhost:3000/api/simulation/catalog?domain=spotify",
+        ),
+      );
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).status, "permission_required");
+      assert.match(response.headers.get("cache-control"), /no-store/);
+      assert.equal(calls, 0);
+    } finally {
+      globalThis.fetch = original;
+      delete globalThis.__CONVERSATION_TEST_USER__;
+    }
+  }));
 
 test("Gemini key is sealed, never projected, revision-protected, and environment-bound", () =>
   withDatabase(async (database) => {
@@ -274,6 +466,7 @@ test("Google processing permission is separate, encrypted, revocable and connect
       approvedAt: "2026-01-01T00:00:00.000Z",
       expiresAt: null,
       enabled: true,
+      purposes: ["game_display", "google_gemini_processing"],
     };
     const saved = await permissions.saveGooglePermission(
       input,
@@ -362,25 +555,6 @@ test("screening rejects secrets, personal identifiers and instruction injection 
   assert.equal(conversationSourceAllowed("https://private.invalid/raw"), false);
 });
 
-test("model output is restricted to distinct current evidence IDs, never generated facts", () => {
-  const candidates = conversationSources(bundle).slice(0, 3);
-  assert.deepEqual(
-    provider.validateEvidenceSelection(
-      { sourceIds: [candidates[0].id] },
-      candidates,
-    ),
-    [candidates[0].id],
-  );
-  for (const output of [
-    { sourceIds: ["hidden:record"] },
-    { sourceIds: [candidates[0].id, candidates[0].id] },
-    { sourceIds: [], answer: "invented claim" },
-    null,
-    "not JSON",
-  ])
-    assert.equal(provider.validateEvidenceSelection(output, candidates), null);
-});
-
 test("Gemini transport pins the model, strips source URLs, and never retries failure", async () => {
   const original = globalThis.fetch;
   const candidates = conversationSources(bundle).slice(0, 2);
@@ -399,7 +573,18 @@ test("Gemini transport pins the model, strips source URLs, and never retries fai
           content: {
             role: "model",
             parts: [
-              { text: JSON.stringify({ sourceIds: [candidates[0].id] }) },
+              {
+                text: JSON.stringify({
+                  sections: [
+                    {
+                      text: "The archive describes tool interfaces with bounded execution and inspectable evidence.",
+                      sourceIds: [candidates[0].id],
+                    },
+                  ],
+                  reaction: "A tidy interface. Suspiciously tidy.",
+                  highlightIds: [candidates[0].id],
+                }),
+              },
             ],
           },
           finishReason: "STOP",
@@ -414,13 +599,24 @@ test("Gemini transport pins the model, strips source URLs, and never retries fai
   };
   try {
     assert.deepEqual(
-      await provider.selectGeminiEvidence(
+      await provider.generateGroundedDialogue(
         "synthetic-test-only",
         "MCP tools",
         candidates,
+        "patch",
+        [],
         AbortSignal.timeout(1000),
       ),
-      [candidates[0].id],
+      {
+        sections: [
+          {
+            text: "The archive describes tool interfaces with bounded execution and inspectable evidence.",
+            sourceIds: [candidates[0].id],
+          },
+        ],
+        reaction: "A tidy interface. Suspiciously tidy.",
+        highlightIds: [candidates[0].id],
+      },
     );
     assert.equal(calls, 1);
     assert.ok(!JSON.stringify(requestBody).includes(candidates[0].href));
@@ -433,28 +629,34 @@ test("Gemini transport pins the model, strips source URLs, and never retries fai
       );
     };
     await assert.rejects(
-      provider.selectGeminiEvidence(
+      provider.generateGroundedDialogue(
         "synthetic-test-only",
         "MCP tools",
         candidates,
+        "patch",
+        [],
         AbortSignal.timeout(1000),
       ),
     );
     assert.equal(calls, 2, "provider failures make exactly one attempt");
     assert.equal(
-      await provider.selectGeminiEvidence(
+      await provider.generateGroundedDialogue(
         "synthetic-test-only",
         "x".repeat(801),
         candidates,
+        "patch",
+        [],
         AbortSignal.timeout(1000),
       ),
       null,
     );
     assert.equal(
-      await provider.selectGeminiEvidence(
+      await provider.generateGroundedDialogue(
         "synthetic-test-only",
         "MCP tools",
         [{ ...candidates[0], text: "x".repeat(25000) }],
+        "patch",
+        [],
         AbortSignal.timeout(1000),
       ),
       null,
@@ -700,16 +902,19 @@ test("HTTP session and manual turns work without Gemini, preserve revisions, and
       });
     try {
       const start = await handleConversation(
-        request("session", { version: "conversation-v2" }),
+        request("session", { version: "network-v3" }),
         "start",
       );
       assert.equal(start.status, 201);
       const cookie = start.headers.get("set-cookie").split(";")[0];
       const turn = {
-        version: "conversation-v2",
+        version: "network-v3",
         requestId: crypto.randomUUID(),
         message: "MCP tool interfaces",
         inspectId: null,
+        character: "patch",
+        selectedIds: [],
+        context: [],
       };
       const response = await handleConversation(
         request("turn", turn, { cookie, "if-match": "0" }),

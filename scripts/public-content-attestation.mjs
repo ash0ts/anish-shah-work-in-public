@@ -23,9 +23,9 @@ const staticArtifactPaths = [
   "content/presentation/work-organizations.v1.json",
   "content/presentation/brand-assets.v1.json",
   "content/presentation/simulation.v1.json",
-  "public/assets/simulation/media-atlas-v1.webp",
-  "public/assets/simulation/companion-cobalt-v1.webp",
-  "components/simulation/ObjectSprite.tsx",
+  "public/assets/simulation/network-cast-v1.webp",
+  "public/assets/simulation/network-props-v1.webp",
+  "lib/simulation/network/characters.ts",
 ];
 
 const brandAssetManifestPath =

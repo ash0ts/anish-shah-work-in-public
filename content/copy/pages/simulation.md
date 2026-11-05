@@ -1,55 +1,52 @@
 <!-- copy-page: simulation -->
 
 ## conversation-title
-Personal internet
+Chips, companions, and a personal network
 
-## console-invitation
-Put something in. See what comes out.
+## network-eyebrow
+Personal network / owner preview
 
-## console-hint
-Turn the dial. Drag a cartridge into a reader, or tap to load it.
+## network-folder
+Chip folder
 
-## reader-empty
-Drop a cartridge here
+## network-workshop
+Workshop
 
-## load-reader
-Load reader
+## network-media
+Media archive
 
-## eject-reader
-Eject
+## network-frequency
+Frequency station
 
-## patch-readers
-Patch together
+## network-program-heading
+Six slots. No grinding.
 
-## tune-label
-Browse cartridges
+## network-discoveries
+Saved discoveries
 
-## previous-object
-Previous cartridge
+## network-encounters
+Optional encounters
 
-## next-object
-Next cartridge
+## network-first-contact
+First contact
 
-## inspect-loaded
-Inspect project
+## network-crosswire
+Crossed wires
 
-## console-idle
-Two readers. One curious machine.
+## network-glitch
+Network glitch
 
-## console-loaded
-One loaded. Try a second cartridge.
+## network-resume
+Resume
 
-## prompt-tools
-Show me the tools
-
-## prompt-teaching
-Find a workshop
+## network-pause
+Pause
 
 ## seo-title
 Meet 4N1SH
 
 ## seo-description
-Open objects, find documented connections, and explore the work with 4N1SH, a fictional guide inhabiting a strange personal internet.
+Explore a personal network with original companions, discovery chips, optional battles, and sourced conversation. Owner-only preview.
 
 ## ingress-label
 Something small lives in the links.
@@ -75,95 +72,14 @@ Still presentation
 ## leave-label
 Leave
 
-## trail-label
-Optional trail
-
-## trail-open
-Open an object
-
-## trail-connect
-Find a connection
-
-## trail-ask
-Ask about it
-
-## trail-complete
-See your discoveries
-
-## trail-finished
-A little trail through the work. Keep these links, or wander somewhere else.
-
-## reaction-open
-That one has a paper trail.
-
-## reaction-connect
-A thread worth pulling.
-
-## project-link
-Open project
-
-## selected-label
-Selected
-
-## select-label
-Select to connect
-
 ## ask-label
-Ask 4N1SH
-
-## reset-window
-Reset position
-
-## connect-label
-Connect
-
-## connect-instruction
-Use + to choose two objects.
-
-## connection-found
-A documented thread.
-
-## connection-missing
-No documented connection.
-
-## ask-pair
-Ask about this pair
-
-## browse-label
-Browse the whole archive
-
-## search-label
-Find a project or topic
-
-## messenger-welcome
-Pick something up. There’s a project inside. Or bring me two and we’ll follow the connection.
-
-## sources-label
-Sources
-
-## attached-label
-On the desk
-
-## prompt-connection
-How do these connect?
-
-## prompt-object
-Explain this project
+Ask about this
 
 ## question-label
-Ask about the work
+Ask about this discovery
 
 ## journal-label
 Journal
-
-## journal-intro
-Things you opened, threads you followed.
-
-## journal-empty
-Nothing collected yet. The objects are a good place to start.
-
-## explore-label
-Explore
 
 ## chat-label
 Chat

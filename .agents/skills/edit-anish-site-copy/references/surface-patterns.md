@@ -145,10 +145,11 @@ Keep consent, provider attribution, coverage, freshness, and recovery wording ne
   rules into an editorial field.
 - Preserve semantic discovery links and still-presentation instructions and an understandable
   authored-fallback path.
-- The personal-internet visual slice uses objects, a messenger, and a journal,
-  not a large introduction or permanent evidence grid. Keep short action labels
-  and interaction-driven reactions. Sources belong inside each reply and journal.
-  Do not imply the authored demo is live Gemini dialogue.
+- The personal network uses a world, chip folder, messenger and journal, not a
+  permanent archive list. Keep source facts separate from fictional programs and
+  character opinions. Never imply ranks or measurements affect combat. Sources
+  belong inside replies and discoveries. Label authored fallback versus Gemini;
+  game-display and Google-processing permissions are different protected uses.
 
 ## Travel
 

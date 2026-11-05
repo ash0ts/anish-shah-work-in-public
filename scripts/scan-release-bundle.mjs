@@ -14,8 +14,7 @@ const targets = [resolve(root, "dist/client"), resolve(root, "dist/server")];
 const clientDirectory = resolve(root, "dist/client");
 const manifestPath = resolve(clientDirectory, ".vite/manifest.json");
 const ROOM_STAGE_SOURCE = "components/play/room-3d/RoomStage.tsx";
-const ROOM_RUNTIME_SOURCE =
-  "components/play/room-platform/RoomRuntime.tsx";
+const ROOM_RUNTIME_SOURCE = "components/play/room-platform/RoomRuntime.tsx";
 const ROOM_RENDERER_GZIP_TARGET_BYTES = 225 * 1024;
 const ROOM_RENDERER_GZIP_HARD_CEILING_BYTES = 325 * 1024;
 export const releaseTextExtensions = new Set([
@@ -32,15 +31,22 @@ const forbiddenText = [
   { label: "local file URI", pattern: /file:\/\/\//i },
   { label: "macOS user path", pattern: /\/Users\/[A-Za-z0-9._-]+\// },
   { label: "Windows user path", pattern: /[A-Z]:\\Users\\[^\\]+\\/i },
-  { label: "private Slack archive URL", pattern: /https?:\/\/[^\s"']+\.slack\.com\/archives\//i },
+  {
+    label: "private Slack archive URL",
+    pattern: /https?:\/\/[^\s"']+\.slack\.com\/archives\//i,
+  },
   {
     label: "private content path",
     pattern: /\bcontent[\\/]private(?:[\\/]|$)/imu,
   },
-  { label: "private key material", pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
+  {
+    label: "private key material",
+    pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
+  },
   {
     label: "literal connector secret assignment",
-    pattern: /(?:CONNECTOR_ENCRYPTION_KEY|MAL_CLIENT_SECRET|STEAM_API_KEY|HARDCOVER_API_KEY|SIMULATION_SESSION_HMAC_KEY|SIMULATION_GATEWAY_TOKEN|SIMULATION_ANTHROPIC_API_KEY|SIMULATION_LOCAL_ANTHROPIC_API_KEY)\s*=\s*[^\s"']+/i,
+    pattern:
+      /(?:CONNECTOR_ENCRYPTION_KEY|MAL_CLIENT_SECRET|STEAM_API_KEY|HARDCOVER_API_KEY|SIMULATION_SESSION_HMAC_KEY|SIMULATION_GATEWAY_TOKEN|SIMULATION_ANTHROPIC_API_KEY|SIMULATION_LOCAL_ANTHROPIC_API_KEY)\s*=\s*[^\s"']+/i,
   },
 ];
 
@@ -52,7 +58,8 @@ const forbiddenSvg = [
   { label: "SVG event handler", pattern: /\son[a-z]+\s*=/iu },
   {
     label: "SVG active or embedded content",
-    pattern: /<(?:foreignObject|iframe|object|embed|image|animate|animateMotion|animateTransform|set)\b/iu,
+    pattern:
+      /<(?:foreignObject|iframe|object|embed|image|animate|animateMotion|animateTransform|set)\b/iu,
   },
   { label: "SVG entity declaration", pattern: /<!ENTITY\b/iu },
   {
@@ -179,6 +186,53 @@ async function main() {
     violations.push(
       `dist/client: unable to validate the RoomStage manifest closure (${error instanceof Error ? error.message : "unknown error"})`,
     );
+  }
+
+  try {
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    const entry = findViteManifestEntryBySource(
+      manifest,
+      "components/simulation/network/renderer.ts",
+    );
+    const closure = collectViteStaticDependencyClosure(manifest, entry);
+    const uiEntry = findViteManifestEntryBySource(
+      manifest,
+      "components/simulation/network/Network.tsx",
+    );
+    const uiClosure = collectViteStaticDependencyClosure(manifest, uiEntry);
+    const shared = new Set();
+    for (const imported of manifest[uiEntry].imports ?? []) {
+      for (const file of collectViteStaticDependencyClosure(manifest, imported)
+        .files)
+        shared.add(file);
+    }
+    for (const file of subtractManifestFiles(uiClosure.files, shared))
+      closure.files.add(file);
+    let bytes = 0;
+    for (const file of closure.files)
+      if (file.endsWith(".js"))
+        bytes += gzipSync(
+          await readFile(resolve(clientDirectory, file)),
+        ).byteLength;
+    const presentation = JSON.parse(
+      await readFile(
+        resolve(root, "content/presentation/simulation.v1.json"),
+        "utf8",
+      ),
+    );
+    const limits = presentation.workspace.budgets;
+    let artwork = 0;
+    for (const path of presentation.artwork.paths)
+      artwork += (await stat(resolve(clientDirectory, path.slice(1)))).size;
+    if (bytes > limits.deferredGameGzipBytes)
+      violations.push(`Network renderer exceeds game-JS ceiling: ${bytes}`);
+    if (artwork > limits.initialArtworkBytes)
+      violations.push(`Network artwork exceeds initial ceiling: ${artwork}`);
+    console.log(
+      `Network renderer: ${bytes} gzip bytes; original artwork: ${artwork} bytes.`,
+    );
+  } catch (error) {
+    violations.push(`Network bundle measurement failed: ${error.message}`);
   }
 
   if (violations.length) {

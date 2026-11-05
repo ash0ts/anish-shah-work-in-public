@@ -5,6 +5,7 @@ import {
   searchConversationSources,
   type ConversationReply,
   type ConversationSource,
+  type RecentTurn,
 } from "@/lib/simulation/conversation-contract";
 import { getPublicContentView } from "../../public-content";
 import { runtimeValue } from "../../runtime-env";
@@ -19,9 +20,10 @@ import {
   simulationSessionTokenFromRequest,
   validSimulationSessionHmacKey,
 } from "../session-crypto";
-import { approvedCollectionSources } from "./collections";
+import { resolveSavedSources } from "./catalog";
+import type { CharacterId } from "@/lib/simulation/network/characters";
 import { conversationSources } from "./grounding";
-import { selectGeminiEvidence } from "./provider";
+import { generateGroundedDialogue } from "./provider";
 import {
   conversationInputAllowed,
   conversationSourceAllowed,
@@ -40,13 +42,13 @@ import {
   readGeminiConfiguration,
 } from "./settings";
 
-export async function activeConversationSources(): Promise<
-  ConversationSource[]
-> {
+export async function activeConversationSources(
+  savedIds: readonly string[] = [],
+): Promise<ConversationSource[]> {
   const { bundle } = await getPublicContentView();
   return [
     ...conversationSources(bundle),
-    ...(await approvedCollectionSources()),
+    ...(await resolveSavedSources(savedIds)),
   ].filter((source) =>
     conversationSourceAllowed(
       [source.title, source.text, source.limit ?? ""].join(" "),
@@ -109,6 +111,9 @@ export type ConversationTurn = {
   requestId: string;
   message: string;
   inspectId: string | null;
+  character: CharacterId;
+  selectedIds: string[];
+  context: RecentTurn[];
 };
 export async function submitConversation(
   request: Request,
@@ -120,10 +125,17 @@ export async function submitConversation(
     database,
     await sessionHash(request),
   );
-  const catalog = await activeConversationSources();
+  const requestedIds = [
+    ...turn.selectedIds,
+    ...turn.context.flatMap((t) => t.sourceIds),
+    ...(turn.inspectId ? [turn.inspectId] : []),
+  ];
+  const catalog = await activeConversationSources(requestedIds);
   const byId = new Map(catalog.map((source) => [source.id, source]));
   // SSR choices and returned cards must still exist in the current visible catalog.
   if (turn.inspectId && !byId.has(turn.inspectId))
+    throw new ConversationError("source_unavailable", 409);
+  if (turn.selectedIds.some((id) => !byId.has(id)))
     throw new ConversationError("source_unavailable", 409);
   const { session, replay } = await reserveConversationTurn(
     database,
@@ -141,6 +153,7 @@ export async function submitConversation(
   let selected: string[] = [];
   let source: ConversationReply["source"] = replay ? "replayed" : "archive";
   let status: ConversationReply["status"] = "answered";
+  let dialogue: ConversationReply["dialogue"];
   if (replay || turn.inspectId) {
     selected = session.state.lastSourceIds.length
       ? session.state.lastSourceIds
@@ -150,10 +163,17 @@ export async function submitConversation(
   } else if (!conversationInputAllowed(turn.message)) {
     status = "screened";
   } else {
-    const candidates = searchConversationSources(catalog, turn.message).slice(
-      0,
-      CONVERSATION_LIMITS.sourceCount,
-    );
+    const candidates = [
+      ...new Map(
+        [
+          ...turn.selectedIds.flatMap((id) => byId.get(id) ?? []),
+          ...searchConversationSources(catalog, turn.message),
+          ...turn.context
+            .flatMap((t) => t.sourceIds)
+            .flatMap((id) => byId.get(id) ?? []),
+        ].map((source) => [source.id, source]),
+      ).values(),
+    ].slice(0, CONVERSATION_LIMITS.sourceCount);
     selected = candidates
       .slice(0, CONVERSATION_LIMITS.responseCards)
       .map((card) => card.id);
@@ -173,17 +193,24 @@ export async function submitConversation(
         if (!dailyBudget) status = "budget";
         else {
           try {
-            const result = await selectGeminiEvidence(
+            const result = await generateGroundedDialogue(
               key,
               turn.message,
               candidates,
+              turn.character,
+              turn.context,
               AbortSignal.timeout(CONVERSATION_LIMITS.deadlineMilliseconds),
             );
             if (result === null) status = "unavailable";
             else {
-              selected = result;
+              dialogue = result;
+              selected = [
+                ...new Set(
+                  result.sections.flatMap((section) => section.sourceIds),
+                ),
+              ].slice(0, 3);
               source = "gemini";
-              if (!result.length) status = "no_evidence";
+              if (!selected.length) status = "no_evidence";
             }
           } catch {
             status = "unavailable";
@@ -193,8 +220,19 @@ export async function submitConversation(
     }
   }
   // Reproject after generation: revocation or hiding during a request wins.
-  const fresh = await activeConversationSources();
+  const fresh = await activeConversationSources(requestedIds);
   const freshById = new Map(fresh.map((card) => [card.id, card]));
+  if (
+    dialogue &&
+    [...selected, ...requestedIds].some(
+      (id) =>
+        JSON.stringify(byId.get(id)) !== JSON.stringify(freshById.get(id)),
+    )
+  ) {
+    dialogue = undefined;
+    source = "archive";
+    status = "unavailable";
+  }
   const cards = selected
     .flatMap((id) => (freshById.has(id) ? [freshById.get(id)!] : []))
     .slice(0, CONVERSATION_LIMITS.responseCards);
@@ -231,5 +269,6 @@ export async function submitConversation(
     visibleIds: fresh.map((card) => card.id),
     cards,
     status,
+    ...(dialogue ? { dialogue } : {}),
   };
 }

@@ -18,7 +18,11 @@ const approval = z
   .object({
     provider: z.enum(GOOGLE_COLLECTIONS),
     processor: z.literal("google-gemini"),
-    scope: z.literal("collection_summary_processing"),
+    scope: z.enum(["collection_summary_processing", "network-v1"]),
+    purposes: z
+      .array(z.enum(["game_display", "google_gemini_processing"]))
+      .max(2)
+      .default([]),
     approvedAt: z.string().datetime(),
     expiresAt: z.string().datetime().nullable(),
     enabled: z.boolean(),
@@ -64,6 +68,7 @@ export function publicGooglePermission({
   provider,
   processor,
   scope,
+  purposes,
   approvedAt,
   expiresAt,
   enabled,
@@ -73,6 +78,7 @@ export function publicGooglePermission({
     provider,
     processor,
     scope,
+    purposes,
     approvedAt,
     expiresAt,
     enabled,
@@ -84,9 +90,13 @@ export async function googlePermissionSummaries(
   database = conversationDatabase(),
 ) {
   const active = new Set(await verifiedGooglePermissions(database));
+  const game = new Set(
+    await verifiedGooglePermissions(database, "game_display"),
+  );
   return (await googleCollectionPermissions(database)).map((record) => ({
     ...publicGooglePermission(record),
     active: active.has(record.provider),
+    gameDisplayActive: game.has(record.provider),
   }));
 }
 async function connectionRevision(provider: string, database: D1Database) {
@@ -116,6 +126,9 @@ export const permissionInput = z
     approvedAt: z.string().datetime(),
     expiresAt: z.string().datetime().nullable(),
     enabled: z.boolean(),
+    purposes: z
+      .array(z.enum(["game_display", "google_gemini_processing"]))
+      .max(2),
   })
   .strict();
 export async function saveGooglePermission(
@@ -143,6 +156,11 @@ export async function saveGooglePermission(
   );
   if (
     !input.reference &&
+    input.purposes.some((purpose) => !previous?.purposes.includes(purpose))
+  )
+    throw new ConversationError("reference_required");
+  if (
+    !input.reference &&
     (!previous || previous.configurationRevision !== configurationRevision)
   )
     throw new ConversationError("reference_required");
@@ -156,7 +174,8 @@ export async function saveGooglePermission(
   const record: Approval = {
     provider: input.provider,
     processor: "google-gemini",
-    scope: "collection_summary_processing",
+    scope: "network-v1",
+    purposes: [...new Set(input.purposes)],
     approvedAt: input.approvedAt,
     expiresAt: input.expiresAt,
     enabled: input.enabled,
@@ -186,11 +205,17 @@ export async function saveGooglePermission(
 }
 export async function verifiedGooglePermissions(
   database = conversationDatabase(),
+  purpose:
+    | "game_display"
+    | "google_gemini_processing" = "google_gemini_processing",
 ) {
   const key = runtimeValue("CONNECTOR_ENCRYPTION_KEY");
   if (!key) return [];
   const eligible = (await googleCollectionPermissions(database)).filter(
-    (record) => activeGooglePermission(record),
+    (record) =>
+      activeGooglePermission(record) &&
+      record.scope === "network-v1" &&
+      record.purposes.includes(purpose),
   );
   return (
     await Promise.all(

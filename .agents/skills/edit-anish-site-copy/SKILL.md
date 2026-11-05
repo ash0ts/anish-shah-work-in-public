@@ -5,6 +5,8 @@ description: Edit, review, simplify, or propose public-facing wording for the An
 
 # Edit Anish Site Copy
 
+For 4N1SH, distinguish fictional character reactions and game effects from source facts. Characters never speak as Anish. Do not edit permission, provenance, saved-date, processing, budget, or recovery wording as ordinary personality copy. The chip-folder labels use the Simulation deck; combat rules and character identities are protected presentation contracts.
+
 Improve the site's language without changing its facts, structure, behavior, or trust boundaries.
 
 ## Workflow

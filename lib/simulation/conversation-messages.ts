@@ -1,12 +1,4 @@
 /** Protected operational/privacy text. Changes require engineering and owner review. */
-export const WORKSPACE_MESSAGES = {
-  demo: "Authored demo · no AI requests",
-  disclosure: "Fictional guide. Not Anish or his representative.",
-  connectionLimit: "Shared subjects or sources, not a claim of collaboration or causality.",
-  privacy: "This visual slice uses authored replies and the visible Work archive. No Gemini, connector, or Travel requests occur. Questions and replies stay in this tab’s memory and reset on reload. Do not enter personal information or secrets. Live conversation is pending visual approval.",
-  noScript: "Open any object to visit its project, or expand the archive directory. Conversation and connections need JavaScript; project descriptions and sources do not.",
-} as const;
-
 export const CONVERSATION_MESSAGES = {
   disclosure:
     "4N1SH is a fictional guide, not Anish or his representative. Answers point to published sources. Do not enter personal information or secrets.",

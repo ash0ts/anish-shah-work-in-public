@@ -16,9 +16,11 @@ type Permission = {
   revision: number;
   enabled: boolean;
   active: boolean;
+  gameDisplayActive: boolean;
   approvedAt: string;
   expiresAt: string | null;
   referenceStored: boolean;
+  purposes: Array<"game_display" | "google_gemini_processing">;
 };
 const providers = ["myanimelist", "hardcover", "spotify", "discogs", "steam"];
 const errors: Record<string, string> = {
@@ -134,7 +136,8 @@ export function GeminiSetup() {
       <details key={provider}>
         <summary>
           {provider} ·{" "}
-          {record?.active ? "Permission current" : "Not shared with Google"}
+          {record?.gameDisplayActive ? "Game allowed" : "Game private"} ·{" "}
+          {record?.active ? "Gemini allowed" : "Not shared with Google"}
         </summary>
         {record?.enabled ? (
           <button
@@ -148,6 +151,7 @@ export function GeminiSetup() {
                   approvedAt: record.approvedAt,
                   expiresAt: record.expiresAt,
                   enabled: false,
+                  purposes: record.purposes,
                 },
                 record.revision,
               )
@@ -171,6 +175,10 @@ export function GeminiSetup() {
                   ? `${values.get("expiresAt")}T23:59:59.999Z`
                   : null,
                 enabled: true,
+                purposes: [
+                  values.has("game") ? "game_display" : null,
+                  values.has("google") ? "google_gemini_processing" : null,
+                ].filter(Boolean),
               },
               record?.revision ?? 0,
             ).then((ok) => {
@@ -179,7 +187,7 @@ export function GeminiSetup() {
           }}
         >
           <label>
-            Private Google-processing permission reference
+            Private permission reference covering the selected uses
             <input
               name="reference"
               type="password"
@@ -187,6 +195,24 @@ export function GeminiSetup() {
               required
               maxLength={512}
             />
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              name="game"
+              defaultChecked={record?.purposes.includes("game_display")}
+            />{" "}
+            Display saved items in the game
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              name="google"
+              defaultChecked={record?.purposes.includes(
+                "google_gemini_processing",
+              )}
+            />{" "}
+            Send bounded selected items to Google / Gemini
           </label>
           <label>
             Approval date
@@ -202,7 +228,7 @@ export function GeminiSetup() {
             <input name="expiresAt" type="date" />
           </label>
           <button disabled={busy} type="submit">
-            Allow this collection for Gemini
+            Save reviewed uses
           </button>
         </form>
       </details>
@@ -302,11 +328,14 @@ export function GeminiSetup() {
                 Disable owner preview
               </button>
             ) : null}
-            <h3>Optional collection processing</h3>
+            <h3>Saved collections in 4N1SH</h3>
             <p>
-              Record separate permission for each collection Google may process.
-              References are encrypted and never returned. Replacing connection
-              credentials requires a new review.
+              Game display and Google processing require separate, explicit
+              permission. Spotify requires written authorization covering these
+              uses; its standard policy does not permit them. Existing
+              public-display and summary-only permissions do not grant these
+              uses. References are encrypted and never returned. Replacing
+              connection credentials requires a new review.
             </p>
             {providers.map(permissionForm)}
           </details>

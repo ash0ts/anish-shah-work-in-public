@@ -70,23 +70,23 @@
     },
     {
       "path": "content/presentation/simulation.v1.json",
-      "bytes": 1047,
-      "sha256": "799ed347a0c1bd478e59322cbe23cc337c312e36061424b7b37e72060d26aa6f"
+      "bytes": 1414,
+      "sha256": "975d7da146d991d50b1e5cf7a89aeb8585a5f4eb0878e389688534e13a28ba61"
     },
     {
-      "path": "public/assets/simulation/media-atlas-v1.webp",
-      "bytes": 195748,
-      "sha256": "3964a306184c23a3f8a02de18de23358aaaaae2738cf6f767ba8dafbd78fb868"
+      "path": "public/assets/simulation/network-cast-v1.webp",
+      "bytes": 683046,
+      "sha256": "4771b35971edd5e4cfcba8f9e7f61f123c22b321eba6d81c45e92cb2a57264aa"
     },
     {
-      "path": "public/assets/simulation/companion-cobalt-v1.webp",
-      "bytes": 34162,
-      "sha256": "3ed452165bc19266dc8cc842052cc4c1d7621f7882bd3a36ffd349161bfc51d7"
+      "path": "public/assets/simulation/network-props-v1.webp",
+      "bytes": 121588,
+      "sha256": "759d3e2a702d071c719cddd2f8d968484d4c8f80bf73497b61fc032e08510066"
     },
     {
-      "path": "components/simulation/ObjectSprite.tsx",
-      "bytes": 720,
-      "sha256": "9d0eaac9eb19642462ed28034d0b49ec816e4db938cf7ac9f49586994ac0fba0"
+      "path": "lib/simulation/network/characters.ts",
+      "bytes": 1594,
+      "sha256": "664ba85238289058802583a5b4f60a0c298bcb48bf3e84d3d4c9b59782fb3101"
     },
     {
       "path": "public/assets/organizations/ai-tinkerers.438086e46304.svg",

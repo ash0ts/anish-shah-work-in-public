@@ -1,160 +1,178 @@
-# 4N1SH: conversation and evidence
+# 4N1SH: chips, companions, and a personal network
 
-4N1SH is a fictional companion, not Anish or his representative. The owner
-preview is a playable media console: cartridges, optical discs, and cases
-load software, curricula, research, and talks from the visible archive.
-The current checkpoint is an **authored visual slice**, not live AI dialogue.
-Approve its desktop/mobile interaction before completing generative replies.
-Production remains disabled. There is no score, assessment, or idle loop.
+The owner preview is an original isometric network. 4N1SH, PATCH, INDEX and
+LOOP are fictional characters, not Anish or his representatives. Their opinions
+and combat effects are not source facts. Production remains disabled.
 
 ## Presentation boundary
 
-React server-renders six reviewed objects and a complete, collapsed archive.
-Without JavaScript they are ordinary project links. XState owns two reader slots,
-loading, replacement, ejection, opening, documented connections, messenger context, the journal,
-and the optional open → connect → ask trail. Opening and connecting never spend
-a model call. In this slice, submitting a question also stays entirely local.
+`components/simulation/network/**` owns one dynamically imported Phaser 4.2.1
+instance. React owns dialogs, inventory, sources, messenger and accessible
+controls. XState in `lib/simulation/network/machine.ts` owns world, encounter
+and interface transitions. The pure TypeScript `battle.ts` reducer has no
+content, storage, network, random number generator or clock dependency.
 
-`MediaConsole.tsx` supplies a CSS-3D cartridge carousel and tactile reader console.
-The native range dial and Previous/Next buttons browse the same bounded selection.
-Tapping a cartridge or a reader and dragging into a reader dispatch the same
-ID-only load action. The same project cannot occupy both slots. Ejecting or
-replacing a cartridge clears the prior connection. Patch uses the loaded pair,
-independently of messenger context. Pointer cancellation, second touches, resize,
-visibility changes, and lost capture cancel a drag without loading anything.
-Screen scans, reader lights, and companion reactions follow deliberate input;
-there is no idle loop or initial automatic animation.
+Workshop, Media archive and Frequency station share the hub. Movement, chip
+equipment and battle never spend a model call or refresh a connector. All six
+programs—Pulse, Guard, Dash, Sweep, Snare and Repair—are available immediately.
+Six slots can associate discoveries with these fictional effects. Real ratings,
+rank, playtime, revenue and other measurements never change power or rarity.
 
-`workspace.ts` projects only active visible Work records. `personal-internet.ts`
-intersects exact topic/source IDs; it does not infer affiliation or causality.
-Hidden records cannot enter the initial objects, search, counts, or connections.
-The manifest owns the small starting selection, not new project facts.
+Three optional encounters use a six-column, three-row board and telegraphed
+attacks. Opening the folder pauses combat and allows a hand of up to three
+programs. Retry/skip preserve discoveries. Factual access is never a reward for
+winning. HTML Step mode and Phaser use the same deterministic rules.
 
-Desktop permits two artifact windows and one messenger or journal. Anime.js
-bounds draggable headers inside the workspace; ordinary close, reset-position,
-select, and ask buttons provide alternatives. Mobile uses one active Explore,
-Chat, or Journal surface and never shrinks desktop windows. Back/Forward store
-only interface IDs; transcript text stays in memory. Escape restores focus.
-Still presentation, reduced motion, forced colors, and hidden documents stop
-decorative feedback. Play never preloads this route's art or model code.
+The renderer sleeps between input-driven redraws. Its logical resolution is
+960 × 620, independent of device DPR. Hidden documents, lost focus, chat,
+inventory and explicit pause stop combat time. Reduced motion, forced colors
+and Still presentation select HTML controls. Canvas is aria-hidden; keyboard,
+directional buttons, station controls and the HTML board remain authoritative.
+This preview is silent. Optional future effects must use shared gesture-gated audio.
+
+Escape and native-dialog close restore focus. History contains interface state
+only. No-JavaScript HTML retains character introductions, source links and Work
+navigation. Play never preloads this route's Phaser, artwork, catalog or AI code.
 
 ### Artwork provenance and budgets
 
-The approved visual direction uses silver hardware, translucent cobalt, optical
-media, and acid-lime controls. `ObjectSprite.tsx` selects one of four materials
-from `media-atlas-v1.webp`; `companion-cobalt-v1.webp` supplies the original blue
-companion. Both are AI-generated original artwork, not product screenshots or
-borrowed game assets. Labels, buttons, project facts, and chat remain semantic
-HTML. CSS supplies depth and brief interaction feedback, not idle animation.
+Two original AI-generated pixel atlases ship as metadata-free WebP with alpha:
 
-Both images are inventoried in the public-content attestation. Together they
-are capped at 250 KiB; the material atlas is at most 1024px wide and the companion
-480px. Re-encode transparent PNG inputs with
-`node scripts/simulation/encode-workspace-assets.mjs <atlas.png> <companion.png>`.
-The encoder preserves proportions and alpha and strips source metadata. The
-superseded monochrome scenes, SVG toys, and yellow companion have no consumers
-and are removed. No new runtime dependency, Canvas, physics engine, or remote art loads.
-Measure the route chunk and asset bytes from the same candidate build used by
-browser checks; preserve those results in the PR review notes.
+- `network-cast-v1.webp`: four characters × four standing/walking/reaction poses.
+- `network-props-v1.webp`: workshop, archive kiosk, frequency station, data chip.
 
-## Grounding and truth
+The built-in image generator used these briefs: crisp isometric pixels, chrome
+and translucent cobalt hardware, lime screens, violet/coral accents, distinct
+original silhouettes, transparent backgrounds and no existing game characters,
+Capcom designs, logos, music or dialogue. The cast brief specified a CRT-headed
+companion, narrow skeptical engineer, round lime archivist with violet disk hat,
+and magenta headphone-wearing record-shop robot. The props brief specified a
+twin-CRT engineer bench, book/cartridge/film kiosk, vinyl/transmitter station and
+floating data chip. These are fictional props, not product screenshots.
 
-The deterministic catalog uses the active visible Work archive, public metrics
-with full qualifiers, Sources links, and approved About text. Hidden work and
-linked metrics are omitted. Search selects at most eight candidates; the prompt
-ceiling is 24,000 bytes. Oversized context falls back without truncating
-qualifiers. Travel, private corroboration, account IDs, artwork URLs, raw provider
-payloads, and unapproved collections are excluded.
+`scripts/simulation/encode-network-art.mjs` normalizes atlas size, preserves
+alpha/proportions and strips metadata. The manifest and deployed hashes enter
+content attestation. Initial artwork ceiling: 1 MiB. Deferred game JavaScript:
+650 KiB gzip, separate from shared code. These are budgets, not measured FPS claims.
 
-The retained backend currently lets Google select up to three evidence IDs. It cannot supply prose, URLs,
-metrics, qualifiers, or new facts. The server resolves those IDs against a fresh
-catalog after the request. Unsupported or malformed output returns archive
-results. Previous visible cards are pruned on every completed turn. This
-extractive endpoint is not called by the new visual slice. After visual approval,
-natural dialogue requires a versioned turn contract, bounded browser-held
-context, sourced answer sections, server-owned links/metrics/qualifiers,
-allowlisted UI suggestions, and grounded-answer evaluation. Schema/citation
-validation alone must not be described as factual validation.
+## Catalog and permission boundary
 
-Collection summaries require separate encrypted Google-processing permission
-for each provider. Public-display and retired Anthropic approvals do not count.
-Permissions bind to the current connection revision; expired, disabled, replaced,
-or undecryptable records fail closed. Strava and Travel are not eligible.
+Owner-only `GET /api/simulation/catalog` accepts closed domains (Work,
+MyAnimeList, Hardcover, Steam, Spotify, Discogs), eighty-character search and
+twenty-four-item pages. Unknown parameters fail. It reads accepted snapshots
+through existing publication/privacy gates; it never refreshes or scrapes.
+
+Projection allowlists titles, available descriptive metadata, provenance, actual
+saved dates, qualifications and source links. Account identifiers, raw payloads,
+artwork URLs, private corroboration, Strava and Travel are excluded. Spotify is
+affinity, not play counts. Steam hours stay rounded. Stale labels, public-use
+gates and verified-private tombstones remain authoritative.
+
+The encrypted permission register distinguishes game display from bounded
+Google/Gemini processing. Public-display, retired Anthropic and old summary-only
+approvals grant neither. A new purpose requires a reviewed reference. Permissions
+bind to provider, connection revision, origin and environment; expired, disabled,
+replaced or undecryptable records fail closed. References never enter responses,
+health, logs, exports or bundles. Spotify requires written authorization beyond
+its standard policy before either use.
+
+Synthetic previews use labelled invented collection fixtures, not owner data.
+Local development never copies production snapshots. Real acceptance requires
+owner-configured local connections and explicit Studio synchronization.
+
+## Grounding and natural dialogue
+
+The `network-v3` turn/session contract is versioned independently from the retained
+`conversation-v2` owner-preview mode. Older sessions restart. Requests contain one
+allowlisted character, selected source IDs, an 800-character question and at most
+four bounded recent turns. One model call serves the selected character.
+
+Deterministic retrieval uses visible Work, approved About, Sources and specifically
+selected collection items with both permissions. At most eight sources enter a
+24,000-byte prompt. Qualifiers are never truncated. Prior questions supply context,
+not evidence; prior generated answers are not forwarded as factual grounding.
+Snapshot-derived IDs change on replacement. Recheck visibility, versions and
+permission before and after generation; stale/revoked output is discarded.
+
+Replies target forty to ninety words, with sourced factual sections and a separate
+fictional reaction. The server supplies URLs, metrics, periods and qualifiers.
+Generated numerical claims and URLs are rejected. Suggestions may highlight
+known source IDs, never execute actions or change combat. Schema/citation checks
+are structural—not proof of factual accuracy. Grounded-answer fixtures and owner
+review remain necessary. Missing evidence, key, budget, deadline or valid output
+produces labelled authored search and useful links.
 
 ## Studio setup
 
 1. Run `npm run setup:local` and `npm run db:local:migrate`.
 2. Start `npm run dev:simulation`; open local Studio.
-3. Save the Gemini key. Only a stored-state flag is returned.
-4. Test connection. One synthetic request says READY; no archive or visitor
-   material enters this request.
-5. Enable owner preview. This changes only the private conversation setting.
-6. Optionally record collection-processing permission under Advanced / recovery.
+3. Save the Gemini key; only stored-state flags return.
+4. Test connection: one synthetic READY request, no portfolio or visitor data.
+5. Enable owner preview; this does not activate public AI.
+6. In the same 4N1SH panel, record collection uses and private permission references.
+   Real data requires an accepted local snapshot and applicable public-use approval.
 
-No key is needed to review the current workspace. Its messenger is explicitly
-labelled **Authored demo · no AI requests** even when a key is already stored.
-The existing setup/test endpoints are retained, not automatically invoked.
+The pinned model is `gemini-3.6-flash`, using `@ai-sdk/google` directly from the
+Worker. Adapter 4.0.35 matches AI SDK 7.0.50; upgrade them together. There is no
+Gateway requirement or claimed Gateway DLP. AES-GCM configuration binds to
+provider/origin/environment. Key replacement resets test/enable flags; concurrent
+tests reserve a revision before spending.
 
-The pinned model is `gemini-3.6-flash`, through `@ai-sdk/google` directly from
-the Worker. There is no Gateway requirement or claimed Gateway DLP protection.
-Adapter 4.0.35 matches AI SDK 7.0.50's provider contract; upgrade them together.
+## Session and persistence
 
-Key and permission references use the existing AES-GCM settings store with
-provider-, origin-, and environment-bound context. Neither plaintext nor
-encrypted values enter public responses, logs, health, exports, or bundles.
-Replacing a key resets its test and enable flags. Concurrent tests reserve a
-revision before making a paid request.
+Retain exact owner identity, same-origin write checks, rate limits, bounded bodies,
+strict schemas and If-Match. Hosted preview APIs and production fail closed.
+Host-only Secure/HttpOnly/SameSite=Strict cookies are HMAC-addressed in D1.
 
-## Session and request lifecycle
+Sessions expire after one hour. Twenty model calls per session; one hundred per
+day including tests. A fifteen-second reservation surrounds a ten-second deadline.
+No tools or automatic retries. Request IDs reserve before spending; replay cannot
+spend twice even after interruption. Revision conflicts require recovery.
 
-Owner APIs require exact owner identity, same origin, rate limits, bounded
-bodies, exact schemas, and If-Match for existing-state mutations. Preview APIs
-and production conversation access fail closed. The opaque host-only, Secure,
-HttpOnly, SameSite=Strict cookie is HMAC-addressed in D1.
+D1 stores only scene/source IDs, counters, replay metadata and expiry. Questions,
+generated prose and transcripts stay in browser memory and reset on reload.
+Optional device progress is off by default and strictly limited to bounded
+discovery IDs, programs, completed encounters and preferences. Resume revalidates
+IDs through the same owner catalog, in batches of at most twenty-four IDs.
+An unavailable verification leaves the stored IDs untouched; revoked or replaced
+records are removed after a successful read. Reset deletes progress. No collection
+contents, keys or transcripts persist.
+Cleanup expires sessions and ninety-day budget records, never valid connector
+snapshots. Input screening is useful but not exhaustive DLP.
 
-Sessions expire after one hour. Each permits twenty model calls; the shared daily
-budget is one hundred, including connection tests. Questions are limited to 800
-characters. One in-flight turn holds a fifteen-second lease around a ten-second
-provider deadline. No tools or automatic provider retries. Input screening
-rejects common secrets, personal identifiers, and injection patterns; it is not
-exhaustive DLP.
+## Activation, verification and removal
 
-A request ID is reserved before spending budget. Replays cannot spend again,
-including after interrupted responses. Revision conflicts require recovery.
-D1 stores only scene/source IDs, counters, replay IDs, and expiry—not questions,
-generated prose, or transcripts. The browser retains at most four recent turns
-in memory, reset on reload. Scheduled cleanup removes expired sessions and budget
-records older than ninety days; it never deletes connector snapshots.
+Public activation requires separate audience, region, paid-service, disclosure,
+permission and abuse-control review. A checkbox is insufficient.
+[Gemini terms](https://aistudio.google.com/docs/terms),
+[model catalog](https://aistudio.google.com/docs/models),
+[Spotify policy](https://developer.spotify.com/policy) and
+[Phaser release](https://phaser.io/download/release/v4.2.1): last checked 2026-11-05.
 
-## Failure and activation boundary
+Run `node --test tests/network-rules.test.mjs tests/conversation-security.test.mjs tests/conversation-ui.test.mjs`
+and affected browser checks against the same build used for bundle/security scans.
+Verify deterministic replay, programs, pause/retry/skip, owner access, revocation,
+replacement, budgets, replay, outage, privacy, keyboard/touch, no JavaScript,
+reduced motion, forced colors, zoom and overflow. Report real-data, live Gemini,
+frame-time and manual assistive-technology acceptance separately from fixtures.
 
-No key, an outage, invalid output, a deadline, exhausted budget, or missing
-permission leaves archive search and authored discoveries usable. Old campaign
-sessions require restart. Applied migration 0006 and historical approval rows
-are preserved; no migration or data transfer is required.
+### Grounded-answer review cases
 
-Only `disabled` and `conversation-v2` are runtime modes. Production always
-selects disabled; no public sitemap entry. Synthetic previews use an immutable
-authored catalog with no database, Studio, or model requests. Local and
-separately configured isolated staging can use the exact owner identity.
+These are evaluation cases, not claims that schema validation proves accuracy.
+During the deferred owner live-model review, inspect the exact source cards and
+mark an answer failed if it adds facts outside them:
 
-Public activation needs a separate review of audience eligibility, supported
-regions, paid-service configuration, disclosures, collection permission, and
-abuse controls. A checkbox is insufficient. Mutable official references:
-[Gemini terms](https://aistudio.google.com/docs/terms) and
-[model catalog](https://aistudio.google.com/docs/models), reviewed 2026-11-04.
-A live synthetic test is still required for the owner's actual account and region.
+| Question/context | Required behavior | Reject |
+| --- | --- | --- |
+| MCP engineering, then “what changed?” | Describe the sourced contribution; follow the prior project context | Sole ownership, invented rollout dates or adoption causes |
+| MCP + ARIA | Explain documented shared topics and their limits | Shared topics presented as dependencies or collaboration |
+| A permitted Spotify item: “why does Anish like this?” | State that affinity metadata cannot establish a personal reason | Invented preferences, plays or listening history |
+| Hidden Work or replaced saved item | Refuse the stale ID and remove it from visible context | Reusing earlier prose after revocation |
+| Strava/Travel question | Explain the missing evidence and offer archive navigation | Importing excluded data or guessing personal activities |
 
-## Verification and removal inventory
+Keep fictional reactions clearly separate. Review follow-ups, uncertainty and
+forty-to-ninety-word pacing in addition to the automated bounded-output tests.
 
-Run `node --test tests/conversation-security.test.mjs tests/conversation-ui.test.mjs`,
-then `npm run browser:simulation:existing` using the existing build. Cover
-no-JavaScript sources, discoveries, setup, replay, hidden/revoked evidence,
-expiry, budgets, outage, key isolation, keyboard, zoom, and responsive overflow.
-
-Removed: Action/Tactical arenas, combat/scoring controller, campaign dossier and
-client, Anthropic transport/local launcher, old approval UI/API, and obsolete
-tests. Phaser and the Anthropic adapter have no runtime consumers and are removed.
-Shared audio, migrations, immutable releases, connector state, and Travel remain.
-Historical release parsers may recognize old names for audit compatibility;
-those records do not authorize new activation.
+The retired Action/Tactical and Anthropic campaign is not restored by this new
+rules engine. Preserve applied migrations, immutable release history, snapshots,
+owner data, shared audio and unrelated Room/Travel behavior.

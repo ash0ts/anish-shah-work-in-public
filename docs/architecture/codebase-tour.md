@@ -370,30 +370,32 @@ for media and geography details.
 
 ## Simulation boundary
 
-The owner-only `conversation-v2` preview uses semantic React, XState, original
-pixel artwork, and brief CSS/Anime.js feedback. Production is disabled and the
-route never appears in the sitemap. Action/Tactical and Phaser are removed;
-applied migrations and historical owner data remain.
+The owner-only `conversation-v2` preview hosts a dynamically loaded Phaser network,
+with React/XState inventory, sources, dialogue and accessible HTML Step mode.
+Three original areas and four fictional companions introduce visible Work and
+specifically approved accepted collections. Pure TypeScript battle rules are
+independent of content, measurements and model output. Production remains disabled.
 
-The current visual checkpoint is a personal-internet workspace: open projects
-as bounded artifact windows, connect exact shared topics/sources, and ask an
-explicitly labelled authored messenger. XState owns exploration, selection,
-connections, conversation, journal, and an optional trail. Mobile uses one
-workspace at a time. This slice makes no model calls, even with a stored key.
-Approve the visual interaction before completing natural generative dialogue.
+Exploration never refreshes providers or calls a model. The bounded, owner-only
+catalog projects twenty-four items per request. Game display and Google processing
+require separate encrypted permissions; legacy summary approvals grant neither.
+Strava, Travel, account identifiers and private evidence stay excluded.
 
-Current visible sources supply every fact and link. The retained backend selects only validated
-evidence IDs; the server reprojects them after generation. Google-processing
-collection permission is separate from public-display approval. Strava, Travel,
-private evidence, account IDs, and raw provider payloads remain excluded.
-No key or provider failure leaves archive search usable.
+Natural dialogue uses the versioned `network-v3` contract. Current visible sources
+and bounded recent questions supply context. Generated sections cite allowlisted
+IDs; links, metrics and qualifiers are server-resolved. Visibility, snapshot
+versions and permissions are checked again after generation. Structural output
+checks are not proof of factual accuracy; grounded-answer evaluation and owner
+review remain required.
 
-Studio encrypts the environment-bound key, tests a synthetic request, then enables
-private preview. Turns reserve revision/replay IDs before spending budget.
-Sessions expire after one hour; twenty calls per session, one hundred per day,
-ten-second deadline, no retry. Only IDs/counters persist. There is no Gateway:
-application bounds, screening, ID-only output validation, and owner access are
-the actual safeguards. See [4N1SH conversation](./meet-me-simulation.md).
+Studio provides Save Gemini key → Test connection → Enable owner preview.
+One-hour sessions permit twenty calls, with a site-wide daily limit of one hundred,
+a ten-second deadline and no retry. Persistence contains bounded IDs and counters,
+never questions or generated prose. Device progress is opt-in and ID-only.
+There is no Gateway: application screening, output validation, replay protection,
+budgets and owner access are the actual safeguards.
+See [4N1SH network architecture](./meet-me-simulation.md) for setup, artwork,
+performance budgets and verification.
 
 ## Environment isolation
 

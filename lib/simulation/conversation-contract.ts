@@ -1,4 +1,6 @@
-export const CONVERSATION_VERSION = "conversation-v2" as const;
+export const CONVERSATION_VERSION = "network-v3" as const;
+export type DialogueSection = { text: string; sourceIds: string[] };
+export type RecentTurn = { question: string; answer: string; sourceIds: string[] };
 export const CONVERSATION_SCENES = ["desk", "archive", "doorway"] as const;
 export type ConversationScene = (typeof CONVERSATION_SCENES)[number];
 export type ConversationSource = {
@@ -18,6 +20,7 @@ export type ConversationReply = {
   inspectedIds: string[];
   visibleIds: string[];
   cards: ConversationSource[];
+  dialogue?: { sections: DialogueSection[]; reaction: string; highlightIds: string[] };
   status: "answered" | "no_evidence" | "screened" | "budget" | "unavailable";
 };
 export const CONVERSATION_LIMITS = {

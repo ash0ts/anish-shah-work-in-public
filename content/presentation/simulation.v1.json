@@ -1,13 +1,13 @@
 {
-  "schemaVersion": "3.0",
-  "campaignVersion": "conversation-v2",
+  "schemaVersion": "4.0",
+  "campaignVersion": "network-v3",
   "persona": {
     "displayName": "4N1SH",
     "disclosure": "A fictional archive guide, not Anish or his representative."
   },
   "workspace": {
-    "stage": "authored-visual-slice",
-    "interaction": "two-reader-media-console",
+    "stage": "owner-network-preview",
+    "interaction": "explore-equip-battle-converse",
     "objectIds": [
       "group:products:wandb-mcp",
       "group:portfolio:autoresearch-labs",
@@ -16,7 +16,13 @@
       "group:portfolio:aria",
       "group:standalone:wk-fp-0161"
     ],
-    "maxArtifactWindows": 2
+    "maxArtifactWindows": 1,
+    "characters": ["4n1sh", "patch", "index", "loop"],
+    "programs": ["Pulse", "Guard", "Dash", "Sweep", "Snare", "Repair"],
+    "areas": ["Workshop", "Media archive", "Frequency station"],
+    "encounters": ["tutorial", "crosswire", "glitch"],
+    "board": {"columns": 6, "rows": 3},
+    "budgets": {"deferredGameGzipBytes": 665600, "initialArtworkBytes": 1048576}
   },
   "provider": "google",
   "model": "gemini-3.6-flash",
@@ -25,8 +31,8 @@
     "format": "original-generated-webp",
     "direction": "Silver hardware, translucent cobalt, optical media, and acid-lime controls. Original concept approved for local visual exploration; not a product screenshot.",
     "paths": [
-      "/assets/simulation/media-atlas-v1.webp",
-      "/assets/simulation/companion-cobalt-v1.webp"
+      "/assets/simulation/network-cast-v1.webp",
+      "/assets/simulation/network-props-v1.webp"
     ]
   }
 }

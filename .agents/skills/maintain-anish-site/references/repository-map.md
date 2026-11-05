@@ -15,8 +15,8 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `components/play/**`: object-screen shell and provider-specific Play UI.
 - `components/play/room-3d/**`: intent-gated Room and Pocket Room R3F runtime.
 - `components/play/travel/**`: Postcard Planet semantic atlas and the only full-globe R3F boundary.
-- `app/simulation/**` and `components/simulation/**`: owner-only personal-internet workspace, artifact windows, messenger, and journal. The current authored visual slice makes no model requests.
-- `lib/simulation/workspace-machine.ts` owns exploration and optional-trail state; `lib/server/simulation/conversation/workspace.ts` projects visible projects and exact topic/source relationships. Do not infer affiliations from decorative connections.
+- `app/simulation/**` and `components/simulation/network/**`: owner-only Phaser world and battles, React chip folder, messenger and journal. One game instance loads only here; HTML Step mode shares the pure rules in `lib/simulation/network/battle.ts`.
+- `lib/simulation/network/machine.ts` owns world, encounter and interface transitions. `lib/server/simulation/conversation/catalog.ts` projects visible Work and explicitly approved saved items in bounded pages. No refresh or model call occurs through exploration. Game-display and Google-processing scopes remain distinct. Decorative paths and fictional programs establish no real relationships.
 - `app/studio/**`: owner-only operational interface. Connector rows consume a
   composed connection/permission/snapshot/publication view and expose one next
   action; Git-owned copy is shown read-only here.

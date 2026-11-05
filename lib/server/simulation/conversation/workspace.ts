@@ -4,7 +4,7 @@ import { workFacetsForRecord, workThemeFacetLabel } from "@/lib/work-facets";
 import type { InternetObject } from "@/lib/simulation/personal-internet";
 import { conversationSources } from "./grounding";
 import { conversationSourceAllowed } from "./screening";
-import presentation from "@/content/presentation/simulation.v1.json";
+import presentation from "@/content/presentation/simulation.v1.json" with { type: "json" };
 
 /** Only the active public Work projection enters the visual slice. No collections. */
 export function personalInternetFrom(bundle: AnishContentBundle) {

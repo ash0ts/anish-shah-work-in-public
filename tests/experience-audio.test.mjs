@@ -191,6 +191,6 @@ test("official Spotify players duck and restore the shared experience bus", asyn
 });
 
 test("conversation is silent and leaves the shared gesture-gated audio runtime unchanged", async () => {
-  const ui = await source("components/simulation/Conversation.tsx");
+  const ui = await source("components/simulation/network/Network.tsx");
   assert.doesNotMatch(ui, /AudioContext|Tone|playCue|new Audio|autoplay/);
 });

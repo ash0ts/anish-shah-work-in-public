@@ -8,6 +8,7 @@ import {
 } from "../session-crypto";
 import { CONVERSATION_VERSION } from "@/lib/simulation/conversation-contract";
 import { ConversationError } from "./settings";
+import { CHARACTER_IDS } from "@/lib/simulation/network/characters";
 import {
   currentConversation,
   endConversation,
@@ -49,7 +50,8 @@ export async function conversationOwner(request: Request, write = false) {
     throw new ConversationError("same_origin_required", 403);
   const result = await authorizeOwnerApi();
   if (!result.ok) {
-    for (const [name, value] of Object.entries(CONVERSATION_HEADERS)) result.response.headers.set(name, value);
+    for (const [name, value] of Object.entries(CONVERSATION_HEADERS))
+      result.response.headers.set(name, value);
   }
   return result;
 }
@@ -65,6 +67,23 @@ const turnInput = z
       .string()
       .regex(/^[a-z0-9][a-z0-9:._-]{0,127}$/)
       .nullable(),
+    character: z.enum(CHARACTER_IDS),
+    selectedIds: z
+      .array(z.string().regex(/^[a-z0-9][a-z0-9:._-]{0,127}$/))
+      .max(2),
+    context: z
+      .array(
+        z
+          .object({
+            question: z.string().max(800),
+            answer: z.string().max(1200),
+            sourceIds: z
+              .array(z.string().regex(/^[a-z0-9][a-z0-9:._-]{0,127}$/))
+              .max(3),
+          })
+          .strict(),
+      )
+      .max(4),
   })
   .strict()
   .refine(
@@ -95,7 +114,7 @@ export async function handleConversation(
     }
     const revision = action === "turn" ? requestRevision(request) : 0;
     const body = await readBoundedJsonBody(request, {
-      maxBytes: action === "start" ? 256 : 4_096,
+      maxBytes: action === "start" ? 256 : 12_288,
     });
     if (!body.ok) return body.response;
     if (action === "start") {
