@@ -12,9 +12,8 @@
   );
   color: var(--ink);
   background:
-    repeating-linear-gradient(0deg, #fff1 0 1px, transparent 1px 3px),
-    radial-gradient(ellipse at 80% 15%, #909aba22, transparent 60%),
-    linear-gradient(120deg, #454e65, #657089 48%, #3f4864);
+    radial-gradient(ellipse at 50% 35%, #243f8e55, transparent 60%),
+    linear-gradient(140deg, #0c1029, #151e40 50%, #070c20);
   padding: 24px clamp(16px, 3vw, 56px) 20px;
   font-family: var(--font-body);
   min-height: calc(100svh - 70px);
@@ -60,6 +59,20 @@
   outline: 3px solid var(--lime);
   outline-offset: 5px;
 }
+.experience[data-still="true"] *,
+.experience[data-still="true"] *::before,
+.experience[data-still="true"] *::after {
+  transition: none !important;
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .experience *,
+  .experience *::before,
+  .experience *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
 .toolbar {
   max-width: 1540px;
   margin: auto;
@@ -71,7 +84,7 @@
 }
 .identifier {
   display: inline-block;
-  font: italic 900 clamp(60px, 8vw, 116px) / 0.9 var(--font-body);
+  font: italic 900 clamp(40px, 5vw, 70px) / 0.9 var(--font-body);
   letter-spacing: -0.08em;
   color: #eef1ff;
   text-shadow:
@@ -107,8 +120,7 @@
   white-space: nowrap;
 }
 .worldLayout {
-  --console-top: clamp(390px, 30vw, 470px);
-  --console-height: 440px;
+  --console-height: 560px;
   position: relative;
   max-width: 1540px;
   margin: auto;
@@ -116,69 +128,19 @@
 .explore {
   min-width: 0;
 }
-.workspaceTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  font: 12px/1.5 var(--font-mono);
-  color: #fff;
-  border-block: 1px solid #e6eaff77;
-  padding: 3px 12px;
-}
-.workspaceTop p {
-  margin: 0;
-}
-.workspaceTop button {
-  background: none;
-  color: #fff;
-  border: 0;
-  box-shadow: none;
-  white-space: nowrap;
-}
 .field {
   position: relative;
-  min-height: max(
-    clamp(660px, 50vw, 780px),
-    calc(var(--console-top) + var(--console-height) - 36px)
-  );
   isolation: isolate;
 }
-.field::before {
-  content: "";
-  position: absolute;
-  width: 38%;
-  aspect-ratio: 1;
-  bottom: 8%;
-  left: 9%;
-  border: 1px solid #d2daff33;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 32px #cbd8ff08,
-    0 0 0 64px #cbd8ff06;
-  pointer-events: none;
+.fallback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px;
+  color: white;
 }
-.object {
-  position: absolute;
-  left: var(--x);
-  top: var(--y);
-  width: clamp(174px, 22vw, 286px);
-  transform: translate(-50%, -50%);
-  z-index: 2;
-}
-.object > a {
-  display: block;
-  position: relative;
-  text-decoration: none;
-  transform: rotate(var(--tilt));
-  transition: transform 220ms ease-out;
-}
-.object:has([data-material="case"]) {
-  width: clamp(168px, 18vw, 230px);
-}
-.object > a:hover,
-.object > a:focus-visible {
-  transform: rotate(0deg) translateY(-8px) scale(1.035);
+.experience[data-ready="true"] .fallback {
+  display: none;
 }
 .mediaArt {
   display: block;
@@ -200,120 +162,6 @@
 }
 .mediaArt[data-material="lime"] {
   background-position: 100% 100%;
-}
-.objectLabel {
-  position: absolute;
-  top: 39%;
-  left: 21%;
-  width: 59%;
-  padding: 7px 8px;
-  color: #11182e;
-  background: #e9ecf4ed;
-  border: 1px solid #f8faff;
-  box-shadow: 1px 2px 2px #111b3a55;
-  font: italic 900 clamp(12px, 1.4vw, 20px) / 1.08 var(--font-body);
-  text-transform: uppercase;
-  letter-spacing: -0.03em;
-  overflow-wrap: normal;
-}
-.object:has([data-material="cartridge"]) .objectLabel {
-  background: transparent;
-  box-shadow: none;
-  border: 0;
-  top: 32%;
-}
-.object:has([data-material="case"]) .objectLabel {
-  top: 25%;
-  left: 22%;
-  width: 57%;
-  background: #f5f4eff5;
-}
-.object[data-selected="true"] .objectLabel {
-  background: var(--lime);
-  color: #11182e;
-  border-color: #4c5b12;
-}
-.object[data-open="true"] > a {
-  transform: rotate(0deg) translateY(-6px);
-}
-.object[data-highlight="true"] .mediaArt {
-  filter: drop-shadow(0 0 12px #cce4ff) drop-shadow(7px 12px 6px #08102e70);
-}
-.experience .selectObject {
-  position: absolute;
-  right: 0;
-  bottom: 6%;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  font: 600 22px var(--font-body);
-  border-radius: 7px;
-  z-index: 3;
-}
-.experience .selectObject[aria-pressed="true"] {
-  background: var(--lime);
-}
-.wires {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-.wires path {
-  fill: none;
-  stroke: #ddff41;
-  stroke-width: 5px;
-  vector-effect: non-scaling-stroke;
-  filter: drop-shadow(0 2px 2px #1c234f);
-}
-.connectionTray {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: #e9edf4;
-  border: 1px solid #45516e;
-  border-radius: 8px 8px 0 0;
-  box-shadow: inset 0 1px 0 #fff;
-}
-.connectionTray > div {
-  min-width: 0;
-}
-.connectionTray small {
-  font: 600 10px var(--font-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.connectionTray p {
-  font-size: 13px;
-  line-height: 1.4;
-  margin: 3px 0 0;
-}
-.connectionTray button {
-  flex-shrink: 0;
-  background: var(--lime);
-  font-weight: 700;
-}
-.connectionResult {
-  padding: 14px 16px;
-  background: #eaf2cc;
-  border: 1px solid #45516e;
-  border-top: 0;
-}
-.connectionResult h2 {
-  font-size: 18px;
-  margin: 0 0 8px;
-}
-.connectionResult p {
-  font-size: 13px;
-  margin: 6px 0;
-  max-width: 80ch;
-}
-.connectionResult button {
-  margin-top: 5px;
-  font-size: 13px;
 }
 .archive {
   padding: 5px 16px;
@@ -361,10 +209,9 @@
 }
 .messenger,
 .journal {
-  position: absolute;
-  right: 1%;
-  top: var(--console-top);
-  width: 40%;
+  position: relative;
+  margin: 24px auto;
+  width: min(720px, 100%);
   z-index: 4;
   color: var(--ink);
   border: 2px solid #e5ebff;
@@ -384,9 +231,16 @@
     4px 10px 18px #101b4666;
 }
 .messenger {
-  display: flex;
+  display: none;
   flex-direction: column;
   height: var(--console-height);
+}
+.experience[data-panel="chat"] .messenger {
+  display: flex;
+}
+.experience[data-panel="chat"] .explore,
+.experience[data-panel="journal"] .explore {
+  display: none;
 }
 .messenger > .windowBar,
 .demoLabel,
@@ -410,8 +264,8 @@
   text-transform: uppercase;
 }
 .windowBar button {
-  min-height: 32px;
-  width: 32px;
+  min-height: 44px;
+  width: 44px;
   padding: 0;
   font-size: 23px;
 }
@@ -578,8 +432,10 @@
 }
 .dock {
   display: flex;
+  width: fit-content;
+  max-width: 100%;
   gap: 6px;
-  margin: 16px 0 0;
+  margin: 32px auto 0;
   padding: 8px;
   background: var(--metal);
   border: 1px solid #dce4ff;
@@ -607,6 +463,7 @@
   font: 11px var(--font-mono);
 }
 .smallPrint {
+  text-align: center;
   margin: 12px 4px 0;
   font: 11px/1.5 var(--font-mono);
   color: #fff;
@@ -724,20 +581,11 @@
   white-space: nowrap;
   border: 0;
 }
-.experience[data-ready="false"] .selectObject,
-.experience[data-ready="false"] .connectionTray,
 .experience[data-ready="false"] .composer,
 .experience[data-ready="false"] .dock {
   display: none;
 }
 @media (max-width: 1100px) and (min-width: 900px) {
-  .object {
-    width: 190px;
-  }
-  .messenger,
-  .journal {
-    width: 43%;
-  }
   .greeting p {
     font-size: 14px;
   }
@@ -747,11 +595,12 @@
     padding: 20px 16px calc(90px + env(safe-area-inset-bottom));
   }
   .toolbar {
-    padding: 0 0 20px;
+    padding: 0 0 10px;
     align-items: flex-start;
+    flex-wrap: wrap;
   }
   .identifier {
-    font-size: clamp(49px, 12vw, 86px);
+    font-size: clamp(40px, 10vw, 60px);
   }
   .toolbar h1 {
     font-size: 9px;
@@ -761,8 +610,10 @@
   .toolbarActions {
     font-size: 11px;
     gap: 10px;
-    flex-direction: column;
-    align-items: end;
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
   }
   .toolbarActions button {
     padding: 5px 8px;
@@ -770,52 +621,8 @@
   .toolbarActions a {
     padding: 4px;
   }
-  .workspaceTop {
-    font-size: 11px;
-    padding-inline: 0;
-  }
-  .workspaceTop p {
-    max-width: 20ch;
-  }
-  .workspaceTop button {
-    padding-inline: 4px;
-  }
   .field {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    padding-block: 16px;
-    min-height: 0;
-  }
-  .field::before {
-    display: none;
-  }
-  .object {
-    position: relative;
-    top: auto;
-    left: auto;
-    width: 100%;
-    transform: none;
-    align-self: center;
-  }
-  .object:has([data-material="case"]) {
-    width: 100%;
-  }
-  .object > a {
-    transform: rotate(calc(var(--tilt) * 0.5));
-  }
-  .objectLabel {
-    font-size: clamp(12px, 2.6vw, 22px);
-    padding: 4px;
-    left: 14%;
-    width: 72%;
-  }
-  .experience .selectObject {
-    right: 1px;
-    bottom: 4%;
-  }
-  .wires {
-    display: none;
+    display: block;
   }
   .messenger,
   .journal {
@@ -844,6 +651,7 @@
     font-size: 16px;
   }
   .dock {
+    width: auto;
     position: fixed;
     z-index: 12;
     left: 12px;
@@ -868,16 +676,6 @@
   .smallPrint {
     font-size: 10px;
     text-align: center;
-  }
-  .connectionTray {
-    padding: 10px;
-  }
-  .connectionTray p {
-    font-size: 12px;
-  }
-  .connectionTray button {
-    padding: 8px;
-    font-size: 12px;
   }
   .artifact,
   .artifact[data-window="1"] {
@@ -907,9 +705,6 @@
   .identifier {
     font-size: 44px;
   }
-  .objectLabel {
-    font-size: 12px;
-  }
   .greeting {
     gap: 4px;
   }
@@ -919,27 +714,10 @@
     height: 80px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .object > a {
-    transition: none;
-    transform: none;
-  }
-  .object > a:hover,
-  .object > a:focus-visible {
-    transform: none;
-  }
-}
-.experience[data-still="true"] .object > a {
-  transition: none;
-  transform: none;
-}
 @media (forced-colors: active) {
   .experience,
   .experience button,
   .field,
-  .workspaceTop,
-  .connectionTray,
-  .connectionResult,
   .archive,
   .messages,
   .composer,
@@ -949,7 +727,6 @@
   .journal,
   .windowBar,
   .dock,
-  .objectLabel,
   .question,
   .trail {
     background: Canvas;
@@ -967,7 +744,6 @@
     color: CanvasText;
     text-shadow: none;
   }
-  .wires,
   .field::before,
   .mediaArt,
   .sprite {
@@ -978,19 +754,6 @@
     inset: 0;
     display: grid;
     place-items: center;
-  }
-  .object > a {
-    transform: none;
-  }
-  .objectLabel {
-    top: 25%;
-    left: 10%;
-    width: 80%;
-    border: 1px solid CanvasText;
-  }
-  .object[data-selected="true"] .objectLabel {
-    color: HighlightText;
-    background: Highlight;
   }
   .experience :focus-visible {
     outline-color: Highlight;

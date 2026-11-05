@@ -18,7 +18,7 @@ export function ArtifactWindow({
   index: number;
   still: boolean;
   close: () => void;
-  ask: () => void;
+  ask: (origin: HTMLElement) => void;
   select: () => void;
   selected: boolean;
 }) {
@@ -87,7 +87,9 @@ export function ArtifactWindow({
           <button onClick={select} aria-pressed={selected}>
             {selected ? copy["selected-label"] : copy["select-label"]}
           </button>
-          <button onClick={ask}>{copy["ask-label"]}</button>
+          <button onClick={(event) => ask(event.currentTarget)}>
+            {copy["ask-label"]}
+          </button>
           <button
             className={styles.resetPosition}
             onClick={() => drag.current?.reset()}

@@ -3,8 +3,41 @@
 ## conversation-title
 Personal internet
 
-## conversation-summary
-Open something. See where it leads.
+## console-invitation
+Put something in. See what comes out.
+
+## console-hint
+Turn the dial. Drag a cartridge into a reader, or tap to load it.
+
+## reader-empty
+Drop a cartridge here
+
+## load-reader
+Load reader
+
+## eject-reader
+Eject
+
+## patch-readers
+Patch together
+
+## tune-label
+Browse cartridges
+
+## previous-object
+Previous cartridge
+
+## next-object
+Next cartridge
+
+## inspect-loaded
+Inspect project
+
+## console-idle
+Two readers. One curious machine.
+
+## console-loaded
+One loaded. Try a second cartridge.
 
 ## prompt-tools
 Show me the tools

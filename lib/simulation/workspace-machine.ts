@@ -12,6 +12,7 @@ type Context = {
   catalog: InternetObject[];
   openIds: string[];
   selectedIds: string[];
+  readers: [string | null, string | null];
   journalIds: string[];
   connection: DocumentedConnection | null;
   panel: WorkspacePanel;
@@ -23,6 +24,8 @@ type Context = {
 };
 export type WorkspaceEvent =
   | { type: "OPEN" | "SELECT" | "CLOSE"; id: string }
+  | { type: "LOAD"; id: string; reader: 0 | 1 }
+  | { type: "EJECT"; reader: 0 | 1 }
   | { type: "CONNECT" }
   | { type: "ASK"; ids: string[] }
   | { type: "SEND"; question: string }
@@ -45,6 +48,7 @@ export const workspaceMachine = setup({
     catalog: input.catalog,
     openIds: [],
     selectedIds: [],
+    readers: [null, null],
     journalIds: [],
     connection: null,
     panel: "explore",
@@ -62,6 +66,40 @@ export const workspaceMachine = setup({
     journaling: {},
   },
   on: {
+    LOAD: {
+      target: ".inspecting",
+      actions: assign(({ context, event }) => {
+        if (!context.catalog.some((object) => object.id === event.id))
+          return {};
+        const readers: Context["readers"] = [...context.readers];
+        const other = event.reader === 0 ? 1 : 0;
+        if (readers[other] === event.id) readers[other] = null;
+        readers[event.reader] = event.id;
+        return {
+          readers,
+          selectedIds: readers.filter((id): id is string => !!id),
+          connection: null,
+          opened: true,
+          panel: "explore" as const,
+          journalIds: validIds(context.catalog, [
+            ...context.journalIds,
+            event.id,
+          ]),
+        };
+      }),
+    },
+    EJECT: {
+      target: ".exploring",
+      actions: assign(({ context, event }) => {
+        const readers: Context["readers"] = [...context.readers];
+        readers[event.reader] = null;
+        return {
+          readers,
+          selectedIds: readers.filter((id): id is string => !!id),
+          connection: null,
+        };
+      }),
+    },
     OPEN: {
       target: ".inspecting",
       actions: assign(({ context, event }) => {
@@ -88,19 +126,25 @@ export const workspaceMachine = setup({
     },
     SELECT: {
       target: ".connecting",
-      actions: assign(({ context, event }) => ({
-        selectedIds: context.selectedIds.includes(event.id)
-          ? context.selectedIds.filter((id) => id !== event.id)
-          : validIds(context.catalog, [...context.selectedIds, event.id]).slice(
-              -2,
-            ),
-        connection: null,
-      })),
+      actions: assign(({ context, event }) => {
+        const loadedIds = context.readers.filter((id): id is string => !!id);
+        const selectedIds = loadedIds.includes(event.id)
+          ? loadedIds.filter((id) => id !== event.id)
+          : validIds(context.catalog, [...loadedIds, event.id]).slice(-2);
+        return {
+          selectedIds,
+          readers: [
+            selectedIds[0] ?? null,
+            selectedIds[1] ?? null,
+          ] as Context["readers"],
+          connection: null,
+        };
+      }),
     },
     CONNECT: {
       target: ".connecting",
       actions: assign(({ context }) => {
-        const pair = context.selectedIds.flatMap(
+        const pair = context.readers.flatMap(
           (id) => context.catalog.find((object) => object.id === id) ?? [],
         );
         if (pair.length !== 2) return {};

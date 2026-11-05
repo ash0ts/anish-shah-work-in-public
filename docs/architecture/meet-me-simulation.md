@@ -1,8 +1,8 @@
 # 4N1SH: conversation and evidence
 
 4N1SH is a fictional companion, not Anish or his representative. The owner
-preview is a colorful personal internet: cartridges, optical discs, and cases
-open into software, curricula, research, and talks from the visible archive.
+preview is a playable media console: cartridges, optical discs, and cases
+load software, curricula, research, and talks from the visible archive.
 The current checkpoint is an **authored visual slice**, not live AI dialogue.
 Approve its desktop/mobile interaction before completing generative replies.
 Production remains disabled. There is no score, assessment, or idle loop.
@@ -10,10 +10,20 @@ Production remains disabled. There is no score, assessment, or idle loop.
 ## Presentation boundary
 
 React server-renders six reviewed objects and a complete, collapsed archive.
-Without JavaScript they are ordinary project links. XState owns opening,
-two-object selection, documented connections, messenger context, the journal,
+Without JavaScript they are ordinary project links. XState owns two reader slots,
+loading, replacement, ejection, opening, documented connections, messenger context, the journal,
 and the optional open → connect → ask trail. Opening and connecting never spend
 a model call. In this slice, submitting a question also stays entirely local.
+
+`MediaConsole.tsx` supplies a CSS-3D cartridge carousel and tactile reader console.
+The native range dial and Previous/Next buttons browse the same bounded selection.
+Tapping a cartridge or a reader and dragging into a reader dispatch the same
+ID-only load action. The same project cannot occupy both slots. Ejecting or
+replacing a cartridge clears the prior connection. Patch uses the loaded pair,
+independently of messenger context. Pointer cancellation, second touches, resize,
+visibility changes, and lost capture cancel a drag without loading anything.
+Screen scans, reader lights, and companion reactions follow deliberate input;
+there is no idle loop or initial automatic animation.
 
 `workspace.ts` projects only active visible Work records. `personal-internet.ts`
 intersects exact topic/source IDs; it does not infer affiliation or causality.

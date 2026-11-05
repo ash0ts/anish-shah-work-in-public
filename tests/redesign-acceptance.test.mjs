@@ -892,6 +892,12 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
       file: "components/simulation/Conversation.module.css",
       selector: ".srOnly",
     },
+    {
+      // Rounded CRT boundary clips the decorative scan, not a fixed-height
+      // text area. The screen expands with content; viewport tests verify reflow.
+      file: "components/simulation/MediaConsole.module.css",
+      selector: ".screen",
+    },
   ]);
   const timelineCss = await readFile(
     path.join(PROJECT_ROOT, "app/work/WorkTimeline.module.css"),

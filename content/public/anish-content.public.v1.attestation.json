@@ -70,8 +70,8 @@
     },
     {
       "path": "content/presentation/simulation.v1.json",
-      "bytes": 982,
-      "sha256": "7f171e96d0147bcf2afb386d2700dbebbc7e2098af459f6a46c105aa87fc53cf"
+      "bytes": 1047,
+      "sha256": "799ed347a0c1bd478e59322cbe23cc337c312e36061424b7b37e72060d26aa6f"
     },
     {
       "path": "public/assets/simulation/media-atlas-v1.webp",

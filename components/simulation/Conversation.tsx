@@ -1,11 +1,5 @@
 "use client";
-import {
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type CSSProperties,
-} from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useMachine } from "@xstate/react";
 import Link from "next/link";
 import { animate } from "animejs";
@@ -16,20 +10,12 @@ import {
   workspaceMachine,
   type WorkspacePanel,
 } from "@/lib/simulation/workspace-machine";
-import { ObjectSprite } from "./ObjectSprite";
+import { MediaConsole } from "./MediaConsole";
 import { ArtifactWindow } from "./ArtifactWindow";
 import styles from "./Conversation.module.css";
 
 const subscribeHydration = () => () => {};
 const copy = SITE_COPY.simulation;
-const positions = [
-  [17, 26],
-  [13, 70],
-  [38, 70],
-  [85, 30],
-  [44, 23],
-  [66, 17],
-];
 
 function SourceLinks({
   ids,
@@ -93,7 +79,6 @@ export function Conversation({
   const selected = context.selectedIds.flatMap(
     (id) => catalog.find((object) => object.id === id) ?? [],
   );
-  const lastReply = context.messages.at(-1);
   const complete = context.opened && context.connected && context.investigated;
 
   useEffect(() => {
@@ -202,7 +187,8 @@ export function Conversation({
     remember(context.openIds, next);
     send({ type: "PANEL", panel: next });
   }
-  function ask(ids: string[]) {
+  function ask(ids: string[], origin: HTMLElement) {
+    focusOrigin.current = origin;
     remember(context.openIds, "chat");
     send({ type: "ASK", ids });
     setQuestion(
@@ -215,9 +201,6 @@ export function Conversation({
     setQuestion("");
     setNotice("Authored reply added. No model request was made.");
   }
-  const linkedPositions = context.connection?.supported
-    ? context.connection.ids.map((id) => positions[featuredIds.indexOf(id)])
-    : [];
 
   return (
     <div
@@ -237,6 +220,13 @@ export function Conversation({
         <div className={styles.toolbarActions}>
           <button
             disabled={!hydrated}
+            aria-pressed={context.trail}
+            onClick={() => send({ type: "TRAIL" })}
+          >
+            {copy["trail-label"]} {context.trail ? "−" : "+"}
+          </button>
+          <button
+            disabled={!hydrated}
             aria-pressed={still}
             onClick={() => setStill(!still)}
           >
@@ -249,16 +239,6 @@ export function Conversation({
       </header>
       <div className={styles.worldLayout}>
         <section className={styles.explore} aria-label="Explore workspace">
-          <div className={styles.workspaceTop}>
-            <p>{copy["conversation-summary"]}</p>
-            <button
-              disabled={!hydrated}
-              aria-pressed={context.trail}
-              onClick={() => send({ type: "TRAIL" })}
-            >
-              {copy["trail-label"]} {context.trail ? "−" : "+"}
-            </button>
-          </div>
           {context.trail && (
             <div className={styles.trail} aria-label="Optional trail">
               <span data-done={context.opened}>01 {copy["trail-open"]}</span>
@@ -276,66 +256,41 @@ export function Conversation({
             </div>
           )}
           <div className={styles.field}>
-            <svg
-              className={styles.wires}
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              {linkedPositions.length === 2 &&
-                linkedPositions.every(Boolean) && (
-                  <path
-                    d={`M${linkedPositions[0][0]} ${linkedPositions[0][1]} Q50 50 ${linkedPositions[1][0]} ${linkedPositions[1][1]}`}
-                  />
-                )}
-            </svg>
-            {objects.map((object, index) => (
-              <div
-                key={object.id}
-                className={styles.object}
-                data-object={object.id}
-                data-highlight={
-                  lastReply?.sourceIds.includes(object.id) || undefined
-                }
-                data-selected={context.selectedIds.includes(object.id)}
-                data-open={context.openIds.includes(object.id)}
-                style={
-                  {
-                    "--x": `${positions[index % positions.length][0]}%`,
-                    "--y": `${positions[index % positions.length][1]}%`,
-                    "--tilt": `${[-7, -5, 4, 5, 4, -5][index % 6]}deg`,
-                  } as CSSProperties
-                }
-              >
+            <MediaConsole
+              objects={objects}
+              catalog={catalog}
+              readers={context.readers}
+              connection={context.connection}
+              still={still || context.panel !== "explore"}
+              ready={hydrated}
+              load={(id, reader) => {
+                send({ type: "LOAD", id, reader });
+                setNotice("Cartridge loaded.");
+              }}
+              eject={(reader) => {
+                send({ type: "EJECT", reader });
+                setNotice("Cartridge ejected.");
+              }}
+              connect={() => {
+                send({ type: "CONNECT" });
+                setNotice(
+                  "Connection checked against documented topics and sources.",
+                );
+              }}
+              inspect={open}
+              ask={ask}
+            />
+            <div className={styles.fallback}>
+              {objects.map((object) => (
                 <a
+                  key={object.id}
                   href={object.href}
-                  onClick={(event) => {
-                    if (
-                      event.metaKey ||
-                      event.ctrlKey ||
-                      event.shiftKey ||
-                      event.altKey
-                    )
-                      return;
-                    event.preventDefault();
-                    open(object, event.currentTarget);
-                  }}
                   aria-label={`Open ${object.label}`}
                 >
-                  <ObjectSprite kind={object.kind} variant={index} />
-                  <span className={styles.objectLabel}>{object.label}</span>
+                  {object.label} ↗
                 </a>
-                <button
-                  className={styles.selectObject}
-                  disabled={!hydrated}
-                  aria-label={`Select ${object.label} for connection`}
-                  aria-pressed={context.selectedIds.includes(object.id)}
-                  onClick={() => send({ type: "SELECT", id: object.id })}
-                >
-                  {context.selectedIds.includes(object.id) ? "✓" : "+"}
-                </button>
-              </div>
-            ))}
+              ))}
+            </div>
             {context.openIds.map((id, index) => {
               const object = catalog.find((entry) => entry.id === id)!;
               return (
@@ -344,9 +299,9 @@ export function Conversation({
                   object={object}
                   index={index}
                   still={still}
-                  selected={context.selectedIds.includes(id)}
+                  selected={context.readers.includes(id)}
                   select={() => send({ type: "SELECT", id })}
-                  ask={() => ask([id])}
+                  ask={(origin) => ask([id], origin)}
                   close={() => {
                     send({ type: "CLOSE", id });
                     requestAnimationFrame(() => focusOrigin.current?.focus());
@@ -355,50 +310,6 @@ export function Conversation({
               );
             })}
           </div>
-          <div className={styles.connectionTray} aria-label="Connect objects">
-            <div>
-              <small>{copy["connect-label"]}</small>
-              <p>
-                {selected.length
-                  ? selected.map((object) => object.label).join(" + ")
-                  : copy["connect-instruction"]}
-              </p>
-            </div>
-            <button
-              disabled={selected.length !== 2}
-              onClick={() => {
-                send({ type: "CONNECT" });
-                setNotice(
-                  "Connection checked against documented topics and sources.",
-                );
-              }}
-            >
-              {copy["connect-label"]} ↗
-            </button>
-          </div>
-          {context.connection && (
-            <section
-              className={styles.connectionResult}
-              aria-label="Documented connection"
-            >
-              <h2>
-                {context.connection.supported
-                  ? copy["connection-found"]
-                  : copy["connection-missing"]}
-              </h2>
-              <p>
-                {context.connection.topics
-                  .map((topic) => topic.label)
-                  .join(" · ")}
-                {context.connection.citations.length > 0 &&
-                  ` · ${context.connection.citations.length} shared ${context.connection.citations.length === 1 ? "source" : "sources"}`}
-              </p>
-              <p>{WORKSPACE_MESSAGES.connectionLimit}</p>
-              <button onClick={() => ask(context.connection!.ids)}>
-                {copy["ask-pair"]} ↗
-              </button>
-            </section>
-          )}
           <details className={styles.archive}>
             <summary>
               {copy["browse-label"]} <span>{catalog.length}</span>
@@ -467,9 +378,8 @@ export function Conversation({
                   ref={companion}
                   className={styles.companion}
                   disabled={!hydrated}
-                  onClick={() => {
-                    focusOrigin.current = companion.current;
-                    ask(context.selectedIds);
+                  onClick={(event) => {
+                    ask(context.selectedIds, event.currentTarget);
                   }}
                   aria-label="Talk to 4N1SH"
                 >

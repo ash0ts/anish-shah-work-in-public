@@ -7,6 +7,7 @@
   },
   "workspace": {
     "stage": "authored-visual-slice",
+    "interaction": "two-reader-media-console",
     "objectIds": [
       "group:products:wandb-mcp",
       "group:portfolio:autoresearch-labs",
@@ -23,6 +24,9 @@
   "artwork": {
     "format": "original-generated-webp",
     "direction": "Silver hardware, translucent cobalt, optical media, and acid-lime controls. Original concept approved for local visual exploration; not a product screenshot.",
-    "paths": ["/assets/simulation/media-atlas-v1.webp", "/assets/simulation/companion-cobalt-v1.webp"]
+    "paths": [
+      "/assets/simulation/media-atlas-v1.webp",
+      "/assets/simulation/companion-cobalt-v1.webp"
+    ]
   }
 }

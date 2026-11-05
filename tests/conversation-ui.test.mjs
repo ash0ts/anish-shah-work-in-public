@@ -150,9 +150,44 @@ test("authored answers state their actual basis and never fabricate missing evid
   assert.deepEqual(source.sourceIds, [a]);
   assert(source.text.includes(byId(a).text));
 });
+test("reader loading, moving, replacing, and ejecting preserve distinct visible IDs", () => {
+  const actor = createActor(workspaceMachine, { input: { catalog } }).start();
+  const state = () => actor.getSnapshot().context;
+  actor.send({ type: "LOAD", id: a, reader: 0 });
+  actor.send({ type: "LOAD", id: b, reader: 1 });
+  assert.deepEqual(state().readers, [a, b]);
+  actor.send({ type: "CONNECT" });
+  assert(state().connection.supported);
+  actor.send({ type: "LOAD", id: a, reader: 1 });
+  assert.deepEqual(state().readers, [null, a]);
+  assert.equal(state().connection, null);
+  actor.send({ type: "LOAD", id: "hidden", reader: 0 });
+  assert.deepEqual(state().readers, [null, a]);
+  actor.send({ type: "LOAD", id: c, reader: 0 });
+  actor.send({ type: "ASK", ids: [b] });
+  actor.send({ type: "CONNECT" });
+  assert.deepEqual(
+    state().connection.ids,
+    [c, a],
+    "patch uses readers, not earlier chat context",
+  );
+  actor.send({ type: "EJECT", reader: 1 });
+  assert.deepEqual(state().readers, [c, null]);
+  assert.equal(state().connection, null);
+  actor.send({ type: "ASK", ids: [b] });
+  actor.send({ type: "SELECT", id: a });
+  assert.deepEqual(
+    state().readers,
+    [c, a],
+    "artifact selection extends loaded readers, not a previous question",
+  );
+  assert.equal(state().messages.length, 0);
+  actor.stop();
+});
 test("slice has no provider requests, transcript storage, or free-text GET transport", async () => {
   const files = [
     "components/simulation/Conversation.tsx",
+    "components/simulation/MediaConsole.tsx",
     "lib/simulation/workspace-machine.ts",
     "lib/simulation/personal-internet.ts",
   ];
