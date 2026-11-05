@@ -18,6 +18,55 @@ async function pair(page) {
   await choose(page, "AutoResearch labs").click();
   await page.getByRole("button", { name: "Connect ↗", exact: true }).click();
 }
+for (const width of [320, 1024, 1440]) {
+  // Isolate viewport cases, including browser history, in fresh contexts.
+  test(`every media object opens and closes without covering connection controls at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await ready(page);
+    for (const name of [
+      "W&B MCP Server",
+      "AutoResearch labs",
+      "Agent Lens studies",
+      "Your Agent Learned to Cheat",
+      "ARIA",
+      "Fugue",
+    ]) {
+      await page
+        .getByRole("link", { name: `Open ${name}`, exact: true })
+        .click();
+      await expect(page.locator("[data-window] h2")).toBeFocused();
+      await page
+        .getByRole("button", { name: `Close ${name}`, exact: true })
+        .click();
+    }
+    if (width >= 900) {
+      const messenger = await page
+        .getByRole("region", { name: /4N1SH.*Messenger/i })
+        .boundingBox();
+      const connect = await page
+        .getByRole("button", { name: "Connect ↗", exact: true })
+        .boundingBox();
+      expect(messenger.y + messenger.height).toBeLessThanOrEqual(connect.y);
+    }
+  });
+}
+
+test("missing decorative media leaves every project and companion control named and usable", async ({
+  page,
+}) => {
+  await page.route("**/assets/simulation/*.webp", (route) => route.abort());
+  await ready(page);
+  await expect(openMcp(page)).toContainText("W&B MCP Server");
+  await openMcp(page).click();
+  await expect(page.locator("[data-window] h2")).toBeFocused();
+  await page.getByRole("button", { name: "Ask 4N1SH", exact: true }).click();
+  await expect(
+    page.getByLabel("Ask about the work", { exact: true }),
+  ).toBeFocused();
+});
+
 test("open, connect, ask, journal, and optional trail are real interactions with zero provider calls", async ({
   page,
 }) => {
@@ -38,7 +87,10 @@ test("open, connect, ask, journal, and optional trail are real interactions with
   await expect(
     page.getByRole("region", { name: "Documented connection" }),
   ).toContainText("Evaluation & observability");
-  await page.screenshot({ path: ".playwright/personal-internet-connection.png", fullPage: true });
+  await page.screenshot({
+    path: ".playwright/personal-internet-connection.png",
+    fullPage: true,
+  });
   await page.getByRole("button", { name: "Ask about this pair ↗" }).click();
   await expect(
     page.getByLabel("Ask about the work", { exact: true }),
@@ -72,24 +124,39 @@ test("open, connect, ask, journal, and optional trail are real interactions with
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
 
-test("dragged artifact windows remain bounded and offer a reset button", async ({ page }) => {
+test("dragged artifact windows remain bounded and offer a reset button", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await ready(page);
   await openMcp(page).click();
   const window = page.locator("[data-window]");
   const initial = await window.boundingBox();
-  const handle = await window.getByText("terminal.open", { exact: true }).boundingBox();
+  const handle = await window
+    .getByText("terminal.open", { exact: true })
+    .boundingBox();
   await page.mouse.move(handle.x + 30, handle.y + 15);
   await page.mouse.down();
   await page.mouse.move(1400, 100, { steps: 12 });
   await page.mouse.up();
-  await expect.poll(() => window.evaluate((element) => {
-    const box = element.getBoundingClientRect();
-    const field = element.parentElement.getBoundingClientRect();
-    return box.left >= field.left && box.right <= field.right + 1 && box.top >= field.top && box.bottom <= field.bottom + 1;
-  })).toBe(true);
+  await expect
+    .poll(() =>
+      window.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const field = element.parentElement.getBoundingClientRect();
+        return (
+          box.left >= field.left &&
+          box.right <= field.right + 1 &&
+          box.top >= field.top &&
+          box.bottom <= field.bottom + 1
+        );
+      }),
+    )
+    .toBe(true);
   await window.getByRole("button", { name: "Reset position" }).click();
-  await expect.poll(async () => Math.round((await window.boundingBox()).x)).toBe(Math.round(initial.x));
+  await expect
+    .poll(async () => Math.round((await window.boundingBox()).x))
+    .toBe(Math.round(initial.x));
 });
 test("window limit, Escape, Back/Forward, and focus restore without leaving the workspace", async ({
   page,
@@ -132,6 +199,17 @@ for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.getByRole("button", { name: "Ask 4N1SH", exact: true }).click();
     await page.getByRole("button", { name: "Send question" }).click();
     await expect(page.getByRole("log")).toContainText("MCP");
+    await expect
+      .poll(() =>
+        page
+          .getByRole("log")
+          .evaluate(
+            (element) =>
+              element.scrollHeight - element.scrollTop - element.clientHeight <
+              2,
+          ),
+      )
+      .toBe(true);
     await fits();
     await page.screenshot({
       path: `.playwright/personal-internet-chat-${width}.png`,
@@ -184,11 +262,17 @@ for (const zoom of [2, 4])
     const question = page.getByLabel("Ask about the work", { exact: true });
     await question.fill("MCP");
     // Wait for the controlled input to enable submit before testing tab order.
-    await expect(page.getByRole("button", { name: "Send question" })).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "Send question" }),
+    ).toBeEnabled();
     // Native macOS WebKit uses Option-Tab for all controls unless the user's
     // Safari keyboard-navigation preference is enabled. Do not change that
     // machine preference or programmatically focus the button under test.
-    await question.press(browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab");
+    await question.press(
+      browserName === "webkit" && process.platform === "darwin"
+        ? "Alt+Tab"
+        : "Tab",
+    );
     await expect(
       page.getByRole("button", { name: "Send question" }),
     ).toBeFocused();

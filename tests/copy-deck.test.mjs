@@ -268,7 +268,9 @@ test("editable Play flavor copy excludes guarded provider-policy literals", asyn
 test("conversation flavor is deck-owned while data handling remains protected", async () => {
   const deck = await buildCopyDeck(root);
   assert.equal(deck.pages.simulation["ingress-cta"], "Talk to 4N1SH");
-  assert.equal(deck.pages.simulation["conversation-title"], "A strange personal internet.");
+  assert.equal(deck.pages.simulation["conversation-title"], "Personal internet");
+  for (const key of ["wall-note", "workspace-stamp", "reaction-idle"])
+    assert.equal(deck.pages.simulation[key], undefined);
   assert.equal(deck.pages.simulation["boot-title"], undefined);
   const messages = await readFile(path.join(root, "lib/simulation/conversation-messages.ts"), "utf8");
   assert.match(messages, /fictional/);

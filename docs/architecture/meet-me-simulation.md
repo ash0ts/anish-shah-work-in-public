@@ -1,8 +1,8 @@
 # 4N1SH: conversation and evidence
 
 4N1SH is a fictional companion, not Anish or his representative. The owner
-preview is a colorful personal internet: tools become terminals, curricula
-become notebooks, research becomes documents, and talks become posters.
+preview is a colorful personal internet: cartridges, optical discs, and cases
+open into software, curricula, research, and talks from the visible archive.
 The current checkpoint is an **authored visual slice**, not live AI dialogue.
 Approve its desktop/mobile interaction before completing generative replies.
 Production remains disabled. There is no score, assessment, or idle loop.
@@ -30,11 +30,20 @@ decorative feedback. Play never preloads this route's art or model code.
 
 ### Artwork provenance and budgets
 
-`ObjectSprite.tsx` contains original inline SVG object drawings, not product
-screenshots or borrowed game assets. `companion.svg` is a first-party four-frame
-pixel sprite sheet. Both are inventoried in the public-content attestation.
-The superseded three WebP scenes and their encoder have no consumers and are
-removed. No new runtime dependency, Canvas, physics engine, or remote art loads.
+The approved visual direction uses silver hardware, translucent cobalt, optical
+media, and acid-lime controls. `ObjectSprite.tsx` selects one of four materials
+from `media-atlas-v1.webp`; `companion-cobalt-v1.webp` supplies the original blue
+companion. Both are AI-generated original artwork, not product screenshots or
+borrowed game assets. Labels, buttons, project facts, and chat remain semantic
+HTML. CSS supplies depth and brief interaction feedback, not idle animation.
+
+Both images are inventoried in the public-content attestation. Together they
+are capped at 250 KiB; the material atlas is at most 1024px wide and the companion
+480px. Re-encode transparent PNG inputs with
+`node scripts/simulation/encode-workspace-assets.mjs <atlas.png> <companion.png>`.
+The encoder preserves proportions and alpha and strips source metadata. The
+superseded monochrome scenes, SVG toys, and yellow companion have no consumers
+and are removed. No new runtime dependency, Canvas, physics engine, or remote art loads.
 Measure the route chunk and asset bytes from the same candidate build used by
 browser checks; preserve those results in the PR review notes.
 

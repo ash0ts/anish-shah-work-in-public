@@ -70,18 +70,23 @@
     },
     {
       "path": "content/presentation/simulation.v1.json",
-      "bytes": 743,
-      "sha256": "da8a848954a677384915e016be93548318f64a2cfac04516905d35758e29d4bd"
+      "bytes": 982,
+      "sha256": "7f171e96d0147bcf2afb386d2700dbebbc7e2098af459f6a46c105aa87fc53cf"
     },
     {
-      "path": "public/assets/simulation/companion.svg",
-      "bytes": 988,
-      "sha256": "09b95250a0fc7b05a88d24027eb1fea3c879331fe22d5936199ef16d6499774e"
+      "path": "public/assets/simulation/media-atlas-v1.webp",
+      "bytes": 195748,
+      "sha256": "3964a306184c23a3f8a02de18de23358aaaaae2738cf6f767ba8dafbd78fb868"
+    },
+    {
+      "path": "public/assets/simulation/companion-cobalt-v1.webp",
+      "bytes": 34162,
+      "sha256": "3ed452165bc19266dc8cc842052cc4c1d7621f7882bd3a36ffd349161bfc51d7"
     },
     {
       "path": "components/simulation/ObjectSprite.tsx",
-      "bytes": 2970,
-      "sha256": "795dfcc6e01b9023db8dd926c11f3f30e3ee618a38c78bb75ea252c6152a534b"
+      "bytes": 720,
+      "sha256": "9d0eaac9eb19642462ed28034d0b49ec816e4db938cf7ac9f49586994ac0fba0"
     },
     {
       "path": "public/assets/organizations/ai-tinkerers.438086e46304.svg",

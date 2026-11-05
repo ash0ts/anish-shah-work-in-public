@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { tsImport } from "tsx/esm/api";
 import { createActor } from "xstate";
+import sharp from "sharp";
 import bundle from "../content/public/anish-content.public.v1.json" with { type: "json" };
 import manifest from "../content/presentation/simulation.v1.json" with { type: "json" };
 const { personalInternetFrom } = await tsImport(
@@ -26,6 +27,28 @@ const { catalog, featuredIds } = personalInternetFrom(
 );
 const [a, b, c] = featuredIds;
 const byId = (id) => catalog.find((object) => object.id === id);
+
+test("workspace art is local, transparent, metadata-free, and within its measured budget", async () => {
+  assert.equal(manifest.artwork.format, "original-generated-webp");
+  assert.deepEqual(manifest.artwork.paths, [
+    "/assets/simulation/media-atlas-v1.webp",
+    "/assets/simulation/companion-cobalt-v1.webp",
+  ]);
+  let total = 0;
+  for (const [index, path] of manifest.artwork.paths.entries()) {
+    const bytes = await readFile(new URL(`../public${path}`, import.meta.url));
+    const metadata = await sharp(bytes).metadata();
+    assert.equal(metadata.format, "webp");
+    assert.equal(metadata.hasAlpha, true);
+    assert(metadata.width <= (index === 0 ? 1024 : 480));
+    if (index === 0) assert.equal(metadata.width, metadata.height);
+    for (const key of ["exif", "icc", "iptc", "xmp"])
+      assert.equal(metadata[key], undefined);
+    assert.equal(metadata.pages ?? 1, 1, "No animated assets or idle loops");
+    total += bytes.length;
+  }
+  assert(total <= 250 * 1024);
+});
 
 test("reviewed starting objects span four work types; all links and sources come from the public archive", () => {
   assert.equal(manifest.workspace.stage, "authored-visual-slice");

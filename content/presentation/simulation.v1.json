@@ -21,7 +21,8 @@
   "model": "gemini-3.6-flash",
   "audience": "owner-preview",
   "artwork": {
-    "format": "first-party-svg",
-    "paths": ["/assets/simulation/companion.svg"]
+    "format": "original-generated-webp",
+    "direction": "Silver hardware, translucent cobalt, optical media, and acid-lime controls. Original concept approved for local visual exploration; not a product screenshot.",
+    "paths": ["/assets/simulation/media-atlas-v1.webp", "/assets/simulation/companion-cobalt-v1.webp"]
   }
 }

@@ -1,7 +1,7 @@
 <!-- copy-page: simulation -->
 
 ## conversation-title
-A strange personal internet.
+Personal internet
 
 ## conversation-summary
 Open something. See where it leads.
@@ -60,15 +60,6 @@ See your discoveries
 ## trail-finished
 A little trail through the work. Keep these links, or wander somewhere else.
 
-## wall-note
-Objects may contain rabbit holes.
-
-## workspace-stamp
-handmade / not a simulation of you
-
-## reaction-idle
-Psst. The objects open.
-
 ## reaction-open
 That one has a paper trail.
 
@@ -112,7 +103,7 @@ Browse the whole archive
 Find a project or topic
 
 ## messenger-welcome
-You can pick things up here. Open an object, or choose a pair and see what holds them together. Most of the wires are metaphorical.
+Pick something up. There’s a project inside. Or bring me two and we’ll follow the connection.
 
 ## sources-label
 Sources

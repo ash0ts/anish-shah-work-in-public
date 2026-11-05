@@ -23,12 +23,12 @@ import styles from "./Conversation.module.css";
 const subscribeHydration = () => () => {};
 const copy = SITE_COPY.simulation;
 const positions = [
-  [20, 22],
-  [55, 18],
-  [82, 40],
-  [73, 76],
-  [39, 79],
-  [15, 58],
+  [17, 26],
+  [13, 70],
+  [38, 70],
+  [85, 30],
+  [44, 23],
+  [66, 17],
 ];
 
 function SourceLinks({
@@ -84,6 +84,7 @@ export function Conversation({
   const root = useRef<HTMLDivElement>(null);
   const companion = useRef<HTMLButtonElement>(null);
   const questionRef = useRef<HTMLTextAreaElement>(null);
+  const messageLog = useRef<HTMLDivElement>(null);
   const focusOrigin = useRef<HTMLElement | null>(null);
   const stateRef = useRef(context);
   const objects = featuredIds.flatMap(
@@ -98,6 +99,11 @@ export function Conversation({
   useEffect(() => {
     stateRef.current = context;
   }, [context]);
+  useEffect(() => {
+    // Reveal a new reply without moving keyboard focus or animating the page.
+    if (context.messages.length && messageLog.current)
+      messageLog.current.scrollTop = messageLog.current.scrollHeight;
+  }, [context.messages]);
   useEffect(() => {
     // Only interface IDs go in history. Questions/replies remain in React memory.
     const base = history.state;
@@ -224,7 +230,7 @@ export function Conversation({
       <header className={styles.toolbar}>
         <div>
           <span className={styles.identifier}>
-            4N1SH<span aria-hidden="true">.net</span>
+            4N1SH<span aria-hidden="true">▰</span>
           </span>
           <h1>{copy["conversation-title"]}</h1>
         </div>
@@ -270,10 +276,6 @@ export function Conversation({
             </div>
           )}
           <div className={styles.field}>
-            <div className={styles.wallNote} aria-hidden="true">
-              {copy["wall-note"]}
-              <span>↘</span>
-            </div>
             <svg
               className={styles.wires}
               viewBox="0 0 100 100"
@@ -296,12 +298,12 @@ export function Conversation({
                   lastReply?.sourceIds.includes(object.id) || undefined
                 }
                 data-selected={context.selectedIds.includes(object.id)}
+                data-open={context.openIds.includes(object.id)}
                 style={
                   {
                     "--x": `${positions[index % positions.length][0]}%`,
                     "--y": `${positions[index % positions.length][1]}%`,
-                    "--mobile-y": `${positions[index % positions.length][1] * 5.4}px`,
-                    "--tilt": `${[-7, 5, 8, -5, 6, -4][index % 6]}deg`,
+                    "--tilt": `${[-7, -5, 4, 5, 4, -5][index % 6]}deg`,
                   } as CSSProperties
                 }
               >
@@ -321,7 +323,7 @@ export function Conversation({
                   aria-label={`Open ${object.label}`}
                 >
                   <ObjectSprite kind={object.kind} variant={index} />
-                  <span>{object.label}</span>
+                  <span className={styles.objectLabel}>{object.label}</span>
                 </a>
                 <button
                   className={styles.selectObject}
@@ -334,33 +336,6 @@ export function Conversation({
                 </button>
               </div>
             ))}
-            <button
-              ref={companion}
-              className={styles.companion}
-              disabled={!hydrated}
-              onClick={() => {
-                focusOrigin.current = companion.current;
-                ask(context.selectedIds);
-              }}
-              aria-label="Talk to 4N1SH"
-            >
-              <span
-                className={styles.sprite}
-                data-frame={
-                  context.connection ? 2 : context.openIds.length ? 3 : 0
-                }
-              />
-              <span className={styles.bubble}>
-                {context.connection
-                  ? copy["reaction-connect"]
-                  : context.openIds.length
-                    ? copy["reaction-open"]
-                    : copy["reaction-idle"]}
-              </span>
-            </button>
-            <span className={styles.stamp} aria-hidden="true">
-              {copy["workspace-stamp"]}
-            </span>
             {context.openIds.map((id, index) => {
               const object = catalog.find((entry) => entry.id === id)!;
               return (
@@ -480,6 +455,7 @@ export function Conversation({
             </header>
             <p className={styles.demoLabel}>{WORKSPACE_MESSAGES.demo}</p>
             <div
+              ref={messageLog}
               className={styles.messages}
               role="log"
               aria-label="Conversation"
@@ -487,12 +463,28 @@ export function Conversation({
               aria-relevant="additions"
             >
               <div className={styles.greeting}>
-                <span
-                  className={styles.sprite}
-                  data-frame="1"
-                  aria-hidden="true"
-                />
-                <p>{copy["messenger-welcome"]}</p>
+                <button
+                  ref={companion}
+                  className={styles.companion}
+                  disabled={!hydrated}
+                  onClick={() => {
+                    focusOrigin.current = companion.current;
+                    ask(context.selectedIds);
+                  }}
+                  aria-label="Talk to 4N1SH"
+                >
+                  <span className={styles.sprite} aria-hidden="true" />
+                  <span className={styles.companionName} aria-hidden="true">
+                    4N1SH
+                  </span>
+                </button>
+                <p>
+                  {context.connection
+                    ? copy["reaction-connect"]
+                    : context.openIds.length
+                      ? copy["reaction-open"]
+                      : copy["messenger-welcome"]}
+                </p>
               </div>
               {context.messages.map((message, index) => (
                 <div key={index} className={styles.exchange}>
@@ -615,9 +607,7 @@ export function Conversation({
               )}
             </button>
           </nav>
-          <p className={styles.smallPrint}>
-            {WORKSPACE_MESSAGES.disclosure}
-          </p>
+          <p className={styles.smallPrint}>{WORKSPACE_MESSAGES.disclosure}</p>
         </aside>
       </div>
       <div role="status" className={styles.srOnly}>
@@ -625,14 +615,10 @@ export function Conversation({
       </div>
       <details className={styles.privacy}>
         <summary>{copy["preview-notes"]}</summary>
-        <p>
-          {WORKSPACE_MESSAGES.privacy}
-        </p>
+        <p>{WORKSPACE_MESSAGES.privacy}</p>
       </details>
       <noscript>
-        <p className={styles.noScript}>
-          {WORKSPACE_MESSAGES.noScript}
-        </p>
+        <p className={styles.noScript}>{WORKSPACE_MESSAGES.noScript}</p>
       </noscript>
     </div>
   );
