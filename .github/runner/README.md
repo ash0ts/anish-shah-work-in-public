@@ -15,12 +15,26 @@ executed failure is a failed candidate; never switch evidence modes to relabel
 it as success.
 
 The Ubuntu 24.04 images, Node 24.18.0 archives, npm 11.6.2, Playwright 1.62.1,
-and GitHub runner 2.336.0 are exact pins. The image build verifies the published
+and GitHub runner 2.338.2 are exact pins. The image build verifies the published
 Node and runner SHA-256 values before extraction. Optional corporate CA input is
 a BuildKit secret used only by the networked build step. It is removed before
 each layer is committed and is never part of the resulting image. The build
 script creates a temporary allowlisted context containing only the Dockerfile,
 entrypoint, and job-start hook; the repository is never sent to Docker.
+
+Before preparing release evidence, compare the runner pin and both architecture
+checksums with the repository's read-only runner download inventory:
+
+```bash
+gh api repos/ash0ts/anish-shah-work-in-public/actions/runners/downloads \
+  --jq '.[] | select(.os == "linux") | {architecture, download_url, sha256_checksum}'
+```
+
+GitHub rejects deprecated runners before they can receive jobs. Review a pin
+update in Git and rebuild the image when needed; do not enable self-updates or
+skip archive verification. The current pin was checked against that inventory
+and the [official runner release](https://github.com/actions/runner/releases/tag/v2.338.2)
+on 2026-11-14.
 
 The ARM64 image includes Chromium for the complete browser suite and WebKit for
 one narrowly scoped Spotify Ranked Groove interaction. WebKit is automated
