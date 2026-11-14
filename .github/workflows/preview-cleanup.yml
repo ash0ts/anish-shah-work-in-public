@@ -31,7 +31,7 @@ jobs:
           ref: ${{ github.workflow_sha }}
           persist-credentials: false
       - name: Verify the dependency-free cleanup runtime
-        run: test "$(node --version | cut -d. -f1)" -ge 20
+        run: node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)'
       - name: Delete the closed or explicitly unlabeled PR preview
         if: github.event_name == 'pull_request'
         env:
