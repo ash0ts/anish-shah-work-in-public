@@ -66,20 +66,6 @@
   text-transform: uppercase;
 }
 
-.runtimeBar .artPreview {
-  max-width: 48ch;
-  color: #c5c8d1;
-  font-size: 0.65rem;
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.objects [data-room-blockout] {
-  color: #c5c8d1;
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-}
-
 .runtimeActions {
   display: flex;
   min-width: 0;

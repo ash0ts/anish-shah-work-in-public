@@ -133,6 +133,19 @@ class Mesh:
         for a, b in zip(points, points[1:]):
             self.rod(a, b, radius, tile, 5)
 
+    def ring(self, center, radius, width, tile=7, plane="xz", segments=24):
+        # Flat, double-sided metal band: much cheaper than many tiny cylinders.
+        def point(angle, r):
+            a, c = math.cos(angle)*r, math.sin(angle)*r
+            offset = (a,0,c) if plane=="xz" else ((a,c,0) if plane=="xy" else (0,a,c))
+            return tuple(Vector(center)+Vector(offset))
+        for i in range(segments):
+            a,c = i*math.tau/segments,(i+1)*math.tau/segments
+            points=[point(a,radius-width/2),point(a,radius+width/2),
+                    point(c,radius+width/2),point(c,radius-width/2)]
+            self.face(points,tile)
+            self.face(list(reversed(points)),tile)
+
     def finish(self, name, parent=None, world=(0, 0, 0)):
         data = bpy.data.meshes.new(name)
         # Runtime-coordinate winding is reversed by the authoring face builders.
@@ -332,20 +345,152 @@ def computer(b,m):
         b.box((.48,.07,.63),(-1.05,1.31+i*.075,-.2),[3,9,14][i],rot=(0,i*.08,0))
     b.box((.33,.16,.45),(.7,.13,-.1),8)
 
-def blockout(b,m,ident,size):
-    # An explicit wire-edged volume, not a falsely finished prop. Labels live
-    # in the semantic dock; no decorative asset embeds public UI wording.
-    w,h,d=size
-    b.box((w,.09,d),(0,.06,0),8)
-    for x in [-w/2,w/2]:
-        for z in [-d/2,d/2]:
-            b.rod((x,.1,z),(x,h,z),.012,11,4)
-    for y in [.11,h]:
-        for z in [-d/2,d/2]:
-            b.rod((-w/2,y,z),(w/2,y,z),.012,11,4)
-        for x in [-w/2,w/2]:
-            b.rod((x,y,-d/2),(x,y,d/2),.012,11,4)
-    m.box((w*.65,.025,.025),(0,h/2,d/2),13)
+def television(b,m):
+    # A squat broadcast shrine: ribbed charcoal cabinet, amber speaker and
+    # forked antenna. Recognizable hardware, not a borrowed anime prop.
+    for x in [-.47,.47]:
+        b.box((.12,.49,.68),(x,.25,0),2,rot=(0,0,-x*.14))
+    b.box((1.28,.1,.88),(0,.51,0),1,bevel=.025)
+    b.box((1.13,.99,.75),(0,1.05,-.02),2,bevel=.075)
+    b.box((1.23,.99,.14),(0,1.05,.39),14,bevel=.04)
+    b.box((.91,.73,.04),(-.105,1.14,.475),8,bevel=.025)
+    b.box((.81,.63,.02),(-.105,1.14,.503),5,bevel=.025)
+    for x in [-.6,.6]:
+        b.box((.035,.82,.03),(x,1.09,.48),7)
+        b.rod((x,1.48,.35),(x*.88,1.71,.3),.045,7,4,end_radius=.005)
+    for y in [.85,1.12,1.35]:
+        b.rod((.48,y,.48),(.48,y,.53),.068,11,8)
+        b.box((.012,.07,.012),(.48,y,.54),8,rot=(0,0,.3))
+    for i in range(9):
+        b.box((.048,.11,.015),(-.44+i*.085,.69,.48),7)
+    b.rod((0,1.61,-.2),(0,1.66,-.2),.13,2,8)
+    for side in [-1,1]:
+        b.rod((0,1.66,-.2),(side*.43,1.98,-.28),.014,11,5)
+    b.wire([(.4,.64,-.4),(.55,.2,-.48),(.3,.06,-.55),(-.6,.05,-.52)],8)
+    # A brief phosphor wake-up, no provider image or fabricated live program.
+    m.box((.66,.019,.012),(-.105,1.14,.52),13)
+    for i,w in enumerate([.32,.48,.22]):
+        m.box((w,.012,.012),(-.105,1.27-i*.055,.52),10)
+    m.box((.027,.027,.013),(.48,.69,.54),13)
+
+def music_player(b,m):
+    # Portable translucent-blue deck on a narrow steel stand. Headphones form
+    # its silhouette; buttons physically depress on selection.
+    b.box((.68,.09,.6),(0,.08,0),2,bevel=.03)
+    b.box((.13,.72,.18),(0,.43,-.1),2)
+    b.box((.76,.07,.66),(0,.81,0),1,bevel=.02)
+    b.box((.65,.42,.48),(0,1.055,0),6,bevel=.04)
+    b.box((.56,.29,.02),(0,1.07,.25),5,bevel=.015)
+    # Tape window, two visible reels, and the thin bridge between them.
+    for x in [-.15,.15]:
+        b.rod((x,1.08,.27),(x,1.08,.28),.086,11,10)
+        b.rod((x,1.08,.284),(x,1.08,.29),.035,8,6)
+    b.box((.3,.022,.01),(0,1.14,.285),7)
+    for i in range(4):
+        m.box((.09,.045,.14),(-.19+i*.126,1.29,.08),12 if i==0 else 11,bevel=.01)
+    b.box((.41,.012,.018),(0,.91,.27),13)
+    # Padded, polygonal headband wrapped around the player, not a UI halo.
+    band=[(-.37,1.14,-.13),(-.41,1.42,-.13),(-.28,1.62,-.13),(0,1.7,-.13),
+          (.28,1.62,-.13),(.41,1.42,-.13),(.37,1.14,-.13)]
+    b.wire(band,2,.039)
+    for side in [-1,1]:
+        b.box((.13,.3,.23),(side*.39,1.16,-.1),8,rot=(0,0,side*.13),bevel=.035)
+        b.box((.025,.23,.17),(side*.465,1.16,-.1),7)
+    b.wire([(.39,1.02,-.1),(.46,.71,.22),(.25,.64,.29),(.1,.85,.28),(.29,.94,.25)],8,.012)
+
+def record_crate(b,m):
+    # Low flight-case console with a working platter and a real open crate.
+    b.box((1.43,.18,1.06),(0,.18,0),2,bevel=.025)
+    for x in [-.63,.63]:
+        for z in [-.43,.43]:
+            b.box((.09,.21,.09),(x,.1,z),8)
+            b.box((.075,.2,.075),(x,.2,z),7)
+    b.box((.91,.4,.86),(-.24,.48,.03),1)
+    b.box((.94,.07,.89),(-.24,.715,.03),11,bevel=.02)
+    b.rod((-.28,.76,.05),(-.28,.79,.05),.365,2,24)
+    m.rod((-.28,.795,.05),(-.28,.81,.05),.35,8,24)
+    for radius in [.19,.24,.29,.325]:
+        m.ring((-.28,.814,.05),radius,.003,2,segments=24)
+    m.rod((-.28,.816,.05),(-.28,.822,.05),.105,9,16)
+    # Off-centre label stripe makes the short platter turn visible.
+    m.box((.014,.007,.063),(-.24,.828,.02),3)
+    b.rod((-.28,.823,.05),(-.28,.86,.05),.012,11,6)
+    b.rod((.09,.75,-.27),(.09,.86,-.27),.045,2,8)
+    b.wire([(.09,.86,-.27),(.09,.88,.05),(-.04,.87,.2)],7,.013)
+    b.box((.045,.04,.09),(-.04,.85,.2),8)
+    b.box((.045,.024,.07),(-.62,.765,.38),12)
+    # Upright sleeves, staggered so they read as a collection, not five cubes.
+    for x in [.26,.7]:
+        for y in [.32,.54,.75]:
+            b.box((.045,.11,.88),(x,y,0),1)
+    for z in [-.43,.43]:
+        for y in [.32,.54,.75]:
+            b.box((.49,.11,.045),(.48,y,z),1)
+    for i in range(7):
+        b.box((.37,.64,.045),(.48,.7,-.32+i*.1),[14,9,3,10,6,11,4][i],rot=(.05+i*.018,0,0))
+    # Original eclipse sleeve artwork in coarse geometry, no album art.
+    b.rod((.48,.85,.343),(.48,.85,.352),.115,7,10)
+    b.rod((.52,.88,.356),(.52,.88,.36),.09,4,10)
+
+def treadmill(b,m):
+    # Industrial training rig: flared rails, ribbed belt and a small phosphor
+    # console. It stays recognizably a treadmill; no game combat or activity data.
+    b.box((1.32,.18,1.95),(0,.16,0),2,bevel=.04)
+    b.box((.91,.03,1.67),(0,.27,.06),8)
+    for i in range(14):
+        b.box((.85,.012,.022),(0,.29,-.65+i*.11),14)
+    for side in [-1,1]:
+        b.box((.14,.075,1.9),(side*.58,.28,0),11,bevel=.015)
+        b.rod((side*.57,.26,-.7),(side*.5,1.45,-.59),.055,2,6)
+        b.rod((side*.5,1.29,-.59),(side*.55,1.05,.34),.037,7,6)
+        b.rod((side*.55,1.05,.08),(side*.55,1.05,.34),.052,8,6)
+        b.box((.045,.1,.12),(side*.58,.33,.84),12)
+    b.box((1.08,.3,.43),(0,1.4,-.57),6,rot=(.2,0,0),bevel=.045)
+    b.box((.55,.18,.025),(-.1,1.43,-.325),5,rot=(.2,0,0))
+    for x in [.28,.4]:
+        b.box((.065,.05,.025),(x,1.36,-.31),9 if x==.28 else 11)
+    # Simple boot bars, intentionally not a speed, distance, or health metric.
+    for i in range(4):
+        m.box((.06,.025+i*.019,.016),(-.27+i*.1,1.425,-.3),13,rot=(.2,0,0))
+    b.wire([(.35,1.28,-.4),(.39,1.08,-.36),(.23,1.04,-.32)],9,.012)
+    b.box((.04,.08,.04),(.23,1.04,-.32),9)
+
+def globe(b,m):
+    # A faceted library globe held in a brass armillary stand. Land patches are
+    # original decorative cartography, never Travel pins or live geographic data.
+    b.rod((0,.05,0),(0,.17,0),.39,1,10,end_radius=.32)
+    b.rod((0,.17,0),(0,.72,0),.11,7,8,end_radius=.065)
+    b.rod((0,.69,0),(0,.77,0),.22,2,8)
+    b.ring((0,1.32,0),.61,.055,7,"xy",32)
+    b.ring((0,1.32,0),.57,.035,7,"xz",32)
+    for y in [.72,1.91]:
+        b.rod((0,y-.05,0),(0,y+.05,0),.035,7,6)
+    radius=.49
+    def point(lat,lon,r=radius):
+        return (math.cos(lat)*math.sin(lon)*r,1.32+math.sin(lat)*r,math.cos(lat)*math.cos(lon)*r)
+    for row in range(10):
+        lo=-math.pi/2+row*math.pi/10
+        hi=lo+math.pi/10
+        for col in range(20):
+            left=col*math.tau/20
+            right=left+math.tau/20
+            lat,lon=(lo+hi)/2,(left+right)/2
+            land=(math.sin(lon*2+.5)+math.cos(lat*4-lon*1.3) > .65 and abs(lat)<1.25)
+            points=[point(lo,left),point(hi,left),point(hi,right),point(lo,right)]
+            m.face(points,10 if land else 6,(.85,.94,1) if land else (.73,.83,.94))
+    for lat in [-.6,0,.6]:
+        for col in range(24):
+            left,right=col*math.tau/24,(col+1)*math.tau/24
+            m.face([point(lat-.008,left,.495),point(lat+.008,left,.495),
+                    point(lat+.008,right,.495),point(lat-.008,right,.495)],7)
+    for lon in [0,math.pi/2,math.pi,math.pi*1.5]:
+        for row in range(12):
+            lo,hi=-math.pi/2+row*math.pi/12,-math.pi/2+(row+1)*math.pi/12
+            m.face([point(lo,lon-.008,.495),point(hi,lon-.008,.495),
+                    point(hi,lon+.008,.495),point(lo,lon+.008,.495)],7)
+
+BUILDERS={"watch":television,"read":shelf,"listen":music_player,"collect":record_crate,
+          "play":computer,"move":treadmill,"travel":globe}
 
 shell()
 for ident, layout in LAYOUT["props"].items():
@@ -355,14 +500,19 @@ for ident, layout in LAYOUT["props"].items():
     parent.rotation_euler.z=layout["rotation"]
     parent.scale=(layout["scale"],)*3
     b,m=Mesh(),Mesh()
-    if ident=="read":
-        shelf(b,m)
-    elif ident=="play":
-        computer(b,m)
-    else:
-        blockout(b,m,ident,layout["size"])
+    BUILDERS[ident](b,m)
     b.finish("body__"+ident,parent,layout["position"])
-    m.finish("motion__"+ident,parent,layout["position"])
+    # Motion is authored about the physical part, not the room floor. Moving
+    # the globe or platter must not orbit the whole prop around an arbitrary origin.
+    pivot=Vector(layout.get("motionPivot",[0,0,0]))
+    m.vertices=[tuple(Vector(v)-pivot) for v in m.vertices]
+    # Keep an empty pivot parent: Meshopt may recenter/scale the child mesh
+    # during quantization, which must not move the animation's rotation origin.
+    motion=bpy.data.objects.new("motion__"+ident,None)
+    bpy.context.collection.objects.link(motion)
+    motion.parent=parent
+    motion.location=xyz(pivot)
+    m.finish("surface__"+ident,motion,tuple(Vector(layout["position"])+pivot))
 
 # Recalculate outward normals for authored disconnected solids before export.
 for obj in bpy.context.scene.objects:

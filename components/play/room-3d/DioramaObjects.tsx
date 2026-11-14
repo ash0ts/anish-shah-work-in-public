@@ -6,6 +6,7 @@ import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import type { RoomObjectId } from "../room-platform/room-types";
 import manifest from "./diorama.generated.json";
 import { roomAtlasPlugin } from "./room-atlas";
+import { roomPropResponse } from "./room-prop-response";
 
 type RegisterHit = (id: RoomObjectId, mesh: Mesh | null) => void;
 type RegisterOccluder = (mesh: Mesh, active: boolean) => void;
@@ -55,12 +56,12 @@ function DioramaProp({ source, id, active, selected, registerHit }: {
     moving.position.copy(base.position);
     moving.rotation.set(0, 0, 0);
     moving.scale.copy(base.scale);
-    if (id === "read") moving.position.z += .2 * t;
-    if (id === "listen") moving.position.z -= .025 * t;
-    if (id === "collect") moving.rotation.z = -.6 * t;
-    if (id === "travel") moving.rotation.y = Math.PI * 1.8 * t;
-    if (id === "watch" || id === "play" || id === "move") moving.visible = t > .05;
-    root.scale.setScalar(layout.scale * (1 + .012 * t));
+    const pose = roomPropResponse(id, t);
+    moving.position.y += pose.offsetY;
+    moving.position.z += pose.offsetZ;
+    moving.rotation.y = pose.yaw;
+    moving.visible = pose.visible;
+    root.scale.setScalar(layout.scale * pose.scale);
     if (response.current !== target) invalidate();
   });
   return <>

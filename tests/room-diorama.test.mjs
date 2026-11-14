@@ -8,6 +8,7 @@ import { MeshoptDecoder } from "meshoptimizer";
 import sharp from "sharp";
 import { roomAtlasPlugin, validateRoomAtlasBytes } from "../components/play/room-3d/room-atlas.ts";
 import { ROOM_OBJECT_IDS } from "../components/play/room-platform/room-object-contract.ts";
+import { roomPropResponse } from "../components/play/room-3d/room-prop-response.ts";
 import { routeObject, markRoomHistoryEntry, clearRoomHistoryEntry, historyRoomObject, historyRoomDepth, historyRoomPath } from "../components/play/room-platform/room-history.ts";
 
 test("the optimized first-party asset matches its hash, registry, and actual mesh budgets", async () => {
@@ -24,6 +25,15 @@ test("the optimized first-party asset matches its hash, registry, and actual mes
   for (const id of ROOM_OBJECT_IDS) {
     assert.equal(root.listNodes().filter(node => node.getName() === "OBJ__" + id).length, 1);
     assert.equal(root.listNodes().filter(node => node.getName() === "motion__" + id).length, 1);
+    const body = root.listNodes().find(node => node.getName() === "body__" + id);
+    const bodyTriangles = body.getMesh().listPrimitives().reduce((sum, primitive) => sum + primitive.getIndices().getCount()/3, 0);
+    assert.ok(bodyTriangles > 200, `${id} has an authored body, not a wireframe placeholder`);
+    const motion = root.listNodes().find(node => node.getName() === "motion__" + id);
+    assert.equal(motion.getMesh(),null,"quantization must not recenter the animation pivot");
+    assert.equal(motion.listChildren().length,1);
+    assert.ok(motion.listChildren()[0].getMesh());
+    const pivot = manifest.props[id].motionPivot ?? [0,0,0];
+    motion.getTranslation().forEach((value, index) => assert.ok(Math.abs(value-pivot[index]) < .00001, `${id} motion pivot`));
   }
   const primitives = root.listNodes().flatMap(node => node.getMesh()?.listPrimitives() ?? []);
   const triangles = primitives.reduce((sum, primitive) => {
@@ -52,11 +62,33 @@ test("the optimized first-party asset matches its hash, registry, and actual mes
   validateRoomAtlasBytes(Uint8Array.from(atlas).buffer);
   assert.equal(manifest.authoring.tool, "Blender");
   assert.equal(manifest.authoring.version, "5.2.3 LTS");
-  assert.deepEqual(manifest.finishedObjects, ["read", "play"]);
+  assert.equal(manifest.reviewStage, "complete");
+  assert.deepEqual([...manifest.finishedObjects].sort(), [...ROOM_OBJECT_IDS].sort());
   for (const primitive of primitives) {
     assert.ok(primitive.getAttribute("COLOR_0"), "baked vertex lighting retained");
     assert.ok(primitive.getAttribute("TEXCOORD_0"), "atlas UVs retained");
     assert.ok(primitive.getMaterial().getExtension("KHR_materials_unlit"), "no live-lighting cost");
+  }
+});
+
+test("every prop response is bounded, reversible, and uses the intended axis", () => {
+  for (const id of ROOM_OBJECT_IDS) {
+    assert.deepEqual(roomPropResponse(id,-1), roomPropResponse(id,0));
+    assert.deepEqual(roomPropResponse(id,2), roomPropResponse(id,1));
+    assert.deepEqual(roomPropResponse(id,NaN), roomPropResponse(id,0));
+    const idle = roomPropResponse(id,0);
+    assert.ok(idle.offsetY === 0);
+    assert.ok(idle.offsetZ === 0);
+    assert.ok(idle.yaw === 0);
+    assert.equal(idle.scale,1);
+  }
+  assert.equal(roomPropResponse("listen",1).offsetY,-.025);
+  assert.equal(roomPropResponse("read",1).offsetZ,.2);
+  assert.equal(roomPropResponse("collect",1).yaw,-.6);
+  assert.equal(roomPropResponse("travel",1).yaw,Math.PI*.7);
+  for (const id of ["watch","play","move"]) {
+    assert.equal(roomPropResponse(id,0).visible,false);
+    assert.equal(roomPropResponse(id,1).visible,true);
   }
 });
 

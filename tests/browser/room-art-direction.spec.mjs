@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
 for (const width of [320, 390, 768, 1024, 1440, 1920]) {
-  test(`gothic Room visual slice at ${width}px`, async ({ page }) => {
+  test(`complete gothic Room at ${width}px`, async ({ page }) => {
     await mkdir(".playwright/room-art", { recursive: true });
     await page.setViewportSize({ width, height: width < 768 ? 844 : 1000 });
     const requests = [];
@@ -14,8 +14,9 @@ for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     page.on("pageerror", error => errors.push(error.message));
     await page.goto("/play");
     const room = await expectRoomReady(page, { context: `gothic room at ${width}` });
-    await expect(room.locator("[data-room-blockout]")).toHaveCount(5);
-    await expect(room.locator("[data-room-art-preview]")).toBeVisible();
+    await expect(room.locator("[data-room-blockout]")).toHaveCount(0);
+    await expect(room.locator("[data-room-art-preview]")).toHaveCount(0);
+    await expect(room.locator("[data-room-object-control]")).toHaveCount(7);
     await expect(page.locator('a[href="/simulation"]')).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     expect(requests.filter(path => /\/api\/(?:connectors|connector-artwork|travel|simulation)/.test(path))).toEqual([]);

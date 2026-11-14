@@ -203,7 +203,7 @@ Blender source under `assets/room/gothic-hardware/`. Build-time vertex lighting,
 one embedded material atlas, glTF Transform, and the bundled Meshopt decoder
 avoid runtime lighting and third-party asset services. The generated manifest
 records geometry budgets, atlas dimensions/hash, source provenance, hit proxies,
-and explicit checkpoint/blockout status. The atlas is decoded from embedded
+physical motion pivots, and the seven completed props. The atlas is decoded from embedded
 bytes without relaxing CSP. Executable object maps stay literal and parity-tested.
 
 Three.js/R3F is restricted to the intent-gated room and Travel globe. The

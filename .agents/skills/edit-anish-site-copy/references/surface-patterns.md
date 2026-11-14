@@ -107,10 +107,6 @@ behind that object:
 - **Treadmill · Move:** Recent rides and runs, when Strava’s public feed is available.
 - **Globe · Travel:** Places I’ve been, the photos I kept, and where they belong.
 
-The Room art-checkpoint notice and blockout label are declared Play copy fields.
-Keep them truthful to the generated asset manifest; changing which props are
-finished is an implementation decision, not a copy edit.
-
 Give each object route its own authored screen title while keeping the literal
 object visible in the doorway and room navigation:
 

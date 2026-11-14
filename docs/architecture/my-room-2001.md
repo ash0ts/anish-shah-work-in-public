@@ -65,10 +65,11 @@ directory. Context loss or runtime failure permanently falls back for the
 session. The reviewed high tier uses Drei Fisheye; frame-health checks downgrade
 to wide perspective when the fisheye path misses its budget.
 
-The current draft is a visual checkpoint: the gothic room shell, reading
-corner, and hardware desk are authored; five wireframe destinations remain
-explicitly labelled blockouts. All seven semantic routes still work. Do not
-promote this checkpoint as a completed seven-prop release.
+All seven destinations have original authored geometry: a gothic CRT cabinet,
+book-filled reading corner, portable music deck and headphones, turntable and
+record crate, computer desk, industrial treadmill, and armillary-style globe.
+The globe's decorative land patches are not Travel geography or publication
+data. The draft remains a local art review, not a production release.
 
 Original geometry and UVs come from `scripts/room/author-gothic-room.py`, pinned
 to **Blender 5.2.3 LTS**. Its editable source, packed original 512×512 material
@@ -81,7 +82,8 @@ lighting or post-processing is needed.
 To edit and export:
 
 1. Change the authoring script and `scripts/room/gothic-layout.json`; the latter
-   owns placements, hit proxies, shell occluders, and visual-checkpoint status.
+   owns placements, hit proxies, shell occluders, physical motion pivots, and
+   the completed-object inventory.
 2. Run `npm run room:author` with the pinned Blender available on PATH. This
    regenerates the editable `.blend`, source GLB, atlas, and provenance. Avoid
    hand-editing generated outputs; port reviewed Blender edits into the script.
@@ -91,13 +93,16 @@ To edit and export:
    source/provenance hashes and reproduces the optimized bytes offline.
 4. Review desktop and Pocket views before replacing the posters.
 
-The decoded checkpoint contains 8,027 triangles, 15 draw calls, one material,
+The decoded room contains 11,207 triangles, 15 draw calls, one material,
 and one embedded atlas. Hard ceilings remain 20K triangles, 30 draws, 16
 materials, and 350,000 GLB bytes. The decoder ships locally. The atlas plugin
 validates PNG dimensions before decoding its embedded bytes directly, avoiding
 blob-URL fetches without widening CSP. Decode failure falls back to the static
 directory rather than silently presenting untextured white geometry.
 Each object has a short selection response; animation invalidates only until settled.
+The platter and globe rotate around their authored centers, music-player
+buttons depress, the selected book advances, and screens briefly illuminate.
+These are bounded, reversible responses, not idle loops or provider content.
 It uses one Canvas, bounded rotation, explicit view
 controls, no physics, no orbit controls, no zoom/pan/inertia, and no autoplay or
 scroll capture. The room has no idle animation requirement.

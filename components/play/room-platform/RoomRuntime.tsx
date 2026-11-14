@@ -15,7 +15,6 @@ import {
 } from "react";
 import { ExperienceAudioControl } from "@/components/experience-audio/ExperienceAudioProvider";
 import { SITE_COPY } from "@/lib/copy";
-import diorama from "../room-3d/diorama.generated.json";
 import { useRoomCapability } from "../room-3d/Room3DGate";
 import type { RoomCapabilityResult } from "../room-3d/room-capability";
 import { adjacentPocketRoomRotation } from "../room-3d/room-math";
@@ -78,23 +77,23 @@ function RoomPosterFallback({
       <picture>
         <source
           media="(max-width: 767px)"
-          srcSet="/assets/play/my-room-2001-neutral-mobile.f605ebf8ca13.avif"
+          srcSet="/assets/play/my-room-2001-neutral-mobile.b9d30a454e1a.avif"
           type="image/avif"
         />
         <source
-          srcSet="/assets/play/my-room-2001-neutral.cd21bcb3428d.avif"
+          srcSet="/assets/play/my-room-2001-neutral.10732d17135b.avif"
           type="image/avif"
         />
         <source
           media="(max-width: 767px)"
-          srcSet="/assets/play/my-room-2001-neutral-mobile.4b93858be948.webp"
+          srcSet="/assets/play/my-room-2001-neutral-mobile.e6f381b29845.webp"
           type="image/webp"
         />
         <img
           alt=""
           decoding="async"
           height="1000"
-          src="/assets/play/my-room-2001-neutral.45bb096ce399.webp"
+          src="/assets/play/my-room-2001-neutral.0c9e0cecc456.webp"
           width="1600"
         />
       </picture>
@@ -303,7 +302,6 @@ export function RoomRuntime() {
         <h1>
           {pocket ? "Pocket Room, 2001" : "My Room, 2001"}
           <small data-room-boot-status>{bootStatus}</small>
-          {diorama.reviewStage !== "complete" ? <small className={styles.artPreview} data-room-art-preview>{SITE_COPY.play["room-art-preview"]}</small> : null}
         </h1>
         <div className={styles.runtimeActions}>
           <button
@@ -468,7 +466,6 @@ export function RoomRuntime() {
               >
                 <span>{object.object}</span>
                 <strong>{object.label}</strong>
-                {!diorama.finishedObjects.includes(object.id) ? <small data-room-blockout>{SITE_COPY.play["room-art-placeholder"]}</small> : null}
               </button>
             </li>
           ))}

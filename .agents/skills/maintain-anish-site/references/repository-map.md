@@ -23,7 +23,9 @@ request path, durable store, or progressive-enhancement boundary changes.
   Follow the author/export procedure in `docs/architecture/my-room-2001.md`.
   Keep provenance, decoded budgets, and `diorama.generated.json` synchronized.
   Do not ship the `.blend` or source atlas separately, relax CSP for a texture,
-  raise Pocket limits, or present checkpoint blockouts as finished props.
+  raise Pocket limits, or turn the decorative room globe into a Travel-data
+  consumer. Keep physical motion pivots in the layout and preserve bounded,
+  reversible responses with no idle animation.
 - `components/play/travel/**`: Postcard Planet semantic atlas and the only full-globe R3F boundary.
 - `app/simulation/**` and `components/simulation/**`: semantic campaign shell, Tactical mode, and the narrowly scoped Action Canvas bridge.
 - `app/studio/**`: owner-only operational interface. Connector rows consume a

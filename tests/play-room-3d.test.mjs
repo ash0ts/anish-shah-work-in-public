@@ -620,19 +620,19 @@ test("the static room poster is first-party, content-hashed, and bounded", async
   ]);
   const posterFiles = [
     {
-      filename: "my-room-2001-neutral.cd21bcb3428d.avif",
+      filename: "my-room-2001-neutral.10732d17135b.avif",
       surfaces: [overview, runtime],
     },
     {
-      filename: "my-room-2001-neutral.45bb096ce399.webp",
+      filename: "my-room-2001-neutral.0c9e0cecc456.webp",
       surfaces: [overview, runtime],
     },
     {
-      filename: "my-room-2001-neutral-mobile.f605ebf8ca13.avif",
+      filename: "my-room-2001-neutral-mobile.b9d30a454e1a.avif",
       surfaces: [overview, runtime],
     },
     {
-      filename: "my-room-2001-neutral-mobile.4b93858be948.webp",
+      filename: "my-room-2001-neutral-mobile.e6f381b29845.webp",
       surfaces: [overview, runtime],
     },
   ];

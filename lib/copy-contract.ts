@@ -179,8 +179,6 @@ export const COPY_PAGE_DEFINITIONS = {
     field("play", "room-opening-status", "editorial", 60),
     field("play", "room-open-control", "editorial", 40),
     field("play", "room-directory-control", "editorial", 40),
-    field("play", "room-art-preview", "fact_check", 160),
-    field("play", "room-art-placeholder", "editorial", 24),
     field("play", "room-fallback-body", "editorial", 120),
     field("play", "pocket-stage-opening", "editorial", 60),
     field("play", "pocket-stage-placing", "editorial", 60),
