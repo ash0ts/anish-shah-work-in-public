@@ -2,6 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { expectRoomReady, openRoomIfNeeded } from "./helpers/room-readiness.mjs";
 import { Object3D, PerspectiveCamera, Vector3 } from "three";
+import { readFileSync } from "node:fs";
+import { ROOM_CAMERA_FRAMING } from "../../components/play/room-3d/room-camera-framing.ts";
 
 const objects = [
   {
@@ -317,13 +319,13 @@ async function settlePaint(page) {
 }
 
 const ROOM_OBJECT_ANCHORS = {
-  watch: { wide: [0.465, 0.35], compact: [0.46, 0.31] },
-  read: { wide: [0.58, 0.37], compact: [0.6, 0.39] },
-  listen: { wide: [0.36, 0.4], compact: [0.36, 0.36] },
-  collect: { wide: [0.22, 0.6], compact: [0.24, 0.6] },
-  play: { wide: [0.52, 0.7], compact: [0.58, 0.69] },
-  move: { wide: [0.86, 0.61], compact: [0.91, 0.58] },
-  travel: { wide: [0.64, 0.48], compact: [0.78, 0.49] },
+  watch: { wide: [0.40, 0.49], compact: [0.40, 0.49] },
+  read: { wide: [0.47, 0.40], compact: [0.47, 0.40] },
+  listen: { wide: [0.42, 0.59], compact: [0.42, 0.59] },
+  collect: { wide: [0.33, 0.60], compact: [0.33, 0.60] },
+  play: { wide: [0.62, 0.53], compact: [0.62, 0.53] },
+  move: { wide: [0.58, 0.74], compact: [0.58, 0.74] },
+  travel: { wide: [0.49, 0.63], compact: [0.49, 0.63] },
 };
 const ROOM_ANCHOR_OFFSETS = [
   [0, 0],
@@ -462,50 +464,9 @@ async function findAllInteractiveRoomPoints(page) {
   return points;
 }
 
-const POCKET_HIT_TARGET_GEOMETRY = {
-  watch: {
-    hit: [0, 1.12, 0],
-    position: [-3.22, 0.56, -2.82],
-    rotationY: 0.18,
-    scale: 1.12,
-  },
-  read: {
-    hit: [0, 1.5, 0],
-    position: [-0.35, 0, -2.94],
-    rotationY: 0,
-    scale: 1.06,
-  },
-  listen: {
-    hit: [0, 1.05, 0],
-    position: [-1.28, 0, -0.42],
-    rotationY: 0.16,
-    scale: 1.2,
-  },
-  collect: {
-    hit: [0, 0.68, 0],
-    position: [-2.82, 0, 1.54],
-    rotationY: 0.12,
-    scale: 1.08,
-  },
-  play: {
-    hit: [-0.04, 1.48, 0],
-    position: [1.48, 0, 1.12],
-    rotationY: 0.22,
-    scale: 0.92,
-  },
-  move: {
-    hit: [0, 1.12, -0.34],
-    position: [3.48, 0, -1.95],
-    rotationY: 0.12,
-    scale: 1.12,
-  },
-  travel: {
-    hit: [0, 1.45, 0],
-    position: [1.48, 0, -2.75],
-    rotationY: -0.08,
-    scale: 0.94,
-  },
-};
+const POCKET_HIT_TARGET_GEOMETRY = JSON.parse(readFileSync(
+  new URL("../../components/play/room-3d/diorama.generated.json", import.meta.url), "utf8",
+)).props;
 
 async function projectedPocketRoomPoints(page) {
   const stage = page.locator("[data-room-poster-stage]");
@@ -513,13 +474,13 @@ async function projectedPocketRoomPoints(page) {
   if (!bounds) throw new Error("The Pocket Room has no visible stage.");
 
   const camera = new PerspectiveCamera(
-    44,
+    ROOM_CAMERA_FRAMING.pocket.fov,
     bounds.width / bounds.height,
     0.1,
     60,
   );
-  camera.position.set(8.2, 7.1, 10.4);
-  camera.lookAt(0, 1.05, -0.4);
+  camera.position.fromArray(ROOM_CAMERA_FRAMING.pocket.position);
+  camera.lookAt(...ROOM_CAMERA_FRAMING.pocket.target);
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld();
 
@@ -536,7 +497,7 @@ async function projectedPocketRoomPoints(page) {
     overview.add(room);
     const objectRoot = new Object3D();
     objectRoot.position.fromArray(geometry.position);
-    objectRoot.rotation.y = geometry.rotationY;
+    objectRoot.rotation.y = geometry.rotation;
     objectRoot.scale.setScalar(geometry.scale);
     room.add(objectRoot);
     const hit = new Object3D();
@@ -750,7 +711,7 @@ test.describe("My Room 2001 browser quality", () => {
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play?fixture=long-title", { waitUntil: "networkidle" });
-    const readLink = page.locator('[data-room-object-link="read"]');
+    const readLink = page.locator('a[data-room-object-link="read"]');
     await expect(readLink).toHaveAttribute(
       "href",
       "/play/read?fixture=long-title",

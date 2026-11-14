@@ -458,8 +458,17 @@ test("room renderer remains demand-driven and first-party", async () => {
   assert.match(stage, /frameloop="demand"/);
   assert.match(stage, /dpr=\{\[1, 1\.25\]\}/);
   assert.match(stage, /data-projection=\{projection\}/);
-  assert.match(stage, /fov: 46/);
-  assert.match(stage, /position: \[4\.8, 4\.3, 5\.5\]/);
+  assert.match(stage, /fov: ROOM_CAMERA_FRAMING\.desktop\.fov/);
+  assert.match(stage, /position: \[\.\.\.ROOM_CAMERA_FRAMING\.desktop\.position\]/);
+  const { ROOM_CAMERA_FRAMING } = await import("../components/play/room-3d/room-camera-framing.ts");
+  assert.equal(ROOM_CAMERA_FRAMING.desktop.fov, 46);
+  assert.equal(ROOM_CAMERA_FRAMING.pocket.fov, 44);
+  for (const camera of Object.values(ROOM_CAMERA_FRAMING)) {
+    assert.equal(camera.position.length, 3);
+    assert.equal(camera.target.length, 3);
+    assert.ok([...camera.position, ...camera.target].every(Number.isFinite));
+    assert.ok(camera.position[2] > camera.target[2]);
+  }
   assert.match(stage, /setClearColor\(ROOM_PALETTE\.backdrop, 1\)/);
   assert.match(stage, /function ResponsiveFisheye/);
   assert.match(stage, /key=\{sizeKey\}/);
@@ -491,7 +500,14 @@ test("room renderer remains demand-driven and first-party", async () => {
   assert.match(controller, /resolveRoomRayHit/);
   assert.doesNotMatch(controller, /onClick=/);
   assert.match(objects, /roomOccluder = true/);
-  assert.equal((objects.match(/registerOccluder=\{registerOccluder\}/g) ?? []).length, 3);
+  assert.match(objects, /manifest\.occluders\.map/);
+  assert.match(objects, /registerOccluder=\{registerOccluder\}/);
+  const manifest = JSON.parse(await readFile(new URL("../components/play/room-3d/diorama.generated.json", import.meta.url)));
+  assert.equal(manifest.occluders.length, 3);
+  for (const occluder of manifest.occluders) {
+    assert.ok(occluder.position.every(Number.isFinite));
+    assert.ok(occluder.size.every(size => Number.isFinite(size) && size > 0));
+  }
   assert.equal(FISHEYE_FRAME_RENDER_BUDGET.cubemapFaces, 6);
   assert.ok(
     FISHEYE_FRAME_RENDER_BUDGET.actualDrawCalls >
@@ -604,20 +620,20 @@ test("the static room poster is first-party, content-hashed, and bounded", async
   ]);
   const posterFiles = [
     {
-      filename: "my-room-2001-neutral.b7e935988f08.avif",
+      filename: "my-room-2001-neutral.cd21bcb3428d.avif",
       surfaces: [overview, runtime],
     },
     {
-      filename: "my-room-2001-neutral.66de435d1349.webp",
+      filename: "my-room-2001-neutral.45bb096ce399.webp",
       surfaces: [overview, runtime],
     },
     {
-      filename: "my-room-2001-neutral-mobile.8880dbc26073.avif",
-      surfaces: [overview],
+      filename: "my-room-2001-neutral-mobile.f605ebf8ca13.avif",
+      surfaces: [overview, runtime],
     },
     {
-      filename: "my-room-2001-neutral-mobile.e3f64d04815d.webp",
-      surfaces: [overview],
+      filename: "my-room-2001-neutral-mobile.4b93858be948.webp",
+      surfaces: [overview, runtime],
     },
   ];
 

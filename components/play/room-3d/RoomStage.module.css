@@ -7,7 +7,7 @@
   overflow: clip;
   border: 1px solid rgb(37 43 69 / 48%);
   border-radius: clamp(1.4rem, 3vw, 3.5rem);
-  background: #c8b8ff;
+  background: #101723;
   isolation: isolate;
 }
 

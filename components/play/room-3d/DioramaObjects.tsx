@@ -5,6 +5,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import type { RoomObjectId } from "../room-platform/room-types";
 import manifest from "./diorama.generated.json";
+import { roomAtlasPlugin } from "./room-atlas";
 
 type RegisterHit = (id: RoomObjectId, mesh: Mesh | null) => void;
 type RegisterOccluder = (mesh: Mesh, active: boolean) => void;
@@ -75,14 +76,14 @@ export function DioramaObjects({ objectIds, focusedId, hoveredId, selectedId, re
   objectIds: readonly RoomObjectId[]; focusedId: RoomObjectId | null; hoveredId: RoomObjectId | null;
   selectedId: RoomObjectId | null; registerHitTarget: RegisterHit; registerOccluder: RegisterOccluder; onLoaded?: () => void;
 }) {
-  const { scene } = useLoader(GLTFLoader, manifest.assetPath, loader => loader.setMeshoptDecoder(MeshoptDecoder));
+  const { scene } = useLoader(GLTFLoader, manifest.assetPath, loader => loader.setMeshoptDecoder(MeshoptDecoder).register(roomAtlasPlugin));
   const shell = useMemo(() => scene.getObjectByName("room-shell")!.clone(), [scene]);
   useEffect(() => { onLoaded?.(); }, [scene, onLoaded]);
   return <>
     <primitive object={shell} dispose={null} />
-    <Proxy position={[-4.76, 2.15, -.2]} size={[.26, 4.65, 6.2]} registerOccluder={registerOccluder} />
-    <Proxy position={[4.76, 2.05, -.55]} size={[.24, 4.35, 5.35]} registerOccluder={registerOccluder} />
-    <Proxy position={[-4, .32, .48]} size={[1.55, .65, 2.62]} registerOccluder={registerOccluder} />
+    {manifest.occluders.map((occluder, index) => <Proxy key={index}
+      position={occluder.position as [number, number, number]}
+      size={occluder.size as [number, number, number]} registerOccluder={registerOccluder} />)}
     {objectIds.map(id => <DioramaProp key={id} id={id} source={scene.getObjectByName(`OBJ__${id}`)!}
       active={focusedId === id || hoveredId === id} selected={selectedId === id} registerHit={registerHitTarget} />)}
   </>;

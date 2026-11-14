@@ -24,6 +24,8 @@
 # misc
 .DS_Store
 *.pem
+# Blender's automatic backups are not reviewed authoring inputs.
+/assets/room/**/*.blend[1-9]
 
 # debug
 npm-debug.log*

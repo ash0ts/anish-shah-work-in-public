@@ -65,23 +65,54 @@ directory. Context loss or runtime failure permanently falls back for the
 session. The reviewed high tier uses Drei Fisheye; frame-health checks downgrade
 to wide perspective when the fisheye path misses its budget.
 
-The original prop source is `scripts/room/diorama-model.mjs`. `room:assets`
-bakes vertex colors, batches static/moving parts, and uses glTF Transform with
-Meshopt compression to emit one content-hashed GLB and measured manifest.
-The decoder ships in the local deferred bundle; no remote models or textures.
-`room:assets:check` verifies reproducibility. The decoded asset has 13,212
-visible triangles, 15 draw calls, and one visible material, below Pocket limits
-of 20K triangles, 30 draws, and 16 materials. Each object has a short selection
-response; animation invalidates only until settled.
+The current draft is a visual checkpoint: the gothic room shell, reading
+corner, and hardware desk are authored; five wireframe destinations remain
+explicitly labelled blockouts. All seven semantic routes still work. Do not
+promote this checkpoint as a completed seven-prop release.
+
+Original geometry and UVs come from `scripts/room/author-gothic-room.py`, pinned
+to **Blender 5.2.3 LTS**. Its editable source, packed original 512×512 material
+atlas, exported source GLB, and provenance hashes live in
+`assets/room/gothic-hardware/`, outside deployed assets. The atlas contains
+procedural worn material patches, not provider artwork or downloaded imagery.
+Vertex colors bake directional shading and warm/cool light pools. No live
+lighting or post-processing is needed.
+
+To edit and export:
+
+1. Change the authoring script and `scripts/room/gothic-layout.json`; the latter
+   owns placements, hit proxies, shell occluders, and visual-checkpoint status.
+2. Run `npm run room:author` with the pinned Blender available on PATH. This
+   regenerates the editable `.blend`, source GLB, atlas, and provenance. Avoid
+   hand-editing generated outputs; port reviewed Blender edits into the script.
+3. Run `npm run room:assets`. glTF Transform batches/optimizes the source with
+   Meshopt, strips PNG metadata, and writes the hashed deployable GLB plus its
+   measured manifest. CI needs Node, not Blender: `room:assets:check` verifies
+   source/provenance hashes and reproduces the optimized bytes offline.
+4. Review desktop and Pocket views before replacing the posters.
+
+The decoded checkpoint contains 8,027 triangles, 15 draw calls, one material,
+and one embedded atlas. Hard ceilings remain 20K triangles, 30 draws, 16
+materials, and 350,000 GLB bytes. The decoder ships locally. The atlas plugin
+validates PNG dimensions before decoding its embedded bytes directly, avoiding
+blob-URL fetches without widening CSP. Decode failure falls back to the static
+directory rather than silently presenting untextured white geometry.
+Each object has a short selection response; animation invalidates only until settled.
 It uses one Canvas, bounded rotation, explicit view
 controls, no physics, no orbit controls, no zoom/pan/inertia, and no autoplay or
 scroll capture. The room has no idle animation requirement.
 
 When the reviewed neutral room composition changes, capture that pose and run
-`npm run room:poster -- <screenshot.png>`. The tool emits content-hashed AVIF
+`npm run room:poster -- <desktop-stage.png> <pocket-stage.png>`. The second
+capture keeps the portrait fallback aligned with the Pocket camera. The tool emits content-hashed AVIF
 and WebP fallbacks under `public/assets/play` and enforces the 200 KB budget for
 each format. Update the poster imports and remove superseded hashes in the same
 reviewed change.
+
+`npm run room:preview` serves the existing build on loopback port 4199 with
+synthetic fixtures and Simulation disabled/authored-only. Open `/play`; no
+Studio, provider refresh, Gemini, or production data is available here. PR #82
+remains dormant and separate from the Room draft.
 
 ## Pocket Room
 

@@ -810,7 +810,7 @@ test("Discogs remains lazy until the Record crate route is selected", async ({ p
   });
   await page.goto("/play", { waitUntil: "networkidle" });
   expect(connectorRequests).toHaveLength(0);
-  await page.locator('[data-room-object-link="collect"]').click();
+  await page.locator('[data-room-object-link="collect"]:visible').click();
   await expect(page).toHaveURL(/\/play\/collect$/);
   await expect(
     page.getByRole("region", { name: "Discogs physical catalog" }),

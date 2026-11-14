@@ -21,6 +21,12 @@ Open 3D room
 ## room-directory-control
 Objects list
 
+## room-art-preview
+Art preview · Bookshelf and Computer finished. Wireframes mark the next five objects.
+
+## room-art-placeholder
+Blockout
+
 ## room-fallback-body
 Every object opens without 3D.
 

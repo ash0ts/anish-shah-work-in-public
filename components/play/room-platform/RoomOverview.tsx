@@ -48,12 +48,17 @@ export function RoomOverview({
           <picture>
             <source
               media="(max-width: 767px)"
-              srcSet="/assets/play/my-room-2001-neutral-mobile.8880dbc26073.avif"
+              srcSet="/assets/play/my-room-2001-neutral-mobile.f605ebf8ca13.avif"
               type="image/avif"
             />
             <source
-              srcSet="/assets/play/my-room-2001-neutral.b7e935988f08.avif"
+              srcSet="/assets/play/my-room-2001-neutral.cd21bcb3428d.avif"
               type="image/avif"
+            />
+            <source
+              media="(max-width: 767px)"
+              srcSet="/assets/play/my-room-2001-neutral-mobile.4b93858be948.webp"
+              type="image/webp"
             />
             <img
               alt=""
@@ -62,8 +67,7 @@ export function RoomOverview({
               height="1000"
               loading="eager"
               sizes="(max-width: 767px) calc(100vw - 2rem), 60vw"
-              src="/assets/play/my-room-2001-neutral.66de435d1349.webp"
-              srcSet="/assets/play/my-room-2001-neutral-mobile.e3f64d04815d.webp 640w, /assets/play/my-room-2001-neutral.66de435d1349.webp 1600w"
+              src="/assets/play/my-room-2001-neutral.45bb096ce399.webp"
               width="1600"
             />
           </picture>

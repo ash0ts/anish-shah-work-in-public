@@ -7,6 +7,7 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
+  useState,
 } from "react";
 
 import type { RoomRotation } from "./room-math";
@@ -52,6 +53,7 @@ export type RoomApproachRigHandle = {
 };
 
 type RoomApproachRigProps = {
+  animateEntry?: boolean;
   approachPoseId: RoomApproachPoseId | null;
   children: ReactNode;
   onSettled?: () => void;
@@ -62,13 +64,16 @@ export const RoomApproachRig = forwardRef<
   RoomApproachRigHandle,
   RoomApproachRigProps
 >(function RoomApproachRig(
-  { approachPoseId, children, onSettled, rotation },
+  { animateEntry = true, approachPoseId, children, onSettled, rotation },
   forwardedRef,
 ) {
   const group = useRef<Group>(null);
+  const [initial] = useState(() => animateEntry
+    ? ROOM_ENTRY_TRANSFORM
+    : targetTransform(approachPoseId ? ROOM_APPROACH_POSES[approachPoseId] : ROOM_OVERVIEW_TRANSFORM, rotation));
   const current = useRef<AnimatedRoomTransform>({
-    ...ROOM_ENTRY_TRANSFORM,
-    position: [...ROOM_ENTRY_TRANSFORM.position],
+    ...initial,
+    position: [...initial.position],
   });
   const target = useRef(
     targetTransform(ROOM_OVERVIEW_TRANSFORM, rotation),
@@ -181,14 +186,14 @@ export const RoomApproachRig = forwardRef<
 
   return (
     <group
-      position={ROOM_ENTRY_TRANSFORM.position}
+      position={initial.position}
       ref={group}
       rotation={[
-        MathUtils.degToRad(ROOM_ENTRY_TRANSFORM.rotationXDeg),
-        MathUtils.degToRad(ROOM_ENTRY_TRANSFORM.rotationYDeg),
+        MathUtils.degToRad(initial.rotationXDeg),
+        MathUtils.degToRad(initial.rotationYDeg),
         0,
       ]}
-      scale={ROOM_ENTRY_TRANSFORM.scale}
+      scale={initial.scale}
     >
       {children}
     </group>

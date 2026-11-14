@@ -18,9 +18,12 @@ request path, durable store, or progressive-enhancement boundary changes.
   `useRoomFocus.ts`, and `useRoomTransitions.ts`: direct-entry policy, history,
   focus, and transitions. Play navigation supplies intent; `?view=directory`
   explicitly opts out. Keep the poster and semantic controls usable while loading.
-- `scripts/room/**`: reproducible first-party diorama geometry and optimized GLB
-  generation. Keep `diorama.generated.json` and the content-hashed asset in sync;
-  retain baked lighting, local Meshopt decoding, and Pocket runtime budgets.
+- `scripts/room/**` and `assets/room/gothic-hardware/**`: pinned Blender 5.2.3 LTS
+  authoring, editable source, original embedded atlas, and optimized GLB output.
+  Follow the author/export procedure in `docs/architecture/my-room-2001.md`.
+  Keep provenance, decoded budgets, and `diorama.generated.json` synchronized.
+  Do not ship the `.blend` or source atlas separately, relax CSP for a texture,
+  raise Pocket limits, or present checkpoint blockouts as finished props.
 - `components/play/travel/**`: Postcard Planet semantic atlas and the only full-globe R3F boundary.
 - `app/simulation/**` and `components/simulation/**`: semantic campaign shell, Tactical mode, and the narrowly scoped Action Canvas bridge.
 - `app/studio/**`: owner-only operational interface. Connector rows consume a

@@ -245,6 +245,7 @@ async function runReleaseBrowserGate() {
         segment: "release-room-travel",
         arguments_: [
           "tests/browser/room-quality.spec.mjs",
+          "tests/browser/room-art-direction.spec.mjs",
           "tests/browser/travel-atlas.spec.mjs",
           "--grep-invert",
           releaseStressPattern,
@@ -344,6 +345,7 @@ if (
     segment: "room-smoke",
     arguments_: [
       "tests/browser/room-quality.spec.mjs",
+      "tests/browser/room-art-direction.spec.mjs",
       "--grep-invert",
       releaseStressPattern,
       "--max-failures=1",
@@ -408,6 +410,7 @@ if (scope === "all" || scope === "room-shard" || scope === "room-pr") {
         segment: `quality-shard-${shard}`,
         arguments_: [
           "tests/browser/room-quality.spec.mjs",
+          "tests/browser/room-art-direction.spec.mjs",
           "--fully-parallel",
           `--shard=${shard}/${activeRoomShardCount}`,
         ],

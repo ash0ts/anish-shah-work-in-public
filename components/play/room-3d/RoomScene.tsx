@@ -17,6 +17,7 @@ import type { RoomApproachPoseId } from "./room-approach";
 import { ROOM_PALETTE } from "./room-palette";
 
 export type RoomSceneProps = {
+  animateEntry?: boolean;
   approachPoseId: RoomApproachPoseId | null;
   focusedId?: RoomObjectId | null;
   onHoverChange?: (id: RoomObjectId | null) => void;
@@ -32,6 +33,7 @@ export type RoomSceneProps = {
 };
 
 export function RoomScene({
+  animateEntry = true,
   approachPoseId,
   focusedId = null,
   onHoverChange,
@@ -87,6 +89,7 @@ export function RoomScene({
       <color attach="background" args={[ROOM_PALETTE.backdrop]} />
 
       <RoomApproachRig
+        animateEntry={animateEntry}
         approachPoseId={approachPoseId}
         onSettled={onSettled}
         ref={motionRig}

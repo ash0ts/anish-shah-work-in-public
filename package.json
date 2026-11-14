@@ -69,6 +69,8 @@
     "deployable:attest:write": "node scripts/deployable-artifact-manifest.mjs --write",
     "brand:assets": "node scripts/generate-favicon.mjs",
     "room:poster": "node scripts/generate-room-poster.mjs",
+    "room:author": "blender --background --factory-startup --python-exit-code 1 --python scripts/room/author-gothic-room.py",
+    "room:preview": "node scripts/room/preview.mjs",
     "room:assets": "node scripts/room/build-diorama.mjs",
     "room:assets:check": "node scripts/room/build-diorama.mjs --check",
     "audio:validate": "node scripts/validate-experience-audio.mjs",

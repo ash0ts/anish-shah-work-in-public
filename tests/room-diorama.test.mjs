@@ -5,6 +5,8 @@ import test from "node:test";
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import { MeshoptDecoder } from "meshoptimizer";
+import sharp from "sharp";
+import { roomAtlasPlugin, validateRoomAtlasBytes } from "../components/play/room-3d/room-atlas.ts";
 import { ROOM_OBJECT_IDS } from "../components/play/room-platform/room-object-contract.ts";
 import { routeObject, markRoomHistoryEntry, clearRoomHistoryEntry, historyRoomObject, historyRoomDepth, historyRoomPath } from "../components/play/room-platform/room-history.ts";
 
@@ -34,7 +36,43 @@ test("the optimized first-party asset matches its hash, registry, and actual mes
   assert.ok(triangles <= 20_000);
   assert.ok(primitives.length <= 30);
   assert.ok(root.listMaterials().length <= 16);
-  assert.equal(root.listTextures().length, 0, "no remote textures or provider artwork");
+  assert.equal(root.listTextures().length, 1, "one original embedded atlas only");
+  const texture = root.listTextures()[0];
+  assert.equal(texture.getMimeType(), "image/png");
+  const atlas = Buffer.from(texture.getImage());
+  assert.equal(createHash("sha256").update(atlas).digest("hex"), manifest.texture.sha256);
+  assert.equal(atlas.length, manifest.texture.bytes);
+  const metadata = await sharp(atlas).metadata();
+  assert.equal(metadata.width, 512);
+  assert.equal(metadata.height, 512);
+  assert.equal(metadata.hasAlpha, false);
+  assert.equal(metadata.exif, undefined);
+  assert.equal(metadata.xmp, undefined);
+  assert.ok(atlas.length < 100_000);
+  validateRoomAtlasBytes(Uint8Array.from(atlas).buffer);
+  assert.equal(manifest.authoring.tool, "Blender");
+  assert.equal(manifest.authoring.version, "5.2.3 LTS");
+  assert.deepEqual(manifest.finishedObjects, ["read", "play"]);
+  for (const primitive of primitives) {
+    assert.ok(primitive.getAttribute("COLOR_0"), "baked vertex lighting retained");
+    assert.ok(primitive.getAttribute("TEXCOORD_0"), "atlas UVs retained");
+    assert.ok(primitive.getMaterial().getExtension("KHR_materials_unlit"), "no live-lighting cost");
+  }
+});
+
+test("atlas decoding rejects remote sources and oversized images before allocation", async () => {
+  assert.throws(() => validateRoomAtlasBytes(new ArrayBuffer(100_001)));
+  assert.throws(() => validateRoomAtlasBytes(new ArrayBuffer(33)));
+  const png = new ArrayBuffer(33);
+  const view = new DataView(png);
+  for (const [offset, value] of [[0,0x89504e47],[4,0x0d0a1a0a],[8,13],[12,0x49484452],[16,512],[20,512]]) view.setUint32(offset,value);
+  validateRoomAtlasBytes(png);
+  view.setUint32(16,8192);
+  assert.throws(() => validateRoomAtlasBytes(png));
+  for (const source of [{uri:"https://example.test/image.png"},{bufferView:0,mimeType:"image/svg+xml"}]) {
+    const plugin=roomAtlasPlugin({json:{textures:[{source:0}],images:[source]},getDependency:()=>{throw Error("must not fetch");}});
+    await assert.rejects(plugin.loadTexture(0), /single embedded PNG/);
+  }
 });
 
 test("room history recognizes only closed routes and preserves router-owned state", () => {

@@ -14,6 +14,7 @@ import {
 import type { RoomObjectId } from "../room-platform/room-types";
 import { ROOM_OBJECT_BY_ID } from "../room-platform/room-registry";
 import { ROOM_PALETTE } from "./room-palette";
+import { ROOM_CAMERA_FRAMING } from "./room-camera-framing";
 import { RoomScene } from "./RoomScene";
 import {
   createFisheyeHealthState,
@@ -207,6 +208,7 @@ export function RoomStage({
 }: RoomStageProps) {
   const [failed, setFailed] = useState(false);
   const [assetsLoaded, setAssetsLoaded] = useState(false);
+  const [hasEntered, setHasEntered] = useState(false);
   const handleAssetsLoaded = useCallback(() => setAssetsLoaded(true), []);
   const [hoveredId, setHoveredId] = useState<RoomObjectId | null>(null);
   const [projection, setProjection] = useState<RoomProjection>(initialProjection);
@@ -250,6 +252,7 @@ export function RoomStage({
   }, [reportReadyIfStable]);
 
   const handleSceneSettled = useCallback(() => {
+    setHasEntered(true);
     sceneSettled.current = true;
     reportReadyIfStable();
   }, [reportReadyIfStable]);
@@ -294,6 +297,7 @@ export function RoomStage({
 
   const roomScene = (
     <RoomScene
+      animateEntry={!hasEntered}
       approachPoseId={approachPoseId}
       focusedId={focusedId}
       onHoverChange={handleHoverChange}
@@ -332,9 +336,9 @@ export function RoomStage({
           aria-hidden="true"
           camera={{
             far: 50,
-            fov: 46,
+            fov: ROOM_CAMERA_FRAMING.desktop.fov,
             near: 0.1,
-            position: [4.8, 4.3, 5.5],
+            position: [...ROOM_CAMERA_FRAMING.desktop.position],
           }}
           dpr={[1, 1.25]}
           frameloop="demand"
@@ -350,7 +354,7 @@ export function RoomStage({
             gl.domElement.setAttribute("aria-hidden", "true");
             gl.domElement.setAttribute("role", "presentation");
             gl.domElement.tabIndex = -1;
-            camera.lookAt(0, 1.05, -0.42);
+            camera.lookAt(...ROOM_CAMERA_FRAMING.desktop.target);
             camera.updateMatrixWorld();
             gl.setClearColor(ROOM_PALETTE.backdrop, 1);
           }}
