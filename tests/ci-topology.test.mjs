@@ -347,7 +347,9 @@ test("disposable runner images pin and verify every downloaded runtime", async (
   assert.match(build, /install_browsers=1/u);
   assert.match(build, /install_browsers=0/u);
   assert.match(build, /INSTALL_BROWSERS=\$install_browsers/u);
-  assert.match(dockerfile, /RUNNER_VERSION=2\.336\.0/u);
+  assert.match(dockerfile, /RUNNER_VERSION=2\.338\.2/u);
+  assert.match(build, /runner_sha=670adb2f268fe21dcbb58b3db0e0aa9d5b3bddfe2c651481336e561ff86de945/u);
+  assert.match(build, /runner_sha=baebf204307bac6193480852732f0aba2ae97b6c5597c244f4d5558390147c40/u);
   assert.equal((dockerfile.match(/sha256sum --check --strict/gu) ?? []).length, 2);
   assert.match(entrypoint, /--ephemeral/u);
   assert.match(entrypoint, /--disableupdate/u);
