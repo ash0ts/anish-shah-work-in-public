@@ -730,12 +730,17 @@ test.describe("My Room 2001 browser quality", () => {
       "href",
       "/play?fixture=long-title",
     );
+  });
 
+  test("Discogs pagination preserves the explicit preview scenario", async ({ page }) => {
     await page.goto(
       "/play/collect?fixture=maximum-density&pageSize=12",
       { waitUntil: "domcontentloaded" },
     );
-    await page.getByRole("button", { name: "Browse all" }).click();
+    await expect(page.getByRole("button", { name: "Browse all" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await expect(page.locator('input[name="fixture"]')).toHaveValue(
       "maximum-density",
     );
@@ -746,6 +751,10 @@ test.describe("My Room 2001 browser quality", () => {
     expect(
       new URL(nextHref, "http://preview.test").searchParams.get("fixture"),
     ).toBe("maximum-density");
+    await page.getByRole("link", { name: "Next" }).click();
+    await expect(page).toHaveURL(/fixture=maximum-density/);
+    await expect(page).toHaveURL(/[?&]page=2(?:&|$)/);
+    await expect(page.getByText("Page 2 of 3", { exact: true })).toBeVisible();
   });
 
   test("selecting a room object does not recurse through the fisheye portal", async ({
