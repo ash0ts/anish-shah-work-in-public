@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
 const clientManifest = JSON.parse(
   await readFile(
@@ -137,11 +138,9 @@ test.describe("without JavaScript", () => {
 test("room reveal isolates its background while the robot transition runs", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/play", { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "Enter the room" }).click();
-  await expect(page.getByRole("dialog", { name: "Interactive room" })).toBeVisible();
+  const room = await expectRoomReady(page, { context: "the optional simulation reveal" });
   await page.route("**/simulation", (route) => route.abort());
-  await page
-    .getByRole("dialog", { name: "Interactive room" })
+  await room
     .getByRole("link", { name: "REVEAL THE SIMULATION" })
     .click();
   await expect(page.locator("[data-simulation-reveal-overlay]")).toBeVisible();
@@ -151,7 +150,6 @@ test("room reveal isolates its background while the robot transition runs", asyn
   ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.locator("[data-simulation-reveal-overlay]")).toHaveCount(0);
-  const room = page.getByRole("dialog", { name: "Interactive room" });
   await expect(room).toBeVisible();
   const revealControl = room.getByRole("link", {
     name: "REVEAL THE SIMULATION",
@@ -173,5 +171,6 @@ test("room reveal isolates its background while the robot transition runs", asyn
   // Once the nested dialog is gone, Escape belongs to the room again.
   await page.keyboard.press("Escape");
   await expect(room).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Enter the room" })).toBeFocused();
+  await expect(page).toHaveURL(/\/play\?view=directory$/);
+  await expect(page.locator('[data-room-overview] [data-room-object-link="watch"]')).toBeFocused();
 });
