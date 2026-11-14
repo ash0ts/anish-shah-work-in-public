@@ -10,6 +10,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 import {
   classifyCiChanges,
   pathsFromPullRequestFiles,
@@ -304,6 +305,19 @@ test("code previews are opt-in and janitor work is weekly and dependency-free", 
   assert.match(copyPreview, /npm run test:rendered/u);
   assert.match(copyPreview, /name: Capture affected routes/u);
   assert.match(copyPreview, /name: Upload copy screenshots/u);
+});
+
+test("preview cleanup accepts supported Node versions without a shell version-prefix bug", async () => {
+  const cleanup = await text(".github/workflows/preview-cleanup.yml");
+  const program = cleanup.match(/node --eval '([^']+)'/u)?.[1];
+  assert.ok(program, "Cleanup must check its dependency-free Node runtime.");
+  for (const [version, expected] of [["18.20.0", 1], ["20.19.0", 0], ["24.18.0", 0], ["26.0.0", 0]]) {
+    let result;
+    runInNewContext(program, {
+      process: { versions: { node: version }, exit: (code) => { result = code; } },
+    });
+    assert.equal(result, expected, version);
+  }
 });
 
 test("disposable runner images pin and verify every downloaded runtime", async () => {
