@@ -4,10 +4,12 @@ import { sha256, shortHash, slugify } from "./primitives.mjs";
 
 export const APPROVED_PUBLIC_DISPLAYS = new Set([
   "7K+",
+  "10K+",
   "About half",
   "1K+",
   "200K+",
   "745K+",
+  "1M+",
   "76%",
   "70%",
   "≈4,800",
@@ -15,6 +17,7 @@ export const APPROVED_PUBLIC_DISPLAYS = new Set([
   "More than two-thirds",
   "Hundreds",
   "$4M+",
+  "$8M+",
   "$300K+",
   "500+",
   "1K+ / 500+",

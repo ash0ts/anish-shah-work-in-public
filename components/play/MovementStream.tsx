@@ -9,7 +9,7 @@ import {
   type StravaPayload,
 } from "./connector-model";
 import { updatedDateLabel } from "./updated-date-label";
-import { PanelHeading, StreamEmpty } from "./StreamChrome";
+import { StreamEmpty } from "./StreamChrome";
 import { SITE_COPY } from "@/lib/copy";
 
 export function MovementStream({
@@ -67,13 +67,7 @@ export function MovementStream({
   }
 
   return (
-    <div className={styles.movementStream}>
-      <div className={styles.movementIntro}>
-        <PanelHeading
-          title="Outside, on purpose."
-          description="Recent activity when Strava allows it; the profile link stays available."
-        />
-      </div>
+    <div className={styles.movementStream} data-embed-status={state.payload.embedStatus}>
       {show && state.payload.embed ? (
         <div className={styles.embed} ref={embedRef} tabIndex={-1}>
           <iframe

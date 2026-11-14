@@ -1,10 +1,10 @@
 .runtime {
   position: fixed;
   z-index: 900;
-  inset: 0;
+  inset: var(--header-height) 0 0;
   display: grid;
   width: 100vw;
-  height: 100dvh;
+  height: calc(100dvh - var(--header-height));
   min-width: 0;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   overflow: auto;
@@ -48,8 +48,9 @@
   margin: 0 auto;
 }
 
-.runtimeBar > span {
+.runtimeBar > h1 {
   display: grid;
+  margin: 0;
   gap: 0.1rem;
   font-family: var(--font-display);
   font-size: 1.05rem;

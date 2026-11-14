@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
 const routes = ["/", "/about", "/work", "/play", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
@@ -809,8 +810,9 @@ test("Discogs remains lazy until the Record crate route is selected", async ({ p
     }
   });
   await page.goto("/play", { waitUntil: "networkidle" });
+  await expectRoomReady(page, { context: "opening Collect without preloading its provider" });
   expect(connectorRequests).toHaveLength(0);
-  await page.locator('[data-room-object-link="collect"]').click();
+  await page.locator('[data-room-object-control="collect"]').click();
   await expect(page).toHaveURL(/\/play\/collect$/);
   await expect(
     page.getByRole("region", { name: "Discogs physical catalog" }),
@@ -853,6 +855,7 @@ test("legacy Play stream links redirect permanently and reject unknown selection
 
 test("Discogs Overview and Browse all support filters and pagination", async ({ page }) => {
   await page.goto("/play/collect", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
 
   const physicalTotal = page.getByText("physical items", { exact: true }).locator("..");
   const releaseTotal = page.getByText("distinct releases", { exact: true }).locator("..");
@@ -888,11 +891,12 @@ test("Discogs Overview and Browse all support filters and pagination", async ({ 
   await expect(page.locator("ol[role='list']")).toHaveAttribute("start", "13");
   await expect(page).toHaveURL(/page=2/);
 
+  await page.getByText("Filters and sort", { exact: true }).click();
   await page.getByRole("combobox", { name: /^Per page/ }).selectOption("24");
   await expect(page.getByText("1—14 of 14 releases")).toBeVisible();
   await expect(page).toHaveURL(/pageSize=24/);
 
-  await page.getByRole("combobox", { name: /^Format/ }).selectOption("vinyl");
+  await page.getByRole("navigation", { name: "Record formats" }).getByRole("link", { name: /^Vinyl/ }).click();
   await expect(page).toHaveURL(/format=vinyl/);
   await page.getByRole("combobox", { name: /^Sort/ }).selectOption("year");
   await expect(page).toHaveURL(/sort=year/);
@@ -903,9 +907,7 @@ test("Discogs Overview and Browse all support filters and pagination", async ({ 
   await page.getByRole("button", { name: "Search" }).click();
   await expect(page.getByText("1—1 of 1 releases")).toBeVisible();
   await expect(
-    page.getByRole("link", {
-      name: /Physical Signal 12.*Synthetic Artist 5/i,
-    }),
+    page.locator("[data-tactile-item] summary").filter({ hasText: "Physical Signal 12" }),
   ).toBeVisible();
   await expect(page).toHaveURL(/q=Physical(?:\+|%20)Signal(?:\+|%20)12/);
 
@@ -923,6 +925,7 @@ test("Discogs Overview and Browse all support filters and pagination", async ({ 
 test("Discogs Overview and Browse all fit 320–1920px viewports", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/play/collect", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
     await expect(

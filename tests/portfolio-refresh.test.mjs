@@ -71,15 +71,17 @@ test("merge and article-update dates never masquerade as publication or delivery
     assert.match(item(id).status, /updated|merged/i);
   }
   assert.equal(item("item:up-0008").date.precision, "year");
-  assert.equal(bundle.generatedAt, "2026-10-22T00:00:00.000Z");
+  assert.equal(bundle.generatedAt, "2026-11-14T00:00:00.000Z");
+  assert.equal(updates.reviewedAt, "2026-10-22", "New metrics must not redate project evidence");
 });
 
 test("owner-validated October measures keep units, windows, limits, and dated source history", () => {
-  assert.equal(updates.metricObservations.length, 5);
+  assert.equal(updates.metricObservations.filter(({ date_recorded }) => date_recorded === "2026-10-22").length, 5);
   assert.equal(bundle.metrics.length, 17);
   const current = bundle.metrics.filter(({ id }) => id.endsWith(":2026-10-22"));
-  assert.deepEqual(current.map(({ displayValue }) => displayValue).sort(), ["745K+", "76%", "70%", "≈4,800", "30"].sort());
-  const calls = current.find(({ key }) => key === "all_time_tool_calls");
+  assert.deepEqual(current.map(({ displayValue }) => displayValue).sort(), ["76%", "70%", "≈4,800", "30"].sort());
+  const calls = claims.claims.find(({ id }) => id === "metric:project:wandb-mcp-server:tool-calls:2026-10-22");
+  assert.equal(calls.displayValue, "745K+", "Keep the historical observation unchanged");
   assert.equal(calls.period.end, null, "A review date must not become a measurement cutoff");
   assert.match(calls.qualifier, /not HTTP requests or sessions/);
   assert(current.filter((m) => m !== calls).every((m) => !m.displaySurfaces.includes("homepage")));
@@ -95,6 +97,31 @@ test("owner-validated October measures keep units, windows, limits, and dated so
   assert.match(audience.qualifier, /not distinct companies or currently active accounts/);
 });
 
+test("November milestones replace only active claims and keep units, limits, and prior observations", () => {
+  const current = bundle.metrics.filter(({ id }) => id.endsWith(":2026-11-14"));
+  assert.equal(updates.metricObservations.length, 8);
+  assert.equal(updates.metricsReviewedAt, "2026-11-14");
+  assert.deepEqual(current.map(({ displayValue }) => displayValue).sort(), ["1M+", "10K+", "$8M+"].sort());
+  for (const metric of current) {
+    assert.deepEqual(metric.period, { start: null, end: null, asOf: "2026-11-14", label: "Owner-reviewed November 14, 2026" });
+    assert.match(metric.qualifier, /review date is not a measurement cutoff/i);
+    assert.equal(metric.sourceLabel, "Owner-reviewed analytics");
+    assert.deepEqual(metric.publicEvidenceIds, ["evidence:methodology:internal-analytics"]);
+  }
+  const calls = current.find(({ displayValue }) => displayValue === "1M+");
+  assert.equal(calls.key, "all_time_tool_calls");
+  assert.match(calls.qualifier, /not unique users, HTTP requests, or sessions/);
+  assert.match(current.find(({ displayValue }) => displayValue === "10K+").qualifier, /Enrollments, not unique learners/);
+  const pipeline = current.find(({ displayValue }) => displayValue === "$8M+");
+  assert.equal(pipeline.attribution, "associated");
+  assert.equal(pipeline.scope, "portfolio");
+  assert.match(pipeline.qualifier, /not revenue, closed ARR, or personal attribution/);
+  const historical = claims.claims.filter(({ displayValue }) => ["745K+", "$4M+"].includes(displayValue));
+  assert.equal(historical.length, 2);
+  assert(historical.every(({ id }) => !bundle.metrics.some((metric) => metric.id === id)));
+  assert.equal(bundle.metrics.find(({ key }) => key === "same_day_account_creation_share").period.asOf, "2026-07-30");
+});
+
 test("reviewed update input is additive and rejects ambiguous dates, links, and identities", () => {
   const original = JSON.stringify([curation, groups]);
   assert.equal(applyPortfolioUpdates(curation, groups, updates).curation.supplementalItems.length, 18);
@@ -102,6 +129,10 @@ test("reviewed update input is additive and rejects ambiguous dates, links, and 
   for (const change of [
     (value) => { value.schemaVersion = "2.0"; },
     (value) => { value.reviewedAt = "today"; },
+    (value) => { value.metricsReviewedAt = "today"; },
+    (value) => { value.metricsReviewedAt = "2026-10-01"; },
+    (value) => { delete value.metricsReviewedAt; },
+    (value) => { value.metricObservations.at(-1).date_recorded = "2026-11-15"; },
     (value) => { value.privateNotes = "not allowed"; },
     (value) => { value.items.push(value.items[0]); },
     (value) => { value.items[0].dateBasis = "release"; },

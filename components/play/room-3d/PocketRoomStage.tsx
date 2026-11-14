@@ -13,6 +13,7 @@ import {
 import { ROOM_OBJECT_BY_ID } from "../room-platform/room-registry";
 import type { RoomObjectId } from "../room-platform/room-types";
 import { ROOM_PALETTE } from "./room-palette";
+import { ROOM_CAMERA_FRAMING } from "./room-camera-framing";
 import { RoomScene } from "./RoomScene";
 import type { RoomRotation } from "./room-math";
 import styles from "./RoomStage.module.css";
@@ -229,9 +230,9 @@ export function PocketRoomStage({
           aria-hidden="true"
           camera={{
             far: 60,
-            fov: 44,
+            fov: ROOM_CAMERA_FRAMING.pocket.fov,
             near: 0.1,
-            position: [8.2, 7.1, 10.4],
+            position: [...ROOM_CAMERA_FRAMING.pocket.position],
           }}
           dpr={[1, 1.15]}
           frameloop="demand"
@@ -247,7 +248,7 @@ export function PocketRoomStage({
             gl.domElement.setAttribute("aria-hidden", "true");
             gl.domElement.setAttribute("role", "presentation");
             gl.domElement.tabIndex = -1;
-            camera.lookAt(0, 1.05, -0.4);
+            camera.lookAt(...ROOM_CAMERA_FRAMING.pocket.target);
             camera.updateMatrixWorld();
             gl.setClearColor(ROOM_PALETTE.backdrop, 1);
           }}

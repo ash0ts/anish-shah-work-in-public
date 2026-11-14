@@ -28,19 +28,13 @@
   border: 1px solid #718299;
   color: var(--travel-paper);
   background: var(--travel-night);
-  box-shadow: 0 1rem 0 #050a12;
+  box-shadow: none;
 }
 
 .console::before {
   display: block;
-  height: 0.35rem;
-  background: linear-gradient(
-    90deg,
-    var(--travel-coral) 0 18%,
-    var(--travel-amber) 18% 35%,
-    var(--travel-mint) 35% 68%,
-    var(--travel-violet) 68%
-  );
+  height: 2px;
+  background: #b9a17b;
   content: "";
 }
 
@@ -76,7 +70,7 @@
 
 .consoleHeader h2 {
   margin-top: 0.35rem;
-  font-size: clamp(2.4rem, 6vw, 5.8rem);
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
   font-variation-settings: "CASL" 0.25, "wght" 740;
   letter-spacing: -0.065em;
   line-height: 0.88;
@@ -141,6 +135,27 @@
   content: "";
   pointer-events: none;
 }
+
+.orrery {
+  position: absolute;
+  z-index: 4;
+  inset: 2%;
+  width: 96%;
+  height: 96%;
+  pointer-events: none;
+  color: #b9a17b;
+  opacity: 0.55;
+}
+.tripNotes { margin-block: 0.7rem; border-block: 1px solid var(--travel-line); }
+.tripNotes summary { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; color: var(--travel-mint); font: 0.8rem var(--font-mono); list-style: none; }
+.tripNotes summary::after { content: "+"; }
+.tripNotes[open] summary::after { content: "−"; }
+.tripNotes summary::-webkit-details-marker { display: none; }
+.tripNotes p { font-size: 0.85rem; line-height: 1.6; }
+.tripNotes[open] p { animation: unfold-note 240ms ease-out; }
+@keyframes unfold-note { from { transform: translateY(-5px); } to { transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .tripNotes[open] p { animation: none; } }
+@media (forced-colors: active) { .orrery { display: none; } }
 
 .globeFrame[data-globe-ready]::before {
   position: absolute;
@@ -537,7 +552,7 @@
 
 .tripIndex {
   min-width: 0;
-  padding: clamp(3rem, 7vw, 7rem) 0 0;
+  padding: 1.5rem 0 0;
 }
 
 .tripIndex > header {
@@ -564,7 +579,7 @@
 }
 
 .tripIndex > header h2 {
-  font-size: clamp(2rem, 5vw, 4.8rem);
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
   font-variation-settings: "CASL" 0.35, "wght" 720;
   letter-spacing: -0.055em;
   line-height: 0.92;
@@ -645,7 +660,7 @@
 
 .tripCard h3 {
   margin: 0;
-  font-size: clamp(1.5rem, 3vw, 2.8rem);
+  font-size: clamp(1.2rem, 2.2vw, 1.9rem);
   font-variation-settings: "CASL" 0.3, "wght" 710;
   letter-spacing: -0.045em;
   line-height: 0.95;

@@ -246,9 +246,9 @@ test("Work pairs flat filtered results with a semantic line-by-year color calend
 
 test("Home signal circuit resolves three reviewed qualified metric IDs", () => {
   for (const metricId of [
-    "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
-    "metric:courses:enrollments:2026-07-30",
-    "metric:events:pipeline-supported:2024-2025",
+    "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
+    "metric:courses:enrollments:2026-11-14",
+    "metric:events:pipeline-supported:2026-11-14",
   ]) {
     assert(
       homePresentationManifest.signals.some(

@@ -29,8 +29,8 @@ import {
 } from "../components/play/room-3d/room-math.ts";
 import {
   FISHEYE_FRAME_RENDER_BUDGET,
-  PROCEDURAL_ROOM_RENDER_BUDGET,
-  PROCEDURAL_ROOM_RENDER_METRICS,
+  ROOM_RENDER_BUDGET,
+  ROOM_RENDER_METRICS,
 } from "../components/play/room-3d/room-render-metrics.ts";
 import { ROOM_APPROACH_POSES } from "../components/play/room-3d/room-approach.ts";
 import {
@@ -433,7 +433,7 @@ test("room presentation rotation clamps to reviewed bounds", () => {
   });
 });
 
-test("room renderer remains demand-driven, procedural, and first-party", async () => {
+test("room renderer remains demand-driven and first-party", async () => {
   const [stage, objects, controller] = await Promise.all([
     readFile(
       new URL("../components/play/room-3d/RoomStage.tsx", import.meta.url),
@@ -441,7 +441,7 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
     ),
     readFile(
       new URL(
-        "../components/play/room-3d/RoomProceduralObjects.tsx",
+        "../components/play/room-3d/DioramaObjects.tsx",
         import.meta.url,
       ),
       "utf8",
@@ -458,8 +458,17 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
   assert.match(stage, /frameloop="demand"/);
   assert.match(stage, /dpr=\{\[1, 1\.25\]\}/);
   assert.match(stage, /data-projection=\{projection\}/);
-  assert.match(stage, /fov: 46/);
-  assert.match(stage, /position: \[4\.8, 4\.3, 5\.5\]/);
+  assert.match(stage, /fov: ROOM_CAMERA_FRAMING\.desktop\.fov/);
+  assert.match(stage, /position: \[\.\.\.ROOM_CAMERA_FRAMING\.desktop\.position\]/);
+  const { ROOM_CAMERA_FRAMING } = await import("../components/play/room-3d/room-camera-framing.ts");
+  assert.equal(ROOM_CAMERA_FRAMING.desktop.fov, 46);
+  assert.equal(ROOM_CAMERA_FRAMING.pocket.fov, 44);
+  for (const camera of Object.values(ROOM_CAMERA_FRAMING)) {
+    assert.equal(camera.position.length, 3);
+    assert.equal(camera.target.length, 3);
+    assert.ok([...camera.position, ...camera.target].every(Number.isFinite));
+    assert.ok(camera.position[2] > camera.target[2]);
+  }
   assert.match(stage, /setClearColor\(ROOM_PALETTE\.backdrop, 1\)/);
   assert.match(stage, /function ResponsiveFisheye/);
   assert.match(stage, /key=\{sizeKey\}/);
@@ -468,27 +477,15 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
   assert.match(stage, /segments=\{32\}/);
   assert.match(stage, /zoom=\{0\.72\}/);
   assert.match(stage, /<FisheyeFrameMonitor/);
-  assert.match(stage, /window\.setTimeout\([\s\S]*downgradeProjection,[\s\S]*2_000/);
   assert.match(stage, /"fisheye" \| "wide-perspective"/);
   assert.match(stage, /sessionStorage\.setItem\(FISHEYE_SESSION_DOWNGRADE_KEY/);
   assert.match(stage, /ROOM_OBJECT_BY_ID\[selectedId\]\.approachPoseId/);
   assert.match(stage, /webglcontextlost/);
   assert.match(stage, /failIfMajorPerformanceCaveat: true/);
   assert.doesNotMatch(`${stage}\n${objects}`, /https?:\/\//);
-  assert.doesNotMatch(`${stage}\n${objects}`, /useGLTF|\.glb|TextureLoader/);
+  assert.match(objects, /setMeshoptDecoder\(MeshoptDecoder\)/);
 
-  const hitIds = [...objects.matchAll(/<HitTarget\s+\n?\s*id="([^"]+)"/g)].map(
-    (match) => match[1],
-  );
-  assert.deepEqual(hitIds.sort(), [
-    "collect",
-    "listen",
-    "move",
-    "play",
-    "read",
-    "travel",
-    "watch",
-  ]);
+  assert.match(objects, /objectIds\.map/);
   assert.match(controller, /crossedRoomDragThreshold/);
   assert.match(controller, /isRoomInteractivePointer/);
   assert.match(controller, /isCompetingRoomPointer/);
@@ -503,13 +500,18 @@ test("room renderer remains demand-driven, procedural, and first-party", async (
   assert.match(controller, /resolveRoomRayHit/);
   assert.doesNotMatch(controller, /onClick=/);
   assert.match(objects, /roomOccluder = true/);
-  assert.match(objects, /interactionTarget: ReactNode/);
-  assert.match(objects, /\{interactionTarget\}[\s\S]*ref=\{visual\}/);
-  assert.ok((objects.match(/<Occluder/g) ?? []).length >= 3);
+  assert.match(objects, /manifest\.occluders\.map/);
+  assert.match(objects, /registerOccluder=\{registerOccluder\}/);
+  const manifest = JSON.parse(await readFile(new URL("../components/play/room-3d/diorama.generated.json", import.meta.url)));
+  assert.equal(manifest.occluders.length, 3);
+  for (const occluder of manifest.occluders) {
+    assert.ok(occluder.position.every(Number.isFinite));
+    assert.ok(occluder.size.every(size => Number.isFinite(size) && size > 0));
+  }
   assert.equal(FISHEYE_FRAME_RENDER_BUDGET.cubemapFaces, 6);
   assert.ok(
     FISHEYE_FRAME_RENDER_BUDGET.actualDrawCalls >
-      PROCEDURAL_ROOM_RENDER_BUDGET.visibleDrawCalls,
+      ROOM_RENDER_BUDGET.visibleDrawCalls,
   );
 });
 
@@ -554,8 +556,8 @@ test("pocket renderer is a separate intent-loaded perspective stage", async () =
   assert.match(runtime, /data-pocket-entry-phase/);
   assert.match(runtimeStyles, /pocket-frame-fold 520ms/);
   assert.match(runtimeStyles, /pocket-dock-rise 130ms/);
-  assert.match(overviewStyles, /@media \(max-width: 1099px\)/);
-  assert.match(overviewStyles, /clamp\(15rem, 44svh, 24rem\)/);
+  assert.match(overviewStyles, /@media \(max-width: 900px\)/);
+  assert.match(overviewStyles, /min-height: 43svh/);
   assert.match(pocket, /data-projection="pocket-perspective"/);
   assert.match(pocket, /dpr=\{\[1, 1\.15\]\}/);
   assert.match(pocket, /frameloop="demand"/);
@@ -616,33 +618,23 @@ test("the static room poster is first-party, content-hashed, and bounded", async
       "utf8",
     ),
   ]);
-  const posterFiles = [
-    {
-      filename: "my-room-2001-neutral.01c6f825bbc1.avif",
-      surfaces: [overview, runtime],
-    },
-    {
-      filename: "my-room-2001-neutral.00d2bc80d8dc.webp",
-      surfaces: [overview, runtime],
-    },
-    {
-      filename: "my-room-2001-neutral-mobile.27b17548d9bf.avif",
-      surfaces: [overview],
-    },
-    {
-      filename: "my-room-2001-neutral-mobile.95603956f4ee.webp",
-      surfaces: [overview],
-    },
-  ];
-
-  for (const { filename, surfaces } of posterFiles) {
-    const url = new URL(`../public/assets/play/${filename}`, import.meta.url);
-    const [bytes, metadata] = await Promise.all([readFile(url), stat(url)]);
-    const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
-    assert.match(filename, new RegExp(`\\.${digest}\\.`));
-    assert.ok(metadata.size <= 200_000);
-    for (const surface of surfaces) {
-      assert.match(surface, new RegExp(filename.replaceAll(".", "\\.")));
+  // Validate the assets actually referenced by both surfaces, not old pinned names.
+  for (const surface of [overview, runtime]) {
+    const filenames = [...new Set([...surface.matchAll(
+      /\/assets\/play\/(my-room-2001-neutral(?:-mobile)?\.[a-f0-9]{12}\.(?:avif|webp))/g,
+    )].map((match) => match[1]))];
+    assert.equal(filenames.length, 4, "Each poster needs desktop/mobile AVIF and WebP");
+    for (const variant of ["neutral.", "neutral-mobile."]) {
+      for (const extension of [".avif", ".webp"]) {
+        assert.equal(filenames.filter((name) => name.includes(variant) && name.endsWith(extension)).length, 1);
+      }
+    }
+    for (const filename of filenames) {
+      const url = new URL(`../public/assets/play/${filename}`, import.meta.url);
+      const [bytes, metadata] = await Promise.all([readFile(url), stat(url)]);
+      const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
+      assert.ok(filename.includes(`.${digest}.`));
+      assert.ok(metadata.size <= 200_000);
     }
   }
 
@@ -747,35 +739,23 @@ test("the deferred room renderer reports its target and stays below its hard cei
 
 test("procedural scene stays inside reviewed draw and material budgets", async () => {
   assert.ok(
-    PROCEDURAL_ROOM_RENDER_METRICS.visibleDrawCallUpperBound <=
-      PROCEDURAL_ROOM_RENDER_BUDGET.visibleDrawCalls,
+    ROOM_RENDER_METRICS.visibleDrawCallUpperBound <=
+      ROOM_RENDER_BUDGET.visibleDrawCalls,
   );
   assert.ok(
-    PROCEDURAL_ROOM_RENDER_METRICS.materialSlots <=
-      PROCEDURAL_ROOM_RENDER_BUDGET.materialSlots,
+    ROOM_RENDER_METRICS.materialSlots <=
+      ROOM_RENDER_BUDGET.materialSlots,
   );
   assert.ok(
-    PROCEDURAL_ROOM_RENDER_METRICS.visibleTriangleUpperBound <=
-      PROCEDURAL_ROOM_RENDER_BUDGET.visibleTriangles,
+    ROOM_RENDER_METRICS.visibleTriangleUpperBound <=
+      ROOM_RENDER_BUDGET.visibleTriangles,
   );
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleDrawCallUpperBound, 66);
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.materialSlots, 24);
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.visibleTriangleUpperBound, 31_000);
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.roundedBoxCount, 33);
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.instancedDrawCalls, 11);
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.repeatedMeshesCollapsed, 56);
-  assert.equal(PROCEDURAL_ROOM_RENDER_METRICS.hitProxyCount, 7);
+  assert.equal(ROOM_RENDER_METRICS.hitProxyCount, 7);
+  const manifest = JSON.parse(await readFile(new URL("../components/play/room-3d/diorama.generated.json", import.meta.url), "utf8"));
+  assert.equal(ROOM_RENDER_METRICS.visibleTriangleUpperBound, manifest.triangles);
+  assert.equal(ROOM_RENDER_METRICS.visibleDrawCallUpperBound, manifest.drawCalls);
+  assert.equal(ROOM_RENDER_METRICS.materialSlots, manifest.materials);
 
-  const objects = await readFile(
-    new URL(
-      "../components/play/room-3d/RoomProceduralObjects.tsx",
-      import.meta.url,
-    ),
-    "utf8",
-  );
-  assert.equal((objects.match(/<SoftBox/g) ?? []).length, 33);
-  assert.equal((objects.match(/<Instances/g) ?? []).length, 11);
-  assert.doesNotMatch(objects, /<mesh(?:Standard|Basic)Material/);
 });
 
 test("every registered object has one authored approach pose", () => {

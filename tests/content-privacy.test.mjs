@@ -40,17 +40,17 @@ test("public output contains no internal URLs or local paths", () => {
 });
 test("public metrics expose reviewed display copy, never exact value fields", () => {
   const publicDisplays = new Set([
-    "7K+",
+    "10K+",
     "About half",
     "1K+",
-    "745K+",
+    "1M+",
     "76%",
     "70%",
     "≈4,800",
     "30",
     "More than two-thirds",
     "Hundreds",
-    "$4M+",
+    "$8M+",
     "$300K+",
     "500+",
     "1K+ / 500+",
@@ -76,16 +76,16 @@ test("selected public measure revisions stay rounded and omit exact source figur
   const calls = publicBundle.metrics.find(
     (metric) =>
       metric.id ===
-      "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+      "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
   );
   const pipeline = publicBundle.metrics.find(
-    (metric) => metric.id === "metric:events:pipeline-supported:2024-2025",
+    (metric) => metric.id === "metric:events:pipeline-supported:2026-11-14",
   );
-  assert.equal(calls?.displayValue, "745K+");
-  assert.equal(calls?.period.asOf, "2026-10-22");
+  assert.equal(calls?.displayValue, "1M+");
+  assert.equal(calls?.period.asOf, "2026-11-14");
   assert(!calls.displayValue.includes("$"));
-  assert.equal(pipeline?.displayValue, "$4M+");
-  assert.equal(pipeline?.period.label, "2024–2025");
+  assert.equal(pipeline?.displayValue, "$8M+");
+  assert.equal(pipeline?.period.label, "Owner-reviewed November 14, 2026");
   assert(
     !publicBundle.metrics.some(
       (metric) =>

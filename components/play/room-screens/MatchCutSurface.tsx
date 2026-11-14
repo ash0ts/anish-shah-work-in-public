@@ -119,7 +119,7 @@ export function MatchCutSurface({
     const element = ref.current;
     if (!element) return;
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce), (forced-colors: active)").matches;
     if (reduced) {
       element.removeAttribute("style");
       element.dataset.matchCutState = "settled";
@@ -128,8 +128,7 @@ export function MatchCutSurface({
 
     element.dataset.matchCutState = "animating";
     Object.assign(element.style, preset.initial);
-    element.style.transformOrigin =
-      objectId === "collect" ? "center bottom" : "center center";
+    element.style.transformOrigin = "center top";
 
     const animation = animate(element, {
       ...preset.animation,

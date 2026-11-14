@@ -180,7 +180,7 @@ flowchart TD
   directory --> direct["Semantic /play/object route"]
   direct --> connector["One connector-backed screen"]
   direct --> travel["Travel atlas and trip routes"]
-  play --> intent["Explicit Enter Room gesture"]
+  play --> intent["Play navigation is room intent"]
   intent --> capability["Capability, accessibility, and data-saving checks"]
   capability --> room["Lazy desktop or Pocket R3F room"]
   room --> select["Select a labeled object"] --> direct
@@ -192,7 +192,27 @@ The seven objects are Watch, Read, Listen, Collect, Play, Move, and Travel.
 The first six pair one literal room screen with one server adapter. Travel owns
 its concrete route because atlas queries, trip pages, fixtures, and metadata
 have a different contract. `/play` itself performs no connector or Travel data
-read and does not preload provider, geography, media, or room-runtime data.
+read and does not preload provider, geography, or media data. Capable visits
+load the room after the poster and semantic links render. `?view=directory`
+opts out; exiting the room sets that state rather than immediately reopening it.
+
+`room-screens/ObjectScreen.tsx` supplies the shared hardware frame and navigation;
+the seven thin wrappers retain their provider isolation. Collection posters,
+books, cartridges, and record sleeves use native `TactileDisclosure` details,
+with a short Anime.js spring layered over selectable, server-rendered content.
+Filtering stays in GET links/forms, not in a second 3D browsing runtime. Listen
+keeps its single-owner needle and playback consent; Move and Travel retain their
+existing provider and geographic boundaries.
+
+Room routing/history, focus restoration, and bounded transitions live in
+separate room-platform modules. The seven visual props share one checked-in
+GLB optimized by `scripts/room/build-diorama.mjs` from the pinned, original
+Blender source under `assets/room/gothic-hardware/`. Build-time vertex lighting,
+one embedded material atlas, glTF Transform, and the bundled Meshopt decoder
+avoid runtime lighting and third-party asset services. The generated manifest
+records geometry budgets, atlas dimensions/hash, source provenance, hit proxies,
+physical motion pivots, and the seven completed props. The atlas is decoded from embedded
+bytes without relaxing CSP. Executable object maps stay literal and parity-tested.
 
 Three.js/R3F is restricted to the intent-gated room and Travel globe. The
 Canvas is decorative; direct links, focus, browser Back, Escape, and semantic

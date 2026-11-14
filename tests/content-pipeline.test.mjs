@@ -53,7 +53,7 @@ test("public bundle preserves the complete footprint inventory", () => {
   assert.match(publicBundle.contentVersion, /^[a-f0-9]{16}$/);
   assert.deepEqual(publicBundle.sourceSummary, {
     footprintRows: 184,
-    impactRows: 90,
+    impactRows: 93,
     supplementalArtifacts: 18,
     publicItems: 202,
     approvedMetricCount: 17,
@@ -383,7 +383,7 @@ test("owner bundle retains source accounting when available", { skip: !existsSyn
   );
   assert.equal(
     ownerBundle.metrics.filter((metric) => Object.hasOwn(metric, "sourceRecord")).length,
-    90,
+    93,
   );
   assert.equal(ownerBundle.sourceSnapshots.length, 9);
   assert(ownerBundle.groupingLedger);

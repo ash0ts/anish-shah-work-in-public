@@ -288,6 +288,21 @@ code {
     display: inline;
   }
 
+  /* A local art review must not cover the Pocket title or controls. */
+  body:has([data-room-runtime]) .preview-environment-notice {
+    top: var(--header-height);
+    left: 0;
+    width: 100%;
+    max-width: none;
+    height: 1.75rem;
+    transform: none;
+  }
+
+  body:has(.preview-environment-notice) [data-room-runtime] {
+    top: calc(var(--header-height) + 1.75rem);
+    height: calc(100dvh - var(--header-height) - 1.75rem);
+  }
+
   body {
     font-size: 16px;
   }

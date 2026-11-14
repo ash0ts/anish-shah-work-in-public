@@ -268,6 +268,18 @@ export function SpotifyRankedGroove({
         {timeRanges.find((entry) => entry.id === range)?.label.toLowerCase()}.
       </p>
 
+      {tracks.length > 1 ? (
+        <div className={styles.deckTransport} role="group" aria-label="Track selection">
+          <button type="button" onClick={() => selectTrack(tracks[(selectedIndex - 1 + tracks.length) % tracks.length], "backward")}>
+            <span aria-hidden="true">◀</span> {SITE_COPY.play["rank-previous"]}
+          </button>
+          <span aria-live="polite">{String(selectedIndex + 1).padStart(2, "0")} / {String(tracks.length).padStart(2, "0")}</span>
+          <button type="button" onClick={() => selectTrack(tracks[(selectedIndex + 1) % tracks.length], "forward")}>
+            {SITE_COPY.play["rank-next"]} <span aria-hidden="true">▶</span>
+          </button>
+        </div>
+      ) : null}
+
       {tracks.length ? (
         view === "groove" ? (
           <div className={styles.grooveLayout}>

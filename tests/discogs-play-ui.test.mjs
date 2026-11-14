@@ -28,7 +28,7 @@ test("Collect is a lazy direct room route with a complete semantic fallback", as
   );
 });
 
-test("Discogs uses a ruled shelf and an accessible pressing matrix", async () => {
+test("Discogs uses a tactile catalog and an accessible pressing matrix", async () => {
   const [discogs, css] = await Promise.all([
     source("components/play/DiscogsStream.tsx"),
     source("components/play/StreamPresentation.module.css"),
@@ -48,7 +48,7 @@ test("Discogs uses a ruled shelf and an accessible pressing matrix", async () =>
   );
   assert.match(discogs, /<th scope="row">\{format\}<\/th>/);
   assert.match(discogs, /Find a title or artist/);
-  for (const label of ["Format", "Decade", "Sort", "Per page"]) {
+  for (const label of ["Decade", "Sort", "Per page"]) {
     assert.match(discogs, new RegExp('label="' + label + '"'));
   }
   assert.match(discogs, /\[12, 24, 36\]/);
@@ -62,7 +62,10 @@ test("Discogs uses a ruled shelf and an accessible pressing matrix", async () =>
     /<Image\b|<img\b|<canvas\b|<svg\b|from\s+["']three["']|autoplay|release\.(?:url|uri|image)/i,
   );
 
-  assert.match(css, /\.discogsShelf\s*\{/);
+  assert.match(discogs, /aria-label="Record formats"/);
+  assert.match(discogs, /data-record-crate/);
+  assert.match(discogs, /<TactileDisclosure kind="record"/);
+  assert.match(await source("components/play/TactileCollections.module.css"), /\.records\s*\{/);
   assert.match(css, /\.discogsMatrixScroll\s*\{[\s\S]*?overflow-x: auto/);
 });
 

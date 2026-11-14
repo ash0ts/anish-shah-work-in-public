@@ -49,9 +49,9 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 - Studio's owner-only copy report enumerates declared page deck paths, review
   classes, and WorkGroup presentation ownership. It is diagnostic and
   read-only; it never makes D1 wording authoritative over Git copy.
-- My Room 2001 is the authoritative Play experience. Its dependency-free closed seven-object contract, semantic routes, and HTML foundations own navigation and content; desktop and Pocket R3F rooms are optional enhancements. There is no Classic mode.
+- My Room 2001 is the authoritative Play experience. Its dependency-free closed seven-object contract, semantic routes, and HTML foundations own navigation and content; desktop and Pocket R3F rooms are optional enhancements. There is no Classic mode. Build geometry with `room:assets`; verify the hashed GLB, registry parity, and measured Pocket limits using `room:assets:check` and decoded-asset tests.
 - Derive routes, controls, focus targets, and smoke paths from the structural object contract. Keep screen imports, provider adapters, scene objects, and other executable maps literal, closed, and parity-tested.
-- Three.js/R3F may exist only under `components/play/room-3d/**` and `components/play/travel/**`, load only after their own intent/capability boundaries, and never own provider data, Travel photos, navigation semantics, or accessibility content.
+- Three.js/R3F may exist only under `components/play/room-3d/**` and `components/play/travel/**`, load only after their own intent/capability boundaries (Play navigation is Room intent; `?view=directory` stays renderer-free), and never own provider data, Travel photos, navigation semantics, or accessibility content.
 - The Simulation may use Phaser, XState, and game Canvas only under its scoped paths. Keep Action lazy, Tactical semantic, authored fallback complete, visitor text ephemeral, and every factual card server-owned. When its experience mode is `disabled`, remove every public ingress, route/API response, sitemap entry, and Play-loaded Simulation chunk while retaining dormant source and owner state.
 - Tone/Web Audio is gesture-gated under `components/experience-audio/**`; missing audio is silent and never blocks interaction.
 - Connector collection synchronization is owner-triggered only. Public reads,

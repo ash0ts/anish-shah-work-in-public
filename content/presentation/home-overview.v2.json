@@ -4,21 +4,21 @@
     {
       "id": "deployed",
       "theme": "product",
-      "metricId": "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+      "metricId": "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
       "iconId": "tool-interface",
       "compactLimit": "Direct project usage · not revenue"
     },
     {
       "id": "taught",
       "theme": "learning",
-      "metricId": "metric:courses:enrollments:2026-07-30",
+      "metricId": "metric:courses:enrollments:2026-11-14",
       "iconId": "open-book",
       "compactLimit": "Enrollments · not unique learners"
     },
     {
       "id": "programs",
       "theme": "programs",
-      "metricId": "metric:events:pipeline-supported:2024-2025",
+      "metricId": "metric:events:pipeline-supported:2026-11-14",
       "iconId": "program-network",
       "compactLimit": "Supported pipeline · not revenue"
     }

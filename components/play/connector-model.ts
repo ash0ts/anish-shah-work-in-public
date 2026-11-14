@@ -215,7 +215,7 @@ export const DEFAULT_COLLECTION_QUERY: CollectionQueryState = {
 };
 
 export const DEFAULT_DISCOGS_QUERY: DiscogsQueryState = {
-  view: "pattern",
+  view: "gallery",
   query: "",
   format: "",
   decade: "",

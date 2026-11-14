@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import styles from "./StreamPresentation.module.css";
+import tactile from "./TactileCollections.module.css";
 import type {
   CollectionPayload,
   CollectionProvider,
@@ -9,9 +10,11 @@ import type {
 export function PatternView({
   provider,
   payload,
+  filterHref,
 }: {
   provider: CollectionProvider;
   payload: CollectionPayload;
+  filterHref?: (label: string) => string | null;
 }) {
   if (provider === "myanimelist" && payload.provider === "myanimelist") {
     const total =
@@ -23,7 +26,7 @@ export function PatternView({
           value={total.toLocaleString()}
           label="titles in the watch library"
         />
-        <Distribution title="Watch state" entries={payload.status} />
+        <Distribution title="Watch state" entries={payload.status} href={filterHref} />
         <Distribution title="Recurring genres" entries={payload.genres} />
         <Distribution title="Release eras" entries={payload.eras} />
         {payload.scores?.length ? (
@@ -43,7 +46,7 @@ export function PatternView({
           value={total.toLocaleString()}
           label="books on the shelf"
         />
-        <Distribution title="Reading state" entries={payload.status} />
+        <Distribution title="Reading state" entries={payload.status} href={filterHref} />
         {payload.ratings?.length ? (
           <Distribution title="Rating distribution" entries={payload.ratings} />
         ) : null}
@@ -120,9 +123,11 @@ function PatternLead({
 function Distribution({
   title,
   entries,
+  href,
 }: {
   title: string;
   entries: StatusCount[];
+  href?: (label: string) => string | null;
 }) {
   const visible = entries.filter((entry) => entry.count > 0).slice(0, 10);
   const maximum = Math.max(...visible.map((entry) => entry.count), 1);
@@ -135,7 +140,7 @@ function Distribution({
             aria-label={`${entry.label}: ${entry.count.toLocaleString()}`}
             key={entry.label}
           >
-            <span>{entry.label}</span>
+            <span>{href?.(entry.label) ? <a className={tactile.visualFilter} href={href(entry.label)!}>{entry.label}</a> : entry.label}</span>
             <i aria-hidden="true">
               <b
                 style={

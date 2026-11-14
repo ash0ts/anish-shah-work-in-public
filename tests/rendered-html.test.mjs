@@ -192,7 +192,7 @@ test("homepage renders four illustrated work types and one qualified signal circ
       /<a\b[^>]*href="\/work\?bucket=[^"]+(?:&amp;|&)topic=[^"]+#work-index"/g,
     ) ?? []).length === 0,
   );
-  for (const value of ["745K+", "7K+", "$4M+"]) {
+  for (const value of ["1M+", "10K+", "$8M+"]) {
     assert.match(
       text,
       new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
@@ -214,11 +214,11 @@ test("homepage renders four illustrated work types and one qualified signal circ
   assert.match(text, /Direct project usage · not revenue/i);
   assert.match(text, /Enrollments · not unique learners/i);
   assert.match(text, /Supported pipeline · not revenue/i);
-  assert.match(html, /Internal analytics/i);
-  assert.match(html, /Owner-validated cumulative tool calls/i);
+  assert.match(html, /Owner-reviewed analytics/i);
+  assert.match(html, /Owner-reported cumulative tool-call milestone/i);
   assert.match(html, /Enrollments, not unique learners/i);
   assert.match(html, /not revenue, closed ARR, or personal attribution/i);
-  for (const checkpoint of ["2026-10-22", "2026-07-30", "2025-10-01"]) {
+  for (const checkpoint of ["2026-11-14"]) {
     assert.match(html, new RegExp(`as of ${checkpoint}`, "i"));
   }
   assert.doesNotMatch(text, /Tool use followed the MCP server launch/i);
@@ -303,14 +303,14 @@ test("all public routes expose useful server-rendered content", async () => {
     {
       path: "/play",
       required: [
-        /The room behind the résumé\./i,
-        /Anime, books, music, records, games, miles, and trips/i,
-        />TV · Watch</i,
-        />Bookshelf · Read</i,
-        />Music player · Listen</i,
-        />Record crate · Collect</i,
-        />Computer · Games</i,
-        />Treadmill · Move</i,
+        /My Room,? 2001/i,
+        /Choose an object\./i,
+        />TV<\/strong><small>Watch</i,
+        />Bookshelf<\/strong><small>Read</i,
+        />Music player<\/strong><small>Listen</i,
+        />Record crate<\/strong><small>Collect</i,
+        />Computer<\/strong><small>Games</i,
+        />Treadmill<\/strong><small>Move</i,
         /data-room-static-stage="true"/i,
         /aria-labelledby="room-directory-title"/i,
         /fetchpriority="high"/i,

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.2",
-  "contentVersion": "792f0c3cdfc7570e",
-  "generatedAt": "2026-10-22T00:00:00.000Z",
+  "contentVersion": "eb8a486d0636e5fd",
+  "generatedAt": "2026-11-14T00:00:00.000Z",
   "sourceSummary": {
     "footprintRows": 184,
-    "impactRows": 90,
+    "impactRows": 93,
     "supplementalArtifacts": 18,
     "publicItems": 202,
     "approvedMetricCount": 17,
@@ -20325,18 +20325,18 @@
   ],
   "metrics": [
     {
-      "id": "metric:courses:enrollments:2026-07-30",
+      "id": "metric:courses:enrollments:2026-11-14",
       "subjectId": "group:courses:ai-curriculum",
       "category": "courses",
       "key": "course_enrollments",
-      "displayValue": "7K+",
+      "displayValue": "10K+",
       "label": "course enrollments across three AI courses",
-      "qualifier": "Enrollments, not unique learners.",
+      "qualifier": "Owner-reported enrollment milestone across three AI courses. Enrollments, not unique learners; review date is not a measurement cutoff.",
       "period": {
-        "start": "2024-06",
-        "end": "2026-07",
-        "asOf": "2026-07-30",
-        "label": "2024–2026"
+        "start": null,
+        "end": null,
+        "asOf": "2026-11-14",
+        "label": "Owner-reviewed November 14, 2026"
       },
       "scope": "work",
       "attribution": "direct",
@@ -20346,9 +20346,9 @@
         "collection",
         "sources"
       ],
-      "sourceLabel": "Internal analytics",
+      "sourceLabel": "Owner-reviewed analytics",
       "publicationState": "public",
-      "verificationState": "corroborated",
+      "verificationState": "verified",
       "publicEvidenceIds": [
         "evidence:methodology:internal-analytics"
       ]
@@ -20410,18 +20410,18 @@
       ]
     },
     {
-      "id": "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+      "id": "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
       "subjectId": "entity:wk-0001",
       "category": "product",
       "key": "all_time_tool_calls",
-      "displayValue": "745K+",
+      "displayValue": "1M+",
       "label": "cumulative MCP tool calls",
-      "qualifier": "Owner-validated cumulative tool calls, not HTTP requests or sessions. Direct project usage, not revenue; review date is not a measurement cutoff.",
+      "qualifier": "Owner-reported cumulative tool-call milestone, not unique users, HTTP requests, or sessions. Direct project usage, not revenue; review date is not a measurement cutoff.",
       "period": {
         "start": null,
         "end": null,
-        "asOf": "2026-10-22",
-        "label": "Owner-reviewed October 22, 2026"
+        "asOf": "2026-11-14",
+        "label": "Owner-reviewed November 14, 2026"
       },
       "scope": "work",
       "attribution": "direct",
@@ -20523,18 +20523,18 @@
       ]
     },
     {
-      "id": "metric:events:pipeline-supported:2024-2025",
+      "id": "metric:events:pipeline-supported:2026-11-14",
       "subjectId": "collection:events",
       "category": "events",
-      "key": "pipeline_supported_2024_2025",
-      "displayValue": "$4M+",
-      "label": "in supported event pipeline across tracked 2024–2025 programs",
-      "qualifier": "Supported pipeline across tracked event programs; not revenue, closed ARR, or personal attribution.",
+      "key": "pipeline_supported",
+      "displayValue": "$8M+",
+      "label": "in supported event pipeline across tracked programs",
+      "qualifier": "Owner-reported supported pipeline across tracked event programs; not revenue, closed ARR, or personal attribution. Review date is not a measurement cutoff.",
       "period": {
-        "start": "2024",
-        "end": "2025",
-        "asOf": "2025-10-01",
-        "label": "2024–2025"
+        "start": null,
+        "end": null,
+        "asOf": "2026-11-14",
+        "label": "Owner-reviewed November 14, 2026"
       },
       "scope": "portfolio",
       "attribution": "associated",
@@ -20543,9 +20543,9 @@
         "collection",
         "sources"
       ],
-      "sourceLabel": "Internal analytics",
+      "sourceLabel": "Owner-reviewed analytics",
       "publicationState": "public",
-      "verificationState": "derived",
+      "verificationState": "verified",
       "publicEvidenceIds": [
         "evidence:methodology:internal-analytics"
       ]
@@ -20800,9 +20800,9 @@
       "theme": "learning",
       "title": "Learning reach",
       "order": 1,
-      "leadMetricId": "metric:courses:enrollments:2026-07-30",
+      "leadMetricId": "metric:courses:enrollments:2026-11-14",
       "metricIds": [
-        "metric:courses:enrollments:2026-07-30",
+        "metric:courses:enrollments:2026-11-14",
         "metric:courses:same-day-account-share:2026-07-30",
         "metric:course:llm-apps-evaluation:launch-signups:2025-01-10"
       ]
@@ -20812,9 +20812,9 @@
       "theme": "product",
       "title": "Product adoption",
       "order": 2,
-      "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+      "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
       "metricIds": [
-        "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+        "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
         "metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22",
         "metric:project:wandb-mcp-server:returning-share:2026-10-22",
         "metric:project:wandb-mcp-server:lifetime-identities:2026-10-22",
@@ -20829,9 +20829,9 @@
       "theme": "programs",
       "title": "Program impact",
       "order": 3,
-      "leadMetricId": "metric:events:pipeline-supported:2024-2025",
+      "leadMetricId": "metric:events:pipeline-supported:2026-11-14",
       "metricIds": [
-        "metric:events:pipeline-supported:2024-2025",
+        "metric:events:pipeline-supported:2026-11-14",
         "metric:event:fully-connected-sf:reach:2024",
         "metric:event:nvidia-gtc:leads:2024",
         "metric:events:ic-associated-pipeline:2024"
@@ -23599,7 +23599,7 @@
         "item:up-0008"
       ],
       "metricIds": [
-        "metric:courses:enrollments:2026-07-30",
+        "metric:courses:enrollments:2026-11-14",
         "metric:courses:same-day-account-share:2026-07-30",
         "metric:course:llm-apps-evaluation:launch-signups:2025-01-10"
       ]
@@ -23668,7 +23668,7 @@
         "item:up-0006"
       ],
       "metricIds": [
-        "metric:events:pipeline-supported:2024-2025",
+        "metric:events:pipeline-supported:2026-11-14",
         "metric:events:ic-associated-pipeline:2024",
         "metric:event:nvidia-gtc:leads:2024",
         "metric:event:fully-connected-sf:reach:2024",
@@ -23716,7 +23716,7 @@
         "item:up-0013"
       ],
       "metricIds": [
-        "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+        "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
         "metric:project:wandb-mcp-server:audience:2026-06-11",
         "metric:project:wandb-mcp-server:returning-share:2026-06-11",
         "metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28",
@@ -23833,7 +23833,7 @@
     {
       "id": "snapshot:public-claims-review",
       "label": "Rounded impact claim review",
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-14",
       "rowCount": 17,
       "sectionCount": null,
       "access": "public_web"

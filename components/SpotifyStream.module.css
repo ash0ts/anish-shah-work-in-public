@@ -1,3 +1,30 @@
+.deckTransport {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0 1rem;
+}
+.deckTransport button {
+  min-height: 48px;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: linear-gradient(#30354e, #20263a);
+  color: var(--ink);
+  box-shadow: 0 3px #070c16, inset 0 1px #ffffff15;
+  font: 0.75rem var(--font-mono);
+  cursor: pointer;
+}
+.deckTransport button:active { transform: translateY(2px); box-shadow: none; }
+.deckTransport > span { color: var(--blue); font: 0.8rem var(--font-mono); white-space: nowrap; }
+@media (max-width: 760px) {
+  .grooveLayout > .inspector { order: -1; }
+  .deckTransport button { font-size: 0.7rem; padding-inline: 0.5rem; }
+}
+@media (forced-colors: active) {
+  .deckTransport button { background: ButtonFace; color: ButtonText; box-shadow: none; }
+}
 .header {
   display: grid;
   min-width: 0;
@@ -10,15 +37,15 @@
 .heading {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(12rem, 0.65fr) minmax(16rem, 1fr);
-  gap: 1.5rem clamp(2rem, 7vw, 7rem);
+  grid-template-columns: 1fr;
+  gap: 0.3rem;
   align-items: baseline;
 }
 
 .heading h2 {
   margin: 0;
   font-family: var(--font-display, "Recursive", sans-serif);
-  font-size: clamp(1.7rem, 3vw, 3rem);
+  font-size: 1rem;
   font-variation-settings: "CASL" 0.32, "wght" 660;
   letter-spacing: -0.045em;
   line-height: 1;
@@ -30,6 +57,7 @@
   margin: 0;
   color: var(--muted, #5f6878);
   line-height: 1.55;
+  font-size: 0.75rem;
 }
 
 .viewSwitch {
@@ -92,7 +120,7 @@
 
 .rangeBar button[aria-pressed="true"] {
   background: var(--blue, #295dff);
-  color: #fff;
+  color: var(--paper, #101626);
 }
 
 .rangeStatus {
@@ -107,7 +135,7 @@
 .grooveLayout {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(24rem, 0.9fr) minmax(22rem, 1.1fr);
+  grid-template-columns: minmax(18rem, 0.8fr) minmax(20rem, 1.2fr);
   border-top: 1px solid var(--ink, #17223b);
   border-left: 1px solid var(--line, #d5dbe4);
 }
@@ -115,20 +143,18 @@
 .grooveStage {
   display: grid;
   min-width: 0;
-  min-height: 38rem;
+  min-height: 24rem;
   place-items: center;
   padding: clamp(1rem, 2vw, 2rem);
   border-right: 1px solid var(--line, #d5dbe4);
   border-bottom: 1px solid var(--line, #d5dbe4);
-  background:
-    linear-gradient(var(--line, #d5dbe4) 1px, transparent 1px) 0 0 / 100% 25%,
-    transparent;
+  background: radial-gradient(ellipse at center, #41375855, #0b1323 70%);
 }
 
 .grooveDisc {
   position: relative;
   display: block;
-  width: min(100%, 35rem);
+  width: min(100%, 24rem);
   aspect-ratio: 1;
 }
 
@@ -203,7 +229,7 @@
 .grooveControls button[aria-pressed="true"] {
   border-color: var(--blue, #295dff);
   background: var(--blue, #295dff);
-  color: #fff;
+  color: var(--paper, #101626);
 }
 
 .grooveControls button:hover {
@@ -234,6 +260,7 @@
 }
 
 .selectionAnnouncement {
+  overflow: hidden;
   position: absolute;
   width: 1px;
   height: 1px;
@@ -282,7 +309,7 @@
 .inspectorRank strong {
   color: var(--blue, #295dff);
   font-family: var(--font-display, "Recursive", sans-serif);
-  font-size: clamp(2.6rem, 5vw, 5.5rem);
+  font-size: clamp(2rem, 4vw, 3rem);
   font-variation-settings: "CASL" 0.15, "wght" 720;
   letter-spacing: -0.075em;
   line-height: 0.75;
@@ -329,7 +356,7 @@
   margin: 0;
   overflow-wrap: anywhere;
   font-family: var(--font-display, "Recursive", sans-serif);
-  font-size: clamp(1.7rem, 3.2vw, 3.1rem);
+  font-size: clamp(1.2rem, 2.5vw, 2rem);
   font-variation-settings: "CASL" 0.32, "wght" 680;
   letter-spacing: -0.05em;
   line-height: 0.95;
@@ -607,6 +634,9 @@
   min-width: 7rem;
   min-height: 2.75rem;
   align-items: center;
+  padding: 0.65rem;
+  background: #fff;
+  border-radius: 2px;
 }
 
 .attribution img {

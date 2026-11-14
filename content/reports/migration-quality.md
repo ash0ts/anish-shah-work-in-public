@@ -1,6 +1,6 @@
 # Canonical content migration quality report
 
-Generated from four immutable source files plus reviewed canonical and presentation curation. Content version: `792f0c3cdfc7570e`.
+Generated from four immutable source files plus reviewed canonical and presentation curation. Content version: `eb8a486d0636e5fd`.
 
 ## Source accounting
 
@@ -8,7 +8,7 @@ Generated from four immutable source files plus reviewed canonical and presentat
 |---|---:|---:|---:|
 | Public footprint CSV | 184 | 184 | 184 |
 | Impact metrics CSV | 61 | 85 | 85 |
-| Reviewed metric additions | — | 5 | 5 |
+| Reviewed metric additions | — | 8 | 8 |
 | Public footprint Markdown | — | 13 level-two sections | 13 owner narrative blocks |
 | Impact report Markdown | — | 10 level-two sections | 10 owner narrative blocks |
 
@@ -69,7 +69,7 @@ Recording relations require a unique best typed match across URL role, date, exa
 
 ## Publication projection
 
-- Owner bundle: 202 items (184 footprint observations + 18 reviewed supplemental records), 90 exact metric observations plus 17 reviewed public projections, 227 evidence records, and 23 source narrative blocks.
+- Owner bundle: 202 items (184 footprint observations + 18 reviewed supplemental records), 93 exact metric observations plus 17 reviewed public projections, 228 evidence records, and 23 source narrative blocks.
 - Public bundle: 202 public items, 143 canonical entities, 88 WorkGroups, 17 rounded or derived public measures in 4 presentation groups, 209 public evidence records, and 9 collections.
 - Legacy exact metric observations remain only in the ignored owner bundle. The versioned update input contains only owner-approved, public-safe aggregates.
 - Dated active-claim replacements select the Home MCP checkpoint and cross-year program total without deleting older owner observations. October review dates are not invented measurement cutoffs.
@@ -78,14 +78,14 @@ Recording relations require a unique best typed match across URL role, date, exa
 
 Public measure records:
 
-- `metric:courses:enrollments:2026-07-30`
+- `metric:courses:enrollments:2026-11-14`
 - `metric:courses:same-day-account-share:2026-07-30`
 - `metric:course:llm-apps-evaluation:launch-signups:2025-01-10`
-- `metric:project:wandb-mcp-server:tool-calls:2026-10-22`
+- `metric:project:wandb-mcp-server:tool-calls:2026-11-14`
 - `metric:project:wandb-mcp-server:audience:2026-06-11`
 - `metric:project:wandb-mcp-server:returning-share:2026-06-11`
 - `metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28`
-- `metric:events:pipeline-supported:2024-2025`
+- `metric:events:pipeline-supported:2026-11-14`
 - `metric:events:ic-associated-pipeline:2024`
 - `metric:event:nvidia-gtc:leads:2024`
 - `metric:event:fully-connected-sf:reach:2024`
@@ -108,6 +108,7 @@ The following source metric families remain exact only in the owner bundle unles
 - `avg_calls_per_user`
 - `campaign_leads_all_courses`
 - `completions_tracked`
+- `course_enrollments_milestone`
 - `course_sourced_wandb_signups`
 - `enrollees_now_on_paid_org`
 - `enrollments_existing_wandb_users`
@@ -157,7 +158,7 @@ Completion floors, paid-organization associations, aggregate course-campaign lea
 - Stable opaque source-observation IDs are unique across all 202 items; legacy IDs and old route slugs remain aliases.
 - Every organization, entity, evidence, relation, collection, and metric subject reference resolves.
 - Every WorkGroup member, context entity, item, organization, and metric presentation reference resolves.
-- All 184 footprint rows and 90 impact rows retain source-row fingerprints in the owner bundle.
+- All 184 footprint rows and 93 impact rows retain source-row fingerprints in the owner bundle.
 - Tool-call display values are validated against currency prefixes.
 - Item-detail metrics require an explicit item or canonical-entity subject; collection metrics are never inherited implicitly.
 - The public projection contains only `public` publication states and `public_web` evidence.

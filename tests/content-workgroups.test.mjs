@@ -253,12 +253,12 @@ test("metric presentation groups use the selected replacement checkpoints", () =
   assert.equal(
     publicBundle.metricGroups.find((group) => group.theme === "product")
       ?.leadMetricId,
-    "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+    "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
   );
   assert.equal(
     publicBundle.metricGroups.find((group) => group.theme === "programs")
       ?.leadMetricId,
-    "metric:events:pipeline-supported:2024-2025",
+    "metric:events:pipeline-supported:2026-11-14",
   );
   assert(
     !publicBundle.metrics.some(
@@ -271,7 +271,7 @@ test("metric presentation groups use the selected replacement checkpoints", () =
   const calls = publicBundle.metrics.find(
     (metric) =>
       metric.id ===
-      "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+      "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
   );
   assert.deepEqual(
     {
@@ -284,15 +284,15 @@ test("metric presentation groups use the selected replacement checkpoints", () =
       evidence: calls?.publicEvidenceIds,
     },
     {
-      displayValue: "745K+",
+      displayValue: "1M+",
       label: "cumulative MCP tool calls",
       qualifier:
-        "Owner-validated cumulative tool calls, not HTTP requests or sessions. Direct project usage, not revenue; review date is not a measurement cutoff.",
+        "Owner-reported cumulative tool-call milestone, not unique users, HTTP requests, or sessions. Direct project usage, not revenue; review date is not a measurement cutoff.",
       period: {
         start: null,
         end: null,
-        asOf: "2026-10-22",
-        label: "Owner-reviewed October 22, 2026",
+        asOf: "2026-11-14",
+        label: "Owner-reviewed November 14, 2026",
       },
       scope: "work",
       attribution: "direct",
@@ -300,7 +300,7 @@ test("metric presentation groups use the selected replacement checkpoints", () =
     },
   );
   const pipeline = publicBundle.metrics.find(
-    (metric) => metric.id === "metric:events:pipeline-supported:2024-2025",
+    (metric) => metric.id === "metric:events:pipeline-supported:2026-11-14",
   );
   assert.deepEqual(
     {
@@ -313,15 +313,15 @@ test("metric presentation groups use the selected replacement checkpoints", () =
       evidence: pipeline?.publicEvidenceIds,
     },
     {
-      displayValue: "$4M+",
-      label: "in supported event pipeline across tracked 2024–2025 programs",
+      displayValue: "$8M+",
+      label: "in supported event pipeline across tracked programs",
       qualifier:
-        "Supported pipeline across tracked event programs; not revenue, closed ARR, or personal attribution.",
+        "Owner-reported supported pipeline across tracked event programs; not revenue, closed ARR, or personal attribution. Review date is not a measurement cutoff.",
       period: {
-        start: "2024",
-        end: "2025",
-        asOf: "2025-10-01",
-        label: "2024–2025",
+        start: null,
+        end: null,
+        asOf: "2026-11-14",
+        label: "Owner-reviewed November 14, 2026",
       },
       scope: "portfolio",
       attribution: "associated",
@@ -329,7 +329,7 @@ test("metric presentation groups use the selected replacement checkpoints", () =
     },
   );
   for (const metricId of [
-    "metric:courses:enrollments:2026-07-30",
+    "metric:courses:enrollments:2026-11-14",
     "metric:courses:same-day-account-share:2026-07-30",
   ]) {
     const metric = publicBundle.metrics.find((candidate) => candidate.id === metricId);

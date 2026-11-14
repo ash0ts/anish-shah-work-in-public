@@ -238,13 +238,14 @@ async function runReleaseBrowserGate() {
       releasePlaywrightCommand({
         port: 4174,
         segment: "release-public",
-        arguments_: ["tests/browser/public-quality.spec.mjs", "tests/browser/balanced-portfolio.spec.mjs"],
+        arguments_: ["tests/browser/public-quality.spec.mjs", "tests/browser/balanced-portfolio.spec.mjs", "tests/browser/object-screens.spec.mjs"],
       }),
       releasePlaywrightCommand({
         port: 4181,
         segment: "release-room-travel",
         arguments_: [
           "tests/browser/room-quality.spec.mjs",
+          "tests/browser/room-art-direction.spec.mjs",
           "tests/browser/travel-atlas.spec.mjs",
           "--grep-invert",
           releaseStressPattern,
@@ -331,7 +332,7 @@ if (
   runPlaywright({
     port: 4174,
     segment: "public",
-    arguments_: ["tests/browser/public-quality.spec.mjs", "tests/browser/balanced-portfolio.spec.mjs"],
+    arguments_: ["tests/browser/public-quality.spec.mjs", "tests/browser/balanced-portfolio.spec.mjs", "tests/browser/object-screens.spec.mjs"],
   }) !== 0
 ) {
   failed = true;
@@ -344,6 +345,7 @@ if (
     segment: "room-smoke",
     arguments_: [
       "tests/browser/room-quality.spec.mjs",
+      "tests/browser/room-art-direction.spec.mjs",
       "--grep-invert",
       releaseStressPattern,
       "--max-failures=1",
@@ -408,6 +410,7 @@ if (scope === "all" || scope === "room-shard" || scope === "room-pr") {
         segment: `quality-shard-${shard}`,
         arguments_: [
           "tests/browser/room-quality.spec.mjs",
+          "tests/browser/room-art-direction.spec.mjs",
           "--fully-parallel",
           `--shard=${shard}/${activeRoomShardCount}`,
         ],

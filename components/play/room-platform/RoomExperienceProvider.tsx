@@ -3,7 +3,6 @@
 import { animate } from "animejs";
 import { usePathname, useRouter } from "next/navigation";
 import { useExperienceAudio } from "@/components/experience-audio/ExperienceAudioProvider";
-import { SITE_COPY } from "@/lib/copy";
 import {
   Component,
   createContext,
@@ -19,7 +18,6 @@ import {
   useState,
 } from "react";
 import {
-  isRoomObjectId,
   ROOM_OBJECT_BY_ID,
   ROOM_OBJECTS,
 } from "./room-registry";
@@ -32,6 +30,10 @@ import {
   roomExperienceReducer,
 } from "./room-reducer";
 import styles from "./RoomExperienceProvider.module.css";
+import { roomDirectoryHref } from "./room-entry-policy";
+import { useRoomFocus } from "./useRoomFocus";
+import { useRoomTransitions } from "./useRoomTransitions";
+import { routeObject, historyRoomObject, historyRoomDepth, historyRoomPath, markRoomHistoryEntry, clearRoomHistoryEntry } from "./room-history";
 import type {
   RoomExperienceState,
   RoomObjectId,
@@ -55,10 +57,6 @@ type RoomExperienceContextValue = RoomExperienceState & {
 };
 
 type ObjectRouteOrigin = "direct" | "room";
-
-const ROOM_HISTORY_ORIGIN_KEY = "__anishRoomOrigin";
-const ROOM_HISTORY_DEPTH_KEY = "__anishRoomDepth";
-const ROOM_HISTORY_PATH_KEY = "__anishRoomPath";
 
 const RoomExperienceContext = createContext<RoomExperienceContextValue | null>(
   null,
@@ -89,141 +87,6 @@ class LazyRoomBoundary extends Component<
   }
 }
 
-function LazyRoomFallback({ onLeave }: { onLeave: () => void }) {
-  const leaveRef = useRef<HTMLButtonElement>(null);
-
-  const containFocus = (event: React.KeyboardEvent<HTMLElement>) => {
-    if (event.key !== "Tab") return;
-    event.preventDefault();
-    leaveRef.current?.focus({ preventScroll: true });
-  };
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      leaveRef.current?.focus({ preventScroll: true });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  return (
-    <section
-      aria-label="Interactive room"
-      aria-modal="true"
-      className={styles.runtimeLoading}
-      data-room-runtime-loading
-      onKeyDown={containFocus}
-      role="dialog"
-    >
-      <picture>
-        <source
-          srcSet="/assets/play/my-room-2001-neutral.01c6f825bbc1.avif"
-          type="image/avif"
-        />
-        <img
-          alt=""
-          decoding="async"
-          height="1000"
-          src="/assets/play/my-room-2001-neutral.00d2bc80d8dc.webp"
-          width="1600"
-        />
-      </picture>
-      <div>
-        <p role="status">{SITE_COPY.play["room-opening-status"]}</p>
-        <button onClick={onLeave} ref={leaveRef} type="button">
-          Leave room
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function ReturnSignal({ objectId }: { objectId: RoomObjectId }) {
-  const object = ROOM_OBJECT_BY_ID[objectId];
-
-  return (
-    <section
-      aria-atomic="true"
-      aria-label="Returning to the interactive room"
-      aria-live="assertive"
-      className={styles.returnSignal}
-      data-room-return-status
-      role="status"
-      tabIndex={-1}
-    >
-      <div className={styles.returnSignalPanel}>
-        <div aria-hidden="true" className={styles.returnSignalPicture}>
-          <span>ROOM 01</span>
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-          <i />
-        </div>
-        <div className={styles.returnSignalCopy}>
-          <p>
-            {object.object} · {SITE_COPY.play["room-return-eyebrow"]}
-          </p>
-          <h2>{SITE_COPY.play["room-return-title"]}</h2>
-          <span>{SITE_COPY.play["room-return-summary"]}</span>
-        </div>
-        <div aria-hidden="true" className={styles.returnSignalTrack}>
-          <i />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function routeObject(pathname: string): RoomObjectId | null {
-  if (/^\/play\/travel\/trips\/[^/]+\/?$/.test(pathname)) return "travel";
-  const match = /^\/play\/([^/]+)\/?$/.exec(pathname);
-  return match && isRoomObjectId(match[1]) ? match[1] : null;
-}
-
-function historyRoomObject(): RoomObjectId | null {
-  const value = window.history.state?.[ROOM_HISTORY_ORIGIN_KEY];
-  return typeof value === "string" && isRoomObjectId(value) ? value : null;
-}
-
-function historyRoomDepth(): number | null {
-  const value = window.history.state?.[ROOM_HISTORY_DEPTH_KEY];
-  return Number.isInteger(value) && value > 0 ? value : null;
-}
-
-function historyRoomPath(): string | null {
-  const value = window.history.state?.[ROOM_HISTORY_PATH_KEY];
-  return typeof value === "string" ? value : null;
-}
-
-function markRoomHistoryEntry(id: RoomObjectId, depth = 1) {
-  const currentState =
-    window.history.state && typeof window.history.state === "object"
-      ? window.history.state
-      : {};
-  window.history.replaceState(
-    {
-      ...currentState,
-      [ROOM_HISTORY_ORIGIN_KEY]: id,
-      [ROOM_HISTORY_DEPTH_KEY]: depth,
-      [ROOM_HISTORY_PATH_KEY]: window.location.pathname,
-    },
-    "",
-    window.location.href,
-  );
-}
-
-function clearRoomHistoryEntry() {
-  const currentState = window.history.state;
-  if (!currentState || typeof currentState !== "object") return;
-  if (!(ROOM_HISTORY_ORIGIN_KEY in currentState)) return;
-  const nextState = { ...currentState };
-  delete nextState[ROOM_HISTORY_ORIGIN_KEY];
-  delete nextState[ROOM_HISTORY_DEPTH_KEY];
-  delete nextState[ROOM_HISTORY_PATH_KEY];
-  window.history.replaceState(nextState, "", window.location.href);
-}
-
 export function RoomExperienceProvider({
   children,
   simulationEnabled,
@@ -239,17 +102,14 @@ export function RoomExperienceProvider({
   const objectRouteActive = routeObject(pathname) !== null;
   const [state, dispatch] = useReducer(roomExperienceReducer, INITIAL_ROOM_STATE);
   const [statusMessage, setStatusMessage] = useState("");
-  const transitionEpoch = useRef(0);
-  const transitionAnimations = useRef<Array<ReturnType<typeof animate>>>([]);
-  const transitionFrame = useRef<number | null>(null);
+  const [runtimeMounted, setRuntimeMounted] = useState(false);
+  const { transitionEpoch, finishTransitionVisuals, cancelTransition, trackAnimation, guaranteeTransitionCompletion } = useRoomTransitions();
   const lastInvoker = useRef<RoomObjectId | null>(null);
   const pendingFocus = useRef<RoomObjectId | null>(null);
   const pendingRoomNavigation = useRef<RoomObjectId | null>(null);
   const activeObjectRouteOrigin = useRef<ObjectRouteOrigin | null>(null);
   const activeObjectRouteDepth = useRef(0);
   const previousRouteObject = useRef<RoomObjectId | null>(routeObject(pathname));
-  const focusRequestEpoch = useRef(0);
-  const focusRequestCleanup = useRef<() => void>(() => undefined);
   const announcementEpoch = useRef(0);
   const roomEntered = useRef(state.entered);
   const enabledObjectIds = useMemo<readonly RoomObjectId[]>(
@@ -267,79 +127,7 @@ export function RoomExperienceProvider({
     });
   }, []);
 
-  const focusAfterPaint = useCallback((selectors: string | string[]) => {
-    focusRequestCleanup.current();
-    const requestEpoch = ++focusRequestEpoch.current;
-    const candidates = Array.isArray(selectors) ? selectors : [selectors];
-    let attempts = 0;
-    let stableFrames = 0;
-    let frame: number | null = null;
-    let cancelled = false;
-
-    const cleanup = () => {
-      if (cancelled) return;
-      cancelled = true;
-      if (frame !== null) cancelAnimationFrame(frame);
-      window.removeEventListener("focusin", cancelForFocusChange, true);
-      window.removeEventListener("keydown", cancelForUserInput, true);
-      window.removeEventListener("pointerdown", cancelForUserInput, true);
-      if (focusRequestCleanup.current === cleanup) {
-        focusRequestCleanup.current = () => undefined;
-      }
-    };
-
-    const cancelForUserInput = () => cleanup();
-    const cancelForFocusChange = (event: FocusEvent) => {
-      const target = event.target;
-      if (
-        target instanceof Element &&
-        candidates.some((selector) => target.matches(selector))
-      ) {
-        return;
-      }
-      cleanup();
-    };
-    focusRequestCleanup.current = cleanup;
-    window.addEventListener("focusin", cancelForFocusChange, true);
-    window.addEventListener("keydown", cancelForUserInput, true);
-    window.addEventListener("pointerdown", cancelForUserInput, true);
-
-    const focusAvailableTarget = () => {
-      frame = null;
-      if (cancelled || requestEpoch !== focusRequestEpoch.current) {
-        cleanup();
-        return;
-      }
-      for (const selector of candidates) {
-        const element = document.querySelector<HTMLElement>(selector);
-        if (!element || element.closest("[inert]")) continue;
-        if (document.activeElement !== element) {
-          element.focus({ preventScroll: true });
-        }
-        stableFrames = document.activeElement === element ? stableFrames + 1 : 0;
-        attempts += 1;
-        if (stableFrames < 12 && attempts < 180) {
-          frame = requestAnimationFrame(focusAvailableTarget);
-        } else {
-          cleanup();
-        }
-        return;
-      }
-      stableFrames = 0;
-      attempts += 1;
-      if (attempts < 180) frame = requestAnimationFrame(focusAvailableTarget);
-      else cleanup();
-    };
-
-    frame = requestAnimationFrame(focusAvailableTarget);
-  }, []);
-
-  useEffect(
-    () => () => {
-      focusRequestCleanup.current();
-    },
-    [],
-  );
+  const focusAfterPaint = useRoomFocus();
 
   useEffect(() => {
     if (sessionRoomFailure) {
@@ -350,61 +138,6 @@ export function RoomExperienceProvider({
   useEffect(() => {
     roomEntered.current = state.entered;
   }, [state.entered]);
-
-  const resetTransitionVisuals = useCallback(() => {
-    for (const selector of [
-      "[data-room-runtime]",
-      "[data-room-stage-shell]",
-      "[data-room-screen]",
-      "[data-room-object-control]",
-      "[data-room-static-stage]",
-    ]) {
-      for (const element of document.querySelectorAll<HTMLElement>(selector)) {
-        element.style.removeProperty("opacity");
-        element.style.removeProperty("transform");
-      }
-    }
-  }, []);
-
-  const finishTransitionVisuals = useCallback(() => {
-    if (transitionFrame.current !== null) {
-      cancelAnimationFrame(transitionFrame.current);
-      transitionFrame.current = null;
-    }
-    for (const animation of transitionAnimations.current) animation.cancel();
-    transitionAnimations.current = [];
-    resetTransitionVisuals();
-  }, [resetTransitionVisuals]);
-
-  const cancelTransition = useCallback(() => {
-    transitionEpoch.current += 1;
-    finishTransitionVisuals();
-  }, [finishTransitionVisuals]);
-
-  const trackAnimation = useCallback(
-    (animation: ReturnType<typeof animate>) => {
-      transitionAnimations.current.push(animation);
-      return animation;
-    },
-    [],
-  );
-
-  const guaranteeTransitionCompletion = useCallback(
-    (duration: number, epoch: number, complete: () => void) => {
-      const startedAt = performance.now();
-      const check = (now: number) => {
-        if (epoch !== transitionEpoch.current) return;
-        if (now - startedAt >= duration) {
-          transitionFrame.current = null;
-          complete();
-          return;
-        }
-        transitionFrame.current = requestAnimationFrame(check);
-      };
-      transitionFrame.current = requestAnimationFrame(check);
-    },
-    [],
-  );
 
   useEffect(() => {
     finishTransitionVisuals();
@@ -490,13 +223,13 @@ export function RoomExperienceProvider({
 
   useEffect(() => {
     const roomIsForeground =
-      state.entered &&
+      state.entered && runtimeMounted &&
       !state.fallbackReason &&
       (pathname === "/play" || pathname === "/play/");
     if (!roomIsForeground) return;
 
     const obscured = document.querySelectorAll<HTMLElement>(
-      "[data-room-overview], body > .skip-link, body > header, body > .site-frame > footer",
+      "[data-room-overview], body > .site-frame > footer",
     );
     const previousAttributes = [...obscured].map((element) => ({
       element,
@@ -504,6 +237,9 @@ export function RoomExperienceProvider({
       ariaHidden: element.getAttribute("aria-hidden"),
     }));
     const previousOverflow = document.documentElement.style.overflow;
+    const skipLink = document.querySelector<HTMLAnchorElement>(".skip-link");
+    const previousSkipHref = skipLink?.getAttribute("href");
+    skipLink?.setAttribute("href", "#room-main");
     for (const element of obscured) {
       element.setAttribute("inert", "");
       element.setAttribute("aria-hidden", "true");
@@ -511,6 +247,7 @@ export function RoomExperienceProvider({
     document.documentElement.style.overflow = "hidden";
     return () => {
       document.documentElement.style.overflow = previousOverflow;
+      if (previousSkipHref) skipLink?.setAttribute("href", previousSkipHref);
       for (const { element, inert, ariaHidden } of previousAttributes) {
         if (inert) element.setAttribute("inert", "");
         else element.removeAttribute("inert");
@@ -518,7 +255,7 @@ export function RoomExperienceProvider({
         else element.setAttribute("aria-hidden", ariaHidden);
       }
     };
-  }, [pathname, state.entered, state.fallbackReason]);
+  }, [pathname, runtimeMounted, state.entered, state.fallbackReason]);
 
   useEffect(() => cancelTransition, [cancelTransition]);
 
@@ -608,6 +345,7 @@ export function RoomExperienceProvider({
       playCue,
       router,
       trackAnimation,
+      transitionEpoch,
     ],
   );
 
@@ -616,7 +354,7 @@ export function RoomExperienceProvider({
     const epoch = transitionEpoch.current;
     const activeRouteObject = routeObject(pathname);
     const target = activeRouteObject ?? lastInvoker.current ?? state.focusedId;
-    if (target) pendingFocus.current = target;
+    if (target) { pendingFocus.current = target; lastInvoker.current = target; }
     const returnWithBrowserHistory = activeObjectRouteOrigin.current === "room";
     const roomHistoryDepth = activeObjectRouteDepth.current;
     announce(
@@ -643,16 +381,15 @@ export function RoomExperienceProvider({
         );
       }
     };
-    focusAfterPaint("[data-room-return-status]");
     requestAnimationFrame(navigate);
   }, [
     announce,
     cancelTransition,
-    focusAfterPaint,
     pathname,
     playCue,
     router,
     state.focusedId,
+    transitionEpoch,
   ]);
 
   const setFallback = useCallback(
@@ -672,8 +409,11 @@ export function RoomExperienceProvider({
   );
 
   const notifyRuntimeMounted = useCallback(() => {
+    setRuntimeMounted(true);
     announce("Interactive room opened.");
-    focusAfterPaint("[data-room-runtime-entry-focus]");
+    focusAfterPaint(lastInvoker.current
+      ? `[data-room-object-control="${lastInvoker.current}"]`
+      : "[data-room-runtime-entry-focus]");
   }, [announce, focusAfterPaint]);
 
   const enterRoom = useCallback(() => {
@@ -697,10 +437,12 @@ export function RoomExperienceProvider({
 
   const exitRoom = useCallback(() => {
     cancelTransition();
+    setRuntimeMounted(false);
     dispatch({ type: "exit" });
     announce("Interactive room closed.");
-    focusAfterPaint("[data-room-enter-control]");
-  }, [announce, cancelTransition, focusAfterPaint]);
+    router.replace(roomDirectoryHref(window.location.search), { scroll: false });
+    focusAfterPaint('[data-room-overview] [data-room-object-link="watch"]');
+  }, [announce, cancelTransition, focusAfterPaint, router]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -778,15 +520,10 @@ export function RoomExperienceProvider({
         <LazyRoomBoundary
           onFailure={() => setFallback("room-runtime-chunk-failed")}
         >
-          <Suspense fallback={<LazyRoomFallback onLeave={exitRoom} />}>
+          <Suspense fallback={null}>
             <LazyRoomRuntime />
           </Suspense>
         </LazyRoomBoundary>
-      ) : null}
-      {state.phase === "returning" && objectRouteActive ? (
-        <ReturnSignal
-          objectId={routeObject(pathname) ?? state.focusedId ?? "watch"}
-        />
       ) : null}
       {children}
     </RoomExperienceContext.Provider>

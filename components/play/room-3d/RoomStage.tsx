@@ -14,6 +14,7 @@ import {
 import type { RoomObjectId } from "../room-platform/room-types";
 import { ROOM_OBJECT_BY_ID } from "../room-platform/room-registry";
 import { ROOM_PALETTE } from "./room-palette";
+import { ROOM_CAMERA_FRAMING } from "./room-camera-framing";
 import { RoomScene } from "./RoomScene";
 import {
   createFisheyeHealthState,
@@ -206,8 +207,12 @@ export function RoomStage({
   selectedId,
 }: RoomStageProps) {
   const [failed, setFailed] = useState(false);
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
+  const [hasEntered, setHasEntered] = useState(false);
+  const handleAssetsLoaded = useCallback(() => setAssetsLoaded(true), []);
   const [hoveredId, setHoveredId] = useState<RoomObjectId | null>(null);
   const [projection, setProjection] = useState<RoomProjection>(initialProjection);
+  const [projectionReason, setProjectionReason] = useState("initial");
   const readySent = useRef(false);
   const projectionStable = useRef(false);
   const sceneSettled = useRef(false);
@@ -247,11 +252,13 @@ export function RoomStage({
   }, [reportReadyIfStable]);
 
   const handleSceneSettled = useCallback(() => {
+    setHasEntered(true);
     sceneSettled.current = true;
     reportReadyIfStable();
   }, [reportReadyIfStable]);
 
-  const downgradeProjection = useCallback(() => {
+  const downgradeProjection = useCallback((reason = "render-error") => {
+    setProjectionReason(reason);
     clearInitializationWatchdog();
     try {
       window.sessionStorage.setItem(FISHEYE_SESSION_DOWNGRADE_KEY, "1");
@@ -269,14 +276,14 @@ export function RoomStage({
   }, [clearInitializationWatchdog, onHoverChange]);
 
   useEffect(() => {
-    if (projection !== "fisheye" || readySent.current) return;
+    if (!assetsLoaded || projection !== "fisheye" || readySent.current) return;
     clearInitializationWatchdog();
     initializationWatchdog.current = window.setTimeout(
-      downgradeProjection,
+      () => downgradeProjection("initialization-timeout"),
       2_000,
     );
     return clearInitializationWatchdog;
-  }, [clearInitializationWatchdog, downgradeProjection, projection]);
+  }, [assetsLoaded, clearInitializationWatchdog, downgradeProjection, projection]);
 
   const handleHoverChange = useCallback(
     (id: RoomObjectId | null) => {
@@ -290,10 +297,12 @@ export function RoomStage({
 
   const roomScene = (
     <RoomScene
+      animateEntry={!hasEntered}
       approachPoseId={approachPoseId}
       focusedId={focusedId}
       onHoverChange={handleHoverChange}
       onSettled={handleSceneSettled}
+      onAssetsLoaded={handleAssetsLoaded}
       onRotationChange={onRotationChange}
       objectIds={objectIds}
       onSelect={onSelect}
@@ -321,14 +330,15 @@ export function RoomStage({
         data-room-hovered-object={hoveredId ?? undefined}
         data-room-poster-stage
         data-projection={projection}
+        data-projection-reason={projectionReason}
       >
         <Canvas
           aria-hidden="true"
           camera={{
             far: 50,
-            fov: 46,
+            fov: ROOM_CAMERA_FRAMING.desktop.fov,
             near: 0.1,
-            position: [4.8, 4.3, 5.5],
+            position: [...ROOM_CAMERA_FRAMING.desktop.position],
           }}
           dpr={[1, 1.25]}
           frameloop="demand"
@@ -344,7 +354,7 @@ export function RoomStage({
             gl.domElement.setAttribute("aria-hidden", "true");
             gl.domElement.setAttribute("role", "presentation");
             gl.domElement.tabIndex = -1;
-            camera.lookAt(0, 1.05, -0.42);
+            camera.lookAt(...ROOM_CAMERA_FRAMING.desktop.target);
             camera.updateMatrixWorld();
             gl.setClearColor(ROOM_PALETTE.backdrop, 1);
           }}
@@ -355,8 +365,8 @@ export function RoomStage({
           {projectedRoom}
           {projection === "fisheye" ? (
             <FisheyeFrameMonitor
-              key={projection}
-              onPerformanceMiss={downgradeProjection}
+              key={`${projection}-${assetsLoaded}`}
+              onPerformanceMiss={() => downgradeProjection("slow-frames")}
               onStable={handleStableFrame}
             />
           ) : (

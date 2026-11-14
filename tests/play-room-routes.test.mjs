@@ -179,7 +179,7 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
     roomReview,
     screens,
   ] = await Promise.all([
-    source("components/play/room-platform/RoomExperienceProvider.tsx"),
+    Promise.all(["RoomExperienceProvider.tsx", "room-history.ts", "useRoomFocus.ts", "useRoomTransitions.ts"].map(file => source(`components/play/room-platform/${file}`))).then(parts => parts.join("\n")),
     source("components/play/room-platform/RoomRuntime.tsx"),
     source("components/play/room-platform/RoomEntryControl.tsx"),
     source("tests/browser/helpers/room-readiness.mjs"),
@@ -236,7 +236,7 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
     ),
   );
   assert.match(provider, /Returned to the room/);
-  assert.match(provider, /data-room-return-status/);
+  assert.doesNotMatch(provider, /data-room-return-status|aria-modal/);
   assert.match(provider, /Returning to the room/);
   assert.match(provider, /requestAnimationFrame\(navigate\)/);
   assert.match(runtime, /const presenting = room\.objectRouteActive && !returning/);
@@ -251,23 +251,24 @@ test("room transitions are cancellable, phased, and restore semantic focus", asy
       .length,
     4,
   );
-  assert.match(entry, /if \(room\.fallbackReason\)/);
+  assert.match(entry, /shouldOpenRoom/);
   assert.match(readiness, /ROOM_READY_TIMEOUT_MS = 15_000/);
   assert.match(readiness, /data-room-ready", "true"/);
   assert.match(readiness, /roomReadinessDiagnostics/);
   assert.match(readiness, /data-room-transition-phase/);
   assert.match(
     roomQuality,
-    /import \{ expectRoomReady \} from "\.\/helpers\/room-readiness\.mjs"/,
+    /import \{ expectRoomReady, openRoomIfNeeded \} from "\.\/helpers\/room-readiness\.mjs"/,
   );
   assert.match(roomQuality, /context: "starting the slow-return scenario"/);
   assert.match(roomQuality, /context: "completing the slow room return"/);
   assert.match(
     roomReview,
-    /import \{ expectRoomReady \} from "\.\/helpers\/room-readiness\.mjs"/,
+    /import \{ expectRoomReady, openRoomIfNeeded \} from "\.\/helpers\/room-readiness\.mjs"/,
   );
   assert.match(roomReview, /context: "capturing room review evidence"/);
-  for (const screen of screens) assert.match(screen, /data-room-screen/);
+  for (const screen of screens) assert.match(screen, /<ObjectScreen/);
+  assert.match(await source("components/play/room-screens/ObjectScreen.tsx"), /data-room-screen/);
 });
 
 test("My Room is authoritative and legacy stream links redirect permanently", async () => {
@@ -349,7 +350,7 @@ test("Discogs parameters reject unknown sorts and unsafe dynamic tokens", () => 
       pageSize: "36",
     }),
     {
-      view: "pattern",
+      view: "gallery",
       query: "Blue Logic",
       format: "vinyl",
       decade: "1990s",
@@ -368,7 +369,7 @@ test("Discogs parameters reject unknown sorts and unsafe dynamic tokens", () => 
       pageSize: "0",
     }),
     {
-      view: "pattern",
+      view: "gallery",
       query: "",
       format: "",
       decade: "",
@@ -379,7 +380,8 @@ test("Discogs parameters reject unknown sorts and unsafe dynamic tokens", () => 
   );
 
   assert.equal(discogsQueryFrom({ view: "gallery" }).view, "gallery");
-  assert.equal(discogsQueryFrom({ view: "unsafe" }).view, "pattern");
+  assert.equal(discogsQueryFrom({ view: "unsafe" }).view, "gallery");
+  assert.equal(discogsQueryFrom({ view: "pattern" }).view, "pattern");
 });
 
 test("projected gallery state is canonicalized before RSC serialization", () => {
@@ -412,7 +414,7 @@ test("projected gallery state is canonicalized before RSC serialization", () => 
       pageSize: 12,
     }),
     {
-      view: "pattern",
+      view: "gallery",
       query: "ambient",
       format: "vinyl",
       decade: "2000s",
@@ -530,13 +532,8 @@ test("seven authored screens preserve provider, travel, and consent boundaries",
     assert.match(copy, new RegExp(`## ${id}-screen-title\\n${screenTitle}`));
     assert.notEqual(screenTitle, objectTitle);
   }
-  assert.equal(
-    screens.reduce(
-      (count, screen) => count + (screen.match(/<p>\{object\.screenEyebrow\}<\/p>/g)?.length ?? 0),
-      0,
-    ),
-    7,
-  );
+  assert.equal(screens.filter((screen) => screen.includes("<ObjectScreen")).length, 7);
+  assert.match(await source("components/play/room-screens/ObjectScreen.tsx"), /object\.screenEyebrow/);
   assert.match(copy, /## travel-title\nGlobe/);
   assert.match(copy, /## travel-screen-title\nPostcard Planet/);
   const travel = roomObjectContract("travel");
@@ -554,43 +551,28 @@ test("seven authored screens preserve provider, travel, and consent boundaries",
   assert.doesNotMatch(combined, /from\s+["']three["']|<canvas\b|autoplay/i);
 });
 
-test("Watch, Read, and Play have provider-specific semantic appliances", async () => {
-  const [watch, read, play, css] = await Promise.all([
-    source("components/play/room-screens/WatchRoomScreen.tsx"),
-    source("components/play/room-screens/ReadRoomScreen.tsx"),
-    source("components/play/room-screens/PlayRoomScreen.tsx"),
-    source("components/play/room-screens/RoomScreens.module.css"),
-  ]);
-
-  assert.match(watch, /aria-label=\{`\$\{object\.title\} sections`\}/);
-  assert.match(watch, /href="#watch-program-note"/);
-  assert.match(watch, /href="#watch-library"/);
-  assert.match(watch, /data-room-collection-presentation="broadcast-guide"/);
-
-  assert.match(read, /aria-label=\{`\$\{object\.title\} sections`\}/);
-  assert.match(read, /href="#read-desk-note"/);
-  assert.match(read, /href="#read-library"/);
-  assert.match(read, /data-room-collection-presentation="circulation-shelf"/);
-  assert.match(read, /<dl>/);
-
-  assert.match(play, /aria-label=\{`\$\{object\.title\} shortcuts`\}/);
-  assert.match(play, /href="#play-system-note"/);
-  assert.match(play, /href="#play-library"/);
-  assert.match(play, /data-room-collection-presentation="desktop-library"/);
-
-  for (const [screen, provider] of [
-    [watch, "myanimelist"],
-    [read, "hardcover"],
-    [play, "steam"],
+test("object screens share a shell without taking ownership of provider data", async () => {
+  for (const [name, provider, presentation] of [
+    ["Watch", "myanimelist", "broadcast-guide"],
+    ["Read", "hardcover", "circulation-shelf"],
+    ["Play", "steam", "desktop-library"],
   ]) {
+    const screen = await source(`components/play/room-screens/${name}RoomScreen.tsx`);
+    assert.match(screen, /<ObjectScreen/);
     assert.match(screen, new RegExp(`provider="${provider}"`));
+    assert.match(screen, new RegExp(`data-room-collection-presentation="${presentation}"`));
     assert.match(screen, /<CollectionStream/);
     assert.doesNotMatch(screen, /CollectionGallery|CollectionPattern/);
   }
-
-  assert.match(css, /\.watchProgram ol\[data-provider="myanimelist"\]/);
-  assert.match(css, /\.readCatalog ol\[data-provider="hardcover"\]/);
-  assert.match(css, /\.desktopProgram ol\[data-provider="steam"\]/);
+  const shell = await source("components/play/room-screens/ObjectScreen.tsx");
+  assert.match(shell, /<ScreenNavigation/);
+  assert.match(shell, /<MatchCutSurface/);
+  assert.doesNotMatch(shell, /loadConnector|fetch\(|from ["']three["']/);
+  const disclosure = await source("components/play/TactileDisclosure.tsx");
+  assert.match(disclosure, /<details/);
+  assert.match(disclosure, /<summary/);
+  assert.match(disclosure, /prefers-reduced-motion/);
+  assert.match(disclosure, /Escape/);
 });
 
 test("each object screen has a distinct cancellable match-cut enhancement", async () => {
@@ -611,7 +593,7 @@ test("Collect defines readable ink directly against its recessed catalog", async
   const css = await source(
     "components/play/room-screens/RoomScreens.module.css",
   );
-  const rule = css.match(/\.collectPage\s*\{([\s\S]*?)\n\}/)?.[1];
+  const rule = css.match(/\.page\s*\{([\s\S]*?)\n\}/)?.[1];
   assert.ok(rule, "Expected a Collect theme rule");
   const color = (name) => {
     const value = rule.match(new RegExp(`--${name}:\\s*(#[0-9a-f]{6})`, "i"))?.[1];
@@ -625,7 +607,7 @@ test("Collect defines readable ink directly against its recessed catalog", async
       `Expected --${token} to meet 4.5:1 against the catalog surface`,
     );
   }
-  assert.match(css, /\.crateWell\s*\{[\s\S]*var\(--paper\)/);
+  assert.match(css, /\.display\s*\{[^}]*var\(--paper\)/);
 });
 
 test("Travel trip pages expose bounded semantic page-size controls", async () => {

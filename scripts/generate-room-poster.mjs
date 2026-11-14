@@ -4,18 +4,18 @@ import path from "node:path";
 
 import sharp from "sharp";
 
-const [input] = process.argv.slice(2);
+const [input, mobileInput] = process.argv.slice(2);
 if (!input) {
   throw new Error(
-    "Usage: node scripts/generate-room-poster.mjs <neutral-stage-screenshot.png>",
+    "Usage: node scripts/generate-room-poster.mjs <desktop-stage.png> [pocket-stage.png]",
   );
 }
 
 const source = path.resolve(input);
 const outputDirectory = path.resolve("public/assets/play");
 const variants = [
-  { height: 1000, label: "", width: 1600 },
-  { height: 400, label: "mobile", width: 640 },
+  { height: 1000, label: "", width: 1600, input: source },
+  { height: mobileInput ? 854 : 400, label: "mobile", width: 640, input: mobileInput ? path.resolve(mobileInput) : source },
 ];
 
 function contentName(label, format, bytes) {
@@ -26,8 +26,8 @@ function contentName(label, format, bytes) {
 
 const outputs = (
   await Promise.all(
-    variants.map(async ({ height, label, width }) => {
-      const pipeline = sharp(source).rotate().resize({
+    variants.map(async ({ height, label, width, input }) => {
+      const pipeline = sharp(input).rotate().resize({
         width,
         height,
         fit: "cover",

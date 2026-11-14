@@ -1,5 +1,5 @@
 export const ROOM_PALETTE = Object.freeze({
-  backdrop: "#c8b8ff",
+  backdrop: "#101723",
   shell: "#dad7e5",
   shellLight: "#f4efe7",
   coral: "#ff6847",

@@ -92,7 +92,7 @@ development check.
 ## Manual Coverage
 
 - Public UI/copy: affected routes at 320, 390, 768, 1024, 1440, and 1920px; long copy; owner verification for every fact-check field; claim qualification; 200–400% zoom; keyboard/focus; reduced motion; forced colors; metadata/JSON-LD; no JavaScript.
-- My Room: zero connector reads on `/play`, one provider per object route, intent-gated R3F, drag/click discrimination, Back/Escape/focus restoration, static capability fallbacks.
+- My Room: zero connector reads on `/play`, one provider per object route, direct Play entry, renderer-free explicit directory, `room:assets:check`, decoded asset budgets, drag/click discrimination, Back/Escape/focus restoration, static capability fallbacks.
 - Travel: zero Travel reads on `/play`, semantic country/region/place parity, click-versus-drag behavior, no-JavaScript/WebGL fallbacks, planned/current publication limits, metadata stripping, active-snapshot media authorization, and immediate unpublish behavior.
 - Simulation: Action/Tactical completion parity, authored fallback, optional-text privacy, bounded sessions/budgets, output rejection, and gesture-gated audio.
 - Simulation incident: read-only Gateway logging/cache/DLP/Guardrails verification, sanitized containment evidence, authorized payload-deletion confirmation when needed, and fresh regression coverage before live mode returns.

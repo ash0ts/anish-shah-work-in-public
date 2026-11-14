@@ -5,10 +5,10 @@ import {
   type CSSProperties,
   type FormEvent,
   type ReactNode,
-  useLayoutEffect,
-  useRef,
 } from "react";
 import styles from "./StreamPresentation.module.css";
+import tactile from "./TactileCollections.module.css";
+import { TactileDisclosure } from "./TactileDisclosure";
 import type {
   CollectionProvider,
   GalleryItem,
@@ -63,6 +63,22 @@ export function GalleryView({
 
   return (
     <div className={styles.gallery}>
+      <nav className={tactile.filters} aria-label="Collection filters">
+        {gallery.filters.map((entry) => (
+          <a
+            key={entry.id}
+            aria-current={gallery.filter === entry.id ? "true" : undefined}
+            href={galleryPageUrl(routePath ?? `/play/${provider === "myanimelist" ? "watch" : provider === "hardcover" ? "read" : "play"}`, { ...gallery, filter: entry.id }, 1, fixture)}
+            onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              event.preventDefault();
+              if (!busy) onFilter(entry.id);
+            }}
+          >
+            {entry.label}<span>{entry.count.toLocaleString()}</span>
+          </a>
+        ))}
+      </nav>
       <form
         action={routePath}
         className={styles.galleryTools}
@@ -85,16 +101,7 @@ export function GalleryView({
           </span>
         </label>
         <GalleryFilterDisclosure>
-            <GallerySelect
-              label="Filter"
-              name="filter"
-              onChange={onFilter}
-              options={gallery.filters.map((entry) => ({
-                value: entry.id,
-                label: `${entry.label} · ${entry.count}`,
-              }))}
-              value={gallery.filter}
-            />
+            <input type="hidden" name="filter" value={gallery.filter} />
             <GallerySelect
               label="Sort"
               name="sort"
@@ -126,7 +133,7 @@ export function GalleryView({
       </div>
 
       {gallery.items.length ? (
-        <ol className={styles.atlas} data-provider={provider}>
+        <ol className={tactile.collection} data-provider={provider} data-collection-gallery>
           {gallery.items.map((item, index) => (
             <GalleryTile
               index={start + index}
@@ -218,20 +225,8 @@ export function GalleryFilterDisclosure({
 }: {
   children: ReactNode;
 }) {
-  const disclosure = useRef<HTMLDetailsElement>(null);
-
-  useLayoutEffect(() => {
-    const media = window.matchMedia("(max-width: 760px)");
-    const applyViewportState = () => {
-      if (disclosure.current) disclosure.current.open = !media.matches;
-    };
-    applyViewportState();
-    media.addEventListener("change", applyViewportState);
-    return () => media.removeEventListener("change", applyViewportState);
-  }, []);
-
   return (
-    <details className={styles.galleryFilters} open ref={disclosure}>
+    <details className={styles.galleryFilters}>
       <summary>Filters and sort</summary>
       <div className={styles.galleryFilterFields}>{children}</div>
     </details>
@@ -300,54 +295,29 @@ function GalleryTile({
   steamMaximum: number;
 }) {
   const presentation = galleryItemPresentation(provider, item, steamMaximum);
-  const content = (
-    <>
-      <span className={styles.artwork} data-aspect={item.artwork?.aspect ?? (provider === "steam" ? "square" : "poster")}>
-        <span aria-hidden="true" className={styles.artworkFallback}>
-          {provider === "steam" ? "PLAY" : provider === "hardcover" ? "READ" : "WATCH"}
-        </span>
-        {item.artwork ? (
-          <Image
-            alt=""
-            decoding="async"
-            height={item.artwork.aspect === "square" ? 480 : 720}
-            loading="lazy"
-            onError={(event) => {
-              event.currentTarget.hidden = true;
-            }}
-            src={item.artwork.src}
-            unoptimized
-            width={480}
-          />
-        ) : null}
-      </span>
-      <span className={styles.tileNumber}>{String(index).padStart(2, "0")}</span>
-      <strong>{item.title}</strong>
-      <span className={styles.tileMeta}>{presentation.meta}</span>
-      <span className={styles.measure} aria-label={presentation.measureLabel}>
-        <i
-          aria-hidden="true"
-          style={
-            {
-              "--measure": `${presentation.measure * 100}%`,
-            } as CSSProperties
-          }
-        />
-      </span>
-      <small>{presentation.measureLabel}</small>
-      {presentation.href ? <b aria-hidden="true">↗</b> : null}
-    </>
-  );
-
+  const providerLabel = SITE_COPY.play[provider === "myanimelist" ? "profile-myanimelist" : provider === "hardcover" ? "profile-hardcover" : "profile-steam"];
   return (
     <li data-stream-item>
-      {presentation.href ? (
-        <a href={presentation.href} rel="noreferrer" target="_blank">
-          {content}
-        </a>
-      ) : (
-        <article>{content}</article>
-      )}
+      <TactileDisclosure kind={provider} summary={
+        <>
+          <span className={tactile.cover} data-aspect={item.artwork?.aspect ?? (provider === "steam" ? "square" : "poster")}>
+            <span aria-hidden="true" className={tactile.coverFallback}>
+              <b>{String(index).padStart(2, "0")}</b>
+              <span>{provider === "steam" ? "PLAY" : provider === "hardcover" ? "READ" : "WATCH"}</span>
+            </span>
+            {item.artwork ? <Image alt="" decoding="async" height={item.artwork.aspect === "square" ? 480 : 720} loading="lazy"
+              onError={(event) => { event.currentTarget.hidden = true; }} src={item.artwork.src} unoptimized width={480} /> : null}
+          </span>
+          <strong>{item.title}</strong>
+          <small>{presentation.meta}</small>
+        </>
+      }>
+        <p>{presentation.measureLabel}</p>
+        <div className={tactile.meter} aria-hidden="true" style={{ "--measure": `${presentation.measure * 100}%` } as CSSProperties}><i /></div>
+        {"episodesWatched" in item && item.episodesWatched !== null ? <p>{item.episodesWatched} {SITE_COPY.play["episodes-watched"]}</p> : null}
+        {"genres" in item && item.genres?.length ? <p>{item.genres.join(" · ")}</p> : null}
+        {presentation.href ? <a href={presentation.href} rel="noreferrer" target="_blank">{providerLabel} ↗</a> : null}
+      </TactileDisclosure>
     </li>
   );
 }

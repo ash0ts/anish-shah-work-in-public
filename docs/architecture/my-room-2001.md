@@ -29,10 +29,29 @@ Canvas.
 ## Semantic-first shell
 
 `app/play/layout.tsx` installs the room state provider. `RoomOverview` renders
-the poster, room entry control, and seven ordinary links server-side. Directly
+the poster and seven ordinary links server-side. Visiting `/play` opens the
+eligible Room or Pocket Room directly. `?view=directory` selects the static
+list; Objects list and Escape preserve that choice until another explicit
+entry. The header remains reachable; the room is a main landmark, not a modal. Directly
 loading an object route renders its useful collection screen without creating
 the room. Browser Back and the explicit return control remain authoritative;
 focus returns to the corresponding semantic object control.
+
+The seven screens share `room-screens/ObjectScreen.tsx`: one compact title,
+semantic object switcher, engraved hardware frame, and cancellable match cut.
+The shell never reads provider data. Each wrapper still owns one existing
+provider or Travel component; no inactive collection is loaded.
+
+Watch posters, Read books, Games cartridges, and Collect sleeves use native
+`TactileDisclosure` details. Opening reveals saved metadata and its source link;
+Escape closes the item and restores its summary focus. Anime.js adds one short,
+cancellable spring, with no idle loop or new physics dependency. GET filter links
+and disclosures remain usable without JavaScript. Collect opens its catalog by
+default; `?view=pattern` selects the optional pressing matrix. Listen retains its
+single-owner needle animation and consent-gated playback, with explicit previous
+and next track controls. Move keeps consent/profile fallback first. Travel adds
+only a decorative, non-hit-testing orrery and optional trip notes around its
+existing geographic and semantic controls.
 
 The seven screen loaders, object definitions, content-source adapters, scene objects,
 and focus targets use closed registries with identical keys. Route parameters,
@@ -43,14 +62,15 @@ is disabled.
 ## Optional Three.js runtime
 
 All Three/R3F imports live under `components/play/room-3d/**` and are reached
-through lazy client boundaries only after the visitor selects Enter Room. The
+through lazy client boundaries after Play navigation and capability detection.
+The explicit directory never imports the renderer. The
 Canvas is `aria-hidden`, outside keyboard order, and never replaces the semantic
 directory.
 
 The capability gate requires all of the following:
 
-- viewport at least 1100 CSS pixels;
-- fine primary pointer;
+- desktop viewport at least 1100 CSS pixels with a fine pointer, or Pocket
+  viewport at least 320×560 with coarse pointers supported;
 - no reduced-motion or forced-colors preference;
 - Save-Data disabled;
 - document visible and below the zoom fallback threshold; and
@@ -61,21 +81,68 @@ directory. Context loss or runtime failure permanently falls back for the
 session. The reviewed high tier uses Drei Fisheye; frame-health checks downgrade
 to wide perspective when the fisheye path misses its budget.
 
-The scene is original procedural geometry with shared toon materials and
-instanced repeated objects. It uses one Canvas, bounded rotation, explicit view
+All seven destinations have original authored geometry: a gothic CRT cabinet,
+book-filled reading corner, portable music deck and headphones, turntable and
+record crate, computer desk, industrial treadmill, and armillary-style globe.
+The globe's decorative land patches are not Travel geography or publication
+data. An eclipse city window, asymmetric cathedral ribs, and a circuit-pattern
+rug frame the midnight-indigo workshop. A suspended mechanical bat is purely
+decorative: it glances toward the hovered, focused, or selected destination and
+settles, with no eighth object, hit target, AI, or idle loop. The draft remains
+a local art review, not a production release.
+
+Original geometry and UVs come from `scripts/room/author-gothic-room.py`, pinned
+to **Blender 5.2.3 LTS**. Its editable source, packed original 512×512 material
+atlas, exported source GLB, and provenance hashes live in
+`assets/room/gothic-hardware/`, outside deployed assets. The atlas contains
+procedural worn material patches, not provider artwork or downloaded imagery.
+Vertex colors bake directional shading and warm/cool light pools. No live
+lighting or post-processing is needed.
+
+To edit and export:
+
+1. Change the authoring script and `scripts/room/gothic-layout.json`; the latter
+   owns placements, hit proxies, shell occluders, physical motion pivots, and
+   the completed-object inventory.
+2. Run `npm run room:author` with the pinned Blender available on PATH. This
+   regenerates the editable `.blend`, source GLB, atlas, and provenance. Avoid
+   hand-editing generated outputs; port reviewed Blender edits into the script.
+3. Run `npm run room:assets`. glTF Transform batches/optimizes the source with
+   Meshopt, strips PNG metadata, and writes the hashed deployable GLB plus its
+   measured manifest. CI needs Node, not Blender: `room:assets:check` verifies
+   source/provenance hashes and reproduces the optimized bytes offline.
+4. Review desktop and Pocket views before replacing the posters.
+
+The decoded room contains 12,387 triangles, 16 draw calls, one material,
+and one embedded atlas. Hard ceilings remain 20K triangles, 30 draws, 16
+materials, and 350,000 GLB bytes. The decoder ships locally. The atlas plugin
+validates PNG dimensions before decoding its embedded bytes directly, avoiding
+blob-URL fetches without widening CSP. Decode failure falls back to the static
+directory rather than silently presenting untextured white geometry.
+Each object has a short selection response; animation invalidates only until settled.
+The platter and globe rotate around their authored centers, music-player
+buttons depress, the selected book advances, and screens briefly illuminate.
+These are bounded, reversible responses, not idle loops or provider content.
+It uses one Canvas, bounded rotation, explicit view
 controls, no physics, no orbit controls, no zoom/pan/inertia, and no autoplay or
 scroll capture. The room has no idle animation requirement.
 
 When the reviewed neutral room composition changes, capture that pose and run
-`npm run room:poster -- <screenshot.png>`. The tool emits content-hashed AVIF
+`npm run room:poster -- <desktop-stage.png> <pocket-stage.png>`. The second
+capture keeps the portrait fallback aligned with the Pocket camera. The tool emits content-hashed AVIF
 and WebP fallbacks under `public/assets/play` and enforces the 200 KB budget for
 each format. Update the poster imports and remove superseded hashes in the same
 reviewed change.
 
+`npm run room:preview` serves the existing build on loopback port 4199 with
+synthetic fixtures and Simulation disabled/authored-only. Open `/play`; no
+Studio, provider refresh, Gemini, or production data is available here. PR #82
+remains dormant and separate from the Room draft.
+
 ## Pocket Room
 
 Eligible coarse-pointer viewports receive a separate portrait composition only
-after `OPEN THE POCKET ROOM`. It reuses the room's first-party primitives but
+after Play navigation and capability checks. It reuses the first-party GLB but
 uses a normal perspective camera, three authored stops, visible Previous/Next/
 Reset controls, and a semantic safe-area dock. It never downloads the desktop
 fisheye module. Save-Data, reduced motion, forced colors, high zoom, failed
@@ -94,8 +161,9 @@ nearest-hit resolution. Touch remains with the document and semantic controls.
 
 Anime.js handles short acknowledgement, approach, match-cut, return, and screen
 reveals. Transitions are cancellable; route state wins over animation state.
-Reduced motion applies final state immediately. A visible rewind status covers
-the asynchronous return while preserving the selected object.
+Reduced motion applies final state immediately. The parked room and live status
+cover asynchronous returns without a duplicate full-screen overlay. Route/history
+helpers, focus scheduling, and transition ownership live in separate modules.
 
 ## Data and privacy invariants
 
@@ -109,7 +177,7 @@ the asynchronous return while preserving the selected object.
 ## Validation
 
 Browser Quality verifies server foundations, direct-route connector isolation,
-zero Three/R3F bytes before entry, capability fallbacks, click-versus-drag,
+zero Three/R3F bytes outside Play or in the explicit directory, capability fallbacks, click-versus-drag,
 focus restoration, context loss, reduced motion, forced colors, Save-Data,
 reflow, screenshots, and Lighthouse budgets. The shared readiness helper waits
 for semantic room state with a 15-second SLO and captures diagnostics on failure.
