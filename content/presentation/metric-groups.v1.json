@@ -6,9 +6,9 @@
       "theme": "learning",
       "title": "Learning reach",
       "order": 1,
-      "leadMetricId": "metric:courses:enrollments:2026-07-30",
+      "leadMetricId": "metric:courses:enrollments:2026-11-14",
       "metricIds": [
-        "metric:courses:enrollments:2026-07-30",
+        "metric:courses:enrollments:2026-11-14",
         "metric:courses:same-day-account-share:2026-07-30",
         "metric:course:llm-apps-evaluation:launch-signups:2025-01-10"
       ]
@@ -18,9 +18,9 @@
       "theme": "product",
       "title": "Product adoption",
       "order": 2,
-      "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+      "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
       "metricIds": [
-        "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+        "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
         "metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22",
         "metric:project:wandb-mcp-server:returning-share:2026-10-22",
         "metric:project:wandb-mcp-server:lifetime-identities:2026-10-22",
@@ -35,9 +35,9 @@
       "theme": "programs",
       "title": "Program impact",
       "order": 3,
-      "leadMetricId": "metric:events:pipeline-supported:2024-2025",
+      "leadMetricId": "metric:events:pipeline-supported:2026-11-14",
       "metricIds": [
-        "metric:events:pipeline-supported:2024-2025",
+        "metric:events:pipeline-supported:2026-11-14",
         "metric:event:fully-connected-sf:reach:2024",
         "metric:event:nvidia-gtc:leads:2024",
         "metric:events:ic-associated-pipeline:2024"

@@ -191,7 +191,15 @@ export function CollectionStream({
         ref={transitionRoot}
       >
         {view === "pattern" ? (
-          <PatternView payload={payload} provider={provider} />
+          <PatternView payload={payload} provider={provider} filterHref={(label) => {
+            const entry = gallery?.filters.find((candidate) => candidate.label === label);
+            if (!entry || !routePath) return null;
+            const parameters = new URLSearchParams({ filter: entry.id, pageSize: String(pageSize) });
+            if (query) parameters.set("q", query);
+            if (sort) parameters.set("sort", sort);
+            if (fixture) parameters.set("fixture", fixture);
+            return `${routePath}?${parameters}`;
+          }} />
         ) : gallery?.ready ? (
           <GalleryView
             busy={busy}

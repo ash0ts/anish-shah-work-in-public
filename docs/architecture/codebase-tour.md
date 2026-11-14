@@ -196,6 +196,14 @@ read and does not preload provider, geography, or media data. Capable visits
 load the room after the poster and semantic links render. `?view=directory`
 opts out; exiting the room sets that state rather than immediately reopening it.
 
+`room-screens/ObjectScreen.tsx` supplies the shared hardware frame and navigation;
+the seven thin wrappers retain their provider isolation. Collection posters,
+books, cartridges, and record sleeves use native `TactileDisclosure` details,
+with a short Anime.js spring layered over selectable, server-rendered content.
+Filtering stays in GET links/forms, not in a second 3D browsing runtime. Listen
+keeps its single-owner needle and playback consent; Move and Travel retain their
+existing provider and geographic boundaries.
+
 Room routing/history, focus restoration, and bounded transitions live in
 separate room-platform modules. The seven visual props share one checked-in
 GLB optimized by `scripts/room/build-diorama.mjs` from the pinned, original

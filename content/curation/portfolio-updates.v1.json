@@ -1,6 +1,7 @@
 {
   "schemaVersion": "1.0",
   "reviewedAt": "2026-10-22",
+  "metricsReviewedAt": "2026-11-14",
   "items": [
     {
       "id": "item:up-0001",
@@ -774,6 +775,45 @@
       "source_name": "October 2026 owner-reviewed MCP usage",
       "confidence": "high",
       "notes": "Owner-validated company-level aggregate at an observed peak, not a current count, customer count, endorsement, or verified key-workflow adoption. Review date is not the peak date."
+    },
+    {
+      "category": "product",
+      "item": "W&B MCP Server",
+      "metric": "all_time_tool_calls",
+      "value": "1000000",
+      "unit": "tool_calls_lower_bound",
+      "period": "Owner-reviewed November 14, 2026",
+      "date_recorded": "2026-11-14",
+      "source_system": "owner_review",
+      "source_name": "November 2026 owner-reviewed milestones",
+      "confidence": "high",
+      "notes": "Owner-reported cumulative tool-call milestone, not unique users, HTTP requests, or sessions. Direct project usage, not revenue; review date is not a measurement cutoff."
+    },
+    {
+      "category": "courses",
+      "item": "All 3 Anish courses",
+      "metric": "course_enrollments_milestone",
+      "value": "10000",
+      "unit": "enrollments_lower_bound",
+      "period": "Owner-reviewed November 14, 2026",
+      "date_recorded": "2026-11-14",
+      "source_system": "owner_review",
+      "source_name": "November 2026 owner-reviewed milestones",
+      "confidence": "high",
+      "notes": "Owner-reported enrollment milestone across three AI courses. Enrollments, not unique learners; review date is not a measurement cutoff."
+    },
+    {
+      "category": "events",
+      "item": "All tracked event programs",
+      "metric": "pipeline_supported_usd",
+      "value": "8000000",
+      "unit": "usd_lower_bound",
+      "period": "Owner-reviewed November 14, 2026",
+      "date_recorded": "2026-11-14",
+      "source_system": "owner_review",
+      "source_name": "November 2026 owner-reviewed milestones",
+      "confidence": "high",
+      "notes": "Owner-reported supported pipeline across tracked event programs; not revenue, closed ARR, or personal attribution. Review date is not a measurement cutoff."
     }
   ]
 }

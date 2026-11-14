@@ -10,6 +10,8 @@ import {
   useState,
 } from "react";
 import styles from "./StreamPresentation.module.css";
+import tactile from "./TactileCollections.module.css";
+import { TactileDisclosure } from "./TactileDisclosure";
 import { GalleryFilterDisclosure } from "./CollectionGallery";
 import {
   type ConnectorState,
@@ -77,7 +79,7 @@ export function DiscogsStream({
       ...next,
     };
     const parameters = new URLSearchParams();
-    if (resolved.view === "gallery") parameters.set("view", "gallery");
+    parameters.set("view", resolved.view);
     if (resolved.query) parameters.set("q", resolved.query);
     if (resolved.format && resolved.format !== "all") {
       parameters.set("format", resolved.format);
@@ -229,7 +231,11 @@ export function DiscogsStream({
         ref={transitionRoot}
       >
         {view === "pattern" ? (
-          <DiscogsPattern payload={payload} />
+          <DiscogsPattern payload={payload} filterUrl={(field, value) => {
+            const selected = field === "format" ? gallery?.formats : gallery?.decades;
+            const id = selected?.find((entry) => entry.label === value)?.id;
+            return id && gallery && routePath ? discogsPageUrl(routePath, { ...gallery, [field]: id }, 1, fixture) : null;
+          }} />
         ) : gallery?.ready ? (
           <DiscogsGallery
             busy={busy}
@@ -313,7 +319,10 @@ export function DiscogsStream({
   );
 }
 
-function DiscogsPattern({ payload }: { payload: DiscogsPublicSnapshot }) {
+function DiscogsPattern({ payload, filterUrl }: {
+  payload: DiscogsPublicSnapshot;
+  filterUrl: (field: "format" | "decade", value: string) => string | null;
+}) {
   const decades = payload.decades.filter((entry) => entry.count > 0);
   const formats = formatOrder.flatMap((format) => {
     const entry = payload.formats.find((candidate) => candidate.label === format);
@@ -336,8 +345,8 @@ function DiscogsPattern({ payload }: { payload: DiscogsPublicSnapshot }) {
           items. Every distribution below uses the physical-item count.
         </p>
       </div>
-      <DiscogsDistribution title="Physical format" entries={formats} />
-      <DiscogsDistribution title="Release decade" entries={decades} />
+      <DiscogsDistribution title="Physical format" entries={formats} href={(value) => filterUrl("format", value)} />
+      <DiscogsDistribution title="Release decade" entries={decades} href={(value) => filterUrl("decade", value)} />
       <DiscogsMatrix payload={payload} />
     </div>
   );
@@ -346,9 +355,11 @@ function DiscogsPattern({ payload }: { payload: DiscogsPublicSnapshot }) {
 function DiscogsDistribution({
   title,
   entries,
+  href,
 }: {
   title: string;
   entries: Array<{ label: string; count: number }>;
+  href: (value: string) => string | null;
 }) {
   const maximum = Math.max(...entries.map((entry) => entry.count), 1);
   return (
@@ -357,7 +368,7 @@ function DiscogsDistribution({
       <ol>
         {entries.map((entry) => (
           <li key={entry.label}>
-            <span>{entry.label}</span>
+            <span>{href(entry.label) ? <a className={tactile.visualFilter} href={href(entry.label)!}>{entry.label}</a> : entry.label}</span>
             <i aria-hidden="true">
               <b
                 style={
@@ -504,6 +515,19 @@ function DiscogsGallery({
 
   return (
     <div className={styles.gallery}>
+      <nav className={tactile.filters} aria-label="Record formats">
+        {gallery.formats.map((entry) => (
+          <a key={entry.id} aria-current={format === entry.id ? "true" : undefined}
+            href={discogsPageUrl(routePath ?? "/play/collect", { ...gallery, format: entry.id }, 1, fixture)}
+            onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              event.preventDefault();
+              if (!busy) onFormat(entry.id);
+            }}>
+            {entry.label}<span>{entry.count.toLocaleString()}</span>
+          </a>
+        ))}
+      </nav>
       <form
         action={routePath}
         className={styles.galleryTools + " " + styles.discogsTools}
@@ -528,16 +552,7 @@ function DiscogsGallery({
           </span>
         </div>
         <GalleryFilterDisclosure>
-            <DiscogsSelect
-              label="Format"
-              name="format"
-              onChange={onFormat}
-              options={gallery.formats.map((entry) => ({
-                value: entry.id,
-                label: entry.label + " · " + entry.count,
-              }))}
-              value={format}
-            />
+            <input type="hidden" name="format" value={format} />
             <DiscogsSelect
               label="Decade"
               name="decade"
@@ -594,7 +609,7 @@ function DiscogsGallery({
       </div>
 
       {gallery.items.length ? (
-        <ol className={styles.discogsShelf} role="list" start={start || 1}>
+        <ol className={tactile.records} data-record-crate role="list" start={start || 1}>
           {gallery.items.map((release, index) => (
             <DiscogsReleaseRow
               index={start + index}
@@ -739,7 +754,7 @@ function discogsViewUrl(
   fixture?: PreviewFixtureScenario,
 ) {
   const parameters = new URLSearchParams();
-  if (view === "gallery") parameters.set("view", "gallery");
+  parameters.set("view", view);
   if (fixture) parameters.set("fixture", fixture);
   const search = parameters.toString();
   return `${routePath}${search ? `?${search}` : ""}`;
@@ -753,43 +768,21 @@ function DiscogsReleaseRow({
   index: number;
 }) {
   const validReleaseId = /^\d+$/.test(release.releaseId);
-  const content = (
-    <>
-      <span className={styles.discogsIndex}>
-        {String(index).padStart(2, "0")}
-      </span>
-      <span className={styles.discogsTitle}>
-        <strong>{release.title}</strong>
-        <small>{release.artists.join(", ")}</small>
-      </span>
-      <span className={styles.discogsMeta}>
-        <span>{release.format}</span>
-        <span>{release.releaseYear ?? "Undated"}</span>
-        <span>
-          {release.copyCount.toLocaleString()}{" "}
-          {release.copyCount === 1 ? "copy" : "copies"}
-        </span>
-      </span>
-      {validReleaseId ? <b aria-hidden="true">↗</b> : null}
-    </>
-  );
-
   return (
     <li data-format={release.format.toLowerCase().replaceAll(" ", "-")} data-stream-item>
-      {validReleaseId ? (
-        <a
-          href={
-            "https://www.discogs.com/release/" +
-            encodeURIComponent(release.releaseId)
-          }
-          rel="noreferrer"
-          target="_blank"
-        >
-          {content}
-        </a>
-      ) : (
-        <div>{content}</div>
-      )}
+      <TactileDisclosure kind="record" summary={
+        <>
+          <span className={tactile.sleeve} aria-hidden="true"><b>{String(index).padStart(2, "0")}</b><span>{release.format} · {release.releaseYear ?? "—"}</span></span>
+          <strong>{release.title}</strong>
+          <small>{release.artists.join(", ")}</small>
+        </>
+      }>
+        <div className={tactile.recordMeta}>
+          <span>{release.format}</span><span>{release.releaseYear ?? "Undated"}</span>
+          <span>{release.copyCount.toLocaleString()} {release.copyCount === 1 ? "copy" : "copies"}</span>
+        </div>
+        {validReleaseId ? <a href={"https://www.discogs.com/release/" + encodeURIComponent(release.releaseId)} rel="noreferrer" target="_blank">{SITE_COPY.play["profile-discogs"]} ↗</a> : null}
+      </TactileDisclosure>
     </li>
   );
 }

@@ -618,33 +618,23 @@ test("the static room poster is first-party, content-hashed, and bounded", async
       "utf8",
     ),
   ]);
-  const posterFiles = [
-    {
-      filename: "my-room-2001-neutral.4edcf2c380f5.avif",
-      surfaces: [overview, runtime],
-    },
-    {
-      filename: "my-room-2001-neutral.30364e150078.webp",
-      surfaces: [overview, runtime],
-    },
-    {
-      filename: "my-room-2001-neutral-mobile.cb7ee0619308.avif",
-      surfaces: [overview, runtime],
-    },
-    {
-      filename: "my-room-2001-neutral-mobile.e1cc0d1ad2de.webp",
-      surfaces: [overview, runtime],
-    },
-  ];
-
-  for (const { filename, surfaces } of posterFiles) {
-    const url = new URL(`../public/assets/play/${filename}`, import.meta.url);
-    const [bytes, metadata] = await Promise.all([readFile(url), stat(url)]);
-    const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
-    assert.match(filename, new RegExp(`\\.${digest}\\.`));
-    assert.ok(metadata.size <= 200_000);
-    for (const surface of surfaces) {
-      assert.match(surface, new RegExp(filename.replaceAll(".", "\\.")));
+  // Validate the assets actually referenced by both surfaces, not old pinned names.
+  for (const surface of [overview, runtime]) {
+    const filenames = [...new Set([...surface.matchAll(
+      /\/assets\/play\/(my-room-2001-neutral(?:-mobile)?\.[a-f0-9]{12}\.(?:avif|webp))/g,
+    )].map((match) => match[1]))];
+    assert.equal(filenames.length, 4, "Each poster needs desktop/mobile AVIF and WebP");
+    for (const variant of ["neutral.", "neutral-mobile."]) {
+      for (const extension of [".avif", ".webp"]) {
+        assert.equal(filenames.filter((name) => name.includes(variant) && name.endsWith(extension)).length, 1);
+      }
+    }
+    for (const filename of filenames) {
+      const url = new URL(`../public/assets/play/${filename}`, import.meta.url);
+      const [bytes, metadata] = await Promise.all([readFile(url), stat(url)]);
+      const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
+      assert.ok(filename.includes(`.${digest}.`));
+      assert.ok(metadata.size <= 200_000);
     }
   }
 

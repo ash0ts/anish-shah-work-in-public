@@ -23,6 +23,9 @@ Reviewed additions live in `content/curation/portfolio-updates.v1.json`.
 The versioned input carries an explicit review date, item date basis and status,
 optional public artifact URL, stable entity/group memberships, and dated metric
 observations. It extends the archive without editing the four original inputs.
+An optional `metricsReviewedAt` allows later metric reviews without changing
+the project review date or recapturing historical evidence. Dataset freshness
+uses the latest reviewed observation; a review date is not a measurement cutoff.
 Merge or article-update dates use an unknown date basis with an explicit status;
 they are not relabelled as publication or delivery dates. Review freshness never
 backdates or advances an older observation.

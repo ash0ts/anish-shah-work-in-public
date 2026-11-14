@@ -13,6 +13,10 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `app/about/**`: Git-owned biography and reusable speaker profile around a reviewed career chronology. The career and speaker manifests own IDs and destinations; the sanitized profile owns LinkedIn.
 - `app/play/**`: My Room overview plus seven semantic object routes.
 - `components/play/**`: object-screen shell and provider-specific Play UI.
+  `room-screens/ObjectScreen.tsx` owns the shared frame and navigation;
+  `TactileDisclosure.tsx` owns native item expansion and its optional spring.
+  Keep provider requests in the existing stream components, and preserve GET
+  filters, no-JavaScript details, and consent boundaries when changing these views.
 - `components/play/room-3d/**`: intent-gated Room and Pocket Room R3F runtime.
 - `components/play/room-platform/room-entry-policy.ts`, `room-history.ts`,
   `useRoomFocus.ts`, and `useRoomTransitions.ts`: direct-entry policy, history,

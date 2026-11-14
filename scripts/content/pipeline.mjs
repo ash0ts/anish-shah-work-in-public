@@ -137,12 +137,16 @@ export async function buildContent({ check = false } = {}) {
   }
 
   const impactRows = [...historicalImpactRows, ...updates.metricObservations];
-  const recordedDates = historicalImpactRows
+  const recordedDates = impactRows
     .map((row) => normalizeRecordedDate(row.date_recorded))
     .filter(Boolean)
     .sort();
-  const legacyAsOf = recordedDates.at(-1);
-  const asOf = [legacyAsOf, updates.reviewedAt].sort().at(-1);
+  const latestObservation = recordedDates.at(-1);
+  const legacyAsOf = historicalImpactRows
+    .map((row) => normalizeRecordedDate(row.date_recorded))
+    .filter(Boolean)
+    .sort().at(-1);
+  const asOf = [latestObservation, updates.reviewedAt].sort().at(-1);
   const generatedAt = `${asOf}T00:00:00.000Z`;
   const sourceContents = [
     footprintCsv,

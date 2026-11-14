@@ -220,9 +220,9 @@ test("Home stays within the compressed Bodies of Work contract", async () => {
   assert.equal(topicLinks.length, 0);
   assert.doesNotMatch(bodiesSection, /<details\b|<summary\b/i);
   assert.equal(occurrences(visible, "See the work"), 1);
-  assert.equal(occurrences(visible, "7K+"), 1);
-  assert.equal(occurrences(visible, "$4M+"), 1);
-  assert.equal(occurrences(visible, "745K+"), 1);
+  assert.equal(occurrences(visible, "10K+"), 1);
+  assert.equal(occurrences(visible, "$8M+"), 1);
+  assert.equal(occurrences(visible, "1M+"), 1);
   assert.equal(occurrences(visible, "More than two-thirds"), 0);
   assert.equal(occurrences(visible, "About half"), 0);
   assert.equal(
@@ -814,76 +814,81 @@ test("the CSS architecture is scoped and has no page-level overflow masking", as
       });
     }
   }
+  // Only bounded artwork, gauges, globes, and screen-reader text may clip.
   assert.deepEqual(overflowMasking, [
-    {
-      file: "app/studio/travel/travel.module.css",
-      selector: ".mapTable",
-    },
-    {
-      file: "app/studio/travel/travel.module.css",
-      selector: ".visuallyHidden",
-    },
-    {
-      file: "app/work/WorkTimeline.module.css",
-      selector: ".frame caption",
-    },
-    {
-      file: "components/play/StreamPresentation.module.css",
-      selector: ".visuallyHidden",
-    },
-    {
-      file: "components/play/room-3d/RoomStage.module.css",
-      selector: ".stage",
-    },
-    {
-      file: "components/play/room-platform/RoomExperienceProvider.module.css",
-      selector: ".announcer",
-    },
-    {
-      file: "components/play/room-platform/RoomOverview.module.css",
-      selector: ".posterField",
-    },
-    {
-      file: "components/play/room-platform/RoomRuntime.module.css",
-      selector: ".announcer",
-    },
-    {
-      file: "components/play/room-platform/RoomRuntime.module.css",
-      selector: ".posterFallback",
-    },
-    {
-      file: "components/play/room-screens/RoomScreens.module.css",
-      selector: ".televisionGlass",
-    },
-    {
-      file: "components/play/room-screens/RoomScreens.module.css",
-      selector: ".playerDisplay",
-    },
-    {
-      file: "components/play/room-screens/RoomScreens.module.css",
-      selector: ".computerDisplay",
-    },
-    {
-      file: "components/play/room-screens/RoomScreens.module.css",
-      selector: ".cardioDisplay",
-    },
-    {
-      file: "components/play/travel/PostcardPlanet.module.css",
-      selector: ".srOnly",
-    },
-    {
-      file: "components/play/travel/PostcardPlanet.module.css",
-      selector: ".globeFrame",
-    },
-    {
-      file: "components/play/travel/PostcardPlanet.module.css",
-      selector: ".tripCard picture,\n.tripFallback",
-    },
-    {
-      file: "components/play/travel/TravelGlobe.module.css",
-      selector: ".canvas",
-    },
-  ]);
+  {
+    "file": "app/studio/travel/travel.module.css",
+    "selector": ".mapTable"
+  },
+  {
+    "file": "app/studio/travel/travel.module.css",
+    "selector": ".visuallyHidden"
+  },
+  {
+    "file": "app/work/WorkTimeline.module.css",
+    "selector": ".frame caption"
+  },
+  {
+    "file": "components/SpotifyStream.module.css",
+    "selector": ".selectionAnnouncement"
+  },
+  {
+    "file": "components/play/StreamPresentation.module.css",
+    "selector": ".visuallyHidden"
+  },
+  {
+    "file": "components/play/TactileCollections.module.css",
+    "selector": ".cover"
+  },
+  {
+    "file": "components/play/TactileCollections.module.css",
+    "selector": ".meter"
+  },
+  {
+    "file": "components/play/TactileCollections.module.css",
+    "selector": ".sleeve"
+  },
+  {
+    "file": "components/play/room-3d/RoomStage.module.css",
+    "selector": ".stage"
+  },
+  {
+    "file": "components/play/room-platform/RoomExperienceProvider.module.css",
+    "selector": ".announcer"
+  },
+  {
+    "file": "components/play/room-platform/RoomOverview.module.css",
+    "selector": ".posterField"
+  },
+  {
+    "file": "components/play/room-platform/RoomRuntime.module.css",
+    "selector": ".announcer"
+  },
+  {
+    "file": "components/play/room-platform/RoomRuntime.module.css",
+    "selector": ".posterFallback"
+  },
+  {
+    "file": "components/play/room-screens/RoomScreens.module.css",
+    "selector": ".page[data-object=\"travel\"] .display"
+  },
+  {
+    "file": "components/play/travel/PostcardPlanet.module.css",
+    "selector": ".srOnly"
+  },
+  {
+    "file": "components/play/travel/PostcardPlanet.module.css",
+    "selector": ".globeFrame"
+  },
+  {
+    "file": "components/play/travel/PostcardPlanet.module.css",
+    "selector": ".tripCard picture,\n.tripFallback"
+  },
+  {
+    "file": "components/play/travel/TravelGlobe.module.css",
+    "selector": ".canvas"
+  }
+]);
   const timelineCss = await readFile(
     path.join(PROJECT_ROOT, "app/work/WorkTimeline.module.css"),
     "utf8",

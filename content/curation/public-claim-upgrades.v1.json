@@ -104,6 +104,107 @@
           "date": "2026-10-22"
         }
       ]
+    },
+    {
+      "replacesMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
+      "id": "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "all_time_tool_calls",
+      "displayValue": "1M+",
+      "label": "cumulative MCP tool calls",
+      "qualifier": "Owner-reported cumulative tool-call milestone, not unique users, HTTP requests, or sessions. Direct project usage, not revenue; review date is not a measurement cutoff.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-11-14",
+        "label": "Owner-reviewed November 14, 2026"
+      },
+      "sourceLabel": "Owner-reviewed analytics",
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "homepage",
+        "collection",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified",
+      "selectors": [
+        {
+          "item": "W&B MCP Server",
+          "metric": "all_time_tool_calls",
+          "date": "2026-11-14"
+        }
+      ]
+    },
+    {
+      "replacesMetricId": "metric:courses:enrollments:2026-07-30",
+      "id": "metric:courses:enrollments:2026-11-14",
+      "subjectId": "group:courses:ai-curriculum",
+      "category": "courses",
+      "key": "course_enrollments",
+      "displayValue": "10K+",
+      "label": "course enrollments across three AI courses",
+      "qualifier": "Owner-reported enrollment milestone across three AI courses. Enrollments, not unique learners; review date is not a measurement cutoff.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-11-14",
+        "label": "Owner-reviewed November 14, 2026"
+      },
+      "sourceLabel": "Owner-reviewed analytics",
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "item_detail",
+        "homepage",
+        "collection",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified",
+      "selectors": [
+        {
+          "item": "All 3 Anish courses",
+          "metric": "course_enrollments_milestone",
+          "date": "2026-11-14"
+        }
+      ]
+    },
+    {
+      "replacesMetricId": "metric:events:pipeline-supported:2024-2025",
+      "id": "metric:events:pipeline-supported:2026-11-14",
+      "subjectId": "collection:events",
+      "category": "events",
+      "key": "pipeline_supported",
+      "displayValue": "$8M+",
+      "label": "in supported event pipeline across tracked programs",
+      "qualifier": "Owner-reported supported pipeline across tracked event programs; not revenue, closed ARR, or personal attribution. Review date is not a measurement cutoff.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-11-14",
+        "label": "Owner-reviewed November 14, 2026"
+      },
+      "sourceLabel": "Owner-reviewed analytics",
+      "scope": "portfolio",
+      "attribution": "associated",
+      "displaySurfaces": [
+        "homepage",
+        "collection",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "verified",
+      "selectors": [
+        {
+          "item": "All tracked event programs",
+          "metric": "pipeline_supported_usd",
+          "date": "2026-11-14"
+        }
+      ]
     }
   ],
   "additions": [

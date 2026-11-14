@@ -39,6 +39,15 @@ Overview
 ## view-browse-all
 Browse all
 
+## episodes-watched
+episodes watched
+
+## rank-previous
+Previous track
+
+## rank-next
+Next track
+
 ## loading-collection
 Loading the collection…
 
@@ -74,6 +83,9 @@ Search the public atlas
 
 ## travel-no-results
 No countries match that search.
+
+## travel-notes
+Trip notes & places
 
 ## travel-loading-map
 Drawing the globe…

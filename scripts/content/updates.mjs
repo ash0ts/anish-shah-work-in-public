@@ -11,9 +11,14 @@ export function applyPortfolioUpdates(curation, workGroups, updates) {
     throw new Error("Portfolio updates require a version and explicit review date");
   }
   for (const key of Object.keys(updates)) {
-    if (!["schemaVersion", "reviewedAt", "items", "entities", "groups", "metricObservations"].includes(key)) {
+    if (!["schemaVersion", "reviewedAt", "metricsReviewedAt", "items", "entities", "groups", "metricObservations"].includes(key)) {
       throw new Error(`Unknown portfolio update field: ${key}`);
     }
+  }
+  // Later metric reviews must not redate previously reviewed project evidence.
+  const metricsReviewedAt = updates.metricsReviewedAt ?? updates.reviewedAt;
+  if (!DATE.test(metricsReviewedAt) || metricsReviewedAt < updates.reviewedAt) {
+    throw new Error("Metric review date must be valid and cannot precede the portfolio review");
   }
   for (const key of ["items", "entities", "groups", "metricObservations"]) {
     if (!Array.isArray(updates[key])) throw new Error(`Missing update list: ${key}`);
@@ -72,7 +77,7 @@ export function applyPortfolioUpdates(curation, workGroups, updates) {
     groups.groups.push(group);
   }
   for (const observation of updates.metricObservations) {
-    if (!DATE.test(observation.date_recorded) || observation.date_recorded > updates.reviewedAt ||
+    if (!DATE.test(observation.date_recorded) || observation.date_recorded > metricsReviewedAt ||
         observation.source_system !== "owner_review" || observation.source_url ||
         !observation.item || !observation.metric || !observation.unit || !observation.period ||
         !observation.source_name || !observation.notes || !Number.isFinite(Number(observation.value))) {

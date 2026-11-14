@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0",
-  "contentVersion": "792f0c3cdfc7570e",
-  "generatedAt": "2026-10-22T00:00:00.000Z",
+  "contentVersion": "eb8a486d0636e5fd",
+  "generatedAt": "2026-11-14T00:00:00.000Z",
   "artifacts": [
     {
       "path": "content/public/anish-content.public.v1.json",
-      "bytes": 723144,
-      "sha256": "1d03af78bcefcd8d752c4508f2d49fe7b2a58204c6cf85c0f184f2b8da402ace"
+      "bytes": 723344,
+      "sha256": "b8f91096f04a9d9cf4fb9cc6d41bfcb015bd96302d313ff721306b081467e5ca"
     },
     {
       "path": "content/schema/anish-content.schema.json",
@@ -25,8 +25,8 @@
     },
     {
       "path": "content/curation/public-claim-upgrades.v1.json",
-      "bytes": 7828,
-      "sha256": "9674db245072378b0b2b32b179c2a5336c989ddc11a30045c2b60b1a91f81026"
+      "bytes": 11222,
+      "sha256": "4361672cff5f2e0dc8d26bf57b49e637b9c657bc9068207b15446a7c9e6fe5af"
     },
     {
       "path": "content/curation/work-groups.v1.json",
@@ -35,18 +35,18 @@
     },
     {
       "path": "content/curation/portfolio-updates.v1.json",
-      "bytes": 28577,
-      "sha256": "158bfdf74064b7de79726a39d660c0c47779fd53acf7d74400302d73b3c35a87"
+      "bytes": 30343,
+      "sha256": "1927d8bdf513b1ed0bd406f9db77c0a47a060426946f7bb996cb69755e08f961"
     },
     {
       "path": "content/presentation/metric-groups.v1.json",
-      "bytes": 1988,
-      "sha256": "cb11e7bf86a04e9656606fceafbb9532d1cfe5320a8e47d47e6589406626f17d"
+      "bytes": 1990,
+      "sha256": "26039f3fb7a04eb306252f968599dc4bf65670ca1307a862d63d22b999be2bb4"
     },
     {
       "path": "content/presentation/home-overview.v2.json",
-      "bytes": 1074,
-      "sha256": "2e9a5eaac794c5dd3b604e2967b51fc197894e3e25d94a75289fa832424143d8"
+      "bytes": 1075,
+      "sha256": "38bf13ba0e7b5412366be8264886b31e0bf43ab64567d7489612690e3113c182"
     },
     {
       "path": "content/presentation/career.v1.json",
@@ -96,7 +96,7 @@
   ],
   "generator": {
     "moduleCount": 13,
-    "sha256": "7ecb1431d71dde520f40ffa40ce67f0b681743bd3e0f63994548693810c6b397"
+    "sha256": "b6d1c85580d301f3dbb8173ba54a0ddcb286615c0b75933207b8867698cda325"
   },
   "counts": {
     "items": 202,
@@ -112,7 +112,7 @@
   },
   "sourceSummary": {
     "footprintRows": 184,
-    "impactRows": 90,
+    "impactRows": 93,
     "supplementalArtifacts": 18,
     "publicItems": 202,
     "approvedMetricCount": 17,

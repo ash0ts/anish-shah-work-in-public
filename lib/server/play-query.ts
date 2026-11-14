@@ -89,7 +89,7 @@ export function discogsQueryFrom(
   values: PlayRouteSearchParams,
 ): DiscogsRouteQuery {
   return {
-    view: firstValue(values.view) === "gallery" ? "gallery" : "pattern",
+    view: firstValue(values.view) === "pattern" ? "pattern" : "gallery",
     query: boundedQuery(firstValue(values.q)),
     format: safeToken(firstValue(values.format)),
     decade: safeToken(firstValue(values.decade)),
@@ -128,7 +128,7 @@ export function discogsQueryFromGallery(gallery: {
   sort: string;
   page: number;
   pageSize: 12 | 24 | 36;
-}, view: "pattern" | "gallery" = "pattern"): DiscogsRouteQuery {
+}, view: "pattern" | "gallery" = "gallery"): DiscogsRouteQuery {
   return discogsQueryFrom({
     view,
     q: gallery.query,

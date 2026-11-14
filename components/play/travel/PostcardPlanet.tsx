@@ -107,12 +107,15 @@ function TravelTripCard({
           <time dateTime={trip.period.start}>{periodLabel(trip)}</time>
         </p>
         <h3>{trip.title}</h3>
-        <p>{trip.summary}</p>
-        <ul aria-label={`${trip.title} places`}>
+        <details className={styles.tripNotes}>
+          <summary>{SITE_COPY.play["travel-notes"]}</summary>
+          <p>{trip.summary}</p>
+          <ul aria-label={`${trip.title} places`}>
           {trip.places.slice(0, 4).map((place) => (
             <li key={place.id}>{place.label}</li>
           ))}
-        </ul>
+          </ul>
+        </details>
         <Link href={tripHref(trip.slug, previewFixture)} prefetch={false}>
           Open trip log <span aria-hidden="true">↗</span>
         </Link>
@@ -330,6 +333,12 @@ export function PostcardPlanet({
               className={styles.globeFrame}
               data-globe-ready={globeReady ? "true" : undefined}
             >
+              <svg className={styles.orrery} aria-hidden="true" viewBox="0 0 600 400" fill="none" stroke="currentColor">
+                <ellipse cx="300" cy="200" rx="275" ry="178" />
+                <ellipse cx="300" cy="200" rx="282" ry="170" transform="rotate(-12 300 200)" />
+                <path d="M300 12v18M300 370v18M12 200h18M570 200h18M91 57l14 14M495 329l14 14M91 343l14-14M495 71l14-14" />
+                <circle cx="300" cy="22" r="4" /><circle cx="578" cy="200" r="4" />
+              </svg>
               <TravelGlobeGate
                 fallback={
                   <div className={styles.staticMap} data-travel-static-atlas>

@@ -37,6 +37,22 @@ loading an object route renders its useful collection screen without creating
 the room. Browser Back and the explicit return control remain authoritative;
 focus returns to the corresponding semantic object control.
 
+The seven screens share `room-screens/ObjectScreen.tsx`: one compact title,
+semantic object switcher, engraved hardware frame, and cancellable match cut.
+The shell never reads provider data. Each wrapper still owns one existing
+provider or Travel component; no inactive collection is loaded.
+
+Watch posters, Read books, Games cartridges, and Collect sleeves use native
+`TactileDisclosure` details. Opening reveals saved metadata and its source link;
+Escape closes the item and restores its summary focus. Anime.js adds one short,
+cancellable spring, with no idle loop or new physics dependency. GET filter links
+and disclosures remain usable without JavaScript. Collect opens its catalog by
+default; `?view=pattern` selects the optional pressing matrix. Listen retains its
+single-owner needle animation and consent-gated playback, with explicit previous
+and next track controls. Move keeps consent/profile fallback first. Travel adds
+only a decorative, non-hit-testing orrery and optional trip notes around its
+existing geographic and semantic controls.
+
 The seven screen loaders, object definitions, content-source adapters, scene objects,
 and focus targets use closed registries with identical keys. Route parameters,
 D1 values, mesh metadata, or provider payloads cannot select executable

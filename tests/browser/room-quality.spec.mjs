@@ -1458,7 +1458,7 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(page).toHaveURL(/fixture=maximum-density/);
     await expect(page.getByText("13—24 of 36")).toBeVisible();
 
-    await page.goto("/play/collect?fixture=maximum-density", {
+    await page.goto("/play/collect?view=pattern&fixture=maximum-density", {
       waitUntil: "load",
     });
     const openDiscogsShelf = page.getByRole("link", {

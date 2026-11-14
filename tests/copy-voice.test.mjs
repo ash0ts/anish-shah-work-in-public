@@ -168,9 +168,9 @@ test("the complete deck obeys public first-person and density budgets", async ()
     ),
   );
   const proofMetrics = [
-    "metric:project:wandb-mcp-server:tool-calls:2026-10-22",
-    "metric:courses:enrollments:2026-07-30",
-    "metric:events:pipeline-supported:2024-2025",
+    "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
+    "metric:courses:enrollments:2026-11-14",
+    "metric:events:pipeline-supported:2026-11-14",
   ];
   proofMetrics.forEach((metricId, offset) => {
     const metric = metricBundle.metrics.find((candidate) => candidate.id === metricId);
