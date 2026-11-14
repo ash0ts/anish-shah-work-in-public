@@ -55,7 +55,7 @@ const manifest = { schemaVersion: 2, assetPath: `/assets/play/diorama.${digest.s
   bytes: bytes.length, triangles, drawCalls: draws, materials,
   texture: { width: 512, height: 512, bytes: image.length, sha256: hash(image), mediaType: "image/png" },
   authoring: { tool: provenance.authoringTool, version: provenance.version, sourceSha256: provenance.sourceSha256 },
-  reviewStage: layout.reviewStage, finishedObjects: layout.finishedObjects, props: layout.props, occluders: layout.occluders };
+  reviewStage: layout.reviewStage, finishedObjects: layout.finishedObjects, familiar: layout.familiar, props: layout.props, occluders: layout.occluders };
 const output = JSON.stringify(manifest, null, 2) + "\n";
 const manifestPath = "components/play/room-3d/diorama.generated.json";
 if (process.argv.includes("--check")) {

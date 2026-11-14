@@ -11,3 +11,17 @@ export function roomPropResponse(id: RoomObjectId, progress: number) {
     scale: 1 + .012 * t,
   };
 }
+
+/** A small, reversible glance; no clock, idle animation, or extra hit target. */
+export function roomFamiliarPose(horizontalOffset: number | null) {
+  const direction = horizontalOffset !== null && Number.isFinite(horizontalOffset)
+    ? Math.max(-1, Math.min(1, horizontalOffset / 4)) : 0;
+  return { yaw: direction * .45, roll: -direction * .08 };
+}
+
+/** Snap to a settled pose so the demand renderer stops invalidating frames. */
+export function settleRoomPose(current: number, target: number, delta: number) {
+  const dt = Number.isFinite(delta) ? Math.max(0, Math.min(delta, .05)) : 0;
+  const next = target + (current - target) * Math.exp(-14 * dt);
+  return Math.abs(next - target) < .001 ? target : next;
+}

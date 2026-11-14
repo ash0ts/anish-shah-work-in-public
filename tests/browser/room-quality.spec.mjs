@@ -877,6 +877,11 @@ test.describe("My Room 2001 browser quality", () => {
     expect(pixelRatio.x).toBeLessThanOrEqual(1.26);
     expect(pixelRatio.y).toBeLessThanOrEqual(1.26);
 
+    // The decorative familiar follows actual keyboard focus. Interrupt its
+    // rightward reaction, then verify the whole room returns to demand-idle.
+    await page.locator('[data-room-object-control="play"]').focus();
+    await page.waitForTimeout(100);
+    await page.locator('[data-room-object-control="read"]').focus();
     await page.evaluate(() => {
       window.__roomIdleProbe = {
         changedAt: performance.now(),

@@ -69,7 +69,11 @@ All seven destinations have original authored geometry: a gothic CRT cabinet,
 book-filled reading corner, portable music deck and headphones, turntable and
 record crate, computer desk, industrial treadmill, and armillary-style globe.
 The globe's decorative land patches are not Travel geography or publication
-data. The draft remains a local art review, not a production release.
+data. An eclipse city window, asymmetric cathedral ribs, and a circuit-pattern
+rug frame the midnight-indigo workshop. A suspended mechanical bat is purely
+decorative: it glances toward the hovered, focused, or selected destination and
+settles, with no eighth object, hit target, AI, or idle loop. The draft remains
+a local art review, not a production release.
 
 Original geometry and UVs come from `scripts/room/author-gothic-room.py`, pinned
 to **Blender 5.2.3 LTS**. Its editable source, packed original 512×512 material
@@ -93,7 +97,7 @@ To edit and export:
    source/provenance hashes and reproduces the optimized bytes offline.
 4. Review desktop and Pocket views before replacing the posters.
 
-The decoded room contains 11,207 triangles, 15 draw calls, one material,
+The decoded room contains 12,387 triangles, 16 draw calls, one material,
 and one embedded atlas. Hard ceilings remain 20K triangles, 30 draws, 16
 materials, and 350,000 GLB bytes. The decoder ships locally. The atlas plugin
 validates PNG dimensions before decoding its embedded bytes directly, avoiding

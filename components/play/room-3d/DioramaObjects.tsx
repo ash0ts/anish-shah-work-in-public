@@ -6,7 +6,7 @@ import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import type { RoomObjectId } from "../room-platform/room-types";
 import manifest from "./diorama.generated.json";
 import { roomAtlasPlugin } from "./room-atlas";
-import { roomPropResponse } from "./room-prop-response";
+import { roomFamiliarPose, roomPropResponse, settleRoomPose } from "./room-prop-response";
 
 type RegisterHit = (id: RoomObjectId, mesh: Mesh | null) => void;
 type RegisterOccluder = (mesh: Mesh, active: boolean) => void;
@@ -72,6 +72,23 @@ function DioramaProp({ source, id, active, selected, registerHit }: {
   </>;
 }
 
+function DioramaFamiliar({ source, attentionId }: { source: Object3D; attentionId: RoomObjectId | null }) {
+  const { invalidate } = useThree();
+  const object = useMemo(() => source.clone(true), [source]);
+  const rootRef = useRef<Object3D>(null);
+  const target = roomFamiliarPose(attentionId
+    ? manifest.props[attentionId].position[0] - manifest.familiar.position[0] : null);
+  useEffect(() => { invalidate(); }, [attentionId, invalidate]);
+  useFrame((_, delta) => {
+    const root = rootRef.current;
+    if (!root) return;
+    root.rotation.y = settleRoomPose(root.rotation.y, target.yaw, delta);
+    root.rotation.z = settleRoomPose(root.rotation.z, target.roll, delta);
+    if (root.rotation.y !== target.yaw || root.rotation.z !== target.roll) invalidate();
+  });
+  return <primitive ref={rootRef} object={object} dispose={null} />;
+}
+
 /** One shared, first-party GLB; all decoder bytes are bundled locally. */
 export function DioramaObjects({ objectIds, focusedId, hoveredId, selectedId, registerHitTarget, registerOccluder, onLoaded }: {
   objectIds: readonly RoomObjectId[]; focusedId: RoomObjectId | null; hoveredId: RoomObjectId | null;
@@ -82,6 +99,7 @@ export function DioramaObjects({ objectIds, focusedId, hoveredId, selectedId, re
   useEffect(() => { onLoaded?.(); }, [scene, onLoaded]);
   return <>
     <primitive object={shell} dispose={null} />
+    <DioramaFamiliar source={scene.getObjectByName("room-familiar")!} attentionId={selectedId ?? hoveredId ?? focusedId} />
     {manifest.occluders.map((occluder, index) => <Proxy key={index}
       position={occluder.position as [number, number, number]}
       size={occluder.size as [number, number, number]} registerOccluder={registerOccluder} />)}

@@ -29,10 +29,10 @@ bpy.ops.object.delete(use_global=False)
 # coarse painted patches: plaster, timber, metal, paper, fabric, screen, etc.
 # Algorithmic material authoring is deterministic, not imported image editing.
 COLORS = [
-    (112, 111, 111), (74, 55, 51), (43, 51, 57), (211, 193, 155),
-    (72, 62, 78), (19, 37, 48), (50, 85, 123), (134, 112, 80),
-    (28, 32, 42), (124, 66, 69), (61, 89, 86), (151, 139, 122),
-    (192, 133, 77), (93, 186, 197), (64, 74, 102), (224, 211, 179),
+    (65, 73, 105), (61, 40, 60), (43, 51, 67), (211, 193, 155),
+    (74, 40, 100), (15, 29, 53), (43, 89, 184), (188, 133, 72),
+    (22, 25, 39), (183, 61, 106), (61, 110, 105), (172, 162, 147),
+    (235, 151, 77), (87, 224, 211), (76, 68, 126), (239, 218, 173),
 ]
 atlas = bpy.data.images.new("Original worn-material atlas", width=512, height=512, alpha=False)
 pixels = []
@@ -159,10 +159,10 @@ class Mesh:
             center = sum((Vector(self.vertices[i]) for i in polygon.vertices), Vector()) / len(polygon.vertices)
             wp = center + Vector(world)
             # Constant baked key plus spatial warm reading/cool hardware pools.
-            key = .70 + .26 * max(0, n.dot(Vector((.35, .8, .45)).normalized()))
+            key = .68 + .28 * max(0, n.dot(Vector((.35, .8, .45)).normalized()))
             warm = math.exp(-((wp.x+2.1)**2 + (wp.y-1.5)**2 + (wp.z+1.3)**2) / 5)
             cool = math.exp(-((wp.x-2.0)**2 + (wp.y-1.8)**2 + (wp.z+1.3)**2) / 4)
-            light = (key + warm*.24, key + warm*.13 + cool*.08, key + cool*.24)
+            light = (key + warm*.35, key + warm*.16 + cool*.09, key + cool*.3)
             for j, li in enumerate(polygon.loop_indices):
                 # Insets keep nearest filtering out of adjacent material patches.
                 corners = [(0, 0), (1, 0), (1, 1), (0, 1)]
@@ -200,7 +200,11 @@ def shell():
     # Tall original lancet window, irregular tracery and static city silhouette.
     arch = [(-1.06, 1.48), (-1.06, 3.25), (-.92, 3.76), (-.59, 4.3), (.22, 5.02),
             (.94, 4.15), (1.26, 3.57), (1.37, 3.11), (1.37, 1.48)]
-    b.face([(x, y, -3.405) for x, y in arch], 5, (.72, 1, 1))
+    b.face([(x, y, -3.405) for x, y in arch], 6, (.49, .58, .85))
+    # A large eclipse above the city gives the room a focal point. Geometry,
+    # not a skybox, shader, licensed illustration, or animated background.
+    b.rod((.19,3.83,-3.39),(.19,3.83,-3.375),.62,12,24)
+    b.rod((.36,3.96,-3.37),(.36,3.96,-3.355),.51,5,24)
     for a, c in zip(arch, arch[1:]+arch[:1]):
         b.rod((a[0],a[1],-3.27),(c[0],c[1],-3.27), .075, 7, 5)
     b.box((2.7,.13,.46),(.16,1.44,-3.2),11)
@@ -219,12 +223,29 @@ def shell():
         b.wire(points,8,.022)
     for x in [-3.7,-2.2,2.6,3.7]:
         b.box((.09,.33,.055),(x,4.62,-3.08),7)
+    # Uneven cathedral ribs with inset cyan conductors; silhouette, not UI.
+    for x,top in [(-4.25,4.65),(-1.35,4.5),(1.65,4.7),(4.22,4.8)]:
+        b.box((.14,top-.5,.22),(x,(top+.5)/2,-3.17),2)
+        b.box((.035,top-1.0,.025),(x,(top+.8)/2,-3.04),13,tint=(.55,.75,.85))
+        b.wire([(x,.56,-3.14),(x,.56,-2.94),(x*.95,1.01,-2.94)],7,.04)
+        b.rod((x,top,-3.17),(x-.13,top+.29,-3.17),.07,7,4,end_radius=0)
     # Threadbare, stepped rug rather than a glowing circular platform.
     b.box((3.6,.025,2.9),(-.35,.02,.9),4)
     for x in [-2.07,1.37]:
         b.box((.07,.008,2.8),(x,.039,.9),9)
     for z in [-.46,2.26]:
         b.box((3.5,.008,.08),(-.35,.041,z),7)
+    # Circuit-sigil rug: equal geometry, purely fictional ornament. The ring
+    # is broken into clear facets, avoiding a luminous video-game portal.
+    b.ring((-.35,.052,.9),1.18,.018,7,segments=16)
+    for x,z in [(-1.3,.9),(-.35,0),(-.35,1.8),(.6,.9)]:
+        b.box((.08,.008,.08),(x,.055,z),13,rot=(0,math.pi/4,0))
+    for side in [-1,1]:
+        b.wire([(-.35+side*1.05,.055,.9),(-.35,.055,.05),
+                (-.35-side*1.05,.055,.9),(-.35,.055,1.75)],7,.009)
+    # Fallen window-light shapes remain painted into the floor, not lights.
+    b.face([(.6,.025,-2.7),(1.1,.025,-2.7),(3.8,.025,.4),(3.0,.025,.4)],7,(.35,.34,.48))
+    b.face([(.6,.027,-2.7),(.75,.027,-2.7),(3.18,.027,.4),(3.0,.027,.4)],12,(.45,.42,.55))
     # Low reading seat and loose folded cloth.
     b.box((1.65,.27,1.52),(-2.75,.18,.3),1,bevel=.035)
     b.box((1.55,.23,1.4),(-2.75,.44,.3),4,bevel=.09,tint=(.84,.83,.92))
@@ -237,7 +258,47 @@ def shell():
     b.rod((3.61,3.81,-3.24),(3.61,3.81,-3.22),.22,3,12)
     for i in range(3):
         b.box((.58-i*.09,.015,.01),(3.5,3.14+i*.09,-3.27),2)
+    # Slanted, cable-bound crescent instrument above the left wall. Angular
+    # fantasy hardware, original shape and not a franchise weapon or logo.
+    b.wire([(-4.48,.28,-1.45),(-4.45,1.2,-1.75),(-4.42,2.15,-2.04),
+            (-4.39,2.7,-2.22)],7,.045)
+    for i in range(5):
+        b.rod((-4.45,1.15+i*.08,-1.73-i*.025),(-4.45,1.17+i*.08,-1.73-i*.025),.065,8,6)
+    for side in [-1,1]:
+        points=[(-4.4,2.63,-2.2),(-4.37,3.25,-2.3),
+                (-4.15,3.63,-2.22),(-4.01,3.52,-2.16),(-4.21,3.13,-2.17)]
+        if side==-1:
+            points=[(x,y, -4.4-z) for x,y,z in points]
+        b.face(points,11)
+        b.face(list(reversed(points)),11)
+    # Suspended cables visibly support the small mechanical familiar.
+    fx,fy,fz=LAYOUT["familiar"]["position"]
+    for x in [fx-.3,fx+.3]:
+        b.wire([(x,4.95,-3.08),(x,4.68,fz),(fx,fy+.19,fz)],8,.01)
     return b.finish("room-shell")
+
+def familiar():
+    """Original suspended mechanical bat; decorative, not an eighth destination."""
+    b=Mesh()
+    b.box((.3,.37,.3),(0,0,0),11,bevel=.05)
+    b.box((.26,.14,.035),(0,.06,.17),8,bevel=.015)
+    for side in [-1,1]:
+        b.rod((side*.11,.16,0),(side*.19,.43,-.02),.07,7,4,end_radius=.003)
+        b.box((.065,.035,.02),(side*.07,.07,.194),13,rot=(0,0,side*.16))
+        wing=[(side*.14,.07,0),(side*.47,.42,-.015),(side*1.05,.38,-.08),
+              (side*.77,.06,.08),(side*.62,-.12,.1),(side*.49,.02,.1),
+              (side*.31,-.13,.08),(side*.18,-.08,.02)]
+        b.face(wing,14)
+        b.face(list(reversed(wing)),14)
+        b.wire([wing[0],wing[1],wing[2]],7,.015)
+        b.wire([wing[1],wing[4]],7,.01)
+        b.wire([wing[1],wing[6]],7,.01)
+        b.rod((side*.08,-.17,0),(side*.13,-.29,.04),.025,2,5)
+    # Empty parent preserves the head/body pivot through mesh quantization.
+    parent=bpy.data.objects.new("room-familiar",None)
+    bpy.context.collection.objects.link(parent)
+    parent.location=xyz(LAYOUT["familiar"]["position"])
+    b.finish("familiar-body",parent,LAYOUT["familiar"]["position"])
 
 def book(b, x, y, z, width, height, tile, lean=0):
     b.box((width,height,.43),(x,y+height/2,z),tile,rot=(0,0,lean))
@@ -493,6 +554,7 @@ BUILDERS={"watch":television,"read":shelf,"listen":music_player,"collect":record
           "play":computer,"move":treadmill,"travel":globe}
 
 shell()
+familiar()
 for ident, layout in LAYOUT["props"].items():
     parent = bpy.data.objects.new("OBJ__"+ident,None)
     bpy.context.collection.objects.link(parent)

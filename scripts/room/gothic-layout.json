@@ -3,6 +3,7 @@
   "artDirection": "gothic-hardware-ps2",
   "reviewStage": "complete",
   "finishedObjects": ["watch", "read", "listen", "collect", "play", "move", "travel"],
+  "familiar": { "position": [2.3, 4.0, -1.0] },
   "props": {
     "watch": { "position": [-3.65, 0, -0.65], "rotation": 0.22, "scale": 1, "hit": [0, 0.95, 0], "size": [1.25, 1.9, 0.9] },
     "read": { "position": [-2.45, 0, -2.45], "rotation": 0.04, "scale": 1, "hit": [0, 1.85, 0.05], "size": [2.35, 3.7, 0.82] },

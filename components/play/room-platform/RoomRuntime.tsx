@@ -77,23 +77,23 @@ function RoomPosterFallback({
       <picture>
         <source
           media="(max-width: 767px)"
-          srcSet="/assets/play/my-room-2001-neutral-mobile.b9d30a454e1a.avif"
+          srcSet="/assets/play/my-room-2001-neutral-mobile.cb7ee0619308.avif"
           type="image/avif"
         />
         <source
-          srcSet="/assets/play/my-room-2001-neutral.10732d17135b.avif"
+          srcSet="/assets/play/my-room-2001-neutral.4edcf2c380f5.avif"
           type="image/avif"
         />
         <source
           media="(max-width: 767px)"
-          srcSet="/assets/play/my-room-2001-neutral-mobile.e6f381b29845.webp"
+          srcSet="/assets/play/my-room-2001-neutral-mobile.e1cc0d1ad2de.webp"
           type="image/webp"
         />
         <img
           alt=""
           decoding="async"
           height="1000"
-          src="/assets/play/my-room-2001-neutral.0c9e0cecc456.webp"
+          src="/assets/play/my-room-2001-neutral.30364e150078.webp"
           width="1600"
         />
       </picture>

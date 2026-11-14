@@ -8,7 +8,7 @@ import { MeshoptDecoder } from "meshoptimizer";
 import sharp from "sharp";
 import { roomAtlasPlugin, validateRoomAtlasBytes } from "../components/play/room-3d/room-atlas.ts";
 import { ROOM_OBJECT_IDS } from "../components/play/room-platform/room-object-contract.ts";
-import { roomPropResponse } from "../components/play/room-3d/room-prop-response.ts";
+import { roomFamiliarPose, roomPropResponse, settleRoomPose } from "../components/play/room-3d/room-prop-response.ts";
 import { routeObject, markRoomHistoryEntry, clearRoomHistoryEntry, historyRoomObject, historyRoomDepth, historyRoomPath } from "../components/play/room-platform/room-history.ts";
 
 test("the optimized first-party asset matches its hash, registry, and actual mesh budgets", async () => {
@@ -22,6 +22,13 @@ test("the optimized first-party asset matches its hash, registry, and actual mes
     .registerDependencies({ "meshopt.decoder": MeshoptDecoder }).readBinary(new Uint8Array(bytes));
   const root = document.getRoot();
   assert.deepEqual(Object.keys(manifest.props).sort(), [...ROOM_OBJECT_IDS].sort());
+  const familiar = root.listNodes().filter(node => node.getName() === "room-familiar");
+  assert.equal(familiar.length, 1, "one decorative familiar, not another destination");
+  assert.equal(familiar[0].getMesh(), null, "preserve the authored reaction pivot");
+  assert.equal(familiar[0].listChildren().length, 1);
+  assert.ok(familiar[0].listChildren()[0].getMesh());
+  familiar[0].getTranslation().forEach((value, index) =>
+    assert.ok(Math.abs(value - manifest.familiar.position[index]) < .00001));
   for (const id of ROOM_OBJECT_IDS) {
     assert.equal(root.listNodes().filter(node => node.getName() === "OBJ__" + id).length, 1);
     assert.equal(root.listNodes().filter(node => node.getName() === "motion__" + id).length, 1);
@@ -69,6 +76,28 @@ test("the optimized first-party asset matches its hash, registry, and actual mes
     assert.ok(primitive.getAttribute("TEXCOORD_0"), "atlas UVs retained");
     assert.ok(primitive.getMaterial().getExtension("KHR_materials_unlit"), "no live-lighting cost");
   }
+});
+
+test("the familiar glances toward objects, handles interruption, then stops requesting frames", () => {
+  assert.deepEqual(roomFamiliarPose(null), { yaw: 0, roll: -0 });
+  assert.deepEqual(roomFamiliarPose(NaN), roomFamiliarPose(null));
+  assert.deepEqual(roomFamiliarPose(Infinity), roomFamiliarPose(null));
+  assert.equal(roomFamiliarPose(-20).yaw, -.45);
+  assert.equal(roomFamiliarPose(20).yaw, .45);
+  assert.equal(roomFamiliarPose(20).roll, -.08);
+  let current = 0;
+  const right = roomFamiliarPose(3).yaw;
+  for (let i = 0; i < 5; i++) current = settleRoomPose(current, right, 1/60);
+  assert.ok(current > 0 && current < right);
+  const interrupted = current;
+  current = settleRoomPose(current, -.45, 1/60);
+  assert.ok(current < interrupted && current > -.45, "retarget from the actual pose without snapping");
+  for (let i = 0; i < 120; i++) current = settleRoomPose(current, -.45, 1/60);
+  assert.equal(current, -.45, "exactly settled: no idle invalidation");
+  for (let i = 0; i < 120; i++) current = settleRoomPose(current, 0, 1/60);
+  assert.equal(current, 0);
+  assert.equal(settleRoomPose(.1, 0, 20), settleRoomPose(.1, 0, .05));
+  assert.equal(settleRoomPose(.1, 0, NaN), .1);
 });
 
 test("every prop response is bounded, reversible, and uses the intended axis", () => {

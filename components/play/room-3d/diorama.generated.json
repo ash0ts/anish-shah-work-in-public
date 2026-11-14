@@ -1,22 +1,22 @@
 {
   "schemaVersion": 2,
-  "assetPath": "/assets/play/diorama.fa4e89c10ca1.glb",
-  "sha256": "fa4e89c10ca168292979cf55520a55e014a659c3a78627c4197e57ad01ec1770",
-  "bytes": 286552,
-  "triangles": 11207,
-  "drawCalls": 15,
+  "assetPath": "/assets/play/diorama.78b659db397b.glb",
+  "sha256": "78b659db397b0ce5df5ea4011a85468ce2ecc15a5688af8d6fb60d38f6223247",
+  "bytes": 313452,
+  "triangles": 12387,
+  "drawCalls": 16,
   "materials": 1,
   "texture": {
     "width": 512,
     "height": 512,
-    "bytes": 21775,
-    "sha256": "34d4f50d54d5082936985bb7f06a24aa9a8f15e9a0c8a38b1cd5238f45d8e174",
+    "bytes": 21653,
+    "sha256": "8d377f9b7a34176273394dd18ec5b360b009db31dcbb307630cefe7bdeea2cb0",
     "mediaType": "image/png"
   },
   "authoring": {
     "tool": "Blender",
     "version": "5.2.3 LTS",
-    "sourceSha256": "979c0a70d5c67d33679962f66bc5210be6e29029a8ba88e326cee3940aca7a17"
+    "sourceSha256": "2e15647c4b548b5124c992f197789e064aee39102a52e4d6eb5a1b0222cd3522"
   },
   "reviewStage": "complete",
   "finishedObjects": [
@@ -28,6 +28,13 @@
     "move",
     "travel"
   ],
+  "familiar": {
+    "position": [
+      2.3,
+      4,
+      -1
+    ]
+  },
   "props": {
     "watch": {
       "position": [
