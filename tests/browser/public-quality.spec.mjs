@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
 const routes = ["/", "/about", "/work", "/play", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
@@ -809,8 +810,9 @@ test("Discogs remains lazy until the Record crate route is selected", async ({ p
     }
   });
   await page.goto("/play", { waitUntil: "networkidle" });
+  await expectRoomReady(page, { context: "opening Collect without preloading its provider" });
   expect(connectorRequests).toHaveLength(0);
-  await page.locator('[data-room-object-link="collect"]:visible').click();
+  await page.locator('[data-room-object-control="collect"]').click();
   await expect(page).toHaveURL(/\/play\/collect$/);
   await expect(
     page.getByRole("region", { name: "Discogs physical catalog" }),
