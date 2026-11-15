@@ -1,6 +1,17 @@
 # Exact-SHA owner release evidence
 
 Four successful GitHub workflow runs remain the default release-evidence path.
+Browser Quality's hosted option uses native `ubuntu-24.04-arm`, keeping its OS
+and architecture aligned with the disposable owner browser runner. It downloads
+the same exact-SHA Validate artifact and retains the two-worker limit, existing
+deadlines, zero functional retries, and complete release browser scope. This
+standard hosted runner avoids a local Docker image when hosted capacity is
+available; it does not select a paid larger runner. GitHub's
+[runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
+documents availability and repository-dependent capacity (last verified:
+2026-11-15). Do not assume an architecture change guarantees a faster run; record
+the resulting evidence before promotion.
+
 Disposable owner runners execute those same workflows without consuming
 GitHub-hosted minutes. If GitHub artifact storage is also unavailable, the
 explicit hybrid owner-local path runs Validate, Gitleaks, and Browser Quality
