@@ -79,6 +79,12 @@ jobs:
           CI_LANE: ${{ needs.classify.outputs.lane }}
         run: |
           set -euo pipefail
+          # Dependency install deliberately skips lifecycle scripts. Targeted
+          # lanes need the ignored copy module before checking its contents.
+          # Full validation already generates it through prevalidate.
+          if [ "$CI_LANE" != full ]; then
+            npm run copy:generate
+          fi
           case "$CI_LANE" in
             copy)
               npm run copy:check

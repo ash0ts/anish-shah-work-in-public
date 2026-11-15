@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
 const widths = [320, 390, 768, 1024, 1440, 1920];
 
@@ -200,6 +201,10 @@ async function findRoomObjectPoint(page, targetId) {
 
 async function findTravelPinPoint(page, targetId) {
   const stage = page.locator("[data-travel-globe-canvas]");
+  // Selecting the stacked mobile/compact directory can scroll the globe out
+  // of view. Raw mouse coordinates do not auto-scroll like locator.click().
+  await stage.scrollIntoViewIfNeeded();
+  await expect(stage).toBeInViewport({ ratio: 0.95 });
   const bounds = await stage.boundingBox();
   if (!bounds) throw new Error("The travel globe has no visible pointer stage.");
   const size = Math.min(bounds.width, bounds.height);
@@ -343,21 +348,27 @@ test.describe("Postcard Planet", () => {
     });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play", { waitUntil: "networkidle" });
-
-    await expect(page.locator("[data-room-object-link]")).toHaveCount(7);
+    const room = await expectRoomReady(page);
+    await expect(room.locator("[data-room-object-control]")).toHaveCount(7);
     await expect(
-      page.locator('[data-room-object-link="travel"]'),
-    ).toHaveAttribute("href", "/play/travel");
+      room.locator('[data-room-object-control="travel"]'),
+    ).toBeVisible();
+    await expect(page.locator("[data-room-overview]")).toHaveAttribute("inert", "");
     expect(requests).toEqual([]);
     expect(travelStageScripts).toEqual([]);
 
-    await page.getByRole("button", { name: "Enter the room" }).click();
-    await expect(page.getByText("Room ready", { exact: true })).toBeVisible({
-      timeout: 15_000,
-    });
+    await room.getByRole("button", { name: "Objects list" }).click();
+    await expect(page).toHaveURL(/view=directory/);
+    await expect(room).toHaveCount(0);
+    const directory = page.locator("[data-room-overview]");
+    await expect(directory).not.toHaveAttribute("inert", "");
+    await expect(directory.locator("[data-room-object-link]")).toHaveCount(7);
     await expect(
-      page.locator('[data-room-object-control="travel"]'),
+      directory.locator('[data-room-object-link="travel"]'),
     ).toBeVisible();
+    await expect(
+      directory.locator('[data-room-object-link="travel"]'),
+    ).toHaveAttribute("href", "/play/travel");
     expect(requests).toEqual([]);
     expect(travelStageScripts).toEqual([]);
   });
@@ -368,10 +379,7 @@ test.describe("Postcard Planet", () => {
     test.setTimeout(90_000);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play", { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Enter the room" }).click();
-    await expect(page.getByText("Room ready", { exact: true })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expectRoomReady(page);
     const point = await findRoomObjectPoint(page, "travel");
     await page.mouse.move(point.x, point.y);
     await page.mouse.down();
@@ -573,10 +581,7 @@ test.describe("Postcard Planet", () => {
   test("a nested trip preserves the room-origin return path", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/play", { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Enter the room" }).click();
-    await expect(page.getByText("Room ready", { exact: true })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expectRoomReady(page);
     const travelControl = page.locator('[data-room-object-control="travel"]');
     await travelControl.click();
     await expect(page).toHaveURL(/\/play\/travel$/);
