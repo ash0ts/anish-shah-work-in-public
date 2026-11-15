@@ -1,8 +1,14 @@
 import { spawn, spawnSync } from "node:child_process";
 import { rmSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { verifyCoverage, changesBetween } from "./lib/release-coverage.mjs";
+import { validationIdentity } from "./lib/validation-receipt.mjs";
+
+const phaseResults = [];
+let browserIdentity = null;
+let browserCoverage = null;
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const packageJson = JSON.parse(
@@ -72,6 +78,8 @@ function releaseCommand({
 }
 
 async function runConcurrentReleaseCommands(commands, { label, timeoutMs }) {
+  const started = performance.now();
+  let phaseStatus = "failed";
   const children = new Set();
   let firstFailure = null;
   let timedOut = false;
@@ -185,7 +193,9 @@ async function runConcurrentReleaseCommands(commands, { label, timeoutMs }) {
     if (statuses.some((status) => status !== 0)) {
       throw new Error(`${firstFailure ?? label} failed; remaining release checks were cancelled.`);
     }
+    phaseStatus = "passed";
   } finally {
+    phaseResults.push({ label, status: phaseStatus, durationMs: Math.round(performance.now() - started) });
     clearTimeout(timeout);
     stopAll();
   }
@@ -197,6 +207,8 @@ function releasePlaywrightCommand({
   arguments_,
   config = "playwright.config.mjs",
   simulationExperienceMode = "disabled",
+  travelAtlasMode = "atlas-v1",
+  workers = 1,
 }) {
   const relativeStateDirectory = `.wrangler/browser-quality-room-${segment}`;
   rmSync(path.join(root, relativeStateDirectory), { force: true, recursive: true });
@@ -208,7 +220,7 @@ function releasePlaywrightCommand({
       ...arguments_,
       "--config",
       config,
-      "--workers=1",
+      `--workers=${workers}`,
       "--retries=0",
       "--max-failures=1",
     ],
@@ -218,6 +230,7 @@ function releasePlaywrightCommand({
       BROWSER_QUALITY_STATE_DIR: relativeStateDirectory,
       BROWSER_QUALITY_RELEASE: "1",
       BROWSER_SIMULATION_EXPERIENCE_MODE: simulationExperienceMode,
+      BROWSER_TRAVEL_ATLAS_MODE: travelAtlasMode,
       ROOM_CAPTURE_VISUALS: "0",
     },
   });
@@ -233,20 +246,36 @@ const releaseStressPattern = [
 ].join("|");
 
 async function runReleaseBrowserGate() {
+  const coveragePath = process.env.BROWSER_RELEASE_COVERAGE_PATH;
+  const coverage = coveragePath ? verifyCoverage(JSON.parse(await readFile(coveragePath, "utf8"))) : null;
+  if (coverage && coverage.candidateSha !== process.env.RELEASE_VALIDATED_SHA) throw new Error("Browser coverage does not match the candidate SHA.");
+  if (coverage) {
+    const actual = changesBetween(root, coverage.baseSha, coverage.candidateSha);
+    for (const field of ["paths", "metadataOnlyPaths"]) {
+      if (JSON.stringify(actual[field].sort()) !== JSON.stringify(coverage[field])) throw new Error("Coverage differs from the actual Git change set.");
+    }
+  }
+  // No range is not permission to skip anything. Local/full checks stay conservative.
+  const scopes = coverage?.scopes ?? ["critical", "public", "objects", "room", "travel"];
+  browserCoverage = coverage ?? { scopes, mode: "conservative-full" };
+  browserIdentity = await validationIdentity(root, "browser", browserCoverage);
+  const files = [
+    "tests/browser/release-critical.spec.mjs",
+    ...(scopes.includes("public") ? ["tests/browser/public-quality.spec.mjs", "tests/browser/balanced-portfolio.spec.mjs"] : []),
+    ...(scopes.includes("objects") ? ["tests/browser/object-screens.spec.mjs"] : []),
+    ...(scopes.includes("room") ? ["tests/browser/room-quality.spec.mjs", "tests/browser/room-art-direction.spec.mjs"] : []),
+    ...(scopes.includes("travel") ? ["tests/browser/travel-atlas.spec.mjs"] : []),
+  ];
   await runConcurrentReleaseCommands(
     [
       releasePlaywrightCommand({
         port: 4174,
         segment: "release-public",
-        arguments_: ["tests/browser/public-quality.spec.mjs", "tests/browser/balanced-portfolio.spec.mjs", "tests/browser/object-screens.spec.mjs"],
-      }),
-      releasePlaywrightCommand({
-        port: 4181,
-        segment: "release-room-travel",
+        workers: 2,
         arguments_: [
-          "tests/browser/room-quality.spec.mjs",
-          "tests/browser/room-art-direction.spec.mjs",
-          "tests/browser/travel-atlas.spec.mjs",
+          ...files,
+          "tests/browser/release-config.spec.mjs",
+          "--fully-parallel",
           "--grep-invert",
           releaseStressPattern,
         ],
@@ -255,6 +284,23 @@ async function runReleaseBrowserGate() {
     { label: "Critical Chromium coverage", timeoutMs: 525_000 },
   );
 
+  if (coverage && (coverage.modes.simulationExperienceMode !== "disabled" || coverage.modes.travelAtlasMode !== "atlas-v1")) {
+    await runConcurrentReleaseCommands([releasePlaywrightCommand({
+      port: 4182, segment: "release-feature-modes",
+      simulationExperienceMode: coverage.modes.simulationExperienceMode,
+      travelAtlasMode: coverage.modes.travelAtlasMode,
+      arguments_: ["tests/browser/release-config.spec.mjs"],
+    })], { label: "Candidate feature configuration", timeoutMs: 60_000 });
+  }
+
+  if (scopes.includes("simulation")) {
+    await runConcurrentReleaseCommands([releasePlaywrightCommand({
+      port: 4180, segment: "release-simulation", simulationExperienceMode: "campaign-v1",
+      arguments_: ["tests/browser/simulation-quality.spec.mjs"],
+    })], { label: "Enabled Simulation coverage", timeoutMs: 525_000 });
+  }
+
+  if (!coverage || coverage.webkit) {
   await runConcurrentReleaseCommands(
     [
       releasePlaywrightCommand({
@@ -270,20 +316,24 @@ async function runReleaseBrowserGate() {
     ],
     { label: "WebKit Spotify coverage", timeoutMs: 75_000 },
   );
+  }
 
   // Linux WebKit and Lighthouse each launch their own browser and Worker.
   // Starting both simultaneously on the bounded ARM64 runner can cancel
   // WebKit's provisional navigation before either product assertion runs.
-  await runConcurrentReleaseCommands(
+  if (!coverage || coverage.lighthouseRoutes.length) await runConcurrentReleaseCommands(
     [
       releaseCommand({
         label: "Lighthouse budgets",
         arguments_: ["scripts/run-lighthouse-quality.mjs"],
-        environment: { BROWSER_QUALITY_RELEASE: "1" },
+        environment: { BROWSER_QUALITY_RELEASE: "1", ...(coverage ? { LIGHTHOUSE_ROUTES: JSON.stringify(coverage.lighthouseRoutes) } : {}) },
       }),
     ],
     { label: "Lighthouse coverage", timeoutMs: 3 * 60_000 },
   );
+  if (JSON.stringify(await validationIdentity(root, "browser", browserCoverage)) !== JSON.stringify(browserIdentity)) {
+    throw new Error("Browser-tested artifact or inputs changed during execution.");
+  }
 }
 
 const scope = process.env.BROWSER_QUALITY_SCOPE?.trim() || "release";
@@ -318,13 +368,19 @@ if (scope !== "room-shard" && configuredShard) {
 let failed = false;
 
 if (scope === "release") {
+  let status = "passed";
   try {
     await runReleaseBrowserGate();
   } catch (error) {
+    status = "failed";
     console.error(error instanceof Error ? error.message : String(error));
-    process.exit(1);
+  } finally {
+    await mkdir(path.join(root, ".wrangler"), { recursive: true });
+    const report = { status, identity: browserIdentity, coverage: browserCoverage, phases: phaseResults };
+    await writeFile(path.join(root, ".wrangler/browser-quality-timing.json"), JSON.stringify(report, null, 2) + "\n", { mode: 0o600 });
+    console.log(JSON.stringify(report, null, 2));
   }
-  process.exit(0);
+  process.exit(status === "passed" ? 0 : 1);
 }
 
 if (

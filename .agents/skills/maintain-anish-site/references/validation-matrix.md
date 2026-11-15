@@ -76,10 +76,10 @@ directory identifier.
 
 ```bash
 npm run validate
-npm run validate:browser
+npm run browser:release:existing
 ```
 
-`validate` covers copy/content attestations, lint, clean local D1 migrations, both repository skills, typechecking, content/backend tests, production build, bundle/privacy scans, rendered tests, and dependency policy. `validate:browser` covers the fail-fast release-smoke Playwright, Axe, Room/Pocket, Travel, Simulation, Spotify WebKit, responsive-overflow, and Lighthouse gate. Use `validate:browser:full` or the manual stability workflow only for exhaustive investigation.
+`validate` covers copy/content attestations, lint, clean local D1 migrations, both repository skills, typechecking, content/backend tests, one production build, bundle/privacy scans, rendered tests, and dependency policy. `browser:release:existing` reuses it for the fail-fast affected browser gate; use `browser:full:existing` or the manual stability workflow for exhaustive investigation. Release coverage uses the full deployed-to-candidate range, never only the last repair. See `docs/testing.md` for the unique assertion ownership inventory and receipt invalidation rules.
 
 Run `validate:release` only for a clean, pushed, approved production candidate
 using the normal four-workflow contract. The hybrid owner-local contract uses

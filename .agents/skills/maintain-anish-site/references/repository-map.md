@@ -46,6 +46,10 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `worker/**`: host/tier enforcement, Cloudflare Access, CSP, headers, throttling, request correlation, and retention/cleanup maintenance. Cron must never synchronize provider collections.
 - `drizzle/**`: ordered immutable D1 migrations.
 - `tests/**`: content, copy, backend/security, rendered, environment, and browser acceptance.
+- `scripts/lib/release-coverage.mjs` extends CI classification with the complete
+  deployed-to-candidate range and feature modes. `validation-receipt.mjs` binds
+  reusable bundle/rendered checks to exact bytes, configuration and suite inputs;
+  `release-resume.mjs` collects exact-SHA evidence without promoting traffic.
 - `docs/README.md`: documentation authority map. Every canonical documentation
   authority is listed there exactly once; support policy files are still
   scanned by `docs:check` without becoming competing authorities.

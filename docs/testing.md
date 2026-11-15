@@ -183,10 +183,11 @@ Install the pinned Chromium and WebKit builds once:
 
 ```bash
 npx --no-install playwright install chromium webkit
-npm run validate:browser
+npm run validate
+npm run browser:release:existing
 ```
 
-The browser gate builds once, then reuses the same `dist` for:
+Validation builds once; the browser gate reuses that `dist` for:
 
 - public route, keyboard, focus, consent, reflow, and overflow checks;
 - critical My Room and Pocket Room entry, navigation, focus, and fallback behavior;
@@ -197,20 +198,45 @@ The browser gate builds once, then reuses the same `dist` for:
 - Axe serious/critical checks;
 - Lighthouse mobile budgets of at least 0.90 with CLS no greater than 0.1.
 
-The release gate first runs Simulation's no-JavaScript and room-reveal fallback
-foundations in one short isolated process, then runs at most two Chromium
-processes for the normal and WebGL-heavy coverage. It uses no test retries,
-cancels remaining work on the first failure, reuses one Worker and browser for
-all Lighthouse routes, and gives its child processes a combined 14.25-minute
-hard budget. WebKit completes before Lighthouse starts so two browser/server
-pairs never compete during startup. This prevents a SwiftShader-heavy room
-process from starving a newly created no-JavaScript Chromium renderer on a
-bounded release runner without weakening or retrying the assertion.
+For a standalone browser check without an existing build, `npm run validate:browser`
+builds first. Do not run that convenience command after `npm run validate`.
+
+The release gate uses one Worker and at most two Chromium workers, with isolated
+browser contexts and no retries. Chromium retains its 525-second deadline;
+WebKit and Lighthouse then run sequentially with their existing deadlines.
+Disabled Simulation receives reachability checks, not an activated gameplay
+soak. A verified release coverage plan adds enabled, affected Simulation checks.
+Without a coverage plan, the gate conservatively runs all active public,
+object, Room and Travel suites. Phase durations are written to
+`.wrangler/browser-quality-timing.json` on success and failure.
 Lighthouse collects three samples per route and applies the 0.90 performance
 budget to the median-performance run; all reports are retained. This is
 benchmark sampling, not a retry that converts a functional failure into a pass.
 Twenty-fold click/drag loops, all-object Pocket stress, performance-downgrade
 stress, and room-review captures belong to the separate manual stability soak.
+
+### Browser coverage ownership
+
+| Behavior | Authoritative suite | Consolidation |
+| --- | --- | --- |
+| Seven object screens, consent, provider isolation, no-JS foundations | `tests/browser/object-screens.spec.mjs` | Room's consent and foundation assertions moved here; fixture pagination retained |
+| Ready-state object Axe and controls | `tests/browser/object-screens.spec.mjs` | Whole-page Axe replaces duplicate main/whole-page audits; text, links and focus still checked |
+| Long-title overflow and first-paint overflow | `tests/browser/object-screens.spec.mjs` | Seven loads resized through all six widths instead of 42 loads; sampler and offender checks retained |
+| Public-page reflow | `tests/browser/public-quality.spec.mjs` | Six loads resized through all seven widths instead of 42 loads |
+| Room entry, input, camera, performance and fallbacks | `tests/browser/room-quality.spec.mjs` | Object-page checks removed only after moving their unique assertions |
+| Travel globe, semantic atlas and media boundaries | `tests/browser/travel-atlas.spec.mjs` | Retained; selected when Travel or shared infrastructure changes |
+
+Screenshots are captured only with `ROOM_CAPTURE_VISUALS=1`; failure traces
+remain automatic. Provider-state fixtures keep independent contexts and normal
+test deadlines. Resize coverage does not replace the dedicated cold mobile
+Room/Pocket and capability tests.
+
+`checks:artifact` stores successful bundle/rendered receipts beside the build.
+Reuse requires the same source SHA, actual artifact/configuration hashes,
+suite-input hash, selected inputs and runtime. Failed/interrupted checks leave
+no successful receipt. A changed production configuration requires fresh
+candidate checks. These are build-cache records, not substitutes for the four
+release evidence identities or the owner-local attestation.
 
 The local browser harness uses the pinned `wrangler-e2e` alias only. Production
 build and deployment continue using the repository’s production Wrangler
@@ -280,8 +306,12 @@ browser scopes. CodeQL runs for source/security/dependency/workflow paths and on
 its weekly schedule. Code previews require the owner-applied `preview` label;
 trusted copy-only previews remain automatic.
 
-Pushes to `main` intentionally run Validate, Gitleaks, and CodeQL once to keep a
-known-good merged baseline. Pushes to `release/*` do not automatically repeat
+Pushes to `main` run the merged baseline. Validate checks documentation without
+installing dependencies; verified package-version-only merges omit builds.
+Exact-SHA manual Validate always produces a complete release build. PR label
+changes other than requesting a preview, title edits, and ready-for-review
+changes do not rerun expensive validation. Base-branch edits do.
+Pushes to `release/*` do not automatically repeat
 those expensive workflows: the owner dispatches all four evidence identities
 for one exact release SHA. Copy-only PRs intentionally have a cheap parser/test
 lane in `PR Gate` and a separate trusted copy-preview lane. The latter rebuilds

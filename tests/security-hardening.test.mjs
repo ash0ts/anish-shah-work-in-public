@@ -1351,7 +1351,11 @@ test("release evidence binds a pushed commit, migrations, and exact smoke checks
   assert.doesNotMatch(packageJson, /"cloudflare:deploy"\s*:\s*"wrangler deploy/);
   assert.match(packageJson, /"cloudflare:triggers"\s*:/);
   assert.match(packageJson, /deployable:attest:write/);
-  assert.match(packageJson, /cloudflare:prepare[^\n]*bundle:scan/);
+  assert.match(packageJson, /cloudflare:prepare:existing[^\n]*check-artifact\.mjs --bundle-only/);
+  const artifactChecks = await readFile(new URL("../scripts/check-artifact.mjs", import.meta.url), "utf8");
+  assert.match(artifactChecks, /validationIdentity\(root, suite\)/);
+  assert.match(artifactChecks, /reusableReceipt/);
+  assert.match(artifactChecks, /scripts\/scan-release-bundle\.mjs/);
 });
 
 test("production source contains no retired Sites origin", async () => {

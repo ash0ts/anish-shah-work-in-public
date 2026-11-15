@@ -24,12 +24,12 @@ rule and is not a Worker route.
 
 ## Corporate-CA shell
 
+Start with the pinned Node and npm versions from [local setup](../testing.md#fresh-clone).
 When a corporate VPN is active, make Node trust the macOS system certificate
 store before running any Wrangler command. Keep this setup in the same shell
 for the entire release:
 
 ```bash
-export PATH='/Applications/ChatGPT.app/Contents/Resources/cua_node/bin:/usr/bin:/bin:/usr/sbin:/sbin'
 export NODE_USE_SYSTEM_CA=1
 export XDG_CONFIG_HOME="$HOME/.config"
 export WRANGLER_LOG_PATH="$PWD/.wrangler/wrangler.log"
@@ -54,6 +54,31 @@ missing the release's required encrypted fields fail closed as `invalid_state`
 and must be started again.
 
 ## 1. Validate the exact commit and bytes
+
+Use `npm run release:resume` to collect the latest exact-SHA results and runner
+minutes for the four existing workflow identities. A newer failure blocks
+reuse of an older success. The command never dispatches another run or changes
+hosted state. After all four pass, `npm run release:resume -- --prepare`
+downloads and verifies the Validate artifact, retains any previous local
+`dist`, runs candidate validation, and writes the guarded plan using the
+read-only production coordinates below. No rebuild or deployment occurs.
+
+For affected release browser coverage, set `RELEASE_BASE_SHA` to the **currently
+deployed** SHA from owner health, not the most recent repair commit. Set
+`RELEASE_VALIDATED_SHA` to the candidate and provide both previous and candidate
+Simulation experience/AI and Travel modes. `npm run release:coverage` records
+the complete Git range and selected suites in `.wrangler/release-coverage.json`.
+Unknown paths, shared shell/runtime changes, dependencies and mode changes
+select full applicable coverage. Missing baseline information never reduces
+coverage. Browser Quality accepts the same baseline as `base_sha` and the two
+mode objects as `previous_modes` / `feature_modes`; omitting `base_sha` runs
+the conservative full gate. Keep this coverage record with the release evidence.
+
+Local invocation uses `BROWSER_RELEASE_COVERAGE_PATH=.wrangler/release-coverage.json`
+with `npm run browser:release:existing`. The baseline must still match fresh
+owner health before staging; if production changed, recompute coverage and
+collect new Browser Quality evidence. Full regression and stability runs remain
+manual, not automatic for unrelated edits.
 
 Merge through a reviewed PR, then collect successful Validate, Gitleaks,
 CodeQL, and Browser Quality evidence for the same full commit SHA. The default

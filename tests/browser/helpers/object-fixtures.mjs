@@ -1,0 +1,51 @@
+export const objectFixtures = [
+  {
+    id: "watch",
+    label: "Watch",
+    provider: "myanimelist",
+    foundation: "Channel 11 · MyAnimeList",
+    title: "Midnight Broadcast",
+  },
+  {
+    id: "read",
+    label: "Read",
+    provider: "hardcover",
+    foundation: "Shelf light on · Hardcover",
+    title: "Bedside Shelf",
+  },
+  {
+    id: "listen",
+    label: "Listen",
+    provider: "spotify",
+    foundation: "Top Tracks · Spotify",
+    title: "Pocket Player",
+  },
+  {
+    id: "collect",
+    label: "Collect",
+    provider: "discogs",
+    foundation: "Crate 01 · Discogs",
+    title: "Crate Archive",
+  },
+  {
+    id: "play",
+    label: "Games",
+    provider: "steam",
+    foundation: "Desktop 01 · Steam",
+    title: "Desktop Library",
+  },
+  {
+    id: "move",
+    label: "Move",
+    provider: "strava",
+    foundation: "Cardio feed · Strava",
+    title: "Cardio Television",
+  },
+  {
+    id: "travel",
+    label: "Travel",
+    provider: null,
+    foundation: "Travel log · Approximate public geography",
+    title: "Postcard Planet",
+  },
+];

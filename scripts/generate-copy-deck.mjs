@@ -23,6 +23,12 @@ if (checkOnly) {
   }
   console.log(`Copy deck valid · ${Object.keys(deck.workGroups).length} WorkGroups · ${deck.copyVersion}`);
 } else {
+  let existing = "";
+  try { existing = await readFile(outputPath, "utf8"); } catch {}
+  if (existing === source) {
+    console.log(`Copy already current · ${deck.copyVersion}`);
+    process.exit(0);
+  }
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, source, { encoding: "utf8", mode: 0o600 });
   console.log(`Generated .generated/site-copy.ts · ${deck.copyVersion}`);

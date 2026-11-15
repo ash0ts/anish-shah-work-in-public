@@ -75,13 +75,35 @@ jobs:
           branch="${GITHUB_REF#refs/heads/}"
           trusted_ref="$(git rev-parse "refs/remotes/origin/${branch}")"
           test "$EXPECTED_SHA" = "$trusted_ref"
+      - name: Select merged validation lane
+        id: change_lane
+        env:
+          BASE_SHA: ${{ github.event.before }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ] && [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]] && [ "$BASE_SHA" != 0000000000000000000000000000000000000000 ]; then
+            node scripts/ci/classify-changes.mjs --base "$BASE_SHA" --head "$GITHUB_SHA" --github-output "$GITHUB_OUTPUT"
+          else
+            echo 'lane=full' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate merged documentation without installing dependencies
+        if: steps.change_lane.outputs.lane == 'docs'
+        run: |
+          node scripts/check-docs.mjs
+          node scripts/validate-repository-skills.mjs
       - name: Set up repository toolchain
+        if: steps.change_lane.outputs.lane != 'docs'
         uses: ./.github/actions/setup-repository
       - name: Validate exact commit
+        if: steps.change_lane.outputs.lane != 'docs' && steps.change_lane.outputs.lane != 'metadata'
         run: npm run validate
+      - name: Validate a version-only merge without rebuilding
+        if: steps.change_lane.outputs.lane == 'metadata'
+        run: npm run test:ci-topology
       - name: Write immutable build manifest
+        if: steps.change_lane.outputs.lane != 'docs' && steps.change_lane.outputs.lane != 'metadata'
         run: npm run deployable:attest:write
       - name: Upload exact validated build for release evidence
+        if: steps.change_lane.outputs.lane != 'docs' && steps.change_lane.outputs.lane != 'metadata'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: validated-dist-${{ env.VALIDATE_SOURCE_SHA }}
