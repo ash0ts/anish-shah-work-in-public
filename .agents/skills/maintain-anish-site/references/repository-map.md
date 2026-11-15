@@ -24,6 +24,9 @@ request path, durable store, or progressive-enhancement boundary changes.
   Keep provider requests in the existing stream components, and preserve GET
   filters, no-JavaScript details, and consent boundaries when changing these views.
 - `components/play/room-3d/**`: intent-gated Room and Pocket Room R3F runtime.
+  The bounded `room-capability.worker.ts` probes WebGL2 without a renderer or
+  provider data. Preserve its timeout/termination and stale-result guards;
+  capability failures keep the semantic directory.
 - `components/play/room-platform/room-entry-policy.ts`, `room-history.ts`,
   `useRoomFocus.ts`, and `useRoomTransitions.ts`: direct-entry policy, history,
   focus, and transitions. Play navigation supplies intent; `?view=directory`

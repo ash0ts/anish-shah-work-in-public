@@ -73,6 +73,46 @@ type NavigatorWithConnection = Navigator & {
 };
 
 let cachedWebGL2Support: boolean | null = null;
+let pendingWebGL2Support: Promise<boolean> | null = null;
+
+type CapabilityWorker = Pick<Worker, "onmessage" | "onerror" | "terminate">;
+
+export function probeWebGL2InWorker(createWorker: () => CapabilityWorker, timeoutMs = 3_000): Promise<boolean> {
+  return new Promise((resolve) => {
+    let worker: CapabilityWorker | undefined;
+    let settled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const finish = (supported: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      worker?.terminate();
+      resolve(supported);
+    };
+    try {
+      worker = createWorker();
+      worker.onmessage = (event: MessageEvent) => finish(event.data?.supported === true);
+      worker.onerror = () => finish(false);
+      timeout = setTimeout(() => finish(false), timeoutMs);
+    } catch { finish(false); }
+  });
+}
+
+export function prepareRoomWebGL2Support(): Promise<boolean> {
+  if (cachedWebGL2Support !== null) return Promise.resolve(cachedWebGL2Support);
+  if (pendingWebGL2Support) return pendingWebGL2Support;
+  // Older browsers retain the existing fail-closed DOM-canvas probe.
+  if (typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined") {
+    return Promise.resolve(detectWebGL2Support());
+  }
+  pendingWebGL2Support = probeWebGL2InWorker(() => new Worker(
+    new URL("./room-capability.worker.ts", import.meta.url), { type: "module" },
+  )).then((supported) => {
+    cachedWebGL2Support = supported;
+    return supported;
+  });
+  return pendingWebGL2Support;
+}
 
 export function detectWebGL2Support() {
   if (cachedWebGL2Support !== null) return cachedWebGL2Support;
@@ -102,7 +142,7 @@ export function detectWebGL2Support() {
   }
 }
 
-export function detectRoomCapability(): RoomCapabilityResult {
+export function detectRoomCapability(webgl2Available = detectWebGL2Support()): RoomCapabilityResult {
   if (
     typeof window === "undefined" ||
     typeof document === "undefined" ||
@@ -122,6 +162,6 @@ export function detectRoomCapability(): RoomCapabilityResult {
     zoomScale: window.visualViewport?.scale ?? 1,
     saveData: connection?.saveData === true,
     documentVisible: document.visibilityState === "visible",
-    webgl2Available: detectWebGL2Support(),
+    webgl2Available,
   });
 }

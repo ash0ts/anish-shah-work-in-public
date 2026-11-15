@@ -1204,6 +1204,12 @@ test.describe("My Room 2001 browser quality", () => {
         }, capability === "zoom-200" ? 2 : 4);
       }
       if (capability === "webgl2-unavailable") {
+        // Modern Room entry probes off-thread; keep both the Worker and the
+        // legacy DOM-canvas fixture unavailable without loading the renderer.
+        await context.route(/\/assets\/room-capability\.worker-[\w-]+\.js$/, route => route.fulfill({
+          contentType: "text/javascript",
+          body: "self.postMessage({supported:false}); self.close();",
+        }));
         await context.addInitScript(() => {
           const nativeGetContext = HTMLCanvasElement.prototype.getContext;
           HTMLCanvasElement.prototype.getContext = function (type, ...options) {
