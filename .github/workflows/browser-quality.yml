@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       runner_target:
-        description: Hosted runner or disposable owner ARM64 runner
+        description: Native hosted ARM64 runner or disposable owner ARM64 runner
         required: true
         default: github-hosted
         type: choice
@@ -38,7 +38,7 @@ env:
 jobs:
   browser:
     name: browser
-    runs-on: ${{ fromJSON(inputs.runner_target == 'owner-arm64' && format('["self-hosted","linux","arm64","{0}"]', inputs.jit_label) || '["ubuntu-latest"]') }}
+    runs-on: ${{ fromJSON(inputs.runner_target == 'owner-arm64' && format('["self-hosted","linux","arm64","{0}"]', inputs.jit_label) || '["ubuntu-24.04-arm"]') }}
     timeout-minutes: 20
     steps:
       - name: Validate owner exact-SHA dispatch

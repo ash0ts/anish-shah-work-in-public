@@ -257,6 +257,8 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(browser, /playwright install --with-deps chromium webkit/u);
   assert.match(browser, /npm run browser:release:existing/u);
   assert.match(browser, /timeout-minutes: 20/u);
+  assert.match(browser, /\|\| '\["ubuntu-24\.04-arm"\]'/u);
+  assert.doesNotMatch(browser, /ubuntu-latest/u);
   assert.doesNotMatch(browser, /Capture room review evidence/u);
   assert.match(runner, /playwright\.spotify-webkit\.config\.mjs/u);
   assert.match(runner, /Spotify rank navigation and consent remain keyboard-first/u);
