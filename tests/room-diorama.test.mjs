@@ -9,7 +9,7 @@ import sharp from "sharp";
 import { roomAtlasPlugin, validateRoomAtlasBytes } from "../components/play/room-3d/room-atlas.ts";
 import { ROOM_OBJECT_IDS } from "../components/play/room-platform/room-object-contract.ts";
 import { roomFamiliarPose, roomPropResponse, settleRoomPose } from "../components/play/room-3d/room-prop-response.ts";
-import { routeObject, markRoomHistoryEntry, clearRoomHistoryEntry, historyRoomObject, historyRoomDepth, historyRoomPath } from "../components/play/room-platform/room-history.ts";
+import { routeObject, markRoomHistoryEntry, clearRoomHistoryEntry, historyRoomObject, historyRoomDepth, historyRoomPath, roomReturnDepth } from "../components/play/room-platform/room-history.ts";
 
 test("the optimized first-party asset matches its hash, registry, and actual mesh budgets", async () => {
   const manifest = JSON.parse(await readFile(new URL("../components/play/room-3d/diorama.generated.json", import.meta.url)));
@@ -153,4 +153,17 @@ test("room history recognizes only closed routes and preserves router-owned stat
     assert.equal(historyRoomObject(), null);
     assert.equal(historyRoomDepth(), null);
   } finally { globalThis.window = previous; }
+});
+
+test("an immediate nested-route return resolves fresh history without double-counting", () => {
+  const atlas = "/play/travel";
+  const trip = "/play/travel/trips/tokyo";
+  // URL committed; passive route bookkeeping has not run yet.
+  assert.equal(roomReturnDepth(trip, atlas, 1, null, null), 2);
+  assert.equal(roomReturnDepth(trip, atlas, 1, atlas, 1), 2);
+  // Either the history marker or the effect has caught up before the frame.
+  assert.equal(roomReturnDepth(trip, atlas, 1, trip, 2), 2);
+  assert.equal(roomReturnDepth(trip, trip, 2, null, null), 2);
+  assert.equal(roomReturnDepth(trip, trip, 2, trip, 2), 2);
+  assert.equal(roomReturnDepth(atlas, trip, 2, atlas, 1), 1);
 });
