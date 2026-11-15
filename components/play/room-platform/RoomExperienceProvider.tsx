@@ -49,7 +49,7 @@ type RoomExperienceContextValue = RoomExperienceState & {
   rotate(rotation: RoomRotation): void;
   setFallback(reason: string): void;
   selectObject(id: RoomObjectId): void;
-  notifyRuntimeMounted(): void;
+  notifyRuntimeMounted(ready: boolean): void;
   objectRouteActive: boolean;
   enabledObjectIds: readonly RoomObjectId[];
   simulationEnabled: boolean;
@@ -418,8 +418,9 @@ export function RoomExperienceProvider({
     [announce, cancelTransition, enabledObjectIds.length, focusAfterPaint, state.focusedId],
   );
 
-  const notifyRuntimeMounted = useCallback(() => {
-    setRuntimeMounted(true);
+  const notifyRuntimeMounted = useCallback((ready: boolean) => {
+    setRuntimeMounted(ready);
+    if (!ready) return;
     announce("Interactive room opened.");
     focusAfterPaint(lastInvoker.current
       ? `[data-room-object-control="${lastInvoker.current}"]`

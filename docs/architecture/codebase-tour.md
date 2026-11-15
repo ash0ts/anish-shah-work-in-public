@@ -199,7 +199,9 @@ The first six pair one literal room screen with one server adapter. Travel owns
 its concrete route because atlas queries, trip pages, fixtures, and metadata
 have a different contract. `/play` itself performs no connector or Travel data
 read and does not preload provider, geography, or media data. Capable visits
-load the room after the poster and semantic links render. `?view=directory`
+load the room after the poster and semantic links render. Those same links stay
+usable until the scene reports stable frames; readiness, not module mounting,
+transfers focus and makes the overview inert. `?view=directory`
 opts out; exiting the room sets that state rather than immediately reopening it.
 
 `room-screens/ObjectScreen.tsx` supplies the shared hardware frame and navigation;

@@ -61,50 +61,6 @@ class RoomRuntimeBoundary extends Component<
   }
 }
 
-function RoomPosterFallback({
-  detail,
-  title,
-}: {
-  detail: string;
-  title: string;
-}) {
-  return (
-    <div
-      className={styles.posterFallback}
-      data-room-poster-fallback
-      role="status"
-    >
-      <picture>
-        <source
-          media="(max-width: 767px)"
-          srcSet="/assets/play/my-room-2001-neutral-mobile.cb7ee0619308.avif"
-          type="image/avif"
-        />
-        <source
-          srcSet="/assets/play/my-room-2001-neutral.4edcf2c380f5.avif"
-          type="image/avif"
-        />
-        <source
-          media="(max-width: 767px)"
-          srcSet="/assets/play/my-room-2001-neutral-mobile.e1cc0d1ad2de.webp"
-          type="image/webp"
-        />
-        <img
-          alt=""
-          decoding="async"
-          height="1000"
-          src="/assets/play/my-room-2001-neutral.30364e150078.webp"
-          width="1600"
-        />
-      </picture>
-      <p>
-        <strong>{title}</strong>
-        <span>{detail}</span>
-      </p>
-    </div>
-  );
-}
-
 export function RoomRuntime() {
   const room = useRoomExperience();
   const notifyRuntimeMounted = room.notifyRuntimeMounted;
@@ -142,8 +98,10 @@ export function RoomRuntime() {
   );
 
   useEffect(() => {
-    notifyRuntimeMounted();
-  }, [notifyRuntimeMounted]);
+    // Keep the server-rendered poster and object links usable until the real
+    // scene is stable. Do not replace them with another late loading image.
+    notifyRuntimeMounted(ready);
+  }, [notifyRuntimeMounted, ready]);
 
   useEffect(() => {
     const blockInterruptedCanvasTouch = () => {
@@ -268,7 +226,6 @@ export function RoomRuntime() {
 
   return (
     <section
-      aria-hidden={blocked || undefined}
       aria-busy={returning || undefined}
       aria-label="Interactive room"
       className={styles.runtime}
@@ -281,7 +238,8 @@ export function RoomRuntime() {
       data-room-transition-phase={room.phase}
       data-presenting={presenting}
       data-returning={returning || undefined}
-      inert={blocked}
+      aria-hidden={blocked || !ready || undefined}
+      inert={blocked || !ready}
       onClickCapture={suppressRetargetedCanvasClick}
       onPointerCancelCapture={finishCanvasTouch}
       onPointerDownCapture={trackCanvasTouch}
@@ -353,19 +311,8 @@ export function RoomRuntime() {
                 />
               )}
             </Suspense>
-            {!ready ? (
-              <RoomPosterFallback
-                detail={SITE_COPY.play["room-fallback-body"]}
-                title={SITE_COPY.play["pocket-stage-placing"]}
-              />
-            ) : null}
           </RoomRuntimeBoundary>
-        ) : (
-          <RoomPosterFallback
-            detail={SITE_COPY.play["room-fallback-body"]}
-            title="The room is staying still on this device."
-          />
-        )}
+        ) : null}
         {room.focusedId ? (
           <p aria-hidden="true" className={styles.objectCue} data-room-object-cue>
             <span>{ROOM_OBJECTS.find(({ id }) => id === room.focusedId)?.object}</span>

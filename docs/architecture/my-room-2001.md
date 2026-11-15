@@ -31,7 +31,10 @@ Canvas.
 `app/play/layout.tsx` installs the room state provider. `RoomOverview` renders
 the poster and seven ordinary links server-side. Visiting `/play` opens the
 eligible Room or Pocket Room directly. `?view=directory` selects the static
-list; Objects list and Escape preserve that choice until another explicit
+list. The original poster and links stay usable until the scene reports stable
+frames; only then does the runtime take focus and make the overview inert.
+The loading runtime stays measurable but hidden, without a second poster.
+Objects list and Escape preserve that choice until another explicit
 entry. The header remains reachable; the room is a main landmark, not a modal. Directly
 loading an object route renders its useful collection screen without creating
 the room. Browser Back and the explicit return control remain authoritative;
