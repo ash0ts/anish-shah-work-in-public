@@ -195,6 +195,10 @@ flowchart TD
 ```
 
 The seven objects are Watch, Read, Listen, Collect, Play, Move, and Travel.
+Room's renderer-free capability gate uses a bounded first-party worker for its
+WebGL2 probe, with a legacy DOM-canvas fallback. This keeps graphics-driver
+initialization out of the main-thread eligibility check; errors retain the
+semantic directory.
 The first six pair one literal room screen with one server adapter. Travel owns
 its concrete route because atlas queries, trip pages, fixtures, and metadata
 have a different contract. `/play` itself performs no connector or Travel data

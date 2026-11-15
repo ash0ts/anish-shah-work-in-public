@@ -9,6 +9,7 @@ import {
 
 import {
   detectRoomCapability,
+  prepareRoomWebGL2Support,
   type RoomCapabilityResult,
 } from "./room-capability";
 
@@ -29,18 +30,32 @@ export function useRoomCapability() {
   const lastSignature = useRef("");
 
   useEffect(() => {
+    let active = true;
+    let revision = 0;
     const mediaQueries = [
       window.matchMedia("(pointer: fine)"),
       window.matchMedia("(prefers-reduced-motion: reduce)"),
       window.matchMedia("(forced-colors: active)"),
     ];
 
-    const update = () => {
-      const next = detectRoomCapability();
+    const publish = (next: RoomCapabilityResult) => {
       const signature = `${next.eligible}:${next.tier}:${next.reasons.join(",")}`;
       if (signature === lastSignature.current) return;
       lastSignature.current = signature;
       setResult(next);
+    };
+
+    const update = () => {
+      const currentRevision = ++revision;
+      const policy = detectRoomCapability(true);
+      if (!policy.eligible) {
+        publish(policy);
+        return;
+      }
+      void prepareRoomWebGL2Support().then((supported) => {
+        if (!active || currentRevision !== revision) return;
+        publish(detectRoomCapability(supported));
+      });
     };
 
     update();
@@ -50,6 +65,7 @@ export function useRoomCapability() {
     for (const query of mediaQueries) query.addEventListener("change", update);
 
     return () => {
+      active = false;
       window.removeEventListener("resize", update);
       document.removeEventListener("visibilitychange", update);
       window.visualViewport?.removeEventListener("resize", update);

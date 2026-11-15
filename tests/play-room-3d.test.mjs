@@ -13,6 +13,7 @@ import {
 
 import {
   evaluateRoomCapability,
+  probeWebGL2InWorker,
   POCKET_ROOM_MINIMUM_VIEWPORT_HEIGHT,
   POCKET_ROOM_MINIMUM_VIEWPORT_WIDTH,
   ROOM_MINIMUM_VIEWPORT_WIDTH,
@@ -72,6 +73,30 @@ const capableEnvironment = {
 };
 const ROOM_RENDERER_GZIP_OPTIMIZATION_TARGET_BYTES = 225 * 1024;
 const ROOM_RENDERER_GZIP_HARD_CEILING_BYTES = 325 * 1024;
+
+test("the off-thread graphics probe accepts only an exact success and always terminates", async () => {
+  for (const [data, expected] of [[{ supported: true }, true], [{ supported: false }, false], [{ supported: "true" }, false], [null, false]]) {
+    let terminated = 0;
+    const worker = { onmessage: null, onerror: null, terminate() { terminated += 1; } };
+    const result = probeWebGL2InWorker(() => worker);
+    worker.onmessage({ data });
+    assert.equal(await result, expected);
+    worker.onmessage({ data: { supported: !expected } });
+    assert.equal(terminated, 1);
+  }
+});
+
+test("blocked, failed, and stalled graphics workers keep the directory usable", async () => {
+  assert.equal(await probeWebGL2InWorker(() => { throw Error("blocked"); }), false);
+  for (const fail of [true, false]) {
+    let terminated = 0;
+    const worker = { onmessage: null, onerror: null, terminate() { terminated += 1; } };
+    const result = probeWebGL2InWorker(() => worker, 5);
+    if (fail) worker.onerror({});
+    assert.equal(await result, false);
+    assert.equal(terminated, 1);
+  }
+});
 
 test("room capability fails closed for every ineligible environment", () => {
   assert.deepEqual(evaluateRoomCapability(capableEnvironment), {

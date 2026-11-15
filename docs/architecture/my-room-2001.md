@@ -79,6 +79,12 @@ The capability gate requires all of the following:
 - document visible and below the zoom fallback threshold; and
 - a successful WebGL2 probe.
 
+Eligible Room entry probes WebGL2 in a short-lived, first-party OffscreenCanvas
+worker when supported. It loads no renderer or content, returns one boolean,
+and terminates after a result, error, or three-second deadline. Older browsers
+retain the DOM-canvas probe. Motion/data-saving/viewport exclusions are checked
+first, and late results cannot override a newer capability decision.
+
 An ineligible device never requests the 3D chunk and keeps the poster plus
 directory. Context loss or runtime failure permanently falls back for the
 session. The reviewed high tier uses Drei Fisheye; frame-health checks downgrade
