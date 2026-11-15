@@ -7,7 +7,7 @@ import { chromium } from "@playwright/test";
 import * as chromeLauncher from "chrome-launcher";
 import lighthouse from "lighthouse";
 
-import { selectMedianLighthouseResult } from "./lib/lighthouse-statistics.mjs";
+import { assertLighthouseAssetLoaded, selectMedianLighthouseResult } from "./lib/lighthouse-statistics.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const releaseVersion = JSON.parse(
@@ -35,6 +35,7 @@ const categories = ["performance", "accessibility", "best-practices", "seo"];
 const minimumScore = 0.9;
 const maximumCls = 0.1;
 const lighthouseRunsPerRoute = 3;
+const roomAsset = JSON.parse(await readFile(path.join(root, "components/play/room-3d/diorama.generated.json"), "utf8"));
 
 function boundedOutput(current, chunk) {
   return `${current}${chunk}`.slice(-16_000);
@@ -98,7 +99,11 @@ async function launchChrome() {
           "--headless=new",
           "--no-sandbox",
           "--disable-dev-shm-usage",
-          "--disable-gpu",
+          // Match the functional browser suite: audit Room startup rather than
+          // an OS-dependent WebGL fallback. CPU/network throttling is unchanged.
+          "--enable-webgl",
+          "--ignore-gpu-blocklist",
+          "--use-angle=swiftshader",
         ],
       });
     } catch (error) {
@@ -212,6 +217,9 @@ try {
           sample.report,
           "utf8",
         );
+        if (route === "/play") {
+          assertLighthouseAssetLoaded(sample, new URL(roomAsset.assetPath, baseUrl).href);
+        }
       }
 
       const result = selectMedianLighthouseResult(samples);

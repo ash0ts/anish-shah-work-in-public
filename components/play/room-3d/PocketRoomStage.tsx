@@ -264,6 +264,10 @@ export function PocketRoomStage({
             performanceArmedAt={performanceArmedAt}
           />
           <RoomScene
+            // The poster remains visible until the scene settles. Start at
+            // the final pose instead of rendering an invisible entrance tween.
+            // User-driven turns and object approaches still animate normally.
+            animateEntry={false}
             approachPoseId={approachPoseId}
             focusedId={focusedId}
             onHoverChange={handleHover}

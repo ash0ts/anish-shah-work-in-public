@@ -27,6 +27,10 @@ export function RoomOverview({
       data-room-overview
       id="main"
     >
+      <link rel="preload" as="image" type="image/avif" fetchPriority="high"
+        media="(max-width: 767px)" href="/assets/play/my-room-2001-neutral-mobile.cb7ee0619308.avif" />
+      <link rel="preload" as="image" type="image/avif" fetchPriority="high"
+        media="(min-width: 768px)" href="/assets/play/my-room-2001-neutral.4edcf2c380f5.avif" />
       <header className={styles.intro}>
         <h1>{SITE_COPY.play["intro-title"]}</h1>
         <div>

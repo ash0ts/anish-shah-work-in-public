@@ -641,6 +641,8 @@ test("the static room poster is first-party, content-hashed, and bounded", async
   assert.match(overview, /<picture>/);
   assert.match(overview, /alt=""/);
   assert.match(overview, /fetchPriority="high"/);
+  assert.equal((overview.match(/rel="preload" as="image"/g) ?? []).length, 2);
+  assert.match(overview, /media="\(min-width: 768px\)"/);
   assert.match(overview, /media="\(max-width: 767px\)"/);
   assert.doesNotMatch(overview, /https?:\/\//);
 });

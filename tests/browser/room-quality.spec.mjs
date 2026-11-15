@@ -1255,12 +1255,18 @@ test.describe("My Room 2001 browser quality", () => {
 
       const page = await context.newPage();
       const runtimeScripts = runtimeChunkRequests(page);
+      await instrumentDrawCalls(page);
       await page.goto("/play", { waitUntil: "networkidle" });
       await expectRoomReady(page);
       const room = await expectRoomReady(page, {
         context: `opening the ${capability} Pocket Room`,
         expectedTier: "pocket",
       });
+      const startupDraws = await page.evaluate(() => window.__roomDrawMetrics.total);
+      expect(startupDraws, "Pocket startup must not render an invisible entrance tween").toBeLessThanOrEqual(160);
+      await nextAnimationFrame(page);
+      await nextAnimationFrame(page);
+      expect(await page.evaluate(() => window.__roomDrawMetrics.total), "Ready Pocket Room must idle without drawing").toBe(startupDraws);
       await expect(page.locator('[data-projection="pocket-perspective"]')).toBeVisible();
       await expect(room.getByRole("button", { name: "Previous view" })).toBeVisible();
       await expect(room.getByRole("button", { name: "Next view" })).toBeVisible();
