@@ -5,11 +5,12 @@ import { mkdir } from "node:fs/promises";
 const objects = ["watch", "read", "listen", "collect", "play", "move", "travel"];
 const widths = [320, 390, 768, 1024, 1440, 1920];
 
-test("collection screens preserve saved, empty, unavailable, and missing-artwork states", async ({ page }) => {
-  test.setTimeout(90_000);
-  await page.setViewportSize({ width: 320, height: 844 });
-  for (const fixture of ["empty", "stale", "unavailable", "long-title", "missing-artwork"]) {
-    for (const object of objects.filter((id) => id !== "travel")) {
+// Give each source/state its own context and normal test deadline. Thirty
+// navigations must not compete for one shared timeout on slower CI machines.
+for (const fixture of ["empty", "stale", "unavailable", "long-title", "missing-artwork"]) {
+  for (const object of objects.filter((id) => id !== "travel")) {
+    test(`${object}: ${fixture} collection remains readable and isolated`, async ({ page }) => {
+      await page.setViewportSize({ width: 320, height: 844 });
       const response = await page.goto(`/play/${object}?fixture=${fixture}`, { waitUntil: "networkidle" });
       expect(response.status()).toBe(200);
       await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
@@ -17,9 +18,9 @@ test("collection screens preserve saved, empty, unavailable, and missing-artwork
       await expect(page.locator("iframe, canvas")).toHaveCount(0);
       if (fixture === "stale" && object !== "move") await expect(page.getByText("Saved snapshot", { exact: true })).toBeVisible();
       if (["empty", "unavailable"].includes(fixture)) await expect(page.locator("[data-tactile-item]")).toHaveCount(0);
-    }
+    });
   }
-});
+}
 
 for (const object of objects) {
   test(`${object}: hardware screen, responsive controls, and accessible content`, async ({ page }) => {
@@ -92,39 +93,41 @@ test("deck transport wraps, preserves needle alignment, and never starts playbac
   await expect(page.locator("iframe")).toHaveCount(0);
 });
 
-test("all object screens retain no-JavaScript links, disclosures, and readable fallbacks", async ({ browser }) => {
-  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
-  const page = await context.newPage();
+test.describe("no-JavaScript object screens", () => {
+  test.use({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
   for (const object of objects) {
-    await page.goto(`/play/${object}`);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    const first = page.locator("[data-tactile-item]").first();
-    if (await first.count()) {
-      await first.locator("summary").click();
-      await expect(first.getByRole("link")).toBeVisible();
-    }
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
+    test(`${object}: links, disclosures, and readable fallbacks`, async ({ page }) => {
+      await page.goto(`/play/${object}`);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      const first = page.locator("[data-tactile-item]").first();
+      if (await first.count()) {
+        await first.locator("summary").click();
+        await expect(first.getByRole("link")).toBeVisible();
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
+    });
   }
-  await page.goto("/play/collect");
-  await page.getByRole("navigation", { name: "Record formats" }).getByRole("link", { name: /^Vinyl/ }).click();
-  await expect(page).toHaveURL(/format=vinyl/);
-  await expect(page.locator("[data-record-crate] > li")).toHaveCount(3);
-  await context.close();
+  test("Discogs format filters remain server navigable", async ({ page }) => {
+    await page.goto("/play/collect");
+    await page.getByRole("navigation", { name: "Record formats" }).getByRole("link", { name: /^Vinyl/ }).click();
+    await expect(page).toHaveURL(/format=vinyl/);
+    await expect(page.locator("[data-record-crate] > li")).toHaveCount(3);
+  });
 });
 
-test("forced colors and reduced motion keep native object interactions", async ({ browser }) => {
-  const context = await browser.newContext({ forcedColors: "active", reducedMotion: "reduce", viewport: { width: 320, height: 844 } });
-  const page = await context.newPage();
+test.describe("forced colors and reduced motion object screens", () => {
+  test.use({ forcedColors: "active", reducedMotion: "reduce", viewport: { width: 320, height: 844 } });
   for (const object of objects) {
-    await page.goto(`/play/${object}`, { waitUntil: "networkidle" });
-    const first = page.locator("[data-tactile-item]").first();
-    if (await first.count()) {
-      await first.locator("summary").focus();
-      await page.keyboard.press("Enter");
-      await expect(first).toHaveAttribute("open", "");
-      await expect(first.getByRole("link")).toBeVisible();
-    }
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
+    test(`${object}: native keyboard interactions`, async ({ page }) => {
+      await page.goto(`/play/${object}`, { waitUntil: "networkidle" });
+      const first = page.locator("[data-tactile-item]").first();
+      if (await first.count()) {
+        await first.locator("summary").focus();
+        await page.keyboard.press("Enter");
+        await expect(first).toHaveAttribute("open", "");
+        await expect(first.getByRole("link")).toBeVisible();
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
+    });
   }
-  await context.close();
 });
