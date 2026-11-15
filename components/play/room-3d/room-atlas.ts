@@ -28,7 +28,9 @@ export function roomAtlasPlugin(parser: GLTFParser): GLTFLoaderPlugin {
       const bytes: ArrayBuffer = await parser.getDependency("bufferView", source.bufferView);
       validateRoomAtlasBytes(bytes);
       const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }), {
-        colorSpaceConversion: "none", premultiplyAlpha: "none", imageOrientation: "none",
+        // The reviewed PNG has no orientation metadata; preserve its pixels
+        // using the current standard rather than the deprecated `none` option.
+        colorSpaceConversion: "none", premultiplyAlpha: "none", imageOrientation: "from-image",
       });
       if (bitmap.width !== 512 || bitmap.height !== 512) {
         bitmap.close();

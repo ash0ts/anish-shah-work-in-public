@@ -27,7 +27,9 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `components/play/room-platform/room-entry-policy.ts`, `room-history.ts`,
   `useRoomFocus.ts`, and `useRoomTransitions.ts`: direct-entry policy, history,
   focus, and transitions. Play navigation supplies intent; `?view=directory`
-  explicitly opts out. Keep the poster and semantic controls usable while loading.
+  explicitly opts out. Keep the original poster and semantic controls usable
+  until stable-scene readiness, not merely runtime mounting. Do not insert a
+  second loading poster or transfer focus before the controls become visible.
 - `scripts/room/**` and `assets/room/gothic-hardware/**`: pinned Blender 5.2.3 LTS
   authoring, editable source, original embedded atlas, and optimized GLB output.
   Follow the author/export procedure in `docs/architecture/my-room-2001.md`.

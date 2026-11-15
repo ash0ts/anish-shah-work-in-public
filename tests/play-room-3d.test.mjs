@@ -618,24 +618,24 @@ test("the static room poster is first-party, content-hashed, and bounded", async
       "utf8",
     ),
   ]);
-  // Validate the assets actually referenced by both surfaces, not old pinned names.
-  for (const surface of [overview, runtime]) {
-    const filenames = [...new Set([...surface.matchAll(
-      /\/assets\/play\/(my-room-2001-neutral(?:-mobile)?\.[a-f0-9]{12}\.(?:avif|webp))/g,
-    )].map((match) => match[1]))];
-    assert.equal(filenames.length, 4, "Each poster needs desktop/mobile AVIF and WebP");
-    for (const variant of ["neutral.", "neutral-mobile."]) {
-      for (const extension of [".avif", ".webp"]) {
-        assert.equal(filenames.filter((name) => name.includes(variant) && name.endsWith(extension)).length, 1);
-      }
+  // One SSR poster remains usable through startup; the runtime must not mount
+  // another late image. Validate every actual variant, not old pinned names.
+  assert.doesNotMatch(runtime, /my-room-2001-neutral|RoomPosterFallback/);
+  const filenames = [...new Set([...overview.matchAll(
+    /\/assets\/play\/(my-room-2001-neutral(?:-mobile)?\.[a-f0-9]{12}\.(?:avif|webp))/g,
+  )].map((match) => match[1]))];
+  assert.equal(filenames.length, 4, "The poster needs desktop/mobile AVIF and WebP");
+  for (const variant of ["neutral.", "neutral-mobile."]) {
+    for (const extension of [".avif", ".webp"]) {
+      assert.equal(filenames.filter((name) => name.includes(variant) && name.endsWith(extension)).length, 1);
     }
-    for (const filename of filenames) {
-      const url = new URL(`../public/assets/play/${filename}`, import.meta.url);
-      const [bytes, metadata] = await Promise.all([readFile(url), stat(url)]);
-      const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
-      assert.ok(filename.includes(`.${digest}.`));
-      assert.ok(metadata.size <= 200_000);
-    }
+  }
+  for (const filename of filenames) {
+    const url = new URL(`../public/assets/play/${filename}`, import.meta.url);
+    const [bytes, metadata] = await Promise.all([readFile(url), stat(url)]);
+    const digest = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
+    assert.ok(filename.includes(`.${digest}.`));
+    assert.ok(metadata.size <= 200_000);
   }
 
   assert.match(overview, /<picture>/);

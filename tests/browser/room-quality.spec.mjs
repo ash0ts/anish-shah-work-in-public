@@ -511,6 +511,34 @@ test.describe("My Room 2001 browser quality", () => {
     await expectRoomReady(page);
   });
 
+  test("the original poster stays usable until the mobile scene is ready", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    let releaseModel;
+    let modelRequested;
+    const released = new Promise(resolve => { releaseModel = resolve; });
+    const requested = new Promise(resolve => { modelRequested = resolve; });
+    await page.route(/\/assets\/play\/diorama\.[a-f0-9]+\.glb$/, async route => {
+      modelRequested();
+      await released;
+      await route.continue();
+    });
+    try {
+      await page.goto("/play", { waitUntil: "domcontentloaded" });
+      await requested;
+      const overview = page.locator("[data-room-overview]");
+      await expect(overview.locator("img")).toBeVisible();
+      await expect(overview).not.toHaveAttribute("inert", "");
+      const watch = overview.locator('[data-room-object-link="watch"]');
+      await watch.focus();
+      await expect(watch).toBeFocused();
+      await expect(page.locator("[data-room-runtime]")).not.toBeVisible();
+      await expect(page.locator("[data-room-poster-fallback]")).toHaveCount(0);
+    } finally { releaseModel(); }
+    await expectRoomReady(page);
+    await expect(page.locator("[data-room-runtime]")).toBeVisible();
+    await expect(page.locator("[data-room-overview]")).toHaveAttribute("inert", "");
+  });
+
   test("direct routes render the selected provider foundation without unrelated browser reads", async ({ page }) => {
     const requests = [];
     page.on("request", (request) => {
@@ -1420,10 +1448,16 @@ test.describe("My Room 2001 browser quality", () => {
     await dispatchTouch(client, "touchStart", [directPoint]);
     await page.setViewportSize({ width: 844, height: 500 });
     await dispatchTouch(client, "touchEnd");
-    await expect(room).toHaveAttribute("data-room-presentation-tier", "static");
-    await expect(room).toHaveAttribute("data-room-ready", "false");
+    const hiddenRuntime = page.locator("[data-room-runtime]");
+    await expect(hiddenRuntime).toHaveAttribute("data-room-presentation-tier", "static");
+    await expect(hiddenRuntime).toHaveAttribute("data-room-ready", "false");
+    await expect(hiddenRuntime).not.toBeVisible();
     await expect(page.locator("canvas")).toHaveCount(0);
-    await expect(page.locator("[data-room-runtime] img")).toBeVisible();
+    const staticOverview = page.locator("[data-room-overview]");
+    await expect(staticOverview.locator("img")).toBeVisible();
+    await expect(staticOverview).not.toHaveAttribute("inert", "");
+    await staticOverview.locator('[data-room-object-link="watch"]').focus();
+    await expect(staticOverview.locator('[data-room-object-link="watch"]')).toBeFocused();
 
     await page.setViewportSize({ width: 390, height: 844 });
     room = await expectRoomReady(page, {

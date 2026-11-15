@@ -136,6 +136,31 @@ test("atlas decoding rejects remote sources and oversized images before allocati
   }
 });
 
+test("atlas decoding preserves un-oriented pixels without deprecated bitmap options", async () => {
+  const bytes = new ArrayBuffer(33);
+  const view = new DataView(bytes);
+  for (const [offset, value] of [[0,0x89504e47],[4,0x0d0a1a0a],[8,13],[12,0x49484452],[16,512],[20,512]]) view.setUint32(offset,value);
+  const previous = globalThis.createImageBitmap;
+  let closed = false;
+  const bitmap = { width: 512, height: 512, close() { closed = true; } };
+  globalThis.createImageBitmap = async (blob, options) => {
+    assert.equal(blob.type, "image/png");
+    assert.deepEqual(options, { colorSpaceConversion: "none", premultiplyAlpha: "none", imageOrientation: "from-image" });
+    return bitmap;
+  };
+  try {
+    const plugin = roomAtlasPlugin({ json: { textures: [{ source: 0 }], images: [{ bufferView: 0, mimeType: "image/png" }] }, getDependency: async () => bytes });
+    const texture = await plugin.loadTexture(0);
+    assert.equal(texture.image, bitmap);
+    assert.equal(texture.flipY, false);
+    texture.dispose();
+    assert.equal(closed, true);
+  } finally {
+    if (previous) globalThis.createImageBitmap = previous;
+    else delete globalThis.createImageBitmap;
+  }
+});
+
 test("room history recognizes only closed routes and preserves router-owned state", () => {
   for (const id of ROOM_OBJECT_IDS) assert.equal(routeObject("/play/" + id), id);
   assert.equal(routeObject("/play/travel/trips/tokyo"), "travel");
