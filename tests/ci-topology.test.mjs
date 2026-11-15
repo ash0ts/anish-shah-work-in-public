@@ -207,6 +207,28 @@ test("repository setup reuses the exact baked release-runner toolchain", async (
   assert.match(action, /test "\$\(node --version\)" = "\$expected_node"/u);
   assert.match(action, /test "\$\(npm --version\)" = "\$expected_npm"/u);
   assert.match(action, /if \[ "\$\(npm --version\)" != "\$npm_version" \]/u);
+  assert.match(action, /npm ci --ignore-scripts/u);
+});
+
+test("targeted PR lanes generate copy before checking a clean checkout", async () => {
+  const gate = await text(".github/workflows/pr-gate.yml");
+  const program = gate.split("      - name: Run the path-selected checks\n")[1]
+    ?.split("        run: |\n")[1]?.split("      - name:")[0];
+  assert.ok(program, "The targeted lane must declare its validation commands.");
+  for (const lane of ["copy", "backend", "ui", "room", "simulation", "travel", "full"]) {
+    const result = spawnSync("bash", ["-c", `npm() { printf '%s\\n' "$*"; }\nnode() { :; }\n${program}`], {
+      encoding: "utf8",
+      env: { ...process.env, CI_LANE: lane },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const commands = result.stdout.trim().split("\n");
+    if (lane === "full") {
+      assert.deepEqual(commands, ["run validate"]);
+    } else {
+      assert.equal(commands[0], "run copy:generate", lane);
+      assert.ok(commands.indexOf("run copy:check") > 0, lane);
+    }
+  }
 });
 
 test("release browser evidence reuses the exact Validate artifact", async () => {
