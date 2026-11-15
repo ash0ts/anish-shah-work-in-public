@@ -267,7 +267,8 @@ test("Home signal circuit resolves three reviewed qualified metric IDs", () => {
   assert.match(impactEvidenceSource, /name="home-signal"/);
   assert.match(impactEvidenceSource, /\/sources#internal-analytics/);
   assert.match(impactEvidenceSource, /`\/sources#\$\{datum\.metric\.id\}`/);
-  assert.match(impactEvidenceSource, /track\.periodAsOf/);
+  assert.match(impactEvidenceSource, /track\.periodLabel/);
+  assert.match(impactEvidenceSource, /track\.explanation/);
   assert.match(impactSource, /periodAsOf: metric\.period\.asOf \?\? null/);
   assert.match(homeIconsSource, /function HomeSignalIcon/);
   assert.match(
@@ -282,14 +283,14 @@ test("Home signal circuit resolves three reviewed qualified metric IDs", () => {
 });
 
 test("Home presentation mapping is closed, ordered, and rejects unreviewed changes", () => {
-  assert.equal(homePresentationManifest.schemaVersion, "2.0");
+  assert.equal(homePresentationManifest.schemaVersion, "2.1");
   assert.deepEqual(
     homePresentationManifest.signals.map(
-      ({ id, theme, iconId, compactLimit }) => ({
+      ({ id, theme, iconId, explanation }) => ({
         id,
         theme,
         iconId,
-        compactLimit,
+        explanation,
       }),
     ),
     [
@@ -297,19 +298,19 @@ test("Home presentation mapping is closed, ordered, and rejects unreviewed chang
         id: "deployed",
         theme: "product",
         iconId: "tool-interface",
-        compactLimit: "Direct project usage · not revenue",
+        explanation: "Tool calls through the W&B MCP Server.",
       },
       {
         id: "taught",
         theme: "learning",
         iconId: "open-book",
-        compactLimit: "Enrollments · not unique learners",
+        explanation: "Enrollments across three AI courses.",
       },
       {
         id: "programs",
         theme: "programs",
         iconId: "program-network",
-        compactLimit: "Supported pipeline · not revenue",
+        explanation: "Pipeline supported across tracked event programs.",
       },
     ],
   );

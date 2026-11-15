@@ -11,3 +11,15 @@ LangChain outputs were scored against ethical principles and reviewed in W&B Pro
 
 ## role-summary
 Wrote the guide
+
+## work-done-1
+Wrote a guide to ethical scoring and output review.
+
+## skill-1
+LangChain
+
+## skill-2
+W&B Prompts
+
+## skill-3
+Evaluation design

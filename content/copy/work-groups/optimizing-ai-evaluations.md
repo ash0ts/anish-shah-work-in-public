@@ -7,7 +7,7 @@ Optimizing AI evaluations
 AI evaluations
 
 ## summary
-AI evaluation workflows are examined for ways to improve.
+Methods for improving evaluation workflows for AI applications.
 
 ## role-summary
 Meetup speaker

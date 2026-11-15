@@ -11,3 +11,12 @@ Plausible browser tabs can still fail an evidence-level check.
 
 ## role-summary
 Report author
+
+## work-done-1
+Analyzed plausible browser results against their supporting evidence.
+
+## skill-1
+Evidence analysis
+
+## skill-2
+Agent evaluation

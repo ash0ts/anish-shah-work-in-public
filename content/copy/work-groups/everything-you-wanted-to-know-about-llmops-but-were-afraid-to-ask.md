@@ -7,7 +7,7 @@ Operating LLM applications in practice
 Practical LLMOps
 
 ## summary
-Operating LLM applications became the focus of a practical interview.
+Practical decisions involved in operating LLM applications, discussed in an interview.
 
 ## role-summary
 Joined as the interview guest

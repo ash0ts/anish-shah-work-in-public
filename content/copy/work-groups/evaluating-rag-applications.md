@@ -7,7 +7,7 @@ RAG evaluation in practice
 Evaluating RAG systems
 
 ## summary
-A hosted session on evaluating retrieval-augmented generation applications.
+Evaluation methods for retrieval-augmented generation, taught in a co-facilitated session.
 
 ## role-summary
 Hosted and co-facilitated the session

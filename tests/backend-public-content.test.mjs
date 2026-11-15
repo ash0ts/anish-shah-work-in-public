@@ -228,6 +228,8 @@ test("canonical selectors expose explicit work groups without collection outcome
       "previously_observed_active_identity_pct",
       "lifetime_recorded_identities",
       "peak_observed_companies",
+      "owner_reported_users",
+      "owner_reported_wreus",
     ],
   );
   assert.equal(collectionMetricsFrom(staticBundle, "collection:events").length, 5);

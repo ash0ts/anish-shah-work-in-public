@@ -1,5 +1,11 @@
 # Repository Map
 
+Work presentation notes are generated from bounded `work-done-*`, `impact-*`,
+and `skill-*` copy fields. `lib/metric-history.ts` resolves the reviewed history
+manifest for Work and Sources; never infer a new unit or replace an old metric
+to simplify its presentation. `components/SupportingDisclosureBehavior.tsx`
+opens nested supporting disclosures for deep links without owning their content.
+
 Paths are relative to the repository root.
 
 This reference is the agent-facing ownership and risk map. The demonstrative,
@@ -65,7 +71,7 @@ request path, durable store, or progressive-enhancement boundary changes.
   additive, owner-reviewed projects and metric observations. Preserve stable
   IDs and immutable legacy inputs; private corroboration never enters this file.
 - `content/presentation/home-overview.v2.json`: exact Home metric IDs,
-  compact limits, code-native icon IDs, and four bucket/illustration mappings.
+  short signal explanations, code-native icon IDs, and four bucket/illustration mappings.
   Runtime counts derive from visible WorkGroups; hidden work never contributes.
   The manifest is attested and participates in `COPY_VERSION`, but remains
   outside the freelancer copy surface.

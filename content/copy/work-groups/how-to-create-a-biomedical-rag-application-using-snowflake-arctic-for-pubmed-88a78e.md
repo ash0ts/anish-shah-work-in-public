@@ -11,3 +11,15 @@ Snowflake Arctic and Weave implement PubMed RAG across an article and demo.
 
 ## role-summary
 Wrote the guide and owns the demo repository
+
+## work-done-1
+Authored the guide and supporting PubMed RAG demo.
+
+## skill-1
+Snowflake Arctic
+
+## skill-2
+Weave
+
+## skill-3
+RAG

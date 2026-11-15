@@ -53,10 +53,10 @@ test("public bundle preserves the complete footprint inventory", () => {
   assert.match(publicBundle.contentVersion, /^[a-f0-9]{16}$/);
   assert.deepEqual(publicBundle.sourceSummary, {
     footprintRows: 184,
-    impactRows: 93,
+    impactRows: 95,
     supplementalArtifacts: 18,
     publicItems: 202,
-    approvedMetricCount: 17,
+    approvedMetricCount: 19,
     footprintBackedUniqueWorks: 99,
     supplementalUniqueWorks: 7,
   });
@@ -69,10 +69,10 @@ test("public bundle preserves the complete footprint inventory", () => {
     publicBundle.items.filter((item) => item.id.startsWith("item:md-")).length,
     2,
   );
-  assert.equal(publicBundle.metrics.length, 17);
+  assert.equal(publicBundle.metrics.length, 19);
   assert.equal(publicBundle.workGroups.length, 88);
   assert.equal(publicBundle.metricGroups.length, 4);
-  assert.equal(publicBundle.evidence.length, 209);
+  assert.equal(publicBundle.evidence.length, 210);
 
   const expectedCategories = {
     article: 18,
@@ -339,7 +339,7 @@ test("public metrics have explicit scope and never imply collection inheritance"
     publicBundle.metrics.filter((metric) =>
       metric.displaySurfaces.includes("item_detail"),
     ).length,
-    11,
+    13,
   );
   assert(
     publicBundle.metrics
@@ -383,7 +383,7 @@ test("owner bundle retains source accounting when available", { skip: !existsSyn
   );
   assert.equal(
     ownerBundle.metrics.filter((metric) => Object.hasOwn(metric, "sourceRecord")).length,
-    93,
+    95,
   );
   assert.equal(ownerBundle.sourceSnapshots.length, 9);
   assert(ownerBundle.groupingLedger);

@@ -7,7 +7,7 @@ Multimodal LLM fine-tuning and evaluation
 Evaluating multimodal LLMs
 
 ## summary
-Multimodal LLM fine-tuning and evaluation shared one focused meetup session.
+Fine-tuning and evaluation workflows for multimodal language models.
 
 ## role-summary
 Presented the meetup session

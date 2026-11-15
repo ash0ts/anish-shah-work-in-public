@@ -52,7 +52,7 @@ Next track
 Loading the collection…
 
 ## collection-unavailable
-This collection is unavailable right now.
+Collection unavailable. Try again later.
 
 ## return-overview
 Back to overview
@@ -76,7 +76,7 @@ Search the record shelf
 Nothing in the crate matches.
 
 ## collect-no-results-body
-Broaden the title, artist, format, or decade.
+Try fewer filters or another search.
 
 ## travel-search-placeholder
 Search the public atlas
@@ -202,7 +202,7 @@ Travel log
 Postcard Planet
 
 ## travel-screen-summary
-Turn the globe, choose a place, and open the trips and photographs attached to it.
+Choose a place for trips and photographs.
 
 ## travel-seo-title
 Travel — Postcard Planet

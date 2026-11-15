@@ -95,6 +95,9 @@
 .metricEvidence { display: flex; flex-wrap: wrap; gap: 0.35rem 0.7rem; margin-top: 0.6rem; font-size: 0.75rem; }
 .metricEvidence span { color: var(--ink-muted); font-family: var(--font-mono); text-transform: uppercase; }
 .metricEvidence a { min-width: 0; color: inherit; overflow-wrap: anywhere; }
+.history { margin-top: 0.8rem; border-top: 1px solid var(--hairline); }
+.history > summary { padding-block: 0.85rem; cursor: pointer; font-size: 0.86rem; font-weight: 650; }
+.history > summary:focus-visible { outline: 2px solid var(--work-blue); outline-offset: 3px; }
 
 .rules {
   display: grid;

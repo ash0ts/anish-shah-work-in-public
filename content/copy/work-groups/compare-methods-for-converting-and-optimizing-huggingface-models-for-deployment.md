@@ -11,3 +11,15 @@ The comparison tested ways to convert and optimize Hugging Face models for deplo
 
 ## role-summary
 Coauthored with Manan Goel
+
+## work-done-1
+Coauthored a comparison of model conversion and deployment optimization methods.
+
+## skill-1
+Hugging Face
+
+## skill-2
+Model conversion
+
+## skill-3
+Deployment optimization

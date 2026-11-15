@@ -3,7 +3,7 @@
 The copy deck cannot directly alter:
 
 - Metric values, labels, qualifiers, periods, scope, attribution, sources, or evidence.
-- Home signal compact limits, metric/icon IDs, bucket/illustration IDs, and ordering
+- Home signal explanations, metric/icon IDs, bucket/illustration IDs, and ordering
   in `content/presentation/home-overview.v2.json`.
 - IDs, slugs, aliases, URLs, relations, WorkGroup membership, ordering, visibility, or featured state.
 - Event dates, source titles, bibliography records, or canonical provider data.
@@ -16,7 +16,11 @@ The copy deck cannot directly alter:
 
 Do not soften, round, aggregate, or newly infer a number to make a sentence read better. Do not turn supported pipeline into revenue, enrollments into unique people, appearances into unique works, or association into personal causation.
 
-If protected wording is inaccurate or awkward, propose:
+These are source-ownership boundaries, not prohibitions on an owner-authorized
+engineering change. Follow the latest request using the owning source; do not
+hide requested information to avoid touching a protected contract.
+
+For a copy-only assignment that needs an unrequested protected change, propose:
 
 1. The exact problem.
 2. The intended audience understanding.

@@ -7,7 +7,7 @@ Agent development with evaluation in the loop
 Agents with evaluation
 
 ## summary
-Agent development stayed tied to evaluation throughout the conference session.
+Agent development workflows that keep evaluation in the implementation loop.
 
 ## role-summary
 Presented the conference session

@@ -7,7 +7,7 @@ Agent observability in practice
 Observing AI agents
 
 ## summary
-Agent observability was presented at an AI Innovators meetup.
+Observability methods make agent behavior inspectable in a practical meetup session.
 
 ## role-summary
 Presented at AI Innovators

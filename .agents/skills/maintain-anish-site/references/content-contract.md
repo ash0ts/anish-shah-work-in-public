@@ -6,7 +6,7 @@
 2. `content/curation/content-v1.1.json` owns stable observations, aliases, relations, corrections, and conservative grouping.
 3. `content/curation/work-groups.v1.json` owns WorkGroup membership and structure.
 4. Reviewed claim, metric, and Home signal/overview presentation files own
-   approved quantitative claims, compact limits, icon identities, and
+   approved quantitative claims, short signal explanations, icon identities, and
    bucket/topic navigation.
 5. `scripts/build-content.mjs` deterministically generates owner/public bundles, schema, report, and attestation.
 6. `content/public/anish-content.public.v1.json` is the only checked-in canonical public bundle imported by the application.
@@ -19,8 +19,11 @@ observations. Declare the review date, source/date basis, status, and optional
 public artifact URL. Merge, review, and article-update dates are not release
 dates. Owner-approved internal work uses a public description and methodology
 source; private corroboration never enters this input or generated output.
-Keep unresolved metrics in PR review notes, not public bundles. Dated additions
-and active-claim replacements go through the existing metric projector.
+Keep unresolved metrics in PR review notes unless the owner explicitly approves
+publication as an owner-reported observation. Such observations remain tentative,
+dated, and explicitly undefined where the unit or window was not supplied; never
+promote them to verified analytics. Dated additions and active-claim replacements
+go through the existing metric projector.
 
 ## Presentation Precedence
 
@@ -32,7 +35,8 @@ and active-claim replacements go through the existing metric projector.
 source, field contract, parser/generator, and the reviewed
 `content/presentation/home-overview.v2.json` and
 `content/presentation/speaker-profile.v1.json` manifests. The public content
-attestation also inventories those manifests. Record both versions in preview
+attestation and copy hash also include `content/presentation/metric-history.v1.json`.
+Record both versions in preview
 metadata, owner health, release plans, and attestations.
 
 ## Copy Ownership
@@ -49,8 +53,10 @@ paths and review classes read-only.
 The copy deck cannot own metrics, evidence, dates, IDs, slugs, relationships,
 URLs, ordering, visibility, privacy/security/legal language, provider
 attribution/policy, connector payloads, states, behavior, generated data, or
-the Home signal/overview mapping and compact limits. Those belong in a proposal or
-linked engineering change. Use `$edit-anish-site-copy` for copy-only work.
+the Home signal/overview mapping and short signal explanations. Change those
+through their owning sources in an authorized engineering task; propose the
+expansion only when the assignment was copy-only. Use both repository skills
+for an owner-requested implementation spanning these boundaries.
 
 The parser rejects unknown/duplicate/missing headings, altered stable-ID markers, HTML, JSX, scripts, code fences, embedded links, control characters, private paths/domains, and field-length violations. Copy renders as plain React text; Markdown is never interpreted.
 

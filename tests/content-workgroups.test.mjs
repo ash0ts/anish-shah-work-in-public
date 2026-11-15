@@ -245,7 +245,7 @@ test("featured groups are ranked only within their bucket", () => {
 });
 
 test("metric presentation groups use the selected replacement checkpoints", () => {
-  assert.equal(publicBundle.metrics.length, 17);
+  assert.equal(publicBundle.metrics.length, 19);
   assert.deepEqual(
     publicBundle.metricGroups.map((group) => group.theme),
     ["learning", "product", "programs", "archive"],

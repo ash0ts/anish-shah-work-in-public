@@ -8,14 +8,47 @@ import {
 import { hasPublicQuery, publicPageMetadata } from "@/lib/seo";
 import styles from "./sources.module.css";
 import { SITE_COPY } from "@/lib/copy";
+import { splitMetricHistory } from "@/lib/metric-history";
+import { SupportingDisclosureBehavior } from "@/components/SupportingDisclosureBehavior";
+import type { EvidenceSource, PublicImpactMetric } from "@/types/content";
 
 export const dynamic = "force-dynamic";
+
+function MetricCard({ metric, evidenceById }: {
+  metric: PublicImpactMetric;
+  evidenceById: ReadonlyMap<string, EvidenceSource>;
+}) {
+  return <article id={metric.id}>
+    <strong>{metric.displayValue}</strong>
+    <div>
+      <h4>{metric.label}</h4>
+      <p>{metric.qualifier}</p>
+      <dl className={styles.metricContext}>
+        <div><dt>Scope</dt><dd>{metric.scope.replaceAll("_", " ")}</dd></div>
+        <div><dt>Attribution</dt><dd>{metric.attribution.replaceAll("_", " ")}</dd></div>
+        <div><dt>Period</dt><dd>{metric.period.label}
+          {metric.period.asOf && !/^Owner-(reviewed|reported)/u.test(metric.period.label) ? ` · as of ${metric.period.asOf}` : ""}
+        </dd></div>
+        <div><dt>Source</dt><dd>{metric.sourceLabel}</dd></div>
+      </dl>
+      <div className={styles.metricEvidence}>
+        {metric.publicEvidenceIds.flatMap((id) => {
+          const source = evidenceById.get(id);
+          if (!source) return [];
+          return [<Link key={id} prefetch={false} href={`/sources?${new URLSearchParams({ association: "claim", q: source.title })}#${id}`}>
+            {source.title}
+          </Link>];
+        })}
+      </div>
+    </div>
+  </article>;
+}
 
 const sourcesDescription = SITE_COPY.sources["seo-description"];
 
 const metricThemeDescriptions = {
   learning: "Enrollment and launch measures for three AI courses.",
-  product: "Rounded usage measures for the W&B MCP Server.",
+  product: SITE_COPY.sources["product-measures-description"],
   programs:
     "Reach and supported-pipeline measures for public programs.",
   archive: "Counts derived from published project records.",
@@ -128,6 +161,7 @@ export default async function SourcesPage({
     }));
   return (
     <main id="main" className={`site-main ${styles.page}`}>
+      <SupportingDisclosureBehavior />
       <header className={styles.intro}>
         <p className={styles.eyebrow}>{SITE_COPY.sources["intro-eyebrow"]}</p>
         <h1>{SITE_COPY.sources["intro-title"]}</h1>
@@ -147,68 +181,23 @@ export default async function SourcesPage({
           <h2 id="claims-title">{metrics.length} claims, each with its limit.</h2>
         </header>
         <div className={styles.themeGroups}>
-          {groupedMetrics.map((theme) => (
+          {groupedMetrics.map((theme) => {
+            const { current, historical } = splitMetricHistory(theme.metrics);
+            return (
             <section id={`metric-theme-${theme.id}`} key={theme.id}>
               <header>
                 <h3>{theme.label}</h3>
                 <p>{theme.description}</p>
               </header>
               <div>
-                {theme.metrics.map((metric) => (
-                  <article id={metric.id} key={metric.id}>
-                    <strong>{metric.displayValue}</strong>
-                    <div>
-                      <h4>{metric.label}</h4>
-                      <p>{metric.qualifier}</p>
-                      <dl className={styles.metricContext}>
-                        <div>
-                          <dt>Scope</dt>
-                          <dd>{metric.scope.replaceAll("_", " ")}</dd>
-                        </div>
-                        <div>
-                          <dt>Attribution</dt>
-                          <dd>{metric.attribution.replaceAll("_", " ")}</dd>
-                        </div>
-                        <div>
-                          <dt>Period</dt>
-                          <dd>
-                            {metric.period.label}
-                            {metric.period.asOf
-                              ? ` · as of ${metric.period.asOf}`
-                              : ""}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Source</dt>
-                          <dd>{metric.sourceLabel}</dd>
-                        </div>
-                      </dl>
-                      <div className={styles.metricEvidence}>
-                        <span>Sources</span>
-                        {metric.publicEvidenceIds.flatMap((evidenceId) => {
-                          const source = evidenceById.get(evidenceId);
-                          if (!source) return [];
-                          const query = new URLSearchParams({
-                            association: "claim",
-                            q: source.title,
-                          });
-                          return [
-                            <Link
-                              href={`/sources?${query.toString()}#${source.id}`}
-                              key={source.id}
-                              prefetch={false}
-                            >
-                              {source.title}
-                            </Link>,
-                          ];
-                        })}
-                      </div>
-                    </div>
-                  </article>
-                ))}
+                {current.map((metric) => <MetricCard key={metric.id} metric={metric} evidenceById={evidenceById} />)}
+                {historical.length ? <details className={styles.history} data-supporting-disclosure>
+                  <summary>{SITE_COPY.sources["history-label"]}</summary>
+                  {historical.map((metric) => <MetricCard key={metric.id} metric={metric} evidenceById={evidenceById} />)}
+                </details> : null}
               </div>
             </section>
-          ))}
+          ); })}
         </div>
       </section>
 
@@ -237,7 +226,11 @@ export default async function SourcesPage({
             </li>
           ))}
         </ol>
-        <details id="owner-reviewed-work">
+        <details id="owner-reported-metrics" data-supporting-disclosure>
+          <summary>{SITE_COPY.sources["owner-metrics-title"]}</summary>
+          <p>{SITE_COPY.sources["owner-metrics-body"]}</p>
+        </details>
+        <details id="owner-reviewed-work" data-supporting-disclosure>
           <summary>{SITE_COPY.sources["owner-reviewed-title"]}</summary>
           <p>{SITE_COPY.sources["owner-reviewed-body"]}</p>
         </details>

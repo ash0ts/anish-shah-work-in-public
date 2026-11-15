@@ -7,7 +7,7 @@ Building GenAI applications
 GenAI applications
 
 ## summary
-Google and W&B anchor a hands-on workshop on building GenAI applications.
+Hands-on GenAI application development using Google tooling and W&B.
 
 ## role-summary
 Hands-on workshop speaker

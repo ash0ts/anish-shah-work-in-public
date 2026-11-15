@@ -7,7 +7,16 @@ Saving and reloading scikit-learn classifiers
 Persisting scikit-learn classifiers
 
 ## summary
-Saving and reloading scikit-learn classifiers anchors this practical guide.
+Classifier persistence and reloading with scikit-learn.
 
 ## role-summary
 Guide author
+
+## work-done-1
+Documented classifier persistence and reloading.
+
+## skill-1
+scikit-learn
+
+## skill-2
+Model persistence

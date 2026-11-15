@@ -137,11 +137,17 @@ Authority is field-specific:
    evidence, metrics, and structure.
 2. Reviewed presentation manifests own narrow protected mappings. In
    particular, `home-overview.v2.json` binds three equal-weight signals to
-   exact metric IDs and compact limits and binds four work types to original code-native illustrations. The career and speaker manifests separately own
+   exact metric IDs and short signal explanations and binds four work types to original code-native illustrations. The career and speaker manifests separately own
    About chronology structure and speaker Work-filter destinations.
 3. Published D1 state owns allowlisted visibility, ordering, featured state,
    caveats, and metric wording.
 4. `content/copy/**` owns only declared page and WorkGroup presentation fields.
+
+Work detail notes are bounded optional arrays generated from reviewed plain-text
+contribution, impact, and skills fields. They do not extend the canonical schema
+or public API. `metric-history.v1.json` selects collapsed historical observations;
+Sources still renders each original definition, unit-bearing label, date, and
+evidence link exactly once. Compact Home disclosures link into that authority.
 
 `content/public/anish-content.public.v1.json` is generated deployable content;
 it is never an editing surface. Raw inputs and `content/private` stay outside

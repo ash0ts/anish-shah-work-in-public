@@ -72,7 +72,12 @@ procedure keeps the receipt and artifact in the same worktree even though the
 enforced identity is the repository/ref/SHA/artifact tuple, not a filesystem
 directory identifier.
 
-## Full Handoff
+## Broad-change validation
+
+A handoff does not automatically require these commands. For focused changes,
+run the classifier's affected checks and reuse matching evidence. Do not run
+`copy:voice` after `copy:check`, rebuild before every browser scope, or include
+unrelated Room/Travel soaks for a copy or documentation change.
 
 ```bash
 npm run validate

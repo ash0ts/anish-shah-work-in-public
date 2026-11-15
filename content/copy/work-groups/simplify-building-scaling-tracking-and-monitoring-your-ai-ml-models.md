@@ -7,7 +7,7 @@ Building, scaling, tracking, and monitoring AI/ML models
 AI/ML model operations
 
 ## summary
-Model building and scaling connect to experiment tracking and monitoring.
+Model development workflows combine scaling, experiment tracking, and monitoring.
 
 ## role-summary
 Webinar speaker

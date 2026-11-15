@@ -11,3 +11,15 @@ Hands-on instruction moved LLM applications from initial build through deploymen
 
 ## role-summary
 Organized the program, led instruction, and wrote the material
+
+## work-done-1
+Organized the program, led instruction, and wrote the material.
+
+## skill-1
+LLM application development
+
+## skill-2
+Deployment
+
+## skill-3
+Workshop design

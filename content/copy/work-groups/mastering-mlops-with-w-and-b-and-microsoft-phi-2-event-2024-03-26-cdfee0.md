@@ -7,7 +7,7 @@ MLOps with W&B and Microsoft Phi-2
 MLOps with Phi-2
 
 ## summary
-W&B MLOps workflows meet Microsoft Phi-2 across a session and recording.
+MLOps workflows for Microsoft Phi-2 using W&B experiment tooling.
 
 ## role-summary
 Session presenter

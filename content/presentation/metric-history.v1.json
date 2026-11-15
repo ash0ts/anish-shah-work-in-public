@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "metricIds": [
+    "metric:courses:same-day-account-share:2026-07-30",
+    "metric:course:llm-apps-evaluation:launch-signups:2025-01-10",
+    "metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22",
+    "metric:project:wandb-mcp-server:returning-share:2026-10-22",
+    "metric:project:wandb-mcp-server:lifetime-identities:2026-10-22",
+    "metric:project:wandb-mcp-server:peak-companies:2026-10-22",
+    "metric:project:wandb-mcp-server:audience:2026-06-11",
+    "metric:project:wandb-mcp-server:returning-share:2026-06-11",
+    "metric:project:wandb-mcp-server:weekly-reengaged:2026-07-28",
+    "metric:event:fully-connected-sf:reach:2024",
+    "metric:event:nvidia-gtc:leads:2024",
+    "metric:events:ic-associated-pipeline:2024"
+  ]
+}

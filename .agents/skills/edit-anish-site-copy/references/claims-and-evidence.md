@@ -5,7 +5,7 @@ Use this reference whenever wording contains a number, date, organization, role,
 ## Claim rules
 
 - Render facts from sanitized canonical content or an approved D1 presentation field. Never invent, estimate, sum, round, or reinterpret a claim in copy.
-- Keep value, period, scope, attribution, qualifier, and source together.
+- Keep the measure and essential provenance understandable beside the figure. Full definitions, dates, scope, and attribution live in Sources; do not repeat database-style fields on every surface.
 - Distinguish personal contribution, program outcome, and company outcome.
 - Use **enrollments**, not unique learners.
 - Use **same-day account creation**, not conversion.
@@ -16,11 +16,13 @@ Use this reference whenever wording contains a number, date, organization, role,
 
 Metric values, labels, qualifiers, periods, scope, attribution, display permissions, and evidence IDs are protected. A copywriter may propose new wording but may not change these fields.
 
-Home's short signal limits are reviewed summaries of those complete claim
-contracts. They live with exact metric and icon IDs in
-`content/presentation/home-overview.v2.json`; do not edit them through the
-copy deck. The expandable node must retain the full canonical qualifier,
-period, scope, attribution, and Sources link.
+Home's reviewed presentation manifest owns signal IDs and short explanations.
+Keep the requested figures visible, including owner-reported MCP users and
+WREUs beside tool calls. Label those supporting figures owner-reported without
+expanding WREU or asserting unique/active users. Signal disclosures contain a
+brief explanation, review date, and exact Sources link; the full definitions
+stay in Sources. Changing placement changes the manifest and display-surface
+curation, not the truth status of the observation.
 
 ## Work facts
 
@@ -64,4 +66,5 @@ For any protected proposal, record:
 5. Whether behavior, payload, accessibility, or legal review must change.
 6. Acceptance criteria.
 
-Do not implement the proposal until its owning system is changed and validated.
+In an authorized implementation task, make and validate the owning-system change
+as part of the work. In a proposal-only task, stop at the proposal.

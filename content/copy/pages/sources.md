@@ -48,6 +48,18 @@ Each derived measure keeps its period, source, attribution, rounding, and caveat
 ## claims-eyebrow
 Numbers
 
+## history-label
+Earlier observations
+
+## product-measures-description
+MCP usage measures and owner-reported figures.
+
+## owner-metrics-title
+Owner-reported figures
+
+## owner-metrics-body
+These figures record the owner's report, not an independent analytics check. Unspecified units and reporting windows stay unspecified. The report date records the review, not a measurement cutoff.
+
 ## bibliography-eyebrow
 Sources
 

@@ -6,6 +6,7 @@ import {
   COPY_PAGE_DEFINITIONS,
   WORK_GROUP_COPY_DEFINITIONS,
 } from "../../lib/copy-contract.ts";
+import { workGroupFieldEntries } from "./copy-deck.mjs";
 
 const HYPE = /\b(?:best[- ]in[- ]class|category[- ]defining|cutting[- ]edge|game[- ]changing|groundbreaking|revolutionary|turbocharge|unprecedented|unrivaled|world[- ]class|world(?:'s|’s)\s+best|thought\s+leader|number\s+one|10x)\b|#1/iu;
 const EMOJI = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
@@ -63,10 +64,6 @@ function normalizedSentence(value) {
     .trim();
 }
 
-function sourceFieldName(name) {
-  return name.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`);
-}
-
 function definitionsByKey(definitions) {
   return new Map(definitions.map((definition) => [definition.key, definition]));
 }
@@ -87,8 +84,7 @@ export function copyVoiceEntries(deck) {
   }
   const workDefinitions = definitionsByKey(WORK_GROUP_COPY_DEFINITIONS);
   for (const [groupId, values] of Object.entries(deck.workGroups)) {
-    for (const [name, value] of Object.entries(values)) {
-      const field = sourceFieldName(name);
+    for (const [field, value] of workGroupFieldEntries(values)) {
       entries.push({
         key: `${groupId}.${field}`,
         surface: "work-group",

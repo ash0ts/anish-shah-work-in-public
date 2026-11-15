@@ -211,16 +211,12 @@ test("homepage renders four illustrated work types and one qualified signal circ
     (markup.match(/<details\b[^>]*name="home-signal"/g) ?? []).length,
     3,
   );
-  assert.match(text, /Direct project usage · not revenue/i);
-  assert.match(text, /Enrollments · not unique learners/i);
-  assert.match(text, /Supported pipeline · not revenue/i);
-  assert.match(html, /Owner-reviewed analytics/i);
-  assert.match(html, /Owner-reported cumulative tool-call milestone/i);
-  assert.match(html, /Enrollments, not unique learners/i);
-  assert.match(html, /not revenue, closed ARR, or personal attribution/i);
-  for (const checkpoint of ["2026-11-14"]) {
-    assert.match(html, new RegExp(`as of ${checkpoint}`, "i"));
-  }
+  assert.match(text, /Tool calls through the W&B MCP Server/i);
+  assert.match(text, /Enrollments across three AI courses/i);
+  assert.match(text, /Event pipeline supported/i);
+  assert.match(text, /Owner-reviewed November 14, 2026/i);
+  assert.doesNotMatch(text, /Scope|Attribution|not revenue|unique learners/i);
+  assert.equal((markup.match(/Source &amp; definition/g) ?? []).length, 3);
   assert.doesNotMatch(text, /Tool use followed the MCP server launch/i);
   assert.doesNotMatch(text, /Three AI courses turned working methods/i);
   assert.doesNotMatch(text, /Event programs supported downstream/i);
@@ -323,7 +319,7 @@ test("all public routes expose useful server-rendered content", async () => {
         /What the numbers mean/i,
         /id="public-footprint"/i,
         /id="internal-analytics"/i,
-        /17(?:\s|<!--.*?-->)*claims, each with its limit/i,
+        /19(?:\s|<!--.*?-->)*claims, each with its limit/i,
         /Count each project once/i,
         /id="bibliography"/i,
       ],
@@ -396,7 +392,7 @@ test("Sources paginates the complete searchable bibliography 24 rows at a time",
   for (const value of [
     "202",
     "88",
-    "209",
+    "210",
     "13",
     "Claims",
     "Method",
@@ -455,8 +451,8 @@ test("Sources paginates the complete searchable bibliography 24 rows at a time",
     documentMarkup(claimHtml).match(
       /<section\b[^>]*id="bibliography"[^>]*>[\s\S]*?<\/section>/i,
     )?.[0] ?? "";
-  assert.match(claimIndex, /2 matching sources/i);
-  assert.equal((claimIndex.match(/<li\b/g) ?? []).length, 2);
+  assert.match(claimIndex, /3 matching sources/i);
+  assert.equal((claimIndex.match(/<li\b/g) ?? []).length, 3);
   assert.match(claimIndex, /value="claim" selected/i);
 
   const workHtml = await renderHtml("/sources?association=work");

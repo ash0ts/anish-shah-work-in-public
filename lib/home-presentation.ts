@@ -17,7 +17,7 @@ export type HomeSignalSpec = {
   theme: "product" | "learning" | "programs";
   metricId: string;
   iconId: HomeSignalIconId;
-  compactLimit: string;
+  explanation: string;
 };
 
 type HomeAreaSpec = {
@@ -26,7 +26,8 @@ type HomeAreaSpec = {
 };
 
 type HomePresentationManifest = {
-  schemaVersion: "2.0";
+  schemaVersion: "2.1";
+  supportingMetricIds: string[];
   signals: HomeSignalSpec[];
   areas: HomeAreaSpec[];
 };
@@ -44,23 +45,28 @@ const reviewedSignals = [
     theme: "product",
     metricId: "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
     iconId: "tool-interface",
-    compactLimit: "Direct project usage · not revenue",
+    explanation: "Tool calls through the W&B MCP Server.",
   },
   {
     id: "taught",
     theme: "learning",
     metricId: "metric:courses:enrollments:2026-11-14",
     iconId: "open-book",
-    compactLimit: "Enrollments · not unique learners",
+    explanation: "Enrollments across three AI courses.",
   },
   {
     id: "programs",
     theme: "programs",
     metricId: "metric:events:pipeline-supported:2026-11-14",
     iconId: "program-network",
-    compactLimit: "Supported pipeline · not revenue",
+    explanation: "Pipeline supported across tracked event programs.",
   },
 ] as const satisfies readonly HomeSignalSpec[];
+
+const reviewedSupportingMetrics = [
+  "metric:project:wandb-mcp-server:users-owner-report:2026-11-15",
+  "metric:project:wandb-mcp-server:wreus-owner-report:2026-11-15",
+];
 
 const reviewedAreas = [
   { bucketId: "products-open-source", illustrationId: "terminal" },
@@ -95,8 +101,9 @@ export function parseHomePresentationManifest(
   }
   const manifest = value as Record<string, unknown>;
   if (
-    !exactKeys(manifest, ["schemaVersion", "signals", "areas"]) ||
-    manifest.schemaVersion !== "2.0" ||
+    !exactKeys(manifest, ["schemaVersion", "signals", "areas", "supportingMetricIds"]) ||
+    manifest.schemaVersion !== "2.1" ||
+    JSON.stringify(manifest.supportingMetricIds) !== JSON.stringify(reviewedSupportingMetrics) ||
     !Array.isArray(manifest.signals) ||
     manifest.signals.length !== 3 ||
     !Array.isArray(manifest.areas) ||
@@ -116,7 +123,7 @@ export function parseHomePresentationManifest(
         "theme",
         "metricId",
         "iconId",
-        "compactLimit",
+        "explanation",
       ]) ||
       typeof signal.id !== "string" ||
       !signalIds.has(signal.id as HomeSignalSpec["id"]) ||
@@ -126,9 +133,9 @@ export function parseHomePresentationManifest(
       !/^metric:[a-z0-9:-]+$/.test(signal.metricId) ||
       typeof signal.iconId !== "string" ||
       !signalIconIds.has(signal.iconId as HomeSignalIconId) ||
-      typeof signal.compactLimit !== "string" ||
-      signal.compactLimit.length < 8 ||
-      signal.compactLimit.length > 64
+      typeof signal.explanation !== "string" ||
+      signal.explanation.length < 8 ||
+      signal.explanation.length > 100
     ) {
       throw new Error("home_signal_spec_invalid");
     }
@@ -138,7 +145,7 @@ export function parseHomePresentationManifest(
       signal.theme !== reviewed.theme ||
       signal.metricId !== reviewed.metricId ||
       signal.iconId !== reviewed.iconId ||
-      signal.compactLimit !== reviewed.compactLimit
+      signal.explanation !== reviewed.explanation
     ) {
       throw new Error("home_signal_spec_unreviewed");
     }
@@ -174,7 +181,7 @@ export function parseHomePresentationManifest(
       throw new Error("home_signal_order_invalid");
     }
   }
-  return { schemaVersion: "2.0", signals, areas };
+  return { schemaVersion: "2.1", signals, areas, supportingMetricIds: [...reviewedSupportingMetrics] };
 }
 
 export const homePresentationManifest =

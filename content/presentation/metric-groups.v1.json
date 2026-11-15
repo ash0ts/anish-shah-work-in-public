@@ -21,6 +21,8 @@
       "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
       "metricIds": [
         "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
+        "metric:project:wandb-mcp-server:wreus-owner-report:2026-11-15",
+        "metric:project:wandb-mcp-server:users-owner-report:2026-11-15",
         "metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22",
         "metric:project:wandb-mcp-server:returning-share:2026-10-22",
         "metric:project:wandb-mcp-server:lifetime-identities:2026-10-22",
