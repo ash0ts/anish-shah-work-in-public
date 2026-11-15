@@ -1448,10 +1448,16 @@ test.describe("My Room 2001 browser quality", () => {
     await dispatchTouch(client, "touchStart", [directPoint]);
     await page.setViewportSize({ width: 844, height: 500 });
     await dispatchTouch(client, "touchEnd");
-    await expect(room).toHaveAttribute("data-room-presentation-tier", "static");
-    await expect(room).toHaveAttribute("data-room-ready", "false");
+    const hiddenRuntime = page.locator("[data-room-runtime]");
+    await expect(hiddenRuntime).toHaveAttribute("data-room-presentation-tier", "static");
+    await expect(hiddenRuntime).toHaveAttribute("data-room-ready", "false");
+    await expect(hiddenRuntime).not.toBeVisible();
     await expect(page.locator("canvas")).toHaveCount(0);
-    await expect(page.locator("[data-room-runtime] img")).toBeVisible();
+    const staticOverview = page.locator("[data-room-overview]");
+    await expect(staticOverview.locator("img")).toBeVisible();
+    await expect(staticOverview).not.toHaveAttribute("inert", "");
+    await staticOverview.locator('[data-room-object-link="watch"]').focus();
+    await expect(staticOverview.locator('[data-room-object-link="watch"]')).toBeFocused();
 
     await page.setViewportSize({ width: 390, height: 844 });
     room = await expectRoomReady(page, {
