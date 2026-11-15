@@ -14,3 +14,10 @@ export function selectMedianLighthouseResult(results) {
   ranked.sort((left, right) => left.score - right.score || left.index - right.index);
   return ranked[Math.floor(ranked.length / 2)].result;
 }
+
+export function assertLighthouseAssetLoaded(result, assetUrl) {
+  const requests = result?.lhr?.audits?.["network-requests"]?.details?.items ?? [];
+  if (!requests.some(({ url, statusCode }) => url === assetUrl && statusCode >= 200 && statusCode < 300)) {
+    throw new Error("Lighthouse Room audit did not load its 3D asset; a static fallback is not runtime performance evidence.");
+  }
+}

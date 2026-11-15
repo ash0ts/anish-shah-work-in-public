@@ -212,6 +212,12 @@ object, Room and Travel suites. Phase durations are written to
 Lighthouse collects three samples per route and applies the 0.90 performance
 budget to the median-performance run; all reports are retained. This is
 benchmark sampling, not a retry that converts a functional failure into a pass.
+Chrome uses the same explicit software-WebGL flags as the functional suite on
+macOS and Linux. Every Play sample must request the current first-party GLB;
+a static fallback is not accepted as evidence of 3D startup performance.
+Pocket entry also bounds initial draw calls and verifies that the ready room
+stops drawing until interaction. Its poster covers loading, not an invisible
+entrance animation.
 Twenty-fold click/drag loops, all-object Pocket stress, performance-downgrade
 stress, and room-review captures belong to the separate manual stability soak.
 
