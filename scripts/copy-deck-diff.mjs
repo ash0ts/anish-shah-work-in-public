@@ -7,6 +7,7 @@ import {
   copyChangedPaths,
   copyRiskManifest,
   readCopyDeck,
+  workGroupFieldEntries,
 } from "./lib/copy-deck.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const argumentIndex = process.argv.indexOf("--base");
@@ -69,7 +70,7 @@ for (const relativePath of changedPaths.sort()) {
     if (!group) continue;
     const source = await readFile(path.join(root, relativePath), "utf8");
     const marker = source.split("\n")[0];
-    currentValues = Object.fromEntries(Object.entries(current.workGroups[group.id]).map(([name, value]) => [name.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`), value]));
+    currentValues = Object.fromEntries(workGroupFieldEntries(current.workGroups[group.id]));
     oldValues = parseLoose(oldFile(relativePath), marker);
     prefix = group.id;
   }

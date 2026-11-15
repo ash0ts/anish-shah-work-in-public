@@ -65,6 +65,30 @@ function definitionsByKey(definitions) {
   return new Map(definitions.map((definition) => [definition.key, definition]));
 }
 
+// Keep the plain-text field contract authoritative across generation, review,
+// trusted-copy comparison, and voice validation.
+export function workGroupFieldEntries(values) {
+  return Object.entries(values).flatMap(([name, value]) => {
+    const prefix = { workDone: "work-done", impact: "impact", skills: "skill" }[name];
+    return prefix
+      ? value.map((text, index) => [`${prefix}-${index + 1}`, text])
+      : [[name.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`), value]];
+  });
+}
+
+function optionalList(values, prefix, maximum, file) {
+  const result = [];
+  let ended = false;
+  for (let index = 1; index <= maximum; index++) {
+    const value = values[`${prefix}-${index}`];
+    if (!value) { ended = true; continue; }
+    if (ended || result.includes(value)) failure(file, `${prefix} must be consecutive and distinct`);
+    if (/\b(?:I|me|my|mine|myself)\b/iu.test(value)) failure(file, `${prefix} must describe the work without first person`);
+    result.push(value);
+  }
+  return result.length ? result : undefined;
+}
+
 export function parseCopyDocument({
   file,
   source,
@@ -254,6 +278,11 @@ export async function readCopyDeck(root) {
       summary: values.summary,
       roleSummary: values["role-summary"],
       ...(values["detail-note"] ? { detailNote: values["detail-note"] } : {}),
+      ...Object.fromEntries([
+        ["workDone", optionalList(values, "work-done", 3, relativePath)],
+        ["impact", optionalList(values, "impact", 2, relativePath)],
+        ["skills", optionalList(values, "skill", 5, relativePath)],
+      ].filter(([, value]) => value)),
     };
     sourceFiles.push({ path: relativePath, source });
   }
@@ -264,6 +293,7 @@ export async function readCopyDeck(root) {
 export async function copyVersionForDeck(root, sourceFiles) {
   const implementationPaths = [
     "content/presentation/home-overview.v2.json",
+    "content/presentation/metric-history.v1.json",
     "content/presentation/speaker-profile.v1.json",
     "lib/copy-contract.ts",
     "lib/copy-voice-contract.ts",
@@ -362,12 +392,11 @@ export async function copyRiskManifest(root) {
   for (const [groupId, values] of Object.entries(deck.workGroups)) {
     const group = deck.publicBundle.workGroups.find((candidate) => candidate.id === groupId);
     const definitions = definitionsByKey(WORK_GROUP_COPY_DEFINITIONS);
-    for (const key of Object.keys(values)) {
-      const sourceKey = key.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`);
+    for (const [sourceKey, value] of workGroupFieldEntries(values)) {
       const definition = definitions.get(sourceKey);
       fields.push({
         key: `${groupId}.${sourceKey}`,
-        risk: effectiveCopyRisk(definition.risk, values[key]),
+        risk: effectiveCopyRisk(definition.risk, value),
         route: `/work/${group.slug}`,
       });
     }

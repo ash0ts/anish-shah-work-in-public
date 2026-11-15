@@ -26,6 +26,21 @@ export function historyRoomPath(): string | null {
   return typeof value === "string" ? value : null;
 }
 
+/** Resolve at navigation time: the URL can commit before React's route effect. */
+export function roomReturnDepth(
+  pathname: string,
+  trackedPath: string,
+  trackedDepth: number,
+  storedPath: string | null,
+  storedDepth: number | null,
+): number {
+  if (storedPath === pathname && storedDepth) return storedDepth;
+  const depth = Math.max(1, trackedDepth);
+  return pathname !== trackedPath && routeObject(pathname) !== null &&
+    routeObject(pathname) === routeObject(trackedPath)
+    ? depth + 1 : depth;
+}
+
 export function markRoomHistoryEntry(id: RoomObjectId, depth = 1) {
   const currentState =
     window.history.state && typeof window.history.state === "object"

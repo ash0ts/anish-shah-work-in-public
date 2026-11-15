@@ -1,6 +1,6 @@
 {
   "name": "anish-shah-work-in-public",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "private": true,
   "packageManager": "npm@11.6.2",
   "engines": {
@@ -29,7 +29,7 @@
     "copy:diff": "node scripts/copy-deck-diff.mjs",
     "copy:voice": "node scripts/copy-voice-check.mjs",
     "copy:audit": "node scripts/copy-voice-check.mjs --audit",
-    "copy:test": "node --test tests/copy-deck.test.mjs tests/copy-only-lane.test.mjs tests/copy-voice.test.mjs tests/public-language-ownership.test.mjs",
+    "copy:test": "node --test tests/copy-deck.test.mjs tests/copy-only-lane.test.mjs tests/copy-voice.test.mjs tests/public-language-ownership.test.mjs tests/clearer-work.test.mjs",
     "verify:content": "node scripts/build-content.mjs --check",
     "content:attest": "node scripts/public-content-attestation.mjs --check",
     "content:attest:write": "node scripts/public-content-attestation.mjs --write",

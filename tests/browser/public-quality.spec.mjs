@@ -5,6 +5,55 @@ import { expectRoomReady } from "./helpers/room-readiness.mjs";
 const routes = ["/", "/about", "/work", "/play", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
 
+test("clearer signals and project notes retain keyboard, source and history access", async ({ page }) => {
+  await page.goto("/");
+  const signals = page.locator("[data-signal-circuit] details");
+  await expect(signals).toHaveCount(3);
+  await expect(page.locator("[data-mcp-supporting-metrics]")).toBeVisible();
+  await expect(page.locator("[data-mcp-supporting-metrics]").getByRole("link", {name:"5,000+ users", exact:true})).toBeVisible();
+  await expect(page.locator("[data-mcp-supporting-metrics]").getByRole("link", {name:"500 WREUs", exact:true})).toBeVisible();
+  await expect(page.locator("[data-mcp-supporting-metrics]")).toContainText("Owner-reported");
+  await signals.first().locator("summary").focus();
+  await page.keyboard.press("Enter");
+  await expect(signals.first()).toHaveAttribute("open", "");
+  await expect(signals.first()).toContainText("Tool calls through the W&B MCP Server.");
+  await expect(signals.first()).toContainText("Owner-reviewed November 14, 2026");
+  await signals.first().getByRole("link", {name:/Source & definition/}).click();
+  await expect(page.getByRole("heading", {level:1})).toBeVisible();
+  await page.goto("/work/wandb-mcp-server");
+  for (const title of ["Work done", "Impact", "Skills / tools"]) {
+    await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+  }
+  await expect(page.getByText("5,000+", {exact:true})).toBeVisible();
+  await expect(page.getByText("WREUs", {exact:true})).toBeVisible();
+  await expect(page.getByText("≈4,800", {exact:true})).not.toBeVisible();
+  await page.getByText("Earlier observations", {exact:true}).click();
+  await expect(page.getByText("≈4,800", {exact:true})).toBeVisible();
+  for (const width of [320,390,768,1024,1440,1920]) {
+    await page.setViewportSize({width,height:900});
+    expect((await pageOverflow(page)).documentWidth).toBeLessThanOrEqual(width + 1);
+  }
+  await page.emulateMedia({forcedColors:"active",reducedMotion:"reduce"});
+  expect((await new AxeBuilder({page}).include("main").analyze()).violations).toEqual([]);
+  await page.goto("/sources#metric:project:wandb-mcp-server:lifetime-identities:2026-10-22");
+  const old = page.locator('[id="metric:project:wandb-mcp-server:lifetime-identities:2026-10-22"]');
+  await expect(old).toBeVisible();
+  await expect(old).toContainText("≈4,800");
+});
+
+test("clearer disclosures remain usable without JavaScript", async ({browser}) => {
+  const context = await browser.newContext({javaScriptEnabled:false, viewport:{width:320,height:900}});
+  const page = await context.newPage();
+  await page.goto("/");
+  await page.locator("[data-signal-circuit] summary").first().click();
+  await expect(page.getByText("Tool calls through the W&B MCP Server.", {exact:true})).toBeVisible();
+  await page.goto("/work/wandb-mcp-server");
+  await page.getByText("Earlier observations", {exact:true}).click();
+  await expect(page.getByText("≈4,800", {exact:true})).toBeVisible();
+  expect((await pageOverflow(page)).documentWidth).toBeLessThanOrEqual(321);
+  await context.close();
+});
+
 test("October projects retain semantic evidence and honest nonpublic-material states", async ({ browser }) => {
   test.setTimeout(60_000);
   const context = await browser.newContext({ javaScriptEnabled: false });

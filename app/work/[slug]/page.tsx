@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { publicBundle } from "@/lib/content";
 import { SITE_COPY, workGroupCopyFor } from "@/lib/copy";
+import { splitMetricHistory } from "@/lib/metric-history";
+import { SupportingDisclosureBehavior } from "@/components/SupportingDisclosureBehavior";
 import { isKnownUnavailablePublicUrl } from "@/lib/public-url-health";
 import {
   findWorkGroupBySlugFrom,
@@ -40,7 +42,6 @@ import type {
   PortfolioItem,
   WorkGroup,
 } from "@/types/content";
-import { WorkDetailDisclosureBehavior } from "./WorkDetailDisclosureBehavior";
 import styles from "./case.module.css";
 
 export const dynamic = "force-dynamic";
@@ -168,7 +169,8 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
     .map((id) => entityById.get(id))
     .filter((entity) => Boolean(entity));
   const evidence = evidenceForItems(bundle, items);
-  const detailNote = workGroupCopyFor(group.id)?.detailNote;
+  const presentation = workGroupCopyFor(group.id);
+  const detailNote = presentation?.detailNote;
   const primaryArtifact = [primary, ...items].find((item) =>
     item.urls.some(({ url }) => !isKnownUnavailablePublicUrl(url)),
   ) ?? primary;
@@ -287,6 +289,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
     ],
   };
   const hasPrimaryContent = Boolean(
+    presentation?.workDone?.length || presentation?.impact?.length || presentation?.skills?.length ||
     topicFacets.length ||
       outcomes.length ||
       memberEntities.length > 1 ||
@@ -295,7 +298,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
 
   return (
     <main id="main" className={`site-main ${styles.page}`}>
-      <WorkDetailDisclosureBehavior />
+      <SupportingDisclosureBehavior />
       <script
         nonce={nonce}
         suppressHydrationWarning
@@ -358,12 +361,22 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
               </div>
             ) : null}
 
+            <WorkBullets title={SITE_COPY.work["detail-work-done"]} values={presentation?.workDone} />
+            <WorkBullets title={SITE_COPY.work["detail-impact"]} values={presentation?.impact} />
+            {presentation?.skills?.length ? (
+              <section className={styles.contribution}>
+                <h2>{SITE_COPY.work["detail-skills"]}</h2>
+                <ul className={styles.skills}>
+                  {presentation.skills.map((skill) => <li key={skill}>{skill}</li>)}
+                </ul>
+              </section>
+            ) : null}
+
             {outcomes.length ? (
               <section
                 className={styles.outcomes}
                 aria-labelledby="outcomes-title"
               >
-                <p className={styles.sectionLabel}>Direct results</p>
                 <h2 id="outcomes-title">{SITE_COPY.work["detail-results"]}</h2>
                 <MetricRows metrics={outcomes} />
               </section>
@@ -374,7 +387,8 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                 className={styles.members}
                 aria-labelledby="members-title"
               >
-                <h2 id="members-title">{SITE_COPY.work["detail-included"]}</h2>
+                <details className={styles.supportingDisclosure} data-supporting-disclosure>
+                <summary><strong id="members-title">{SITE_COPY.work["detail-included"]}</strong></summary>
                 <ol>
                   {memberEntities.map((entity) =>
                     entity ? (
@@ -390,6 +404,7 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                     ) : null,
                   )}
                 </ol>
+                </details>
               </section>
             ) : null}
 
@@ -398,11 +413,13 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
                 className={styles.context}
                 aria-labelledby="context-title"
               >
-                <h2 id="context-title">Program context</h2>
+                <details className={styles.supportingDisclosure} data-supporting-disclosure>
+                <summary><strong id="context-title">{SITE_COPY.work["detail-program-context"]}</strong></summary>
                 <p className={styles.contextNote}>
                   {SITE_COPY.work["detail-context"]}
                 </p>
                 <MetricRows metrics={context} compact />
+                </details>
               </section>
             ) : null}
           </article> : null}
@@ -529,26 +546,42 @@ function MetricRows({
   metrics: ReturnType<typeof publicMetricsFrom>;
   compact?: boolean;
 }) {
+  const { current, historical } = splitMetricHistory(metrics);
   return (
     <div className={compact ? styles.contextList : styles.outcomeList}>
-      {metrics.map((metric) => (
+      {current.map((metric) => (
         <article key={metric.id}>
           <strong>{metric.displayValue}</strong>
           <div>
             <h3>{metric.label}</h3>
-            {metric.qualifier ? <p>{metric.qualifier}</p> : null}
-            {!compact ? (
-              <span>
-                {metric.attribution} · {metric.sourceLabel} ·{" "}
-                {metric.period.label}
-                {metric.period.asOf ? ` · as of ${metric.period.asOf}` : ""}
-              </span>
-            ) : null}
+            <span>{metric.period.label}</span>
+            <Link href={`/sources#${metric.id}`} prefetch={false}>{SITE_COPY.work["detail-metric-source"]}</Link>
           </div>
         </article>
       ))}
+      {historical.length ? (
+        <details className={styles.supportingDisclosure} data-supporting-disclosure>
+          <summary>{SITE_COPY.work["detail-history"]}</summary>
+          {historical.map((metric) => (
+            <article key={metric.id} id={metric.id}>
+              <strong>{metric.displayValue}</strong>
+              <div><h3>{metric.label}</h3><span>{metric.period.label}</span>
+                <Link href={`/sources#${metric.id}`} prefetch={false}>{SITE_COPY.work["detail-metric-source"]}</Link>
+              </div>
+            </article>
+          ))}
+        </details>
+      ) : null}
     </div>
   );
+}
+
+function WorkBullets({ title, values }: { title: string; values?: readonly string[] }) {
+  if (!values?.length) return null;
+  return <section className={styles.contribution}>
+    <h2>{title}</h2>
+    <ul>{values.map((value) => <li key={value}>{value}</li>)}</ul>
+  </section>;
 }
 
 function appearanceTitle(

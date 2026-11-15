@@ -11,3 +11,9 @@ PII detection safeguards are proposed through a pull request.
 
 ## role-summary
 Pull-request contributor
+
+## work-done-1
+Proposed PII detection safeguards in a pull request.
+
+## skill-1
+PII detection

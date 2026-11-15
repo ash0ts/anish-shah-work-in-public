@@ -13,6 +13,8 @@ export const APPROVED_PUBLIC_DISPLAYS = new Set([
   "76%",
   "70%",
   "≈4,800",
+  "5,000+",
+  "500",
   "30",
   "More than two-thirds",
   "Hundreds",

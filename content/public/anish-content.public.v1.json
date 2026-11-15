@@ -1,13 +1,13 @@
 {
   "schemaVersion": "1.2",
-  "contentVersion": "eb8a486d0636e5fd",
-  "generatedAt": "2026-11-14T00:00:00.000Z",
+  "contentVersion": "9fbe9f6b3c94c4a6",
+  "generatedAt": "2026-11-15T00:00:00.000Z",
   "sourceSummary": {
     "footprintRows": 184,
-    "impactRows": 93,
+    "impactRows": 95,
     "supplementalArtifacts": 18,
     "publicItems": 202,
-    "approvedMetricCount": 17,
+    "approvedMetricCount": 19,
     "footprintBackedUniqueWorks": 99,
     "supplementalUniqueWorks": 7
   },
@@ -20792,6 +20792,62 @@
       "publicEvidenceIds": [
         "evidence:methodology:internal-analytics"
       ]
+    },
+    {
+      "id": "metric:project:wandb-mcp-server:users-owner-report:2026-11-15",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "owner_reported_users",
+      "displayValue": "5,000+",
+      "label": "users",
+      "qualifier": "Owner-reported. User definition and reporting window were not supplied.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-11-15",
+        "label": "Owner-reported November 15, 2026"
+      },
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "homepage",
+        "item_detail",
+        "sources"
+      ],
+      "sourceLabel": "Owner report",
+      "publicationState": "public",
+      "verificationState": "tentative",
+      "publicEvidenceIds": [
+        "evidence:methodology:owner-reported-metrics"
+      ]
+    },
+    {
+      "id": "metric:project:wandb-mcp-server:wreus-owner-report:2026-11-15",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "owner_reported_wreus",
+      "displayValue": "500",
+      "label": "WREUs",
+      "qualifier": "Owner-reported. The acronym and reporting window were not defined.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-11-15",
+        "label": "Owner-reported November 15, 2026"
+      },
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "homepage",
+        "item_detail",
+        "sources"
+      ],
+      "sourceLabel": "Owner report",
+      "publicationState": "public",
+      "verificationState": "tentative",
+      "publicEvidenceIds": [
+        "evidence:methodology:owner-reported-metrics"
+      ]
     }
   ],
   "metricGroups": [
@@ -20815,6 +20871,8 @@
       "leadMetricId": "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
       "metricIds": [
         "metric:project:wandb-mcp-server:tool-calls:2026-11-14",
+        "metric:project:wandb-mcp-server:wreus-owner-report:2026-11-15",
+        "metric:project:wandb-mcp-server:users-owner-report:2026-11-15",
         "metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22",
         "metric:project:wandb-mcp-server:returning-share:2026-10-22",
         "metric:project:wandb-mcp-server:lifetime-identities:2026-10-22",
@@ -20859,6 +20917,16 @@
       "publisher": "anishshah.dev",
       "capturedAt": "2026-07-30",
       "verificationState": "corroborated"
+    },
+    {
+      "id": "evidence:methodology:owner-reported-metrics",
+      "title": "Owner-reported metrics — definitions and review limits",
+      "kind": "methodology",
+      "access": "public_web",
+      "url": "/sources#owner-reported-metrics",
+      "publisher": "Anish Shah",
+      "capturedAt": "2026-11-15",
+      "verificationState": "tentative"
     },
     {
       "id": "evidence:methodology:owner-reviewed-work",
@@ -23723,7 +23791,9 @@
         "metric:project:wandb-mcp-server:weekly-active-growth:2026-10-22",
         "metric:project:wandb-mcp-server:returning-share:2026-10-22",
         "metric:project:wandb-mcp-server:lifetime-identities:2026-10-22",
-        "metric:project:wandb-mcp-server:peak-companies:2026-10-22"
+        "metric:project:wandb-mcp-server:peak-companies:2026-10-22",
+        "metric:project:wandb-mcp-server:users-owner-report:2026-11-15",
+        "metric:project:wandb-mcp-server:wreus-owner-report:2026-11-15"
       ]
     },
     {
@@ -23833,8 +23903,8 @@
     {
       "id": "snapshot:public-claims-review",
       "label": "Rounded impact claim review",
-      "capturedAt": "2026-11-14",
-      "rowCount": 17,
+      "capturedAt": "2026-11-15",
+      "rowCount": 19,
       "sectionCount": null,
       "access": "public_web"
     }

@@ -7,7 +7,7 @@ Production AI evaluation and observability
 Evaluating production AI
 
 ## summary
-A workshop on evaluation and observability for production AI systems.
+Evaluation and observability practices for AI systems running in production.
 
 ## role-summary
 Presented the workshop

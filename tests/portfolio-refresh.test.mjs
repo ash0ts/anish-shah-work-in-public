@@ -40,7 +40,7 @@ test("the original inventory, canonical IDs, and route slugs remain unchanged", 
   assert.equal(hash(bundle.entities.filter(({ id }) => !id.includes("-up-")).map(({ id, slug, primaryItemId }) => [id, slug, primaryItemId]).sort()),
     "40ca2f32abed28486a7c417b5fe0056394c75e827c4dc77ccccfc25e388dc773");
   assert.equal(bundle.workGroups.find(({ slug }) => slug === "wandb-mcp-server").period.start, "2026-05-21");
-  const originalEvidence = bundle.evidence.filter(({ capturedAt }) => capturedAt !== updates.reviewedAt);
+  const originalEvidence = bundle.evidence.filter(({ capturedAt, id }) => capturedAt !== updates.reviewedAt && id !== "evidence:methodology:owner-reported-metrics");
   assert.equal(originalEvidence.length, 198);
   assert.equal(hash(originalEvidence), "10d434e06e89d79480bfee6112c1cfc309e54164047016149be437ac94cbe739");
 });
@@ -71,13 +71,13 @@ test("merge and article-update dates never masquerade as publication or delivery
     assert.match(item(id).status, /updated|merged/i);
   }
   assert.equal(item("item:up-0008").date.precision, "year");
-  assert.equal(bundle.generatedAt, "2026-11-14T00:00:00.000Z");
+  assert.equal(bundle.generatedAt, "2026-11-15T00:00:00.000Z");
   assert.equal(updates.reviewedAt, "2026-10-22", "New metrics must not redate project evidence");
 });
 
 test("owner-validated October measures keep units, windows, limits, and dated source history", () => {
   assert.equal(updates.metricObservations.filter(({ date_recorded }) => date_recorded === "2026-10-22").length, 5);
-  assert.equal(bundle.metrics.length, 17);
+  assert.equal(bundle.metrics.length, 19);
   const current = bundle.metrics.filter(({ id }) => id.endsWith(":2026-10-22"));
   assert.deepEqual(current.map(({ displayValue }) => displayValue).sort(), ["76%", "70%", "≈4,800", "30"].sort());
   const calls = claims.claims.find(({ id }) => id === "metric:project:wandb-mcp-server:tool-calls:2026-10-22");
@@ -99,8 +99,8 @@ test("owner-validated October measures keep units, windows, limits, and dated so
 
 test("November milestones replace only active claims and keep units, limits, and prior observations", () => {
   const current = bundle.metrics.filter(({ id }) => id.endsWith(":2026-11-14"));
-  assert.equal(updates.metricObservations.length, 8);
-  assert.equal(updates.metricsReviewedAt, "2026-11-14");
+  assert.equal(updates.metricObservations.length, 10);
+  assert.equal(updates.metricsReviewedAt, "2026-11-15");
   assert.deepEqual(current.map(({ displayValue }) => displayValue).sort(), ["1M+", "10K+", "$8M+"].sort());
   for (const metric of current) {
     assert.deepEqual(metric.period, { start: null, end: null, asOf: "2026-11-14", label: "Owner-reviewed November 14, 2026" });
@@ -132,7 +132,7 @@ test("reviewed update input is additive and rejects ambiguous dates, links, and 
     (value) => { value.metricsReviewedAt = "today"; },
     (value) => { value.metricsReviewedAt = "2026-10-01"; },
     (value) => { delete value.metricsReviewedAt; },
-    (value) => { value.metricObservations.at(-1).date_recorded = "2026-11-15"; },
+    (value) => { value.metricObservations.at(-1).date_recorded = "2026-11-16"; },
     (value) => { value.privateNotes = "not allowed"; },
     (value) => { value.items.push(value.items[0]); },
     (value) => { value.items[0].dateBasis = "release"; },

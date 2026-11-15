@@ -200,7 +200,7 @@
 .members,
 .outcomes,
 .context {
-  margin-top: clamp(3rem, 6vw, 6rem);
+  margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--blueprint-ink, #17223b);
 }
@@ -215,9 +215,21 @@
 .context > h2 {
   max-width: 14ch;
   margin: 0 0 1.75rem;
-  font-size: clamp(2rem, 4.4vw, 4.25rem);
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
   text-wrap: balance;
 }
+
+.contribution {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--hairline);
+}
+.contribution h2 { margin: 0 0 0.65rem; font-size: 1rem; }
+.contribution ul { margin: 0; padding-left: 1.15rem; }
+.contribution li { padding-block: 0.2rem; font-size: 0.94rem; line-height: 1.5; overflow-wrap: anywhere; }
+.contribution .skills { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; padding: 0; list-style: none; }
+.skills li { font-family: var(--font-mono); font-size: 0.75rem; }
+.outcomeList a, .contextList a { display: block; width: fit-content; margin-top: 0.35rem; font-size: 0.8rem; }
 
 .members ol {
   margin: 0;
@@ -493,6 +505,20 @@
 
 .appearances .sectionLabel {
   color: #73dcc5;
+}
+
+@media (forced-colors: active) {
+  .appearances {
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .appearances .sectionLabel,
+  .appearances .supportingDisclosure > summary i,
+  .appearances .formMeta,
+  .appearances li > p {
+    color: CanvasText;
+  }
 }
 
 .appearances h2 {

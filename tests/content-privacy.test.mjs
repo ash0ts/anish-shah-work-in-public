@@ -47,6 +47,8 @@ test("public metrics expose reviewed display copy, never exact value fields", ()
     "76%",
     "70%",
     "≈4,800",
+    "5,000+",
+    "500",
     "30",
     "More than two-thirds",
     "Hundreds",
@@ -57,7 +59,7 @@ test("public metrics expose reviewed display copy, never exact value fields", ()
     "49",
     "19+",
   ]);
-  assert.equal(publicBundle.metrics.length, 17);
+  assert.equal(publicBundle.metrics.length, 19);
   for (const metric of publicBundle.metrics) {
     assert.equal(typeof metric.displayValue, "string");
     assert(publicDisplays.has(metric.displayValue), metric.displayValue);

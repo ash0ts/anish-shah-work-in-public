@@ -5,6 +5,7 @@ import path from "node:path";
 import {
   buildCopyDeck,
   copyRiskManifest,
+  workGroupFieldEntries,
 } from "./copy-deck.mjs";
 
 export const COPY_ONLY_PACKAGE_SCHEMA_VERSION = "1.0";
@@ -140,11 +141,7 @@ function flattenDeck(deck) {
     }
   }
   for (const [groupId, values] of Object.entries(deck.workGroups)) {
-    for (const [key, value] of Object.entries(values)) {
-      const sourceKey = key.replace(
-        /[A-Z]/gu,
-        (letter) => `-${letter.toLowerCase()}`,
-      );
+    for (const [sourceKey, value] of workGroupFieldEntries(values)) {
       fields.set(`${groupId}.${sourceKey}`, value);
     }
   }

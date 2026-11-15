@@ -11,3 +11,15 @@ Three Lightning Fabric pull requests contribute W&B logging and checkpoint suppo
 
 ## role-summary
 Contributor across three upstream pull requests
+
+## work-done-1
+Contributed W&B logging and checkpoint support upstream.
+
+## skill-1
+Lightning Fabric
+
+## skill-2
+W&B
+
+## skill-3
+Checkpointing

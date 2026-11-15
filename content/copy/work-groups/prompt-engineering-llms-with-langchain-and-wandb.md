@@ -11,3 +11,15 @@ The guide instruments LangChain prompt workflows with W&B tracking.
 
 ## role-summary
 Guide author
+
+## work-done-1
+Wrote a guide to instrumenting LangChain prompt workflows.
+
+## skill-1
+LangChain
+
+## skill-2
+W&B
+
+## skill-3
+Prompt engineering

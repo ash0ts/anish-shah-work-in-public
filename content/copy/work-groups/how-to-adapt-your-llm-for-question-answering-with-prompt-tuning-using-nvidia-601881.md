@@ -11,3 +11,15 @@ NVIDIA NeMo prompt tuning and W&B tracked a question-answering adaptation workfl
 
 ## role-summary
 Wrote the article and owns the supporting repository
+
+## work-done-1
+Authored the article and supporting question-answering repository.
+
+## skill-1
+NVIDIA NeMo
+
+## skill-2
+Prompt tuning
+
+## skill-3
+W&B

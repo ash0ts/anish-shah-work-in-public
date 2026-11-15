@@ -176,7 +176,7 @@ function evidenceKind(url, itemType) {
   return "web_page";
 }
 
-export function buildPublicEvidence(items, capturedAt, supplemental = []) {
+export function buildPublicEvidence(items, capturedAt, supplemental = [], metricReviewDate = capturedAt) {
   const reviewed = new Map(supplemental.map((entry) => [entry.id, entry]));
   const evidenceByUrl = new Map();
   for (const item of items) {
@@ -217,6 +217,16 @@ export function buildPublicEvidence(items, capturedAt, supplemental = []) {
     });
   }
 
+  evidenceByUrl.set("methodology:owner-reported-metrics", {
+    id: "evidence:methodology:owner-reported-metrics",
+    title: "Owner-reported metrics — definitions and review limits",
+    kind: "methodology",
+    access: "public_web",
+    url: "/sources#owner-reported-metrics",
+    publisher: "Anish Shah",
+    capturedAt: metricReviewDate,
+    verificationState: "tentative",
+  });
   evidenceByUrl.set("methodology:internal-analytics", {
     id: "evidence:methodology:internal-analytics",
     title: "Internal analytics — rounded public summary",

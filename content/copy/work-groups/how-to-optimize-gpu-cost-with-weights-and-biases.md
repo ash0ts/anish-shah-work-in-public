@@ -11,3 +11,12 @@ GPU cost analysis and optimization with W&B.
 
 ## role-summary
 Report author
+
+## work-done-1
+Wrote the report on GPU cost analysis and optimization.
+
+## skill-1
+W&B
+
+## skill-2
+GPU cost analysis

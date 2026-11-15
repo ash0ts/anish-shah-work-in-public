@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "reviewedAt": "2026-10-22",
-  "metricsReviewedAt": "2026-11-14",
+  "metricsReviewedAt": "2026-11-15",
   "items": [
     {
       "id": "item:up-0001",
@@ -814,6 +814,32 @@
       "source_name": "November 2026 owner-reviewed milestones",
       "confidence": "high",
       "notes": "Owner-reported supported pipeline across tracked event programs; not revenue, closed ARR, or personal attribution. Review date is not a measurement cutoff."
+    },
+    {
+      "category": "product",
+      "item": "W&B MCP Server",
+      "metric": "owner_reported_users",
+      "value": "5000",
+      "unit": "users_owner_reported_lower_bound",
+      "period": "Owner-reported November 15, 2026",
+      "date_recorded": "2026-11-15",
+      "source_system": "owner_review",
+      "source_name": "November 2026 owner-reported MCP figures",
+      "confidence": "medium",
+      "notes": "Owner-reported. User definition and reporting window were not supplied. Report date is not a measurement cutoff."
+    },
+    {
+      "category": "product",
+      "item": "W&B MCP Server",
+      "metric": "owner_reported_wreus",
+      "value": "500",
+      "unit": "WREUs",
+      "period": "Owner-reported November 15, 2026",
+      "date_recorded": "2026-11-15",
+      "source_system": "owner_review",
+      "source_name": "November 2026 owner-reported MCP figures",
+      "confidence": "medium",
+      "notes": "Owner-reported. The acronym and reporting window were not defined. Report date is not a measurement cutoff."
     }
   ]
 }

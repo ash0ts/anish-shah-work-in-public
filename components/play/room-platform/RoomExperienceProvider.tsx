@@ -33,7 +33,7 @@ import styles from "./RoomExperienceProvider.module.css";
 import { roomDirectoryHref } from "./room-entry-policy";
 import { useRoomFocus } from "./useRoomFocus";
 import { useRoomTransitions } from "./useRoomTransitions";
-import { routeObject, historyRoomObject, historyRoomDepth, historyRoomPath, markRoomHistoryEntry, clearRoomHistoryEntry } from "./room-history";
+import { routeObject, historyRoomObject, historyRoomDepth, historyRoomPath, roomReturnDepth, markRoomHistoryEntry, clearRoomHistoryEntry } from "./room-history";
 import type {
   RoomExperienceState,
   RoomObjectId,
@@ -109,6 +109,7 @@ export function RoomExperienceProvider({
   const pendingRoomNavigation = useRef<RoomObjectId | null>(null);
   const activeObjectRouteOrigin = useRef<ObjectRouteOrigin | null>(null);
   const activeObjectRouteDepth = useRef(0);
+  const activeObjectRoutePath = useRef(pathname);
   const previousRouteObject = useRef<RoomObjectId | null>(routeObject(pathname));
   const announcementEpoch = useRef(0);
   const roomEntered = useRef(state.entered);
@@ -163,6 +164,7 @@ export function RoomExperienceProvider({
     }
     const priorRouteObject = previousRouteObject.current;
     previousRouteObject.current = activeRouteObject;
+    activeObjectRoutePath.current = pathname;
     dispatch({ type: "route", id: activeRouteObject });
 
     if (activeRouteObject) {
@@ -355,8 +357,6 @@ export function RoomExperienceProvider({
     const activeRouteObject = routeObject(pathname);
     const target = activeRouteObject ?? lastInvoker.current ?? state.focusedId;
     if (target) { pendingFocus.current = target; lastInvoker.current = target; }
-    const returnWithBrowserHistory = activeObjectRouteOrigin.current === "room";
-    const roomHistoryDepth = activeObjectRouteDepth.current;
     announce(
       target
         ? `Returning to the room. ${ROOM_OBJECT_BY_ID[target].label} remains selected.`
@@ -368,6 +368,16 @@ export function RoomExperienceProvider({
     const navigate = () => {
       if (epoch !== transitionEpoch.current || navigated) return;
       navigated = true;
+      // Escape can arrive between the URL commit and the route effect. Read
+      // fresh history here instead of capturing the previous page's depth.
+      const returnWithBrowserHistory = activeObjectRouteOrigin.current === "room";
+      const roomHistoryDepth = roomReturnDepth(
+        window.location.pathname,
+        activeObjectRoutePath.current,
+        activeObjectRouteDepth.current,
+        historyRoomPath(),
+        historyRoomDepth(),
+      );
       if (returnWithBrowserHistory && roomHistoryDepth > 1) {
         window.history.go(-roomHistoryDepth);
       } else if (returnWithBrowserHistory) router.back();

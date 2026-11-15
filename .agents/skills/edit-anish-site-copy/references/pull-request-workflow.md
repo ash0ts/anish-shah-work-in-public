@@ -2,6 +2,12 @@
 
 ## Before Editing
 
+This page describes the restricted copy-only lane, not every task involving
+words. An owner request to implement UI, metrics, or contracts uses the normal
+engineering lane. Reuse a suitable current worktree; create a branch/worktree
+only when needed or requested. Do not make extra PRs or approval loops merely
+to satisfy this template.
+
 - Start from current `main` and change only approved copy-deck Markdown plus the copy PR template response.
 - Do not add scripts, binaries, symlinks, workflow/config files, or generated output.
 - State the audience, objective, changed pages/WorkGroups, factual claims touched, SEO intent, and any implementation request.

@@ -17,7 +17,7 @@ export function ImpactEvidence({ tracks }: { tracks: HomepageImpactTrack[] }) {
           href="/sources#internal-analytics"
           prefetch={false}
         >
-          <span>Method</span>
+          <span>{SITE_COPY.home["impact-method-label"]}</span>
           <i aria-hidden="true">↗</i>
         </Link>
 
@@ -35,39 +35,34 @@ export function ImpactEvidence({ tracks }: { tracks: HomepageImpactTrack[] }) {
                     />
                     <strong>{datum.metric.displayValue}</strong>
                     <span>{track.label}</span>
-                    <small>{track.compactLimit}</small>
                     <i aria-hidden="true">+</i>
                   </summary>
                   <div className={styles.signalDetail}>
-                    <p>{track.qualifier}</p>
-                    <dl>
-                      <div>
-                        <dt>Period</dt>
-                        <dd>
-                          {track.periodLabel}
-                          {track.periodAsOf
-                            ? ` · as of ${track.periodAsOf}`
-                            : ""}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt>Scope</dt>
-                        <dd>{humanize(datum.metric.scope)}</dd>
-                      </div>
-                      <div>
-                        <dt>Attribution</dt>
-                        <dd>{humanize(datum.metric.attribution)}</dd>
-                      </div>
-                    </dl>
+                    <p>{track.explanation}</p>
+                    <p className={styles.reviewDate}>{track.periodLabel}</p>
                     <Link
                       href={`/sources#${datum.metric.id}`}
                       prefetch={false}
                     >
-                      {datum.metric.sourceLabel}{" "}
+                      {SITE_COPY.home["impact-source-cta"]}{" "}
                       <span aria-hidden="true">↗</span>
                     </Link>
                   </div>
                 </details>
+                {track.supportingMetrics.length ? (
+                  <div className={styles.supporting} data-mcp-supporting-metrics>
+                    <p>{SITE_COPY.home["impact-supporting-provenance"]}</p>
+                    <ul>
+                      {track.supportingMetrics.map((metric) => (
+                        <li key={metric.id}>
+                          <Link href={`/sources#${metric.id}`} prefetch={false}>
+                            <strong>{metric.displayValue}</strong> {metric.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </li>
             );
           })}
@@ -76,8 +71,4 @@ export function ImpactEvidence({ tracks }: { tracks: HomepageImpactTrack[] }) {
       </figure>
     </section>
   );
-}
-
-function humanize(value: string) {
-  return value.replaceAll("_", " ");
 }

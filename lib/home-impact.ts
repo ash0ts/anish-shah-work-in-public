@@ -18,11 +18,12 @@ export type HomepageImpactTrack = {
   theme: Extract<MetricTheme, "product" | "learning" | "programs">;
   label: string;
   iconId: HomeSignalIconId;
-  compactLimit: string;
+  explanation: string;
   periodLabel: string;
   periodAsOf: string | null;
   qualifier: string;
   metrics: HomepageImpactDatum[];
+  supportingMetrics: PublicImpactMetric[];
 };
 
 const trackSpecs = homePresentationManifest.signals.map((signal) => ({
@@ -64,16 +65,26 @@ export function homepageImpactTracksFrom(
         `Homepage metric ${metric.id} must be public and include its limit.`,
       );
     }
+    const supportingMetrics = spec.id === "deployed"
+      ? homePresentationManifest.supportingMetricIds.flatMap((id) => {
+          const supporting = publicMetrics.get(id);
+          return supporting?.displaySurfaces.includes("homepage") &&
+            supporting.subjectId === metric.subjectId &&
+            allowedMetricIdsByTheme.get(spec.theme)?.has(id)
+            ? [supporting] : [];
+        })
+      : [];
     return {
       id: spec.id,
       theme: spec.theme,
       label: spec.label,
       iconId: spec.iconId,
-      compactLimit: spec.compactLimit,
+      explanation: spec.explanation,
       periodLabel: metric.period.label,
       periodAsOf: metric.period.asOf ?? null,
       qualifier,
       metrics: [{ metric }],
+      supportingMetrics,
     };
   });
 }

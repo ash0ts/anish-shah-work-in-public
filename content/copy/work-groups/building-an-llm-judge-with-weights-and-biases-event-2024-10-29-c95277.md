@@ -7,7 +7,7 @@ LLM judge construction with W&B
 W&B LLM judge
 
 ## summary
-W&B grounded a practical demonstration of building an LLM judge.
+LLM judge construction demonstrated with W&B.
 
 ## role-summary
 Presented the session

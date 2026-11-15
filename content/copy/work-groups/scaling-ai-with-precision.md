@@ -7,7 +7,7 @@ Scaling AI systems with precision
 Scaling AI systems
 
 ## summary
-Precise AI scaling approaches anchor the Deep Dive session.
+Approaches to scaling AI systems, presented in a Deep Dive session.
 
 ## role-summary
 Deep Dive speaker

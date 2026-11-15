@@ -195,7 +195,7 @@ export async function buildContent({ check = false } = {}) {
     ...makeSupplementalItems(curation),
   ];
   assertUniqueItemSlugs(ownerItems);
-  const publicEvidence = buildPublicEvidence(ownerItems, legacyAsOf, curation.supplementalItems);
+  const publicEvidence = buildPublicEvidence(ownerItems, legacyAsOf, curation.supplementalItems, updates.metricsReviewedAt ?? updates.reviewedAt);
   const organizations = buildOrganizations(footprintRows, curation);
   const relations = buildRelations(ownerItems, curation);
   const entities = buildCanonicalEntities(ownerItems, relations, curation);

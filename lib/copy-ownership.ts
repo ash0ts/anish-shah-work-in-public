@@ -5,7 +5,7 @@ import {
   COPY_VERSION,
   WORK_GROUP_COPY,
 } from "../.generated/site-copy.ts";
-import { COPY_PAGE_DEFINITIONS } from "./copy-contract.ts";
+import { COPY_PAGE_DEFINITIONS, WORK_GROUP_COPY_DEFINITIONS } from "./copy-contract.ts";
 import type {
   CopyPageId,
   CopyRisk,
@@ -18,6 +18,8 @@ export const GIT_OWNED_WORK_GROUP_FIELDS = [
   "short-title",
   "summary",
   "role-summary",
+  "detail-note",
+  ...WORK_GROUP_COPY_DEFINITIONS.filter(({ key }) => /^(?:work-done|impact|skill)-\d$/u.test(key)).map(({ key }) => key),
 ] as const;
 
 export type CopyOwnershipSourceRecord = {

@@ -1,19 +1,25 @@
 # Surface Patterns
 
-Treat the typed copy-field registry as the source of truth for exact field names and maximum lengths. These patterns govern intent and density.
+Treat the typed copy-field registry as the current implementation contract.
+These patterns are defaults that yield to the owner's latest explicit brief.
+When an authorized brief changes a field budget or layout, update the contract
+and tests together instead of discarding the requested content.
 
 ## Home
 
 - Keep initially visible Home copy at or below 130 words.
 - Use one thesis, one supporting sentence, and one primary call to action.
 - Present one equal-weight three-node signal circuit. Compact nodes show icon,
-  value, label, and reviewed short limit; native disclosures retain the full
-  period, scope, attribution, qualifier, and exact Sources link.
+  value, and precise label. Each disclosure shows one reviewed explanation,
+  review date, and exact Sources link. Sources retains the complete measurement
+  definition, period, scope, attribution, and qualifier.
+- Keep 5,000+ users and 500 WREUs visible alongside MCP tool calls, marked
+  owner-reported. They are supporting figures, not hidden disclosure contents.
 - Present one illustrated overview with four equally prominent work types:
   Software & tools, Courses & labs, Research & writing, and Talks & programs.
   Each area links to its existing bucket-filtered Work view. Keep counts and
   cross-cutting topics in Work; no representative-project selection or new route.
-- Treat compact signal limits and bucket/illustration mappings as protected
+- Treat short signal explanations and bucket/illustration mappings as protected
   presentation data, not editable copy.
 - Remove duplicate trajectory, current-focus, archive-accounting, and methodology modules rather than rewriting all of them.
 
@@ -67,9 +73,11 @@ Keep the page a lean canonical evidence leaf, in this order:
 
 1. Title and one what/why sentence.
 2. Role, period, organization, and one primary artifact.
-3. Line plus no more than three high-level topic links back to filtered Work.
-4. Direct results, when present.
-5. Collapsed additional artifacts, sources, and related context.
+3. Work type plus no more than three high-level topic links back to filtered Work.
+4. Up to three Work done bullets, two evidenced Impact bullets, and five
+   demonstrated Skills / tools labels. Omit unsupported or empty sections.
+5. Dated metrics with exact Sources links; earlier observations stay collapsed.
+6. Collapsed additional artifacts, sources, and related context.
 
 Do not repeat the title or summary, render empty ornamental sections, or turn
 detail pages into category navigation. Give a single-artifact project one
@@ -136,7 +144,7 @@ Keep consent, provider attribution, coverage, freshness, and recovery wording ne
 
 ## Simulation
 
-- For v2.2 public and preview surfaces, Simulation is disabled: no invitation,
+- When the selected release mode is disabled, Simulation has no invitation,
   route, API, sitemap entry, or client bundle is visible. Existing deck fields
   remain dormant preparation for a separately reviewed future activation.
 - Keep `4N1SH` clearly framed as a generated game character, never Anish or an

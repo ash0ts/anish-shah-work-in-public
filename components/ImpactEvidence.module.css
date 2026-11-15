@@ -104,9 +104,9 @@
   position: relative;
   display: grid;
   min-width: 0;
-  min-height: 12.5rem;
+  min-height: 8.5rem;
   grid-template-columns: 2.25rem minmax(0, 1fr);
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto;
   gap: 0.2rem 0.75rem;
   align-content: start;
   padding: 1rem 2.2rem 1rem 1rem;
@@ -156,15 +156,6 @@
   text-transform: uppercase;
 }
 
-.signal summary small {
-  align-self: end;
-  grid-column: 1 / -1;
-  padding-top: 1.15rem;
-  color: var(--ink-muted);
-  font-size: 0.76rem;
-  line-height: 1.35;
-}
-
 .signal summary > i {
   position: absolute;
   top: 0.8rem;
@@ -190,29 +181,12 @@
   line-height: 1.45;
 }
 
-.signalDetail dl {
-  display: grid;
-  gap: 0.4rem;
-  margin: 0 0 0.9rem;
-}
-
-.signalDetail dl > div {
-  display: grid;
-  grid-template-columns: 5.5rem minmax(0, 1fr);
-  gap: 0.5rem;
-}
-
-.signalDetail dt,
-.signalDetail dd {
-  margin: 0;
+.signalDetail .reviewDate {
   font-family: var(--font-mono);
   font-size: 0.68rem;
   letter-spacing: 0.035em;
   line-height: 1.4;
   text-transform: uppercase;
-}
-
-.signalDetail dt {
   color: var(--ink-muted);
 }
 
@@ -232,6 +206,34 @@
   letter-spacing: 0.04em;
   text-align: center;
   text-transform: uppercase;
+}
+
+.supporting {
+  padding: 0.8rem 0.2rem;
+  font-size: 0.85rem;
+}
+
+.supporting p {
+  margin: 0 0 0.35rem;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+
+.supporting ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.supporting a {
+  color: inherit;
+  text-decoration-color: var(--work-blue);
+  text-underline-offset: 0.2em;
 }
 
 @media (max-width: 760px) {

@@ -34,7 +34,13 @@ Three signals. One method.
 Independent measures; no shared scale.
 
 ## impact-source-cta
-See the method
+Source & definition
+
+## impact-method-label
+Method
+
+## impact-supporting-provenance
+Owner-reported
 
 ## proof-1-label
 MCP tool calls
@@ -43,4 +49,4 @@ MCP tool calls
 Course enrollments
 
 ## proof-3-label
-Supported event pipeline
+Event pipeline supported

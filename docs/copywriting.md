@@ -22,6 +22,26 @@ Copywriters and their LLMs should use the repository-local
 [`$edit-anish-site-copy` skill](../.agents/skills/edit-anish-site-copy/SKILL.md).
 Application maintainers use `$maintain-anish-site`.
 
+## Owner implementation requests
+
+The plain-text restrictions below apply to the freelancer copy-only lane.
+They do not block an owner request to implement new layout, fields, facts, or
+metric placement. Use both repository skills for that work, update the owning
+contracts, and switch to ordinary engineering validation. Latest explicit owner
+instructions replace older design defaults; do not silently hide requested
+content or require the same implementation approval twice.
+
+Keep the concise, concrete voice from `write-like-anish`, but adapt it to the
+surface: project bullets are not articles, the approved About story can remain
+longer, and operational recovery must remain actionable. Owner-reported figures
+retain that provenance without acquiring invented definitions.
+
+Skill guidance reviewed November 15, 2026 against the owner's workflow and
+[official skill guidance](https://learn.chatgpt.com/docs/build-skills) and
+[Codex best practices](https://learn.chatgpt.com/guides/best-practices#turn-repeatable-work-into-skills):
+keep each skill focused, disclose conditional detail only when needed, and test
+real requests rather than accumulating blanket rules.
+
 ## What to edit
 
 Each file has a fixed marker and fixed `## field-name` headings:
@@ -74,6 +94,8 @@ before approval:
 - profile headline, summary, and current-focus language;
 - About biography, speaker bio, and speaker topics;
 - WorkGroup display title, short title, summary, and role summary;
+- Optional Work detail fields: `work-done-1` through `work-done-3`,
+  `impact-1` through `impact-2`, and `skill-1` through `skill-5`;
 - career trajectory and bucket descriptions;
 - Sources methodology, counting-rule, and non-claim prose; and
 - statements about dates, organizations, scope, attribution, roles, or product capabilities.
@@ -81,6 +103,18 @@ before approval:
 `npm run copy:diff` reports changed keys and marks each `EDITORIAL` or
 `FACT-CHECK`. A fact-check label is a review requirement, not permission to
 change canonical facts.
+
+Work notes are consecutive plain-text fields, not Markdown lists. Use fewer
+than the maximum whenever the evidence is sparse. Contribution is what Anish
+did; impact needs an evidenced result; skills name tools or techniques actually
+used. Organization membership and topic tags do not prove a skill. Adding a
+previously absent field is an owner-reviewed implementation change.
+
+Home keeps precise measure labels, one short disclosure explanation, a review
+date, and an exact Sources link. Complete metric definitions and limitations
+live in Sources, where earlier observations remain available in disclosures.
+Owner-reported figures remain labelled as such; do not invent definitions or
+reporting windows to make them sound more precise.
 
 The About chronology is not a copy-deck surface. Its periods, organization
 names, trajectory labels, and brand references live in the reviewed
@@ -129,7 +163,7 @@ messages stay literal.
 The deck cannot change:
 
 - metric value, label, qualifier, period, scope, attribution, or evidence;
-- Home signal compact limits, metric/icon IDs, bucket/illustration IDs, and ordering in
+- Home signal short signal explanations, metric/icon IDs, bucket/illustration IDs, and ordering in
   `content/presentation/home-overview.v2.json`;
 - IDs, slugs, aliases, URLs, relationships, WorkGroup membership, order,
   visibility, or featured state;

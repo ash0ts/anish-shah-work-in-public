@@ -179,7 +179,6 @@ test("the complete deck obeys public first-person and density budgets", async ()
     assert.equal(signal.metricId, metricId);
     const compactCopy = [
       deck.pages.home[`proof-${offset + 1}-label`],
-      signal.compactLimit,
     ].join(" ");
     assert(
       countCopyWords(compactCopy) <= 12,

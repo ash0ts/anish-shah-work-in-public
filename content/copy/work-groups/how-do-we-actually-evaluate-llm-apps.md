@@ -7,7 +7,7 @@ Practical evaluation for LLM applications
 LLM application checks
 
 ## summary
-LLM application evaluation is the subject of this session.
+Practical evaluation methods for checking LLM application behavior.
 
 ## role-summary
 Presented the session

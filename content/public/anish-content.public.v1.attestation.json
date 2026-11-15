@@ -1,12 +1,12 @@
 {
   "schemaVersion": "1.0",
-  "contentVersion": "eb8a486d0636e5fd",
-  "generatedAt": "2026-11-14T00:00:00.000Z",
+  "contentVersion": "9fbe9f6b3c94c4a6",
+  "generatedAt": "2026-11-15T00:00:00.000Z",
   "artifacts": [
     {
       "path": "content/public/anish-content.public.v1.json",
-      "bytes": 723344,
-      "sha256": "b8f91096f04a9d9cf4fb9cc6d41bfcb015bd96302d313ff721306b081467e5ca"
+      "bytes": 725690,
+      "sha256": "ffdb52bb7fbaccd2ea5d644022a88ba2d3cff6b1362a57148320d2fb8a5e5b4e"
     },
     {
       "path": "content/schema/anish-content.schema.json",
@@ -25,8 +25,8 @@
     },
     {
       "path": "content/curation/public-claim-upgrades.v1.json",
-      "bytes": 11222,
-      "sha256": "4361672cff5f2e0dc8d26bf57b49e637b9c657bc9068207b15446a7c9e6fe5af"
+      "bytes": 13238,
+      "sha256": "f7a1fbb550b0b8c3125c072bf31ca390af621b3d671e9bce16d2fd03478453ec"
     },
     {
       "path": "content/curation/work-groups.v1.json",
@@ -35,18 +35,23 @@
     },
     {
       "path": "content/curation/portfolio-updates.v1.json",
-      "bytes": 30343,
-      "sha256": "1927d8bdf513b1ed0bd406f9db77c0a47a060426946f7bb996cb69755e08f961"
+      "bytes": 31390,
+      "sha256": "ba549711a33e39ff69a503328614f8c892e2a665154beda1bcd71558fe7a6912"
     },
     {
       "path": "content/presentation/metric-groups.v1.json",
-      "bytes": 1990,
-      "sha256": "26039f3fb7a04eb306252f968599dc4bf65670ca1307a862d63d22b999be2bb4"
+      "bytes": 2136,
+      "sha256": "1dd4e9f0f7e21909fdc693aebb5bbea73dc72ae7a9b42c03b284bb65046ac4b8"
+    },
+    {
+      "path": "content/presentation/metric-history.v1.json",
+      "bytes": 778,
+      "sha256": "b938b719fcb10e20826997109c328276c28f1d6b7cfecfc0a0814ce5bc50d8b7"
     },
     {
       "path": "content/presentation/home-overview.v2.json",
-      "bytes": 1075,
-      "sha256": "38bf13ba0e7b5412366be8264886b31e0bf43ab64567d7489612690e3113c182"
+      "bytes": 1262,
+      "sha256": "6ecde9a657a1fdade4e2a69cf6552d8ef3722ce9ed636ee151eb4d5718761757"
     },
     {
       "path": "content/presentation/career.v1.json",
@@ -96,15 +101,15 @@
   ],
   "generator": {
     "moduleCount": 13,
-    "sha256": "b6d1c85580d301f3dbb8173ba54a0ddcb286615c0b75933207b8867698cda325"
+    "sha256": "0a58c1d70fe1ebe9e84e0d7ffbb900bf91132f983c16dee88405cb976aca93ea"
   },
   "counts": {
     "items": 202,
     "entities": 143,
     "workGroups": 88,
-    "metrics": 17,
+    "metrics": 19,
     "metricGroups": 4,
-    "evidence": 209,
+    "evidence": 210,
     "relations": 67,
     "collections": 9,
     "narratives": 5,
@@ -112,10 +117,10 @@
   },
   "sourceSummary": {
     "footprintRows": 184,
-    "impactRows": 93,
+    "impactRows": 95,
     "supplementalArtifacts": 18,
     "publicItems": 202,
-    "approvedMetricCount": 17,
+    "approvedMetricCount": 19,
     "footprintBackedUniqueWorks": 99,
     "supplementalUniqueWorks": 7
   }

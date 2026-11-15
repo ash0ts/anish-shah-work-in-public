@@ -1,102 +1,93 @@
 ---
 name: edit-anish-site-copy
-description: Edit, review, simplify, or propose public-facing wording for the Anish Shah site through its Git-owned copy deck. Use for page headlines, summaries, calls to action, WorkGroup presentation copy, Play object language, metadata, empty states, evidence presentation, speaker-profile prose, or copywriter PRs. Enforces the personal technical voice and its third-person speaker-bio exception, editorial versus fact-check risk classes, protected claims and source records, provider and privacy boundaries, and the engineering-request workflow for changes that cannot be made in copy alone.
+description: Write, shorten, or review visible Anish Shah site language in the existing voice and copy deck. Use for page copy, project notes, speaker material, labels, and evidence presentation. Follow the owner's latest wording and placement choices; pair with the maintenance skill when implementation or source contracts must change.
 ---
 
 # Edit Anish Site Copy
 
-Improve the site's language without changing its facts, structure, behavior, or trust boundaries.
+Write brief, technical, human language for the requested surface. Preserve strong
+manual copy and the owner's latest corrections; do not force churn or turn every
+page into an article.
 
-## Workflow
+## Intent before conventions
 
-1. Read the repository-root `AGENTS.md`, inspect `git status`, and use `$maintain-anish-site` alongside this skill.
-2. Trace the visible text to `content/copy/**`. Treat [copy-fields.md](references/copy-fields.md), the typed field registry, and `content/copy/README.md` as authoritative. Do not patch generated copy, canonical content, JSX, or D1 to bypass the deck.
-3. Classify every requested change:
-   - `editorial`: edit directly within an existing copy field.
-   - `fact_check`: edit only when the proposed wording is supported by the sanitized content; flag it for owner verification.
-   - protected or structural: do not implement through the deck. Put the proposal in the pull request's **Implementation or visual requests** section.
-   Classify what the proposed words say, not only the field that contains them. A factual clause makes the affected field `fact_check`; a protected clause remains protected even inside an otherwise editorial field.
-4. Read the applicable reference before drafting:
-   - Voice, positioning, terminology, or general editing: [voice-and-positioning.md](references/voice-and-positioning.md).
-   - Home, Work, Sources, Play, metadata, error, or empty-state copy: [surface-patterns.md](references/surface-patterns.md).
-   - Numbers, factual claims, sources, privacy, consent, provider states, or policy wording: [claims-and-evidence.md](references/claims-and-evidence.md).
-   - Protected facts, system behavior, and prohibited edits: [protected-boundaries.md](references/protected-boundaries.md).
-   - Branch, pull-request, preview, and owner-review workflow: [pull-request-workflow.md](references/pull-request-workflow.md).
-5. Edit only the plain text beneath existing `## field-name` headings. Preserve each `copy-page` or `copy-record` marker and every field heading. Do not add Markdown links, HTML, JSX, code fences, templates, variables, URLs, or executable content.
-6. Keep one sentence or element responsible for one job. Remove repeated framing before adding new prose. CTA wording is editorial only when its destination and behavior stay unchanged. When language changes hierarchy or layout, also use `frontend-design` and route the request through engineering; loading that skill does not authorize copywriters to edit JSX, CSS, routes, or behavior.
-   For longer narrative fields, write like a builder recalling the work: name
-   the actor, concrete mechanism, consequence, and remaining limit. Do not
-   polish the opening and leave a generic whitepaper in the middle. Make four
-   passes: claim and structure; concrete nouns and verbs; repetition; then a
-   read-aloud check. Preserve strong manual copy instead of forcing churn.
-7. Validate from the repository root:
+The latest explicit user instruction supersedes older plans and presentation
+defaults. A request to show a figure on Home means show it visibly—not hide it in
+a disclosure or move it to Sources. Preserve honest provenance without inventing
+definitions. Do not treat a protected field as a veto on an authorized change.
 
-   ```sh
-   npm run copy:check
-   npm run copy:voice
-   npm run copy:diff -- --base <ref>
-   npm run copy:audit -- --base <ref>
-   npm run copy:test
-   ```
+Choose the actual scope:
 
-   If a command is not present on the current branch, report that integration dependency rather than substituting an unreviewed tool.
-8. Review every affected route at narrow and desktop widths. Check wrapping, visible and accessible label agreement, metadata alignment, and repeated information.
-9. Follow the copy-only pull-request and synthetic-preview workflow, then report changed copy keys, routes, risk classes, fact-check items, validation results, and any implementation request that remains.
+- **Review/propose:** return the requested explanation or draft; do not edit.
+- **Copy-only:** edit plain text under existing deck headings using trusted
+  copy-preview rules.
+- **Implement:** for requested layout, new fields, factual updates, or metric
+  placement, pair with `$maintain-anish-site` and change the owning contracts in
+  the engineering lane. Do not stop at a proposal or ask for the same approval
+  again.
 
-## Ownership Boundaries
+Read `AGENTS.md` and inspect `git status` before edits. Reuse a suitable worktree
+and preserve unrelated changes.
 
-### Edit directly
+## Find the source and review class
 
-- Page framing, section introductions, calls to action, nonbehavioral labels, search placeholders, no-results text, and 404 wording. On Home this includes the signal/overview headings and method CTA, not the protected signal or overview mapping.
-- Play object flavor text, including the Globe/Travel doorway. Literal object names and categories are fixed by the seven-object registry.
-- Dormant Simulation introduction, CTA, nonfactual encounter flavor, and accessibility-friendly instructions through declared `content/copy/pages/simulation.md` fields. Editing them does not expose the disabled route or authorize activation.
-- SEO and social descriptions when they remain consistent with visible copy and structured data.
+- [Copy fields](references/copy-fields.md): typed registry, stable markers, field
+  ownership. Git-owned prose belongs in `content/copy/**`; never bypass it in
+  JSX, generated modules, or D1.
+- [Voice](references/voice-and-positioning.md): concrete actor, action, consequence;
+  [surface patterns](references/surface-patterns.md): density and current design.
+  These are defaults, not immutable slogans or a substitute for the brief.
+- [Claims](references/claims-and-evidence.md) and
+  [protected boundaries](references/protected-boundaries.md): facts, metrics,
+  sources, privacy, consent, and provider meaning.
+- [PR workflow](references/pull-request-workflow.md): restricted copy-only preview
+  versus ordinary engineering review.
 
-### Edit with owner fact-check
+Editorial fields can change directly. Fact-check fields need sanitized evidence
+or an explicit owner factual update. New facts enter reviewed curation first;
+owner reports must not become independently verified analytics. Keep stable
+subjects and evidence associations.
 
-- Profile positioning and current-focus language.
-- About speaker bio and demonstrated speaker-topic labels and descriptions. The bio uses
-  third person by design so organizers can reuse it directly; this is the one
-  exception to the personal first-person narrative voice. Keep it useful as a
-  standalone organizer bio and use short paragraphs when they improve scanning.
-- WorkGroup display titles, short titles, summaries, and role summaries.
-- Wording that mentions dates, organizations, roles, scope, attribution, product behavior, or technical capability.
-- An explicitly registered citation display label that preserves the immutable source title in accessible detail. No citation-label field is currently registered; request one through engineering before proposing this edit.
+In the copy-only lane preserve markers/headings and use plain text, not HTML,
+URLs, code, or templates. An authorized new field updates the typed contract and
+generator instead. Metric values, units, source records, routes, visibility,
+privacy, provider state, and behavior belong to their owning systems—not an
+unrelated editorial field.
 
-For WorkGroup factual copy, resolve the `copy-record` stable ID against the sanitized public bundle. Record the canonical subject and evidence IDs that support the clause. If it cannot be resolved there, do not add it.
+## Write for the job
 
-The About career manifest owns chronology periods, organization names,
-trajectory labels, and brand references. Do not describe those values as
-copy-deck fields or duplicate them in the biography. Speaker-topic destinations
-are likewise manifest-owned; a copy edit may change only the declared visible
-label after fact-check review.
+- Prefer concrete nouns and verbs. Remove repeated framing, defensive sourcing,
+  database labels, and duplicated conclusions.
+- Work: one concrete summary, concise evidenced contribution/impact bullets,
+  and demonstrated tools. Omit empty or unsupported sections.
+- Home: show the requested measures with precise labels and a brief explanation.
+  Full definitions and historical observations belong in Sources. Essential
+  provenance stays visible; incomplete definitions are not invented.
+- About: preserve the approved personal story. The copyable speaker bio stays
+  third person and fact-checked; don't shorten it merely to match card copy.
+- Play: keep personality, literal object navigation, attribution, consent,
+  update dates, and useful recovery.
+- Privacy/Studio: simplify duplication without changing legal, retention,
+  deletion, permission, or recovery meaning.
+- Apply `write-like-anish` principles to longer prose when available: preserve
+  author edits, name the mechanism, cut repetition, read aloud. Article-specific
+  narration rules do not force first person or a story arc into UI labels.
 
-### Never change through copy
+Use `frontend-design` with maintenance for authorized hierarchy/interaction
+changes. Inspect real narrow and desktop layouts.
 
-- Metric values, labels, qualifiers, periods, scope, attribution, source labels, or evidence associations.
-- The reviewed `home-overview.v2.json` metric IDs, compact limits, icon IDs,
-  bucket IDs, illustration IDs, and ordering. They require an engineering change,
-  owner review, `COPY_VERSION`, and attestation updates.
-- IDs, slugs, aliases, routes, links, ordering, visibility, relationships, group membership, or featured state.
-- Source titles, publishers, URLs, event dates, bibliography records, generated bundles, schemas, attestations, or private inputs.
-- Privacy, retention, deletion, consent, provider attribution, OAuth, security, legal, synchronization, error-state semantics, or public-payload contracts.
-- Travel trip titles, dates, place labels, captions, tags, geography precision, photo safety wording, and media policy. Those remain owner-authored/fact-controlled in Travel Desk.
-- Simulation disclosure, factual cards, metrics, model/provider policy, system prompts, safety behavior, budgets, session rules, fallback behavior, and provider approvals.
-- Purely programmatic accessible names, button behavior, or other interaction contracts.
+## Validate once and hand off
 
-Do not weaken a protected statement to make prose smoother. Propose the desired outcome and explain why in the pull request instead.
-A short citation label would require a separate registered presentation field; none exists today. It may never replace the immutable title, and its future implementation must keep that exact title in accessible detail.
+Run `copy:check`, `copy:diff -- --base <ref>`, `copy:audit`, and `copy:test`.
+`copy:check` already runs voice validation; don't duplicate it. Add the affected
+rendered, metadata, accessibility, and browser checks selected by maintenance,
+reusing the candidate build.
 
-## Engineering-Request Workflow
+Report changed routes, factual provenance, exact results, preview, and remaining
+review action. The maintenance skill's `tests/intent-scenarios.md` captures
+regression cases for scope, latest instructions, metric visibility, and release
+separation.
 
-When copy implies a new layout, interaction, route, field, fact, policy, or behavior:
-
-1. Keep the copy-only change limited to allowed deck files.
-2. Describe the request in **Implementation or visual requests**, including the affected route, user outcome, proposed language, and acceptance criteria.
-3. Let the owner add implementation commits to the same PR, which converts it to the normal full-code workflow, or open a linked engineering PR.
-4. Stop treating the change as copy-only as soon as code, configuration, workflows, migrations, generated output, or protected content changes.
-
-Never deploy, migrate, publish, rotate credentials, or mutate production from this skill.
-The engineering-request workflow is not an approval path for changing protected facts. Layout may change only while the complete canonical value, period, scope, attribution, qualifier, and source remain adjacent.
-
-For each fact-check field, report its copy key, stable subject ID, proposed factual clause, supporting sanitized fact or evidence ID, and owner-review status.
+This skill alone does not authorize deployment, content publication, migrations,
+or credentials. If the user explicitly requests a release, use the maintenance
+runbook rather than treating copy-only restrictions as a blanket refusal.

@@ -48,4 +48,7 @@ export type WorkGroupCopy = {
   summary: string;
   roleSummary: string;
   detailNote?: string;
+  workDone?: readonly string[];
+  impact?: readonly string[];
+  skills?: readonly string[];
 };

@@ -3,13 +3,16 @@
 ## Editable Sources
 
 - `content/copy/pages/site.md`: navigation, footer, global labels, and shared metadata wording.
-- `content/copy/pages/home.md`: homepage framing, signal/overview headings, calls to action, and homepage metadata. The signal values, compact limits, icons, and bucket/illustration mapping are protected elsewhere.
+- `content/copy/pages/home.md`: homepage framing, signal/overview headings, calls to action, and homepage metadata. The signal values, short signal explanations, icons, and bucket/illustration mapping are protected elsewhere.
 - `content/copy/pages/about.md`: concise biography, copyable speaker-profile prose, calls to action, and About metadata. The separate career manifest owns chronology periods, organizations, and trajectory labels.
 - `content/copy/pages/work.md`: Work archive introduction, search wording, and metadata.
 - `content/copy/pages/play.md`: room overview, seven object descriptions, Travel doorway/atlas framing, and Play metadata.
 - `content/copy/pages/simulation.md`: dormant Simulation introduction, CTA, nonfactual encounter flavor, instructions, and metadata. Editing it does not enable the route.
 - `content/copy/pages/sources.md`: Sources framing and approved methodology prose.
 - `content/copy/work-groups/<slug>.md`: one stable WorkGroup's display title, short title, summary, and role summary; optional fact-checked `detail-note` provides contribution or experiment limits inside Sources.
+- Optional fact-checked Work notes: `work-done-1..3`, `impact-1..2`, and
+  `skill-1..5`. Use consecutive fields; no empty or duplicate entries. Each needs
+  project-specific evidence, not an inferred skill or invented impact.
 
 Only edit the text between fixed headings. A field may be one line or multiple paragraphs according to the registry; validation reports the exact rule when a draft is too long or paragraph-incompatible.
 
@@ -66,5 +69,5 @@ The marker binds a human-readable file to a stable sanitized record. Changing it
 Literal Play object names are also structural. The copy deck exposes their fields so generation stays centralized, but validation pins them to TV, Bookshelf, Music player, Record crate, Computer, Treadmill, and Globe. Edit the adjacent descriptions and screen framing instead.
 
 Home's protected `content/presentation/home-overview.v2.json` is not an
-editable copy source. Request changes to its metric IDs, compact limits, icon
+editable copy source. Request changes to its metric IDs, short signal explanations, icon
 IDs, bucket/illustration IDs, or ordering through engineering and owner review.

@@ -1,6 +1,6 @@
 # Canonical content migration quality report
 
-Generated from four immutable source files plus reviewed canonical and presentation curation. Content version: `eb8a486d0636e5fd`.
+Generated from four immutable source files plus reviewed canonical and presentation curation. Content version: `9fbe9f6b3c94c4a6`.
 
 ## Source accounting
 
@@ -8,7 +8,7 @@ Generated from four immutable source files plus reviewed canonical and presentat
 |---|---:|---:|---:|
 | Public footprint CSV | 184 | 184 | 184 |
 | Impact metrics CSV | 61 | 85 | 85 |
-| Reviewed metric additions | — | 8 | 8 |
+| Reviewed metric additions | — | 10 | 10 |
 | Public footprint Markdown | — | 13 level-two sections | 13 owner narrative blocks |
 | Impact report Markdown | — | 10 level-two sections | 10 owner narrative blocks |
 
@@ -69,8 +69,8 @@ Recording relations require a unique best typed match across URL role, date, exa
 
 ## Publication projection
 
-- Owner bundle: 202 items (184 footprint observations + 18 reviewed supplemental records), 93 exact metric observations plus 17 reviewed public projections, 228 evidence records, and 23 source narrative blocks.
-- Public bundle: 202 public items, 143 canonical entities, 88 WorkGroups, 17 rounded or derived public measures in 4 presentation groups, 209 public evidence records, and 9 collections.
+- Owner bundle: 202 items (184 footprint observations + 18 reviewed supplemental records), 95 exact metric observations plus 19 reviewed public projections, 230 evidence records, and 23 source narrative blocks.
+- Public bundle: 202 public items, 143 canonical entities, 88 WorkGroups, 19 rounded or derived public measures in 4 presentation groups, 210 public evidence records, and 9 collections.
 - Legacy exact metric observations remain only in the ignored owner bundle. The versioned update input contains only owner-approved, public-safe aggregates.
 - Dated active-claim replacements select the Home MCP checkpoint and cross-year program total without deleting older owner observations. October review dates are not invented measurement cutoffs.
 - Public metrics contain display strings and qualifiers, never raw numeric value fields.
@@ -95,6 +95,8 @@ Public measure records:
 - `metric:project:wandb-mcp-server:returning-share:2026-10-22`
 - `metric:project:wandb-mcp-server:lifetime-identities:2026-10-22`
 - `metric:project:wandb-mcp-server:peak-companies:2026-10-22`
+- `metric:project:wandb-mcp-server:users-owner-report:2026-11-15`
+- `metric:project:wandb-mcp-server:wreus-owner-report:2026-11-15`
 
 ## Private or excluded metric families
 
@@ -129,6 +131,8 @@ The following source metric families remain exact only in the owner bundle unles
 - `named_accounts_supported`
 - `official_nvidia_blueprint`
 - `open_source_release`
+- `owner_reported_users`
+- `owner_reported_wreus`
 - `peak_observed_companies`
 - `pipeline_supported_usd`
 - `pod_ownership`
@@ -158,7 +162,7 @@ Completion floors, paid-organization associations, aggregate course-campaign lea
 - Stable opaque source-observation IDs are unique across all 202 items; legacy IDs and old route slugs remain aliases.
 - Every organization, entity, evidence, relation, collection, and metric subject reference resolves.
 - Every WorkGroup member, context entity, item, organization, and metric presentation reference resolves.
-- All 184 footprint rows and 93 impact rows retain source-row fingerprints in the owner bundle.
+- All 184 footprint rows and 95 impact rows retain source-row fingerprints in the owner bundle.
 - Tool-call display values are validated against currency prefixes.
 - Item-detail metrics require an explicit item or canonical-entity subject; collection metrics are never inherited implicitly.
 - The public projection contains only `public` publication states and `public_web` evidence.

@@ -1,9 +1,17 @@
 # Repository contract
 
+## User intent and working defaults
+
+- The latest explicit user instruction takes precedence over older plans and repository design/copy preferences. Apply the correction to the implementation and its tests/docs together; do not silently restore an earlier choice.
+- This site's current design and wording conventions are defaults, not a veto on the owner's requested change. A protected field identifies its owning source and required validation, not a prohibition on changing it through the approved engineering path.
+- For an implementation request that includes copy, layout, metrics, or behavior, use both repository skills and make the authorized change. The restricted copy-only lane applies only when the task really is limited to plain-text deck edits.
+- Do not hide, omit, or relocate a requested figure because its definition is incomplete. Preserve the owner's wording with truthful provenance, leave unknown definitions unknown, and keep measurement history. Ask only when an unresolved choice materially blocks implementation.
+- Keep the approved work moving: reuse a suitable worktree and exact matching validation evidence, run affected checks, and report actual blockers. Read-only review never authorizes writes; preview approval and production authorization are distinct unless the user explicitly grants both.
+
 - Use `$maintain-anish-site` for every engineering, content-structure, connector, environment, CI, documentation, or release investigation/change in this repository.
 - Use `$edit-anish-site-copy` for copy-only work in `content/copy/**`. Copywriters and their LLMs may edit only text beneath existing approved headings; they must never change markers, generated output, facts outside the allowlist, application code, Studio, connectors, security, migrations, workflows, or deployment files.
 - Public wording, naming, metadata, WorkGroup presentation, evidence labels, and Play descriptions must use the existing copy deck. Do not bypass it through JSX, generated modules, D1, or canonical data.
-- When a copy request needs layout, interaction, hierarchy, a destination, a new field, or protected wording, record it as an implementation request. The owner may adopt it through `$maintain-anish-site`; once code changes, the PR leaves the trusted copy-only lane.
+- When a copy-only assignment needs unrequested code or policy changes, propose that expansion. When the owner already requests implementation, perform it through `$maintain-anish-site`; once code changes, the PR leaves the trusted copy-only lane without requiring another ceremonial approval.
 - For visual, interaction, or hierarchy changes, also use `frontend-design`; it remains the sole creative/design skill for this site.
 - Do not use Field Notes, film, video-story, Remotion, canvas-film, technical-analysis-animation, autoplay, or scroll hijacking. Three.js is allowed only inside the Play-navigation/capability-gated `/play` room runtime under `components/play/room-3d/**` and the Postcard Planet globe under `components/play/travel/**`; it remains prohibited for Home, Work, Sources, Studio, and archive navigation.
 - The `/simulation` campaign has one narrow technology exception: Phaser, XState, game-oriented Canvas effects, and pixel-art rendering may be used only under `app/simulation/**` and `components/simulation/**`. Tone.js and Web Audio may be used only behind an explicit user gesture under `components/experience-audio/**`. These dependencies must remain dynamically loaded, must not enter unrelated route bundles, and must preserve semantic DOM, Tactical/no-JavaScript parity, reduced-motion behavior, and silent operation until `SOUND ON`.
@@ -18,9 +26,9 @@
   changes run `npm run docs:check`; subsystem-boundary changes update both the
   human-readable `docs/architecture/codebase-tour.md` and the maintenance
   skill's repository map.
-- Metric, source, privacy, provider-policy, route, stable-ID, and programmatic accessibility wording remains owner-guarded. Put desired changes in an implementation request instead of smoothing away a required fact or behavior.
+- Metric, source, privacy, provider-policy, route, stable-ID, and accessibility contracts must change through their owning source. Preserve required facts and behavior; an explicit owner request authorizes the scoped engineering work, not invented facts or removed security protections.
 - Treat `content/presentation/home-overview.v2.json` as reviewed, protected
-  presentation data. Its metric IDs, compact limits, icon IDs, bucket IDs, and
+  presentation data. Its metric IDs, short signal explanations, icon IDs, bucket IDs, and
   illustration IDs are not copy-deck fields. Keep it in `COPY_VERSION` and the public
   content attestation whenever its contract changes.
 - Travel may use advanced R3F, shaders, geographic interaction, and owner-side image processing only under `components/play/travel/**`, the selection-only globe prop in `components/play/room-3d/**`, and `app/studio/travel/**`. Travel remains semantic HTML first and may not introduce WebGL navigation elsewhere.
@@ -29,7 +37,7 @@
 
 - Home presents one equal-weight, three-node signal circuit and an illustrated
   overview of four equally prominent work types. Overview links enter the existing
-  bucket-filtered Work index; topics and counts belong in Work, not Home. Do not
+  bucket-filtered Work index; archive counts and topic filters stay in Work by default. MCP's owner-reported users and WREUs remain visibly alongside the call signal on Home. Do not
   scale signals by value, select representative projects, or add category routes.
 - Keep the complete Work archive two-dimensional and server rendered. Its temporal overview is a semantic four-work-type-by-year color calendar with exact counts. Calendar, topic, search, organization, and filter selections all reveal the same flat Project index; individual project pages remain lean evidence leaves. Do not use a separate plot, Three.js, or WebGL for archive navigation.
 - Preserve an editorial, inspectable HTML experience when JavaScript or motion is unavailable.

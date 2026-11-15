@@ -1,5 +1,23 @@
 <!-- copy-page: work -->
 
+## detail-work-done
+Work done
+
+## detail-impact
+Impact
+
+## detail-skills
+Skills / tools
+
+## detail-history
+Earlier observations
+
+## detail-program-context
+Program context
+
+## detail-metric-source
+Source & definition
+
 ## seo-title
 Work
 

@@ -11,3 +11,18 @@ L5Kit, Ray, and W&B scale motion-prediction experiments across an article and de
 
 ## role-summary
 Article author and demo repository owner
+
+## work-done-1
+Authored the article and supporting motion-prediction demo.
+
+## skill-1
+L5Kit
+
+## skill-2
+Ray
+
+## skill-3
+W&B
+
+## skill-4
+Motion prediction

@@ -57,7 +57,7 @@ attestations. It changes presentation wording and protected Home navigation
 presentation without changing canonical `CONTENT_VERSION`.
 
 The Home manifest is also inventoried by the public content attestation. It
-owns the three signal metric IDs, compact limits, icon IDs, and the four
+owns the three signal metric IDs, short explanations, icon IDs, and the four
 bucket/illustration mappings. Those values are owner-reviewed engineering data,
 not freelancer copy fields.
 

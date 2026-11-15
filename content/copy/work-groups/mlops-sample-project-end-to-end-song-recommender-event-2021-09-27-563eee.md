@@ -11,3 +11,12 @@ Song recommendation anchors an end-to-end MLOps capstone and presentation.
 
 ## role-summary
 Project author and capstone presenter
+
+## work-done-1
+Built and presented an end-to-end song-recommendation capstone.
+
+## skill-1
+Recommendation systems
+
+## skill-2
+MLOps

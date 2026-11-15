@@ -1,139 +1,100 @@
 ---
 name: maintain-anish-site
-description: Maintain, debug, extend, validate, stage, or release the Anish Shah Work in Public site. Use for application code, My Room and Pocket Room, Postcard Planet Travel, the 4N1SH Simulation, canonical content, the copy deck, Play connectors, Studio, OAuth, D1, KV, R2, Cloudflare Images or AI Gateway, accessibility, SEO, privacy, security, CI, documentation, and production verification. Enforces public/private data boundaries, environment isolation, exact-SHA release evidence, and risk-based validation.
+description: Implement, diagnose, validate, or release changes in the Anish Shah site repository. Use for application code, content contracts, providers, infrastructure, CI, and repository documentation. Follow the current user request while preserving private-data boundaries and guarded release mechanics; use the copy skill for public wording.
 ---
 
 # Maintain Anish Site
 
-Make the smallest coherent change while preserving the site's content, copy, privacy, accessibility, connector, environment, and release contracts.
+Implement the requested outcome using the site's existing architecture. A skill
+helps complete the task; it does not substitute a different product or add
+approval loops.
 
-## Workflow
+## Start from current intent
 
-1. Read the repository-root `AGENTS.md`, inspect `git status`, and preserve unrelated work.
-2. Classify the request as diagnosis, copy, canonical content, UI, room, connector/Studio, storage, security, CI/docs, staging, or production release. A review or diagnosis does not authorize writes or deployment.
-3. Read only the applicable reference:
-   - Architecture, UI, room, or repository ownership: [repository-map.md](references/repository-map.md). Also use `frontend-design` for visual, interaction, or hierarchy changes. Use `docs/architecture/codebase-tour.md` as the human-readable system tour; keep the skill reference focused on editing constraints and high-risk seams.
-   - Canonical facts, claims, WorkGroups, or copy ownership: [content-contract.md](references/content-contract.md).
-   - Public language: use `$edit-anish-site-copy` and its voice, surface, claims, protected-boundary, and pull-request references.
-   - Connectors, OAuth, environments, security, staging, or production: [connectors-security-release.md](references/connectors-security-release.md).
-   - Validation and handoff: [validation-matrix.md](references/validation-matrix.md).
-4. Trace the authoritative source before editing. Never patch a generated file, D1 snapshot, or client output when curation, the copy deck, a schema, a migration, or server policy owns it.
-5. Implement the smallest change and add a behavior-level regression test for every repaired invariant.
-6. Classify both committed and local changes:
+- Read `AGENTS.md` and `git status`; preserve unrelated work and manual edits.
+- The latest explicit user instruction supersedes older plans and repository
+  presentation defaults. Update source contracts and tests with the correction.
+  Do not silently restore an earlier choice.
+- Distinguish review, implementation, preview, and release. A review does not
+  authorize writes; an implementation request does authorize its normal scoped
+  code/content changes. Release authorization does not authorize unrelated data,
+  credential, or provider changes.
+- Protected means change through the owning source with appropriate checks—not
+  refuse an owner-authorized change. Do not hide requested figures because a
+  definition is incomplete; preserve honest owner-reported provenance and leave
+  unknown definitions unknown.
+- Ask only when missing information materially blocks the outcome or new
+  authority is needed. Explain a concrete security/privacy conflict and continue
+  unaffected work.
 
-   ```bash
-   node .agents/skills/maintain-anish-site/scripts/check-change.mjs --plan --base origin/main
-   node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run --base origin/main
-   ```
+## Read the relevant reference
 
-   Use `--full` for cross-domain, security, migration, dependency, or final handoff work.
-7. Inspect relevant responsive, keyboard, no-JavaScript, reduced-motion, forced-colors, provider-failure, and privacy states.
-8. Report changed behavior, exact validation run, remaining uncertainty, and any hosted mutation still requiring explicit authorization.
+- Code ownership, UI, Room/Pocket Room, Travel, Simulation, or assets:
+  [repository map](references/repository-map.md). Use `frontend-design` for
+  visual/interaction work; inspect the current site rather than imposing a
+  generic aesthetic.
+- Canonical facts, WorkGroups, metrics, presentation manifests, or publication:
+  [content contract](references/content-contract.md).
+- Public words: pair with `$edit-anish-site-copy`. Authorized layout, new fields,
+  or metric placement uses the engineering lane, not a copy-only handoff.
+- Connectors, Studio, OAuth, hosted environments, security, or production:
+  [connector and release boundaries](references/connectors-security-release.md).
+- Tests and delivery: [validation matrix](references/validation-matrix.md).
+  Human-readable architecture is in `docs/architecture/codebase-tour.md`;
+  production procedure is in `docs/operations/release.md`.
 
-## Domain Ownership
+Read only references relevant to the task. Do not re-copy their inventories into
+every plan or final answer.
 
-- Canonical facts and structure come from immutable source inputs, reviewed curation, and the generated sanitized public bundle.
-- Git-owned presentation prose comes from `content/copy/**`. For copy-only work, use `$edit-anish-site-copy`; never move metrics, evidence, privacy, provider policy, routes, or behavior into that deck.
-- Published D1 state owns allowlisted visibility, ordering, caveats, and metric wording. `PUBLICATION_CACHE` KV is the validated last-known-good production fallback.
-- `content/presentation/home-overview.v2.json` is reviewed protected
-  presentation data. It binds the three equal-weight Home signals to exact
-  metrics and compact limits and binds four work types to original illustrations. Its
-  IDs and limits participate in `COPY_VERSION` and the public attestation; the
-  copy deck owns only the surrounding Home labels and prose.
-- `content/presentation/career.v1.json` owns About chronology periods,
-  organizations, trajectory labels, and brand references. The copy deck owns
-  the surrounding biography and speaker-profile prose.
-- `content/presentation/speaker-profile.v1.json` owns the speaker section's
-  Talks/Programs bucket and topic IDs. The copy deck owns its visible labels
-  and third-person reusable bio; the sanitized profile owns the LinkedIn URL.
-- Studio's owner-only copy report enumerates declared page deck paths, review
-  classes, and WorkGroup presentation ownership. It is diagnostic and
-  read-only; it never makes D1 wording authoritative over Git copy.
-- My Room 2001 is the authoritative Play experience. Its dependency-free closed seven-object contract, semantic routes, and HTML foundations own navigation and content; desktop and Pocket R3F rooms are optional enhancements. There is no Classic mode. Build geometry with `room:assets`; verify the hashed GLB, registry parity, and measured Pocket limits using `room:assets:check` and decoded-asset tests.
-- Derive routes, controls, focus targets, and smoke paths from the structural object contract. Keep screen imports, provider adapters, scene objects, and other executable maps literal, closed, and parity-tested.
-- Three.js/R3F may exist only under `components/play/room-3d/**` and `components/play/travel/**`, load only after their own intent/capability boundaries (Play navigation is Room intent; `?view=directory` stays renderer-free), and never own provider data, Travel photos, navigation semantics, or accessibility content.
-- The Simulation may use Phaser, XState, and game Canvas only under its scoped paths. Keep Action lazy, Tactical semantic, authored fallback complete, visitor text ephemeral, and every factual card server-owned. When its experience mode is `disabled`, remove every public ingress, route/API response, sitemap entry, and Play-loaded Simulation chunk while retaining dormant source and owner state.
-- Tone/Web Audio is gesture-gated under `components/experience-audio/**`; missing audio is silent and never blocks interaction.
-- Connector collection synchronization is owner-triggered only. Public reads,
-  OAuth callbacks, credential saves, and scheduled maintenance must not fetch or
-  mutate provider collection data; Studio's explicit Refresh action owns that
-  boundary.
-- Studio composes connection, authorization, provider permission, saved
-  snapshot, and publication choice into one provider-local lifecycle:
-  **Connect → Allow public use → Sync → Show**. Preserve exactly one primary
-  next action per row; keep callback setup, diagnostics, credential replacement,
-  unpublish, and disconnect under Advanced / recovery.
-- `public_display` and `retain_last_known_good` are fixed server policy, not
-  owner-selectable UI scopes. The initial rollout remains an atomic one-time
-  **Finish permission setup** action; after activation, permission renewal,
-  making private, and restoration stay inside the affected provider row.
-- Failed connector synchronization preserves the active last-known-good
-  snapshot. Accepted snapshots do not age out; the owner-only approval gate
-  governs public display without deleting private state. Discogs uses OAuth
-  1.0a HMAC-SHA1; do not treat it as an OAuth 2 or artwork-gallery provider.
+## Implement and validate proportionally
 
-## Non-Negotiable Boundaries
+1. Trace the owning source. Edit curation, the copy deck, presentation manifests,
+   server policy, or application code—not generated JSON, D1/KV envelopes, or
+   client output. Regenerate dependent content, copy, and attestations.
+2. Implement the smallest coherent change. Preserve stable URLs, hidden-work
+   filtering, factual boundaries, semantic HTML, and relevant accessibility.
+   Add behavior-level coverage for repaired invariants.
+3. Classify committed and local changes:
+   `node .agents/skills/maintain-anish-site/scripts/check-change.mjs --plan --base origin/main`.
+   Run the selected affected checks with `--run`. A final handoff alone is not
+   a reason for `--full`; broad runtime/security/dependency changes may be.
+4. Build once per candidate; reuse exact artifact/configuration/suite-bound
+   evidence. `copy:check` already runs voice validation. Avoid nested duplicate
+   checks and unrelated Room/Travel soaks. Executed failures block completion;
+   unavailable capacity is not a test failure or a pass.
+5. Inspect affected narrow/desktop layouts and interaction/fallback states.
+   Report actual tests, unresolved limitations, preview location, and next action.
 
-- Never print, stage, deploy, or copy secrets, `.env*`, `.wrangler`, local D1, `content/private`, OAuth material, raw provider payloads, internal evidence, or machine-local paths.
-- The helper scans tracked and changed text for high-confidence token formats, literal credential assignments, machine-local paths, internal workspace URLs, and private evidence markers. Use documented placeholders; never weaken the scanner to accommodate copied credentials.
-- Never hand-edit the immutable source files, generated public JSON, generated copy module, content attestation, or migration report. Preserve stable IDs, aliases, explicit metric subjects, and public projector validation.
-- New owner mutations live under `/api/studio/**` and require same-origin rejection, verified owner authorization, bounded body parsing, exact runtime validation, and sanitized no-store responses.
-- OAuth callbacks may be public only with exact callback origins plus encrypted, owner-bound, expiring, single-use state and replay prevention.
-- Do not assume Strava uses the generic connector repository. Its remote embed
-  health check runs only when the owner saves or explicitly verifies the Studio
-  configuration; public reads never recheck Strava.
-- Travel is an owner-authored publication, not a connector. Keep draft D1 state, versioned D1/KV publication, private tier-isolated R2 media, approximate geography, and the `TRAVEL_ATLAS_MODE` gate separate from provider state. Authorize public media against the active snapshot before any derivative-cache lookup.
-- Travel may use R3F, first-party geography, shaders, and browser-local image analysis only inside the scoped paths declared by `AGENTS.md`; its Canvas never replaces the semantic atlas.
-- Simulation uses bounded D1 sessions, budgets, provider approvals, and a tier-isolated Cloudflare AI Gateway. Disable prompt/response logging and response caching, preserve DLP/Guardrails and spend limits, and never persist raw visitor or model text.
-- Never rewrite an applied D1 migration. Only the audited one-time flow may transfer reviewed Hardcover, Steam, and Strava setup from local to production; never move OAuth material, snapshots, D1 rows, KV envelopes, or encryption keys between environments.
-- Do not deploy, migrate hosted D1, rotate keys, change Access, or mutate provider registrations unless the user explicitly requests that exact action.
+## Boundaries that remain real
 
-## Environment Contract
+- Never publish secrets, raw provider payloads, private evidence, local paths,
+  ignored state, or cross-environment credentials/snapshots.
+- Public connector reads, OAuth callbacks, saves, and maintenance never refresh
+  collections. Studio owns manual refresh; failed attempts preserve accepted
+  snapshots. Strava is separately configured and manually verified.
+- Owner mutations require owner authorization, same-origin checks, bounded
+  validated input, and sanitized no-store output. Preserve approval and
+  publication gates without inventing new permissions.
+- Keep rich runtimes and audio inside the scoped paths and intent/capability
+  boundaries in `AGENTS.md`. No provider preload from Play. Disabled Simulation
+  stays unreachable; unrelated copy work cannot activate it.
+- Never rewrite applied migrations. Local, synthetic preview, staging, and
+  production state stay isolated. No hosted mutation without the user's explicit
+  authorization for that operation.
 
-- Local: loopback, isolated local D1, local secrets, ordinary development.
-- PR preview: Access-protected, synthetic static fixtures, no D1/KV/R2/provider calls/Studio/OAuth/secrets.
-- Staging: Access-protected, isolated Worker/D1/KV/R2/Images/Gateway/secrets/provider registrations; never a production-data clone and always globally noindexed.
-- Production: `https://anish-shah-is.online`, Access-protected owner surfaces, production D1/KV/R2/Images/Gateway, and exact-SHA guarded release.
-- Private Sites deployment: reference/recovery only, never production rollback or public proxy.
+## Releases
 
-## Helper Safety Contract
+Use coverage from the last deployed SHA through the candidate, including feature
+modes. Unknown/shared-runtime/security/dependency changes select full applicable
+coverage. Never use only the most recent CI repair.
 
-- `--plan` classifies paths and enforces guardrails without application checks.
-- `--run` executes affected-surface checks. `--full` runs `validate` and the
-  bounded fail-fast release browser gate. It shares one synthetic Worker across
-  at most two isolated Chromium workers and serializes WebKit before
-  Lighthouse, without functional-test retries. Lighthouse budgets use the
-  retained median of three benchmark samples per route.
-  Exhaustive 20-fold interaction stress
-  and visual capture belong to the separate manual stability workflow.
-- `--base <ref>` includes committed changes from that merge base through `HEAD`; use it for PR and freelancer review.
-- Owner write, Access/auth, and OAuth code require matching security/connector regression tests. Connector changes must prove public reads and cron make zero provider data-API calls, one Studio Refresh makes at most one attempt, and every failed attempt preserves the active snapshot.
-- Travel owner APIs require `tests/travel-security.test.mjs`; Travel schema, geography, or media work requires its focused checks, a clean local migration, and the browser gate.
-- Simulation APIs, persistence, campaign, Gateway, or provider-approval work requires focused Simulation security, migration, UI, privacy, and browser checks. Preserve both Action and Tactical completion plus authored outage fallback.
-- Room registry changes require seven-key parity, zero overview data reads, direct-route source isolation, desktop/Pocket input tests, and disabled-feature reachability tests.
-- Copy changes require copy parsing, voice/audit, owner fact-check, diff, rendered, metadata, and browser checks. Skill and docs changes require their dedicated validators.
-- Home signal/overview changes require manifest validation, content attestation,
-  `COPY_VERSION`, rendered Home/Work behavior, and affected browser checks.
-  Preserve equal signal geometry and route every illustrated work type into the
-  existing Work calendar and flat Project index.
-- Documentation changes must preserve the authority map in `docs/README.md`.
-  Run `npm run docs:check`; when architecture ownership changes, update both
-  `docs/architecture/codebase-tour.md` and the repository map in this skill.
-- Release-code edits select ordinary `npm run validate`. A clean, pushed
-  `release/<semver>` candidate uses four exact-SHA GitHub workflow runs for
-  isolated staging, and production normally uses the same evidence. If hosted
-  minutes or artifact storage block production, its explicit owner-local mode
-  may replace only Validate, Gitleaks, and Browser Quality with one
-  permission-restricted owner attestation from the exact pushed `origin/main`
-  head over the same immutable build; CodeQL remains an exact-SHA run of the
-  pinned GitHub action on the verified one-time AMD64 owner runner.
-  Production-candidate execution—standard
-  `npm run validate:release` or the explicit owner-local evidence command—and
-  production mutation remain separately authorized.
-- Release coverage uses the last deployed SHA through the candidate, including
-  previous/candidate feature modes. Unknown paths and shared runtime changes
-  fail closed to full applicable coverage. Never use only the last CI-fix diff.
-  Reuse bundle/rendered receipts only through `checks:artifact`; artifact,
-  configuration, suite inputs and runtime must match. `release:resume` collects
-  evidence and prepares local artifacts/plans, never promotes production.
-- The helper never deploys, migrates hosted state, rotates credentials, or mutates Git.
+`checks:artifact` reuses matching scan/render receipts. `release:resume` collects
+the four exact-SHA identities and prepares local plans; it does not promote.
+Preserve the signed-in owner checkpoint, explicit content-publication review,
+0%-traffic candidate, guarded promotion, and rollback. Use the documented
+native/disposable runner fallback when capacity is unavailable; never manufacture
+evidence or repeat successful identical jobs unnecessarily.
+
+For skill edits, run structural validation and review the realistic
+[intent scenarios](tests/intent-scenarios.md). These checks complement behavior
+tests; neither frontmatter validation nor an agent's claim proves compliance.

@@ -331,6 +331,76 @@
           "date": "2026-10-22"
         }
       ]
+    },
+    {
+      "id": "metric:project:wandb-mcp-server:users-owner-report:2026-11-15",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "owner_reported_users",
+      "displayValue": "5,000+",
+      "label": "users",
+      "qualifier": "Owner-reported. User definition and reporting window were not supplied.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-11-15",
+        "label": "Owner-reported November 15, 2026"
+      },
+      "sourceLabel": "Owner report",
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "homepage",
+        "item_detail",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "tentative",
+      "publicEvidenceIds": [
+        "evidence:methodology:owner-reported-metrics"
+      ],
+      "selectors": [
+        {
+          "item": "W&B MCP Server",
+          "metric": "owner_reported_users",
+          "date": "2026-11-15"
+        }
+      ]
+    },
+    {
+      "id": "metric:project:wandb-mcp-server:wreus-owner-report:2026-11-15",
+      "subjectId": "entity:wk-0001",
+      "category": "product",
+      "key": "owner_reported_wreus",
+      "displayValue": "500",
+      "label": "WREUs",
+      "qualifier": "Owner-reported. The acronym and reporting window were not defined.",
+      "period": {
+        "start": null,
+        "end": null,
+        "asOf": "2026-11-15",
+        "label": "Owner-reported November 15, 2026"
+      },
+      "sourceLabel": "Owner report",
+      "scope": "work",
+      "attribution": "direct",
+      "displaySurfaces": [
+        "homepage",
+        "item_detail",
+        "sources"
+      ],
+      "publicationState": "public",
+      "verificationState": "tentative",
+      "publicEvidenceIds": [
+        "evidence:methodology:owner-reported-metrics"
+      ],
+      "selectors": [
+        {
+          "item": "W&B MCP Server",
+          "metric": "owner_reported_wreus",
+          "date": "2026-11-15"
+        }
+      ]
     }
   ]
 }
