@@ -4,7 +4,7 @@ Four successful GitHub workflow runs remain the default release-evidence path.
 Browser Quality's hosted option uses native `ubuntu-24.04-arm`, keeping its OS
 and architecture aligned with the disposable owner browser runner. It downloads
 the same exact-SHA Validate artifact and retains the two-worker limit, existing
-deadlines, zero functional retries, and complete release browser scope. This
+deadlines, zero functional retries, and the reviewed release browser scope. This
 standard hosted runner avoids a local Docker image when hosted capacity is
 available; it does not select a paid larger runner. GitHub's
 [runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
@@ -163,6 +163,14 @@ downloads and verifies that run's immutable `dist`; it never rebuilds. The
 bounded release-smoke suite stays on Chromium except for one Spotify Ranked Groove interaction
 in WebKit. That check complements rather than replaces the manual Safari staging
 acceptance in the staging runbook:
+
+`npm run release:resume` collects existing exact-SHA workflow URLs and timing
+instead of dispatching duplicates. Standard hosted ARM64 remains the default;
+use owner containers only when capacity requires them. Supply `base_sha` from
+fresh owner health and `previous_modes` / `feature_modes` to select affected
+coverage across the whole unreleased range. Without a baseline Browser Quality
+uses full active coverage. See the [production runbook](../../docs/operations/release.md)
+for artifact preparation and the still-required owner checkpoint.
 
 ```bash
 export VALIDATE_RUN_ID='<successful Validate run ID>'

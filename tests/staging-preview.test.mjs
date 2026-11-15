@@ -1887,7 +1887,7 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.doesNotMatch(packageJson.scripts["validate:release:candidate"], /build/);
   assert.match(
     packageJson.scripts["validate:release:candidate"],
-    /bundle:scan && npm run test:rendered/,
+    /npm run checks:artifact/,
   );
   assert.doesNotMatch(packageJson.scripts["validate:browser:existing"], /build/);
   assert.doesNotMatch(packageJson.scripts["cloudflare:prepare:existing"], /build/);
@@ -1906,7 +1906,7 @@ test("browser quality isolates workerd lifecycles without weakening review evide
   assert.match(workflow, /name: Download the exact Validate build/);
   assert.match(workflow, /run-id: \$\{\{ inputs\.validate_run_id \}\}/);
   assert.match(workflow, /test -s dist\/client\/\.vite\/manifest\.json/);
-  assert.match(workflow, /npm run bundle:scan/);
+  assert.match(workflow, /node scripts\/check-artifact\.mjs --bundle-only/);
   assert.match(workflow, /npm run browser:release:existing/);
   assert.doesNotMatch(workflow, /npm run build/);
   assert.match(workflow, /name: Upload browser failure evidence\n        if: failure\(\)/);
@@ -1956,7 +1956,12 @@ test("browser quality isolates workerd lifecycles without weakening review evide
       ]),
     );
   }
-  assert.ok(complete.length >= 44);
+  // Count test behaviors, not duplicated per-viewport declarations. Provider
+  // consent, no-JS foundations and long-title reflow now belong to object-screens.
+  assert.equal(complete.length, 31);
+  for (const behavior of ["WebGL context loss", "Back and Escape", "projected hit regions", "newer object selection", "Pocket Room rejects twenty"]) {
+    assert.ok(complete.some((name) => name.includes(behavior)), behavior);
+  }
   assert.equal(partitioned.length, complete.length);
   assert.equal(new Set(partitioned).size, partitioned.length);
   assert.deepEqual([...partitioned].sort(), [...complete].sort());

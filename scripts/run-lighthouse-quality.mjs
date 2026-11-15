@@ -24,6 +24,13 @@ const wranglerLogPath = path.join(wranglerDirectory, "lighthouse-quality.log");
 const audits = [
   { mode: "room", routes: ["/", "/work", "/play", "/sources", "/privacy"] },
 ];
+if (process.env.LIGHTHOUSE_ROUTES) {
+  const routes = JSON.parse(process.env.LIGHTHOUSE_ROUTES);
+  if (!Array.isArray(routes) || routes.length === 0 || routes.some((route) => !audits[0].routes.includes(route)) || new Set(routes).size !== routes.length) {
+    throw new Error("Lighthouse route selection must use the closed release route set.");
+  }
+  audits[0].routes = routes;
+}
 const categories = ["performance", "accessibility", "best-practices", "seo"];
 const minimumScore = 0.9;
 const maximumCls = 0.1;

@@ -25,6 +25,8 @@ function isDocs(pathname) {
   return (
     pathname.startsWith("docs/") ||
     pathname === "releases/README.md" ||
+    pathname === ".github/runner/README.md" ||
+    pathname === "content/copy/README.md" ||
     pathname === "README.md" ||
     pathname === "AGENTS.md" ||
     pathname === "CONTRIBUTING.md" ||
@@ -53,6 +55,8 @@ function isCopy(pathname) {
 
 function isFull(pathname) {
   return (
+    ["app/layout.tsx", "app/globals.css"].includes(pathname) ||
+    /^components\/Site(?:Header|Footer)(?:\.module\.css|\.tsx)$/u.test(pathname) ||
     pathname === "package.json" ||
     pathname === "package-lock.json" ||
     pathname === ".node-version" ||
@@ -156,11 +160,18 @@ function browserScopesFor(areas) {
   return [...new Set(scopes)];
 }
 
-export function classifyCiChanges(inputPaths) {
+export function classifyCiChanges(inputPaths, { metadataOnlyPaths = [] } = {}) {
   if (!Array.isArray(inputPaths) || inputPaths.length === 0) {
     throw new Error("CI change classification requires at least one path.");
   }
   const paths = [...new Set(inputPaths.map(normalizeChangedPath))].sort();
+  const metadata = new Set(metadataOnlyPaths);
+  if ([...metadata].some((pathname) => !["package.json", "package-lock.json"].includes(pathname))) {
+    throw new Error("Only verified package version changes may use the metadata lane.");
+  }
+  if (paths.every((pathname) => metadata.has(pathname) || isDocs(pathname)) && paths.some((pathname) => metadata.has(pathname))) {
+    return { lane: "metadata", paths, areas: ["metadata"], requiresBuild: false, browserScopes: [], requiresCodeql: false };
+  }
 
   if (paths.every(isDocs)) {
     return {
@@ -186,13 +197,16 @@ export function classifyCiChanges(inputPaths) {
 
   const areas = new Set();
   for (const pathname of paths) {
-    if (isFull(pathname)) areas.add("full");
+    if (isDocs(pathname) || metadata.has(pathname)) continue;
+    if (isCopy(pathname)) areas.add("ui");
+    else if (isFull(pathname)) areas.add("full");
     else if (isTravel(pathname)) areas.add("travel");
     else if (isSimulation(pathname)) areas.add("simulation");
     else if (isRoom(pathname)) areas.add("room");
     else if (isPlayObject(pathname)) areas.add("play");
     else if (isBackend(pathname)) areas.add("backend");
     else if (isUserInterface(pathname)) areas.add("ui");
+    else areas.add("full"); // An unknown path must not disappear in a mixed change.
   }
   if (areas.size === 0) areas.add("full");
 

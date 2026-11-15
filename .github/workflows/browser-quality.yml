@@ -11,6 +11,20 @@ on:
         description: Successful Validate workflow run that produced this SHA's build
         required: true
         type: string
+      base_sha:
+        description: Last deployed SHA from owner health; omit for conservative full coverage
+        required: false
+        type: string
+      feature_modes:
+        description: Candidate modes as JSON (simulationExperienceMode, simulationAiMode, travelAtlasMode)
+        required: true
+        default: '{"simulationExperienceMode":"disabled","simulationAiMode":"authored-only","travelAtlasMode":"atlas-v1"}'
+        type: string
+      previous_modes:
+        description: Last deployed modes from owner health, using the same JSON keys
+        required: true
+        default: '{"simulationExperienceMode":"disabled","simulationAiMode":"authored-only","travelAtlasMode":"atlas-v1"}'
+        type: string
       runner_target:
         description: Native hosted ARM64 runner or disposable owner ARM64 runner
         required: true
@@ -112,7 +126,15 @@ jobs:
         run: |
           test -s dist/client/.vite/manifest.json
           npm run deployable:attest
-          npm run bundle:scan
+          node scripts/check-artifact.mjs --bundle-only
+      - name: Derive coverage from the last deployed SHA
+        if: inputs.base_sha != ''
+        env:
+          RELEASE_BASE_SHA: ${{ inputs.base_sha }}
+          RELEASE_VALIDATED_SHA: ${{ inputs.commit_sha }}
+          CANDIDATE_MODES: ${{ inputs.feature_modes }}
+          PREVIOUS_MODES: ${{ inputs.previous_modes }}
+        run: node scripts/ci/release-browser-plan.mjs
       - name: Install Chromium on GitHub-hosted runners
         if: inputs.runner_target == 'github-hosted'
         run: npx --no-install playwright install --with-deps chromium webkit
@@ -120,7 +142,21 @@ jobs:
         if: inputs.runner_target == 'owner-arm64'
         run: npx --no-install playwright install --dry-run chromium webkit
       - name: Run bounded release browser, accessibility, WebKit, and Lighthouse coverage
+        env:
+          RELEASE_VALIDATED_SHA: ${{ inputs.commit_sha }}
+          BROWSER_RELEASE_COVERAGE_PATH: ${{ inputs.base_sha != '' && '.wrangler/release-coverage.json' || '' }}
         run: npm run browser:release:existing
+      - name: Upload coverage and phase timings
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-evidence-${{ env.BROWSER_SOURCE_SHA }}
+          path: |
+            .wrangler/release-coverage.json
+            .wrangler/browser-quality-timing.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload browser failure evidence
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

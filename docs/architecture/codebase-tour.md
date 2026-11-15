@@ -461,6 +461,14 @@ browser and deployment check. Content, connectors, Room, Travel, Simulation,
 Worker security, migrations, docs, and release code each select their own
 bounded gates; cross-domain changes use the full validation path.
 
+Release browser selection compares the last deployed SHA with the complete
+candidate and its feature modes. Unknown paths select full applicable coverage.
+One synthetic Worker serves two isolated Chromium workers; object-screen
+behavior has one test owner rather than duplicate Room and public-page checks.
+Successful bundle/rendered receipts are reusable only with matching artifact,
+configuration, suite-input and runtime identities. `release:resume` collects
+workflow results and prepares local artifacts/plans; it cannot promote traffic.
+
 A production candidate has a stronger contract:
 
 1. Pin a clean pushed `release/<semver>` commit.

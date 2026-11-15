@@ -19,9 +19,7 @@ const port = configuredPort ? Number(configuredPort) : defaultPort;
 if (!Number.isSafeInteger(port) || port < 1024 || port > 65_535) {
   throw new Error("BROWSER_QUALITY_PORT must be between 1024 and 65535.");
 }
-// Release Browser Quality runs two isolated Wrangler previews concurrently.
-// Wrangler otherwise gives every process the same 9229 inspector port, which
-// makes the second preview fail before any product test can start.
+// Explicit ports also isolate an operator's development server from tests.
 const inspectorPort = port + 5_000;
 if (inspectorPort > 65_535) {
   throw new Error("BROWSER_QUALITY_PORT is too high to derive an inspector port.");
@@ -37,22 +35,24 @@ const persistedState =
   `.wrangler/browser-quality-${playMode}`;
 const simulationExperienceMode =
   process.env.BROWSER_SIMULATION_EXPERIENCE_MODE?.trim() || "disabled";
-if (!new Set(["disabled", "campaign-v1"]).has(simulationExperienceMode)) {
+if (!new Set(["disabled", "coming-soon", "campaign-v1"]).has(simulationExperienceMode)) {
   throw new Error(
-    "BROWSER_SIMULATION_EXPERIENCE_MODE must be disabled or campaign-v1.",
+    "BROWSER_SIMULATION_EXPERIENCE_MODE must be disabled, coming-soon or campaign-v1.",
   );
 }
 const simulationAiMode =
   simulationExperienceMode === "campaign-v1" ? "fixture" : "authored-only";
+const travelAtlasMode = process.env.BROWSER_TRAVEL_ATLAS_MODE || "atlas-v1";
+if (!["disabled", "atlas-v1"].includes(travelAtlasMode)) throw new Error("Invalid browser Travel mode.");
 const previewRuntimeVariables =
-  ` --var DEPLOYMENT_TIER:preview --var PREVIEW_PR_NUMBER:1 --var SITE_URL:https://pr-1.anish-shah-is.online --var PRODUCTION_SITE_URL:https://anish-shah-is.online --var PUBLIC_CONTENT_MODE:static_preview --var RELEASE_VERSION:${packageVersion} --var SIMULATION_EXPERIENCE_MODE:${simulationExperienceMode} --var SIMULATION_AI_MODE:${simulationAiMode} --var SIMULATION_PROVIDER:fixture --var SIMULATION_MODEL:authored-fixture-v1 --var TRAVEL_ATLAS_MODE:atlas-v1`;
+  ` --var DEPLOYMENT_TIER:preview --var PREVIEW_PR_NUMBER:1 --var SITE_URL:https://pr-1.anish-shah-is.online --var PRODUCTION_SITE_URL:https://anish-shah-is.online --var PUBLIC_CONTENT_MODE:static_preview --var RELEASE_VERSION:${packageVersion} --var SIMULATION_EXPERIENCE_MODE:${simulationExperienceMode} --var SIMULATION_AI_MODE:${simulationAiMode} --var SIMULATION_PROVIDER:fixture --var SIMULATION_MODEL:authored-fixture-v1 --var TRAVEL_ATLAS_MODE:${travelAtlasMode}`;
 
 export default defineConfig({
   testDir: "./tests/browser",
   outputDir: `.playwright/results-${playMode}${artifactSuffix}`,
   fullyParallel: false,
   workers: 1,
-  retries: process.env.CI ? 1 : 0,
+  retries: 0,
   reporter: process.env.CI
     ? [
         ["line"],

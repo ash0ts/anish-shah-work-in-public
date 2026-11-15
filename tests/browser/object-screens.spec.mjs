@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { mkdir } from "node:fs/promises";
 
-const objects = ["watch", "read", "listen", "collect", "play", "move", "travel"];
+import { objectFixtures } from "./helpers/object-fixtures.mjs";
+import { installOverflowSampler, overflowReport, settlePaint } from "./helpers/overflow.mjs";
+const objects = objectFixtures.map(({ id }) => id);
 const widths = [320, 390, 768, 1024, 1440, 1920];
 
 // Give each source/state its own context and normal test deadline. Thirty
@@ -48,13 +50,30 @@ for (const object of objects) {
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth), { message: `${object} at ${width}px` }).toBeLessThanOrEqual(width + 1);
     }
     await page.setViewportSize({ width: 390, height: 844 });
-    const result = await new AxeBuilder({ page }).include("main").analyze();
+    const result = await new AxeBuilder({ page }).analyze();
     expect(result.violations, JSON.stringify(result.violations)).toEqual([]);
     expect(externalRequests).toEqual([]);
+    if (process.env.ROOM_CAPTURE_VISUALS === "1") {
     await mkdir("outputs/object-screens", { recursive: true });
     await page.screenshot({ path: `outputs/object-screens/${object}-mobile.png`, fullPage: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.screenshot({ path: `outputs/object-screens/${object}-desktop.png`, fullPage: true });
+    }
+    await installOverflowSampler(page);
+    const route = `/play/${object}?fixture=long-title${object === "collect" ? "&view=gallery" : ""}`;
+    await page.setViewportSize({ width: 320, height: 844 });
+    const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+    expect(response.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: objectFixtures.find(({ id }) => id === object).title })).toBeVisible();
+    await settlePaint(page);
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await settlePaint(page);
+      const overflow = await overflowReport(page);
+      expect(overflow.offenders, JSON.stringify(overflow.offenders)).toEqual([]);
+      expect(overflow.documentWidth).toBeLessThanOrEqual(width + 1);
+      expect(overflow.maximumDocumentWidth).toBeLessThanOrEqual(width + 1);
+    }
   });
 }
 
@@ -97,7 +116,14 @@ test.describe("no-JavaScript object screens", () => {
   test.use({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
   for (const object of objects) {
     test(`${object}: links, disclosures, and readable fallbacks`, async ({ page }) => {
-      await page.goto(`/play/${object}`);
+      const response = await page.goto(`/play/${object}`);
+      expect(response.status()).toBe(200);
+      const fixture = objectFixtures.find(({ id }) => id === object);
+      await expect(page.getByRole("heading", { name: fixture.title })).toBeVisible();
+      await expect(page.getByText(fixture.foundation, { exact: false }).first()).toBeVisible();
+      await expect(page.locator("main[data-room-screen]")).toHaveCount(1);
+      await expect(page.getByRole("link", { name: "Back to room" })).toBeVisible();
+      await expect(page.locator("iframe, canvas")).toHaveCount(0);
       await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
       const first = page.locator("[data-tactile-item]").first();
       if (await first.count()) {
@@ -131,3 +157,131 @@ test.describe("forced colors and reduced motion object screens", () => {
     });
   }
 });
+
+  test("Spotify remains consent-gated on the Listen object route", async ({ page }) => {
+    const connectorRequests = [];
+    const providerRequests = [];
+    page.on("request", (request) => {
+      const url = request.url();
+      if (url.includes("/api/connectors/spotify")) connectorRequests.push(url);
+      if (url.startsWith("https://open.spotify.com/")) providerRequests.push(url);
+    });
+
+    const response = await page.goto("/play/listen?fixture=ready", {
+      waitUntil: "networkidle",
+    });
+    expect(response?.headers()["content-security-policy"]).toContain(
+      "frame-src 'none'",
+    );
+    await expect(page.getByRole("heading", { name: "Top Tracks, in returned order." })).toBeVisible();
+    expect(connectorRequests).toEqual([]);
+    expect(providerRequests).toEqual([]);
+    await expect(page.locator("iframe")).toHaveCount(0);
+
+    const listenHere = page.getByRole("button", { name: "Listen here" }).first();
+    await listenHere.click();
+    await expect(page.locator("iframe")).toHaveCount(0);
+    expect(providerRequests).toEqual([]);
+    await page.getByRole("button", { name: "Load Spotify player" }).click();
+    const spotifyFrame = page.locator('iframe[title*="Spotify"]');
+    await expect(spotifyFrame).toHaveCount(1);
+    await expect(spotifyFrame).toHaveAttribute(
+      "src",
+      /^https:\/\/open\.spotify\.com\/embed\/track\//,
+    );
+    await spotifyFrame.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
+    expect(providerRequests).toEqual([]);
+    await page.getByRole("button", { name: "Close player" }).click();
+    await expect(page.locator("iframe")).toHaveCount(0);
+    await expect(listenHere).toBeFocused();
+  });
+
+  test("Strava remains consent-gated on the Move object route", async ({ page }) => {
+    const connectorRequests = [];
+    const providerRequests = [];
+    page.on("request", (request) => {
+      const url = request.url();
+      if (url.includes("/api/connectors/strava")) connectorRequests.push(url);
+      if (
+        url.startsWith("https://www.strava.com/") ||
+        url.startsWith("https://strava-embeds.com/")
+      ) {
+        providerRequests.push(url);
+      }
+    });
+
+    const response = await page.goto("/play/move?fixture=ready", {
+      waitUntil: "networkidle",
+    });
+    expect(response?.headers()["content-security-policy"]).toContain(
+      "frame-src 'none'",
+    );
+    await expect(page.getByRole("button", { name: "Load public Strava feed" })).toBeVisible();
+    expect(connectorRequests).toEqual([]);
+    expect(providerRequests).toEqual([]);
+    await expect(page.locator("iframe")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Load public Strava feed" }).click();
+    const stravaFrame = page.locator('iframe[title*="Strava"]');
+    await expect(stravaFrame).toHaveCount(1);
+    await expect(stravaFrame).toHaveAttribute(
+      "src",
+      /^https:\/\/www\.strava\.com\/athletes\/99999999999999999999\/latest-rides\//,
+    );
+    await stravaFrame.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(150);
+    expect(providerRequests).toEqual([]);
+  });
+
+
+  test("no-JavaScript pagination preserves fixtures and gallery view", async ({ browser }) => {
+    const context = await browser.newContext({
+      javaScriptEnabled: false,
+      viewport: { width: 390, height: 844 },
+    });
+    const page = await context.newPage();
+    await page.goto("/play/watch?fixture=maximum-density&pageSize=12", {
+      waitUntil: "load",
+    });
+    await expect(page.locator('input[name="fixture"]')).toHaveValue(
+      "maximum-density",
+    );
+    const next = page.getByRole("link", { name: "Next" });
+    const nextHref = await next.getAttribute("href");
+    expect(nextHref).not.toBeNull();
+    expect(new URL(nextHref, "http://preview.test").searchParams.get("fixture")).toBe(
+      "maximum-density",
+    );
+    await next.click();
+    await expect(page).toHaveURL(/fixture=maximum-density/);
+    await expect(page.getByText("13—24 of 36")).toBeVisible();
+
+    await page.goto("/play/collect?view=pattern&fixture=maximum-density", {
+      waitUntil: "load",
+    });
+    const openDiscogsShelf = page.getByRole("link", {
+      name: "Open the searchable release shelf",
+    });
+    await expect(openDiscogsShelf).toHaveAttribute(
+      "href",
+      "/play/collect?view=gallery&fixture=maximum-density",
+    );
+    await openDiscogsShelf.click();
+    await expect(page).toHaveURL(/view=gallery/);
+    await expect(page.locator('input[name="view"]')).toHaveValue("gallery");
+    await expect(page.locator('input[name="fixture"]')).toHaveValue(
+      "maximum-density",
+    );
+    const nextDiscogs = page.getByRole("link", { name: "Next" });
+    const nextDiscogsHref = await nextDiscogs.getAttribute("href");
+    expect(nextDiscogsHref).not.toBeNull();
+    const nextDiscogsUrl = new URL(nextDiscogsHref, "http://preview.test");
+    expect(nextDiscogsUrl.searchParams.get("view")).toBe("gallery");
+    expect(nextDiscogsUrl.searchParams.get("fixture")).toBe("maximum-density");
+    await nextDiscogs.click();
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.getByText("13—24 of 36")).toBeVisible();
+
+    await context.close();
+  });

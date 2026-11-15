@@ -100,8 +100,8 @@ Make the smallest coherent change while preserving the site's content, copy, pri
 
 - `--plan` classifies paths and enforces guardrails without application checks.
 - `--run` executes affected-surface checks. `--full` runs `validate` and the
-  bounded fail-fast release browser gate. The gate isolates Simulation fallback
-  foundations before parallel WebGL-heavy coverage and serializes WebKit before
+  bounded fail-fast release browser gate. It shares one synthetic Worker across
+  at most two isolated Chromium workers and serializes WebKit before
   Lighthouse, without functional-test retries. Lighthouse budgets use the
   retained median of three benchmark samples per route.
   Exhaustive 20-fold interaction stress
@@ -130,4 +130,10 @@ Make the smallest coherent change while preserving the site's content, copy, pri
   Production-candidate execution—standard
   `npm run validate:release` or the explicit owner-local evidence command—and
   production mutation remain separately authorized.
+- Release coverage uses the last deployed SHA through the candidate, including
+  previous/candidate feature modes. Unknown paths and shared runtime changes
+  fail closed to full applicable coverage. Never use only the last CI-fix diff.
+  Reuse bundle/rendered receipts only through `checks:artifact`; artifact,
+  configuration, suite inputs and runtime must match. `release:resume` collects
+  evidence and prepares local artifacts/plans, never promotes production.
 - The helper never deploys, migrates hosted state, rotates credentials, or mutates Git.

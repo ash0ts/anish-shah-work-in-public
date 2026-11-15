@@ -280,12 +280,16 @@ test("the v2.2 public runtime keeps Simulation fully disabled", async ({
   ).toEqual([]);
 });
 
-for (const width of widths) {
-  test(`public routes fit a ${width}px viewport`, async ({ page }) => {
-    await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
-    for (const route of routes) {
-      const response = await page.goto(route, { waitUntil: "networkidle" });
-      expect(response?.status(), route).toBe(200);
+for (const route of routes) {
+  test(`public route ${route} fits all supported viewports`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 844 });
+    const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+    expect(response?.status(), route).toBe(200);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const overflow = await page.evaluate(() => {
         const limit = window.innerWidth + 1;
         const isInsideBoundedScroller = (element) => {

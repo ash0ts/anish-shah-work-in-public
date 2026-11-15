@@ -39,7 +39,7 @@ test("CI classifier selects bounded validation and browser lanes", () => {
   assert.equal(connector.requiresCodeql, true);
   assert.deepEqual(connector.browserScopes, []);
 
-  const ui = classifyCiChanges(["components/SiteHeader.tsx"]);
+  const ui = classifyCiChanges(["components/WorkFilters.tsx"]);
   assert.equal(ui.lane, "ui");
   assert.equal(ui.requiresBuild, true);
   assert.deepEqual(ui.browserScopes, ["public"]);
@@ -168,9 +168,10 @@ test("ordinary pull requests use one stable path-classified PR Gate", async () =
   );
   assert.match(gate, /full\)\s+npm run validate/u);
   const scripts = JSON.parse(packageSource).scripts;
-  assert.match(scripts.validate, /npm run security:audit/u);
-  assert.match(scripts.test, /npm run build/u);
-  assert.match(scripts.test, /npm run bundle:scan/u);
+  assert.match(scripts.validate, /npm --ignore-scripts run security:audit/u);
+  assert.match(scripts.test, /npm --ignore-scripts run build/u);
+  assert.match(scripts.test, /npm --ignore-scripts run checks:artifact/u);
+  assert.equal(scripts["checks:artifact"], "node scripts/check-artifact.mjs");
   assert.doesNotMatch(pullRequest, /npm run db:local:migrate/u);
   assert.doesNotMatch(pullRequest, /^- \[ \].*Migration/imu);
   assert.doesNotMatch(validate, /pull_request:/u);
@@ -266,10 +267,7 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(runner, /--max-failures=1/u);
   assert.match(runner, /segment: "release-public"/u);
   assert.doesNotMatch(runner, /segment: "release-simulation-fallbacks"/u);
-  assert.doesNotMatch(
-    runner.match(/async function runReleaseBrowserGate\(\)[\s\S]*?^\}/mu)?.[0] ?? "",
-    /simulation-quality\.spec\.mjs/u,
-  );
+  assert.match(runner, /if \(scopes.includes\("simulation"\)\)/u);
   assert.match(runner, /simulationExperienceMode: "campaign-v1"/u);
   assert.match(runner, /BROWSER_SIMULATION_EXPERIENCE_MODE/u);
   assert.match(runner, /spawnSync\("ps", \["-axo", "pid=,ppid=,pgid="\]/u);
@@ -281,7 +279,7 @@ test("release browser evidence reuses the exact Validate artifact", async () => 
   assert.match(runner, /timeoutMs: 3 \* 60_000/u);
   assert.match(playwrightConfig, /const inspectorPort = port \+ 5_000/u);
   assert.match(playwrightConfig, /BROWSER_SIMULATION_EXPERIENCE_MODE/u);
-  assert.match(playwrightConfig, /"disabled", "campaign-v1"/u);
+  assert.match(playwrightConfig, /"disabled", "coming-soon", "campaign-v1"/u);
   assert.match(playwrightConfig, /--inspector-port \$\{inspectorPort\}/u);
   assert.equal(
     webkitConfig.use.launchOptions,

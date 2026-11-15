@@ -4,6 +4,7 @@ import {
   classifyCiChanges,
   pathsFromPullRequestFiles,
 } from "../lib/ci-change-classifier.mjs";
+import { changesBetween } from "../lib/release-coverage.mjs";
 
 function option(name) {
   const index = process.argv.indexOf(name);
@@ -23,12 +24,18 @@ if (usesChangesFile === usesGitRange) {
 }
 
 let paths;
+let metadataOnlyPaths = [];
 if (usesChangesFile) {
   const bytes = await readFile(changesFile);
   if (bytes.byteLength === 0 || bytes.byteLength > 2 * 1024 * 1024) {
     throw new Error("Pull-request file metadata is empty or oversized.");
   }
   paths = pathsFromPullRequestFiles(JSON.parse(bytes.toString("utf8")));
+  const metadataBase = option("--metadata-base"), metadataHead = option("--metadata-head");
+  if (metadataBase && metadataHead) {
+    try { metadataOnlyPaths = changesBetween(process.cwd(), metadataBase, metadataHead).metadataOnlyPaths; }
+    catch { /* Missing fork history uses full checks, never a metadata exemption. */ }
+  }
 } else {
   if (!/^[a-f0-9]{40}$/u.test(base) || !/^[a-f0-9]{40}$/u.test(head)) {
     throw new Error("--base and --head must be full lowercase commit SHAs.");
@@ -52,8 +59,9 @@ if (usesChangesFile) {
     throw diff.error ?? new Error(diff.stderr || "git diff failed.");
   }
   paths = diff.stdout.split("\0").filter(Boolean);
+  metadataOnlyPaths = changesBetween(process.cwd(), base, head).metadataOnlyPaths;
 }
-const result = classifyCiChanges(paths);
+const result = classifyCiChanges(paths, { metadataOnlyPaths });
 const serialized = `${JSON.stringify(result, null, 2)}\n`;
 if (outputPath) await writeFile(outputPath, serialized, { mode: 0o600 });
 if (githubOutput) {
