@@ -3,7 +3,7 @@
 ## Provider Model
 
 - MyAnimeList and Spotify use owner-only OAuth 2 with separate applications per live environment.
-- Discogs uses OAuth 1.0a HMAC-SHA1, server nonces/timestamps, owner-bound request transactions, exact callbacks, and separate applications. Its text-first catalog is eligible for an owner-triggered refresh after four hours and normally becomes unavailable after six.
+- Discogs uses OAuth 1.0a HMAC-SHA1, server nonces/timestamps, owner-bound request transactions, exact callbacks, and separate applications. Its text-first catalog is eligible for an owner-triggered refresh after four hours, subject to persisted Retry-After. Accepted snapshots do not expire by age; the publication permission gate controls display.
 - Hardcover uses an owner API token. Steam uses API key plus SteamID64 and a truthful storage-country gate.
 - Strava stores a validated public profile and optional official embed separately from the generic connector repository.
 - Every provider publishes through an exact runtime projector. No raw payload, standalone account identifier, credential, or arbitrary remote artwork URL enters public JSON.
@@ -60,6 +60,7 @@ Local promotion may transfer only reviewed, explicitly portable provider setup o
 ## Publication, Retention, and Disconnect
 
 - D1 commits validated publication state; versioned `PUBLICATION_CACHE` KV advances only after D1 succeeds. If both are unavailable/invalid in production, return a noindexed `503`, never the checked-in bundle.
+- Share publication resolution only within the current request, including availability, metadata, and rendering. Never turn request-local reuse into cross-request caching: the next request must observe visibility and publication changes.
 - A failed, rate-limited, malformed, or rejected synchronization never changes
   the active snapshot pointer. Preserve the stored last-known-good snapshot;
   accepted Spotify and Steam snapshots have no age-based deletion or cutoff.
@@ -111,6 +112,16 @@ plans, commands, and attestations all fail closed on a missing or mismatched
 version.
 
 Ordinary release-code changes run `npm run validate`. Only a clean, pushed, approved candidate with required exact-SHA evidence runs `npm run validate:release`, release planning, upload, staging, or deployment.
+
+An operations audit distinguishes implemented code, passing candidate evidence,
+saved hosted configuration, and verified production behavior. An unsaved alert
+form, successful local test, or old workflow receipt is not a completed setup.
+For obsolete environments, inventory exact routes, preview URLs, and cron
+triggers, retain recovery coordinates, then quarantine only the authorized
+exposure. Do not delete databases, snapshots, Workers, or storage as a side
+effect. Follow `docs/operations/observability.md` for paid-tier budgets and
+monitor semantics; use included capacity only when it improves this workload,
+not merely because a product is available.
 
 An explicit request to stage a named release candidate authorizes only the enumerated staging train for that exact SHA: guarded plan, listed additive migrations, immutable upload, staging traffic change, bootstrap, checkpoint, smoke checks, and rollback if acceptance fails. It never authorizes production traffic, production migrations, secret rotation, provider reauthorization, or copying production state. Stop before any mutation whose resource, migration list, evidence URL, or prior-version checkpoint differs from the approved plan.
 

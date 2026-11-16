@@ -214,27 +214,15 @@ export function mergePublishedEditorialSnapshot(
 ): AnishContentBundle | null {
   if (snapshot.baseContentVersion !== staticBundle.contentVersion) return null;
   const records = new Map(snapshot.records.map((record) => [record.id, record]));
+  const recordTypes = new Map([
+    ...staticBundle.workGroups.map((record) => [record.id, "work_group"] as const),
+    ...staticBundle.narratives.map((record) => [record.id, "narrative"] as const),
+    ...staticBundle.metrics.map((record) => [record.id, "metric"] as const),
+    ...staticBundle.items.map((record) => [record.id, record.type] as const),
+  ]);
 
   for (const record of snapshot.records) {
-    const item = staticBundle.items.find((candidate) => candidate.id === record.id);
-    const metric = staticBundle.metrics.find(
-      (candidate) => candidate.id === record.id,
-    );
-    const narrative = staticBundle.narratives.find(
-      (candidate) => candidate.id === record.id,
-    );
-    const workGroup = staticBundle.workGroups.find(
-      (candidate) => candidate.id === record.id,
-    );
-    const expectedType = item
-      ? item.type
-      : metric
-        ? "metric"
-        : narrative
-          ? "narrative"
-          : workGroup
-            ? "work_group"
-            : null;
+    const expectedType = recordTypes.get(record.id);
     if (!expectedType || record.recordType !== expectedType) return null;
   }
 
@@ -317,11 +305,12 @@ export function mergePublishedEditorialSnapshot(
     }),
     records,
   );
+  const canonicalEntityIds = new Set(staticBundle.entities.map((entity) => entity.id));
   const requiredEntityIds = new Set([
     ...items.map((item) => item.canonicalEntityId),
     ...orderedMetrics
       .map((metric) => metric.subjectId)
-      .filter((id) => staticBundle.entities.some((entity) => entity.id === id)),
+      .filter((id) => canonicalEntityIds.has(id)),
     ...candidateWorkGroups.flatMap((group) => [
       ...group.memberEntityIds,
       ...group.programEntityIds,

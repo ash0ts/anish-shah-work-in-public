@@ -11,7 +11,7 @@ node .agents/skills/maintain-anish-site/scripts/check-change.mjs --run --base or
 
 | Changed area | Required checks |
 | --- | --- |
-| `content/copy`, copy contracts/parser/voice/runtime | `copy:check`, `copy:voice`, `copy:diff`, `copy:audit`, `copy:test`, owner fact-check, typecheck, build, rendered and browser checks |
+| `content/copy`, copy contracts/parser/voice/runtime | `copy:check` (includes voice), `copy:diff`, `copy:audit`, `copy:test`, owner fact-check, typecheck, build, rendered and browser checks |
 | canonical curation/presentation/generator/types | content verification, attestation, content tests, typecheck; rendered/privacy checks when public |
 | public app/components/CSS/SEO | typecheck, lint, build, rendered tests; browser checks for responsive/interactive work |
 | connectors, Studio, OAuth | typecheck, content/backend/security tests, exact public projector and provider-failure coverage; prove zero provider data calls from public reads/callbacks/saves/cron, one attempt per Studio refresh, and last-known-good preservation |
@@ -47,8 +47,9 @@ weekly, and for every release candidate. Pushes to `main` establish the merged
 Validate/Gitleaks/CodeQL baseline; release branches use owner-dispatched exact-
 SHA evidence instead of automatic full runs. Bounded Browser Quality and
 Lighthouse are manual exact-SHA release evidence. The two-worker exhaustive
-interaction soak and visual capture are separate manual evidence required only
-for Room, Travel input, or browser-harness changes.
+interaction soak and visual capture are separate manual investigations, selected
+when the changed behavior needs them; a Room, Travel, or harness path alone does
+not require repeating an unrelated soak. Preserve unique affected assertions.
 
 Disposable release runners use one-time labels and trusted `main` or
 `release/<semver>` refs. They must require the exact current ref head, carry no

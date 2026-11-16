@@ -49,12 +49,21 @@ request path, durable store, or progressive-enhancement boundary changes.
 - `app/api/studio/**`: canonical owner read/write APIs.
 - `app/api/connectors/**`: public reads, exact OAuth callbacks, and retained compatibility redirects—not new owner mutations.
 - `lib/server/http/**`: thin, reusable authenticated request handlers.
+- `lib/server/publication-request-context.ts`: request-scoped promise sharing
+  for availability, metadata, and rendering, isolated by actual bindings and
+  fail-closed mode. `public-content-selector.ts` owns indexed publication merges.
+- `lib/work-query-policy.ts` and `worker/public-request-policy.ts`: bounded
+  Work queries and unsupported-action rejection before framework execution.
+  Keep valid legacy filters and RSC navigation; no blanket public POST allowance.
 - `lib/server/connectors/**`: provider contracts, clients, credentials, OAuth, refresh locks, public projectors, snapshots, audit, and retention.
 - `lib/server/strava-config.ts`: separate official-embed configuration, not the generic connector repository.
 - `lib/server/travel/**`: Postcard Planet drafts, policy, public projection, versioned publication, retention, uploads, and media authorization. Public atlas and paginated trip projectors stay narrower than stored publication records.
 - `app/studio/travel/**` and `app/api/studio/travel/**`: owner-only Travel Desk and writes. Exact GPS and original filenames remain browser-local intake suggestions and never enter public state.
 - `lib/server/simulation/**`: bounded session, budget, approval, grounding, and model-gateway contracts.
 - `worker/**`: host/tier enforcement, Cloudflare Access, CSP, headers, throttling, request correlation, and retention/cleanup maintenance. Cron must never synchronize provider collections.
+- `build/vinext-worker-manifests.ts`: build-time rebasing of known Vinext
+  manifest paths before chunk hashing; never patch installed dependencies or
+  completed release artifacts to repair a build.
 - `drizzle/**`: ordered immutable D1 migrations.
 - `tests/**`: content, copy, backend/security, rendered, environment, and browser acceptance.
 - `scripts/lib/release-coverage.mjs` extends CI classification with the complete

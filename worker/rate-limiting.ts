@@ -1,6 +1,7 @@
 import { isProtectedOwnerPath } from "./access";
 import type { AccessIdentity, WorkerEnv } from "./runtime-types";
 import { privateJson } from "./security-headers";
+import { isFilteredWorkRequest } from "../lib/work-query-policy";
 
 const OAUTH_CALLBACK_PROVIDERS = new Map([
   ["/api/connectors/myanimelist/oauth/callback", "myanimelist"],
@@ -15,6 +16,7 @@ const PROMOTION_IMPORT_RATE_LIMIT = 6;
 const OAUTH_CALLBACK_RATE_LIMIT = 20;
 const SIMULATION_API_RATE_LIMIT = 12;
 const TRAVEL_MEDIA_RATE_LIMIT = 180;
+const FILTERED_WORK_RATE_LIMIT = 120;
 const RATE_WINDOW_MS = 60_000;
 const DISCOGS_PUBLIC_READ_PATH = "/api/connectors/discogs";
 const SIMULATION_API_PREFIX = "/api/simulation/";
@@ -160,6 +162,20 @@ export function requiresConfiguredRateLimit(
             pathname.startsWith("/api/connector-artwork/") ||
             pathname === "/api/play-promotion/import" ||
             OAUTH_CALLBACK_PROVIDERS.has(pathname)))),
+  );
+}
+
+export async function throttleFilteredWork(
+  env: WorkerEnv,
+  request: Request,
+  development: boolean,
+  pathname = new URL(request.url).pathname,
+): Promise<Response | null> {
+  if (!isFilteredWorkRequest(request, pathname)) return null;
+  const key = await oneWayBucketKey(env, request, "filtered-work");
+  return rateLimitResponse(
+    await consumeRateLimit(env.WORK_RATE_LIMITER, key, FILTERED_WORK_RATE_LIMIT, development),
+    "Work search is temporarily limited. Try again shortly.",
   );
 }
 

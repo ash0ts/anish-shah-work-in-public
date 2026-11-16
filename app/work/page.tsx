@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { permanentRedirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { FilteredResultFocus } from "@/components/FilteredResultFocus";
 import {
   WorkOrganizationContext,
@@ -102,6 +102,8 @@ export default async function WorkPage({
     0,
   );
   const filtered = filterWorkArchiveRecords(allWorks, query);
+  const page = paginateWorkArchiveRecords(filtered, query.page);
+  if (query.page > page.totalPages) notFound();
   const contextualOrganizations = contextualWorkOrganizationMarksFrom(
     bundle,
     filtered,
@@ -110,7 +112,6 @@ export default async function WorkPage({
   const contextualOrganizationMarks = contextualOrganizations.marks.map(
     organizationMarkView,
   );
-  const page = paginateWorkArchiveRecords(filtered, query.page);
   const timelineRecords = filterWorkArchiveRecords(allWorks, {
     ...query,
     bucket: "",

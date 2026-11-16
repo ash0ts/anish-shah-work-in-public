@@ -95,6 +95,14 @@ Preserve the signed-in owner checkpoint, explicit content-publication review,
 native/disposable runner fallback when capacity is unavailable; never manufacture
 evidence or repeat successful identical jobs unnecessarily.
 
+Keep independent operations moving when one gate needs owner input. Distinguish
+code complete, locally validated, hosted configuration saved, and production
+verified. A capacity failure is a reason to use the documented fallback, not
+to weaken checks or repeatedly dispatch the same unavailable runner. Diagnose
+a failing feature with focused traces before rerunning the complete candidate.
+Adding monitoring or using included paid-tier capacity does not authorize a
+new subscription, broader repository access, or automatic production deploys.
+
 For skill edits, run structural validation and review the realistic
 [intent scenarios](tests/intent-scenarios.md). These checks complement behavior
 tests; neither frontmatter validation nor an agent's claim proves compliance.

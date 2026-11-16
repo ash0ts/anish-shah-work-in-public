@@ -96,6 +96,14 @@ noindexed `503`. The checked-in bundle is an explicit local, synthetic-preview,
 and private-reference input; it is never an automatic direct-production
 fallback.
 
+The Worker establishes an AsyncLocalStorage context for each GET/HEAD request.
+Availability, metadata, and page rendering share one pending publication
+resolution keyed by the actual D1/KV bindings and fail-closed policy. There is no
+cross-request cache: a new request rechecks authority and visibility. Sitemap
+generation also opts out of framework caching. The built-Worker integration test
+counts publication reads and validations and exercises concurrent visibility
+changes and invalid/missing publications.
+
 ## Connector state
 
 Provider responses are untrusted until exact normalization and public

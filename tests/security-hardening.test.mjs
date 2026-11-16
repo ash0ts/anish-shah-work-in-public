@@ -15,12 +15,72 @@ const {
   throttleDiscogsPublicRead,
   throttleOAuthCallback,
   throttleOwnerWrite,
+  throttleFilteredWork,
 } = await tsImport("../worker/rate-limiting.ts", import.meta.url);
+const { publicRequestPolicyResponse } = await tsImport("../worker/public-request-policy.ts", import.meta.url);
+const { canonicalSecurityPathname } = await tsImport(
+  "../worker/request-path.ts",
+  import.meta.url,
+);
+
+test("unsupported actions and public mutations stop before body decoding", async () => {
+  for (const path of ["/_next/rsc", "/%5fnext/rsc", "/work", "/about"]) {
+    for (const method of ["POST", "PUT", "PATCH", "DELETE", "OPTIONS"]) {
+      const request = new Request(`https://portfolio.example${path}`, {
+        method, headers: { origin: "https://untrusted.example", "content-length": "99999999" },
+        body: "unsupported",
+      });
+      const response = publicRequestPolicyResponse(request, canonicalSecurityPathname(new URL(request.url).pathname));
+      assert.equal(response.status, 405);
+      assert.equal(request.bodyUsed, false);
+      assert.equal(await response.text(), "Method Not Allowed");
+    }
+  }
+  for (const header of ["next-action", "x-rsc-action"]) {
+    for (const value of ["", "not-an-action", "x".repeat(16_000)]) {
+      const response = publicRequestPolicyResponse(new Request("https://portfolio.example/_next/rsc", {
+        headers: { [header]: value },
+      }), "/_next/rsc");
+      assert.equal(response.status, 400);
+      assert.equal(await response.text(), "Bad Request");
+    }
+  }
+  for (const [path, method] of [["/_next/rsc", "GET"], ["/work", "HEAD"], ["/api/studio/records", "POST"], ["/api/connectors/myanimelist/oauth/callback", "GET"]]) {
+    assert.equal(publicRequestPolicyResponse(new Request(`https://portfolio.example${path}`, { method }), path), null);
+  }
+});
+
+test("Work bounds reject malformed pagination and oversized queries without changing valid legacy scopes", () => {
+  for (const query of ["page=0", "page=-1", "page=1.5", "page=2junk", "page=1&page=2", "page=1000000", "q=%00", `q=${"x".repeat(201)}`, `unknown=${"x".repeat(2048)}`]) {
+    assert.equal(publicRequestPolicyResponse(new Request(`https://portfolio.example/work?${query}`), "/work").status, 400);
+  }
+  for (const query of ["bucket=talks-programs&page=2", "view=map&practice=teaching", "organization=org%3Aexample&year=2021", "_rsc=example"]) {
+    assert.equal(publicRequestPolicyResponse(new Request(`https://portfolio.example/work?${query}`), "/work"), null);
+  }
+});
+
+test("filtered Work throttling uses one salted client key across different queries", async () => {
+  const keys = [];
+  const env = { RATE_LIMIT_SALT: "s".repeat(40), WORK_RATE_LIMITER: {
+    limit: async ({ key }) => { keys.push(key); return { success: keys.length <= 120 }; },
+  } };
+  const request = (q) => new Request(`https://portfolio.example/work${q}`, { headers: { "cf-connecting-ip": "203.0.113.4" } });
+  assert.equal(await throttleFilteredWork(env, request(""), false), null);
+  assert.equal(await throttleFilteredWork(env, request("?_rsc=token"), false), null);
+  for (let n = 0; n < 120; n++) assert.equal(await throttleFilteredWork(env, request(`?q=${n}`), false), null);
+  const rejected = await throttleFilteredWork(env, request("?topic=agent-systems"), false);
+  assert.equal(rejected.status, 429);
+  assert.equal(rejected.headers.get("retry-after"), "60");
+  assert.equal(new Set(keys).size, 1);
+  assert(!keys[0].includes("203.0.113.4"));
+  assert.equal((await throttleFilteredWork({}, request("?q=a"), false)).status, 503);
+});
 const {
   beginRequestObservation,
   correlatedResponse,
   observeResponse,
   observeScheduledFailure,
+  observeScheduledSuccess,
 } = await tsImport("../worker/redacted-observability.ts", import.meta.url);
 const { productionOriginResponse } = await tsImport(
   "../worker/production-origin.ts",
@@ -28,10 +88,6 @@ const { productionOriginResponse } = await tsImport(
 );
 const { boundedApiWrite } = await tsImport(
   "../worker/request-limits.ts",
-  import.meta.url,
-);
-const { canonicalSecurityPathname } = await tsImport(
-  "../worker/request-path.ts",
   import.meta.url,
 );
 const { simulationExperienceBoundaryResponse } = await tsImport(
@@ -535,6 +591,17 @@ test("scheduled Worker failure events expose only a release prefix", () => {
     '{"event":"worker_scheduled_failure","releaseShaPrefix":"bbbbbbbbbbbb"}',
   ]);
   assert.doesNotMatch(messages.join("\n"), /secret|private|token|code|state/i);
+});
+
+test("maintenance completion exposes no state and unknown methods are bounded", () => {
+  const messages = [];
+  const originalLog = console.log;
+  console.log = (message) => messages.push(String(message));
+  try {
+    observeScheduledSuccess("b".repeat(40));
+  } finally { console.log = originalLog; }
+  assert.deepEqual(messages, ['{"event":"worker_maintenance_complete","releaseShaPrefix":"bbbbbbbbbbbb"}']);
+  assert.equal(beginRequestObservation("SYNTHETIC-PRIVATE-VALUE", "/work", undefined).method, "OTHER");
 });
 
 test("direct production accepts only the configured canonical apex", () => {

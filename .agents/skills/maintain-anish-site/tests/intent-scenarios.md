@@ -13,6 +13,9 @@ These are dry-run cases, never authorization to mutate a real environment.
 | “Tighten this one Play instruction.” | Edit the affected field and run focused checks | Rewrite About or run unrelated Travel stability soaks |
 | “Ship the approved release; preview the new copy separately.” | Keep candidates separate, reuse exact evidence, honor guarded release/owner checkpoint and copy approval boundary | Mix unreleased copy into production; repeat successful checks without changed inputs |
 | “Show the impact, keep it concise.” | Use supported outcome bullets and omit empty sections | Invent causal revenue claims or remove necessary consent/recovery details |
+| “Are we done and is everything configured?” | Check live state and distinguish local implementation, matching validation, saved configuration, and deployed behavior | Call an unsaved monitor or an older SHA's passing build complete |
+| “Use what our paid plan includes.” | Identify a measured benefit, preserve guardrails, and obtain any new access/subscription authority | Enable every product, connect a repository with automatic promotion, or treat usage alerts as an account-wide cap |
+| “Keep the saved collection even when stale.” | Preserve accepted snapshots and timestamps; enforce actual permissions and explicit deletion paths | Apply the superseded six-hour Discogs cutoff |
 
 The current browser tests exercise visible Home reports, Source links, history,
 keyboard and no-JavaScript access. Release-efficiency tests exercise full-range

@@ -5,6 +5,25 @@ import { expectRoomReady } from "./helpers/room-readiness.mjs";
 const routes = ["/", "/about", "/work", "/play", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
 
+test("public metadata stays in the head after hydration and navigation", async ({ page }) => {
+  for (const route of routes) {
+    await page.goto(route);
+    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator('head meta[name="description"]')).toHaveAttribute("content", /\S/);
+    // The synthetic preview deliberately prefixes browser titles, not public
+    // social titles. Compare the underlying title without that exact marker.
+    await expect(page.locator('head meta[property="og:title"]')).toHaveAttribute("content", (await page.title()).replace(/^\[PR #1\] /, ""));
+    const canonical = page.locator('head link[rel="canonical"]');
+    await expect(canonical).toHaveCount(1);
+    expect(new URL(await canonical.getAttribute("href")).href).toBe(new URL(route, "https://anish-shah-is.online").href);
+    await expect(page.locator('body meta[name="description"]')).toHaveCount(0);
+  }
+  await page.getByRole("navigation", { name: "Primary navigation", exact: true }).getByRole("link", { name: "About", exact: true }).click();
+  await expect(page).toHaveURL(/\/about$/);
+  await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute("href", "https://anish-shah-is.online/about");
+  await expect(page.locator('head meta[property="og:title"]')).toHaveAttribute("content", (await page.title()).replace(/^\[PR #1\] /, ""));
+});
+
 test("clearer signals and project notes retain keyboard, source and history access", async ({ page }) => {
   await page.goto("/");
   const signals = page.locator("[data-signal-circuit] details");
@@ -884,7 +903,9 @@ test("legacy Play stream links redirect permanently and reject unknown selection
     maxRedirects: 0,
   });
   expect(redirect.status()).toBe(308);
-  expect(new URL(redirect.headers().location).pathname).toBe("/play/collect");
+  const destination = new URL(redirect.headers().location, redirect.url());
+  expect(destination.origin).toBe(new URL(redirect.url()).origin);
+  expect(destination.pathname).toBe("/play/collect");
 
   await page.goto("/play?stream=collect", { waitUntil: "networkidle" });
   await expect(page).toHaveURL(/\/play\/collect$/);

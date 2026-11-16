@@ -209,6 +209,14 @@ try {
           );
         }
         samples.push(sample);
+        if (process.env.LIGHTHOUSE_DIAGNOSTICS === "1") {
+          // Local synthetic traffic only; diagnostics do not alter the audit.
+          await writeFile(
+            path.join(reportDirectory, `${reportName(route, mode)}.run-${run}.artifacts.json`),
+            JSON.stringify(sample.artifacts),
+            { mode: 0o600 },
+          );
+        }
         await writeFile(
           path.join(
             reportDirectory,

@@ -33,6 +33,7 @@ import {
 import { readPublicationFallback } from "./publication-fallback";
 import { previewFixtureRuntime } from "../deployment-environment";
 import { applyCopyDeckToBundle } from "../copy";
+import { resolvePublicationForRequest } from "./publication-request-context";
 export { PUBLICATION_FALLBACK_KEY } from "./publication-fallback";
 
 // Apply Git-owned presentation copy before D1 visibility/order/caveat merging.
@@ -64,6 +65,17 @@ async function resolveKvFallback(
 }
 
 export async function getPublicContentViewFromStores(
+  database: D1Database | null,
+  fallbackStore: KVNamespace | null,
+  options: { failClosed: boolean },
+): Promise<ResolvedPublicContent> {
+  return resolvePublicationForRequest(
+    database, fallbackStore, options.failClosed,
+    () => readPublicContentViewFromStores(database, fallbackStore, options),
+  );
+}
+
+async function readPublicContentViewFromStores(
   database: D1Database | null,
   fallbackStore: KVNamespace | null,
   options: { failClosed: boolean },

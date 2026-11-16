@@ -1,6 +1,7 @@
 import type { WorkArchiveRecord } from "@/lib/work-index";
 import { workFacetsForRecord } from "@/lib/work-facets";
 import { workOrganizationLabelForId } from "@/lib/work-organizations";
+import { validWorkPage, WORK_QUERY_KEYS } from "./work-query-policy";
 
 export type WorkSearchParams = Record<
   string,
@@ -57,18 +58,7 @@ type WorkArchiveQueryPatch = Partial<
   >
 >;
 
-const queryParameterOrder = [
-  "q",
-  "bucket",
-  "topic",
-  "year",
-  "format",
-  "organization",
-  "role",
-  "practice",
-  "organizations",
-  "page",
-] as const;
+const queryParameterOrder = WORK_QUERY_KEYS;
 
 function first(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
@@ -81,7 +71,8 @@ function normalized(value: string): string {
 export function parseWorkArchiveQuery(
   params: WorkSearchParams,
 ): WorkArchiveQuery {
-  const parsedPage = Number.parseInt(first(params.page), 10);
+  const pageValue = first(params.page);
+  const parsedPage = validWorkPage(pageValue) ? Number(pageValue) : 1;
   return {
     query: first(params.q).trim(),
     bucket: first(params.bucket),
@@ -286,7 +277,7 @@ export function paginateWorkArchiveRecords<T>(
   const normalizedPage = Number.isFinite(requestedPage)
     ? Math.max(1, Math.trunc(requestedPage))
     : 1;
-  const currentPage = Math.min(normalizedPage, totalPages);
+  const currentPage = normalizedPage;
   const startIndex = (currentPage - 1) * safePageSize;
   const items = records.slice(startIndex, startIndex + safePageSize);
 
@@ -294,8 +285,8 @@ export function paginateWorkArchiveRecords<T>(
     currentPage,
     items,
     pageSize: safePageSize,
-    rangeEnd: totalItems ? startIndex + items.length : 0,
-    rangeStart: totalItems ? startIndex + 1 : 0,
+    rangeEnd: items.length ? startIndex + items.length : 0,
+    rangeStart: items.length ? startIndex + 1 : 0,
     totalItems,
     totalPages,
   };

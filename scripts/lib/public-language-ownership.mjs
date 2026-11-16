@@ -58,6 +58,11 @@ function reviewedLiteral(file, literal, reason) {
 export const PUBLIC_LANGUAGE_LITERAL_ALLOWLIST = Object.freeze([
   reviewedLiteral(
     "app/privacy/page.tsx",
+    `No visitor-analytics beacon is enabled. Cloudflare processes network requests and may record request URLs and error metadata for security and operations. The application’s own events omit URLs, search terms, identities, and request bodies.`,
+    PRIVACY_MESSAGE_REASON,
+  ),
+  reviewedLiteral(
+    "app/privacy/page.tsx",
     `What Anish Shah’s connectors and travel atlas store, publish, retain, and delete—and how visitors control third-party loads.`,
     PRIVACY_MESSAGE_REASON,
   ),

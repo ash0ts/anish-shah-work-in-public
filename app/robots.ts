@@ -19,6 +19,10 @@ export default function robots(): MetadataRoute.Robots {
         "/api/",
         "/signin-with-chatgpt",
         "/signout-with-chatgpt",
+        // Keep the four bucket-only entry points and their page links open.
+        // Robots is crawl advice, not authorization or a deindexing guarantee.
+        ...["q", "topic", "year", "organization", "organizations", "format", "role", "practice", "view"]
+          .flatMap((parameter) => [`/work?*${parameter}=`, `/work/?*${parameter}=`]),
       ],
     },
     sitemap: `${siteUrl()}/sitemap.xml`,

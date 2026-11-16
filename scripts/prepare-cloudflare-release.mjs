@@ -174,7 +174,13 @@ config.r2_buckets = [
   },
 ];
 config.images = { binding: "IMAGES" };
+config.limits = { cpu_ms: 5_000 };
 config.ratelimits = [
+  {
+    name: "WORK_RATE_LIMITER",
+    namespace_id: "88001007",
+    simple: { limit: 120, period: 60 },
+  },
   {
     name: "OWNER_RATE_LIMITER",
     namespace_id: "88001001",

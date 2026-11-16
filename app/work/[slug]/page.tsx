@@ -32,6 +32,7 @@ import { requestCspNonce } from "@/lib/server/csp";
 import {
   absoluteSiteUrl,
   publicPageMetadata,
+  projectPersonRelationship,
   safeJsonLd,
   workMetadataDescription,
 } from "@/lib/seo";
@@ -252,13 +253,9 @@ export default async function WorkDetailPage({ params }: WorkDetailProps) {
         headline: group.shortTitle,
         description: workMetadataDescription(group.title, group.summary),
         dateCreated: group.period.basis === "unknown" ? undefined : group.period.start ?? undefined,
-        creator: {
-          "@type": "Person",
-          "@id": `${absoluteSiteUrl("/")}#anish-shah`,
-          name: "Anish Shah",
-        },
+        ...projectPersonRelationship(group.roleSummary),
         about: group.topics.map((topic) => humanizeWorkFilter(topic)),
-        sameAs: evidence
+        citation: evidence
           .map((source) => source.url)
           .filter((url): url is string => Boolean(url)),
       },

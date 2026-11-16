@@ -386,8 +386,9 @@ test("the archive paginates exactly 24 canonical works while preserving order", 
     [...first.items, ...second.items].map((record) => record.id),
     records.slice(0, 48).map((record) => record.id),
   );
-  assert.equal(last.currentPage, Math.ceil(records.length / 24));
-  assert.equal(last.rangeEnd, records.length);
+  assert.equal(last.currentPage, 999);
+  assert.deepEqual(last.items, []);
+  assert.equal(last.rangeEnd, 0);
 });
 
 test("the color calendar has four semantic rows, six years, and exact archive counts", () => {
