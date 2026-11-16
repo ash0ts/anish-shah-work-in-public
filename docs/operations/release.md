@@ -6,6 +6,13 @@ Worker. The private Sites
 deployment remains a recovery/reference environment; it is not a public
 rollback target.
 
+Report progress in four distinct states: source implemented, candidate validated,
+hosted settings saved, and production verified. Never call a release complete
+because local checks passed or an alert form is populated. Keep independent
+operations moving while an owner checkpoint or another specific step awaits
+input. Actual failures block promotion; unavailable capacity selects the
+documented fallback rather than another identical dispatch.
+
 Every release has two records:
 
 1. An ignored pre-release plan at `dist/release-plan.json`, written before any

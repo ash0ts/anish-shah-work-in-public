@@ -36,7 +36,9 @@ function output(result) {
 }
 
 function git(directory, ...args) {
-  const result = spawnSync("git", args, { cwd: directory, encoding: "utf8" });
+  // These disposable fixture repositories must not invoke the owner's signing
+  // key or hooks. Real repository commits retain the owner's configuration.
+  const result = spawnSync("git", ["-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", ...args], { cwd: directory, encoding: "utf8" });
   assert.equal(result.status, 0, output(result));
 }
 

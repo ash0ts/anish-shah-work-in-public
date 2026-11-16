@@ -254,6 +254,14 @@ do not hide failures with a server restart or functional-test retry. See
 (last verified 2026-10-22). Browser jobs wait for semantic room readiness with a 15-second SLO and
 capture diagnostic state on failure.
 
+Rendered HTML uses the same pinned proxy, including oversized rejected-action
+bodies followed by successful navigation. `tests/publication-worker.test.mjs`
+also exercises the unmodified built Worker directly in workerd with synthetic
+D1 bindings. It counts one read/hash validation across availability, metadata,
+and SSR, checks simultaneous visibility changes, and confirms rejected requests
+perform no publication or outbound reads. The observation wrapper is test-only;
+its counters and fixture headers never enter deployed code.
+
 Run the manually dispatched Browser stability workflow only after changing the
 Room, Travel input, or browser harness, or while containing flakiness. It reuses
 one validated build and partitions one exhaustive pass across exactly two
@@ -266,13 +274,18 @@ media authorization, upload bounds, EXIF removal, atomic publication, and the
 disabled-mode 404/sitemap boundary. Preview uses synthetic Travel data and has
 no R2 binding.
 
-The pinned Vinext 0.0.50 entry generator reads a stale `searchParamsObject`
-property during page preflight; the collector returns `pageSearchParams`.
-`build/vinext-page-query-compat.ts` corrects that single generated virtual-entry
-access so preflight, metadata, and rendering see the same query. It fails closed
-if the upstream expression changes. Review and remove the shim when upgrading
-Vinext; never patch installed packages or deployable output. The Travel review
-fixtures exercise non-default query selection through real HTTP requests.
+Vinext 1.2.0 replaces the old query-preflight implementation; the 0.0.50
+compatibility shim has been removed. Regression checks retain repeated query
+values and real HTTP filtered-Work navigation. Never patch installed packages
+or deployable output. Travel review fixtures still exercise non-default query
+selection through real HTTP requests.
+
+`build/vinext-worker-manifests.ts` corrects four known external manifest import
+paths when Vinext emits the Worker entry into a nested chunk. The transformation
+runs before chunk hashes are finalized, affects only the RSC build, and has
+root/nested/client fixtures. Do not replace it with edits to `node_modules` or
+`dist`. Lint excludes local Worker state and generated reports, not the source
+plugins under `build/`.
 
 Simulation browser coverage must exercise both Action and Tactical completion,
 the semantic no-JavaScript dossier, reduced-motion/forced-colors/Save-Data

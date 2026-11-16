@@ -66,10 +66,11 @@ parsing a write or invoking application code.
 flowchart TD
   request["Incoming request"] --> path["Canonicalize and validate pathname"]
   path --> origin["Enforce expected origin and deployment tier"]
-  origin --> auth["Verify Access when the route or tier requires it"]
+  origin --> shape["Reject unsupported actions, methods, and malformed Work queries"]
+  shape --> auth["Verify Access when the route or tier requires it"]
   auth --> preview["Apply read-only preview boundary"]
   preview --> setup["Check required rate-limit bindings and attach the CSP nonce"]
-  setup --> discogs["Apply the Discogs public-read throttle"]
+  setup --> discogs["Apply Discogs public-read and filtered Work throttles"]
   discogs --> publication["Check publication availability for content-backed public pages"]
   publication --> early["Apply OAuth, promotion, and Simulation throttles"]
   early --> body["Bound JSON; precheck and preserve the Travel upload stream"]
@@ -79,6 +80,7 @@ flowchart TD
   response --> client["Sanitized response"]
   path -. "invalid" .-> reject["Fail closed"]
   origin -. "mismatch" .-> reject
+  shape -. "invalid" .-> reject
   auth -. "denied" .-> reject
   setup -. "missing" .-> reject
   discogs -. "limited" .-> reject
@@ -172,6 +174,32 @@ the sanitized base and resolves the active D1 publication. The selector
 validates snapshot shape, base content version, record identity, public
 projection, and content hash before rendering. Hosted public mode fails closed
 when neither D1 nor the verified KV fallback can supply a valid publication.
+
+`publication-request-context.ts` shares that resolution promise across the
+availability check, metadata, and SSR in one GET/HEAD request. Store identities
+and fail-closed policy are part of its key; nothing survives into another request
+or environment. Snapshot merging uses indexed record lookups. About participates
+in the availability boundary, and sitemap generation is explicitly dynamic so
+the next request reflects newly hidden work. Neither HTML nor publication state
+gets a cross-request cache.
+
+Filtered Work requests have a dedicated 120/minute salted-client limit. Query
+size and pagination are checked before publication access; out-of-range pages
+return 404 rather than repeatedly rendering the last page. Generated filter
+links use a stable parameter order. The production configuration and release
+guard both require a 5,000 ms Worker CPU ceiling.
+
+Home and About share one Person definition and identity ID. Project artifacts
+are citations, not identity-equivalent `sameAs` links. The sitemap lists visible
+canonical pages without fabricated modification dates. Robots rules discourage
+expensive facet combinations while permitting work-type entry points and their
+pagination; they do not replace request throttling or authorization.
+
+Metadata resolves into the initial HTML head for every visitor, using the
+supported `htmlLimitedBots: /.*/` setting to disable metadata streaming. This
+avoids body-only canonical/social tags and does not special-case audit tools or
+trust crawler identities. The same request-scoped publication promise supplies
+metadata and page content.
 
 ## Play as progressive enhancement
 

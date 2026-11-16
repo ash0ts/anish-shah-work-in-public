@@ -178,6 +178,12 @@ export default function PrivacyPage() {
         <section>
           <h2>What visitors load</h2>
           <p>
+            No visitor-analytics beacon is enabled. Cloudflare processes network
+            requests and may record request URLs and error metadata for security
+            and operations. The application’s own events omit URLs, search
+            terms, identities, and request bodies.
+          </p>
+          <p>
             Watch, Read, Listen, Collect, and Play request only this site’s
             sanitized first-party snapshots. Discogs data loads only after
             Collect opens. Spotify artwork loads only after Listen opens. The
