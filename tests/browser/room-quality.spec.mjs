@@ -574,7 +574,7 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(
       page.getByRole("heading", { name: "My Room, 2001" }),
     ).toBeVisible();
-    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
+    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(8);
     await expect(page.locator("canvas")).toHaveCount(0);
     expect(connectors).toEqual([]);
     expect(runtimeScripts).toEqual([]);
