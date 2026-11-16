@@ -903,7 +903,9 @@ test("legacy Play stream links redirect permanently and reject unknown selection
     maxRedirects: 0,
   });
   expect(redirect.status()).toBe(308);
-  expect(new URL(redirect.headers().location).pathname).toBe("/play/collect");
+  const destination = new URL(redirect.headers().location, redirect.url());
+  expect(destination.origin).toBe(new URL(redirect.url()).origin);
+  expect(destination.pathname).toBe("/play/collect");
 
   await page.goto("/play?stream=collect", { waitUntil: "networkidle" });
   await expect(page).toHaveURL(/\/play\/collect$/);
