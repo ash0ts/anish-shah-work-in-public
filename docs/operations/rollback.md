@@ -28,6 +28,15 @@ session-boundary incident should use `disabled` or the recorded prior Worker.
 
 ## Worker rollback
 
+Before changing traffic after a content publication, use the documented Worker
+version override to check a public content-backed page on the recorded prior
+version. The prior Worker may reject a newer publication contract and return
+`503`; compatible database schema alone does not prove publication compatibility.
+Do not replace a functioning candidate with a version known to reject the active
+publication. Prefer a forward repair, or separately review an audited Studio
+publication restore. Never repair this by writing D1/KV envelopes or restoring
+the database wholesale.
+
 Use the previous version recorded in the checked-in release record. During an
 incomplete release that has not yet produced a final record, use the previous
 version captured in the unchanged `dist/release-plan.json`:

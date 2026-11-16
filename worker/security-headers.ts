@@ -41,7 +41,10 @@ export function securityPolicy(
 ): string {
   const scriptSources = development
     ? `'self' 'nonce-${nonce}' 'unsafe-eval'`
-    : `'self' 'nonce-${nonce}' 'strict-dynamic'`;
+    : `'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'`;
+  // The bundled Meshopt decoder compiles WebAssembly. This narrowly permits
+  // Wasm, not JavaScript eval/Function. Keep it on the document policy because
+  // client navigation from Home to Play retains Home's original CSP.
   const connectSources = development ? "'self' ws: wss:" : "'self'";
   return [
     "default-src 'self'",

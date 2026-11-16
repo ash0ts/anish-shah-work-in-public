@@ -1959,10 +1959,10 @@ test("browser quality isolates workerd lifecycles without weakening review evide
       ]),
     );
   }
-  // Count test behaviors, not duplicated per-viewport declarations. Provider
-  // consent, no-JS foundations and long-title reflow now belong to object-screens.
-  assert.equal(complete.length, 32);
-  for (const behavior of ["original poster stays usable", "WebGL context loss", "Back and Escape", "projected hit regions", "newer object selection", "Pocket Room rejects twenty"]) {
+  // Assert required behaviors and exact shard parity, not a frozen suite count:
+  // adding a regression must not fail the partition contract. Provider consent,
+  // no-JS foundations and long-title reflow belong to object-screens.
+  for (const behavior of ["production CSP loads the real Room decoder at 390px", "production CSP loads the real Room decoder at 1440px", "original poster stays usable", "WebGL context loss", "Back and Escape", "projected hit regions", "newer object selection", "Pocket Room rejects twenty"]) {
     assert.ok(complete.some((name) => name.includes(behavior)), behavior);
   }
   assert.equal(partitioned.length, complete.length);

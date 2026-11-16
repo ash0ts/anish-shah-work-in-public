@@ -748,6 +748,21 @@ test("the Worker verifies Access identity and strips forgeable forwarded identit
   assert.match(access, /headers\.delete\(INTERNAL_NONCE_HEADER\)/);
 });
 
+test("production CSP permits the bundled Wasm decoder without permitting JavaScript evaluation", async () => {
+  const { securityPolicy } = await tsImport("../worker/security-headers.ts", import.meta.url);
+  for (const tier of [null, "production", "staging", "preview"]) {
+    const policy = securityPolicy("test-nonce", false, tier);
+    const sources = policy.split("; ").find((directive) => directive.startsWith("script-src ")).split(" ");
+    assert(sources.includes("'wasm-unsafe-eval'"));
+    assert(sources.includes("'strict-dynamic'"));
+    assert(sources.includes("'nonce-test-nonce'"));
+    assert(!sources.includes("'unsafe-eval'"));
+    assert(!sources.includes("'unsafe-inline'"));
+    assert.match(policy, /worker-src 'self'/);
+    assert.match(policy, /connect-src 'self'/);
+  }
+});
+
 test("the Worker applies the required secure response policy", async () => {
   const [worker, headers] = await Promise.all([
     readFile(new URL("../worker/index.ts", import.meta.url), "utf8"),
