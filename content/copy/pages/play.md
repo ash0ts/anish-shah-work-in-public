@@ -230,3 +230,6 @@ Guitar Rig — Signal Garden
 
 ## rig-seo-description
 Explore Anish Shah’s guitar pedals, portable recording chain, and planned pedalboard build.
+
+## rig-source-note
+Equipboard is a linked catalog, not the live database. This checked-in manifest is the public source of truth.

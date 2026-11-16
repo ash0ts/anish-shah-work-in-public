@@ -230,6 +230,7 @@ export const COPY_PAGE_DEFINITIONS = {
     field("play", "rig-directory-label", "editorial", 100),
     field("play", "rig-seo-title", "editorial", 70),
     field("play", "rig-seo-description", "editorial", 160),
+    field("play", "rig-source-note", "fact_check", 220),
     field("play", "travel-screen-summary", "editorial", 220),
     field("play", "travel-seo-title", "editorial", 70),
     field("play", "travel-seo-description", "editorial", 160),

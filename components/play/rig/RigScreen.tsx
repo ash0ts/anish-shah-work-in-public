@@ -76,7 +76,7 @@ export function RigScreen({ manifest }: { manifest: GearManifest }) {
       </section>
 
       <footer className={styles.footer}>
-        <p>Equipboard remains a linked catalog, not the live database. This checked-in manifest is the public source of truth.</p>
+        <p>{SITE_COPY.play["rig-source-note"]}</p>
         {manifest.profile.equipboardProfileUrl ? (
           <a href={manifest.profile.equipboardProfileUrl} rel="noreferrer">Open Equipboard profile ↗</a>
         ) : (
