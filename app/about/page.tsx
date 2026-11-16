@@ -74,6 +74,7 @@ export default async function AboutPage() {
         ].join("\n")
       : "";
   const structuredData = buildAboutStructuredData(
+    bundle,
     profileUrl,
     SITE_COPY.about["seo-title"],
     SITE_COPY.about["seo-description"],

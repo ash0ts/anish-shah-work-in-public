@@ -1,7 +1,7 @@
 <!-- copy-page: about -->
 
 ## seo-title
-About Anish Shah — ML systems, evaluation, and agents
+About — ML systems, evaluation, and agents
 
 ## seo-description
 Anish Shah builds agent infrastructure and evaluation workflows at Weights & Biases, part of CoreWeave, and teaches through courses and workshops.

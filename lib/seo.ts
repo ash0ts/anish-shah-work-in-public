@@ -92,6 +92,34 @@ export function publicPageMetadata({
   };
 }
 
+export function buildPersonStructuredData(
+  bundle: Pick<AnishContentBundle, "profile">,
+  homeUrl = absoluteSiteUrl("/"),
+) {
+  return {
+    "@type": "Person",
+    "@id": `${homeUrl}#anish-shah`,
+    name: bundle.profile.name,
+    url: homeUrl,
+    description: bundle.profile.summary,
+    sameAs: bundle.profile.links.map((link) => link.href),
+    worksFor: {
+      "@type": "Organization",
+      name: "Weights & Biases",
+      url: "https://wandb.ai/",
+      parentOrganization: { "@type": "Organization", name: "CoreWeave", url: "https://www.coreweave.com/" },
+    },
+  };
+}
+
+/** A contribution is not authorship of the whole project. Default narrowly. */
+export function projectPersonRelationship(role: string) {
+  const person = { "@type": "Person", "@id": `${absoluteSiteUrl("/")}#anish-shah`, name: "Anish Shah" };
+  return /^(creator|author|coauthor|curriculum author)(?:$|\s*[;,])/i.test(role.trim())
+    ? { creator: person }
+    : { contributor: person };
+}
+
 export function buildHomeStructuredData(
   bundle: Pick<AnishContentBundle, "profile">,
   profileUrl: string,
@@ -109,20 +137,7 @@ export function buildHomeStructuredData(
         description: bundle.profile.summary,
         mainEntity: { "@id": personId },
       },
-      {
-        "@type": "Person",
-        "@id": personId,
-        name: bundle.profile.name,
-        url: profileUrl,
-        jobTitle: bundle.profile.headline,
-        description: bundle.profile.summary,
-        sameAs: bundle.profile.links.map((link) => link.href),
-        worksFor: {
-          "@type": "Organization",
-          name: "Weights & Biases",
-          url: "https://wandb.ai/",
-        },
-      },
+      buildPersonStructuredData(bundle, profileUrl),
       {
         "@type": "WebSite",
         "@id": `${profileUrl}#website`,
@@ -136,6 +151,7 @@ export function buildHomeStructuredData(
 }
 
 export function buildAboutStructuredData(
+  bundle: Pick<AnishContentBundle, "profile">,
   profileUrl: string,
   title: string,
   description: string,
@@ -149,7 +165,7 @@ export function buildAboutStructuredData(
     url: profileUrl,
     name: socialPageTitle(title, identity),
     description,
-    mainEntity: { "@id": `${homeUrl}#anish-shah` },
+    mainEntity: buildPersonStructuredData(bundle, homeUrl),
     isPartOf: { "@id": `${homeUrl}#website` },
   };
 }
