@@ -15,7 +15,12 @@ const eslintConfig = defineConfig([
     // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
-    "build/**",
+    // Local Worker state, archived candidates, and browser output are generated.
+    ".wrangler/**",
+    ".playwright/**",
+    "playwright-report/**",
+    "test-results/**",
+    "dist/**",
     "next-env.d.ts",
   ]),
 ]);

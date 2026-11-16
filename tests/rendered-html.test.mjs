@@ -22,11 +22,14 @@ let serverOutput = "";
 
 before(async () => {
   server = spawn(
-    path.join(PROJECT_ROOT, "node_modules/.bin/wrangler"),
+    process.execPath,
     [
+      "node_modules/wrangler-e2e/bin/wrangler.js",
       "dev",
       "--config",
       "dist/server/wrangler.json",
+      "--compatibility-date",
+      "2026-07-28",
       "--port",
       String(PORT),
       "--ip",
@@ -34,6 +37,8 @@ before(async () => {
       "--local",
       "--var",
       "NODE_ENV:development",
+      "--var",
+      "RATE_LIMIT_SALT:synthetic-rendered-test-salt-not-a-secret",
       "--log-level",
       "error",
       "--persist-to",
@@ -637,6 +642,17 @@ test("robots and sitemap publish only public editorial surfaces", async () => {
   assert.match(sitemap, /<loc>[^<]+\/about<\/loc>/i);
   assert.doesNotMatch(sitemap, /\/studio|\/api\//i);
   assert.doesNotMatch(sitemap, /workers\.dev/i);
+  assert.doesNotMatch(sitemap, /<lastmod>/i, "bundle generation is not a substantive page update");
+  const disallowed = robots.split("\n").filter((line) => line.startsWith("Disallow: ")).map((line) => line.slice(10).trim());
+  const blocked = (pathname) => disallowed.some((pattern) => new RegExp(`^${pattern.split("*").map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*")}`).test(pathname));
+  for (const parameter of ["q", "topic", "year", "organization", "organizations", "format", "role", "practice", "view"]) {
+    assert(blocked(`/work?${parameter}=example`), parameter);
+    assert(blocked(`/work?bucket=products-open-source&${parameter}=example`), parameter);
+    assert(blocked(`/work/?${parameter}=example`), parameter);
+  }
+  for (const pathname of ["/", "/about", "/work", "/work?bucket=products-open-source", "/work?bucket=talks-programs&page=2", "/work/wandb-mcp-server", "/assets/organizations/brand.svg"]) {
+    assert.equal(blocked(pathname), false, pathname);
+  }
 });
 
 test("public pages expose canonical, social, and structured metadata", async () => {
@@ -644,18 +660,21 @@ test("public pages expose canonical, social, and structured metadata", async () 
   const socialTitles = new Set();
   for (const pathname of routes) {
     const html = await renderHtml(pathname);
-    const canonical = html.match(
+    assert.doesNotMatch(html, /static\.cloudflareinsights\.com|data-cf-beacon|cloudflareinsights\.com\/cdn-cgi\/rum/i, "privacy-incompatible analytics must remain disabled");
+    const head = html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1];
+    assert(head, `${pathname} is missing its initial head`);
+    const canonical = head.match(
       /<link\b(?=[^>]*\brel="canonical")(?=[^>]*\bhref="([^"]+)")[^>]*>/i,
     )?.[1];
     assert(canonical, `${pathname} is missing its canonical link`);
     assert.equal(new URL(canonical).origin, "https://anish-shah-is.online");
     assert.equal(new URL(canonical).pathname, pathname);
-    const socialTitle = html.match(
+    const socialTitle = head.match(
       /<meta\b(?=[^>]*\bproperty="og:title")(?=[^>]*\bcontent="([^"]+)")[^>]*>/i,
     )?.[1];
     assert(socialTitle, `${pathname} is missing an Open Graph title`);
     socialTitles.add(decodeHtml(socialTitle));
-    const description = html.match(
+    const description = head.match(
       /<meta\b(?=[^>]*\bname="description")(?=[^>]*\bcontent="([^"]+)")[^>]*>/i,
     )?.[1];
     assert(description, `${pathname} is missing a description`);
@@ -664,7 +683,7 @@ test("public pages expose canonical, social, and structured metadata", async () 
       descriptionLength >= 80 && descriptionLength <= 160,
       `${pathname} description is ${descriptionLength} characters`,
     );
-    assert.match(html, /name="twitter:card"[^>]*content="summary_large_image"/i);
+    assert.match(head, /name="twitter:card"[^>]*content="summary_large_image"/i);
   }
   assert.equal(socialTitles.size, routes.length);
 
@@ -678,7 +697,16 @@ test("public pages expose canonical, social, and structured metadata", async () 
   assert.match(home, /"@type":"WebSite"/);
   assert.match(about, /"@type":"ProfilePage"/);
   assert.match(about, /"@id":"https:\/\/anish-shah-is\.online\/#anish-shah"/);
-  assert.doesNotMatch(about, /"@type":"Person"/);
+  assert.match(about, /"@type":"Person"/);
+  assert.doesNotMatch(home + about, /"jobTitle":/);
+  const structuredFrom = (html) => JSON.parse(html.match(/<script\b(?=[^>]*\btype="application\/ld\+json")[^>]*>([\s\S]*?)<\/script>/i)[1]);
+  const homePerson = structuredFrom(home)["@graph"].find((entry) => entry["@type"] === "Person");
+  const aboutProfile = structuredFrom(about);
+  assert.deepEqual(aboutProfile.mainEntity, homePerson);
+  assert.equal((about.match(/<title>(.*?)<\/title>/)?.[1].match(/Anish Shah/g) ?? []).length, 1);
+  assert.match(work, /"citation":\[/);
+  assert.match(work, /"contributor":\{/);
+  assert.doesNotMatch(work, /"sameAs":/);
   assert.match(work, /"@type":"CreativeWork"/);
   assert.match(work, /"@type":"BreadcrumbList"/);
   const conciseWorkSummary =
@@ -691,6 +719,22 @@ test("public pages expose canonical, social, and structured metadata", async () 
     work,
     /"description":"Agent access to experiments and traces, with hosted deployment support, compatibility fixes, and usage instrumentation\."/,
   );
+});
+
+test("expensive and unsupported public requests fail before rendering", async () => {
+  for (const pathname of ["/work?page=0", "/work?page=-1", "/work?page=2x", "/work?page=1&page=2", `/work?q=${"x".repeat(201)}`]) {
+    const response = await render(pathname);
+    assert.equal(response.status, 400, pathname);
+    assert.equal(await response.text(), "Bad Request");
+  }
+  const outOfRange = await render("/work?bucket=products-open-source&page=999999");
+  assert.equal(outOfRange.status, 404);
+  for (const pathname of ["/_next/rsc", "/work", "/%5fnext/rsc"]) {
+    const response = await fetch(`${BASE_URL}${pathname}`, { method: "POST", headers: { "next-action": "malformed", origin: "https://untrusted.example" }, body: "x".repeat(100_000) });
+    assert.equal(response.status, 400, pathname);
+    assert.equal(await response.text(), "Bad Request");
+    assert.match(response.headers.get("cache-control"), /no-store/);
+  }
 });
 
 test("every Work route keeps metadata and CreativeWork JSON-LD synchronized", { timeout: 120_000 }, async () => {

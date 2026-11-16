@@ -30,11 +30,14 @@ const rendered = new Map();
 
 before(async () => {
   server = spawn(
-    path.join(PROJECT_ROOT, "node_modules/.bin/wrangler"),
+    process.execPath,
     [
+      "node_modules/wrangler-e2e/bin/wrangler.js",
       "dev",
       "--config",
       "dist/server/wrangler.json",
+      "--compatibility-date",
+      "2026-07-28",
       "--port",
       String(PORT),
       "--ip",
@@ -42,6 +45,8 @@ before(async () => {
       "--local",
       "--var",
       "NODE_ENV:development",
+      "--var",
+      "RATE_LIMIT_SALT:example-rendered-fixture-rate-limit-salt",
       "--var",
       "TRAVEL_ATLAS_MODE:atlas-v1",
       "--log-level",
@@ -680,7 +685,7 @@ test("Three.js stays inside deferred Play room and Travel boundaries", async () 
   );
   assert.match(
     roomStage?.file ?? "",
-    /^assets\/RoomStage-[\w-]+\.js$/,
+    /^_next\/static\/chunks\/RoomStage-[\w-]+\.js$/,
     "the Three.js room must retain an independently cacheable chunk",
   );
   const travelStage = manifest["components/play/travel/TravelGlobeStage.tsx"];
@@ -691,7 +696,7 @@ test("Three.js stays inside deferred Play room and Travel boundaries", async () 
   );
   assert.match(
     travelStage?.file ?? "",
-    /^assets\/TravelGlobeStage-[\w-]+\.js$/,
+    /^_next\/static\/chunks\/TravelGlobeStage-[\w-]+\.js$/,
     "the Travel globe must retain an independently cacheable chunk",
   );
   for (const pathname of ["/", "/work"]) {

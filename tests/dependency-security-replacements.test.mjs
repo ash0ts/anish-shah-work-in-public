@@ -5,10 +5,21 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import yaml from "js-yaml";
-import { vinextPageQueryCompat } from "../build/vinext-page-query-compat.ts";
+import { searchParamsToRecord } from "vinext/utils/query";
+import { vinextWorkerManifests } from "../build/vinext-worker-manifests.ts";
 
 const require = createRequire(import.meta.url);
 const braces = require("braces");
+
+test("Vinext runtime manifest imports resolve from nested Worker chunks before hashing", () => {
+  const plugin = vinextWorkerManifests();
+  const input = 'import manifest from "./__vinext_cacheability_manifest.js";import "./__vinext_pregenerated_concrete_paths.js";import projection from "./__vinext_cacheability_request_projection.js";import assets from "./vinext-client-assets.js";import x from "./unrelated.js";';
+  const context = { environment: { name: "rsc" } };
+  assert.equal(plugin.renderChunk.call(context, input, { fileName: "index.js" }), null);
+  const nested = plugin.renderChunk.call(context, input, { fileName: "_next/static/worker-entry-hash.js" });
+  assert.equal(nested.code, input.replaceAll('"./__vinext_', '"../../__vinext_').replace('"./vinext-client-assets.js"', '"../../vinext-client-assets.js"'));
+  assert.equal(plugin.renderChunk.call({ environment: { name: "client" } }, input, { fileName: "_next/static/main.js" }), null);
+});
 
 test("bounded Zod collections reject oversized input before parsing elements", () => {
   const { z } = require("zod");
@@ -33,26 +44,16 @@ test("bounded Zod collections reject oversized input before parsing elements", (
 });
 
 test("pinned Vinext preflight preserves query values and repeated parameters", async () => {
-  const entry = await readFile(new URL("../node_modules/vinext/dist/entries/app-rsc-entry.js", import.meta.url), "utf8");
-  const collector = await readFile(new URL("../node_modules/vinext/dist/server/app-page-head.js", import.meta.url), "utf8");
-  const broken = "__collectAppPageSearchParams(searchParams).searchParamsObject";
-  assert.equal(entry.split(broken).length, 2);
-  assert.match(collector, /return \{\s*hasSearchParams,\s*pageSearchParams\s*\}/);
-  const plugin = vinextPageQueryCompat();
-  const expression = `return ${broken};`;
-  const transformed = plugin.transform(expression, "\0virtual:vinext-rsc-entry");
   const values = Object.assign(Object.create(null), {
     fixture: "long-caption", pageSize: "24", tag: ["city", "night"],
   });
-  const evaluate = new Function("__collectAppPageSearchParams", "searchParams", transformed.code);
   const query = new URLSearchParams("fixture=long-caption&pageSize=24&tag=city&tag=night");
-  assert.equal(evaluate((input) => {
-    assert.equal(input, query);
-    return { hasSearchParams: true, pageSearchParams: values };
-  }, query), values);
-  assert.equal(plugin.transform(expression, "/app/page.tsx"), null);
-  assert.throws(() => plugin.transform("upstream changed", "\0virtual:vinext-rsc-entry"), /review the pinned/);
-  assert.throws(() => plugin.transform(expression + expression, "\0virtual:vinext-rsc-entry"), /review the pinned/);
+  assert.deepEqual(searchParamsToRecord(query), values);
+  const config = await readFile(new URL("../vite.config.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(config, /vinextPageQueryCompat/);
+  const root = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  assert.equal(root.devDependencies.vinext, "1.2.0");
+  assert.equal(root.devDependencies["@vitejs/plugin-rsc"], "0.5.37");
 });
 
 test("the build resolves the reviewed local braces patch, not an advisory waiver", async () => {
