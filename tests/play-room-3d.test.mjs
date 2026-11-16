@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 import { gzipSync } from "node:zlib";
 import { BoxGeometry, Mesh, MeshBasicMaterial, Ray, Vector3 } from "three";
 
@@ -73,6 +74,32 @@ const capableEnvironment = {
 };
 const ROOM_RENDERER_GZIP_OPTIMIZATION_TARGET_BYTES = 225 * 1024;
 const ROOM_RENDERER_GZIP_HARD_CEILING_BYTES = 325 * 1024;
+
+test("the graphics worker reports capability without waiting for driver teardown", async () => {
+  const source = await readFile(new URL("../components/play/room-3d/room-capability.worker.ts", import.meta.url), "utf8");
+  for (const mode of ["supported", "unavailable", "throws"]) {
+    const replies = [];
+    let extensionRequests = 0;
+    let closed = 0;
+    runInNewContext(source, {
+      OffscreenCanvas: class {
+        getContext(kind) {
+          assert.equal(kind, "webgl2");
+          if (mode === "throws") throw Error("Graphics unavailable");
+          if (mode === "unavailable") return null;
+          return { getExtension() { extensionRequests += 1; throw Error("Driver teardown stalled"); } };
+        }
+      },
+      self: {
+        postMessage(data) { replies.push(data.supported); },
+        close() { closed += 1; },
+      },
+    });
+    assert.deepEqual(replies, [mode === "supported"]);
+    assert.equal(extensionRequests, 0, "worker termination owns context cleanup");
+    assert.equal(closed, 1);
+  }
+});
 
 test("the off-thread graphics probe accepts only an exact success and always terminates", async () => {
   for (const [data, expected] of [[{ supported: true }, true], [{ supported: false }, false], [{ supported: "true" }, false], [null, false]]) {
