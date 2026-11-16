@@ -41,6 +41,9 @@ const {
 } = await tsImport("../lib/content-selectors.ts", import.meta.url);
 
 const staticBundle = publicBundleJson;
+const { resolvePublicationForRequest, withPublicationRequest } = await tsImport(
+  "../lib/server/publication-request-context.ts", import.meta.url,
+);
 const publishedAt = "2026-07-30T18:00:00.000Z";
 
 async function publicContentStoreHarness(overrides = {}) {
@@ -67,6 +70,7 @@ async function publicContentStoreHarness(overrides = {}) {
         ? null
         : { source: "published_snapshot", row },
     readPublicationFallback,
+    resolvePublicationForRequest,
     ...overrides,
   };
 
@@ -76,6 +80,7 @@ async function publicContentStoreHarness(overrides = {}) {
       resolvePublicContentFromSnapshotRow,
       resolveVerifiedPublicContentFromSnapshotRow,
       readPublicationFallback,
+      resolvePublicationForRequest,
     } = globalThis[${JSON.stringify(harnessKey)}];
     ${source.slice(start, end)}
   `;
@@ -705,6 +710,59 @@ test("store resolution uses KV on D1 failure but rejects a missing D1 active pub
     [],
     "an intentionally inactive D1 publication must not revive stale KV content",
   );
+});
+
+test("request-scoped publication shares pending reads and validation, then observes the next publication", async () => {
+  let reads = 0;
+  let validations = 0;
+  let row = { contentHash: "first" };
+  const db = { prepare: () => ({ first: async () => { reads++; return row; } }) };
+  const { getPublicContentViewFromStores: get } = await publicContentStoreHarness({
+    resolveVerifiedPublicContentFromSnapshotRow: async (_bundle, value) => {
+      validations++;
+      await Promise.resolve();
+      return { source: "published_snapshot", row: value };
+    },
+  });
+  await withPublicationRequest(async () => {
+    const results = await Promise.all(Array.from({ length: 4 }, () => get(db, null, { failClosed: true })));
+    assert(results.every((value) => value === results[0]));
+    assert.equal(reads, 1);
+    assert.equal(validations, 1);
+  });
+  row = { contentHash: "second" };
+  await withPublicationRequest(async () => {
+    assert.equal((await get(db, null, { failClosed: true })).row.contentHash, "second");
+  });
+  assert.equal(reads, 2);
+  assert.equal(validations, 2);
+  row = null;
+  await withPublicationRequest(async () => {
+    const results = await Promise.allSettled([get(db, null, { failClosed: true }), get(db, null, { failClosed: true })]);
+    assert(results.every((result) => result.status === "rejected"));
+  });
+  assert.equal(reads, 3);
+});
+
+test("concurrent request contexts and distinct environments never share publication state", async () => {
+  const { getPublicContentViewFromStores: get } = await publicContentStoreHarness();
+  let reads = 0;
+  const db = (id) => ({ prepare: () => ({ first: async () => { reads++; return { id }; } }) });
+  const production = db("production");
+  const preview = db("preview");
+  await Promise.all(Array.from({ length: 5 }, () => withPublicationRequest(async () => {
+    const [a, b, c] = await Promise.all([
+      get(production, null, { failClosed: true }),
+      get(preview, null, { failClosed: true }),
+      get(production, null, { failClosed: true }),
+    ]);
+    assert.equal(a, c);
+    assert.equal(a.row.id, "production");
+    assert.equal(b.row.id, "preview");
+  })));
+  assert.equal(reads, 10);
+  await Promise.all([get(production, null, { failClosed: true }), get(production, null, { failClosed: true })]);
+  assert.equal(reads, 12, "outside a request there is no cache");
 });
 
 test("checked-in static content is available only when failClosed is false", async () => {

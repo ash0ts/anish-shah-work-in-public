@@ -16,6 +16,7 @@ export const PRODUCTION_RESOURCE_FINGERPRINTS = Object.freeze({
 });
 
 export const PRODUCTION_RATE_LIMITS = Object.freeze([
+  ["WORK_RATE_LIMITER", { namespaceId: "88001007", limit: 120 }],
   ["OWNER_RATE_LIMITER", { namespaceId: "88001001", limit: 30 }],
   ["ARTWORK_RATE_LIMITER", { namespaceId: "88001002", limit: 120 }],
   ["PROMOTION_RATE_LIMITER", { namespaceId: "88001003", limit: 6 }],
@@ -34,6 +35,7 @@ const PUBLIC_CONFIG_KEYS = Object.freeze([
   "jsx_factory",
   "jsx_fragment",
   "kv_namespaces",
+  "limits",
   "main",
   "name",
   "no_bundle",
@@ -302,6 +304,7 @@ export function assertPublicReleaseConfig(config, expected) {
     images?.binding !== "IMAGES" ||
     Object.keys(images).length !== 1 ||
     !exactRateLimits ||
+    JSON.stringify(config?.limits) !== JSON.stringify({ cpu_ms: 5_000 }) ||
     !exactVars ||
     config?.observability?.enabled !== true ||
     config?.observability?.head_sampling_rate !== 1 ||

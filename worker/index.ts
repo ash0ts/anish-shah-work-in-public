@@ -10,6 +10,8 @@ import { pruneSimulationRetention } from "../lib/server/simulation/repository";
 import { pruneTravelRetention } from "../lib/server/travel";
 import { authenticateRequest, isSitesRuntime } from "./access";
 import { publicationAvailabilityResponse } from "./publication-fallback";
+import { withPublicationRequest } from "../lib/server/publication-request-context";
+import { publicRequestPolicyResponse } from "./public-request-policy";
 import {
   rateLimitSetupResponse,
   requiresConfiguredRateLimit,
@@ -20,12 +22,14 @@ import {
   throttleOAuthCallback,
   throttleSimulationApi,
   throttleTravelMedia,
+  throttleFilteredWork,
 } from "./rate-limiting";
 import {
   beginRequestObservation,
   correlatedResponse,
   observeResponse,
   observeScheduledFailure,
+  observeScheduledSuccess,
 } from "./redacted-observability";
 import { productionOriginResponse } from "./production-origin";
 import { canonicalSecurityPathname } from "./request-path";
@@ -125,6 +129,8 @@ const worker = {
         sitesRuntime,
       });
       if (originFailure) return finalize(originFailure);
+      const publicRequestFailure = publicRequestPolicyResponse(request, pathname);
+      if (publicRequestFailure) return finalize(publicRequestFailure);
 
       const authentication = await authenticateRequest(request, env, {
         pathname,
@@ -192,6 +198,11 @@ const worker = {
       if (discogsReadLimited && (directProduction || development)) {
         return finalize(discogsReadLimited);
       }
+
+      const workLimited = enforceRequestRateLimits
+        ? await throttleFilteredWork(env, appRequest, development, pathname)
+        : null;
+      if (workLimited && (directProduction || development)) return finalize(workLimited);
 
       const unavailable = await publicationAvailabilityResponse(
         appRequest,
@@ -309,9 +320,21 @@ const worker = {
         await pruneConnectorRetention(db, scheduledAt);
         await pruneSimulationRetention(db, scheduledAt);
         await pruneTravelRetention(db, scheduledAt);
+        observeScheduledSuccess(env.RELEASE_SHA);
       })().catch(() => observeScheduledFailure(env.RELEASE_SHA)),
     );
   },
 };
 
-export default worker;
+const requestScopedWorker = {
+  ...worker,
+  fetch(request: Request, env: WorkerEnv, ctx: WorkerExecutionContext) {
+    // Mutations must never reuse publication state across a write. Public
+    // rendering (including metadata and its availability check) is read-only.
+    return ["GET", "HEAD"].includes(request.method)
+      ? withPublicationRequest(() => worker.fetch(request, env, ctx))
+      : worker.fetch(request, env, ctx);
+  },
+};
+
+export default requestScopedWorker;

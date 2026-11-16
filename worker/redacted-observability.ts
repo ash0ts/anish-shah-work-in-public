@@ -63,7 +63,9 @@ export function beginRequestObservation(
   const routeClass = classifyRoute(pathname);
   return {
     requestId: crypto.randomUUID(),
-    method,
+    method: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"].includes(method)
+      ? method
+      : "OTHER",
     routeClass,
     releaseShaPrefix: safeReleaseShaPrefix(releaseSha),
     startedAt: Date.now(),
@@ -107,6 +109,16 @@ export function observeScheduledFailure(releaseSha: string | undefined): void {
   console.error(
     JSON.stringify({
       event: "worker_scheduled_failure",
+      releaseShaPrefix: safeReleaseShaPrefix(releaseSha),
+    }),
+  );
+}
+
+/** Emitted only after every scheduled maintenance task completed successfully. */
+export function observeScheduledSuccess(releaseSha: string | undefined): void {
+  console.log(
+    JSON.stringify({
+      event: "worker_maintenance_complete",
       releaseShaPrefix: safeReleaseShaPrefix(releaseSha),
     }),
   );

@@ -179,7 +179,9 @@ function validReleaseConfigFixture() {
         { binding: "TRAVEL_MEDIA", bucket_name: "anish-shah-travel-media" },
       ],
       images: { binding: "IMAGES" },
+      limits: { cpu_ms: 5_000 },
       ratelimits: [
+        ["WORK_RATE_LIMITER", "88001007", 120],
         ["OWNER_RATE_LIMITER", "88001001", 30],
         ["ARTWORK_RATE_LIMITER", "88001002", 120],
         ["PROMOTION_RATE_LIMITER", "88001003", 6],
@@ -300,6 +302,19 @@ test("production release configuration rejects unexpected Worker bindings", () =
       ),
     /exact public-release boundary/,
   );
+});
+
+test("production release configuration pins CPU and filtered Work limits", () => {
+  const { config, expected } = validReleaseConfigFixture();
+  for (const limits of [undefined, {}, { cpu_ms: 300_000 }, { cpu_ms: 5_000, subrequests: 1000 }]) {
+    assert.throws(() => assertPublicReleaseConfig({ ...config, limits }, expected));
+  }
+  for (const change of ["remove", "weaken"]) {
+    const ratelimits = config.ratelimits.flatMap((entry) => entry.name !== "WORK_RATE_LIMITER"
+      ? [entry]
+      : change === "remove" ? [] : [{ ...entry, simple: { limit: 1000, period: 60 } }]);
+    assert.throws(() => assertPublicReleaseConfig({ ...config, ratelimits }, expected));
+  }
 });
 
 test("release parsers return exact migration and Worker version identifiers", () => {

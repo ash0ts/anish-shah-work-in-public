@@ -9,6 +9,7 @@ export interface WorkerEnv {
   OAUTH_CALLBACK_RATE_LIMITER?: RateLimitBinding;
   SIMULATION_RATE_LIMITER?: RateLimitBinding;
   TRAVEL_MEDIA_RATE_LIMITER?: RateLimitBinding;
+  WORK_RATE_LIMITER?: RateLimitBinding;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
