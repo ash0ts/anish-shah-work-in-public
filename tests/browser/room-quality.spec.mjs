@@ -1045,7 +1045,7 @@ test.describe("My Room 2001 browser quality", () => {
     }
   });
 
-  test("a slow room return is acknowledged immediately without exposing controls", async ({
+  test("a pending history return is acknowledged immediately without exposing controls", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -1057,24 +1057,36 @@ test.describe("My Room 2001 browser quality", () => {
     await room.locator('[data-room-object-control="collect"]').click();
     await expect(page).toHaveURL(/\/play\/collect\?fixture=ready$/);
 
-    let releaseReturn;
-    const returnReleased = new Promise((resolve) => {
-      releaseReturn = resolve;
-    });
-    await page.route(/\/play\.rsc(?:\?|$)/, async (route) => {
-      await returnReleased;
-      await route.continue();
+    // History restoration may reuse a client-cached page without a request.
+    // Hold the standard browser operation, not a framework-specific RSC URL,
+    // so this always exercises the pending state before the real history move.
+    await page.evaluate(() => {
+      const back = window.history.back.bind(window.history);
+      window.__roomPendingReturn = { calls: 0, release: back };
+      window.history.back = () => {
+        window.__roomPendingReturn.calls += 1;
+      };
     });
 
-    await page.getByRole("link", { name: "Back to room" }).click();
-    const status = page.locator("[data-room-runtime-announcer]");
-    await expect(status).toContainText("Returning to the room.");
-    room = page.locator("[data-room-runtime]");
-    await expect(room).toBeVisible();
-    await expect(room).toHaveAttribute("data-room-transition-phase", "returning");
-    await expect(room).toHaveAttribute("inert", "");
+    try {
+      await page.getByRole("link", { name: "Back to room" }).click();
+      await expect.poll(() => page.evaluate(() => window.__roomPendingReturn.calls)).toBe(1);
+      await expect(page).toHaveURL(/\/play\/collect\?fixture=ready$/);
+      const status = page.locator("[data-room-runtime-announcer]");
+      await expect(status).toContainText("Returning to the room.");
+      room = page.locator("[data-room-runtime]");
+      await expect(room).toBeVisible();
+      await expect(room).toHaveAttribute("data-room-transition-phase", "returning");
+      await expect(room).toHaveAttribute("inert", "");
+    } finally {
+      await page.evaluate(() => {
+        const { calls, release } = window.__roomPendingReturn;
+        window.history.back = release;
+        delete window.__roomPendingReturn;
+        if (calls > 0) release();
+      });
+    }
 
-    releaseReturn();
     await expect(page).toHaveURL(/\/play\?fixture=ready$/, { timeout: 10_000 });
     await expectRoomReady(page, { context: "completing the slow room return" });
     await expect(
@@ -1144,18 +1156,25 @@ test.describe("My Room 2001 browser quality", () => {
     const watchRequestReleased = new Promise((resolve) => {
       releaseWatchRequest = resolve;
     });
-    await page.route(/\/play\/watch\.rsc(?:\?|$)/, async (route) => {
+    await page.route((url) => url.pathname === "/play/watch", async (route) => {
+      if (route.request().headers().rsc !== "1") {
+        await route.continue();
+        return;
+      }
       signalWatchRequest();
       await watchRequestReleased;
       await route.continue();
     });
 
-    await room.locator('[data-room-object-control="watch"]').click();
-    await watchRequestStarted;
-    await room
-      .locator('[data-room-object-control="play"]')
-      .dispatchEvent("click");
-    releaseWatchRequest();
+    try {
+      await room.locator('[data-room-object-control="watch"]').click();
+      await watchRequestStarted;
+      await room
+        .locator('[data-room-object-control="play"]')
+        .dispatchEvent("click");
+    } finally {
+      releaseWatchRequest();
+    }
 
     await expect(page).toHaveURL(/\/play\/play$/, { timeout: 10_000 });
     await expect(page.getByRole("heading", { name: "Desktop Library" })).toBeVisible();
