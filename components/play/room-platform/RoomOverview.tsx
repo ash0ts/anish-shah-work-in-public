@@ -95,6 +95,16 @@ export function RoomOverview({
               </li>
             ))}
           </ol>
+          <Link
+            className={styles.rigLink}
+            data-play-rig-link
+            href="/play/rig"
+            prefetch={false}
+          >
+            <strong>{SITE_COPY.play["rig-title"]}</strong>
+            <small>{SITE_COPY.play["rig-directory-label"]}</small>
+            <b aria-hidden="true">↗</b>
+          </Link>
         </nav>
       </section>
     </main>

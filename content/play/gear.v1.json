@@ -1,0 +1,281 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-16",
+  "profile": {
+    "displayName": "Anish Shah",
+    "equipboardProfileUrl": null,
+    "publicNote": "A portable guitar, recording, and performance rig. Serial numbers, receipts, and purchase prices are intentionally private."
+  },
+  "statusLabels": {
+    "owned": "In the rig",
+    "incoming": "Incoming",
+    "planned": "Planned",
+    "optional": "Considering"
+  },
+  "items": [
+    {
+      "id": "fishman-fluence",
+      "brand": "Fishman",
+      "model": "Fluence pickups",
+      "kind": "pickup",
+      "status": "owned",
+      "chainGroup": "instrument",
+      "signalOrder": 10,
+      "equipboardQuery": "Fishman Fluence pickups",
+      "note": "Active pickups; exact voice/model can be added later."
+    },
+    {
+      "id": "tuner-unconfirmed",
+      "brand": "Model to confirm",
+      "model": "Tuner",
+      "kind": "utility",
+      "status": "owned",
+      "chainGroup": "input",
+      "signalOrder": 20,
+      "equipboardQuery": "guitar tuner pedal",
+      "note": "Exact tuner model still needs confirmation."
+    },
+    {
+      "id": "boss-ns2",
+      "brand": "Boss",
+      "model": "NS-2 Noise Suppressor",
+      "kind": "utility",
+      "status": "owned",
+      "chainGroup": "routing",
+      "signalOrder": 30,
+      "equipboardQuery": "Boss NS-2 Noise Suppressor",
+      "note": "Gate loop surrounds the noisy gain and compression stages."
+    },
+    {
+      "id": "kaede",
+      "brand": "Altero Custom Guitars × Kida Motif",
+      "model": "KAEDE",
+      "kind": "pedal",
+      "status": "owned",
+      "chainGroup": "gain",
+      "signalOrder": 40,
+      "equipboardQuery": "Altero Custom Guitars KAEDE overdrive",
+      "note": "Boutique overdrive with switchable headroom."
+    },
+    {
+      "id": "knife-drop",
+      "brand": "Eventide × Third Man Hardware",
+      "model": "Knife Drop",
+      "kind": "pedal",
+      "status": "owned",
+      "chainGroup": "gain",
+      "signalOrder": 50,
+      "equipboardQuery": "Eventide Knife Drop pedal",
+      "note": "Aggressive drive and octave texture."
+    },
+    {
+      "id": "greer-lightspeed",
+      "brand": "Greer Amps",
+      "model": "Lightspeed Organic Overdrive",
+      "kind": "pedal",
+      "status": "owned",
+      "chainGroup": "gain",
+      "signalOrder": 60,
+      "equipboardQuery": "Greer Lightspeed Organic Overdrive",
+      "note": "Low-gain touch-sensitive overdrive."
+    },
+    {
+      "id": "friedman-beod",
+      "brand": "Friedman",
+      "model": "BE-OD",
+      "kind": "pedal",
+      "status": "owned",
+      "chainGroup": "gain",
+      "signalOrder": 70,
+      "equipboardQuery": "Friedman BE-OD",
+      "note": "High-gain amp-style drive."
+    },
+    {
+      "id": "keeley-compressor-plus",
+      "brand": "Keeley",
+      "model": "Compressor Plus",
+      "kind": "pedal",
+      "status": "owned",
+      "chainGroup": "dynamics",
+      "signalOrder": 80,
+      "equipboardQuery": "Keeley Compressor Plus",
+      "note": "Placed after gain by preference, before the NS-2 return."
+    },
+    {
+      "id": "keeley-dyno-my-roto",
+      "brand": "Keeley",
+      "model": "Dyno My Roto",
+      "kind": "pedal",
+      "status": "owned",
+      "chainGroup": "modulation",
+      "signalOrder": 100,
+      "equipboardQuery": "Keeley Dyno My Roto",
+      "note": "Tri-chorus, rotary, and flange textures."
+    },
+    {
+      "id": "swan-hunter",
+      "brand": "Champion Leccy",
+      "model": "Swan Hunter",
+      "kind": "pedal",
+      "status": "owned",
+      "chainGroup": "texture",
+      "signalOrder": 110,
+      "equipboardQuery": "Champion Leccy Swan Hunter",
+      "note": "Situational ambience and lo-fi texture."
+    },
+    {
+      "id": "harmonic-tremolo-unconfirmed",
+      "brand": "Model to confirm",
+      "model": "Harmonic tremolo",
+      "kind": "pedal",
+      "status": "owned",
+      "chainGroup": "modulation",
+      "signalOrder": 120,
+      "equipboardQuery": "harmonic tremolo pedal",
+      "note": "Exact maker and model still need confirmation."
+    },
+    {
+      "id": "boss-rc1",
+      "brand": "Boss",
+      "model": "RC-1 Loop Station",
+      "kind": "pedal",
+      "status": "owned",
+      "chainGroup": "looping",
+      "signalOrder": 130,
+      "equipboardQuery": "Boss RC-1 Loop Station",
+      "note": "Available for simple looping; not planned as a permanent board fixture."
+    },
+    {
+      "id": "op1-field",
+      "brand": "Teenage Engineering",
+      "model": "OP-1 field",
+      "kind": "instrument",
+      "status": "owned",
+      "chainGroup": "recording",
+      "signalOrder": 160,
+      "equipboardQuery": "Teenage Engineering OP-1 field",
+      "note": "Portable recorder, looper, sampler, and MIDI destination."
+    },
+    {
+      "id": "orange-crush-20rt",
+      "brand": "Orange",
+      "model": "Crush 20RT",
+      "kind": "amp",
+      "status": "owned",
+      "chainGroup": "amplification",
+      "signalOrder": 180,
+      "equipboardQuery": "Orange Crush 20RT",
+      "note": "Practice amp with no effects loop."
+    },
+    {
+      "id": "empress-paraeq",
+      "brand": "Empress Effects",
+      "model": "ParaEQ MKII Deluxe",
+      "kind": "pedal",
+      "status": "planned",
+      "chainGroup": "eq",
+      "signalOrder": 90,
+      "equipboardQuery": "Empress ParaEQ MKII Deluxe",
+      "note": "Precision shaping before post-gain modulation."
+    },
+    {
+      "id": "vemuram-galea",
+      "brand": "Vemuram",
+      "model": "Galea",
+      "kind": "pedal",
+      "status": "planned",
+      "chainGroup": "gain",
+      "signalOrder": 45,
+      "equipboardQuery": "Vemuram Galea",
+      "note": "Planned boutique gain voice."
+    },
+    {
+      "id": "two-notes-opus",
+      "brand": "Two Notes",
+      "model": "OPUS",
+      "kind": "recording",
+      "status": "planned",
+      "chainGroup": "recording",
+      "signalOrder": 150,
+      "equipboardQuery": "Two Notes OPUS",
+      "note": "Amp, cab, DI, and recording bridge for OP-1 field or computer."
+    },
+    {
+      "id": "gigrig-g3s",
+      "brand": "TheGigRig",
+      "model": "G3S",
+      "kind": "switcher",
+      "status": "planned",
+      "chainGroup": "routing",
+      "signalOrder": null,
+      "equipboardQuery": "TheGigRig G3S",
+      "note": "Preset switching and MIDI control for the pedalboard."
+    },
+    {
+      "id": "gigrig-genx14",
+      "brand": "TheGigRig",
+      "model": "GENX14",
+      "kind": "power",
+      "status": "planned",
+      "chainGroup": "power",
+      "signalOrder": null,
+      "equipboardQuery": "TheGigRig GENX14",
+      "note": "Isolated pedalboard power."
+    },
+    {
+      "id": "gigrig-genx4lc",
+      "brand": "TheGigRig",
+      "model": "GENX4LC",
+      "kind": "utility",
+      "status": "optional",
+      "chainGroup": "routing",
+      "signalOrder": null,
+      "equipboardQuery": "TheGigRig GENX4LC",
+      "note": "Optional loop expansion if the final wiring needs it."
+    },
+    {
+      "id": "schmidt-sa550xdm",
+      "brand": "Schmidt Array",
+      "model": "SA550XDM",
+      "kind": "board",
+      "status": "incoming",
+      "chainGroup": "housing",
+      "signalOrder": null,
+      "equipboardQuery": "Schmidt Array SA550XDM",
+      "note": "Two-level board with connector hardware and rear access."
+    },
+    {
+      "id": "lehle-dual-expression",
+      "brand": "Lehle",
+      "model": "Dual Expression",
+      "kind": "controller",
+      "status": "planned",
+      "chainGroup": "control",
+      "signalOrder": null,
+      "equipboardQuery": "Lehle Dual Expression",
+      "note": "Expression control for switcher and MIDI-capable devices."
+    },
+    {
+      "id": "cme-h4midi-wc",
+      "brand": "CME",
+      "model": "H4MIDI WC",
+      "kind": "midi",
+      "status": "planned",
+      "chainGroup": "control",
+      "signalOrder": null,
+      "equipboardQuery": "CME H4MIDI WC",
+      "note": "MIDI host and routing bridge for OP-1 field, G3S, and computer."
+    },
+    {
+      "id": "flower-hosta-v2",
+      "brand": "Flower Pedals",
+      "model": "Hosta V2",
+      "kind": "pedal",
+      "status": "optional",
+      "chainGroup": "filter",
+      "signalOrder": 95,
+      "equipboardQuery": "Flower Pedals Hosta V2",
+      "note": "Optional envelope filter and auto-wah voice."
+    }
+  ]
+}

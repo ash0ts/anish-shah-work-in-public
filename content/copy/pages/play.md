@@ -4,7 +4,7 @@
 Play — My Room, 2001
 
 ## seo-description
-Open a low-poly room for anime, books, music, records, games, movement, and travel.
+Open a low-poly room for anime, books, music, records, games, movement, travel, and a guitar rig.
 
 ## intro-title
 My Room, 2001
@@ -209,3 +209,24 @@ Travel — Postcard Planet
 
 ## travel-seo-description
 Explore Anish Shah’s trips, approximate places, and photographs through a public, interactive world atlas.
+
+## rig-title
+Guitar rig
+
+## rig-directory-label
+Open the pedalboard workbench
+
+## rig-description
+Pedals, routing, recording tools, and the pieces still joining the board.
+
+## rig-screen-eyebrow
+Bench 01
+
+## rig-screen-title
+Signal Garden
+
+## rig-seo-title
+Guitar Rig — Signal Garden
+
+## rig-seo-description
+Explore Anish Shah’s guitar pedals, portable recording chain, and planned pedalboard build.
