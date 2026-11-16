@@ -22,7 +22,6 @@ Every entry is classified as `Concept`, `How-to`, `Reference`, or `Runbook`.
 | --- | --- | --- | --- |
 | Engineers changing publication state | Concept | [Content and state](./architecture/content-and-state.md) | Git, D1, KV, projector, or fallback ownership changes |
 | Engineers changing My Room | Concept | [My Room architecture](./architecture/my-room-2001.md) | Seven-object contract, semantic routes, or enhancement boundary changes |
-| Owner maintaining the guitar rig | Concept | [Gear rig and Equipboard](./architecture/gear-rig.md) | Public gear, Equipboard workflow, or the future room prop changes |
 | Engineers changing the campaign | Concept | [Simulation architecture](./architecture/meet-me-simulation.md) | Feature modes, sessions, AI, privacy, or authored fallback changes |
 | Travel authors and engineers | Runbook | [Travel atlas](./travel-atlas.md) | Authoring, geography, publication, media, or globe behavior changes |
 | Local developers and reviewers | How-to | [Testing](./testing.md) | Fresh-clone setup, local servers, validation selection, or browser gates change |
