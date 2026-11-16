@@ -201,6 +201,18 @@ avoids body-only canonical/social tags and does not special-case audit tools or
 trust crawler identities. The same request-scoped publication promise supplies
 metadata and page content.
 
+## Guitar collection and build plan
+
+`/play/rig` is a semantic, server-rendered route linked from the Play directory.
+It reads reviewed Git-owned gear and program manifests through `lib/gear-model.ts`;
+public explanations remain in the Play copy deck. Bounded GET selections choose a
+deck, preset and bank without JavaScript or external requests. Its static JSON
+feed and Equipboard checklist are generated from those same inputs and checked for
+drift. Equipboard remains an external catalog/profile link, with no authenticated
+integration or automatic synchronization. Planned positions do not imply ownership.
+See the [rig runbook](../../components/play/rig/README.md) for authoring and privacy.
+The seven-object 3D room contract stays unchanged; the new directory glyph is SVG.
+
 ## Play as progressive enhancement
 
 My Room 2001 is a semantic route system first and a 3D room second. A

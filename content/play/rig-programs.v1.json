@@ -1,0 +1,202 @@
+{
+  "version": 1,
+  "presets": [
+    {
+      "slot": 1,
+      "labelKey": "rig-preset-1",
+      "loops": [
+        7,
+        8,
+        12
+      ]
+    },
+    {
+      "slot": 2,
+      "labelKey": "rig-preset-2",
+      "loops": [
+        3,
+        7,
+        8,
+        12
+      ]
+    },
+    {
+      "slot": 3,
+      "labelKey": "rig-preset-3",
+      "loops": [
+        4,
+        7,
+        8,
+        12
+      ]
+    },
+    {
+      "slot": 4,
+      "labelKey": "rig-preset-4",
+      "loops": [
+        5,
+        8,
+        12
+      ]
+    },
+    {
+      "slot": 5,
+      "labelKey": "rig-preset-5",
+      "loops": [
+        6,
+        7,
+        8,
+        12
+      ]
+    },
+    {
+      "slot": 6,
+      "labelKey": "rig-preset-6",
+      "loops": [
+        3,
+        8,
+        11,
+        12
+      ]
+    },
+    {
+      "slot": 7,
+      "labelKey": "rig-preset-7",
+      "loops": [
+        2,
+        8,
+        12
+      ]
+    },
+    {
+      "slot": 8,
+      "labelKey": "rig-preset-8",
+      "loops": [
+        7,
+        8,
+        9,
+        12
+      ]
+    },
+    {
+      "slot": 9,
+      "labelKey": "rig-preset-9",
+      "loops": [
+        7,
+        8,
+        10,
+        12
+      ]
+    },
+    {
+      "slot": 10,
+      "labelKey": "rig-preset-10",
+      "loops": [
+        3,
+        7,
+        8,
+        9,
+        12
+      ]
+    },
+    {
+      "slot": 11,
+      "labelKey": "rig-preset-11",
+      "loops": [
+        3,
+        7,
+        8,
+        10,
+        12
+      ]
+    },
+    {
+      "slot": 12,
+      "labelKey": "rig-preset-12",
+      "loops": [
+        7,
+        8,
+        11,
+        12
+      ]
+    },
+    {
+      "slot": 13,
+      "labelKey": "rig-preset-13",
+      "loops": [
+        6,
+        7,
+        8,
+        11,
+        12
+      ]
+    },
+    {
+      "slot": 14,
+      "labelKey": "rig-preset-14",
+      "loops": [
+        2,
+        11,
+        12
+      ]
+    }
+  ],
+  "op1Commands": [
+    {
+      "slot": 8,
+      "labelKey": "rig-command-8",
+      "channel": 1,
+      "cc": 105,
+      "press": 127,
+      "release": 0
+    },
+    {
+      "slot": 9,
+      "labelKey": "rig-command-9",
+      "channel": 1,
+      "cc": 104,
+      "press": 127,
+      "release": 0
+    },
+    {
+      "slot": 10,
+      "labelKey": "rig-command-10",
+      "channel": 1,
+      "cc": 84,
+      "press": 127,
+      "release": 0
+    },
+    {
+      "slot": 11,
+      "labelKey": "rig-command-11",
+      "channel": 1,
+      "cc": 86,
+      "press": 127,
+      "release": 0
+    },
+    {
+      "slot": 12,
+      "labelKey": "rig-command-12",
+      "channel": 1,
+      "cc": 87,
+      "press": 127,
+      "release": 0
+    },
+    {
+      "slot": 13,
+      "labelKey": "rig-command-13",
+      "channel": 1,
+      "cc": 88,
+      "press": 127,
+      "release": 0
+    },
+    {
+      "slot": 14,
+      "labelKey": "rig-command-14",
+      "channel": 1,
+      "cc": 9,
+      "press": 127,
+      "release": 0
+    }
+  ]
+}

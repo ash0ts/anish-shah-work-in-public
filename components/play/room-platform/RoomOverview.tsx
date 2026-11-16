@@ -101,6 +101,13 @@ export function RoomOverview({
             href="/play/rig"
             prefetch={false}
           >
+            <svg className={styles.rigGlyph} viewBox="0 0 140 100" aria-hidden="true" focusable="false">
+              <path d="M24 32V5l5-3 5 4-3 28c9 6 6 14 13 22 12 17 1 34-13 34C9 90 6 73 18 60c7-8-3-17 6-28Z" fill="currentColor" />
+              <rect x="27" y="32" width="4" height="39" fill="var(--paper)" />
+              <rect x="52" y="43" width="81" height="45" rx="4" fill="none" stroke="currentColor" strokeWidth="3" />
+              {[60, 82, 104].map(x => <rect key={x} x={x} y="50" width="16" height="24" rx="2" fill="currentColor" />)}
+              <path d="M61 81h60" stroke="currentColor" strokeWidth="3" />
+            </svg>
             <strong>{SITE_COPY.play["rig-title"]}</strong>
             <small>{SITE_COPY.play["rig-directory-label"]}</small>
             <b aria-hidden="true">↗</b>

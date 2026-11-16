@@ -1117,3 +1117,30 @@ test("reduced-motion preference resolves to readable final states", async ({ bro
   await expect(page.locator("main")).toBeVisible();
   await context.close();
 });
+
+test("guitar rig banks, decks and inventory work without JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  await page.goto("/play/rig");
+  const main = page.locator("[data-gear-rig]");
+  await expect(main.getByRole("heading", { name: "Under the lid" })).toBeVisible();
+  await main.getByRole("navigation", { name: "Choose a guitar sound" }).getByRole("link", { name: "05 Heavy", exact: true }).click();
+  await expect(page.locator('[data-device="friedman-beod"]')).toHaveAttribute("data-active", "true");
+  await main.getByRole("link", { name: "Lower deck", exact: true }).click();
+  await expect(page.locator('[data-device="keeley-compressor-plus"]')).toHaveAttribute("data-active", "true");
+  await expect(page.locator('[data-device="gigrig-genx4lc"]')).toBeVisible();
+  await main.getByRole("link", { name: "02 / Guitar + tape", exact: true }).click();
+  await expect(main.getByRole("heading", { name: "OP-1 field commands" })).toBeVisible();
+  await expect(main.getByText("CC 105", { exact: true })).toBeVisible();
+  await main.getByRole("link", { name: "01 / Guitar only", exact: true }).click();
+  await expect(main.getByRole("heading", { name: "OP-1 field commands" })).toHaveCount(0);
+  await main.locator("#gear-boss-rc1 summary").click();
+  await expect(main.locator("#gear-boss-rc1")).toContainText("Owned and kept off this board plan");
+  const response = await page.request.get("/data/gear.v1.json");
+  expect(response.ok()).toBeTruthy();
+  const data = await response.json();
+  expect(data.manifest.build.revision).toBe("07");
+  expect(data.manifest.items.find(item => item.id === "canvas-power-6").status).toBe("owned");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
+  await context.close();
+});

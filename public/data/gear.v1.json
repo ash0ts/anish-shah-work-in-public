@@ -1,0 +1,986 @@
+{
+  "manifest": {
+    "version": 1,
+    "updatedAt": "2026-11-16",
+    "profile": {
+      "displayName": "Anish Shah",
+      "equipboardProfileUrl": null
+    },
+    "build": {
+      "id": "sa550xdm",
+      "revision": "07",
+      "state": "planned",
+      "widthMm": 550,
+      "depthMm": 460,
+      "spareLoops": [
+        1
+      ]
+    },
+    "items": [
+      {
+        "id": "fishman-fluence",
+        "brand": "Fishman",
+        "model": "Fluence — exact set unconfirmed",
+        "kind": "pickup",
+        "status": "owned",
+        "placement": "external",
+        "modelConfirmed": false,
+        "provenance": "owner-confirmed",
+        "catalogUrl": null,
+        "catalogQuery": "Fishman Fluence — exact set unconfirmed",
+        "noteKey": "rig-note-fishman-fluence"
+      },
+      {
+        "id": "tuner-unconfirmed",
+        "brand": "Landlord FX",
+        "model": "Lock In",
+        "kind": "utility",
+        "status": "owned",
+        "placement": "upper",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": null,
+        "catalogQuery": "Landlord FX Lock In",
+        "noteKey": "rig-note-tuner-unconfirmed",
+        "footprint": {
+          "x": 438,
+          "y": 154,
+          "w": 45,
+          "h": 95,
+          "rotation": 90,
+          "color": "#89987c",
+          "knobs": 0,
+          "switches": 1,
+          "dimensions": "provisional"
+        },
+        "power": {
+          "allocation": "P06",
+          "volts": 9
+        }
+      },
+      {
+        "id": "boss-ns2",
+        "brand": "Boss",
+        "model": "NS-2 Noise Suppressor",
+        "kind": "utility",
+        "status": "owned",
+        "placement": "lower",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/boss-ns-2-noise-suppressor-pedal",
+        "catalogQuery": "Boss NS-2 Noise Suppressor",
+        "noteKey": "rig-note-boss-ns2",
+        "footprint": {
+          "x": 270,
+          "y": 202,
+          "w": 73,
+          "h": 129,
+          "rotation": 90,
+          "color": "#e5e2d7",
+          "knobs": 3,
+          "switches": 1,
+          "dimensions": "published"
+        },
+        "loop": 8,
+        "power": {
+          "allocation": "P02",
+          "volts": 9
+        }
+      },
+      {
+        "id": "kaede",
+        "brand": "Altero Custom Guitars × Kida Motif",
+        "model": "KAEDE",
+        "kind": "pedal",
+        "status": "owned",
+        "placement": "upper",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/altero-kaede-kida-motifour-signature-overdrive-booster",
+        "catalogQuery": "Altero Custom Guitars × Kida Motif KAEDE",
+        "noteKey": "rig-note-kaede",
+        "footprint": {
+          "x": 336,
+          "y": 183,
+          "w": 70,
+          "h": 120,
+          "rotation": 0,
+          "color": "#888a51",
+          "knobs": 4,
+          "switches": 1,
+          "dimensions": "published"
+        },
+        "loop": 5,
+        "power": {
+          "allocation": "Q3",
+          "volts": 9
+        }
+      },
+      {
+        "id": "knife-drop",
+        "brand": "Eventide × Third Man Hardware",
+        "model": "Knife Drop",
+        "kind": "pedal",
+        "status": "owned",
+        "placement": "upper",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/eventide-knife-drop",
+        "catalogQuery": "Eventide × Third Man Hardware Knife Drop",
+        "noteKey": "rig-note-knife-drop",
+        "footprint": {
+          "x": 20,
+          "y": 195,
+          "w": 102,
+          "h": 108,
+          "rotation": 0,
+          "color": "#292b29",
+          "knobs": 3,
+          "switches": 2,
+          "dimensions": "published"
+        },
+        "loop": 2,
+        "power": {
+          "allocation": "P09",
+          "volts": 9
+        }
+      },
+      {
+        "id": "greer-lightspeed",
+        "brand": "Greer Amps",
+        "model": "Lightspeed Organic Overdrive",
+        "kind": "pedal",
+        "status": "owned",
+        "placement": "upper",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/greer-lightspeed-organic-overdrive",
+        "catalogQuery": "Greer Amps Lightspeed Organic Overdrive",
+        "noteKey": "rig-note-greer-lightspeed",
+        "footprint": {
+          "x": 148,
+          "y": 182,
+          "w": 66,
+          "h": 121.2,
+          "rotation": 0,
+          "color": "#32618a",
+          "knobs": 3,
+          "switches": 1,
+          "dimensions": "published"
+        },
+        "loop": 3,
+        "power": {
+          "allocation": "Q1",
+          "volts": 9
+        }
+      },
+      {
+        "id": "friedman-beod",
+        "brand": "Friedman",
+        "model": "BE-OD",
+        "kind": "pedal",
+        "status": "owned",
+        "placement": "upper",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/friedman-be-od-overdrive-pedal",
+        "catalogQuery": "Friedman BE-OD",
+        "noteKey": "rig-note-friedman-beod",
+        "footprint": {
+          "x": 466,
+          "y": 25,
+          "w": 64,
+          "h": 121,
+          "rotation": 0,
+          "color": "#272725",
+          "knobs": 6,
+          "switches": 1,
+          "dimensions": "provisional"
+        },
+        "loop": 6,
+        "power": {
+          "allocation": "Q4",
+          "volts": 9
+        }
+      },
+      {
+        "id": "keeley-compressor-plus",
+        "brand": "Keeley",
+        "model": "Compressor Plus",
+        "kind": "pedal",
+        "status": "owned",
+        "placement": "lower",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/keeley-compressor-plus",
+        "catalogQuery": "Keeley Compressor Plus",
+        "noteKey": "rig-note-keeley-compressor-plus",
+        "footprint": {
+          "x": 113,
+          "y": 230,
+          "w": 68,
+          "h": 112,
+          "rotation": 90,
+          "color": "#c9c8c1",
+          "knobs": 4,
+          "switches": 1,
+          "dimensions": "provisional"
+        },
+        "loop": 7,
+        "power": {
+          "allocation": "P01",
+          "volts": 9
+        }
+      },
+      {
+        "id": "keeley-dyno-my-roto",
+        "brand": "Keeley",
+        "model": "Dyno My Roto",
+        "kind": "pedal",
+        "status": "owned",
+        "placement": "upper",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/keeley-dyno-my-roto",
+        "catalogQuery": "Keeley Dyno My Roto",
+        "noteKey": "rig-note-keeley-dyno-my-roto",
+        "footprint": {
+          "x": 22,
+          "y": 30,
+          "w": 68,
+          "h": 112,
+          "rotation": 0,
+          "color": "#514455",
+          "knobs": 4,
+          "switches": 1,
+          "dimensions": "provisional"
+        },
+        "loop": 9,
+        "power": {
+          "allocation": "P03",
+          "volts": 9
+        }
+      },
+      {
+        "id": "swan-hunter",
+        "brand": "Champion Leccy",
+        "model": "Swan Hunter",
+        "kind": "pedal",
+        "status": "owned",
+        "placement": "upper",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": null,
+        "catalogQuery": "Champion Leccy Swan Hunter",
+        "noteKey": "rig-note-swan-hunter",
+        "footprint": {
+          "x": 202,
+          "y": 30,
+          "w": 145,
+          "h": 117,
+          "rotation": 0,
+          "color": "#232b2b",
+          "knobs": 7,
+          "switches": 2,
+          "dimensions": "provisional"
+        },
+        "loop": 11,
+        "power": {
+          "allocation": "P05",
+          "volts": 9
+        }
+      },
+      {
+        "id": "harmonic-tremolo-unconfirmed",
+        "brand": "JHS",
+        "model": "3 Series Harmonic Trem",
+        "kind": "pedal",
+        "status": "owned",
+        "placement": "upper",
+        "modelConfirmed": true,
+        "provenance": "collection-photo",
+        "catalogUrl": "https://equipboard.com/items/jhs-3-series-harmonic-tremolo-pedal",
+        "catalogQuery": "JHS 3 Series Harmonic Trem",
+        "noteKey": "rig-note-harmonic-tremolo-unconfirmed",
+        "footprint": {
+          "x": 114,
+          "y": 30,
+          "w": 60.5,
+          "h": 112.3,
+          "rotation": 0,
+          "color": "#ece6d9",
+          "knobs": 3,
+          "switches": 1,
+          "dimensions": "published"
+        },
+        "loop": 10,
+        "power": {
+          "allocation": "P04",
+          "volts": 9
+        }
+      },
+      {
+        "id": "boss-rc1",
+        "brand": "Boss",
+        "model": "RC-1 Loop Station",
+        "kind": "pedal",
+        "status": "owned",
+        "placement": "offboard",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/boss-rc-1-loop-station",
+        "catalogQuery": "Boss RC-1 Loop Station",
+        "noteKey": "rig-note-boss-rc1"
+      },
+      {
+        "id": "op1-field",
+        "brand": "Teenage Engineering",
+        "model": "OP-1 field",
+        "kind": "instrument",
+        "status": "owned",
+        "placement": "external",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/teenage-engineering-op-1-field",
+        "catalogQuery": "Teenage Engineering OP-1 field",
+        "noteKey": "rig-note-op1-field"
+      },
+      {
+        "id": "orange-crush-20rt",
+        "brand": "Orange",
+        "model": "Crush 20RT",
+        "kind": "amp",
+        "status": "owned",
+        "placement": "external",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/orange-crush-20rt",
+        "catalogQuery": "Orange Crush 20RT",
+        "noteKey": "rig-note-orange-crush-20rt"
+      },
+      {
+        "id": "empress-paraeq",
+        "brand": "Empress Effects",
+        "model": "ParaEQ MKII Deluxe",
+        "kind": "pedal",
+        "status": "planned",
+        "placement": "upper",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": "https://equipboard.com/items/empress-paraeq-mkii-deluxe-equalizer-and-boost-pedal",
+        "catalogQuery": "Empress Effects ParaEQ MKII Deluxe",
+        "noteKey": "rig-note-empress-paraeq",
+        "footprint": {
+          "x": 374,
+          "y": 30,
+          "w": 66,
+          "h": 122,
+          "rotation": 0,
+          "color": "#acc5c7",
+          "knobs": 9,
+          "switches": 2,
+          "dimensions": "published"
+        },
+        "loop": 12,
+        "power": {
+          "allocation": "P10",
+          "volts": 9
+        }
+      },
+      {
+        "id": "vemuram-galea",
+        "brand": "Vemuram",
+        "model": "Galea",
+        "kind": "pedal",
+        "status": "planned",
+        "placement": "upper",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": "https://equipboard.com/items/vemuram-vemuran-galea",
+        "catalogQuery": "Vemuram Galea",
+        "noteKey": "rig-note-vemuram-galea",
+        "footprint": {
+          "x": 240,
+          "y": 191,
+          "w": 70,
+          "h": 112,
+          "rotation": 0,
+          "color": "#7d6248",
+          "knobs": 5,
+          "switches": 1,
+          "dimensions": "provisional"
+        },
+        "loop": 4,
+        "power": {
+          "allocation": "Q2",
+          "volts": 9
+        }
+      },
+      {
+        "id": "two-notes-opus",
+        "brand": "Two Notes",
+        "model": "OPUS",
+        "kind": "recording",
+        "status": "planned",
+        "placement": "lower",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": null,
+        "catalogQuery": "Two Notes OPUS",
+        "noteKey": "rig-note-two-notes-opus",
+        "footprint": {
+          "x": 288,
+          "y": 62,
+          "w": 100,
+          "h": 121,
+          "rotation": 0,
+          "color": "#b1b9b2",
+          "knobs": 0,
+          "switches": 0,
+          "dimensions": "planning"
+        },
+        "power": {
+          "allocation": "P14",
+          "volts": 12
+        }
+      },
+      {
+        "id": "gigrig-g3s",
+        "brand": "TheGigRig",
+        "model": "G3S",
+        "kind": "switcher",
+        "status": "planned",
+        "placement": "both",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": null,
+        "catalogQuery": "TheGigRig G3S",
+        "noteKey": "rig-note-gigrig-g3s",
+        "footprint": {
+          "x": 5,
+          "y": 329,
+          "w": 440,
+          "h": 130,
+          "rotation": 0,
+          "color": "#242729",
+          "knobs": 0,
+          "switches": 0,
+          "dimensions": "planning"
+        },
+        "power": {
+          "allocation": "P13",
+          "volts": 9
+        }
+      },
+      {
+        "id": "gigrig-genx14",
+        "brand": "TheGigRig",
+        "model": "GENX14",
+        "kind": "power",
+        "status": "planned",
+        "placement": "lower",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": null,
+        "catalogQuery": "TheGigRig GENX14",
+        "noteKey": "rig-note-gigrig-genx14",
+        "footprint": {
+          "x": 110,
+          "y": 35,
+          "w": 158,
+          "h": 82,
+          "rotation": 0,
+          "color": "#b4b4a9",
+          "knobs": 0,
+          "switches": 0,
+          "dimensions": "planning"
+        }
+      },
+      {
+        "id": "gigrig-genx4lc",
+        "brand": "TheGigRig",
+        "model": "GENX4LC",
+        "kind": "power",
+        "status": "planned",
+        "placement": "lower",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": null,
+        "catalogQuery": "TheGigRig GENX4LC",
+        "noteKey": "rig-note-gigrig-genx4lc",
+        "footprint": {
+          "x": 420,
+          "y": 107,
+          "w": 67,
+          "h": 50,
+          "rotation": 0,
+          "color": "#b4b4a9",
+          "knobs": 0,
+          "switches": 0,
+          "dimensions": "planning"
+        }
+      },
+      {
+        "id": "schmidt-sa550xdm",
+        "brand": "Schmidt Array",
+        "model": "SA550XDM",
+        "kind": "board",
+        "status": "incoming",
+        "placement": "chassis",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": null,
+        "catalogQuery": "Schmidt Array SA550XDM",
+        "noteKey": "rig-note-schmidt-sa550xdm"
+      },
+      {
+        "id": "lehle-dual-expression",
+        "brand": "Lehle",
+        "model": "Dual Expression",
+        "kind": "controller",
+        "status": "planned",
+        "placement": "both",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": null,
+        "catalogQuery": "Lehle Dual Expression",
+        "noteKey": "rig-note-lehle-dual-expression",
+        "footprint": {
+          "x": 455,
+          "y": 258,
+          "w": 90,
+          "h": 200,
+          "rotation": 0,
+          "color": "#bd926a",
+          "knobs": 0,
+          "switches": 0,
+          "dimensions": "planning"
+        },
+        "power": {
+          "allocation": "P07",
+          "volts": 9
+        }
+      },
+      {
+        "id": "cme-h4midi-wc",
+        "brand": "CME",
+        "model": "H4MIDI WC",
+        "kind": "midi",
+        "status": "planned",
+        "placement": "lower",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": null,
+        "catalogQuery": "CME H4MIDI WC",
+        "noteKey": "rig-note-cme-h4midi-wc",
+        "footprint": {
+          "x": 110,
+          "y": 162,
+          "w": 140,
+          "h": 38,
+          "rotation": 0,
+          "color": "#c8c3b2",
+          "knobs": 0,
+          "switches": 0,
+          "dimensions": "planning"
+        },
+        "power": {
+          "allocation": "P11+12",
+          "volts": 9
+        }
+      },
+      {
+        "id": "cme-c2midi-pro",
+        "brand": "CME",
+        "model": "C2MIDI Pro",
+        "kind": "midi",
+        "status": "planned",
+        "placement": "external",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": null,
+        "catalogQuery": "CME C2MIDI Pro",
+        "noteKey": "rig-note-cme-c2midi-pro"
+      },
+      {
+        "id": "canvas-power-6",
+        "brand": "Walrus Audio",
+        "model": "Canvas Power 6",
+        "kind": "power",
+        "status": "owned",
+        "placement": "offboard",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": null,
+        "catalogQuery": "Walrus Audio Canvas Power 6",
+        "noteKey": "rig-note-canvas-power-6"
+      },
+      {
+        "id": "genx14-adapter",
+        "brand": "The GigRig",
+        "model": "GENX14 supplied 24 V adapter",
+        "kind": "power",
+        "status": "planned",
+        "placement": "lower",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": null,
+        "catalogQuery": "The GigRig GENX14 supplied 24 V adapter",
+        "noteKey": "rig-note-genx14-adapter",
+        "footprint": {
+          "x": 20,
+          "y": 170,
+          "w": 57,
+          "h": 132,
+          "rotation": 0,
+          "color": "#404745",
+          "knobs": 0,
+          "switches": 0,
+          "dimensions": "planning"
+        }
+      },
+      {
+        "id": "schmidt-connector-box",
+        "brand": "Schmidt Array",
+        "model": "6-channel stereo Connector Box",
+        "kind": "utility",
+        "status": "planned",
+        "placement": "lower",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": null,
+        "catalogQuery": "Schmidt Array 6-channel stereo Connector Box",
+        "noteKey": "rig-note-schmidt-connector-box",
+        "footprint": {
+          "x": 522,
+          "y": 20,
+          "w": 28,
+          "h": 126,
+          "rotation": 0,
+          "color": "#6b7372",
+          "knobs": 0,
+          "switches": 0,
+          "dimensions": "planning"
+        }
+      },
+      {
+        "id": "schmidt-rear-patchbay",
+        "brand": "Schmidt Array",
+        "model": "4-channel stereo rear patchbay",
+        "kind": "utility",
+        "status": "planned",
+        "placement": "lower",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": null,
+        "catalogQuery": "Schmidt Array 4-channel stereo rear patchbay",
+        "noteKey": "rig-note-schmidt-rear-patchbay",
+        "footprint": {
+          "x": 312,
+          "y": 0,
+          "w": 124,
+          "h": 22,
+          "rotation": 0,
+          "color": "#6b7372",
+          "knobs": 0,
+          "switches": 0,
+          "dimensions": "planning"
+        }
+      },
+      {
+        "id": "schmidt-socket-plate",
+        "brand": "Schmidt Array",
+        "model": "Custom socket plate — configuration pending",
+        "kind": "utility",
+        "status": "planned",
+        "placement": "lower",
+        "modelConfirmed": false,
+        "provenance": "build-plan",
+        "catalogUrl": null,
+        "catalogQuery": "Schmidt Array Custom socket plate — configuration pending",
+        "noteKey": "rig-note-schmidt-socket-plate",
+        "footprint": {
+          "x": 0,
+          "y": 24,
+          "w": 17,
+          "h": 110,
+          "rotation": 0,
+          "color": "#6b7372",
+          "knobs": 0,
+          "switches": 0,
+          "dimensions": "planning"
+        }
+      },
+      {
+        "id": "photo-accessories-unconfirmed",
+        "brand": "Unconfirmed",
+        "model": "Treadle pedal + two dial controllers",
+        "kind": "utility",
+        "status": "owned",
+        "placement": "offboard",
+        "modelConfirmed": false,
+        "provenance": "collection-photo",
+        "catalogUrl": null,
+        "catalogQuery": "Unconfirmed Treadle pedal + two dial controllers",
+        "noteKey": "rig-note-photo-accessories-unconfirmed"
+      }
+    ]
+  },
+  "notes": {
+    "fishman-fluence": "My guitar has active Fishman Fluence pickups. The exact pickup model is still to be logged.",
+    "tuner-unconfirmed": "My tuner, connected to the G3S AUX output rather than inserted among the effect loops.",
+    "boss-ns2": "Listens to the clean guitar, then closes after the drives and compressor. Reverb stays outside the gate.",
+    "kaede": "An alternate overdrive voice, with bass, treble and selectable headroom. A choice alongside Galea and Lightspeed.",
+    "knife-drop": "Octave, fuzz and synth textures. The space preset leaves the gate out so slower envelopes can breathe.",
+    "greer-lightspeed": "My low-gain voice for edge and touch-sensitive rhythm sounds.",
+    "friedman-beod": "The high-gain voice. I prefer the compressor after it to even the level and extend sustain.",
+    "keeley-compressor-plus": "After the drives, where I like it. Blends compression with the dry signal to control level and sustain.",
+    "keeley-dyno-my-roto": "Chorus, rotary and flange movement, after the gate.",
+    "swan-hunter": "Lo-fi echo and reverb for the moments that need space. A situational texture rather than an always-on delay.",
+    "harmonic-tremolo-unconfirmed": "Rhythmic movement after the gate. A separate texture to call up when the part needs a pulse.",
+    "boss-rc1": "Owned and kept off this board plan. Still available for straightforward looping in another setup.",
+    "op1-field": "External recorder and instrument. Receives OPUS headphone audio; headphones move to the OP-1 while recording.",
+    "orange-crush-20rt": "My real amp, fed at the front input from the isolated G3S output. This model has no effects loop.",
+    "empress-paraeq": "Planned final tone shaping in loop 12, after modulation and space.",
+    "vemuram-galea": "Planned overdrive voice for the Galea presets. Purchase completion is still to be confirmed.",
+    "two-notes-opus": "The planned amp and cabinet voice for direct recording and headphones. USB handles editing; audio leaves through its analog outputs.",
+    "gigrig-g3s": "Recalls selected loops and their order. Presets do not move the pedals’ physical knobs.",
+    "gigrig-genx14": "Planned isolated power distribution. Its supplied 24 V adapter feeds the system; pedals use rated DC outputs.",
+    "gigrig-genx4lc": "Four-output power expansion for the GENX14 system. It does not add audio loops to the G3S.",
+    "schmidt-sa550xdm": "Ordered from Schmidt Array. The two-floor layout is planned; final plug clearance is checked by the builder.",
+    "lehle-dual-expression": "Planned expression control through G3S. It can send an assigned MIDI value without carrying guitar audio.",
+    "cme-h4midi-wc": "Routes G3S commands to OPUS and the external MIDI port. The proposed power combiner still needs builder approval.",
+    "cme-c2midi-pro": "Planned DIN-to-USB MIDI interface. OP-1 field hosts it for standalone foot control.",
+    "canvas-power-6": "My existing supply, retained for a smaller or separate board rather than silently removed from the collection.",
+    "genx14-adapter": "Included with GENX14. The lower deck reserves space for the adapter; this is not a separate pedal purchase.",
+    "schmidt-connector-box": "Board-edge access for guitar, amp and the OPUS headphone feed. Installation details remain part of the build order.",
+    "schmidt-rear-patchbay": "Rear connections for OPUS line out and auxiliary input, with two spare channels.",
+    "schmidt-socket-plate": "Planned XLR, MIDI and two separate USB data connections. Final hardware configuration needs supplier confirmation.",
+    "photo-accessories-unconfirmed": "A treadle pedal and two small dial controllers appear in the collection photo. Their exact models and current use need confirmation."
+  },
+  "programs": {
+    "version": 1,
+    "presets": [
+      {
+        "slot": 1,
+        "labelKey": "rig-preset-1",
+        "loops": [
+          7,
+          8,
+          12
+        ]
+      },
+      {
+        "slot": 2,
+        "labelKey": "rig-preset-2",
+        "loops": [
+          3,
+          7,
+          8,
+          12
+        ]
+      },
+      {
+        "slot": 3,
+        "labelKey": "rig-preset-3",
+        "loops": [
+          4,
+          7,
+          8,
+          12
+        ]
+      },
+      {
+        "slot": 4,
+        "labelKey": "rig-preset-4",
+        "loops": [
+          5,
+          8,
+          12
+        ]
+      },
+      {
+        "slot": 5,
+        "labelKey": "rig-preset-5",
+        "loops": [
+          6,
+          7,
+          8,
+          12
+        ]
+      },
+      {
+        "slot": 6,
+        "labelKey": "rig-preset-6",
+        "loops": [
+          3,
+          8,
+          11,
+          12
+        ]
+      },
+      {
+        "slot": 7,
+        "labelKey": "rig-preset-7",
+        "loops": [
+          2,
+          8,
+          12
+        ]
+      },
+      {
+        "slot": 8,
+        "labelKey": "rig-preset-8",
+        "loops": [
+          7,
+          8,
+          9,
+          12
+        ]
+      },
+      {
+        "slot": 9,
+        "labelKey": "rig-preset-9",
+        "loops": [
+          7,
+          8,
+          10,
+          12
+        ]
+      },
+      {
+        "slot": 10,
+        "labelKey": "rig-preset-10",
+        "loops": [
+          3,
+          7,
+          8,
+          9,
+          12
+        ]
+      },
+      {
+        "slot": 11,
+        "labelKey": "rig-preset-11",
+        "loops": [
+          3,
+          7,
+          8,
+          10,
+          12
+        ]
+      },
+      {
+        "slot": 12,
+        "labelKey": "rig-preset-12",
+        "loops": [
+          7,
+          8,
+          11,
+          12
+        ]
+      },
+      {
+        "slot": 13,
+        "labelKey": "rig-preset-13",
+        "loops": [
+          6,
+          7,
+          8,
+          11,
+          12
+        ]
+      },
+      {
+        "slot": 14,
+        "labelKey": "rig-preset-14",
+        "loops": [
+          2,
+          11,
+          12
+        ]
+      }
+    ],
+    "op1Commands": [
+      {
+        "slot": 8,
+        "labelKey": "rig-command-8",
+        "channel": 1,
+        "cc": 105,
+        "press": 127,
+        "release": 0
+      },
+      {
+        "slot": 9,
+        "labelKey": "rig-command-9",
+        "channel": 1,
+        "cc": 104,
+        "press": 127,
+        "release": 0
+      },
+      {
+        "slot": 10,
+        "labelKey": "rig-command-10",
+        "channel": 1,
+        "cc": 84,
+        "press": 127,
+        "release": 0
+      },
+      {
+        "slot": 11,
+        "labelKey": "rig-command-11",
+        "channel": 1,
+        "cc": 86,
+        "press": 127,
+        "release": 0
+      },
+      {
+        "slot": 12,
+        "labelKey": "rig-command-12",
+        "channel": 1,
+        "cc": 87,
+        "press": 127,
+        "release": 0
+      },
+      {
+        "slot": 13,
+        "labelKey": "rig-command-13",
+        "channel": 1,
+        "cc": 88,
+        "press": 127,
+        "release": 0
+      },
+      {
+        "slot": 14,
+        "labelKey": "rig-command-14",
+        "channel": 1,
+        "cc": 9,
+        "press": 127,
+        "release": 0
+      }
+    ]
+  },
+  "programLabels": {
+    "rig-preset-1": "Clear",
+    "rig-preset-2": "Edge",
+    "rig-preset-3": "Galea",
+    "rig-preset-4": "KAEDE",
+    "rig-preset-5": "Heavy",
+    "rig-preset-6": "Swan",
+    "rig-preset-7": "Knife",
+    "rig-preset-8": "Dyno clean",
+    "rig-preset-9": "Trem clean",
+    "rig-preset-10": "Dyno edge",
+    "rig-preset-11": "Trem edge",
+    "rig-preset-12": "Swan clean",
+    "rig-preset-13": "Swan heavy",
+    "rig-preset-14": "Knife space",
+    "rig-command-8": "Play",
+    "rig-command-9": "Stop",
+    "rig-command-10": "Tape start",
+    "rig-command-11": "Loop in",
+    "rig-command-12": "Loop out",
+    "rig-command-13": "Loop on / off",
+    "rig-command-14": "Hold mute track 1"
+  }
+}

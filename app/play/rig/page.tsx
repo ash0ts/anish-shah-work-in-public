@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { RigScreen } from "@/components/play/rig/RigScreen";
-import { publicGearManifest } from "@/lib/gear";
+import { publicGearManifest, publicRigPrograms } from "@/lib/gear";
+import { selectRigView } from "@/lib/gear-model";
 import { SITE_COPY } from "@/lib/copy";
 import { publicPageMetadata } from "@/lib/seo";
 
@@ -10,6 +11,6 @@ export const metadata: Metadata = publicPageMetadata({
   path: "/play/rig",
 });
 
-export default function RigPage() {
-  return <RigScreen manifest={publicGearManifest()} />;
+export default async function RigPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  return <RigScreen manifest={publicGearManifest()} programs={publicRigPrograms()} view={selectRigView(await searchParams)} />;
 }

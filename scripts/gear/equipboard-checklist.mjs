@@ -1,20 +1,11 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { gearExports } from "./exports.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const manifest = JSON.parse(await readFile(path.join(root, "content/play/gear.v1.json"), "utf8"));
-const output = process.argv[2] ?? path.join(root, "dist/equipboard-import-checklist.tsv");
-const rows = [
-  ["status", "brand", "model", "equipboard search", "note"],
-  ...manifest.items.map((item) => [
-    item.status,
-    item.brand,
-    item.model,
-    item.equipboardQuery,
-    item.note,
-  ]),
-];
-const tsv = rows.map((row) => row.map((value) => String(value).replaceAll("\t", " ")).join("\t")).join("\n") + "\n";
-await writeFile(output, tsv, "utf8");
-console.log(`Wrote ${manifest.items.length} Equipboard checklist rows to ${output}`);
+const output = path.resolve(process.argv[2] ?? path.join(root, "dist/equipboard-import-checklist.tsv"));
+const exports = await gearExports(root);
+await mkdir(path.dirname(output), { recursive: true });
+await writeFile(output, exports.get("equipboard-checklist.tsv"), "utf8");
+console.log(`Wrote Equipboard checklist to ${output}`);

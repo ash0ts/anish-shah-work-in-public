@@ -70,6 +70,7 @@ const PROFILE_BUDGETS = {
 >;
 
 function profileForField(surface: string, key: string): CopyVoiceProfile {
+  if (surface === "play" && key.startsWith("rig-note-")) return "narrative";
   if (surface === "about" && key === "speaker-bio") {
     return "speaker-bio";
   }

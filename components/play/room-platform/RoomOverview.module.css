@@ -84,3 +84,8 @@
   .entryLink, .simulationIngress a, .directory li { border-color: CanvasText; }
   .directory small, .directory b, .entryStatus { color: CanvasText; }
 }
+
+.rigGlyph { width: 66px; height: 48px; grid-row: span 2; justify-self: start; }
+.rigLink:has(.rigGlyph) { grid-template-columns: 66px 1fr auto; column-gap: .8rem; }
+.rigLink:has(.rigGlyph) strong, .rigLink:has(.rigGlyph) small { grid-column: 2; }
+.rigLink:has(.rigGlyph) > b { grid-column: 3; grid-row: 1 / span 2; }
