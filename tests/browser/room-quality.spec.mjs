@@ -1345,7 +1345,7 @@ test.describe("My Room 2001 browser quality", () => {
       if (capability === "webgl2-unavailable") {
         await expect.poll(() => capabilityProbeIntercepted).toBe(true);
       }
-      await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
+      await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(8);
       await expect(page.getByRole("link", { name: "Open 3D room" })).toHaveCount(0);
       await expect(page.locator("canvas")).toHaveCount(0);
       expect(runtimeScripts).toEqual([]);
