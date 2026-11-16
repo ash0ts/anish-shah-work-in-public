@@ -499,15 +499,20 @@ test.describe("My Room 2001 browser quality", () => {
   test("the poster and links remain usable while direct-entry modules load", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     let releaseRuntime;
+    let runtimeRequested;
     const released = new Promise(resolve => { releaseRuntime = resolve; });
-    await page.route(/\/assets\/RoomRuntime-[^/]+\.js(?:\?.*)?$/, async route => {
+    const requested = new Promise(resolve => { runtimeRequested = resolve; });
+    await page.route(/\/RoomRuntime-[^/]+\.js(?:\?.*)?$/, async route => {
+      runtimeRequested();
       await released; await route.continue();
     });
-    await page.goto("/play", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("[data-room-overview] img")).toBeVisible();
-    await expect(page.locator('[data-room-object-link="watch"]')).toBeVisible();
-    await expect(page.locator("header").getByRole("link", { name: "Work", exact: true })).toBeVisible();
-    releaseRuntime();
+    try {
+      await page.goto("/play", { waitUntil: "domcontentloaded" });
+      await requested;
+      await expect(page.locator("[data-room-overview] img")).toBeVisible();
+      await expect(page.locator('[data-room-object-link="watch"]')).toBeVisible();
+      await expect(page.locator("header").getByRole("link", { name: "Work", exact: true })).toBeVisible();
+    } finally { releaseRuntime(); }
     await expectRoomReady(page);
   });
 
@@ -1222,13 +1227,17 @@ test.describe("My Room 2001 browser quality", () => {
           });
         }, capability === "zoom-200" ? 2 : 4);
       }
+      let capabilityProbeIntercepted = false;
       if (capability === "webgl2-unavailable") {
         // Modern Room entry probes off-thread; keep both the Worker and the
         // legacy DOM-canvas fixture unavailable without loading the renderer.
-        await context.route(/\/assets\/room-capability\.worker-[\w-]+\.js$/, route => route.fulfill({
-          contentType: "text/javascript",
-          body: "self.postMessage({supported:false}); self.close();",
-        }));
+        await context.route(/\/room-capability\.worker-[\w-]+\.js$/, route => {
+          capabilityProbeIntercepted = true;
+          return route.fulfill({
+            contentType: "text/javascript",
+            body: "self.postMessage({supported:false}); self.close();",
+          });
+        });
         await context.addInitScript(() => {
           const nativeGetContext = HTMLCanvasElement.prototype.getContext;
           HTMLCanvasElement.prototype.getContext = function (type, ...options) {
@@ -1240,6 +1249,9 @@ test.describe("My Room 2001 browser quality", () => {
       const page = await context.newPage();
       const runtimeScripts = runtimeChunkRequests(page);
       await page.goto("/play", { waitUntil: "networkidle" });
+      if (capability === "webgl2-unavailable") {
+        await expect.poll(() => capabilityProbeIntercepted).toBe(true);
+      }
       await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
       await expect(page.getByRole("link", { name: "Open 3D room" })).toHaveCount(0);
       await expect(page.locator("canvas")).toHaveCount(0);
@@ -1298,7 +1310,7 @@ test.describe("My Room 2001 browser quality", () => {
       await expect(room.locator('[data-room-object-control="watch"]')).toBeVisible();
       expect(runtimeScripts.length).toBeGreaterThan(0);
       expect(
-        runtimeScripts.some((url) => /assets\/RoomStage-[^/]+\.js/.test(url)),
+        runtimeScripts.some((url) => /\/RoomStage-[^/]+\.js$/.test(new URL(url).pathname)),
       ).toBe(false);
       await context.close();
     });
