@@ -254,7 +254,11 @@ one embedded material atlas, glTF Transform, and the bundled Meshopt decoder
 avoid runtime lighting and third-party asset services. The generated manifest
 records geometry budgets, atlas dimensions/hash, source provenance, hit proxies,
 physical motion pivots, and the seven completed props. The atlas is decoded from embedded
-bytes without relaxing CSP. Executable object maps stay literal and parity-tested.
+bytes without adding blob or remote image sources. The production script policy
+permits `wasm-unsafe-eval` for the bundled Meshopt decoder, while JavaScript
+`eval`/`Function` and unnonced inline scripts remain blocked. This document-level
+policy also covers Home-to-Play client navigation. Executable object maps stay
+literal and parity-tested.
 
 Three.js/R3F is restricted to the intent-gated room and Travel globe. The
 Canvas is decorative; direct links, focus, browser Back, Escape, and semantic

@@ -229,7 +229,7 @@ stress, and room-review captures belong to the separate manual stability soak.
 | Ready-state object Axe and controls | `tests/browser/object-screens.spec.mjs` | Whole-page Axe replaces duplicate main/whole-page audits; text, links and focus still checked |
 | Long-title overflow and first-paint overflow | `tests/browser/object-screens.spec.mjs` | Seven loads resized through all six widths instead of 42 loads; sampler and offender checks retained |
 | Public-page reflow | `tests/browser/public-quality.spec.mjs` | Six loads resized through all seven widths instead of 42 loads |
-| Room entry, input, camera, performance and fallbacks | `tests/browser/room-quality.spec.mjs` | Object-page checks removed only after moving their unique assertions |
+| Room entry, input, camera, performance and fallbacks | `tests/browser/room-quality.spec.mjs` | Includes real GLB decoding under production CSP on direct and Home-to-Play navigation at desktop/Pocket widths; JavaScript string evaluation remains blocked |
 | Travel globe, semantic atlas and media boundaries | `tests/browser/travel-atlas.spec.mjs` | Retained; selected when Travel or shared infrastructure changes |
 
 Screenshots are captured only with `ROOM_CAPTURE_VISUALS=1`; failure traces

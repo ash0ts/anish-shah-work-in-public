@@ -4,6 +4,7 @@ import { expectRoomReady, openRoomIfNeeded } from "./helpers/room-readiness.mjs"
 import { Object3D, PerspectiveCamera, Vector3 } from "three";
 import { readFileSync } from "node:fs";
 import { ROOM_CAMERA_FRAMING } from "../../components/play/room-3d/room-camera-framing.ts";
+import { securityPolicy } from "../../worker/security-headers.ts";
 
 import { objectFixtures as objects } from "./helpers/object-fixtures.mjs";
 
@@ -522,6 +523,41 @@ async function activeElementReport(page) {
 }
 
 test.describe("My Room 2001 browser quality", () => {
+  for (const width of [390, 1440]) {
+    test(`production CSP loads the real Room decoder at ${width}px on direct and client navigation`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      // Local fixtures need NODE_ENV=development for isolated auth/state, but
+      // must not hide production CSP failures behind development unsafe-eval.
+      await page.route("**/*", async (route) => {
+        if (route.request().resourceType() !== "document") return route.continue();
+        const response = await route.fetch();
+        const headers = response.headers();
+        const nonce = headers["content-security-policy"]?.match(/'nonce-([^']+)'/)?.[1];
+        expect(nonce).toBeTruthy();
+        // The parser executes this probe in the page's CSP context; browser
+        // automation evaluate (including synchronously inserted scripts) has
+        // privileged evaluation semantics and cannot prove eval is denied.
+        const probe = `<script nonce="${nonce}">try { new Function("return 1")(); document.documentElement.dataset.evalProbe = "allowed"; } catch { document.documentElement.dataset.evalProbe = "blocked"; }</script>`;
+        const body = (await response.text()).replace("</body>", `${probe}</body>`);
+        await route.fulfill({ response, body, headers: { ...headers, "content-security-policy": securityPolicy(nonce, false, "production") } });
+      });
+      const errors = [];
+      const providerRequests = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      page.on("request", (request) => {
+        if (/^\/api\/(connectors|travel|simulation)/.test(new URL(request.url()).pathname)) providerRequests.push(request.url());
+      });
+      await page.goto("/play");
+      await expectRoomReady(page, { context: "direct entry under production CSP" });
+      await page.goto("/");
+      await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Play", exact: true }).click();
+      await expectRoomReady(page, { context: "Home-to-Play navigation under production CSP" });
+      expect(errors).toEqual([]);
+      expect(providerRequests).toEqual([]);
+      await expect(page.locator("html")).toHaveAttribute("data-eval-probe", "blocked");
+    });
+  }
+
   test("the explicit directory is provider-free and does not load the renderer", async ({
     page,
   }) => {
