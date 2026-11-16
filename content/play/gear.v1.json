@@ -38,7 +38,7 @@
       "placement": "upper",
       "modelConfirmed": true,
       "provenance": "owner-confirmed",
-      "catalogUrl": null,
+      "catalogUrl": "https://equipboard.com/items/landlord-fx-lock-in-tuner-pedal",
       "catalogQuery": "Landlord FX Lock In",
       "noteKey": "rig-note-tuner-unconfirmed",
       "footprint": {
@@ -269,7 +269,7 @@
       "placement": "upper",
       "modelConfirmed": true,
       "provenance": "owner-confirmed",
-      "catalogUrl": null,
+      "catalogUrl": "https://equipboard.com/items/champion-leccy-the-swan-hunter",
       "catalogQuery": "Champion Leccy Swan Hunter",
       "noteKey": "rig-note-swan-hunter",
       "footprint": {
@@ -569,7 +569,7 @@
       "placement": "lower",
       "modelConfirmed": true,
       "provenance": "build-plan",
-      "catalogUrl": null,
+      "catalogUrl": "https://equipboard.com/items/cme-h4midi-wc-advanced-midi-interface",
       "catalogQuery": "CME H4MIDI WC",
       "noteKey": "rig-note-cme-h4midi-wc",
       "footprint": {
@@ -597,7 +597,7 @@
       "placement": "external",
       "modelConfirmed": true,
       "provenance": "build-plan",
-      "catalogUrl": null,
+      "catalogUrl": "https://equipboard.com/items/cme-c2midi-pro-usb-c-midi-interface-cable",
       "catalogQuery": "CME C2MIDI Pro",
       "noteKey": "rig-note-cme-c2midi-pro"
     },

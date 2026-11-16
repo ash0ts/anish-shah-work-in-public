@@ -10,7 +10,7 @@ function keys(value: unknown, allowed: string[]): Record<string, unknown> {
   return object;
 }
 function text(value: unknown): asserts value is string {
-  if (typeof value !== "string" || !value.trim() || value.length > 250 || /[\x00-\x1f\x7f]/u.test(value)) throw new Error("Invalid gear text");
+  if (typeof value !== "string" || !value.trim() || value.length > 250 || Array.from(value).some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)) throw new Error("Invalid gear text");
 }
 function member(value: unknown, values: readonly unknown[]) {
   if (!values.includes(value)) throw new Error(`Unexpected gear value: ${String(value)}`);
