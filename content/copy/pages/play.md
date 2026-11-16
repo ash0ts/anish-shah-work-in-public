@@ -217,7 +217,7 @@ Guitar rig
 Open the pedalboard workbench
 
 ## rig-description
-Pedals, routing, recording tools, and the pieces still joining the board.
+Pedals, routing, recording tools, and pieces still joining the board.
 
 ## rig-screen-eyebrow
 Bench 01
