@@ -15,6 +15,13 @@ crypto.subtle.digest = async (algorithm, data) => {
 
 const observationWorker = {
   async fetch(request, bindings, context) {
+    // Finish the test runner's loopback upload before invoking the application.
+    // Otherwise an immediate rejection can reset Undici's still-writing socket
+    // on Linux. The unmodified application still receives the full oversized
+    // body; production does not use this wrapper or consume rejected bodies.
+    if (request.method === "POST") {
+      request = new Request(request, { body: await request.arrayBuffer() });
+    }
     const state = request.headers.get("x-fixture-state") ?? "public";
     const row = bindings.FIXTURES[state];
     if (!row) return new Response("Unknown fixture", { status: 400 });
