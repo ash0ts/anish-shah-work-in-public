@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
-const routes = ["/", "/about", "/work", "/play", "/sources", "/privacy"];
+const routes = ["/", "/about", "/work", "/play", "/play/rig", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
 
 test("public metadata stays in the head after hydration and navigation", async ({ page }) => {
@@ -1063,7 +1063,8 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
   }
   await page.goto("/play", { waitUntil: "load" });
-  await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
+  await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(8);
+  await expect(page.locator('[data-play-rig-link]')).toHaveAttribute("href", "/play/rig");
   await expect(page.locator("iframe")).toHaveCount(0);
 
   await page.goto("/about", { waitUntil: "load" });
