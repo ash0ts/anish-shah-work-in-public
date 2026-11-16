@@ -87,10 +87,10 @@ function profileForField(surface: string, key: string): CopyVoiceProfile {
     if (key === "detail-note") return "narrative";
     return "role";
   }
-  if (surface === "play" && /^(?:watch|read|listen|collect|play|move|travel)-title$/u.test(key)) {
+  if (surface === "play" && /^(?:watch|read|listen|collect|play|move|travel|rig)-title$/u.test(key)) {
     return "play-object-title";
   }
-  if (surface === "play" && /^(?:watch|read|listen|collect|play|move|travel)-description$/u.test(key)) {
+  if (surface === "play" && /^(?:watch|read|listen|collect|play|move|travel|rig)-description$/u.test(key)) {
     return "play-object-description";
   }
   if (key === "seo-title" || key === "default-title" || key === "title-template") {

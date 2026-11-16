@@ -219,7 +219,7 @@ export const COPY_PAGE_DEFINITIONS = {
     field("play", "watch-collection-title", "editorial", 60),
     field("play", "read-collection-title", "editorial", 60),
     field("play", "play-collection-title", "editorial", 60),
-    ...["watch", "read", "listen", "collect", "play", "move", "travel"].flatMap(
+    ...["watch", "read", "listen", "collect", "play", "move", "travel", "rig"].flatMap(
       (object) => [
         field("play", `${object}-title`, "editorial", 60),
         field("play", `${object}-description`, "editorial", 220),
@@ -227,6 +227,9 @@ export const COPY_PAGE_DEFINITIONS = {
         field("play", `${object}-screen-title`, "editorial", 80),
       ],
     ),
+    field("play", "rig-directory-label", "editorial", 100),
+    field("play", "rig-seo-title", "editorial", 70),
+    field("play", "rig-seo-description", "editorial", 160),
     field("play", "travel-screen-summary", "editorial", 220),
     field("play", "travel-seo-title", "editorial", 70),
     field("play", "travel-seo-description", "editorial", 160),
