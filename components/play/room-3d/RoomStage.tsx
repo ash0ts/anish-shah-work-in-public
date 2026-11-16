@@ -342,6 +342,8 @@ export function RoomStage({
           }}
           dpr={[1, 1.25]}
           frameloop="demand"
+          // CSS approach/return transforms must not resize the GPU buffer.
+          resize={{ offsetSize: true }}
           gl={{
             alpha: false,
             antialias: false,

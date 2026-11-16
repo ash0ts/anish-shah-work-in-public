@@ -236,6 +236,9 @@ export function PocketRoomStage({
           }}
           dpr={[1, 1.15]}
           frameloop="demand"
+          // Size the drawing buffer from layout, not the animated hardware
+          // transform. Reallocating a live WebGL buffer can stall the GPU.
+          resize={{ offsetSize: true }}
           gl={{
             alpha: false,
             antialias: false,
