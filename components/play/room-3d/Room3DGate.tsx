@@ -12,6 +12,7 @@ import {
   prepareRoomWebGL2Support,
   type RoomCapabilityResult,
 } from "./room-capability";
+import { afterRoomFirstPaint } from "./room-first-paint";
 
 export type Room3DGateProps = {
   children: ReactNode;
@@ -52,7 +53,9 @@ export function useRoomCapability() {
         publish(policy);
         return;
       }
-      void prepareRoomWebGL2Support().then((supported) => {
+      void afterRoomFirstPaint().then(async () => {
+        if (!active || currentRevision !== revision) return;
+        const supported = await prepareRoomWebGL2Support();
         if (!active || currentRevision !== revision) return;
         publish(detectRoomCapability(supported));
       });

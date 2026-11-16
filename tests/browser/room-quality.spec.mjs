@@ -92,6 +92,63 @@ async function instrumentDrawCalls(page) {
   });
 }
 
+async function instrumentRoomBufferSize(page) {
+  await page.addInitScript(() => {
+    window.__roomBufferMeasurements = 0;
+    window.__roomBufferChanges = [];
+    window.__roomProbePaints = [];
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      constructor(url, options) {
+        super(url, options);
+        if (String(url).includes("room-capability.worker")) {
+          window.__roomProbePaints.push(performance.getEntriesByName("first-contentful-paint").length);
+        }
+      }
+    };
+    const bounds = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      if (this.firstElementChild instanceof HTMLCanvasElement) {
+        window.__roomBufferMeasurements += 1;
+      }
+      return bounds.call(this);
+    };
+    for (const dimension of ["width", "height"]) {
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, dimension);
+      Object.defineProperty(HTMLCanvasElement.prototype, dimension, {
+        ...descriptor,
+        set(value) {
+          const previous = descriptor.get.call(this);
+          descriptor.set.call(this, value);
+          if (previous !== descriptor.get.call(this)) {
+            window.__roomBufferChanges.push({ dimension, value });
+          }
+        },
+      });
+    }
+  });
+}
+
+async function expectTransformIndependentBuffer(page) {
+  const before = await page.evaluate(() => ({
+    measurements: window.__roomBufferMeasurements,
+    changes: window.__roomBufferChanges.length,
+  }));
+  await page.evaluate(() => {
+    document.querySelector("[data-room-stage-shell]").style.transform = "scale(0.8)";
+    window.dispatchEvent(new Event("resize"));
+  });
+  // Wait for the actual measurement, not an arbitrary animation delay.
+  await expect.poll(() => page.evaluate(() => window.__roomBufferMeasurements)).toBeGreaterThan(before.measurements);
+  await nextAnimationFrame(page);
+  await nextAnimationFrame(page);
+  expect(await page.evaluate(() => window.__roomBufferChanges.length), "CSS transforms must not reallocate the drawing buffer").toBe(before.changes);
+  await page.evaluate(() => {
+    document.querySelector("[data-room-stage-shell]").style.removeProperty("transform");
+    window.dispatchEvent(new Event("resize"));
+  });
+}
+
 async function instrumentDragLatency(page) {
   await page.addInitScript(() => {
     const metrics = {
@@ -1293,6 +1350,7 @@ test.describe("My Room 2001 browser quality", () => {
       const page = await context.newPage();
       const runtimeScripts = runtimeChunkRequests(page);
       await instrumentDrawCalls(page);
+      await instrumentRoomBufferSize(page);
       await page.goto("/play", { waitUntil: "networkidle" });
       await expectRoomReady(page);
       const room = await expectRoomReady(page, {
@@ -1304,6 +1362,8 @@ test.describe("My Room 2001 browser quality", () => {
       await nextAnimationFrame(page);
       await nextAnimationFrame(page);
       expect(await page.evaluate(() => window.__roomDrawMetrics.total), "Ready Pocket Room must idle without drawing").toBe(startupDraws);
+      expect(await page.evaluate(() => window.__roomProbePaints), "Driver initialization must follow the usable poster paint").toEqual([1]);
+      await expectTransformIndependentBuffer(page);
       await expect(page.locator('[data-projection="pocket-perspective"]')).toBeVisible();
       await expect(room.getByRole("button", { name: "Previous view" })).toBeVisible();
       await expect(room.getByRole("button", { name: "Next view" })).toBeVisible();

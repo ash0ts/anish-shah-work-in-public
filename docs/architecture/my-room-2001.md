@@ -162,6 +162,14 @@ Pocket taps use same-object pointer down/up with a larger movement threshold;
 swipes, multiple pointers, cancellation, rotation, and lost capture cannot open
 an object. The dock remains the authoritative accessible interface.
 
+Both Room canvases measure untransformed layout dimensions (`offsetSize`).
+The hardware entrance and route-transition CSS may scale the presentation,
+but must not resize a live WebGL drawing buffer. Actual viewport changes still
+resize the renderer and update its camera; the DPR and asset budgets are unchanged.
+The initial graphics probe follows the first contentful paint, so driver startup
+cannot hold up the usable HTML/poster. Browsers without Paint Timing yield two
+animation frames instead. This is automatic entry, not a timer or another doorway.
+
 ## Input and transitions
 
 Mouse and pen may rotate or select. An eight-pixel threshold separates click

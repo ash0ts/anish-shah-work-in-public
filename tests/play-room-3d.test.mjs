@@ -4,6 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
 import { gzipSync } from "node:zlib";
+import { stripTypeScriptTypes } from "node:module";
 import { BoxGeometry, Mesh, MeshBasicMaterial, Ray, Vector3 } from "three";
 
 import {
@@ -74,6 +75,43 @@ const capableEnvironment = {
 };
 const ROOM_RENDERER_GZIP_OPTIMIZATION_TARGET_BYTES = 225 * 1024;
 const ROOM_RENDERER_GZIP_HARD_CEILING_BYTES = 325 * 1024;
+
+test("graphics startup follows real paint, with a frame fallback for unsupported browsers", async () => {
+  const source = stripTypeScriptTypes(await readFile(new URL("../components/play/room-3d/room-first-paint.ts", import.meta.url), "utf8")).replace("export ", "");
+  const load = (globals) => runInNewContext(`${source}; afterRoomFirstPaint`, globals);
+  const frames = [];
+  await load({ performance: { getEntriesByName: () => [{}] } })();
+  const fallback = load({ performance: { getEntriesByName: () => [] }, requestAnimationFrame: cb => frames.push(cb) });
+  let done = false;
+  const waiting = fallback().then(() => { done = true; });
+  assert.equal(frames.length, 1);
+  frames.shift()();
+  await Promise.resolve();
+  assert.equal(done, false);
+  frames.shift()();
+  await waiting;
+  assert.equal(done, true);
+
+  let observerCallback;
+  let disconnected = false;
+  const observed = load({
+    performance: { getEntriesByName: () => [] },
+    PerformanceObserver: class {
+      static supportedEntryTypes = ["paint"];
+      constructor(callback) { observerCallback = callback; }
+      observe(options) { assert.equal(options.type, "paint"); assert.equal(options.buffered, true); }
+      disconnect() { disconnected = true; }
+    },
+  });
+  done = false;
+  const painted = observed().then(() => { done = true; });
+  observerCallback({ getEntries: () => [{ name: "first-paint" }] });
+  await Promise.resolve();
+  assert.equal(done, false);
+  observerCallback({ getEntries: () => [{ name: "first-contentful-paint" }] });
+  await painted;
+  assert.equal(disconnected, true);
+});
 
 test("the graphics worker reports capability without waiting for driver teardown", async () => {
   const source = await readFile(new URL("../components/play/room-3d/room-capability.worker.ts", import.meta.url), "utf8");
