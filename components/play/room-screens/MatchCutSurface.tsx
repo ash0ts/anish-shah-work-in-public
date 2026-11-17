@@ -27,6 +27,10 @@ type EntrancePreset = {
 };
 
 const ENTRANCE_PRESETS: Record<RoomObjectId, EntrancePreset> = {
+  rig: {
+    initial: { opacity: 0, transform: "translateY(12px)" },
+    animation: { opacity: [0, 1], translateY: [12, 0], duration: 300, ease: "out(3)" },
+  },
   watch: {
     initial: { opacity: 0, transform: "scaleY(0.035)" },
     animation: {
@@ -111,7 +115,7 @@ export function MatchCutSurface({
   const { enabled: audioEnabled, playCue } = useExperienceAudio();
 
   useEffect(() => {
-    if (!audioEnabled || objectId === "listen") return;
+    if (!audioEnabled || objectId === "listen" || objectId === "rig") return;
     playCue(ENTRY_CUE_BY_OBJECT[objectId]);
   }, [audioEnabled, objectId, playCue]);
 

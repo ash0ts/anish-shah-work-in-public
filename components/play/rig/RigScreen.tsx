@@ -6,6 +6,9 @@ import type { GearItem, GearManifest, RigPrograms, GearStatus } from "@/types/ge
 import { RigScene } from "./RigScene";
 import { rigHref, type RigSceneState } from "@/lib/rig-scene";
 import styles from "./RigScreen.module.css";
+import { ScreenNavigation } from "../room-screens/ScreenNavigation";
+import { MatchCutSurface } from "../room-screens/MatchCutSurface";
+import { ROOM_OBJECT_BY_ID } from "../room-platform/room-registry";
 
 type View = ReturnType<typeof selectRigView>;
 function copy(key: string) {
@@ -23,7 +26,7 @@ function Pedal({ item, active, manifest }: { item: GearItem; active: boolean; ma
   } as CSSProperties;
   const utility = !item.loop && item.id !== "tuner-unconfirmed";
   return (
-    <a href={`#gear-${item.id}`} className={styles.pedal} style={style} data-active={active} data-utility={utility}
+    <Link replace prefetch={false} href={`#gear-${item.id}`} className={styles.pedal} style={style} data-active={active} data-utility={utility}
       data-planned={item.status === "planned"} data-device={item.id}
       aria-label={`${item.brand} ${item.model} · ${copy(`rig-${item.status}-label`)}${item.loop ? ` · ${copy("rig-loop-label")} ${item.loop} · ${copy(active ? "rig-active-label" : "rig-bypassed-label")}` : ""}`}>
       <span className={styles.knobs} aria-hidden="true">{Array.from({ length: f.knobs }, (_, n) => <i key={n} />)}</span>
@@ -31,7 +34,7 @@ function Pedal({ item, active, manifest }: { item: GearItem; active: boolean; ma
       <small>{item.brand}</small>
       {item.loop ? <span className={styles.loop}>{String(item.loop).padStart(2, "0")}</span> : null}
       <span className={styles.stomps} aria-hidden="true">{Array.from({ length: f.switches || (item.id === "gigrig-g3s" ? 14 : 0) }, (_, n) => <i key={n} />)}</span>
-    </a>
+    </Link>
   );
 }
 
@@ -42,31 +45,31 @@ export function RigScreen({ manifest, programs, view, scene }: { manifest: GearM
   const pedals = manifest.items.filter(item => item.footprint && (item.placement === view.deck || item.placement === "both"));
   const statuses: GearStatus[] = ["owned", "incoming", "planned", "optional"];
   return (
-    <main className={styles.page} data-gear-rig id="main">
-      <nav aria-label={copy("rig-nav-label")} className={styles.nav}>
-        <Link href="/play?view=directory" prefetch={false}>← {copy("rig-back-label")}</Link>
-        <span>{copy("rig-screen-eyebrow")}</span>
-      </nav>
+    <main className={styles.page} data-gear-rig data-room-screen data-object="rig" id="main" tabIndex={-1}>
+      <ScreenNavigation object={ROOM_OBJECT_BY_ID.rig} />
       <header className={styles.header}>
+        <p className={styles.eyebrow}>{copy("rig-screen-eyebrow")}</p>
         <div><p className={styles.eyebrow}>{copy("rig-plan-label")}</p><h1>{copy("rig-screen-title")}</h1><p>{copy("rig-plan-body")}</p></div>
 
       </header>
 
-      <RigScene manifest={manifest} state={scene} view={view} active={active} />
+      <MatchCutSurface objectId="rig" surface={ROOM_OBJECT_BY_ID.rig.matchCutSurface} className={styles.sceneSurface}>
+        <RigScene manifest={manifest} state={scene} view={view} active={active} />
+      </MatchCutSurface>
 
       <section className={styles.workbench} id="workbench" aria-labelledby="board-title">
         <header className={styles.sectionHeader}><div><p className={styles.eyebrow}>01 / SA550XDM</p><h2 id="board-title">{copy("rig-board-title")}</h2></div><p>{copy("rig-board-body")}</p></header>
         <nav className={styles.segment} aria-label={copy("rig-bank-label")}>
-          {[1, 2].map(bank => <Link key={bank} href={href(view, { bank, preset: Math.min(view.preset, bank === 2 ? 7 : 14) })} scroll={false} prefetch={false} aria-current={view.bank === bank ? "true" : undefined}>{copy(`rig-bank-${bank}-label`)}</Link>)}
+          {[1, 2].map(bank => <Link replace key={bank} href={href(view, { bank, preset: Math.min(view.preset, bank === 2 ? 7 : 14) })} scroll={false} prefetch={false} aria-current={view.bank === bank ? "true" : undefined}>{copy(`rig-bank-${bank}-label`)}</Link>)}
         </nav>
         <p className={styles.bankNote}>{copy(`rig-bank-${view.bank}-body`)}</p>
         <nav aria-label={copy("rig-presets-label")} className={styles.presets}>
-          {programs.presets.slice(0, view.bank === 2 ? 7 : 14).map(p => <Link href={href(view, { preset: p.slot })} scroll={false} prefetch={false} key={p.slot} aria-current={view.preset === p.slot ? "true" : undefined}><span>{String(p.slot).padStart(2, "0")}</span>{copy(p.labelKey)}</Link>)}
+          {programs.presets.slice(0, view.bank === 2 ? 7 : 14).map(p => <Link replace href={href(view, { preset: p.slot })} scroll={false} prefetch={false} key={p.slot} aria-current={view.preset === p.slot ? "true" : undefined}><span>{String(p.slot).padStart(2, "0")}</span>{copy(p.labelKey)}</Link>)}
         </nav>
         {view.bank === 2 ? <div className={styles.commands}><h3>{copy("rig-command-label")}</h3><ol start={8}>{programs.op1Commands.map(c => <li key={c.slot}><span>{c.slot}</span><strong>{copy(c.labelKey)}</strong><small>CC {c.cc}</small></li>)}</ol><p>{copy("rig-command-body")}</p><p>{copy("rig-bank-change-body")}</p></div> : null}
         <div className={styles.deckBar}>
           <nav className={styles.segment} aria-label={copy("rig-deck-label")}>
-            {(["upper", "lower"] as const).map(deck => <Link key={deck} href={href(view, { deck })} scroll={false} prefetch={false} aria-current={view.deck === deck ? "true" : undefined}>{copy(`rig-${deck}-label`)}</Link>)}
+            {(["upper", "lower"] as const).map(deck => <Link replace key={deck} href={href(view, { deck })} scroll={false} prefetch={false} aria-current={view.deck === deck ? "true" : undefined}>{copy(`rig-${deck}-label`)}</Link>)}
           </nav>
           <span className={styles.activeKey}><i aria-hidden="true" />{copy("rig-active-label")} / {copy(preset.labelKey)}</span>
         </div>
@@ -84,7 +87,7 @@ export function RigScreen({ manifest, programs, view, scene }: { manifest: GearM
       <section className={styles.section} aria-labelledby="signal-chain-title">
         <header className={styles.sectionHeader}><div><p className={styles.eyebrow}>02 / AUDIO</p><h2 id="signal-chain-title">{copy("rig-chain-title")}</h2></div><p>{copy("rig-chain-body")}</p></header>
         <div className={styles.input}><span>{copy("rig-guitar-label")}</span><b aria-hidden="true">→</b><span>{copy("rig-detector-label")}</span><b aria-hidden="true">→</b><span>G3S IN</span></div>
-        <ol className={styles.chain}>{loopItems(manifest.items).map(item => <li key={item.id} data-active={active.has(item.loop!)} data-gate={item.loop === 8}><a href={`#gear-${item.id}`}><span>{copy("rig-loop-label")} {item.loop}</span><strong>{item.model}</strong><small>{copy(active.has(item.loop!) ? "rig-active-label" : "rig-bypassed-label")}</small></a></li>)}</ol>
+        <ol className={styles.chain}>{loopItems(manifest.items).map(item => <li key={item.id} data-active={active.has(item.loop!)} data-gate={item.loop === 8}><Link replace prefetch={false} href={`#gear-${item.id}`}><span>{copy("rig-loop-label")} {item.loop}</span><strong>{item.model}</strong><small>{copy(active.has(item.loop!) ? "rig-active-label" : "rig-bypassed-label")}</small></Link></li>)}</ol>
         <p className={styles.eyebrow}>{copy("rig-output-label")}</p>
         <div className={styles.outputs}>
           <article><span className={styles.port}>B / OUT 2</span><h3>{copy("rig-amp-label")}</h3><p>{copy("rig-amp-body")}</p></article>

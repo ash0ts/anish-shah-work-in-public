@@ -1,8 +1,9 @@
 import type { selectRigView } from "./gear-model.ts";
+import { RIG_OBJECT_BY_ID, type RigGuitarId, type RigObject } from "./rig-object-contract.ts";
 
 export type RigView = ReturnType<typeof selectRigView>;
-export type RigSceneState = { scene: "home" | "tape" | "portable"; guitar: "fgn" | "duo" };
-export const sceneGuitars = { fgn: "fgn-dark-odyssey", duo: "fender-duo-sonic" } as const;
+export type RigSceneState = { scene: "home" | "tape" | "portable"; guitar: RigGuitarId };
+export const sceneGuitars = { fgn: RIG_OBJECT_BY_ID.fgn.gearId, duo: RIG_OBJECT_BY_ID.duo.gearId } as const;
 export const sceneModes = ["home", "tape", "portable"] as const;
 
 export function selectRigScene(query: Record<string, string | string[] | undefined>): RigSceneState {
@@ -19,6 +20,13 @@ export function rigHref(view: RigView, scene: RigSceneState, change: Partial<Rig
   const preset = Math.min(v.preset, bank === 2 ? 7 : 14);
   const params = new URLSearchParams({ bank: String(bank), preset: String(preset), deck: v.deck, scene: v.scene, guitar: v.guitar });
   return `/play/rig?${params}#${anchor}`;
+}
+
+/** The visual scene and its ordinary links perform the same bounded action. */
+export function rigObjectHref(object: RigObject, view: RigView, scene: RigSceneState) {
+  if (object.action.kind === "select-guitar") return rigHref(view, scene, { guitar: object.action.guitar });
+  if (object.action.kind === "inspect-board") return rigHref(view, scene, {}, object.action.anchor);
+  return `#gear-${object.gearId}`;
 }
 
 /** Port-level facts are separate from the illustration's decorative geometry. */

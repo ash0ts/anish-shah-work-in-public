@@ -191,6 +191,31 @@ Primary references from the reviewed guide: [G3/G3S manual](https://cdn.shopify.
 
 ## Play integration and validation
 
-The semantic Play directory has an original guitar-and-board glyph linking to this page. It remains outside the seven-object 3D room contract. Adding a physical room prop requires the pinned Blender author/export pipeline, hit proxy, approach pose, poster renders, asset budgets and browser captures together; this change does not claim to have done that work.
+The music corner is the eighth room destination, `rig`, with `gear-collection`
+content. `/play/rig` owns its concrete route and uses the literal room screen
+loader, shared return control, focus restoration and object switcher. The dynamic
+connector route derives its allowed IDs from source kind, not an exclusion list.
+
+`lib/rig-object-contract.ts` defines seven device objects: the two guitars, board,
+Orange, OP-1, EP-35 and EP-127. Each has a stable ID, gear-record reference,
+illustration key and discriminated action. Selecting a guitar preserves the
+setup/preset; inspecting the board opens its workbench; other devices open their
+inventory details. Ordinary links and illustrated hit targets use the same action
+resolver. Hydrated view links replace the current entry, so preset and device
+changes do not strand Back to room inside the rig. Without JavaScript they remain
+ordinary server-navigable links. The additive `objects` block in `/data/gear.v1.json` exposes this contract
+with its own schema version; model, ownership and catalog facts remain in the
+referenced manifest records.
+
+The optional room runtime combines the original baked room asset with
+`RigRoomObject.tsx`, an original code-authored, unlit mesh. `room-scene-layout.ts`
+explicitly owns which representation renders each destination. The generated GLB
+manifest continues to describe only its actual seven props; combined metrics add
+the rig's measured geometry. The static directory retains its music-corner glyph.
+This does not preload collection data, audio or external assets from `/play`.
+
+When adding a device, update the bounded object contract, both illustrations and
+action coverage. When adding a destination, update the room contract, presentation,
+screen loader, scene map, approach pose and browser fixtures as one change.
 
 Unit checks validate ownership, routing, query bounds, copy completeness, privacy and export drift. Public browser tests cover bank/deck changes, detail access and downloads without JavaScript, plus existing responsive and accessibility checks. Full build/typecheck/browser evidence must come from an environment with repository dependencies; syntax transformation alone is not that evidence.

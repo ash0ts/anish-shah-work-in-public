@@ -48,4 +48,11 @@ export const objectFixtures = [
     foundation: "Travel log · Approximate public geography",
     title: "Postcard Planet",
   },
+  {
+    id: "rig",
+    label: "Guitar rig",
+    provider: null,
+    foundation: "SA550XDM / REV 07",
+    title: "A small rig. Many voices.",
+  },
 ];

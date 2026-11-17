@@ -6,7 +6,8 @@ import type {
 export { ROOM_OBJECT_IDS } from "./room-object-contract";
 export type { RoomObjectId } from "./room-object-contract";
 
-export type RoomConnectorObjectId = Exclude<RoomObjectId, "travel">;
+import type { RoomConnectorObjectId } from "./room-object-contract";
+export type { RoomConnectorObjectId } from "./room-object-contract";
 
 export type RoomProviderById = {
   readonly [Id in RoomConnectorObjectId]: Extract<

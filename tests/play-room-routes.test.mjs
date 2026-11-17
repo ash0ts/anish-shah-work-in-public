@@ -61,24 +61,24 @@ const roomRegistryKeys = (text, name) => {
     ),
   );
   assert.ok(match, `Expected a satisfies-checked literal ${name} registry`);
-  return [...match[1].matchAll(/^  (watch|read|listen|collect|play|move|travel):/gm)].map(
+  return [...match[1].matchAll(/^  (watch|read|listen|collect|play|move|travel|rig):/gm)].map(
     ([, id]) => id,
   );
 };
 
-test("the dependency-free room contract closes seven routes and content sources", async () => {
+test("the dependency-free room contract closes eight routes and content sources", async () => {
   const [contract, registry] = await Promise.all([
     source("components/play/room-platform/room-object-contract.ts"),
     source("components/play/room-platform/room-registry.ts"),
   ]);
-  const expectedIds = ["watch", "read", "listen", "collect", "play", "move", "travel"];
+  const expectedIds = ["watch", "read", "listen", "collect", "play", "move", "travel", "rig"];
   assert.deepEqual(ROOM_OBJECT_IDS, expectedIds);
   assert.deepEqual(
     ROOM_OBJECT_ROUTES,
     expectedIds.map((id) => `/play/${id}`),
   );
-  assert.equal(new Set(ROOM_OBJECT_CONTRACT.map(({ focusTarget }) => focusTarget)).size, 7);
-  assert.equal(new Set(ROOM_OBJECT_CONTRACT.map(({ smokeTest }) => smokeTest)).size, 7);
+  assert.equal(new Set(ROOM_OBJECT_CONTRACT.map(({ focusTarget }) => focusTarget)).size, ROOM_OBJECT_IDS.length);
+  assert.equal(new Set(ROOM_OBJECT_CONTRACT.map(({ smokeTest }) => smokeTest)).size, ROOM_OBJECT_IDS.length);
   for (const [id, provider] of [
     ["watch", "myanimelist"],
     ["read", "hardcover"],
@@ -94,6 +94,7 @@ test("the dependency-free room contract closes seven routes and content sources"
   }
   assert.deepEqual(roomObjectContract("travel").contentSource, { kind: "travel-log" });
   assert.equal(isRoomObjectId("travel"), true);
+  assert.deepEqual(roomObjectContract("rig").contentSource, { kind: "gear-collection" });
   assert.equal(isRoomObjectId("unknown"), false);
   assert.equal(roomObjectContract("unknown"), null);
   assert.doesNotMatch(contract, /roomLabel:|label:/);
@@ -105,7 +106,7 @@ test("the dependency-free room contract closes seven routes and content sources"
   assert.match(registry, /return isRoomObjectId\(value\) \? ROOM_OBJECT_BY_ID\[value\] : null/);
 });
 
-test("room registries derive seven objects while connector dispatch excludes Travel", async () => {
+test("room registries derive eight objects while connector dispatch excludes local collections", async () => {
   const [registry, screens, foundation, route, travelRoute] = await Promise.all([
     source("components/play/room-platform/room-registry.ts"),
     source("components/play/room-platform/room-screen-registry.ts"),
@@ -113,15 +114,15 @@ test("room registries derive seven objects while connector dispatch excludes Tra
     source("app/play/[objectSlug]/page.tsx"),
     source("app/play/travel/page.tsx"),
   ]);
-  const expected = ["watch", "read", "listen", "collect", "play", "move", "travel"];
+  const expected = ["watch", "read", "listen", "collect", "play", "move", "travel", "rig"];
   assert.deepEqual(roomRegistryKeys(screens, "ROOM_SCREEN_LOADERS"), expected);
   assert.deepEqual(
     roomRegistryKeys(route, "ROOM_ROUTE_FOUNDATIONS"),
-    expected.filter((id) => id !== "travel"),
+    expected.filter((id) => roomObjectContract(id).contentSource.kind === "connector"),
   );
   assert.deepEqual(
     roomRegistryKeys(foundation, "ROOM_PROVIDER_ADAPTERS"),
-    expected.filter((id) => id !== "travel"),
+    expected.filter((id) => roomObjectContract(id).contentSource.kind === "connector"),
     "ROOM_PROVIDER_ADAPTERS",
   );
   assert.match(registry, /ROOM_OBJECT_CONTRACT\.map\(\(structural\)/);
@@ -463,7 +464,7 @@ test("Play overview is provider-free while validated direct routes use closed di
   ]) {
     assert.match(screens, new RegExp(`import\\("\\.\\./room-screens/${screen}"\\)`));
   }
-  assert.match(direct, /if \(object\.id === "travel"\) notFound\(\)/);
+  assert.match(direct, /if \(!isRoomConnectorObjectId\(object\.id\)\) notFound\(\)/);
   assert.doesNotMatch(direct, /travel: async|import\(/);
   assert.doesNotMatch(screens, /import\(`|import\([^"']/);
   assert.doesNotMatch(direct, /object\.(provider|meshRoot).*ROOM_/);
@@ -579,7 +580,7 @@ test("each object screen has a distinct cancellable match-cut enhancement", asyn
   const matchCut = await source(
     "components/play/room-screens/MatchCutSurface.tsx",
   );
-  for (const id of ["watch", "read", "listen", "collect", "play", "move", "travel"]) {
+  for (const id of ["watch", "read", "listen", "collect", "play", "move", "travel", "rig"]) {
     assert.match(matchCut, new RegExp(`^  ${id}: \\{`, "m"));
   }
   assert.match(matchCut, /import \{ animate \} from "animejs"/);

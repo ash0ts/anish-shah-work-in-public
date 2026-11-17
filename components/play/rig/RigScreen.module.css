@@ -3,6 +3,11 @@
   --rig-ink:#252b2a;
   --rig-muted:#58615d;
   --rig-accent:#a33b20;
+  --ink:var(--rig-ink);
+  --muted:var(--rig-muted);
+  --line:#a7aaa0;
+  --screen-accent:var(--rig-accent);
+  --screen-nav-bg:var(--rig-paper);
   max-width:1280px;
   margin:0 auto;
   padding:1.5rem 3rem 5rem;
@@ -519,3 +524,9 @@
 
 
 .record:target{outline:2px solid var(--rig-accent);outline-offset:4px;scroll-margin-top:24px}
+.sceneSurface { min-width: 0; }
+
+.page > nav { background:var(--rig-paper); }
+@media(forced-colors:active) {
+  .page { --rig-paper:Canvas; --rig-ink:CanvasText; --rig-muted:CanvasText; --rig-accent:LinkText; --line:CanvasText; }
+}

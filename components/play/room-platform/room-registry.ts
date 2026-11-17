@@ -67,6 +67,14 @@ const ROOM_OBJECT_PRESENTATION_BY_ID = {
     title: SITE_COPY.play["travel-screen-title"],
     description: SITE_COPY.play["travel-description"],
   },
+  rig: {
+    label: SITE_COPY.play["rig-title"],
+    roomLabel: SITE_COPY.play["rig-scene-title"],
+    object: SITE_COPY.play["rig-scene-title"],
+    screenEyebrow: SITE_COPY.play["rig-screen-eyebrow"],
+    title: SITE_COPY.play["rig-screen-title"],
+    description: SITE_COPY.play["rig-directory-label"],
+  },
 } as const satisfies Record<
   RoomObjectId,
   Pick<

@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { RIG_OBJECT_CONTRACT, RIG_OBJECT_BY_ID } from "@/lib/rig-object-contract";
 import { SITE_COPY } from "@/lib/copy";
-import { rigHref, sceneGuitars, sceneModes, sceneRoute, type RigSceneState, type RigView } from "@/lib/rig-scene";
+import { rigHref, rigObjectHref, sceneGuitars, sceneModes, sceneRoute, type RigSceneState, type RigView } from "@/lib/rig-scene";
 import type { GearManifest } from "@/types/gear";
 import { Guitar, Headphones, KoAmp, MiniBoard, Op1Field, OrangeAmp, KoPedal } from "./RigIllustrations";
 import styles from "./RigScene.module.css";
@@ -57,24 +58,24 @@ export function RigArtwork({ manifest, state, view, active }: Props) {
 
     <g transform="translate(66 45) scale(.82)">
       {state.guitar==='fgn' ? <ellipse cx="70" cy="472" rx="68" ry="17" fill="none" stroke="#a24a2a" strokeWidth="2"/> : null}
-      <a href={rigHref(view,state,{guitar:'fgn'})} aria-label={copy("rig-scene-fgn-label")} aria-current={state.guitar==='fgn'?'true':undefined} className={styles.object}><title>{guitarNames[sceneGuitars.fgn]}</title><Guitar/></a>
+      <Link replace prefetch={false} data-rig-object="fgn" href={rigObjectHref(RIG_OBJECT_BY_ID.fgn,view,state)} aria-label={copy("rig-scene-fgn-label")} aria-current={state.guitar==='fgn'?'true':undefined} className={styles.object}><title>{guitarNames[sceneGuitars.fgn]}</title><Guitar/></Link>
     </g>
     <g transform="translate(220 65) scale(.82)">
       {state.guitar==='duo' ? <ellipse cx="70" cy="472" rx="68" ry="17" fill="none" stroke="#a24a2a" strokeWidth="2"/> : null}
-      <a href={rigHref(view,state,{guitar:'duo'})} aria-label={copy("rig-scene-duo-label")} aria-current={state.guitar==='duo'?'true':undefined} className={styles.object}><title>{guitarNames[sceneGuitars.duo]}</title><Guitar duo/></a>
+      <Link replace prefetch={false} data-rig-object="duo" href={rigObjectHref(RIG_OBJECT_BY_ID.duo,view,state)} aria-label={copy("rig-scene-duo-label")} aria-current={state.guitar==='duo'?'true':undefined} className={styles.object}><title>{guitarNames[sceneGuitars.duo]}</title><Guitar duo/></Link>
     </g>
     <text x="108" y="466" textAnchor="middle" fill="#303d33" fontSize="13" fontWeight="700">FGN</text>
     <text x="108" y="483" textAnchor="middle" fill="#63705d" fontSize="10">FLUENCE MODERN</text>
     <text x="276" y="486" textAnchor="middle" fill="#303d33" fontSize="13" fontWeight="700">DUO–SONIC</text>
     <text x="276" y="503" textAnchor="middle" fill="#63705d" fontSize="10">FENDER</text>
 
-    <a href="#gear-op1-field" className={styles.object} aria-label={`OP-1 field · ${copy("rig-scene-inventory-label")}`}><g transform="translate(500 180)"><Op1Field/></g></a>
-    <a href="#gear-te-ep35" className={styles.object} aria-label={`EP-35 · ${copy("rig-scene-inventory-label")}`}><g transform="translate(950 132)"><KoAmp/></g></a>
+    <Link replace prefetch={false} data-rig-object="op1" href={rigObjectHref(RIG_OBJECT_BY_ID.op1,view,state)} className={styles.object} aria-label={`OP-1 field · ${copy("rig-scene-inventory-label")}`}><g transform="translate(500 180)"><Op1Field/></g></Link>
+    <Link replace prefetch={false} data-rig-object="ep35" href={rigObjectHref(RIG_OBJECT_BY_ID.ep35,view,state)} className={styles.object} aria-label={`EP-35 · ${copy("rig-scene-inventory-label")}`}><g transform="translate(950 132)"><KoAmp/></g></Link>
     <g transform="translate(814 229) scale(.65)" opacity={tape&&!portable?1:.35}><Headphones/></g>
-    <text x="948" y="339" fontSize="11" fill="#54614e">EP–35 / {copy("rig-optional-label")}</text>
-    <a href="#gear-orange-crush-20rt" className={styles.object} aria-label={`Orange Crush 20RT · ${copy("rig-scene-inventory-label")}`}><g transform="translate(865 390)"><OrangeAmp/></g></a>
-    <a href={rigHref(view,state,{},'workbench')} className={styles.object} aria-label={copy("rig-scene-board-body")}><g transform="translate(397 411) matrix(.68 .04 -.12 .39 0 0)"><MiniBoard manifest={manifest} active={active}/></g></a>
-    <a href="#gear-te-ep127" className={styles.object} aria-label={`EP-127 · ${copy("rig-scene-inventory-label")}`}><g transform="translate(830 569)"><KoPedal/></g></a>
+    <text x="948" y="339" fontSize="11" fill="#54614e">EP–35 / {copy(`rig-${manifest.items.find(item => item.id === RIG_OBJECT_BY_ID.ep35.gearId)!.status}-label`)}</text>
+    <Link replace prefetch={false} data-rig-object="orange" href={rigObjectHref(RIG_OBJECT_BY_ID.orange,view,state)} className={styles.object} aria-label={`Orange Crush 20RT · ${copy("rig-scene-inventory-label")}`}><g transform="translate(865 390)"><OrangeAmp/></g></Link>
+    <Link replace prefetch={false} data-rig-object="board" href={rigObjectHref(RIG_OBJECT_BY_ID.board,view,state)} className={styles.object} aria-label={copy("rig-scene-board-body")}><g transform="translate(397 411) matrix(.68 .04 -.12 .39 0 0)"><MiniBoard manifest={manifest} active={active}/></g></Link>
+    <Link replace prefetch={false} data-rig-object="ep127" href={rigObjectHref(RIG_OBJECT_BY_ID.ep127,view,state)} className={styles.object} aria-label={`EP-127 · ${copy("rig-scene-inventory-label")}`}><g transform="translate(830 569)"><KoPedal/></g></Link>
     <text x="884" y="645" textAnchor="middle" fill="#52614b" fontSize="10">EP–127</text>
     <text x="551" y="656" textAnchor="middle" fill="#52614b" fontSize="11" letterSpacing="1.4">G3S / SCHMIDT ARRAY</text>
     {!tape ? <g fill="none" strokeLinecap="round"><path d="M771 446C822 446 803 625 1030 625C1160 625 1140 490 1076 421" stroke="#f4f1e4" strokeWidth="9"/><path data-cable="board-orange" d="M771 446C822 446 803 625 1030 625C1160 625 1140 490 1076 421" stroke="#a24a2a" strokeWidth="4"/></g> : null}
@@ -90,13 +91,13 @@ export function RigArtwork({ manifest, state, view, active }: Props) {
 export function RigScene({ manifest, state, view, active }: Props) {
   const items = new Map(manifest.items.map(i=>[i.id,i]));
   const route = sceneRoute(state);
-  const devices = ["fgn-dark-odyssey","fender-duo-sonic","orange-crush-20rt","op1-field","te-ep35","te-ep127"];
+  const devices = RIG_OBJECT_CONTRACT;
   const label = (id:string) => id==='headphones' ? copy('rig-scene-headphones-label') : items.get(id)?.model ?? id;
   return <section className={styles.scene} id="music-corner" aria-labelledby="music-corner-title" data-music-corner>
     <header className={styles.heading}><div><p className={styles.eyebrow}>00 / COLLECTION</p><h2 id="music-corner-title">{copy('rig-scene-title')}</h2></div><p>{copy('rig-scene-body')}</p></header>
     <div className={styles.console}>
-      <nav aria-label={copy('rig-scene-label')} className={styles.tabs}>{sceneModes.map((scene,i)=><Link key={scene} href={rigHref(view,state,{scene})} scroll={false} prefetch={false} aria-current={state.scene===scene?'true':undefined}><span>0{i+1}</span>{copy(`rig-scene-${scene}-label`)}</Link>)}</nav>
-      <nav aria-label={copy('rig-scene-guitar-label')} className={styles.guitars}>{(['fgn','duo'] as const).map(guitar=><Link key={guitar} href={rigHref(view,state,{guitar})} scroll={false} prefetch={false} aria-current={state.guitar===guitar?'true':undefined}><i aria-hidden="true"/>{copy(`rig-scene-${guitar}-label`)}</Link>)}</nav>
+      <nav aria-label={copy('rig-scene-label')} className={styles.tabs}>{sceneModes.map((scene,i)=><Link replace key={scene} href={rigHref(view,state,{scene})} scroll={false} prefetch={false} aria-current={state.scene===scene?'true':undefined}><span>0{i+1}</span>{copy(`rig-scene-${scene}-label`)}</Link>)}</nav>
+      <nav aria-label={copy('rig-scene-guitar-label')} className={styles.guitars}>{(['fgn','duo'] as const).map(guitar=><Link replace key={guitar} href={rigHref(view,state,{guitar})} scroll={false} prefetch={false} aria-current={state.guitar===guitar?'true':undefined}><i aria-hidden="true"/>{copy(`rig-scene-${guitar}-label`)}</Link>)}</nav>
     </div>
     <RigArtwork manifest={manifest} state={state} view={view} active={active}/>
     <div className={styles.readout} aria-live="off">
@@ -104,7 +105,7 @@ export function RigScene({ manifest, state, view, active }: Props) {
       <ol className={styles.route} aria-label={copy('rig-scene-signal-label')}>{route.map(edge=><li key={edge.id} data-route={edge.id}><span className={styles.routeNumber}>{String(route.indexOf(edge)+1).padStart(2,'0')}</span><div><strong>{label(edge.from)}<b aria-hidden="true"> → </b>{label(edge.to)}</strong><small>{edge.fromPort} → {edge.toPort}{edge.internal?` · ${copy('rig-scene-internal-label')}`:''}</small></div></li>)}</ol>
     </div>
     <div className={styles.controlNote}><span className={styles.controlMark} aria-hidden="true"/><p>{view.bank===2?copy(state.scene!=='home'?'rig-scene-control-body':'rig-scene-unused-control-body'):copy('rig-scene-guitar-bank-body')}{state.scene==='portable'?` ${copy('rig-scene-ep127-body')}`:''}</p></div>
-    <nav aria-label={copy('rig-scene-details-label')} className={styles.deviceIndex}>{devices.map((id,i)=>{const item=items.get(id)!;return <a key={id} href={`#gear-${id}`}><span>{String(i+1).padStart(2,'0')}</span><strong>{item.model}</strong><small>{copy(`rig-${item.status}-label`)} ↗</small></a>;})}</nav>
+    <nav aria-label={copy('rig-scene-details-label')} className={styles.deviceIndex}>{devices.map((object,i)=>{const item=items.get(object.gearId)!;return <Link replace prefetch={false} key={object.id} data-rig-object-link={object.id} href={rigObjectHref(object,view,state)}><span>{String(i+1).padStart(2,'0')}</span><strong>{item.model}</strong><small>{copy(`rig-${item.status}-label`)} ↗</small></Link>;})}</nav>
     <p className={styles.caption}>{copy('rig-scene-caption')}</p>
   </section>;
 }

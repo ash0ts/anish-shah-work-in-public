@@ -10,7 +10,7 @@ const widths = [320, 390, 768, 1024, 1440, 1920];
 // Give each source/state its own context and normal test deadline. Thirty
 // navigations must not compete for one shared timeout on slower CI machines.
 for (const fixture of ["empty", "stale", "unavailable", "long-title", "missing-artwork"]) {
-  for (const object of objects.filter((id) => id !== "travel")) {
+  for (const object of objectFixtures.filter(({ provider }) => provider !== null).map(({ id }) => id)) {
     test(`${object}: ${fixture} collection remains readable and isolated`, async ({ page }) => {
       await page.setViewportSize({ width: 320, height: 844 });
       const response = await page.goto(`/play/${object}?fixture=${fixture}`, { waitUntil: "networkidle" });

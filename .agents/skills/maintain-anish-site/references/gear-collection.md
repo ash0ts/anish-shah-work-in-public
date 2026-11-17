@@ -10,6 +10,8 @@ comparing the owner's Equipboard with `/play/rig`. The canonical human runbook i
 | --- | --- |
 | Identity, ownership, configuration, loops and planned geometry | `content/play/gear.v1.json` |
 | Missing catalog products and primary product sources | `content/play/equipboard-catalog.v1.json` |
+| Device identities and actions | `lib/rig-object-contract.ts` |
+| Room integration and geometry ownership | `room-platform/room-object-contract.ts` and `room-3d/room-scene-layout.ts` under `components/play` |
 | Guitar banks and OP-1 commands | `content/play/rig-programs.v1.json` |
 | Public notes and UI wording | `content/copy/pages/play.md` and `lib/copy-contract.ts` |
 | Strict validation and comparison | `lib/gear-model.ts`, `lib/gear-reconciliation.ts` |
@@ -55,3 +57,18 @@ prepared; account items actually saved; local comparison result; PR/deployment
 state. Do not call the website JSON feed an Equipboard API or the checklist an
 official bulk import. Do not promise authenticated sync without an implemented,
 permitted adapter and an account-level verification.
+
+## Extend the music corner
+
+Treat `rig` as a room destination, not a second directory link. Keep its concrete
+route and shared return/focus controls. Derive connector IDs from `contentSource`
+kind so local collections never dispatch through provider adapters. The bounded
+`RIG_OBJECT_CONTRACT` joins the scene to gear by stable ID and discriminates
+select-guitar, inspect-board and inspect-gear actions. Update the illustration,
+ordinary links, export and behavior tests together; never copy ownership into
+scene metadata. Room geometry is an editorial preview and loads no inventory.
+
+`room-scene-layout.ts` distinguishes the seven baked GLB props from the
+code-authored rig. Do not hand-edit `diorama.generated.json` to claim a mesh exists
+in that asset. Measure the combined scene budgets, test every registered device,
+and include rig selection/return and no-JavaScript checks in browser coverage.

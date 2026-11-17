@@ -14,6 +14,7 @@ const objects = [
   "play",
   "move",
   "travel",
+  "rig",
 ];
 const scenarios = [
   "ready",
@@ -23,7 +24,7 @@ const scenarios = [
   "long-title",
   "missing-artwork",
 ];
-const connectorObjects = objects.filter((id) => id !== "travel");
+const connectorObjects = objects.filter((id) => id !== "travel" && id !== "rig");
 
 async function settleRoomScreen(page) {
   if ((await page.locator("[data-match-cut-state]").count()) === 0) return;
@@ -84,7 +85,7 @@ test.describe("My Room 2001 visual review evidence", () => {
     );
   });
 
-  test("captures the neutral room, rotation bounds, and seven focus states", async ({
+  test("captures the neutral room, rotation bounds, and eight focus states", async ({
     page,
   }) => {
     test.setTimeout(120_000);

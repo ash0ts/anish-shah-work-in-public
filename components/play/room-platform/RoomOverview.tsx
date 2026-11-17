@@ -86,9 +86,23 @@ export function RoomOverview({
               <li key={object.id}>
                 <Link
                   data-room-object-link={object.id}
+                  data-play-rig-link={object.id === "rig" ? "" : undefined}
+                  className={object.id === "rig" ? styles.rigLink : undefined}
                   href={routeWithPreviewFixture(object.route, fixture)}
                   prefetch={false}
                 >
+                  {object.id === "rig" ? (
+                    <svg className={styles.rigGlyph} viewBox="0 0 160 110" aria-hidden="true" focusable="false">
+                    {[0,28].map((x,i)=><g key={x} transform={`translate(${x} ${i*7})`}><path d={rigShapes.directoryGuitar} fill="currentColor"/><path d="M23 17v62" stroke="var(--paper)" strokeWidth="2"/></g>)}
+                    <rect x="76" y="21" width="76" height="25" rx="3" fill="none" stroke="currentColor" strokeWidth="3"/>
+                    <path d="M80 37h68m-60 0v7m10-7v7m10-7v7m10-7v7m10-7v7m10-7v7" stroke="currentColor" strokeWidth="2"/>
+                    <rect x="113" y="59" width="39" height="42" rx="3" fill="none" stroke="currentColor" strokeWidth="3"/>
+                    <path d="M123 59v-6h19v6M117 69h31" fill="none" stroke="currentColor" strokeWidth="3"/>
+                    <rect x="65" y="67" width="39" height="34" rx="3" fill="none" stroke="currentColor" strokeWidth="3"/>
+                    {[71,82,93].map(x=><rect key={x} x={x} y="73" width="6" height="13" fill="currentColor"/>)}
+                    <path d="M71 94h27" stroke="currentColor" strokeWidth="3"/>
+                    </svg>
+                  ) : null}
                   <strong>{object.object}</strong>
                   <small>{object.label}</small>
                   <b aria-hidden="true">↗</b>
@@ -96,26 +110,7 @@ export function RoomOverview({
               </li>
             ))}
           </ol>
-          <Link
-            className={styles.rigLink}
-            data-play-rig-link
-            href="/play/rig"
-            prefetch={false}
-          >
-            <svg className={styles.rigGlyph} viewBox="0 0 160 110" aria-hidden="true" focusable="false">
-              {[0,28].map((x,i)=><g key={x} transform={`translate(${x} ${i*7})`}><path d={rigShapes.directoryGuitar} fill="currentColor"/><path d="M23 17v62" stroke="var(--paper)" strokeWidth="2"/></g>)}
-              <rect x="76" y="21" width="76" height="25" rx="3" fill="none" stroke="currentColor" strokeWidth="3"/>
-              <path d="M80 37h68m-60 0v7m10-7v7m10-7v7m10-7v7m10-7v7m10-7v7" stroke="currentColor" strokeWidth="2"/>
-              <rect x="113" y="59" width="39" height="42" rx="3" fill="none" stroke="currentColor" strokeWidth="3"/>
-              <path d="M123 59v-6h19v6M117 69h31" fill="none" stroke="currentColor" strokeWidth="3"/>
-              <rect x="65" y="67" width="39" height="34" rx="3" fill="none" stroke="currentColor" strokeWidth="3"/>
-              {[71,82,93].map(x=><rect key={x} x={x} y="73" width="6" height="13" fill="currentColor"/>)}
-              <path d="M71 94h27" stroke="currentColor" strokeWidth="3"/>
-            </svg>
-            <strong>{SITE_COPY.play["rig-title"]}</strong>
-            <small>{SITE_COPY.play["rig-directory-label"]}</small>
-            <b aria-hidden="true">↗</b>
-          </Link>
+
         </nav>
       </section>
     </main>

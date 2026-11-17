@@ -789,6 +789,77 @@
       }
     ]
   },
+  "objects": {
+    "schemaVersion": 1,
+    "items": [
+      {
+        "id": "fgn",
+        "gearId": "fgn-dark-odyssey",
+        "kind": "guitar",
+        "illustration": "fgn",
+        "action": {
+          "kind": "select-guitar",
+          "guitar": "fgn"
+        }
+      },
+      {
+        "id": "duo",
+        "gearId": "fender-duo-sonic",
+        "kind": "guitar",
+        "illustration": "duo",
+        "action": {
+          "kind": "select-guitar",
+          "guitar": "duo"
+        }
+      },
+      {
+        "id": "board",
+        "gearId": "schmidt-sa550xdm",
+        "kind": "pedalboard",
+        "illustration": "board",
+        "action": {
+          "kind": "inspect-board",
+          "anchor": "workbench"
+        }
+      },
+      {
+        "id": "orange",
+        "gearId": "orange-crush-20rt",
+        "kind": "amplifier",
+        "illustration": "orange",
+        "action": {
+          "kind": "inspect-gear"
+        }
+      },
+      {
+        "id": "op1",
+        "gearId": "op1-field",
+        "kind": "recorder",
+        "illustration": "op1",
+        "action": {
+          "kind": "inspect-gear"
+        }
+      },
+      {
+        "id": "ep35",
+        "gearId": "te-ep35",
+        "kind": "amplifier",
+        "illustration": "ep35",
+        "action": {
+          "kind": "inspect-gear"
+        }
+      },
+      {
+        "id": "ep127",
+        "gearId": "te-ep127",
+        "kind": "controller",
+        "illustration": "ep127",
+        "action": {
+          "kind": "inspect-gear"
+        }
+      }
+    ]
+  },
   "catalog": {
     "version": 1,
     "checkedAt": "2026-11-16",

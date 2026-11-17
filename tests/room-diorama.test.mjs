@@ -7,6 +7,7 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import { MeshoptDecoder } from "meshoptimizer";
 import sharp from "sharp";
 import { roomAtlasPlugin, validateRoomAtlasBytes } from "../components/play/room-3d/room-atlas.ts";
+import { BAKED_ROOM_OBJECT_IDS } from "../components/play/room-3d/room-scene-layout.ts";
 import { ROOM_OBJECT_IDS } from "../components/play/room-platform/room-object-contract.ts";
 import { roomFamiliarPose, roomPropResponse, settleRoomPose } from "../components/play/room-3d/room-prop-response.ts";
 import { routeObject, markRoomHistoryEntry, clearRoomHistoryEntry, historyRoomObject, historyRoomDepth, historyRoomPath, roomReturnDepth } from "../components/play/room-platform/room-history.ts";
@@ -21,7 +22,7 @@ test("the optimized first-party asset matches its hash, registry, and actual mes
   const document = await new NodeIO().registerExtensions(ALL_EXTENSIONS)
     .registerDependencies({ "meshopt.decoder": MeshoptDecoder }).readBinary(new Uint8Array(bytes));
   const root = document.getRoot();
-  assert.deepEqual(Object.keys(manifest.props).sort(), [...ROOM_OBJECT_IDS].sort());
+  assert.deepEqual(Object.keys(manifest.props).sort(), [...BAKED_ROOM_OBJECT_IDS].sort());
   const familiar = root.listNodes().filter(node => node.getName() === "room-familiar");
   assert.equal(familiar.length, 1, "one decorative familiar, not another destination");
   assert.equal(familiar[0].getMesh(), null, "preserve the authored reaction pivot");
@@ -29,7 +30,7 @@ test("the optimized first-party asset matches its hash, registry, and actual mes
   assert.ok(familiar[0].listChildren()[0].getMesh());
   familiar[0].getTranslation().forEach((value, index) =>
     assert.ok(Math.abs(value - manifest.familiar.position[index]) < .00001));
-  for (const id of ROOM_OBJECT_IDS) {
+  for (const id of BAKED_ROOM_OBJECT_IDS) {
     assert.equal(root.listNodes().filter(node => node.getName() === "OBJ__" + id).length, 1);
     assert.equal(root.listNodes().filter(node => node.getName() === "motion__" + id).length, 1);
     const body = root.listNodes().find(node => node.getName() === "body__" + id);
@@ -70,7 +71,7 @@ test("the optimized first-party asset matches its hash, registry, and actual mes
   assert.equal(manifest.authoring.tool, "Blender");
   assert.equal(manifest.authoring.version, "5.2.3 LTS");
   assert.equal(manifest.reviewStage, "complete");
-  assert.deepEqual([...manifest.finishedObjects].sort(), [...ROOM_OBJECT_IDS].sort());
+  assert.deepEqual([...manifest.finishedObjects].sort(), [...BAKED_ROOM_OBJECT_IDS].sort());
   for (const primitive of primitives) {
     assert.ok(primitive.getAttribute("COLOR_0"), "baked vertex lighting retained");
     assert.ok(primitive.getAttribute("TEXCOORD_0"), "atlas UVs retained");

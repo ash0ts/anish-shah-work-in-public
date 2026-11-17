@@ -198,7 +198,7 @@ after the downloaded Browser-tested build; owner-local Browser Quality instead
 exercises the already prepared final upload bytes. Neither path rebuilds the
 application.
 
-My Room, 2001 and its seven semantic object routes are the only Play runtime.
+My Room, 2001 and its eight semantic object routes are the only Play runtime.
 There is no hosted Classic flag or fallback. The release plan records
 `RELEASE_VERSION` and also computes `COPY_VERSION` from the copy deck and parser
 contract. `COPY_VERSION` is distinct from canonical-data `CONTENT_VERSION`.
@@ -549,7 +549,7 @@ the base set:
    a non-owner remains denied.
 
 My Room is the only Play runtime, so the attestation always requires its six
-connector-backed direct-route checks:
+connector-backed direct-route checks and the local gear collection:
 
 15. `play_watch`: `/play/watch` renders Watch and reads only MyAnimeList.
 16. `play_read`: `/play/read` renders Read and reads only Hardcover.
@@ -557,10 +557,12 @@ connector-backed direct-route checks:
 18. `play_collect`: `/play/collect` renders Collect and the eligible Discogs public state.
 19. `play_play`: `/play/play` renders Play and reads only Steam.
 20. `play_move`: `/play/move` renders Move and keeps the Strava frame consent-gated.
+21. `play_rig`: `/play/rig` renders the local music corner and inventory, preserves
+    selections and room return/focus, and performs no Equipboard/provider request.
 
 When Travel is enabled, the attestation additionally requires:
 
-21. `play_travel`: `/play/travel` renders the semantic atlas, loads no
+22. `play_travel`: `/play/travel` renders the semantic atlas, loads no
     connector, and serves only media authorized by the active Travel snapshot.
 
 Also verify that `/play` itself performs no connector read before object

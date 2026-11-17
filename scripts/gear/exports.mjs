@@ -3,6 +3,7 @@ import path from "node:path";
 import { parseGearManifest, parseRigPrograms } from "../../lib/gear-model.ts";
 import { parseCatalogPlan } from "../../lib/gear-reconciliation.ts";
 import { buildCopyDeck } from "../lib/copy-deck.mjs";
+import { RIG_OBJECT_CONTRACT } from "../../lib/rig-object-contract.ts";
 
 /** Sheets interpret these prefixes as formulas even in a tab-delimited download. */
 export function tsvCell(value) {
@@ -54,6 +55,7 @@ export async function gearExports(root) {
   for (const item of manifest.items) if (!pages.play[item.noteKey]) throw new Error(`Missing gear note: ${item.id}`);
   const data = {
     manifest,
+    objects: { schemaVersion: 1, items: RIG_OBJECT_CONTRACT },
     catalog,
     notes: Object.fromEntries(manifest.items.map(item => [item.id, pages.play[item.noteKey]])),
     programs,

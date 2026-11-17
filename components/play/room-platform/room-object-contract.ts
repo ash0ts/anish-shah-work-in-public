@@ -76,11 +76,22 @@ export const ROOM_OBJECT_CONTRACT = [
     focusTarget: '[data-room-object-link="travel"]',
     smokeTest: "play_travel",
   },
+  {
+    id: "rig",
+    route: "/play/rig",
+    contentSource: { kind: "gear-collection" },
+    approachPoseId: "rig-approach",
+    meshRoot: "OBJ__rig",
+    matchCutSurface: "pedalboard deck",
+    focusTarget: '[data-room-object-link="rig"]',
+    smokeTest: "play_rig",
+  },
 ] as const;
 
 export type RoomObjectContract = (typeof ROOM_OBJECT_CONTRACT)[number];
 export type RoomObjectId = RoomObjectContract["id"];
 export type RoomObjectRoute = RoomObjectContract["route"];
+export type RoomConnectorObjectId = Extract<RoomObjectContract, { contentSource: { kind: "connector" } }>["id"];
 
 export const ROOM_OBJECT_IDS = ROOM_OBJECT_CONTRACT.map(({ id }) => id) as
   readonly RoomObjectId[];
@@ -100,4 +111,8 @@ export function isRoomObjectId(value: unknown): value is RoomObjectId {
 
 export function roomObjectContract(value: unknown): RoomObjectContract | null {
   return isRoomObjectId(value) ? ROOM_OBJECT_CONTRACT_BY_ID[value] : null;
+}
+
+export function isRoomConnectorObjectId(value: unknown): value is RoomConnectorObjectId {
+  return roomObjectContract(value)?.contentSource.kind === "connector";
 }

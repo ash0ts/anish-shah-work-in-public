@@ -7,6 +7,8 @@ import type { RoomObjectId } from "../room-platform/room-types";
 import manifest from "./diorama.generated.json";
 import { roomAtlasPlugin } from "./room-atlas";
 import { roomFamiliarPose, roomPropResponse, settleRoomPose } from "./room-prop-response";
+import { ROOM_SCENE_OBJECTS, type BakedRoomObjectId } from "./room-scene-layout";
+import { RigRoomObject } from "./RigRoomObject";
 
 type RegisterHit = (id: RoomObjectId, mesh: Mesh | null) => void;
 type RegisterOccluder = (mesh: Mesh, active: boolean) => void;
@@ -34,7 +36,7 @@ function Proxy({ id, position, size, registerHit, registerOccluder }: {
 }
 
 function DioramaProp({ source, id, active, selected, registerHit }: {
-  source: Object3D; id: RoomObjectId; active: boolean; selected: boolean; registerHit: RegisterHit;
+  source: Object3D; id: BakedRoomObjectId; active: boolean; selected: boolean; registerHit: RegisterHit;
 }) {
   const { invalidate } = useThree();
   const object = useMemo(() => source.clone(true), [source]);
@@ -77,7 +79,7 @@ function DioramaFamiliar({ source, attentionId }: { source: Object3D; attentionI
   const object = useMemo(() => source.clone(true), [source]);
   const rootRef = useRef<Object3D>(null);
   const target = roomFamiliarPose(attentionId
-    ? manifest.props[attentionId].position[0] - manifest.familiar.position[0] : null);
+    ? ROOM_SCENE_OBJECTS[attentionId].layout.position[0] - manifest.familiar.position[0] : null);
   useEffect(() => { invalidate(); }, [attentionId, invalidate]);
   useFrame((_, delta) => {
     const root = rootRef.current;
@@ -103,7 +105,9 @@ export function DioramaObjects({ objectIds, focusedId, hoveredId, selectedId, re
     {manifest.occluders.map((occluder, index) => <Proxy key={index}
       position={occluder.position as [number, number, number]}
       size={occluder.size as [number, number, number]} registerOccluder={registerOccluder} />)}
-    {objectIds.map(id => <DioramaProp key={id} id={id} source={scene.getObjectByName(`OBJ__${id}`)!}
+    {objectIds.map(id => id === "rig"
+      ? <RigRoomObject key={id} active={focusedId === id || hoveredId === id} selected={selectedId === id} registerHit={registerHitTarget} />
+      : <DioramaProp key={id} id={id} source={scene.getObjectByName(`OBJ__${id}`)!}
       active={focusedId === id || hoveredId === id} selected={selectedId === id} registerHit={registerHitTarget} />)}
   </>;
 }

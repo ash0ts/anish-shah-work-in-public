@@ -17,8 +17,8 @@ request path, durable store, or progressive-enhancement boundary changes.
 
 - `app/`: Next/Vinext public routes and server-rendered foundations.
 - `app/about/**`: Git-owned biography and reusable speaker profile around a reviewed career chronology. The career and speaker manifests own IDs and destinations; the sanitized profile owns LinkedIn.
-- `app/play/**`: My Room overview plus seven semantic object routes.
-- `app/play/rig`, `components/play/rig`, `lib/gear-model.ts`, and `content/play/gear.v1.json`: reviewed collection and revisioned board plan. Editorial text belongs to the Play copy deck. Keep ownership separate from placement. `scripts/gear` generates checked public JSON/TSV downloads; do not add private inventory fields or request-time Equipboard reads. The semantic route does not extend the seven-object room contract. `lib/gear-reconciliation.ts` and `scripts/gear/reconcile-equipboard.mjs` compare owner-reviewed snapshots without mutation. `content/play/equipboard-catalog.v1.json` gives every unmatched item a resolution. `lib/rig-scene.ts` owns bounded scene/guitar queries and audio routes; `RigScene.tsx` and `RigIllustrations.tsx` draw the music corner without extending the 3D room or changing board geometry. See [gear collection workflow](gear-collection.md) and `components/play/rig/README.md`.
+- `app/play/**`: My Room overview plus eight semantic object routes.
+- `app/play/rig`, `components/play/rig`, `lib/gear-model.ts`, and `content/play/gear.v1.json`: reviewed collection and revisioned board plan. Editorial text belongs to the Play copy deck. Keep ownership separate from placement. `scripts/gear` generates checked public JSON/TSV downloads; do not add private inventory fields or request-time Equipboard reads. The `rig` destination participates in the room contract with a local `gear-collection` source; connector IDs derive from source kind. `lib/gear-reconciliation.ts` and `scripts/gear/reconcile-equipboard.mjs` compare owner-reviewed snapshots without mutation. `content/play/equipboard-catalog.v1.json` gives every unmatched item a resolution. `lib/rig-scene.ts` owns bounded scene/guitar queries and audio routes; `RigScene.tsx` and `RigIllustrations.tsx` draw the music corner; `lib/rig-object-contract.ts` owns its seven device identities and actions. `room-3d/room-scene-layout.ts` explicitly maps the seven baked props plus the code-authored rig; `RigRoomObject.tsx` renders that merged unlit mesh without loading the inventory. See [gear collection workflow](gear-collection.md) and `components/play/rig/README.md`.
 - `components/play/**`: object-screen shell and provider-specific Play UI.
   `room-screens/ObjectScreen.tsx` owns the shared frame and navigation;
   `TactileDisclosure.tsx` owns native item expansion and its optional spring.
@@ -127,7 +127,7 @@ Runtime precedence is: sanitized canonical facts and structure, then published D
 
 ## My Room Contract
 
-- `/play` performs zero connector or Travel reads and offers a semantic seven-object directory.
+- `/play` performs zero connector or Travel reads and offers a semantic eight-object directory.
 - `/play/watch`, `/play/read`, `/play/listen`, `/play/collect`, `/play/play`, and
   `/play/move` load only their associated provider; `/play/travel` loads only
   the sanitized Travel publication.
