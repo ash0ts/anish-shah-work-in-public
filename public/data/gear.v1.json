@@ -18,17 +18,52 @@
     },
     "items": [
       {
-        "id": "fishman-fluence",
-        "brand": "Fishman",
-        "model": "Fluence — exact set unconfirmed",
-        "kind": "pickup",
+        "id": "fgn-dark-odyssey",
+        "brand": "FGN",
+        "model": "Dark Odyssey — 6-string",
+        "kind": "guitar",
         "status": "owned",
         "placement": "external",
         "modelConfirmed": false,
         "provenance": "owner-confirmed",
         "catalogUrl": null,
-        "catalogQuery": "Fishman Fluence — exact set unconfirmed",
-        "noteKey": "rig-note-fishman-fluence"
+        "catalogQuery": "FGN Dark Odyssey 6-string Fishman Fluence Modern — verify manufacturer model code",
+        "noteKey": "rig-note-fgn-dark-odyssey",
+        "legacyIds": [
+          "fishman-fluence"
+        ],
+        "instrument": {
+          "strings": 6,
+          "manufacturerCode": null,
+          "year": null,
+          "pickups": {
+            "brand": "Fishman",
+            "model": "Fluence Modern"
+          }
+        }
+      },
+      {
+        "id": "fender-duo-sonic",
+        "brand": "Fender",
+        "model": "Duo-Sonic",
+        "kind": "guitar",
+        "status": "owned",
+        "placement": "external",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/fender-duo-sonic-electric-guitar",
+        "catalogScope": "family",
+        "catalogQuery": "Fender Duo-Sonic — year and finish unconfirmed",
+        "noteKey": "rig-note-fender-duo-sonic",
+        "instrument": {
+          "strings": 6,
+          "manufacturerCode": null,
+          "year": null,
+          "finish": {
+            "name": "Desert Sand",
+            "confirmed": false
+          }
+        }
       },
       {
         "id": "tuner-unconfirmed",
@@ -425,7 +460,7 @@
         "placement": "lower",
         "modelConfirmed": true,
         "provenance": "build-plan",
-        "catalogUrl": null,
+        "catalogUrl": "https://equipboard.com/items/two-notes-opus-amp-simulator-and-dynir-engine-pedal",
         "catalogQuery": "Two Notes OPUS",
         "noteKey": "rig-note-two-notes-opus",
         "footprint": {
@@ -453,7 +488,7 @@
         "placement": "both",
         "modelConfirmed": true,
         "provenance": "build-plan",
-        "catalogUrl": null,
+        "catalogUrl": "https://equipboard.com/items/thegigrig-g3s",
         "catalogQuery": "TheGigRig G3S",
         "noteKey": "rig-note-gigrig-g3s",
         "footprint": {
@@ -542,7 +577,7 @@
         "placement": "both",
         "modelConfirmed": true,
         "provenance": "build-plan",
-        "catalogUrl": null,
+        "catalogUrl": "https://equipboard.com/items/lehle-dual-expression-pedal",
         "catalogQuery": "Lehle Dual Expression",
         "noteKey": "rig-note-lehle-dual-expression",
         "footprint": {
@@ -609,10 +644,10 @@
         "kind": "power",
         "status": "owned",
         "placement": "offboard",
-        "modelConfirmed": true,
+        "modelConfirmed": false,
         "provenance": "owner-confirmed",
         "catalogUrl": null,
-        "catalogQuery": "Walrus Audio Canvas Power 6",
+        "catalogQuery": "Walrus Audio Canvas Power — owner calls it Power 6; verify label before matching a size",
         "noteKey": "rig-note-canvas-power-6"
       },
       {
@@ -726,8 +761,100 @@
       }
     ]
   },
+  "catalog": {
+    "version": 1,
+    "checkedAt": "2026-11-16",
+    "unmatched": [
+      {
+        "id": "fgn-dark-odyssey",
+        "resolution": "identify",
+        "category": "Solid Body Electric Guitars",
+        "sourceUrls": [
+          "https://fgnguitars.com/eg/odyssey/"
+        ]
+      },
+      {
+        "id": "canvas-power-6",
+        "resolution": "identify",
+        "category": "Pedal Power Supplies",
+        "sourceUrls": [
+          "https://www.walrusaudio.com/collections/power-supplies"
+        ]
+      },
+      {
+        "id": "gigrig-genx14",
+        "resolution": "request",
+        "title": "The GigRig GENX14",
+        "category": "Pedal Power Supplies",
+        "sourceUrls": [
+          "https://shop.thegigrig.com/products/gen-x-14"
+        ]
+      },
+      {
+        "id": "gigrig-genx4lc",
+        "resolution": "request",
+        "title": "The GigRig GENX4LC (Isolator V2)",
+        "category": "Pedal Power Supplies",
+        "sourceUrls": [
+          "https://shop.thegigrig.com/collections/power/products/genx4lc"
+        ]
+      },
+      {
+        "id": "schmidt-sa550xdm",
+        "resolution": "request",
+        "title": "Schmidt Array SA550XDM",
+        "category": "Pedalboards",
+        "sourceUrls": [
+          "https://www.schmidtarray.com/product-page/sa550xdm"
+        ]
+      },
+      {
+        "id": "schmidt-connector-box",
+        "resolution": "request",
+        "title": "Schmidt Array Connector Box",
+        "category": "Effects Pedal Accessories",
+        "sourceUrls": [
+          "https://www.schmidtarray.com/product-page/connector-box-1"
+        ]
+      },
+      {
+        "id": "schmidt-rear-patchbay",
+        "resolution": "request",
+        "title": "Schmidt Array Patchbay",
+        "category": "Effects Pedal Accessories",
+        "sourceUrls": [
+          "https://www.schmidtarray.com/product-page/patch-bay"
+        ]
+      },
+      {
+        "id": "schmidt-socket-plate",
+        "resolution": "request",
+        "title": "Schmidt Array Socket Plate",
+        "category": "Effects Pedal Accessories",
+        "sourceUrls": [
+          "https://www.schmidtarray.com/product-page/socket-plate"
+        ]
+      },
+      {
+        "id": "genx14-adapter",
+        "resolution": "component",
+        "parentId": "gigrig-genx14",
+        "category": "Included power adapter",
+        "sourceUrls": [
+          "https://shop.thegigrig.com/products/gen-x-14"
+        ]
+      },
+      {
+        "id": "photo-accessories-unconfirmed",
+        "resolution": "identify",
+        "category": "Unidentified accessories",
+        "sourceUrls": []
+      }
+    ]
+  },
   "notes": {
-    "fishman-fluence": "My guitar has active Fishman Fluence pickups. The exact pickup model is still to be logged.",
+    "fgn-dark-odyssey": "My FGN six-string with Fishman Fluence Modern pickups installed. I call it the Dark Odyssey; the exact model code is still to be checked. The pickups are part of this guitar.",
+    "fender-duo-sonic": "My gold-colored Fender Duo-Sonic. I think the finish is Desert Sand; the finish and year are unconfirmed. The catalog link covers the model family.",
     "tuner-unconfirmed": "My tuner, connected to the G3S AUX output rather than inserted among the effect loops.",
     "boss-ns2": "Listens to the clean guitar, then closes after the drives and compressor. Reverb stays outside the gate.",
     "kaede": "An alternate overdrive voice, with bass, treble and selectable headroom. A choice alongside Galea and Lightspeed.",
@@ -751,7 +878,7 @@
     "lehle-dual-expression": "Planned expression control through G3S. It can send an assigned MIDI value without carrying guitar audio.",
     "cme-h4midi-wc": "Routes G3S commands to OPUS and the external MIDI port. The proposed power combiner still needs builder approval.",
     "cme-c2midi-pro": "Planned DIN-to-USB MIDI interface. OP-1 field hosts it for standalone foot control.",
-    "canvas-power-6": "My existing supply, retained for a smaller or separate board rather than silently removed from the collection.",
+    "canvas-power-6": "My existing Walrus Canvas supply, kept off the main board. I have called it Power 6; the exact model needs checking before adding a catalog link.",
     "genx14-adapter": "Included with GENX14. The lower deck reserves space for the adapter; this is not a separate pedal purchase.",
     "schmidt-connector-box": "Board-edge access for guitar, amp and the OPUS headphone feed. Installation details remain part of the build order.",
     "schmidt-rear-patchbay": "Rear connections for OPUS line out and auxiliary input, with two spare channels.",

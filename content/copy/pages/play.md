@@ -232,7 +232,7 @@ Guitar rig — pedals, presets and the build log
 Explore Anish Shah’s pedal collection, two-deck Schmidt Array build plan, G3S presets and OP-1 field recording setup.
 
 ## rig-source-note
-The collection follows my gear photos, purchase confirmations and revision 07 build plan. Unconfirmed purchases stay marked as planned.
+The collection follows my own notes, gear photos, purchase confirmations and revision 07 build plan. Unconfirmed purchases stay marked as planned.
 
 ## rig-back-label
 Back to room
@@ -418,7 +418,7 @@ One path feeds my Orange. The other uses OPUS for recording and quiet playing, w
 The catalog and the collection
 
 ## rig-equipboard-body
-Equipboard can hold the public collection. Until I add my profile, this log keeps owned gear separate from the wishlist.
+Equipboard can hold the public collection. This log keeps owned gear separate from the wishlist. Catalog changes are compared before I add them here.
 
 ## rig-equipboard-link
 Equipboard profile
@@ -432,14 +432,20 @@ Download gear data
 ## rig-checklist-label
 Download Equipboard checklist
 
+## rig-catalog-requests-label
+Missing catalog entries
+
 ## rig-dataset-label
 Public gear record
 
 ## rig-private-body
 Serials, receipts and purchase details belong in a separate private inventory.
 
-## rig-note-fishman-fluence
-My guitar has active Fishman Fluence pickups. The exact pickup model is still to be logged.
+## rig-note-fgn-dark-odyssey
+My FGN six-string with Fishman Fluence Modern pickups installed. I call it the Dark Odyssey; the exact model code is still to be checked. The pickups are part of this guitar.
+
+## rig-note-fender-duo-sonic
+My gold-colored Fender Duo-Sonic. I think the finish is Desert Sand; the finish and year are unconfirmed. The catalog link covers the model family.
 
 ## rig-note-boss-ns2
 Listens to the clean guitar, then closes after the drives and compressor. Reverb stays outside the gate.
@@ -508,7 +514,7 @@ Routes G3S commands to OPUS and the external MIDI port. The proposed power combi
 Planned DIN-to-USB MIDI interface. OP-1 field hosts it for standalone foot control.
 
 ## rig-note-canvas-power-6
-My existing supply, retained for a smaller or separate board rather than silently removed from the collection.
+My existing Walrus Canvas supply, kept off the main board. I have called it Power 6; the exact model needs checking before adding a catalog link.
 
 ## rig-note-genx14-adapter
 Included with GENX14. The lower deck reserves space for the adapter; this is not a separate pedal purchase.
@@ -590,3 +596,57 @@ Hold mute track 1
 
 ## rig-note-two-notes-opus
 The planned amp and cabinet voice for direct recording and headphones. USB handles editing; audio leaves through its analog outputs.
+
+## rig-export-confirm-action
+Confirm exact model first
+
+## rig-export-owned-action
+Add to owned collection
+
+## rig-export-incoming-action
+Ordered — confirm receipt before marking owned
+
+## rig-export-planned-action
+Wishlist only — purchase unconfirmed
+
+## rig-export-component-action
+Record with parent product
+
+## rig-export-title
+Equipboard catalog requests
+
+## rig-export-intro
+These are drafts; nothing has been submitted. Search again before requesting each product.
+
+## rig-export-form-body
+Try the new-item form with the product source. If the store restriction or your account permissions prevent this, use the item-request forum. Moderators decide whether to add it.
+
+## rig-export-form-label
+New-item form
+
+## rig-export-forum-label
+Item-request forum
+
+## rig-export-after-body
+Once approved, record the returned catalog URL and remove its unmatched row from the catalog plan. Regenerate the downloads. A catalog entry does not change ownership.
+
+## rig-export-configuration-body
+Keep custom socket choices in your setup notes; do not request another product for each wiring configuration.
+
+## rig-export-request-title
+Ready to request
+
+## rig-export-identify-title
+Identify before requesting
+
+## rig-export-component-title
+Keep with its parent product
+
+## rig-export-request-body
+Please add this product to the catalog; I couldn't find a matching entry.
+
+## rig-export-component-body
+Log this included component in the notes for its parent product. Do not substitute a different standalone power supply.
+
+## rig-export-identify-body
+Confirm the exact model from the unit or an owner-supplied product link, then search again. A broad manufacturer page is not proof of an exact model.

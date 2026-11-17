@@ -10,8 +10,17 @@ export type GearItem = {
   modelConfirmed: boolean;
   provenance: "owner-confirmed" | "collection-photo" | "build-plan";
   catalogUrl: string | null;
+  catalogScope?: "exact" | "family";
   catalogQuery: string;
   noteKey: string;
+  legacyIds?: string[];
+  instrument?: {
+    strings: number;
+    manufacturerCode: string | null;
+    year: number | null;
+    pickups?: { brand: string; model: string };
+    finish?: { name: string; confirmed: boolean };
+  };
   loop?: number;
   power?: { allocation: string; volts: number };
   footprint?: {

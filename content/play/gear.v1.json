@@ -17,17 +17,52 @@
   },
   "items": [
     {
-      "id": "fishman-fluence",
-      "brand": "Fishman",
-      "model": "Fluence \u2014 exact set unconfirmed",
-      "kind": "pickup",
+      "id": "fgn-dark-odyssey",
+      "brand": "FGN",
+      "model": "Dark Odyssey — 6-string",
+      "kind": "guitar",
       "status": "owned",
       "placement": "external",
       "modelConfirmed": false,
       "provenance": "owner-confirmed",
       "catalogUrl": null,
-      "catalogQuery": "Fishman Fluence \u2014 exact set unconfirmed",
-      "noteKey": "rig-note-fishman-fluence"
+      "catalogQuery": "FGN Dark Odyssey 6-string Fishman Fluence Modern — verify manufacturer model code",
+      "noteKey": "rig-note-fgn-dark-odyssey",
+      "legacyIds": [
+        "fishman-fluence"
+      ],
+      "instrument": {
+        "strings": 6,
+        "manufacturerCode": null,
+        "year": null,
+        "pickups": {
+          "brand": "Fishman",
+          "model": "Fluence Modern"
+        }
+      }
+    },
+    {
+      "id": "fender-duo-sonic",
+      "brand": "Fender",
+      "model": "Duo-Sonic",
+      "kind": "guitar",
+      "status": "owned",
+      "placement": "external",
+      "modelConfirmed": true,
+      "provenance": "owner-confirmed",
+      "catalogUrl": "https://equipboard.com/items/fender-duo-sonic-electric-guitar",
+      "catalogScope": "family",
+      "catalogQuery": "Fender Duo-Sonic — year and finish unconfirmed",
+      "noteKey": "rig-note-fender-duo-sonic",
+      "instrument": {
+        "strings": 6,
+        "manufacturerCode": null,
+        "year": null,
+        "finish": {
+          "name": "Desert Sand",
+          "confirmed": false
+        }
+      }
     },
     {
       "id": "tuner-unconfirmed",
@@ -88,7 +123,7 @@
     },
     {
       "id": "kaede",
-      "brand": "Altero Custom Guitars \u00d7 Kida Motif",
+      "brand": "Altero Custom Guitars × Kida Motif",
       "model": "KAEDE",
       "kind": "pedal",
       "status": "owned",
@@ -96,7 +131,7 @@
       "modelConfirmed": true,
       "provenance": "owner-confirmed",
       "catalogUrl": "https://equipboard.com/items/altero-kaede-kida-motifour-signature-overdrive-booster",
-      "catalogQuery": "Altero Custom Guitars \u00d7 Kida Motif KAEDE",
+      "catalogQuery": "Altero Custom Guitars × Kida Motif KAEDE",
       "noteKey": "rig-note-kaede",
       "footprint": {
         "x": 336,
@@ -117,7 +152,7 @@
     },
     {
       "id": "knife-drop",
-      "brand": "Eventide \u00d7 Third Man Hardware",
+      "brand": "Eventide × Third Man Hardware",
       "model": "Knife Drop",
       "kind": "pedal",
       "status": "owned",
@@ -125,7 +160,7 @@
       "modelConfirmed": true,
       "provenance": "owner-confirmed",
       "catalogUrl": "https://equipboard.com/items/eventide-knife-drop",
-      "catalogQuery": "Eventide \u00d7 Third Man Hardware Knife Drop",
+      "catalogQuery": "Eventide × Third Man Hardware Knife Drop",
       "noteKey": "rig-note-knife-drop",
       "footprint": {
         "x": 20,
@@ -424,7 +459,7 @@
       "placement": "lower",
       "modelConfirmed": true,
       "provenance": "build-plan",
-      "catalogUrl": null,
+      "catalogUrl": "https://equipboard.com/items/two-notes-opus-amp-simulator-and-dynir-engine-pedal",
       "catalogQuery": "Two Notes OPUS",
       "noteKey": "rig-note-two-notes-opus",
       "footprint": {
@@ -452,7 +487,7 @@
       "placement": "both",
       "modelConfirmed": true,
       "provenance": "build-plan",
-      "catalogUrl": null,
+      "catalogUrl": "https://equipboard.com/items/thegigrig-g3s",
       "catalogQuery": "TheGigRig G3S",
       "noteKey": "rig-note-gigrig-g3s",
       "footprint": {
@@ -541,7 +576,7 @@
       "placement": "both",
       "modelConfirmed": true,
       "provenance": "build-plan",
-      "catalogUrl": null,
+      "catalogUrl": "https://equipboard.com/items/lehle-dual-expression-pedal",
       "catalogQuery": "Lehle Dual Expression",
       "noteKey": "rig-note-lehle-dual-expression",
       "footprint": {
@@ -608,10 +643,10 @@
       "kind": "power",
       "status": "owned",
       "placement": "offboard",
-      "modelConfirmed": true,
+      "modelConfirmed": false,
       "provenance": "owner-confirmed",
       "catalogUrl": null,
-      "catalogQuery": "Walrus Audio Canvas Power 6",
+      "catalogQuery": "Walrus Audio Canvas Power — owner calls it Power 6; verify label before matching a size",
       "noteKey": "rig-note-canvas-power-6"
     },
     {
@@ -689,14 +724,14 @@
     {
       "id": "schmidt-socket-plate",
       "brand": "Schmidt Array",
-      "model": "Custom socket plate \u2014 configuration pending",
+      "model": "Custom socket plate — configuration pending",
       "kind": "utility",
       "status": "planned",
       "placement": "lower",
       "modelConfirmed": false,
       "provenance": "build-plan",
       "catalogUrl": null,
-      "catalogQuery": "Schmidt Array Custom socket plate \u2014 configuration pending",
+      "catalogQuery": "Schmidt Array Custom socket plate — configuration pending",
       "noteKey": "rig-note-schmidt-socket-plate",
       "footprint": {
         "x": 0,

@@ -24,7 +24,16 @@ test("revision 07 preserves ownership, spare gear and exact confirmed models", (
   assert.equal(byId["harmonic-tremolo-unconfirmed"].model, "3 Series Harmonic Trem");
   for (const id of ["boss-rc1", "canvas-power-6"]) { assert.equal(byId[id].status, "owned"); assert.equal(byId[id].placement, "offboard"); }
   assert.equal(byId["two-notes-opus"].power.volts, 12);
-  assert.equal(byId["fishman-fluence"].modelConfirmed, false);
+  assert.equal(byId["fishman-fluence"], undefined);
+  assert.equal(byId["fgn-dark-odyssey"].kind, "guitar");
+  assert.equal(byId["fgn-dark-odyssey"].status, "owned");
+  assert.equal(byId["fgn-dark-odyssey"].instrument.strings, 6);
+  assert.deepEqual(byId["fgn-dark-odyssey"].instrument.pickups, {brand:"Fishman",model:"Fluence Modern"});
+  assert.deepEqual(byId["fgn-dark-odyssey"].legacyIds, ["fishman-fluence"]);
+  assert.equal(byId["fender-duo-sonic"].instrument.year, null);
+  assert.deepEqual(byId["fender-duo-sonic"].instrument.finish, {name:"Desert Sand",confirmed:false});
+  assert.equal(byId["fender-duo-sonic"].catalogScope, "family");
+  assert.equal(byId["fender-duo-sonic"].status, "owned");
   assert.equal(manifest.items.some(i => /hosta/i.test(i.model)), false);
 });
 test("private fields and unsafe catalog/profile links cannot enter the public feed", () => {
@@ -39,6 +48,11 @@ test("private fields and unsafe catalog/profile links cannot enter the public fe
   }
   const input = structuredClone(manifest); input.items[0].catalogUrl = "https://equipboard.com/items/example";
   assert.equal(parseGearManifest(input).items[0].catalogUrl, input.items[0].catalogUrl);
+  input.items[0].instrument.serialNumber = "private";
+  assert.throws(() => parseGearManifest(input), /Unexpected gear field/);
+  const aliasCollision = structuredClone(manifest);
+  aliasCollision.items[0].legacyIds.push("boss-ns2");
+  assert.throws(() => parseGearManifest(aliasCollision), /duplicate/);
 });
 test("audio loops exclude recording, power and tuner; gate follows compression", () => {
   const chain = loopItems(manifest.items);

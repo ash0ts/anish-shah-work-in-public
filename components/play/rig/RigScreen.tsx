@@ -103,7 +103,7 @@ export function RigScreen({ manifest, programs, view }: { manifest: GearManifest
           const items = manifest.items.filter(item => item.status === status);
           return items.length ? <div className={styles.collection} key={status}><h3>{copy(`rig-${status}-label`)} <span>{String(items.length).padStart(2, "0")}</span></h3><div>{items.map(item => <details className={styles.record} id={`gear-${item.id}`} key={item.id}>
             <summary><span><small>{item.brand}</small><strong>{item.model}</strong></span><span>{copy(`rig-${item.placement}-location`)}</span><b aria-hidden="true">+</b></summary>
-            <div className={styles.recordBody}><p>{copy(item.noteKey)}</p><dl><dt>{copy("rig-status-label")}</dt><dd>{copy(`rig-${item.status}-label`)}</dd><dt>{copy("rig-source-label")}</dt><dd>{copy(`rig-${item.provenance}-label`)}</dd>{item.loop ? <><dt>{copy("rig-loop-label")}</dt><dd>{item.loop}</dd></> : null}{!item.modelConfirmed ? <><dt>{copy("rig-model-label")}</dt><dd>{item.catalogQuery}</dd></> : null}</dl>{item.catalogUrl ? <a href={item.catalogUrl} rel="noreferrer">{copy("rig-catalog-label")} ↗</a> : null}</div>
+            <div className={styles.recordBody}>{item.legacyIds?.map(id => <span id={`gear-${id}`} key={id} aria-hidden="true" />)}<p>{copy(item.noteKey)}</p><dl><dt>{copy("rig-status-label")}</dt><dd>{copy(`rig-${item.status}-label`)}</dd><dt>{copy("rig-source-label")}</dt><dd>{copy(`rig-${item.provenance}-label`)}</dd>{item.loop ? <><dt>{copy("rig-loop-label")}</dt><dd>{item.loop}</dd></> : null}{!item.modelConfirmed ? <><dt>{copy("rig-model-label")}</dt><dd>{item.catalogQuery}</dd></> : null}</dl>{item.catalogUrl ? <a href={item.catalogUrl} rel="noreferrer">{copy("rig-catalog-label")} ↗</a> : null}</div>
           </details>)}</div></div> : null;
         })}
       </section>
@@ -112,6 +112,7 @@ export function RigScreen({ manifest, programs, view }: { manifest: GearManifest
       <footer className={styles.footer}><div><h2>{copy("rig-equipboard-title")}</h2><p>{copy("rig-equipboard-body")}</p><p className={styles.fine}>{copy("rig-source-note")}</p><p className={styles.fine}>{copy("rig-private-body")}</p></div><div className={styles.downloads}>
         <a href="/data/gear.v1.json" download>{copy("rig-json-label")} ↓</a>
         <a href="/data/equipboard-checklist.tsv" download>{copy("rig-checklist-label")} ↓</a>
+        <a href="/data/equipboard-catalog-requests.md" download>{copy("rig-catalog-requests-label")} ↓</a>
         {manifest.profile.equipboardProfileUrl ? <a href={manifest.profile.equipboardProfileUrl} rel="noreferrer">{copy("rig-equipboard-link")} ↗</a> : null}
       </div></footer>
     </main>

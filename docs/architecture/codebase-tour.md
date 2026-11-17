@@ -208,8 +208,11 @@ It reads reviewed Git-owned gear and program manifests through `lib/gear-model.t
 public explanations remain in the Play copy deck. Bounded GET selections choose a
 deck, preset and bank without JavaScript or external requests. Its static JSON
 feed and Equipboard checklist are generated from those same inputs and checked for
-drift. Equipboard remains an external catalog/profile link, with no authenticated
-integration or automatic synchronization. Planned positions do not imply ownership.
+drift. `lib/gear-reconciliation.ts` compares an owner-reviewed Equipboard snapshot
+with the manifest and missing-catalog plan. The CLI stages an ignored report; it
+never overwrites ownership or publishes remote data. There is no authenticated
+Equipboard integration or automatic synchronization. Planned positions do not imply
+ownership. Installed pickups stay in the instrument record, not a separate asset.
 See the [rig runbook](../../components/play/rig/README.md) for authoring and privacy.
 The seven-object 3D room contract stays unchanged; the new directory glyph is SVG.
 

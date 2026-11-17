@@ -33,6 +33,13 @@
   content attestation whenever its contract changes.
 - Travel may use advanced R3F, shaders, geographic interaction, and owner-side image processing only under `components/play/travel/**`, the selection-only globe prop in `components/play/room-3d/**`, and `app/studio/travel/**`. Travel remains semantic HTML first and may not introduce WebGL navigation elsewhere.
 
+## Guitar collection contract
+
+- Read the maintenance skill's `references/gear-collection.md` for gear and Equipboard work.
+- Owner-confirmed inventory, external catalog identity, instrument configuration, and board placement are separate. Keep uncertain years/finishes unknown and installed pickups inside their guitar.
+- Compare owner-reviewed Equipboard snapshots with `gear:reconcile`; review findings before changing sources. Do not infer ownership from Save, catalog presence or missing remote rows. Never overwrite the accepted collection on a failed or partial pull.
+- Every unmatched item needs a request, identify or component resolution. Catalog submissions and website publication are separate actions. Keep raw snapshots and private inventory outside public output.
+
 ## Project creative direction
 
 - Home presents one equal-weight, three-node signal circuit and an illustrated

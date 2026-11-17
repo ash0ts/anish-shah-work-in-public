@@ -39,7 +39,7 @@ export function parseGearManifest(input: unknown): GearManifest {
   if (!Array.isArray(root.items) || root.items.length > 200) throw new Error("Invalid gear inventory");
   const ids = new Set<string>(), loops = new Set<number>();
   for (const value of root.items) {
-    const item = keys(value, ["id", "brand", "model", "kind", "status", "placement", "modelConfirmed", "provenance", "catalogUrl", "catalogQuery", "noteKey", "loop", "power", "footprint"]);
+    const item = keys(value, ["id", "brand", "model", "kind", "status", "placement", "modelConfirmed", "provenance", "catalogUrl", "catalogScope", "catalogQuery", "noteKey", "legacyIds", "instrument", "loop", "power", "footprint"]);
     for (const key of ["id", "brand", "model", "kind", "catalogQuery", "noteKey"]) text(item[key]);
     const id = item.id as string;
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) || ids.has(id)) throw new Error("Invalid/duplicate gear ID");
@@ -49,6 +49,38 @@ export function parseGearManifest(input: unknown): GearManifest {
     member(item.provenance, ["owner-confirmed", "collection-photo", "build-plan"]);
     if (typeof item.modelConfirmed !== "boolean" || item.noteKey !== `rig-note-${id}`) throw new Error("Invalid model or copy reference");
     catalogUrl(item.catalogUrl, "items");
+    if (item.catalogScope !== undefined) {
+      member(item.catalogScope, ["exact", "family"]);
+      if (!item.catalogUrl) throw new Error("Catalog scope requires a URL");
+    }
+    if (item.legacyIds !== undefined) {
+      if (!Array.isArray(item.legacyIds) || item.legacyIds.length > 5) throw new Error("Invalid legacy IDs");
+      for (const alias of item.legacyIds) {
+        text(alias);
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(alias) || ids.has(alias)) throw new Error("Invalid/duplicate legacy ID");
+        ids.add(alias);
+      }
+    }
+    if (item.instrument !== undefined) {
+      if (item.kind !== "guitar") throw new Error("Instrument configuration requires a guitar");
+      const instrument = keys(item.instrument, ["strings", "manufacturerCode", "year", "pickups", "finish"]);
+      number(instrument.strings, 1, 24);
+      if (!Number.isInteger(instrument.strings)) throw new Error("Invalid string count");
+      if (instrument.manufacturerCode !== null) text(instrument.manufacturerCode);
+      if (instrument.year !== null) {
+        number(instrument.year, 1900, 2100);
+        if (!Number.isInteger(instrument.year)) throw new Error("Invalid instrument year");
+      }
+      if (instrument.pickups !== undefined) {
+        const pickups = keys(instrument.pickups, ["brand", "model"]);
+        text(pickups.brand); text(pickups.model);
+      }
+      if (instrument.finish !== undefined) {
+        const finish = keys(instrument.finish, ["name", "confirmed"]);
+        text(finish.name);
+        if (typeof finish.confirmed !== "boolean") throw new Error("Invalid finish confirmation");
+      }
+    }
     if (item.loop !== undefined) {
       number(item.loop, 1, 12);
       if (!Number.isInteger(item.loop) || loops.has(item.loop) || build.spareLoops.includes(item.loop)) throw new Error("Invalid/duplicate assigned loop");

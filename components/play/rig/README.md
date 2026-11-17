@@ -23,6 +23,7 @@ Footprints copy the revision 07 plan in millimetres. Some dimensions and all plu
 `GET /data/gear.v1.json` is a static, versioned, read-only JSON feed containing:
 
 - `manifest`: validated public records and build geometry;
+- `catalog`: validated missing-entry resolutions and public product sources;
 - `notes`: public copy keyed by stable item ID;
 - `programs`: the two-bank program facts;
 - `programLabels`: copy-deck names for those controls.
@@ -38,21 +39,118 @@ npm run gear:check
 npm run test:gear
 ```
 
-Commit the sources and both generated files in `public/data/`. `test:content` includes drift checks. Never put serial numbers, prices, receipts, addresses, account credentials or private acquisition notes in these files. The parser rejects extra fields at each level; private inventory should be a separate owner-only system, not hidden JSON keys in a public record.
+Commit the sources and all three generated files in `public/data/`. `test:content` includes drift checks. Never put serial numbers, prices, receipts, addresses, account credentials or private acquisition notes in these files. The parser rejects extra fields at each level; private inventory should be a separate owner-only system, not hidden JSON keys in a public record.
 
 ## Equipboard account workflow
 
-No documented public member-collection API was located during the November 2026 review, and this environment does not have an authenticated Equipboard session. **No profile mutation or import has occurred.** The TSV is a manual checklist, not a supported bulk-import format.
+No documented public member-collection API or supported bulk import/export was
+located in the November 16, 2026 review. This implementation does not log in, scrape,
+post products, save account items, or claim a completed sync. Your actual profile
+URL is not configured yet. `Save` on an Equipboard item is separate from its global
+catalog entry and does not itself prove that you own the item.
 
-1. Run `node scripts/gear/equipboard-checklist.mjs` to write `dist/equipboard-import-checklist.tsv`, or download the public copy.
-2. Open each confirmed catalog URL. Add owned products to the personal collection; keep planned gear on the wishlist. Verify ordered gear has arrived before marking it owned.
-3. For rows without catalog matches, search the provided brand/model. Check duplicates before proposing a new product. Do not invent an exact model for unresolved records.
-4. Record the actual public profile URL under `profile.equipboardProfileUrl`. The validator accepts only `https://equipboard.com/users/<name>` URLs.
-5. Copy future owner-confirmed status changes back to the manifest, regenerate and review. No automatic two-way synchronization is claimed.
+1. Download `/data/equipboard-checklist.tsv` or run
+   `node scripts/gear/equipboard-checklist.mjs`. Follow the status and stable ID on
+   each row. This TSV is a checklist, not an Equipboard import format.
+2. Open confirmed catalog URLs and save the owned gear. Keep planned items on a
+   wishlist; an order is not receipt. The Duo-Sonic uses the general model-family
+   entry: do not invent a year or create a duplicate for a tentative finish.
+3. Open `/data/equipboard-catalog-requests.md` for ready-to-paste requests and
+   manufacturer sources. Search again first. Use the
+   [new-item form](https://equipboard.com/items/new); if it refuses the source or
+   your account lacks permission, use the
+   [item-request forum](https://equipboard.com/forums/general/topics/post-your-item-add-requests-here).
+   The [FAQ](https://equipboard.com/about/faq) explains supported-store limits,
+   duplicate rules and saving gear. Forum moderation controls whether an entry
+   is accepted; a drafted request is not a submitted or approved product.
+4. `content/play/equipboard-catalog.v1.json` covers every unmatched inventory row:
+   `request` for a known product, `identify` for uncertain identity, `component`
+   for the supplied adapter. Request the standard Schmidt Socket Plate, then put
+   its custom port choices in your setup notes. Keep the included adapter with
+   GENX14 on Equipboard and retain its separate engineering record here.
+5. When a new entry is approved, verify the returned URL, set `catalogUrl` in the
+   manifest and remove its unmatched-plan row in the same change. Regenerate all
+   three downloads. No automatic substitute or guessed catalog slug is accepted.
 
-The [Equipboard FAQ](https://equipboard.com/about/faq) documents saving items to a personal collection and adding missing products. Catalog links in the manifest were matched to item pages, not used to infer ownership. No artist endorsement, rating or price data is imported.
+### The two guitars
 
-If an official API or authorized export becomes available, implement an **owner-triggered** adapter that maps it into `GearManifest`, rejects private/unknown fields, stages a diff and retains the last reviewed snapshot on failure. Do not add request-time scraping, cookies, browser-session extraction, background provider refreshes or automatic public publication.
+`fgn-dark-odyssey` records the owner's six-string FGN with Fishman Fluence Moderns
+installed. The name is owner-reported; its manufacturer code is unknown. Do not
+silently replace it with an Iliad or Mythic based on a search result. The old
+`fishman-fluence` record was an inventory mistake, not a separately owned pickup
+set. Its legacy fragment is retained on the FGN record, but reconciliation will
+flag that old ID for review rather than map an external pickup entry to a guitar.
+
+`fender-duo-sonic` is owned and uses a family-level catalog match. Its year is null,
+and Desert Sand is a tentative finish. Do not choose 2016, 2017 or 2019 arbitrarily.
+The Walrus supply remains owned under the stable `canvas-power-6` ID, but its exact
+label needs checking; the current manufacturer range did not establish that name.
+
+### Compare your Equipboard collection
+
+Use Node 24. No additional package or account credentials are needed by this CLI.
+Replace the example profile with your actual public URL:
+
+```sh
+npm run gear:reconcile -- init --profile https://equipboard.com/users/YOUR_NAME
+```
+
+This creates an empty, partial snapshot at `work/gear/equipboard-snapshot.json`.
+It deliberately does not copy local inventory into an alleged remote collection.
+Populate `items` only from entries you have actually checked on your profile:
+
+```json
+{
+  "version": 1,
+  "profileUrl": "https://equipboard.com/users/YOUR_NAME",
+  "capturedAt": "2026-11-16",
+  "source": "owner-reviewed",
+  "complete": false,
+  "items": [
+    {
+      "catalogUrl": "https://equipboard.com/items/boss-ns-2-noise-suppressor-pedal",
+      "status": "owned"
+    }
+  ]
+}
+```
+
+Use the actual observation date. `status` is `owned`, `wishlist`, or `saved` when
+Equipboard's UI does not establish the distinction. Set `complete` true only after
+reviewing all pages and relevant collection/wishlist views. Never ingest
+recommendations, artist-use lists or reviews as your own inventory. If a new
+catalog URL has no local match, an optional `localId` proposes the association;
+it cannot approve it or overwrite an existing link.
+
+```sh
+npm run gear:reconcile -- compare work/gear/equipboard-snapshot.json --profile https://equipboard.com/users/YOUR_NAME
+```
+
+Read `work/gear/equipboard-review.json`. The command never modifies the manifest,
+Equipboard, or public downloads. It checks the account, input size, dates,
+canonical URLs and duplicate IDs/URLs. Private or unknown keys are rejected.
+Repeated comparisons of the same inputs produce the same report. Failed input
+validation preserves the previous report. `baseDigest` binds the report to the
+manifest and catalog plan; rerun after either changes.
+
+| Finding | Next action |
+| --- | --- |
+| `match` | Observed status agrees with the local state; a separate catalog-candidate finding still needs review |
+| `status-conflict` | Resolve with the owner's latest confirmation; never auto-promote a wishlisted/ordered item to owned |
+| `saved-status-unknown` | Clarify owned versus wishlist; a generic Save is insufficient |
+| `catalog-candidate` / `identity-review` | Verify product identity and approve its local association before editing sources |
+| `catalog-conflict` / `ambiguous-local-match` | Resolve conflicting IDs, duplicate local units or catalog merges explicitly |
+| `external-only` / `unknown-local-id` | Review whether to add an item; do not guess a similar model |
+| `legacy-id-review` | Resolve a corrected identity; do not convert the old pickup entry into a guitar silently |
+| `not-observed` / `not-seen-in-partial` | Check completeness or add to Equipboard if wanted; absence never means sold or deleted |
+| `catalog-request` / `catalog-identify` / `catalog-component` | Follow the generated missing-item packet |
+
+`work/` is ignored and never deployed. Keep credentials, raw account exports,
+serials and receipts out of commits. Only review-approved facts enter the public
+manifest and copy deck. A future official API or permitted export adapter should
+produce this same bounded snapshot format, run once on owner request, and stage
+this report. It must not fetch on public requests or auto-publish changes. Current
+manual comparison does not need a hosted connector or new Studio credentials.
 
 ## Signal and control invariants
 
