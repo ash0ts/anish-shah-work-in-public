@@ -7,6 +7,7 @@ import {
 } from "@/components/play/room-platform/room-registry";
 import { ROOM_SCREEN_LOADERS } from "@/components/play/room-platform/room-screen-registry";
 import type { RoomConnectorObjectId } from "@/components/play/room-platform/room-types";
+import { isRoomConnectorObjectId } from "@/components/play/room-platform/room-object-contract";
 import { travelAtlasEnabled } from "@/lib/server/travel";
 import {
   ROOM_PROVIDER_ADAPTERS,
@@ -153,9 +154,8 @@ export default async function PlayObjectPage({
   const [{ objectSlug }, query] = await Promise.all([params, searchParams]);
   const object = roomObject(objectSlug);
   if (!object) notFound();
-  // Travel owns a concrete route because its atlas has distinct query,
-  // preview-fixture, and metadata contracts. The dynamic route is only the
-  // closed connector dispatch surface.
-  if (object.id === "travel") notFound();
+  // Travel and Rig own concrete routes with distinct local-data/query contracts.
+  // This dynamic route dispatches only connector-backed objects.
+  if (!isRoomConnectorObjectId(object.id)) notFound();
   return ROOM_ROUTE_FOUNDATIONS[object.id](query);
 }

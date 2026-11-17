@@ -1,6 +1,6 @@
 ---
 name: maintain-anish-site
-description: Implement, diagnose, validate, or release changes in the Anish Shah site repository. Use for application code, content contracts, providers, infrastructure, CI, and repository documentation. Follow the current user request while preserving private-data boundaries and guarded release mechanics; use the copy skill for public wording.
+description: Implement, diagnose, validate, or release changes in the Anish Shah site repository. Use for application code, content contracts, providers, infrastructure, CI, gear/Equipboard reconciliation, and repository documentation. Follow the current user request while preserving private-data boundaries and guarded release mechanics; use the copy skill for public wording.
 ---
 
 # Maintain Anish Site
@@ -39,6 +39,8 @@ approval loops.
   or metric placement uses the engineering lane, not a copy-only handoff.
 - Connectors, Studio, OAuth, hosted environments, security, or production:
   [connector and release boundaries](references/connectors-security-release.md).
+- Guitar inventory, missing Equipboard entries, or collection comparison:
+  [gear collection workflow](references/gear-collection.md).
 - Tests and delivery: [validation matrix](references/validation-matrix.md).
   Human-readable architecture is in `docs/architecture/codebase-tour.md`;
   production procedure is in `docs/operations/release.md`.

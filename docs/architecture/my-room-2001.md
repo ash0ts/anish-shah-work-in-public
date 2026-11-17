@@ -29,7 +29,7 @@ Canvas.
 ## Semantic-first shell
 
 `app/play/layout.tsx` installs the room state provider. `RoomOverview` renders
-the poster and seven ordinary links server-side. Visiting `/play` opens the
+the poster and eight ordinary links server-side. Visiting `/play` opens the
 eligible Room or Pocket Room directly. `?view=directory` selects the static
 list. The original poster and links stay usable until the scene reports stable
 frames; only then does the runtime take focus and make the overview inert.
@@ -56,11 +56,18 @@ and next track controls. Move keeps consent/profile fallback first. Travel adds
 only a decorative, non-hit-testing orrery and optional trip notes around its
 existing geographic and semantic controls.
 
-The seven screen loaders, object definitions, content-source adapters, scene objects,
-and focus targets use closed registries with identical keys. Route parameters,
+The eight screen loaders, object definitions, scene objects and focus targets
+use closed registries with identical keys. Provider adapters contain only the six
+connector objects; Travel and Rig have concrete local-domain routes. Route parameters,
 D1 values, mesh metadata, or provider payloads cannot select executable
 modules. Travel is removed from every public room surface when its feature gate
 is disabled.
+
+Rig is the eighth destination. It exposes the reviewed local gear collection and
+keeps guitar/setup/bank/deck selections in bounded GET parameters. Its illustrated
+workbench uses shared room return/focus navigation and the room screen loader.
+The seven device objects and their actions are defined in
+`lib/rig-object-contract.ts`; public facts remain in the gear manifest.
 
 ## Optional Three.js runtime
 
@@ -90,14 +97,14 @@ directory. Context loss or runtime failure permanently falls back for the
 session. The reviewed high tier uses Drei Fisheye; frame-health checks downgrade
 to wide perspective when the fisheye path misses its budget.
 
-All seven destinations have original authored geometry: a gothic CRT cabinet,
+The seven baked destinations have original authored geometry: a gothic CRT cabinet,
 book-filled reading corner, portable music deck and headphones, turntable and
 record crate, computer desk, industrial treadmill, and armillary-style globe.
 The globe's decorative land patches are not Travel geography or publication
 data. An eclipse city window, asymmetric cathedral ribs, and a circuit-pattern
 rug frame the midnight-indigo workshop. A suspended mechanical bat is purely
 decorative: it glances toward the hovered, focused, or selected destination and
-settles, with no eighth object, hit target, AI, or idle loop. The draft remains
+settles, with no additional destination, hit target, AI, or idle loop. The draft remains
 a local art review, not a production release.
 
 Original geometry and UVs come from `scripts/room/author-gothic-room.py`, pinned
@@ -122,7 +129,17 @@ To edit and export:
    source/provenance hashes and reproduces the optimized bytes offline.
 4. Review desktop and Pocket views before replacing the posters.
 
-The decoded room contains 12,387 triangles, 16 draw calls, one material,
+`room-scene-layout.ts` adds the original code-authored music corner to this baked
+base. `rig-room-model.ts` builds deterministic colored triangles for all seven
+music devices; `RigRoomObject.tsx` renders them as one unlit mesh and one material
+with a separate hit proxy. It requires no texture, inventory or provider preload.
+Keep this explicit source distinction: never modify the generated manifest to
+claim the new mesh exists inside the old GLB. The static directory supplements
+the original poster with the music-corner illustration and semantic link.
+`room-render-metrics.ts` measures the combined geometry (currently 14,415 triangles,
+17 draws, two materials and eight hit proxies); the existing ceilings apply.
+
+The decoded baked room contains 12,387 triangles, 16 draw calls, one material,
 and one embedded atlas. Hard ceilings remain 20K triangles, 30 draws, 16
 materials, and 350,000 GLB bytes. The decoder ships locally. The atlas plugin
 validates PNG dimensions before decoding its embedded bytes directly, avoiding

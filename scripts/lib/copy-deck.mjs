@@ -340,6 +340,7 @@ export async function copyRiskManifest(root) {
       play: "/play/play",
       move: "/play/move",
       travel: "/play/travel",
+      rig: "/play/rig",
     };
     for (const [objectId, route] of Object.entries(objectRoutes)) {
       if (key.startsWith(`${objectId}-`)) return route;

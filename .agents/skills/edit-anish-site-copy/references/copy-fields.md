@@ -71,3 +71,9 @@ Literal Play object names are also structural. The copy deck exposes their field
 Home's protected `content/presentation/home-overview.v2.json` is not an
 editable copy source. Request changes to its metric IDs, short signal explanations, icon
 IDs, bucket/illustration IDs, or ordering through engineering and owner review.
+
+Gear facts and instrument configurations live in `content/play/gear.v1.json`; public
+notes use `rig-note-<stable-id>` in the Play deck. Keep the FGN's Fluence Moderns
+inside its guitar note. The Duo-Sonic year and Desert Sand finish are unconfirmed.
+Catalog matches, a wishlist and confirmed ownership are separate facts. Pair with
+maintenance for corrections, new fields, and Equipboard reconciliation.

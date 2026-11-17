@@ -1,0 +1,41 @@
+.scene{margin:0 0 64px;scroll-margin-top:24px;color:var(--rig-ink)}
+.heading{display:flex;justify-content:space-between;align-items:end;gap:32px;margin-bottom:24px}
+.heading h2{font-family:var(--font-display);font-size:clamp(30px,4vw,44px);line-height:1.05;letter-spacing:-.04em;margin:6px 0 0}
+.heading>p{max-width:440px;font-size:16px;line-height:1.6;color:var(--rig-muted);margin:0}
+.eyebrow{font-family:var(--font-mono);font-size:11px!important;letter-spacing:.08em;text-transform:uppercase;margin:0!important;color:var(--rig-accent)!important}
+.console{display:flex;justify-content:space-between;gap:20px;align-items:center;border-top:1px solid #939d87;border-bottom:1px solid #b4bca7;background:#e4e7d8;padding:13px 18px}
+.tabs,.guitars{display:flex;gap:4px;flex-wrap:wrap}
+.tabs a,.guitars a{display:flex;align-items:center;gap:9px;text-decoration:none;color:#4a5745;min-height:44px;line-height:1.3;padding:8px 11px;box-sizing:border-box;font-size:13px;border:1px solid transparent;border-radius:3px}
+.tabs a[aria-current=true]{background:#303e32;color:#f6f4e9;border-color:#303e32}
+.tabs a span{font-family:var(--font-mono);font-size:10px;opacity:.75}
+.guitars a{font-size:12px;padding:8px}
+.guitars i{width:7px;height:7px;border:1px solid #66765a;border-radius:50%;display:block;flex-shrink:0}
+.guitars a[aria-current=true]{color:#783a23;border-color:#aab69a}
+.guitars a[aria-current=true] i{background:#a24a2a;border-color:#a24a2a}
+.scene a:focus-visible{outline:3px solid #a33b20;outline-offset:4px}
+.art{display:block;width:100%;height:auto;background:#efefe6;font-family:var(--font-body),sans-serif;border-bottom:1px solid #aab59b}
+.object{cursor:pointer;transition:filter .16s ease}
+.object:hover{filter:drop-shadow(0 0 5px #ad744855)}
+.object:focus-visible{outline:3px solid #a33b20;outline-offset:6px}
+.readout{display:grid;grid-template-columns:1fr 1fr;gap:42px;padding:29px 24px;background:#e9ecdf;border-bottom:1px solid #b4bca7}
+.routeStory h3{font-family:var(--font-display);font-size:26px;font-weight:500;line-height:1.12;letter-spacing:-.025em;margin:8px 0 12px}
+.routeStory>p:last-child{font-size:14px;line-height:1.65;margin:0;color:#4c5847;max-width:500px}
+.route{list-style:none;margin:0;padding:0;display:grid;align-content:start;gap:13px}
+.route li{display:flex;align-items:start;gap:12px;line-height:1.35}
+.routeNumber{font:10px var(--font-mono);border:1px solid #a8b29b;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;color:#56634f}
+.route strong{font-size:13px;font-weight:550;display:block}
+.route b{color:#9e4728;padding:0 4px}
+.route small{display:block;font:10px var(--font-mono);line-height:1.5;color:#5c6b53;margin-top:4px}
+.controlNote{display:flex;gap:12px;align-items:baseline;border-bottom:1px solid #c2c7b7;padding:17px 0}
+.controlNote p{font-size:12px;line-height:1.7;color:var(--rig-muted);margin:0;max-width:1000px}
+.controlMark{width:30px;border-top:2px dashed #4b7586;flex-shrink:0}
+.deviceIndex{display:grid;grid-template-columns:repeat(3,1fr);margin-top:20px;gap:0 26px}
+.deviceIndex a{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:7px;color:var(--rig-ink);text-decoration:none;padding:15px 0;border-bottom:1px solid #c2c7b7;min-height:44px}
+.deviceIndex a>span{font:10px var(--font-mono);color:var(--rig-muted)}
+.deviceIndex strong{font-size:13px;font-weight:550;line-height:1.4}
+.deviceIndex small{font-size:10px;color:var(--rig-muted)}
+.caption{font-size:11px;color:var(--rig-muted);line-height:1.65;margin:18px 0 0;max-width:920px}
+@media(max-width:900px){.console{flex-direction:column;align-items:stretch;gap:7px;padding:10px}.tabs,.guitars{justify-content:center}.heading{display:block}.heading>p{margin-top:16px}.readout{gap:24px;padding:24px 16px}.deviceIndex{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.scene{margin-bottom:44px}.heading h2{font-size:32px}.readout{grid-template-columns:1fr;gap:22px;padding:22px 16px}.deviceIndex{grid-template-columns:1fr;gap:0}.art{width:100%;min-height:220px}.guitars a{font-size:11px}.tabs a{font-size:12px;padding:7px 10px}.route strong{font-size:12px}.heading>p{font-size:14px}.deviceIndex small{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.object{transition:none}}
+@media(forced-colors:active){.console,.readout{border:1px solid CanvasText}.tabs a[aria-current=true],.guitars a[aria-current=true]{outline:2px solid Highlight}.art{forced-color-adjust:none}.deviceIndex a,.controlNote{border-color:CanvasText}.controlMark{border-color:LinkText}}

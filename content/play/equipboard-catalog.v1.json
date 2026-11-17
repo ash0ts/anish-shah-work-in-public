@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "checkedAt": "2026-11-16",
+  "unmatched": [
+    {"id":"fgn-dark-odyssey","resolution":"identify","category":"Solid Body Electric Guitars","sourceUrls":["https://fgnguitars.com/eg/odyssey/"]},
+    {"id":"canvas-power-6","resolution":"identify","category":"Pedal Power Supplies","sourceUrls":["https://www.walrusaudio.com/collections/power-supplies"]},
+    {"id":"gigrig-genx14","resolution":"request","title":"The GigRig GENX14","category":"Pedal Power Supplies","sourceUrls":["https://shop.thegigrig.com/products/gen-x-14"]},
+    {"id":"gigrig-genx4lc","resolution":"request","title":"The GigRig GENX4LC (Isolator V2)","category":"Pedal Power Supplies","sourceUrls":["https://shop.thegigrig.com/collections/power/products/genx4lc"]},
+    {"id":"schmidt-sa550xdm","resolution":"request","title":"Schmidt Array SA550XDM","category":"Pedalboards","sourceUrls":["https://www.schmidtarray.com/product-page/sa550xdm"]},
+    {"id":"schmidt-connector-box","resolution":"request","title":"Schmidt Array Connector Box","category":"Effects Pedal Accessories","sourceUrls":["https://www.schmidtarray.com/product-page/connector-box-1"]},
+    {"id":"schmidt-rear-patchbay","resolution":"request","title":"Schmidt Array Patchbay","category":"Effects Pedal Accessories","sourceUrls":["https://www.schmidtarray.com/product-page/patch-bay"]},
+    {"id":"schmidt-socket-plate","resolution":"request","title":"Schmidt Array Socket Plate","category":"Effects Pedal Accessories","sourceUrls":["https://www.schmidtarray.com/product-page/socket-plate"]},
+    {"id":"genx14-adapter","resolution":"component","parentId":"gigrig-genx14","category":"Included power adapter","sourceUrls":["https://shop.thegigrig.com/products/gen-x-14"]},
+    {"id":"photo-accessories-unconfirmed","resolution":"identify","category":"Unidentified accessories","sourceUrls":[]}
+  ]
+}

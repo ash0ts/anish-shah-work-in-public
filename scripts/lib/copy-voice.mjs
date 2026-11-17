@@ -457,7 +457,7 @@ function validatePublicSurfaceBudgets(entries, errors) {
       entries: entriesForSurface(
         entries,
         "play",
-        (field) => /^(?:watch|read|listen|collect|play|move|travel)-description$/u.test(field),
+        (field) => /^(?:watch|read|listen|collect|play|move|travel|rig)-description$/u.test(field),
       ),
     },
   ];

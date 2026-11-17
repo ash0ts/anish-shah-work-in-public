@@ -33,6 +33,14 @@
   content attestation whenever its contract changes.
 - Travel may use advanced R3F, shaders, geographic interaction, and owner-side image processing only under `components/play/travel/**`, the selection-only globe prop in `components/play/room-3d/**`, and `app/studio/travel/**`. Travel remains semantic HTML first and may not introduce WebGL navigation elsewhere.
 
+## Guitar collection contract
+
+- Read the maintenance skill's `references/gear-collection.md` for gear and Equipboard work.
+- `rig` is a first-class room destination with `gear-collection` content. `lib/rig-object-contract.ts` owns its device identities and actions; the gear manifest owns facts. Extend all literal registries, focus/return behavior, geometry budgets and affected tests when adding objects. Room navigation must not preload inventory or provider data.
+- Owner-confirmed inventory, external catalog identity, instrument configuration, and board placement are separate. Keep uncertain years/finishes unknown and installed pickups inside their guitar.
+- Compare owner-reviewed Equipboard snapshots with `gear:reconcile`; review findings before changing sources. Do not infer ownership from Save, catalog presence or missing remote rows. Never overwrite the accepted collection on a failed or partial pull.
+- Every unmatched item needs a request, identify or component resolution. Catalog submissions and website publication are separate actions. Keep raw snapshots and private inventory outside public output.
+
 ## Project creative direction
 
 - Home presents one equal-weight, three-node signal circuit and an illustrated
@@ -48,7 +56,7 @@
   numbers, and avoid hype, rhetorical questions, or unsupported causality.
   Prefer concrete actors and verbs, read longer copy aloud, and reserve mild
   personality for Play—not speaker, Privacy, consent, or recovery text.
-- Treat the dependency-free closed seven-object contract, semantic `/play/<object>` routes, and object directory as authoritative. Derive routes, controls, focus targets, and smoke paths from that contract while keeping executable screen/provider/scene maps literal and parity-tested. The low-poly room is optional enhancement: it may not own provider or Travel content, preload connectors, geography, or media, or make any collection unreachable without WebGL. There is no Classic Play mode; retain only the permanent legacy `?stream=` redirects.
+- Treat the dependency-free closed room-object contract (including the gear-backed music corner), semantic `/play/<object>` routes, and object directory as authoritative. Derive routes, controls, focus targets, and smoke paths from that contract while keeping executable screen/provider/scene maps literal and parity-tested. The low-poly room is optional enhancement: it may not own provider or Travel content, preload connectors, geography, or media, or make any collection unreachable without WebGL. There is no Classic Play mode; retain only the permanent legacy `?stream=` redirects.
 - The v2.2 public, preview, and staging contract keeps Simulation dormant with
   `SIMULATION_EXPERIENCE_MODE=disabled` and
   `SIMULATION_AI_MODE=authored-only`. Disabled means no Play ingress, sitemap

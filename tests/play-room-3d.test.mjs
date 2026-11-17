@@ -1,3 +1,4 @@
+import { RIG_RENDER_METRICS } from "../components/play/room-3d/room-render-metrics.ts";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
@@ -842,11 +843,11 @@ test("procedural scene stays inside reviewed draw and material budgets", async (
     ROOM_RENDER_METRICS.visibleTriangleUpperBound <=
       ROOM_RENDER_BUDGET.visibleTriangles,
   );
-  assert.equal(ROOM_RENDER_METRICS.hitProxyCount, 7);
+  assert.equal(ROOM_RENDER_METRICS.hitProxyCount, 8);
   const manifest = JSON.parse(await readFile(new URL("../components/play/room-3d/diorama.generated.json", import.meta.url), "utf8"));
-  assert.equal(ROOM_RENDER_METRICS.visibleTriangleUpperBound, manifest.triangles);
-  assert.equal(ROOM_RENDER_METRICS.visibleDrawCallUpperBound, manifest.drawCalls);
-  assert.equal(ROOM_RENDER_METRICS.materialSlots, manifest.materials);
+  assert.equal(ROOM_RENDER_METRICS.visibleTriangleUpperBound, manifest.triangles + RIG_RENDER_METRICS.triangles);
+  assert.equal(ROOM_RENDER_METRICS.visibleDrawCallUpperBound, manifest.drawCalls + RIG_RENDER_METRICS.drawCalls);
+  assert.equal(ROOM_RENDER_METRICS.materialSlots, manifest.materials + RIG_RENDER_METRICS.materials);
 
 });
 
@@ -857,6 +858,7 @@ test("every registered object has one authored approach pose", () => {
     "move-approach",
     "play-approach",
     "read-approach",
+    "rig-approach",
     "travel-approach",
     "watch-approach",
   ]);

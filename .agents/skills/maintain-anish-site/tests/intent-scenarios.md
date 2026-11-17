@@ -17,6 +17,11 @@ These are dry-run cases, never authorization to mutate a real environment.
 | “Use what our paid plan includes.” | Identify a measured benefit, preserve guardrails, and obtain any new access/subscription authority | Enable every product, connect a repository with automatic promotion, or treat usage alerts as an account-wide cap |
 | “Keep the saved collection even when stale.” | Preserve accepted snapshots and timestamps; enforce actual permissions and explicit deletion paths | Apply the superseded six-hour Discogs cutoff |
 
+| “The Fluence Moderns are in my FGN, not another purchase.” | Correct the instrument configuration, retain a legacy-ID review path and avoid counting pickups separately | Keep or auto-recreate a standalone pickup asset from Equipboard |
+| “My Duo-Sonic might be 2016 or 2019, Desert Sand I think.” | Record owned family, null year and tentative finish | Assert a year or create a color-only catalog duplicate |
+| “Pull my Equipboard; it only loaded one page.” | Compare a partial, account-bound snapshot and preserve local ownership | Delete unseen gear or promote Save to owned |
+| “This custom part has no Equipboard page.” | Use the missing-catalog plan and official product source; distinguish standard part from custom configuration | Invent a slug, use a similar model or say a draft was submitted |
+
 The current browser tests exercise visible Home reports, Source links, history,
 keyboard and no-JavaScript access. Release-efficiency tests exercise full-range
 coverage and evidence identity. Manual prompt review complements those tests;

@@ -201,19 +201,40 @@ avoids body-only canonical/social tags and does not special-case audit tools or
 trust crawler identities. The same request-scoped publication promise supplies
 metadata and page content.
 
+## Guitar collection and build plan
+
+`/play/rig` is a semantic, server-rendered route linked from the Play directory.
+It reads reviewed Git-owned gear and program manifests through `lib/gear-model.ts`;
+public explanations remain in the Play copy deck. Bounded GET selections choose a
+deck, preset and bank without JavaScript or external requests. `RigScene.tsx` adds
+an SVG music corner; `lib/rig-scene.ts` validates guitar/setup selections and owns
+port-level routes. Illustrated devices link to inventory; the active preset also
+lights the miniature board. Every scene route has a text equivalent. Its static JSON
+feed and Equipboard checklist are generated from those same inputs and checked for
+drift. `lib/gear-reconciliation.ts` compares an owner-reviewed Equipboard snapshot
+with the manifest and missing-catalog plan. The CLI stages an ignored report; it
+never overwrites ownership or publishes remote data. There is no authenticated
+Equipboard integration or automatic synchronization. Planned positions do not imply
+ownership. Installed pickups stay in the instrument record, not a separate asset.
+See the [rig runbook](../../components/play/rig/README.md) for authoring and privacy.
+The `rig` object now shares room navigation, focus and return behavior. Its typed
+device contract joins illustrations and actions to inventory by stable ID. The
+public gear feed exposes these references without duplicating ownership facts.
+
 ## Play as progressive enhancement
 
 My Room 2001 is a semantic route system first and a 3D room second. A
-dependency-free contract defines seven objects and derives their route, focus,
+dependency-free contract defines eight objects and derives their route, focus,
 mesh, and smoke-test identities. Executable imports remain literal closed maps,
 so URL or provider data never becomes an import specifier.
 
 ```mermaid
 flowchart TD
-  play["GET /play"] --> directory["Server-rendered seven-object directory"]
+  play["GET /play"] --> directory["Server-rendered eight-object directory"]
   directory --> direct["Semantic /play/object route"]
   direct --> connector["One connector-backed screen"]
   direct --> travel["Travel atlas and trip routes"]
+  direct --> rig["Reviewed gear and music corner"]
   play --> intent["Play navigation is room intent"]
   intent --> capability["Capability, accessibility, and data-saving checks"]
   capability --> room["Lazy desktop or Pocket R3F room"]
@@ -222,7 +243,7 @@ flowchart TD
   direct -. "no JavaScript or WebGL" .-> semantic["Complete semantic HTML experience"]
 ```
 
-The seven objects are Watch, Read, Listen, Collect, Play, Move, and Travel.
+The eight objects are Watch, Read, Listen, Collect, Play, Move, Travel, and Rig.
 Room's renderer-free capability gate uses a bounded first-party worker for its
 WebGL2 probe, with a legacy DOM-canvas fallback. This keeps graphics-driver
 initialization out of the main-thread eligibility check; errors retain the
@@ -231,15 +252,17 @@ parent terminates its worker on reply, error, or the unchanged three-second
 deadline instead of waiting for synchronous context-loss cleanup.
 The first six pair one literal room screen with one server adapter. Travel owns
 its concrete route because atlas queries, trip pages, fixtures, and metadata
-have a different contract. `/play` itself performs no connector or Travel data
-read and does not preload provider, geography, or media data. Capable visits
+have a different contract. Rig likewise owns a concrete, local-data route.
+Connector IDs are derived by source kind. `/play` itself performs no connector,
+Travel or inventory data read and does not preload provider, geography, or media data. Capable visits
 load the room after the poster and semantic links render. Those same links stay
 usable until the scene reports stable frames; readiness, not module mounting,
 transfers focus and makes the overview inert. `?view=directory`
 opts out; exiting the room sets that state rather than immediately reopening it.
 
 `room-screens/ObjectScreen.tsx` supplies the shared hardware frame and navigation;
-the seven thin wrappers retain their provider isolation. Collection posters,
+the existing thin wrappers retain their provider isolation. Rig reuses the same
+shared navigation around its workbench. Collection posters,
 books, cartridges, and record sleeves use native `TactileDisclosure` details,
 with a short Anime.js spring layered over selectable, server-rendered content.
 Filtering stays in GET links/forms, not in a second 3D browsing runtime. Listen
@@ -259,6 +282,12 @@ permits `wasm-unsafe-eval` for the bundled Meshopt decoder, while JavaScript
 `eval`/`Function` and unnonced inline scripts remain blocked. This document-level
 policy also covers Home-to-Play client navigation. Executable object maps stay
 literal and parity-tested.
+
+`room-scene-layout.ts` composes that baked base with the code-authored music corner.
+Its two guitar silhouettes, board, amps, recorder and controller are one unlit mesh
+with one material and one hit proxy. The rig does not load the gear manifest into
+the room. Combined scene metrics include both representations, while the generated
+asset manifest and its provenance remain specific to the GLB bytes.
 
 Three.js/R3F is restricted to the intent-gated room and Travel globe. The
 Canvas is decorative; direct links, focus, browser Back, Escape, and semantic

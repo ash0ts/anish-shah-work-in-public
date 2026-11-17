@@ -99,7 +99,7 @@ const COPY_PAGE_ROUTE_SCOPES = {
   home: ["/"],
   about: ["/about"],
   work: ["/work", "/work/[slug]"],
-  play: ["/play", "/play/[object]"],
+  play: ["/play", "/play/[object]", "/play/rig"],
   sources: ["/sources"],
   simulation: ["/simulation (dormant)"],
 } as const satisfies Record<CopyPageId, readonly string[]>;

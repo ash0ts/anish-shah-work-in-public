@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { expectRoomReady } from "./helpers/room-readiness.mjs";
 
-const routes = ["/", "/about", "/work", "/play", "/sources", "/privacy"];
+const routes = ["/", "/about", "/work", "/play", "/play/rig", "/sources", "/privacy"];
 const widths = [320, 390, 640, 768, 1024, 1440, 1920];
 
 test("public metadata stays in the head after hydration and navigation", async ({ page }) => {
@@ -1063,7 +1063,8 @@ test("public routes retain semantic fallbacks without JavaScript", async ({ brow
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
   }
   await page.goto("/play", { waitUntil: "load" });
-  await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
+  await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(8);
+  await expect(page.locator('[data-play-rig-link]')).toHaveAttribute("href", "/play/rig");
   await expect(page.locator("iframe")).toHaveCount(0);
 
   await page.goto("/about", { waitUntil: "load" });
@@ -1114,5 +1115,55 @@ test("reduced-motion preference resolves to readable final states", async ({ bro
     await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches),
   ).toBe(true);
   await expect(page.locator("main")).toBeVisible();
+  await context.close();
+});
+
+test("guitar rig banks, decks and inventory work without JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  await page.goto("/play/rig");
+  const main = page.locator("[data-gear-rig]");
+  await expect(main.getByRole("heading", { name: "Under the lid" })).toBeVisible();
+  await main.getByRole("navigation", { name: "Choose a guitar sound" }).getByRole("link", { name: "05 Heavy", exact: true }).click();
+  await expect(page.locator('[data-device="friedman-beod"]')).toHaveAttribute("data-active", "true");
+  await main.getByRole("link", { name: "Lower deck", exact: true }).click();
+  await expect(page.locator('[data-device="keeley-compressor-plus"]')).toHaveAttribute("data-active", "true");
+  await expect(page.locator('[data-device="gigrig-genx4lc"]')).toBeVisible();
+  await main.getByRole("link", { name: "02 / Guitar + tape", exact: true }).click();
+  await expect(main.getByRole("heading", { name: "OP-1 field commands" })).toBeVisible();
+  await expect(main.getByText("CC 105", { exact: true })).toBeVisible();
+  await main.getByRole("link", { name: "01 / Guitar only", exact: true }).click();
+  await expect(main.getByRole("heading", { name: "OP-1 field commands" })).toHaveCount(0);
+  await main.locator("#gear-boss-rc1 summary").click();
+  await expect(main.locator("#gear-boss-rc1")).toContainText("Owned and kept off this board plan");
+  const response = await page.request.get("/data/gear.v1.json");
+  expect(response.ok()).toBeTruthy();
+  const data = await response.json();
+  expect(data.manifest.build.revision).toBe("07");
+  expect(data.manifest.items.find(item => item.id === "canvas-power-6").status).toBe("owned");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
+  await context.close();
+});
+
+test("music corner changes guitar and output route without JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  await page.goto("/play/rig?bank=2&preset=5&deck=upper");
+  const corner = page.locator('[data-music-corner]');
+  await corner.getByRole('navigation',{name:'Choose the guitar'}).getByRole('link',{name:'Fender / Duo-Sonic',exact:true}).click();
+  await corner.getByRole('navigation',{name:'Choose a setup'}).getByRole('link',{name:'02 To tape',exact:true}).click();
+  await expect(corner.locator('svg[data-scene]')).toHaveAttribute('data-guitar','duo');
+  await expect(corner.locator('[data-route="op1-phones"]')).toContainText('Headphones');
+  await expect(corner.locator('[data-cable="g3-op1-control"]')).toHaveCount(1);
+  await corner.getByRole('navigation',{name:'Choose a setup'}).getByRole('link',{name:'03 Out loud',exact:true}).click();
+  await expect(corner.locator('[data-route="op1-ep35"]')).toContainText('LINE IN');
+  await expect(corner.locator('[data-route="op1-phones"]')).toHaveCount(0);
+  await expect(corner.locator('[data-cable="ep127-control"]')).toHaveCount(1);
+  await page.getByRole('link',{name:'01 / Guitar only',exact:true}).click();
+  await expect(corner.locator('svg[data-scene]')).toHaveAttribute('data-scene','portable');
+  await expect(corner.locator('[data-cable="g3-op1-control"]')).toHaveCount(0);
+  await expect(page.locator('[data-device="friedman-beod"]')).toHaveAttribute('data-active','true');
+  await expect(page.locator('#gear-te-ep127')).toContainText('Owned');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
   await context.close();
 });

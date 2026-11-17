@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { expectRoomReady, openRoomIfNeeded } from "./helpers/room-readiness.mjs";
 import { Object3D, PerspectiveCamera, Vector3 } from "three";
-import { readFileSync } from "node:fs";
+import { ROOM_SCENE_OBJECTS } from "../../components/play/room-3d/room-scene-layout.ts";
 import { ROOM_CAMERA_FRAMING } from "../../components/play/room-3d/room-camera-framing.ts";
 import { securityPolicy } from "../../worker/security-headers.ts";
 
@@ -204,6 +204,7 @@ const ROOM_OBJECT_ANCHORS = {
   collect: { wide: [0.33, 0.60], compact: [0.33, 0.60] },
   play: { wide: [0.62, 0.53], compact: [0.62, 0.53] },
   move: { wide: [0.58, 0.74], compact: [0.58, 0.74] },
+  rig: { wide: [0.42, 0.74], compact: [0.42, 0.74] },
   travel: { wide: [0.49, 0.63], compact: [0.49, 0.63] },
 };
 const ROOM_ANCHOR_OFFSETS = [
@@ -343,9 +344,9 @@ async function findAllInteractiveRoomPoints(page) {
   return points;
 }
 
-const POCKET_HIT_TARGET_GEOMETRY = JSON.parse(readFileSync(
-  new URL("../../components/play/room-3d/diorama.generated.json", import.meta.url), "utf8",
-)).props;
+const POCKET_HIT_TARGET_GEOMETRY = Object.fromEntries(
+  Object.entries(ROOM_SCENE_OBJECTS).map(([id, object]) => [id, object.layout]),
+);
 
 async function projectedPocketRoomPoints(page) {
   const stage = page.locator("[data-room-poster-stage]");
@@ -574,7 +575,7 @@ test.describe("My Room 2001 browser quality", () => {
     await expect(
       page.getByRole("heading", { name: "My Room, 2001" }),
     ).toBeVisible();
-    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
+    await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(8);
     await expect(page.locator("canvas")).toHaveCount(0);
     expect(connectors).toEqual([]);
     expect(runtimeScripts).toEqual([]);
@@ -1345,7 +1346,7 @@ test.describe("My Room 2001 browser quality", () => {
       if (capability === "webgl2-unavailable") {
         await expect.poll(() => capabilityProbeIntercepted).toBe(true);
       }
-      await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(7);
+      await expect(page.locator('[data-room-overview] a[href^="/play/"]')).toHaveCount(8);
       await expect(page.getByRole("link", { name: "Open 3D room" })).toHaveCount(0);
       await expect(page.locator("canvas")).toHaveCount(0);
       expect(runtimeScripts).toEqual([]);
@@ -1703,4 +1704,22 @@ test.describe("My Room 2001 browser quality", () => {
     );
     await context.close();
   });
+});
+
+
+test("music-corner choices return to the room and restore its object focus", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/play", { waitUntil: "networkidle" });
+  await openRoomIfNeeded(page);
+  const room = await expectRoomReady(page, { context: "opening the music corner" });
+  await room.locator('[data-room-object-control="rig"]').click();
+  await expect(page.locator('[data-room-screen][data-object="rig"]')).toBeVisible();
+  await page.getByRole("navigation", { name: "Choose the guitar" }).getByRole("link", { name: "Fender / Duo-Sonic", exact: true }).click();
+  await page.getByRole("navigation", { name: "Choose a setup" }).getByRole("link", { name: "02 To tape", exact: true }).click();
+  await page.locator('[data-rig-object="ep127"]').click();
+  await expect(page).toHaveURL(/guitar=duo.*#gear-te-ep127$/);
+  await page.getByRole("link", { name: "Back to room", exact: true }).click();
+  await expectPlayOverview(page);
+  const returned = await expectRoomReady(page, { context: "returning from music-corner choices" });
+  await expect(returned.locator('[data-room-object-control="rig"]')).toBeFocused();
 });

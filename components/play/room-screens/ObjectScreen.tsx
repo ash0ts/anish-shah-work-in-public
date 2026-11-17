@@ -8,6 +8,7 @@ import styles from "./RoomScreens.module.css";
 
 // Original instrument diagrams. These describe the object, never provider data.
 const engravings: Record<RoomObjectId, ReactNode> = {
+  rig: <><path d="M19 42V8h7v34c14 8 2 18 9 27 9 18-19 24-22 10-4-15 13-24 6-37ZM42 53h44v30H42zM48 60h10v12H48zM64 60h14v12H64zM50 78h25" /></>,
   watch: <><rect x="12" y="20" width="64" height="48" rx="8" /><path d="m28 8 16 12L60 8M22 30h44v28H22zM84 30v20M84 58v4M24 76h40" /></>,
   read: <><path d="M16 18h26l6 6 6-6h26v54H54l-6 6-6-6H16zM48 24v54M24 30h12M24 39h12M60 30h12M60 39h12" /><path d="M10 26v54h32M86 26v54H54" /></>,
   listen: <><rect x="13" y="15" width="70" height="66" rx="10" /><path d="M26 15v20h44V15M30 25h30M22 72h12M64 72h10" /><circle cx="48" cy="57" r="14" /><circle cx="48" cy="57" r="4" /></>,
