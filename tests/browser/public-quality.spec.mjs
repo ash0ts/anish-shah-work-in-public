@@ -1144,3 +1144,26 @@ test("guitar rig banks, decks and inventory work without JavaScript", async ({ b
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
   await context.close();
 });
+
+test("music corner changes guitar and output route without JavaScript", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  await page.goto("/play/rig?bank=2&preset=5&deck=upper");
+  const corner = page.locator('[data-music-corner]');
+  await corner.getByRole('navigation',{name:'Choose the guitar'}).getByRole('link',{name:'Fender / Duo-Sonic',exact:true}).click();
+  await corner.getByRole('navigation',{name:'Choose a setup'}).getByRole('link',{name:'02 To tape',exact:true}).click();
+  await expect(corner.locator('svg[data-scene]')).toHaveAttribute('data-guitar','duo');
+  await expect(corner.locator('[data-route="op1-phones"]')).toContainText('Headphones');
+  await expect(corner.locator('[data-cable="g3-op1-control"]')).toHaveCount(1);
+  await corner.getByRole('navigation',{name:'Choose a setup'}).getByRole('link',{name:'03 Out loud',exact:true}).click();
+  await expect(corner.locator('[data-route="op1-ep35"]')).toContainText('LINE IN');
+  await expect(corner.locator('[data-route="op1-phones"]')).toHaveCount(0);
+  await expect(corner.locator('[data-cable="ep127-control"]')).toHaveCount(1);
+  await page.getByRole('link',{name:'01 / Guitar only',exact:true}).click();
+  await expect(corner.locator('svg[data-scene]')).toHaveAttribute('data-scene','portable');
+  await expect(corner.locator('[data-cable="g3-op1-control"]')).toHaveCount(0);
+  await expect(page.locator('[data-device="friedman-beod"]')).toHaveAttribute('data-active','true');
+  await expect(page.locator('#gear-te-ep127')).toContainText('Owned');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
+  await context.close();
+});

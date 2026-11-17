@@ -3,16 +3,14 @@ import type { CSSProperties } from "react";
 import { SITE_COPY } from "@/lib/copy";
 import { loopItems, selectRigView } from "@/lib/gear-model";
 import type { GearItem, GearManifest, RigPrograms, GearStatus } from "@/types/gear";
+import { RigScene } from "./RigScene";
+import { rigHref, type RigSceneState } from "@/lib/rig-scene";
 import styles from "./RigScreen.module.css";
 
 type View = ReturnType<typeof selectRigView>;
 function copy(key: string) {
   if (!(key in SITE_COPY.play)) throw new Error(`Unknown rig copy: ${key}`);
   return SITE_COPY.play[key as keyof typeof SITE_COPY.play];
-}
-function href(view: View, change: Partial<View> = {}) {
-  const v = { ...view, ...change };
-  return `/play/rig?bank=${v.bank}&preset=${v.preset}&deck=${v.deck}#workbench`;
 }
 
 function Pedal({ item, active, manifest }: { item: GearItem; active: boolean; manifest: GearManifest }) {
@@ -37,7 +35,8 @@ function Pedal({ item, active, manifest }: { item: GearItem; active: boolean; ma
   );
 }
 
-export function RigScreen({ manifest, programs, view }: { manifest: GearManifest; programs: RigPrograms; view: View }) {
+export function RigScreen({ manifest, programs, view, scene }: { manifest: GearManifest; programs: RigPrograms; view: View; scene: RigSceneState }) {
+  const href = (v: View, change: Partial<View> = {}) => rigHref(v, scene, change, "workbench");
   const preset = programs.presets[view.preset - 1];
   const active = new Set(preset.loops);
   const pedals = manifest.items.filter(item => item.footprint && (item.placement === view.deck || item.placement === "both"));
@@ -50,14 +49,10 @@ export function RigScreen({ manifest, programs, view }: { manifest: GearManifest
       </nav>
       <header className={styles.header}>
         <div><p className={styles.eyebrow}>{copy("rig-plan-label")}</p><h1>{copy("rig-screen-title")}</h1><p>{copy("rig-plan-body")}</p></div>
-        <svg className={styles.guitar} viewBox="0 0 120 300" aria-hidden="true" focusable="false">
-          <path d="M51 94V24l-7-14 9-8 21 8-10 23v66c21 23 7 34 24 55 38 43 24 99-28 99-55 0-76-51-36-96 21-23 1-41 27-63Z" fill="currentColor" />
-          <path d="M53 26h9v156h-9zM43 168h29v11H43zM43 190h29v11H43zM43 217h29v5H43z" fill="var(--rig-paper)" />
-          <path d="M54 27v195m3-195v195m3-195v195" stroke="var(--rig-ink)" strokeWidth=".7" />
-          <circle cx="79" cy="211" r="5" fill="var(--rig-paper)" />
-          <path d="M81 241c45 42-63 55-15 55" fill="none" stroke="currentColor" strokeWidth="3" />
-        </svg>
+
       </header>
+
+      <RigScene manifest={manifest} state={scene} view={view} active={active} />
 
       <section className={styles.workbench} id="workbench" aria-labelledby="board-title">
         <header className={styles.sectionHeader}><div><p className={styles.eyebrow}>01 / SA550XDM</p><h2 id="board-title">{copy("rig-board-title")}</h2></div><p>{copy("rig-board-body")}</p></header>
@@ -103,7 +98,7 @@ export function RigScreen({ manifest, programs, view }: { manifest: GearManifest
           const items = manifest.items.filter(item => item.status === status);
           return items.length ? <div className={styles.collection} key={status}><h3>{copy(`rig-${status}-label`)} <span>{String(items.length).padStart(2, "0")}</span></h3><div>{items.map(item => <details className={styles.record} id={`gear-${item.id}`} key={item.id}>
             <summary><span><small>{item.brand}</small><strong>{item.model}</strong></span><span>{copy(`rig-${item.placement}-location`)}</span><b aria-hidden="true">+</b></summary>
-            <div className={styles.recordBody}>{item.legacyIds?.map(id => <span id={`gear-${id}`} key={id} aria-hidden="true" />)}<p>{copy(item.noteKey)}</p><dl><dt>{copy("rig-status-label")}</dt><dd>{copy(`rig-${item.status}-label`)}</dd><dt>{copy("rig-source-label")}</dt><dd>{copy(`rig-${item.provenance}-label`)}</dd>{item.loop ? <><dt>{copy("rig-loop-label")}</dt><dd>{item.loop}</dd></> : null}{!item.modelConfirmed ? <><dt>{copy("rig-model-label")}</dt><dd>{item.catalogQuery}</dd></> : null}</dl>{item.catalogUrl ? <a href={item.catalogUrl} rel="noreferrer">{copy("rig-catalog-label")} ↗</a> : null}</div>
+            {item.legacyIds?.map(id => <span id={`gear-${id}`} key={id} aria-hidden="true" />)}<div className={styles.recordBody}><p>{copy(item.noteKey)}</p><dl><dt>{copy("rig-status-label")}</dt><dd>{copy(`rig-${item.status}-label`)}</dd><dt>{copy("rig-source-label")}</dt><dd>{copy(`rig-${item.provenance}-label`)}</dd>{item.loop ? <><dt>{copy("rig-loop-label")}</dt><dd>{item.loop}</dd></> : null}{!item.modelConfirmed ? <><dt>{copy("rig-model-label")}</dt><dd>{item.catalogQuery}</dd></> : null}</dl>{item.catalogUrl ? <a href={item.catalogUrl} rel="noreferrer">{copy("rig-catalog-label")} ↗</a> : null}</div>
           </details>)}</div></div> : null;
         })}
       </section>

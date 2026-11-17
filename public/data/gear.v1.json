@@ -758,6 +758,34 @@
         "catalogUrl": null,
         "catalogQuery": "Unconfirmed Treadle pedal + two dial controllers",
         "noteKey": "rig-note-photo-accessories-unconfirmed"
+      },
+      {
+        "id": "te-ep35",
+        "brand": "Teenage Engineering",
+        "model": "EP-35 K.O. amp",
+        "kind": "amp",
+        "status": "optional",
+        "placement": "external",
+        "modelConfirmed": true,
+        "provenance": "build-plan",
+        "catalogUrl": "https://equipboard.com/items/teenage-engineering-ep-35-k-o-amp-35-multi-channel-amplifier-and-bluetooth-speaker",
+        "catalogScope": "exact",
+        "catalogQuery": "Teenage Engineering EP-35 K.O. amp",
+        "noteKey": "rig-note-te-ep35"
+      },
+      {
+        "id": "te-ep127",
+        "brand": "Teenage Engineering",
+        "model": "EP-127 K.O. pedal",
+        "kind": "controller",
+        "status": "owned",
+        "placement": "external",
+        "modelConfirmed": true,
+        "provenance": "owner-confirmed",
+        "catalogUrl": "https://equipboard.com/items/teenage-engineering-ep-127-k-o-pedal-foot-controller-for-ep-35-k-o-amp",
+        "catalogScope": "exact",
+        "catalogQuery": "Teenage Engineering EP-127 K.O. pedal",
+        "noteKey": "rig-note-te-ep127"
       }
     ]
   },
@@ -883,7 +911,9 @@
     "schmidt-connector-box": "Board-edge access for guitar, amp and the OPUS headphone feed. Installation details remain part of the build order.",
     "schmidt-rear-patchbay": "Rear connections for OPUS line out and auxiliary input, with two spare channels.",
     "schmidt-socket-plate": "Planned XLR, MIDI and two separate USB data connections. Final hardware configuration needs supplier confirmation.",
-    "photo-accessories-unconfirmed": "A treadle pedal and two small dial controllers appear in the collection photo. Their exact models and current use need confirmation."
+    "photo-accessories-unconfirmed": "A treadle pedal and two small dial controllers appear in the collection photo. Their exact models and current use need confirmation.",
+    "te-ep35": "A portable speaker option for the OP-1 field output. Purchase is unconfirmed. Feed its stereo line input; the board still needs its own power.",
+    "te-ep127": "Owned foot controller for the EP-35. It can pair wirelessly for amp controls. It stays outside the G3S audio loops; it is a controller, not an audio effect in the guitar chain."
   },
   "programs": {
     "version": 1,

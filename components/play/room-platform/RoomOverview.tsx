@@ -1,3 +1,4 @@
+import { rigShapes } from "@/lib/rig-artwork";
 import Link from "next/link";
 import type { PreviewFixtureScenario } from "../connector-model";
 import { routeWithPreviewFixture } from "./preview-fixture-navigation";
@@ -101,12 +102,15 @@ export function RoomOverview({
             href="/play/rig"
             prefetch={false}
           >
-            <svg className={styles.rigGlyph} viewBox="0 0 140 100" aria-hidden="true" focusable="false">
-              <path d="M24 32V5l5-3 5 4-3 28c9 6 6 14 13 22 12 17 1 34-13 34C9 90 6 73 18 60c7-8-3-17 6-28Z" fill="currentColor" />
-              <rect x="27" y="32" width="4" height="39" fill="var(--paper)" />
-              <rect x="52" y="43" width="81" height="45" rx="4" fill="none" stroke="currentColor" strokeWidth="3" />
-              {[60, 82, 104].map(x => <rect key={x} x={x} y="50" width="16" height="24" rx="2" fill="currentColor" />)}
-              <path d="M61 81h60" stroke="currentColor" strokeWidth="3" />
+            <svg className={styles.rigGlyph} viewBox="0 0 160 110" aria-hidden="true" focusable="false">
+              {[0,28].map((x,i)=><g key={x} transform={`translate(${x} ${i*7})`}><path d={rigShapes.directoryGuitar} fill="currentColor"/><path d="M23 17v62" stroke="var(--paper)" strokeWidth="2"/></g>)}
+              <rect x="76" y="21" width="76" height="25" rx="3" fill="none" stroke="currentColor" strokeWidth="3"/>
+              <path d="M80 37h68m-60 0v7m10-7v7m10-7v7m10-7v7m10-7v7m10-7v7" stroke="currentColor" strokeWidth="2"/>
+              <rect x="113" y="59" width="39" height="42" rx="3" fill="none" stroke="currentColor" strokeWidth="3"/>
+              <path d="M123 59v-6h19v6M117 69h31" fill="none" stroke="currentColor" strokeWidth="3"/>
+              <rect x="65" y="67" width="39" height="34" rx="3" fill="none" stroke="currentColor" strokeWidth="3"/>
+              {[71,82,93].map(x=><rect key={x} x={x} y="73" width="6" height="13" fill="currentColor"/>)}
+              <path d="M71 94h27" stroke="currentColor" strokeWidth="3"/>
             </svg>
             <strong>{SITE_COPY.play["rig-title"]}</strong>
             <small>{SITE_COPY.play["rig-directory-label"]}</small>

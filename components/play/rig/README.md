@@ -2,6 +2,30 @@
 
 The public `/play/rig` page logs Anish’s collection and the **revision 07 build plan**, not a claim that the assembled board has been delivered. Its guitar-only and guitar + tape views reuse the same seven base sounds. Native links select a bank, preset and deck through validated GET parameters; the complete inventory remains available without JavaScript.
 
+## Music corner
+
+`RigScene.tsx` renders an interactive SVG room illustration from the same inventory
+and active preset. `RigIllustrations.tsx` owns silhouettes with shared path geometry
+in `lib/rig-artwork.ts`; `lib/rig-scene.ts` owns
+bounded `scene=home|tape|portable` and `guitar=fgn|duo` selections and the port-level
+audio routes. `rigHref` preserves these alongside bank, deck and preset. Native
+links and a text route/index work without JavaScript and at small sizes. The
+illustration is an editorial view, not another millimetre layout or product photo.
+Do not infer finishes or fit from its decorative coordinates.
+
+- Home: guitar → board → G3S output 2 → Orange front input.
+- Tape: G3S output 1 → OPUS internally; board G → OP-1 line in; headphones on OP-1.
+- Portable: the same input path, with OP-1 output → EP-35 stereo line in. The
+  EP-35 battery does not power the board. This remains a mains-powered board rig.
+- Blue dashed control is G3S → H4MIDI → C2MIDI → OP-1 only in guitar + tape mode.
+  EP-127's dotted path is wireless control of EP-35, never audio or a G3S loop.
+
+The owner confirmed EP-127 ownership. EP-35 remains optional until explicitly
+confirmed; both have verified Equipboard product matches. Keep that distinction in
+art labels, collection rows and exports. Technical sources checked 2026-11-16:
+[EP-35 guide](https://teenage.engineering/guides/ep-35) and
+[EP-127 guide](https://teenage.engineering/guides/ep-127).
+
 ## Ownership and authoring
 
 | Source | Owns |

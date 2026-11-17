@@ -96,5 +96,49 @@ test("public rig uses local data and semantic navigation without provider reads"
   assert.match(files[1],/aria-current/);
   assert.match(files[1],/<details/);
   assert.match(files[1],/\/data\/gear\.v1\.json/);
-  assert.match(files[0],/selectRigView\(await searchParams\)/);
+  assert.match(files[0],/selectRigView\(query\)/);
+});
+
+test("music corner bounds selection and preserves the sound across setup/guitar changes", async () => {
+  const { selectRigScene, rigHref } = await import("../lib/rig-scene.ts");
+  assert.deepEqual(selectRigScene({}), {scene:"home",guitar:"fgn"});
+  for (const value of ["bad","javascript:alert(1)",["tape","home"]]) {
+    assert.equal(selectRigScene({scene:value}).scene,"home");
+    assert.equal(selectRigScene({guitar:value}).guitar,"fgn");
+  }
+  const state=selectRigScene({scene:"portable",guitar:"duo"});
+  const url=new URL(rigHref({bank:1,preset:14,deck:"lower"},state,{bank:2}),"https://example.com");
+  const params=Object.fromEntries(url.searchParams);
+  assert.deepEqual(selectRigView(params),{bank:2,preset:7,deck:"lower"});
+  assert.deepEqual(selectRigScene(params),state);
+  assert.equal(url.hash,"#music-corner");
+});
+test("scene paths separate amp input, OPUS recording, headphones and EP-35 line input", async () => {
+  const { sceneRoute, sceneGuitars } = await import("../lib/rig-scene.ts");
+  for (const guitar of ["fgn","duo"]) {
+    const home=sceneRoute({scene:"home",guitar});
+    const tape=sceneRoute({scene:"tape",guitar});
+    const portable=sceneRoute({scene:"portable",guitar});
+    assert.equal(home[0].from,sceneGuitars[guitar]);
+    assert.equal(home.at(-1).to,"orange-crush-20rt");
+    assert.equal(home.at(-1).fromPort,"OUT 2 / B");
+    assert.equal(tape[1].internal,true);
+    assert.equal(tape[1].to,"two-notes-opus");
+    assert.equal(tape[2].fromPort,"PHONES / G");
+    assert.equal(tape[2].toPort,"LINE IN");
+    assert.equal(tape.at(-1).from,"op1-field");
+    assert.equal(tape.at(-1).to,"headphones");
+    assert.equal(portable.at(-1).to,"te-ep35");
+    assert.equal(portable.at(-1).toPort,"LINE IN / 3.5 mm TRS");
+    for (const edge of [...home,...tape,...portable]) {
+      for (const id of [edge.from,edge.to]) assert.ok(id==='headphones'||manifest.items.some(i=>i.id===id));
+      assert.notEqual(edge.from,"te-ep127");
+      assert.doesNotMatch(edge.fromPort+edge.toPort,/USB|SPEAKER|FX RETURN/);
+    }
+  }
+  const ep127=manifest.items.find(i=>i.id==='te-ep127');
+  assert.equal(ep127.status,'owned');
+  assert.equal(ep127.placement,'external');
+  assert.equal(ep127.loop,undefined);
+  assert.equal(manifest.items.find(i=>i.id==='te-ep35').status,'optional');
 });

@@ -19,14 +19,14 @@
     {
       "id": "fgn-dark-odyssey",
       "brand": "FGN",
-      "model": "Dark Odyssey — 6-string",
+      "model": "Dark Odyssey \u2014 6-string",
       "kind": "guitar",
       "status": "owned",
       "placement": "external",
       "modelConfirmed": false,
       "provenance": "owner-confirmed",
       "catalogUrl": null,
-      "catalogQuery": "FGN Dark Odyssey 6-string Fishman Fluence Modern — verify manufacturer model code",
+      "catalogQuery": "FGN Dark Odyssey 6-string Fishman Fluence Modern \u2014 verify manufacturer model code",
       "noteKey": "rig-note-fgn-dark-odyssey",
       "legacyIds": [
         "fishman-fluence"
@@ -52,7 +52,7 @@
       "provenance": "owner-confirmed",
       "catalogUrl": "https://equipboard.com/items/fender-duo-sonic-electric-guitar",
       "catalogScope": "family",
-      "catalogQuery": "Fender Duo-Sonic — year and finish unconfirmed",
+      "catalogQuery": "Fender Duo-Sonic \u2014 year and finish unconfirmed",
       "noteKey": "rig-note-fender-duo-sonic",
       "instrument": {
         "strings": 6,
@@ -123,7 +123,7 @@
     },
     {
       "id": "kaede",
-      "brand": "Altero Custom Guitars × Kida Motif",
+      "brand": "Altero Custom Guitars \u00d7 Kida Motif",
       "model": "KAEDE",
       "kind": "pedal",
       "status": "owned",
@@ -131,7 +131,7 @@
       "modelConfirmed": true,
       "provenance": "owner-confirmed",
       "catalogUrl": "https://equipboard.com/items/altero-kaede-kida-motifour-signature-overdrive-booster",
-      "catalogQuery": "Altero Custom Guitars × Kida Motif KAEDE",
+      "catalogQuery": "Altero Custom Guitars \u00d7 Kida Motif KAEDE",
       "noteKey": "rig-note-kaede",
       "footprint": {
         "x": 336,
@@ -152,7 +152,7 @@
     },
     {
       "id": "knife-drop",
-      "brand": "Eventide × Third Man Hardware",
+      "brand": "Eventide \u00d7 Third Man Hardware",
       "model": "Knife Drop",
       "kind": "pedal",
       "status": "owned",
@@ -160,7 +160,7 @@
       "modelConfirmed": true,
       "provenance": "owner-confirmed",
       "catalogUrl": "https://equipboard.com/items/eventide-knife-drop",
-      "catalogQuery": "Eventide × Third Man Hardware Knife Drop",
+      "catalogQuery": "Eventide \u00d7 Third Man Hardware Knife Drop",
       "noteKey": "rig-note-knife-drop",
       "footprint": {
         "x": 20,
@@ -646,7 +646,7 @@
       "modelConfirmed": false,
       "provenance": "owner-confirmed",
       "catalogUrl": null,
-      "catalogQuery": "Walrus Audio Canvas Power — owner calls it Power 6; verify label before matching a size",
+      "catalogQuery": "Walrus Audio Canvas Power \u2014 owner calls it Power 6; verify label before matching a size",
       "noteKey": "rig-note-canvas-power-6"
     },
     {
@@ -724,14 +724,14 @@
     {
       "id": "schmidt-socket-plate",
       "brand": "Schmidt Array",
-      "model": "Custom socket plate — configuration pending",
+      "model": "Custom socket plate \u2014 configuration pending",
       "kind": "utility",
       "status": "planned",
       "placement": "lower",
       "modelConfirmed": false,
       "provenance": "build-plan",
       "catalogUrl": null,
-      "catalogQuery": "Schmidt Array Custom socket plate — configuration pending",
+      "catalogQuery": "Schmidt Array Custom socket plate \u2014 configuration pending",
       "noteKey": "rig-note-schmidt-socket-plate",
       "footprint": {
         "x": 0,
@@ -757,6 +757,34 @@
       "catalogUrl": null,
       "catalogQuery": "Unconfirmed Treadle pedal + two dial controllers",
       "noteKey": "rig-note-photo-accessories-unconfirmed"
+    },
+    {
+      "id": "te-ep35",
+      "brand": "Teenage Engineering",
+      "model": "EP-35 K.O. amp",
+      "kind": "amp",
+      "status": "optional",
+      "placement": "external",
+      "modelConfirmed": true,
+      "provenance": "build-plan",
+      "catalogUrl": "https://equipboard.com/items/teenage-engineering-ep-35-k-o-amp-35-multi-channel-amplifier-and-bluetooth-speaker",
+      "catalogScope": "exact",
+      "catalogQuery": "Teenage Engineering EP-35 K.O. amp",
+      "noteKey": "rig-note-te-ep35"
+    },
+    {
+      "id": "te-ep127",
+      "brand": "Teenage Engineering",
+      "model": "EP-127 K.O. pedal",
+      "kind": "controller",
+      "status": "owned",
+      "placement": "external",
+      "modelConfirmed": true,
+      "provenance": "owner-confirmed",
+      "catalogUrl": "https://equipboard.com/items/teenage-engineering-ep-127-k-o-pedal-foot-controller-for-ep-35-k-o-amp",
+      "catalogScope": "exact",
+      "catalogQuery": "Teenage Engineering EP-127 K.O. pedal",
+      "noteKey": "rig-note-te-ep127"
     }
   ]
 }

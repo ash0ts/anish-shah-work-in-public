@@ -214,7 +214,7 @@ Explore Anish Shah’s trips, approximate places, and photographs through a publ
 Guitar rig
 
 ## rig-directory-label
-Pedals, presets and the build log
+Guitars, pedals and a tape machine
 
 ## rig-description
 Boutique pedals, recording paths, and a board taking shape.
@@ -244,7 +244,7 @@ Rig navigation
 Build plan · Revision 07
 
 ## rig-plan-body
-I chose each pedal for a different job, then worked through the space, power and routing. This is the build plan; ownership is logged separately below.
+From the FGN and Duo-Sonic to the Orange and OP-1 field. My collection, the board I am building, and the routes between them.
 
 ## rig-board-title
 Under the lid
@@ -650,3 +650,107 @@ Log this included component in the notes for its parent product. Do not substitu
 
 ## rig-export-identify-body
 Confirm the exact model from the unit or an owner-supplied product link, then search again. A broad manufacturer page is not proof of an exact model.
+
+## rig-note-te-ep35
+A portable speaker option for the OP-1 field output. Purchase is unconfirmed. Feed its stereo line input; the board still needs its own power.
+
+## rig-scene-title
+The music corner
+
+## rig-scene-body
+Two guitars, a board built around them, and a little tape machine. Choose a setup to follow the sound.
+
+## rig-scene-label
+Choose a setup
+
+## rig-scene-home-label
+At home
+
+## rig-scene-tape-label
+To tape
+
+## rig-scene-portable-label
+Out loud
+
+## rig-scene-home-title
+Guitar into the Orange.
+
+## rig-scene-tape-title
+A take on the OP-1.
+
+## rig-scene-portable-title
+Tape and guitar, out loud.
+
+## rig-scene-home-body
+The selected guitar runs through the board, then G3S output 2 feeds the Crush 20RT front input. The Orange supplies the amp sound. It has no effects loop.
+
+## rig-scene-tape-body
+G3S output 1 feeds OPUS inside the board. Port G extends the OPUS headphone output to OP-1 line in. Plug headphones into the OP-1; arm recording on the OP-1 itself.
+
+## rig-scene-portable-body
+The same OPUS-to-OP-1 path feeds the EP-35 stereo line input from OP-1 output. Start with low output levels. The EP-35 is a portable option; the pedalboard still needs mains power.
+
+## rig-scene-guitar-label
+Choose the guitar
+
+## rig-scene-fgn-label
+FGN / Fluence Modern
+
+## rig-scene-duo-label
+Fender / Duo-Sonic
+
+## rig-scene-caption
+Illustrated shapes and finishes, not a fit drawing. The FGN model code and finish are unconfirmed; the Fender year and Desert Sand finish remain tentative. The board is a plan; EP-35 is being considered.
+
+## rig-scene-alt
+Two guitars on stands beside a Schmidt pedalboard, Orange combo, OP-1 field and EP-35 amp. Highlighted cables trace the selected setup; the route is also listed below.
+
+## rig-scene-signal-label
+Audio path
+
+## rig-scene-control-label
+Foot control
+
+## rig-scene-control-body
+The guitar + tape bank sends playback commands through G3S → H4MIDI → C2MIDI Pro → OP-1 USB host. The dashed line summarizes this control path. Recording still starts on the OP-1.
+
+## rig-scene-guitar-bank-body
+The guitar-only bank keeps all switches for your presets. Choose Guitar + tape below for OP-1 playback commands.
+
+## rig-scene-details-label
+Explore the instruments
+
+## rig-scene-inventory-label
+Collection details
+
+## rig-scene-headphones-label
+Headphones
+
+## rig-scene-board-label
+Pedalboard
+
+## rig-scene-board-body
+Explore the pedals and presets
+
+## rig-scene-internal-label
+Inside the board
+
+## rig-scene-out-label
+Output
+
+## rig-scene-input-label
+Input
+
+## rig-scene-idle-label
+Not in this route
+
+
+## rig-note-te-ep127
+Owned foot controller for the EP-35. It can pair wirelessly for amp controls. It stays outside the G3S audio loops; it is a controller, not an audio effect in the guitar chain.
+
+## rig-scene-ep127-body
+The dotted EP-127 link is wireless control of the EP-35, not an audio cable. Its amp controls are separate from the G3S guitar and OP-1 bank.
+
+
+## rig-scene-unused-control-body
+The guitar + tape bank is selected. Its OP-1 commands are unused in this Orange-only route; choose To tape to see that control path.

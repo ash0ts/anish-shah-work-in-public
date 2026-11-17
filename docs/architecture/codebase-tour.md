@@ -206,7 +206,10 @@ metadata and page content.
 `/play/rig` is a semantic, server-rendered route linked from the Play directory.
 It reads reviewed Git-owned gear and program manifests through `lib/gear-model.ts`;
 public explanations remain in the Play copy deck. Bounded GET selections choose a
-deck, preset and bank without JavaScript or external requests. Its static JSON
+deck, preset and bank without JavaScript or external requests. `RigScene.tsx` adds
+an SVG music corner; `lib/rig-scene.ts` validates guitar/setup selections and owns
+port-level routes. Illustrated devices link to inventory; the active preset also
+lights the miniature board. Every scene route has a text equivalent. Its static JSON
 feed and Equipboard checklist are generated from those same inputs and checked for
 drift. `lib/gear-reconciliation.ts` compares an owner-reviewed Equipboard snapshot
 with the manifest and missing-catalog plan. The CLI stages an ignored report; it
